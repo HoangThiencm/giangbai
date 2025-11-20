@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hỗ trợ dạy học online</title>
+    <title>Hỗ trợ dạy học online (Auto-Save Key & Fix JSON)</title>
     
     <!-- 1. Core Libs -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -66,6 +66,7 @@
             Trash: (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"/></Icon>,
             AlertTriangle: (p) => <Icon {...p}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></Icon>,
             Zap: (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>,
+            Database: (p) => <Icon {...p}><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></Icon>
         };
 
         // --- MATH DISPLAY ---
@@ -87,11 +88,11 @@
             );
         };
 
-        // --- COMPONENT: GOOGLE SLIDES VIEWER (UPDATED) ---
+        // --- COMPONENT: GOOGLE SLIDES VIEWER ---
         const GoogleSlidesViewer = () => {
             const [url, setUrl] = useState("");
             const [embedUrl, setEmbedUrl] = useState("");
-            const [showControls, setShowControls] = useState(true); // New state to control visibility
+            const [showControls, setShowControls] = useState(true);
             
             const processUrl = () => {
                 if(!url) return;
@@ -99,12 +100,11 @@
                 if(url.includes("/pub?")) finalUrl = url.replace("/pub?", "/embed?");
                 else if(url.includes("/edit")) finalUrl = url.split("/edit")[0] + "/embed?start=false&loop=false&delayms=3000";
                 setEmbedUrl(finalUrl);
-                setShowControls(false); // HIDE CONTROLS AFTER LOAD
+                setShowControls(false); 
             };
 
             return (
                 <div className="flex flex-col h-full bg-gray-800 relative group">
-                    {/* CONTROL BAR - HIDDEN WHEN showControls is false */}
                     {showControls && (
                         <div className="bg-gray-900 text-white p-3 flex justify-between items-center shadow-md z-30 absolute top-0 left-0 right-0">
                              <div className="flex-1 flex gap-2 max-w-3xl mx-auto">
@@ -114,8 +114,6 @@
                              <button onClick={() => setShowControls(false)} className="text-gray-400 hover:text-white ml-4"><Icons.EyeOff className="w-5 h-5"/></button>
                         </div>
                     )}
-
-                    {/* FLOATING BUTTON TO SHOW CONTROLS */}
                     {!showControls && (
                         <button 
                             onClick={() => setShowControls(true)} 
@@ -125,7 +123,6 @@
                             <Icons.Settings className="w-5 h-5"/>
                         </button>
                     )}
-
                     <div className="flex-1 relative w-full h-full bg-black flex justify-center items-center">
                         {!embedUrl ? (
                             <div className="text-gray-500 text-center">
@@ -141,7 +138,7 @@
             );
         };
 
-        // --- COMPONENT: PRESENTATION MODE (UPDATED) ---
+        // --- COMPONENT: PRESENTATION MODE ---
         const PresentationMode = ({ questions, onBack }) => {
             const [currentIndex, setCurrentIndex] = useState(0);
             const [showAnswer, setShowAnswer] = useState(false);
@@ -150,7 +147,6 @@
 
             useEffect(() => { setShowAnswer(false); setUserSelection(null); }, [currentIndex]);
 
-            // Logic: Allows changing selection if answer is not shown yet
             const handleSelectOption = (idx) => { if (!showAnswer) setUserSelection(idx); };
 
             return (
@@ -167,42 +163,19 @@
                                 {currentQ.options.map((opt, idx) => {
                                     const isCorrect = idx === currentQ.correctAnswerIndex;
                                     const isSelected = userSelection === idx;
-                                    
                                     let bgClass = "bg-white border-2 border-gray-600 hover:bg-indigo-50 hover:border-indigo-600 shadow-md";
                                     let textClass = "text-black font-semibold"; 
                                     let icon = null;
-
                                     if (showAnswer) {
-                                        // KHI HIỆN ĐÁP ÁN
-                                        if (isCorrect) { 
-                                            bgClass = "bg-green-100 border-2 border-green-600 shadow-green-200 shadow-lg scale-105 z-10"; 
-                                            textClass = "text-green-900 font-bold"; 
-                                            icon = <Icons.Check className="w-6 h-6 text-green-700 stroke-[3]" />; 
-                                        } 
-                                        else if (isSelected && !isCorrect) { 
-                                            bgClass = "bg-red-100 border-2 border-red-500 shake"; 
-                                            textClass = "text-red-900 font-semibold"; 
-                                        } 
-                                        else { 
-                                            bgClass = "bg-gray-100 border-2 border-gray-300 opacity-50"; 
-                                            textClass = "text-gray-500"; 
-                                        }
+                                        if (isCorrect) { bgClass = "bg-green-100 border-2 border-green-600 shadow-green-200 shadow-lg scale-105 z-10"; textClass = "text-green-900 font-bold"; icon = <Icons.Check className="w-6 h-6 text-green-700 stroke-[3]" />; } 
+                                        else if (isSelected && !isCorrect) { bgClass = "bg-red-100 border-2 border-red-500 shake"; textClass = "text-red-900 font-semibold"; } 
+                                        else { bgClass = "bg-gray-100 border-2 border-gray-300 opacity-50"; textClass = "text-gray-500"; }
                                     } else {
-                                        // KHI CHƯA HIỆN ĐÁP ÁN (HIGHLIGHT KHI CHỌN)
-                                        if (isSelected) { 
-                                            bgClass = "bg-indigo-100 border-2 border-indigo-700 shadow-lg ring-2 ring-indigo-200"; 
-                                            textClass = "text-indigo-900 font-bold"; 
-                                        }
+                                        if (isSelected) { bgClass = "bg-indigo-100 border-2 border-indigo-700 shadow-lg ring-2 ring-indigo-200"; textClass = "text-indigo-900 font-bold"; }
                                     }
                                     return (
                                         <div key={idx} onClick={() => handleSelectOption(idx)} className={`p-5 rounded-xl text-xl transition-all duration-200 cursor-pointer flex justify-between items-center ${bgClass} ${textClass}`}>
-                                            <div className="flex items-center w-full">
-                                                <span className={`font-bold mr-4 w-10 h-10 flex items-center justify-center rounded-full border-2 text-lg shrink-0 ${isSelected || (showAnswer && isCorrect) ? 'border-current bg-white/30' : 'border-gray-800 text-black bg-gray-100'}`}>
-                                                    {String.fromCharCode(65+idx)}
-                                                </span>
-                                                <span className="flex-1"><LatexText text={opt} /></span>
-                                            </div>
-                                            {icon}
+                                            <div className="flex items-center w-full"><span className={`font-bold mr-4 w-10 h-10 flex items-center justify-center rounded-full border-2 text-lg shrink-0 ${isSelected || (showAnswer && isCorrect) ? 'border-current bg-white/30' : 'border-gray-800 text-black bg-gray-100'}`}>{String.fromCharCode(65+idx)}</span><span className="flex-1"><LatexText text={opt} /></span></div>{icon}
                                         </div>
                                     );
                                 })}
@@ -218,9 +191,9 @@
             );
         };
 
-        // --- COMPONENT: SMART QUIZ DIRECT (AI ONLY) ---
+        // --- COMPONENT: SMART QUIZ DIRECT ---
         const SmartQuizDirect = () => {
-            const [step, setStep] = useState(0); // 0: Config, 1: Review, 2: Present
+            const [step, setStep] = useState(0);
             const [questions, setQuestions] = useState([]);
             const [topic, setTopic] = useState("");
             const [loading, setLoading] = useState(false);
@@ -228,6 +201,14 @@
             const [questionCount, setQuestionCount] = useState(10);
             const [errorMsg, setErrorMsg] = useState('');
             const keyInputRef = useRef(null);
+
+            // --- NEW: Auto-load API Key from LocalStorage ---
+            useEffect(() => {
+                const savedKey = localStorage.getItem('smartquiz_gemini_key');
+                if (savedKey) {
+                    setApiKeys([savedKey]);
+                }
+            }, []);
 
             // AI Logic
             const fetchWithRetry = async (keysToTry, prompt) => {
@@ -249,30 +230,65 @@
                 if(apiKeys.length === 0) return setErrorMsg("Chưa nạp API Key!");
                 setLoading(true); setErrorMsg('');
                 try {
-                    const prompt = `Tạo ${questionCount} câu trắc nghiệm chủ đề "${topic}". Output JSON format: [{"id":1, "question":"Nội dung (dùng $LaTeX$ cho toán)", "options":["A","B","C","D"], "correctAnswer":"Nội dung đúng"}]`;
+                    // Updated Prompt: Specifically request double-escaped LaTeX
+                    const prompt = `Tạo ${questionCount} câu trắc nghiệm chủ đề "${topic}". 
+                    Output JSON format (QUAN TRỌNG: Các ký tự LaTeX như \\frac phải được escape thành \\\\frac): 
+                    [{"id":1, "question":"Nội dung (dùng $LaTeX$ cho toán)", "options":["A","B","C","D"], "correctAnswer":"Nội dung đúng"}]`;
+                    
                     const data = await fetchWithRetry([...apiKeys], prompt);
                     const txt = data.candidates[0].content.parts[0].text;
-                    const jsonStart = txt.indexOf('['); const jsonEnd = txt.lastIndexOf(']') + 1;
-                    const json = JSON.parse(txt.substring(jsonStart, jsonEnd));
+                    
+                    const jsonStart = txt.indexOf('['); 
+                    const jsonEnd = txt.lastIndexOf(']') + 1;
+                    let jsonString = txt.substring(jsonStart, jsonEnd);
+
+                    // --- NEW: JSON Cleaning Logic ---
+                    // Thay thế các trường hợp có dấu \ nhưng không phải là escape sequence hợp lệ của JSON (\", \\, \/, \b, \f, \n, \r, \t, \u)
+                    // Regex này tìm dấu \ mà KHÔNG được theo sau bởi ký tự JSON hợp lệ, rồi thêm \ vào.
+                    // Ví dụ: \frac -> \\frac, \alpha -> \\alpha
+                    try {
+                         // Thử parse trực tiếp
+                        JSON.parse(jsonString);
+                    } catch (e) {
+                        // Nếu lỗi, thử fix "ngây thơ" bằng cách thay thế single backslash
+                        console.log("JSON Parse Error, attempting to fix backslashes...");
+                        // Tìm dấu \ đứng trước 1 ký tự chữ cái (thường là lệnh latex như \f, \a...) và gấp đôi nó lên
+                        jsonString = jsonString.replace(/\\([a-zA-Z])/g, "\\\\$1");
+                    }
+                    
+                    const json = JSON.parse(jsonString);
                     const mapped = json.map((q, i) => {
                         const cIdx = q.options.findIndex(o => o.trim() === q.correctAnswer.trim());
                         return { ...q, id: Date.now()+i, number: i+1, correctAnswerIndex: cIdx !== -1 ? cIdx : 0, correctAnswerText: q.correctAnswer };
                     });
-                    setQuestions(mapped); setStep(1); // Go to Review
-                } catch(e) { setErrorMsg("Lỗi AI: " + e.message); } finally { setLoading(false); }
+                    setQuestions(mapped); setStep(1); 
+                } catch(e) { setErrorMsg("Lỗi AI (Chi tiết): " + e.message); } finally { setLoading(false); }
             };
 
             const handleReadKeyFile = (e) => {
                 const f = e.target.files[0]; if (!f) return; const r = new FileReader();
-                r.onload = (ev) => { const k = ev.target.result.split('\n').map(x => x.trim()).filter(x => x); if(k.length) { setApiKeys(k); alert(`Đã nạp ${k.length} keys!`); } };
+                r.onload = (ev) => { 
+                    const k = ev.target.result.split('\n').map(x => x.trim()).filter(x => x); 
+                    if(k.length) { 
+                        setApiKeys(k); 
+                        // --- NEW: Save to LocalStorage ---
+                        localStorage.setItem('smartquiz_gemini_key', k[0]);
+                        alert(`Đã nạp ${k.length} keys và lưu vào trình duyệt!`); 
+                    } 
+                };
                 r.readAsText(f);
+            };
+
+            const handleClearKey = () => {
+                localStorage.removeItem('smartquiz_gemini_key');
+                setApiKeys([]);
+                alert("Đã xóa Key khỏi bộ nhớ!");
             };
 
             if (step === 2) return <PresentationMode questions={questions} onBack={() => setStep(1)} />;
 
             return (
                 <div className="h-full bg-gray-50 overflow-y-auto p-4">
-                    {/* STEP 0: CONFIG */}
                     {step === 0 && (
                         <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-10">
                             <h2 className="text-2xl font-bold mb-6 pb-2 border-b text-indigo-800 flex items-center gap-2">
@@ -285,16 +301,23 @@
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="font-semibold text-sm uppercase text-gray-500">1. Cấu hình AI</label>
                                         <span className={`text-xs font-bold px-2 py-1 rounded ${apiKeys.length > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {apiKeys.length > 0 ? `${apiKeys.length} Keys Sẵn Sàng` : "Chưa có Key"}
+                                            {apiKeys.length > 0 ? 'Đã có Key' : 'Chưa có Key'}
                                         </span>
                                     </div>
-                                    <button onClick={()=>keyInputRef.current.click()} className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                        <Icons.Upload className="w-4 h-4"/> Nạp File API Key (.txt)
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button onClick={()=>keyInputRef.current.click()} className="flex-1 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                                            <Icons.Upload className="w-4 h-4"/> Nạp File API Key (.txt)
+                                        </button>
+                                        {apiKeys.length > 0 && (
+                                            <button onClick={handleClearKey} className="bg-red-50 border border-red-200 text-red-600 px-3 rounded hover:bg-red-100" title="Xóa Key đã lưu">
+                                                <Icons.Trash className="w-4 h-4"/>
+                                            </button>
+                                        )}
+                                    </div>
                                     <input type="file" ref={keyInputRef} className="hidden" onChange={handleReadKeyFile} />
+                                    {apiKeys.length > 0 && <p className="text-xs text-gray-400 mt-2 italic">* Key đã được lưu tự động trên máy này.</p>}
                                 </div>
 
-                                {/* Question Config */}
                                 <div>
                                     <label className="block font-semibold mb-2 text-gray-700">2. Chủ đề kiểm tra</label>
                                     <input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="VD: Phương trình logarit, Lịch sử chiến dịch Điện Biên Phủ..."/>
@@ -317,7 +340,6 @@
                         </div>
                     )}
 
-                    {/* STEP 1: REVIEW */}
                     {step === 1 && (
                         <div className="max-w-4xl mx-auto">
                             <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm sticky top-0 z-20 border-b border-gray-200">
@@ -359,27 +381,22 @@
             
             return (
                 <div className="flex h-screen overflow-hidden font-sans">
-                    {/* SIDEBAR */}
                     <div className="w-20 bg-indigo-900 text-indigo-100 flex flex-col items-center py-6 gap-8 shadow-xl z-20 shrink-0">
                         <div className="p-2 bg-indigo-800 rounded-lg mb-4 shadow-inner"><Icons.Home className="w-8 h-8"/></div>
-                        
                         <button onClick={()=>setActiveTab('home')} className={`p-3 rounded-xl transition group relative ${activeTab==='home' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}>
                             <Icons.Home className="w-6 h-6"/>
                             <span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Trang chủ</span>
                         </button>
-                        
                         <button onClick={()=>setActiveTab('gslides')} className={`p-3 rounded-xl transition group relative ${activeTab==='gslides' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}>
                             <Icons.Presentation className="w-6 h-6"/>
                             <span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Google Slides</span>
                         </button>
-                        
                         <button onClick={()=>setActiveTab('smartquiz')} className={`p-3 rounded-xl transition group relative ${activeTab==='smartquiz' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}>
                             <Icons.Zap className="w-6 h-6"/>
                             <span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">SmartQuiz AI</span>
                         </button>
                     </div>
 
-                    {/* MAIN CONTENT */}
                     <div className="flex-1 relative bg-gray-100 overflow-hidden">
                         {activeTab === 'home' && (
                             <div className="absolute inset-0 p-10 flex flex-col items-center justify-center overflow-y-auto">
@@ -401,14 +418,8 @@
                                 </div>
                             </div>
                         )}
-
-                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'gslides' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                            <GoogleSlidesViewer />
-                        </div>
-                        
-                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'smartquiz' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                            <SmartQuizDirect />
-                        </div>
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'gslides' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><GoogleSlidesViewer /></div>
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'smartquiz' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><SmartQuizDirect /></div>
                     </div>
                 </div>
             );
