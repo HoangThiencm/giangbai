@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartQuiz Pro - Math Edition</title>
+    <title>SmartQuiz Pro - Teaching Suite v3 (Google Slides)</title>
     
     <!-- Core Libs -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,49 +23,17 @@
 
     <style>
         .math-tex { font-family: 'Times New Roman', serif; font-size: 1.1em; }
-        
+        /* Animation Transitions */
+        .slide-page-enter { opacity: 0; transform: translateX(50px); }
+        .slide-page-enter-active { opacity: 1; transform: translateX(0); transition: all 400ms ease-out; }
+        .fade-page-enter { opacity: 0; }
+        .fade-page-enter-active { opacity: 1; transition: opacity 500ms ease-in-out; }
+        .zoom-page-enter { opacity: 0; transform: scale(0.9); }
+        .zoom-page-enter-active { opacity: 1; transform: scale(1); transition: all 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
         /* Cursors */
         .cursor-draw { cursor: crosshair; }
-        .cursor-mask { cursor: cell; }
-        .cursor-eraser { cursor: no-drop; }
-
-        /* Mask Style */
-        .mask-box {
-            position: absolute;
-            background: #e5e7eb; /* Gray-200 */
-            border: 2px dashed #9ca3af; /* Gray-400 */
-            opacity: 0.95;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .mask-box:hover {
-            background: #d1d5db;
-            transform: scale(1.01);
-            border-color: #4f46e5; /* Indigo */
-        }
-        .mask-box::after {
-            content: '👁️';
-            font-size: 20px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .mask-box:hover::after {
-            opacity: 1;
-        }
         
-        /* Animation khi mask biến mất */
-        .mask-vanish {
-            animation: vanish 0.3s forwards;
-        }
-        @keyframes vanish {
-            to { opacity: 0; transform: scale(1.1); visibility: hidden; }
-        }
-
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
@@ -78,48 +46,145 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
+        // --- UTILS ---
+        const cleanText = (str) => str ? str.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim() : "";
+        const CORRECT_MARKER = "{{#CORRECT#}}";
+
         // --- ICONS ---
         const Icon = ({ children, className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>;
         const Icons = {
             Home: (p) => <Icon {...p}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>,
             BookOpen: (p) => <Icon {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>,
-            Book: (p) => <Icon {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></Icon>,
+            Presentation: (p) => <Icon {...p}><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5 5 5-5"/></Icon>,
             CheckSquare: (p) => <Icon {...p}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Icon>,
+            Book: (p) => <Icon {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></Icon>,
             ArrowLeft: (p) => <Icon {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></Icon>,
             ArrowRight: (p) => <Icon {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></Icon>,
             Upload: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>,
+            Zap: (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>,
+            Crosshair: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></Icon>,
             Pen: (p) => <Icon {...p}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></Icon>,
             Eraser: (p) => <Icon {...p}><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></Icon>,
-            Mask: (p) => <Icon {...p}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></Icon>,
-            Refresh: (p) => <Icon {...p}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></Icon>,
-            Trash: (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"/></Icon>,
             Check: (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>,
+            Trash: (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"/></Icon>,
             Eye: (p) => <Icon {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></Icon>,
             EyeOff: (p) => <Icon {...p}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M1 1l22 22"/></Icon>,
+            Link: (p) => <Icon {...p}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></Icon>,
         };
 
-        // --- UTILS ---
-        const cleanText = (str) => str ? str.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim() : "";
+        // --- CORE PARSERS ---
+        const parseDocxAdvanced = async (file) => {
+            const zip = new JSZip();
+            await zip.loadAsync(file);
+            const xmlContent = await zip.file("word/document.xml").async("string");
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+            const paragraphs = xmlDoc.getElementsByTagName("w:p");
+            const tables = xmlDoc.getElementsByTagName("w:tbl"); 
+            let extractedTextLines = [];
+            for (let i = 0; i < paragraphs.length; i++) {
+                const p = paragraphs[i];
+                let line = "";
+                for (let j = 0; j < p.childNodes.length; j++) {
+                    const node = p.childNodes[j];
+                    if (node.nodeName === "w:r") {
+                        let isHighlighted = false;
+                        const rPr = node.getElementsByTagName("w:rPr")[0];
+                        if (rPr) {
+                            const u = rPr.getElementsByTagName("w:u")[0];
+                            if (u && u.getAttribute("w:val") && u.getAttribute("w:val") !== 'none') isHighlighted = true;
+                            const color = rPr.getElementsByTagName("w:color")[0];
+                            if (color) {
+                                const cVal = color.getAttribute("w:val");
+                                if (cVal && (cVal === 'red' || cVal.toUpperCase() === 'FF0000' || cVal.toUpperCase() === 'C00000')) isHighlighted = true;
+                            }
+                        }
+                        const t = node.getElementsByTagName("w:t");
+                        if(t.length > 0) {
+                            let content = t[0].textContent;
+                            if (isHighlighted && content.trim().length > 0) content += CORRECT_MARKER; 
+                            line += content;
+                        }
+                    } else if (node.nodeName === "m:oMath" || node.nodeName === "m:oMathPara") {
+                        const mathTexts = node.getElementsByTagName("m:t");
+                        let mathExp = "";
+                        for(let k=0; k<mathTexts.length; k++) mathExp += mathTexts[k].textContent;
+                        if(mathExp) line += " $" + mathExp + "$ ";
+                    }
+                }
+                if (line.trim()) extractedTextLines.push(line);
+            }
+            let answerKey = {};
+            for (let i = 0; i < tables.length; i++) {
+                const rows = tables[i].getElementsByTagName("w:tr");
+                let tableData = []; 
+                for(let r=0; r<rows.length; r++) {
+                     let rowCells = [];
+                     const cols = rows[r].getElementsByTagName("w:tc");
+                     for(let c=0; c<cols.length; c++) rowCells.push(cleanText(cols[c].textContent));
+                     if(rowCells.length > 0) tableData.push(rowCells);
+                }
+                for(let r=0; r<tableData.length-1; r++) {
+                    const rowTop = tableData[r];
+                    const rowBot = tableData[r+1];
+                    let validPairs = 0; let tempKey = {}; const minLen = Math.min(rowTop.length, rowBot.length);
+                    for(let k=0; k<minLen; k++) { if(/^\d+$/.test(rowTop[k]) && /^[A-D]$/i.test(rowBot[k])) { tempKey[rowTop[k]] = rowBot[k].toUpperCase(); validPairs++; } }
+                    if(validPairs >= 3) { Object.assign(answerKey, tempKey); continue; }
+                }
+                let allCells = tableData.flat();
+                for(let k=0; k<allCells.length; k++) {
+                     const current = allCells[k];
+                     const matchCombined = current.match(/^(\d+)[\.:\s]+([A-D])$/i);
+                     if(matchCombined) { answerKey[matchCombined[1]] = matchCombined[2].toUpperCase(); continue; }
+                     if (k < allCells.length - 1) { if(/^\d+$/.test(current) && /^[A-D]$/i.test(allCells[k+1])) { if(!answerKey[current]) answerKey[current] = allCells[k+1].toUpperCase(); } }
+                }
+            }
+            return { lines: extractedTextLines, answerKey };
+        };
 
-        // --- COMPONENT: INTERACTIVE PDF BOARD ---
-        const PdfBoard = ({ file }) => {
+        const parseQuestions = (lines, externalKey = {}) => {
+            const questions = [];
+            let currentQ = null;
+            const qRegex = /^(?:Câu|Bài)?\s*(\d+)[:.]/i; 
+            const optRegex = /^([A-D])[\.:]\s*(.*)/i;
+            lines.forEach(line => {
+                const text = line.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim(); 
+                if(!text) return;
+                const qMatch = text.match(qRegex);
+                if (qMatch) {
+                    if (currentQ) questions.push(currentQ);
+                    currentQ = { id: Math.random(), number: qMatch[1], question: text.replace(qRegex, '').replace(CORRECT_MARKER, '').trim(), options: [], correctAnswerText: null, correctAnswerIndex: -1, markedIndex: -1 };
+                } else if (currentQ) {
+                    const optMatch = text.match(optRegex);
+                    if (optMatch) {
+                        let rawContent = optMatch[2]; 
+                        let isMarked = (rawContent.includes(CORRECT_MARKER) || text.includes(CORRECT_MARKER));
+                        let finalContent = rawContent.replace(new RegExp(CORRECT_MARKER, 'g'), '').trim();
+                        currentQ.options.push(finalContent);
+                        if (isMarked) currentQ.markedIndex = currentQ.options.length - 1;
+                    } else { if (currentQ.options.length === 0) currentQ.question += " " + text.replace(CORRECT_MARKER, ''); }
+                }
+            });
+            if (currentQ) questions.push(currentQ);
+            questions.forEach(q => {
+                if (externalKey[q.number]) {
+                    const idx = externalKey[q.number].charCodeAt(0) - 65;
+                    if (q.options[idx] !== undefined) { q.correctAnswerIndex = idx; q.correctAnswerText = q.options[idx]; }
+                } else if (q.markedIndex !== -1) { q.correctAnswerIndex = q.markedIndex; q.correctAnswerText = q.options[q.markedIndex]; }
+                if (q.correctAnswerIndex === -1 && q.options.length > 0) { q.correctAnswerIndex = 0; q.correctAnswerText = q.options[0]; }
+            });
+            return questions;
+        };
+
+        // --- COMPONENT: PDF VIEWER (Basic with Animations) ---
+        const PdfViewer = ({ file }) => {
             const [pdfDoc, setPdfDoc] = useState(null);
             const [pageNum, setPageNum] = useState(1);
             const [scale, setScale] = useState(1.2);
             const [loading, setLoading] = useState(false);
-            
-            // Tools
-            const [tool, setTool] = useState('none'); // none, pen, mask
-            const [masks, setMasks] = useState({}); // { pageNum: [{x,y,w,h, id, visible}] }
-            
-            // Refs
+            const [effect, setEffect] = useState('slide');
             const canvasRef = useRef(null);
-            const drawCanvasRef = useRef(null);
-            const containerRef = useRef(null);
-            const isDrawing = useRef(false);
-            const startPos = useRef({x:0, y:0});
 
-            // Load PDF
             useEffect(() => {
                 if (file) {
                     setLoading(true);
@@ -130,24 +195,83 @@
                         setPdfDoc(pdf);
                         setPageNum(1);
                         setLoading(false);
-                        setMasks({}); // Reset masks
-                        clearDrawing();
                     };
                     reader.readAsArrayBuffer(file);
                 }
             }, [file]);
 
-            // Render Page
             useEffect(() => {
                 if (pdfDoc && canvasRef.current) {
                     renderPage(pageNum);
                 }
             }, [pdfDoc, pageNum, scale]);
 
-            // Clear drawing on page change (Simplified logic)
-            useEffect(() => {
+            const renderPage = async (num) => {
+                const page = await pdfDoc.getPage(num);
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = canvasRef.current;
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+            };
+
+            const changePage = (offset) => {
+                setPageNum(prev => Math.min(Math.max(1, prev + offset), pdfDoc.numPages));
+            };
+
+            if (!file) return <div className="flex flex-col items-center justify-center h-full text-gray-400 border-2 border-dashed border-gray-300 rounded-xl m-4"><Icons.BookOpen className="w-16 h-16 mb-4"/><p className="text-xl">Vui lòng chọn file PDF</p></div>;
+
+            return (
+                <div className="flex flex-col h-full bg-gray-700">
+                    <div className="bg-gray-800 text-white p-3 flex justify-between items-center shadow-md z-20">
+                        <div className="flex items-center gap-4">
+                            <div className="flex gap-2">
+                                <button onClick={() => changePage(-1)} disabled={pageNum <= 1} className="p-1 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"><Icons.ArrowLeft className="w-5 h-5"/></button>
+                                <span className="font-bold w-20 text-center">Trang {pageNum}/{pdfDoc?.numPages}</span>
+                                <button onClick={() => changePage(1)} disabled={pageNum >= (pdfDoc?.numPages || 0)} className="p-1 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"><Icons.ArrowRight className="w-5 h-5"/></button>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                             <select value={effect} onChange={(e)=>setEffect(e.target.value)} className="bg-gray-700 border-none outline-none text-white cursor-pointer text-xs rounded px-2 py-1"><option value="slide">Trượt</option><option value="fade">Mờ</option><option value="zoom">Zoom</option></select>
+                             <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="px-2 bg-gray-600 rounded">-</button>
+                             <span className="text-xs">{Math.round(scale * 100)}%</span>
+                             <button onClick={() => setScale(s => Math.min(3, s + 0.1))} className="px-2 bg-gray-600 rounded">+</button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-auto flex justify-center p-4 bg-gray-500/50 relative">
+                        {loading ? <div className="text-white text-xl">Đang tải...</div> : (
+                            <div key={pageNum} className={effect !== 'none' ? `${effect}-page-enter ${effect}-page-enter-active` : ''}>
+                                <canvas ref={canvasRef} className="shadow-2xl rounded-sm bg-white max-w-full"/>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- COMPONENT: GOOGLE SLIDES VIEWER ---
+        const GoogleSlidesViewer = () => {
+            const [url, setUrl] = useState("");
+            const [embedUrl, setEmbedUrl] = useState("");
+            const [isDrawingMode, setIsDrawingMode] = useState(false);
+            const drawCanvasRef = useRef(null);
+            const isDrawing = useRef(false);
+
+            const processUrl = () => {
+                if(!url) return;
+                let finalUrl = url;
+                // Hỗ trợ link dạng /pub?start=false...
+                if(url.includes("/pub?")) {
+                    finalUrl = url.replace("/pub?", "/embed?");
+                } 
+                // Hỗ trợ link edit (thử convert sang preview/embed)
+                else if(url.includes("/edit")) {
+                     finalUrl = url.split("/edit")[0] + "/embed?start=false&loop=false&delayms=3000";
+                }
+                setEmbedUrl(finalUrl);
                 clearDrawing();
-            }, [pageNum]);
+            };
 
             const clearDrawing = () => {
                 const canvas = drawCanvasRef.current;
@@ -157,200 +281,103 @@
                 }
             };
 
-            const renderPage = async (num) => {
-                const page = await pdfDoc.getPage(num);
-                const viewport = page.getViewport({ scale: scale });
-                
-                const canvas = canvasRef.current;
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                const drawCanvas = drawCanvasRef.current;
-                if(drawCanvas) {
-                    drawCanvas.height = viewport.height;
-                    drawCanvas.width = viewport.width;
-                }
-
-                const renderContext = { canvasContext: context, viewport: viewport };
-                await page.render(renderContext).promise;
-            };
-
-            // --- TOOL HANDLERS ---
-            const getPos = (e) => {
-                const rect = drawCanvasRef.current.getBoundingClientRect();
-                return {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-            };
-
+            // Drawing Logic (Similar to PDF Board)
             const handleMouseDown = (e) => {
-                if (tool === 'none') return;
+                if (!isDrawingMode) return;
                 isDrawing.current = true;
-                const pos = getPos(e);
-                startPos.current = pos;
-
-                if (tool === 'pen') {
-                    const ctx = drawCanvasRef.current.getContext('2d');
-                    ctx.beginPath();
-                    ctx.moveTo(pos.x, pos.y);
-                    ctx.strokeStyle = "red";
-                    ctx.lineWidth = 2;
-                    ctx.lineCap = "round";
-                }
+                const canvas = drawCanvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const ctx = canvas.getContext('2d');
+                ctx.beginPath();
+                ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 3;
+                ctx.lineCap = "round";
             };
 
             const handleMouseMove = (e) => {
-                if (!isDrawing.current) return;
-                const pos = getPos(e);
-
-                if (tool === 'pen') {
-                    const ctx = drawCanvasRef.current.getContext('2d');
-                    ctx.lineTo(pos.x, pos.y);
-                    ctx.stroke();
-                }
-                // Với mask, ta sẽ vẽ hình chữ nhật tạm thời (preview) ở đây nếu muốn xịn hơn
-                // Nhưng để đơn giản, ta chỉ xử lý khi thả chuột (MouseUp)
+                if (!isDrawingMode || !isDrawing.current) return;
+                const canvas = drawCanvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const ctx = canvas.getContext('2d');
+                ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+                ctx.stroke();
             };
 
-            const handleMouseUp = (e) => {
-                if (!isDrawing.current) return;
-                isDrawing.current = false;
-                const pos = getPos(e);
+            const handleMouseUp = () => { isDrawing.current = false; };
 
-                if (tool === 'mask') {
-                    // Tạo mask mới
-                    const w = pos.x - startPos.current.x;
-                    const h = pos.y - startPos.current.y;
-                    
-                    // Chỉ tạo nếu kích thước đủ lớn (>10px)
-                    if (Math.abs(w) > 10 && Math.abs(h) > 10) {
-                        const newMask = {
-                            id: Date.now(),
-                            x: w > 0 ? startPos.current.x : pos.x,
-                            y: h > 0 ? startPos.current.y : pos.y,
-                            w: Math.abs(w),
-                            h: Math.abs(h),
-                            visible: true
-                        };
-                        
-                        setMasks(prev => ({
-                            ...prev,
-                            [pageNum]: [...(prev[pageNum] || []), newMask]
-                        }));
-                        // Reset lại công cụ về none để tránh vẽ nhầm, hoặc giữ nguyên nếu muốn vẽ tiếp
-                        // Ở đây tôi giữ nguyên để vẽ nhiều mask liên tục
+            // Resize canvas to match window
+            useEffect(() => {
+                const resizeCanvas = () => {
+                    if(drawCanvasRef.current) {
+                        drawCanvasRef.current.width = drawCanvasRef.current.offsetWidth;
+                        drawCanvasRef.current.height = drawCanvasRef.current.offsetHeight;
                     }
-                }
-            };
-
-            const handleMaskClick = (maskId) => {
-                if (tool === 'mask') return; // Đang chế độ vẽ thì không click ẩn
-                setMasks(prev => ({
-                    ...prev,
-                    [pageNum]: prev[pageNum].map(m => m.id === maskId ? {...m, visible: false} : m)
-                }));
-            };
-
-            const handleResetMasks = () => {
-                 setMasks(prev => ({
-                    ...prev,
-                    [pageNum]: prev[pageNum]?.map(m => ({...m, visible: true})) || []
-                }));
-            };
-
-            const handleClearPageMasks = () => {
-                if(confirm("Xóa hết các ô che ở trang này?")) {
-                    setMasks(prev => ({
-                        ...prev,
-                        [pageNum]: []
-                    }));
-                }
-            };
-
-            if (!file) return (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 border-2 border-dashed border-gray-300 rounded-xl m-4">
-                    <Icons.BookOpen className="w-16 h-16 mb-4"/>
-                    <p className="text-xl font-bold">Chế độ Giảng Dạy Toán</p>
-                    <p className="mt-2">1. Tải file PDF bài giảng (có sẵn đáp án/lời giải).</p>
-                    <p>2. Dùng công cụ <span className="font-bold text-indigo-600">Mặt Nạ (Mask)</span> để che lời giải.</p>
-                    <p>3. Khi dạy: Click vào ô che để hiện lời giải từng bước.</p>
-                </div>
-            );
-
-            const currentMasks = masks[pageNum] || [];
+                };
+                window.addEventListener('resize', resizeCanvas);
+                if(embedUrl) setTimeout(resizeCanvas, 500); // Wait for render
+                return () => window.removeEventListener('resize', resizeCanvas);
+            }, [embedUrl]);
 
             return (
-                <div className={`flex flex-col h-full bg-gray-700 relative select-none ${tool === 'pen' ? 'cursor-draw' : (tool === 'mask' ? 'cursor-mask' : '')}`}>
-                    
+                <div className="flex flex-col h-full bg-gray-800">
                     {/* Toolbar */}
-                    <div className="bg-gray-800 text-white p-3 flex justify-between items-center shadow-md z-30">
-                        <div className="flex items-center gap-4">
-                            <div className="flex gap-2">
-                                <button onClick={() => setPageNum(p => Math.max(1, p-1))} disabled={pageNum <= 1} className="p-1 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"><Icons.ArrowLeft className="w-5 h-5"/></button>
-                                <span className="font-bold min-w-[80px] text-center">Trang {pageNum}/{pdfDoc?.numPages||'-'}</span>
-                                <button onClick={() => setPageNum(p => Math.min(pdfDoc?.numPages||1, p+1))} disabled={pageNum >= (pdfDoc?.numPages || 0)} className="p-1 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"><Icons.ArrowRight className="w-5 h-5"/></button>
-                            </div>
-                        </div>
-                        
-                        <div className="flex gap-4 items-center">
-                             {/* Tools Group */}
-                             <div className="flex bg-gray-900 rounded-lg p-1 gap-1 border border-gray-600">
-                                 <button onClick={() => setTool('none')} className={`px-3 py-1 rounded flex gap-2 items-center ${tool === 'none' ? 'bg-blue-600' : 'hover:bg-gray-700'}`} title="Chế độ trình chiếu (Click để mở ô)">
-                                     <span className="font-bold text-sm">🖱️ Click</span>
-                                 </button>
-                                 <div className="w-px bg-gray-600 mx-1"></div>
-                                 <button onClick={() => setTool('mask')} className={`px-3 py-1 rounded flex gap-2 items-center ${tool === 'mask' ? 'bg-indigo-600 text-white shadow-lg ring-1 ring-white' : 'text-gray-300 hover:bg-gray-700'}`} title="Vẽ ô che đáp án">
-                                     <Icons.Mask className="w-4 h-4"/> <span className="text-sm font-medium">Che Lời Giải</span>
-                                 </button>
-                                 <button onClick={() => setTool('pen')} className={`p-2 rounded ${tool === 'pen' ? 'bg-green-600' : 'hover:bg-gray-700'}`} title="Bút viết"><Icons.Pen className="w-4 h-4"/></button>
-                             </div>
-
-                             {/* Actions */}
-                             <div className="flex gap-2">
-                                <button onClick={handleResetMasks} className="p-2 bg-gray-600 rounded hover:bg-gray-500 text-yellow-300" title="Che lại tất cả"><Icons.Refresh className="w-4 h-4"/></button>
-                                <button onClick={handleClearPageMasks} className="p-2 bg-gray-600 rounded hover:bg-red-500 text-red-300 hover:text-white" title="Xóa hết ô che"><Icons.Trash className="w-4 h-4"/></button>
-                             </div>
-
-                             {/* Zoom */}
-                             <div className="flex items-center bg-gray-900 rounded overflow-hidden border border-gray-600">
-                                 <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="px-2 py-1 hover:bg-gray-700">-</button>
-                                 <span className="px-2 text-sm min-w-[3rem] text-center">{Math.round(scale * 100)}%</span>
-                                 <button onClick={() => setScale(s => Math.min(3, s + 0.1))} className="px-2 py-1 hover:bg-gray-700">+</button>
-                             </div>
-                        </div>
+                    <div className="bg-gray-900 text-white p-3 flex justify-between items-center shadow-md z-30">
+                         <div className="flex-1 flex gap-2 max-w-2xl">
+                             <input 
+                                value={url}
+                                onChange={(e)=>setUrl(e.target.value)}
+                                placeholder="Dán link Google Slides (File -> Share -> Publish to web -> Embed -> Copy Link trong src='...')"
+                                className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-1 text-sm outline-none focus:border-indigo-500"
+                             />
+                             <button onClick={processUrl} className="bg-indigo-600 px-4 py-1 rounded text-sm hover:bg-indigo-500 font-bold">Load</button>
+                         </div>
+                         
+                         <div className="flex items-center gap-2 ml-4">
+                             <button 
+                                onClick={()=>setIsDrawingMode(!isDrawingMode)} 
+                                className={`flex items-center gap-2 px-3 py-1 rounded transition ${isDrawingMode ? 'bg-red-600 text-white shadow-lg ring-1 ring-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
+                             >
+                                 <Icons.Pen className="w-4 h-4"/> {isDrawingMode ? "Đang Vẽ" : "Chế độ Vẽ"}
+                             </button>
+                             {isDrawingMode && (
+                                 <button onClick={clearDrawing} className="p-1.5 bg-gray-700 rounded hover:bg-red-500 hover:text-white text-gray-400" title="Xóa hình vẽ"><Icons.Eraser className="w-5 h-5"/></button>
+                             )}
+                         </div>
                     </div>
-                    
-                    {/* Canvas Area */}
-                    <div className="flex-1 overflow-auto flex justify-center p-8 bg-gray-500/50 relative">
-                        {loading ? <div className="text-white text-xl">Đang tải bài giảng...</div> : (
-                            <div className="relative shadow-2xl" style={{ width: 'fit-content', height: 'fit-content' }}>
-                                {/* PDF Layer */}
-                                <canvas ref={canvasRef} className="bg-white block rounded-sm"/>
+
+                    {/* Content */}
+                    <div className="flex-1 relative w-full h-full bg-black flex justify-center items-center">
+                        {!embedUrl ? (
+                            <div className="text-gray-500 text-center">
+                                <Icons.Presentation className="w-20 h-20 mx-auto mb-4 opacity-50"/>
+                                <p>Chưa có Slide nào.</p>
+                                <p className="text-sm mt-2">Vào Google Slides {'>'} File {'>'} Share {'>'} Publish to web {'>'} Embed {'>'} Copy link.</p>
+                            </div>
+                        ) : (
+                            <div className="relative w-full h-full">
+                                <iframe 
+                                    src={embedUrl} 
+                                    frameBorder="0" 
+                                    width="100%" 
+                                    height="100%" 
+                                    allowFullScreen="true" 
+                                    mozallowfullscreen="true" 
+                                    webkitallowfullscreen="true"
+                                    className="absolute inset-0 z-0"
+                                ></iframe>
                                 
-                                {/* Drawing Layer */}
+                                {/* Drawing Overlay */}
                                 <canvas 
-                                    ref={drawCanvasRef} 
-                                    className="absolute top-0 left-0"
+                                    ref={drawCanvasRef}
+                                    className={`absolute inset-0 z-10 ${isDrawingMode ? 'cursor-draw pointer-events-auto' : 'pointer-events-none'}`}
                                     onMouseDown={handleMouseDown}
                                     onMouseMove={handleMouseMove}
                                     onMouseUp={handleMouseUp}
                                     onMouseLeave={handleMouseUp}
+                                    width="100%"
+                                    height="100%"
                                 />
-
-                                {/* Masks Layer */}
-                                {currentMasks.map((mask) => (
-                                    mask.visible && (
-                                        <div
-                                            key={mask.id}
-                                            className="mask-box"
-                                            style={{ left: mask.x, top: mask.y, width: mask.w, height: mask.h }}
-                                            onClick={() => handleMaskClick(mask.id)}
-                                            title={tool === 'none' ? "Click để hiện nội dung" : "Đang chế độ vẽ"}
-                                        ></div>
-                                    )
-                                ))}
                             </div>
                         )}
                     </div>
@@ -358,10 +385,8 @@
             );
         };
 
-        // --- COMPONENT: QUIZ PLAYER (Giữ nguyên logic cũ) ---
+        // --- COMPONENT: QUIZ PLAYER (Giữ nguyên) ---
         const QuizPlayer = ({ questions }) => {
-            // (Giữ nguyên code QuizPlayer từ bản v2)
-            // ... Để tiết kiệm không gian, tôi dùng lại logic hiển thị đơn giản
             const [idx, setIdx] = useState(0);
             const [showKey, setShowKey] = useState(false);
             if (!questions || questions.length === 0) return <div className="flex flex-col items-center justify-center h-full text-gray-400"><Icons.CheckSquare className="w-16 h-16 mb-4"/><p className="text-xl">Chưa có câu hỏi.</p></div>;
@@ -384,40 +409,48 @@
             const lectureInputRef = useRef(null);
             const quizInputRef = useRef(null);
 
-            // Logic Upload Đề (Giữ nguyên từ V3)
             const handleUploadQuiz = async (e) => {
                 const file = e.target.files[0]; if(!file) return; setLoadingQuiz(true);
-                // (Giả lập logic parse để code gọn, bạn copy logic cũ vào đây nếu cần chạy thật)
-                setTimeout(() => { setQuestions([{id:1, question:"1+1=?", options:["1","2"], correctAnswerIndex:1}]); setLoadingQuiz(false); setActiveTab('quiz'); alert("Đã tải đề demo!"); }, 1000);
+                try {
+                    let lines = [], answerKey = {};
+                    if (file.name.endsWith('.docx')) { const result = await parseDocxAdvanced(file); lines = result.lines; answerKey = result.answerKey; } 
+                    else if (file.name.endsWith('.pdf')) {
+                        const buffer = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument(buffer).promise; let fullText = "";
+                        for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); fullText += (await page.getTextContent()).items.map(item => item.str).join(' ') + "\n"; }
+                        lines = fullText.split('\n').map(cleanText); const keyRegex = /(\d+)[\.\-\s]*([A-D])/g; let match;
+                        while ((match = keyRegex.exec(fullText)) !== null) { if(parseInt(match[1]) < 100) answerKey[match[1]] = match[2]; }
+                    }
+                    const parsed = parseQuestions(lines, answerKey);
+                    if(parsed.length === 0) throw new Error("Không tìm thấy câu hỏi nào!");
+                    setQuestions(parsed); setActiveTab('quiz'); alert(`Đã nhập thành công ${parsed.length} câu hỏi!`);
+                } catch (err) { alert("Lỗi: " + err.message); } finally { setLoadingQuiz(false); }
             };
 
             const handleUploadLecture = (e) => { if(e.target.files[0]) { setLectureFile(e.target.files[0]); setActiveTab('lecture'); } };
 
             return (
                 <div className="flex h-screen overflow-hidden font-sans">
+                    {/* SIDEBAR */}
                     <div className="w-20 bg-indigo-900 text-indigo-100 flex flex-col items-center py-6 gap-8 shadow-xl z-20 shrink-0">
                         <div className="p-2 bg-indigo-800 rounded-lg mb-4 shadow-inner"><Icons.Book className="w-8 h-8"/></div>
                         <button onClick={()=>setActiveTab('home')} className={`p-3 rounded-xl transition group relative ${activeTab==='home' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}><Icons.Home className="w-6 h-6"/><span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Trang chủ</span></button>
-                        <button onClick={()=>setActiveTab('lecture')} className={`p-3 rounded-xl transition group relative ${activeTab==='lecture' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}><Icons.BookOpen className="w-6 h-6"/><span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Bài giảng</span></button>
+                        <button onClick={()=>setActiveTab('lecture')} className={`p-3 rounded-xl transition group relative ${activeTab==='lecture' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}><Icons.BookOpen className="w-6 h-6"/><span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Bài giảng PDF</span></button>
+                        <button onClick={()=>setActiveTab('gslides')} className={`p-3 rounded-xl transition group relative ${activeTab==='gslides' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}><Icons.Presentation className="w-6 h-6"/><span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Google Slides</span></button>
                         <button onClick={()=>setActiveTab('quiz')} className={`p-3 rounded-xl transition group relative ${activeTab==='quiz' ? 'bg-white text-indigo-900 shadow-lg' : 'hover:bg-indigo-800'}`}><Icons.CheckSquare className="w-6 h-6"/><span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-50">Trắc nghiệm</span></button>
                     </div>
                     <div className="flex-1 relative bg-gray-100 overflow-hidden">
                         {activeTab === 'home' && (
                             <div className="absolute inset-0 p-10 flex flex-col items-center justify-center overflow-y-auto">
-                                <div className="text-center mb-12"><h1 className="text-5xl font-extrabold text-indigo-900 mb-4 tracking-tight">SmartQuiz Math</h1><p className="text-xl text-gray-500">Dành riêng cho Giáo viên Toán</p></div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full">
-                                    <div onClick={()=>lectureInputRef.current.click()} className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 border-l-4 border-blue-500 cursor-pointer group relative overflow-hidden">
-                                        <div className="relative z-10"><div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm"><Icons.BookOpen className="w-8 h-8"/></div><h3 className="text-2xl font-bold text-gray-800 mb-2">1. Bài Giảng (PDF)</h3><p className="text-gray-500 mb-4">Tải file PDF bài giảng đầy đủ.</p><div className="bg-blue-50 p-3 rounded text-sm text-blue-800">✨ <b>Tính năng mới:</b> Vẽ ô che lời giải (Mask) để hiện từng bước giải theo ý muốn.</div></div>
-                                        <input type="file" accept=".pdf" ref={lectureInputRef} className="hidden" onChange={handleUploadLecture}/>
-                                    </div>
-                                    <div onClick={()=>quizInputRef.current.click()} className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 border-l-4 border-indigo-500 cursor-pointer group relative overflow-hidden">
-                                        <div className="relative z-10"><div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm"><Icons.CheckSquare className="w-8 h-8"/></div><h3 className="text-2xl font-bold text-gray-800 mb-2">2. Trắc Nghiệm</h3><p className="text-gray-500 mb-4">Tổ chức thi trắc nghiệm nhanh.</p></div>
-                                        <input type="file" accept=".docx,.pdf" ref={quizInputRef} className="hidden" onChange={handleUploadQuiz}/>
-                                    </div>
+                                <div className="text-center mb-12"><h1 className="text-5xl font-extrabold text-indigo-900 mb-4 tracking-tight">SmartQuiz Pro v3</h1><p className="text-xl text-gray-500">Nền tảng dạy học toàn diện</p></div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
+                                    <div onClick={()=>lectureInputRef.current.click()} className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 border-l-4 border-blue-500 cursor-pointer group"><div className="mb-4"><Icons.BookOpen className="w-10 h-10 text-blue-600"/></div><h3 className="text-xl font-bold text-gray-800 mb-2">1. Bài Giảng PDF</h3><p className="text-sm text-gray-500">Offline. Tải file PDF. Hỗ trợ hiệu ứng chuyển trang và bút vẽ.</p><input type="file" accept=".pdf" ref={lectureInputRef} className="hidden" onChange={handleUploadLecture}/></div>
+                                    <div onClick={()=>setActiveTab('gslides')} className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 border-l-4 border-yellow-500 cursor-pointer group"><div className="mb-4"><Icons.Presentation className="w-10 h-10 text-yellow-600"/></div><h3 className="text-xl font-bold text-gray-800 mb-2">2. Google Slides</h3><p className="text-sm text-gray-500">Online. Giữ nguyên hiệu ứng PPT gốc. Hỗ trợ vẽ đè lên slide.</p></div>
+                                    <div onClick={()=>quizInputRef.current.click()} className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 border-l-4 border-indigo-500 cursor-pointer group"><div className="mb-4"><Icons.CheckSquare className="w-10 h-10 text-indigo-600"/></div><h3 className="text-xl font-bold text-gray-800 mb-2">3. Thi Trắc Nghiệm</h3><p className="text-sm text-gray-500">Tải file Word/PDF đề thi. Chấm điểm tự động.</p><input type="file" accept=".docx,.pdf" ref={quizInputRef} className="hidden" onChange={handleUploadQuiz}/></div>
                                 </div>
                             </div>
                         )}
-                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'lecture' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><PdfBoard file={lectureFile} /></div>
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'lecture' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><PdfViewer file={lectureFile} /></div>
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'gslides' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><GoogleSlidesViewer /></div>
                         <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'quiz' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}><QuizPlayer questions={questions} /></div>
                     </div>
                 </div>
