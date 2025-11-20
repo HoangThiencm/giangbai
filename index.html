@@ -319,13 +319,13 @@
                                 </div>
 
                                 <div>
-                                    <label className="block font-semibold mb-2 text-gray-700">2. Chủ đề kiểm tra</label>
+                                    <label className="block font-semibold mb-2 text-gray-700">2. CHỦ ĐỀ KIỂM TRA</label>
                                     <input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="VD: Phương trình logarit, Lịch sử chiến dịch Điện Biên Phủ..."/>
                                 </div>
                                 
                                 <div>
                                     <div className="flex justify-between mb-2">
-                                        <label className="font-semibold text-gray-700">3. Số lượng câu hỏi</label>
+                                        <label className="font-semibold text-gray-700">3. SỐ LƯỢNG CÂU HỎI</label>
                                         <span className="font-bold text-indigo-600">{questionCount} câu</span>
                                     </div>
                                     <input type="range" min="5" max="30" value={questionCount} onChange={e=>setQuestionCount(parseInt(e.target.value))} className="w-full accent-indigo-600"/>
@@ -334,7 +334,7 @@
                                 {errorMsg && <div className="text-red-500 bg-red-50 p-3 rounded border border-red-200 text-sm flex gap-2"><Icons.AlertTriangle className="shrink-0 w-5 h-5"/> {errorMsg}</div>}
                                 
                                 <button onClick={handleAIGen} disabled={loading} className="w-full bg-indigo-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2 shadow-lg shadow-indigo-200 transition transform active:scale-95">
-                                    {loading ? "Đang suy nghĩ & tạo câu hỏi..." : <><Icons.Zap className="w-6 h-6"/> Tạo đề kiểm tra</>}
+                                    {loading ? "Đang suy nghĩ & tạo câu hỏi..." : <><Icons.Zap className="w-6 h-6"/> TẠO ĐỀ</>}
                                 </button>
                             </div>
                         </div>
