@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hỗ trợ dạy học online (Auto-Save Key & Fix JSON)</title>
+    <title>Hỗ trợ dạy học online</title>
     
     <!-- 1. Core Libs -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -108,7 +108,7 @@
                     {showControls && (
                         <div className="bg-gray-900 text-white p-3 flex justify-between items-center shadow-md z-30 absolute top-0 left-0 right-0">
                              <div className="flex-1 flex gap-2 max-w-3xl mx-auto">
-                                 <input value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="Dán link Google Slides (File -> Share -> Publish to web -> Embed -> Copy Link)" className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-1 text-sm outline-none focus:border-indigo-500" />
+                                 <input value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="Dán link Google Slides" className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-1 text-sm outline-none focus:border-indigo-500" />
                                  <button onClick={processUrl} className="bg-indigo-600 px-4 py-1 rounded text-sm hover:bg-indigo-500 font-bold">Load</button>
                              </div>
                              <button onClick={() => setShowControls(false)} className="text-gray-400 hover:text-white ml-4"><Icons.EyeOff className="w-5 h-5"/></button>
