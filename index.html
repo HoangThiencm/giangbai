@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
-        // Check Login
         if (!localStorage.getItem('authToken')) window.location.href = 'login.html';
 
         function logout() {
@@ -20,9 +19,7 @@
                 const keyList = keys.split('\n').map(k=>k.trim()).filter(k=>k);
                 localStorage.setItem('global_gemini_keys', JSON.stringify(keyList));
                 alert(`✅ Đã lưu ${keyList.length} API Keys! Các module khác sẽ tự động sử dụng.`);
-            } else {
-                alert("Vui lòng nhập Key!");
-            }
+            } else { alert("Vui lòng nhập Key!"); }
         }
 
         function loadKeys() {
@@ -34,7 +31,6 @@
     </script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen" onload="loadKeys()">
-
     <nav class="bg-indigo-900 text-white p-4 shadow-lg flex justify-between items-center">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-white text-indigo-900 rounded-full flex items-center justify-center font-bold text-xl">AI</div>
@@ -49,7 +45,7 @@
     <div class="max-w-6xl mx-auto p-8">
         <div class="bg-white p-6 rounded-xl shadow-md mb-8 border-l-4 border-yellow-500">
             <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-key text-yellow-500 mr-2"></i> Cấu Hình Gemini API Key (Toàn Hệ Thống)</h2>
-            <p class="text-sm text-gray-500 mb-2">Nhập danh sách API Key vào đây (mỗi key 1 dòng). Các chức năng SmartQuiz, Trộn Đề sẽ tự động lấy key từ đây.</p>
+            <p class="text-sm text-gray-500 mb-2">Nhập danh sách API Key vào đây (mỗi key 1 dòng). Các module khác sẽ tự động dùng.</p>
             <textarea id="apiKeys" class="w-full p-3 border rounded-lg bg-gray-50 font-mono text-sm h-24 focus:ring-2 focus:ring-yellow-400 outline-none" placeholder="Dán key vào đây..."></textarea>
             <div class="mt-3 text-right">
                 <button onclick="saveKeys()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg font-bold shadow transition">
@@ -60,27 +56,21 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <a href="smartquiz.html" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border-t-4 border-indigo-600 block">
-                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto">
-                    <i class="fas fa-bolt"></i>
-                </div>
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto"><i class="fas fa-bolt"></i></div>
                 <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">SmartQuiz AI</h3>
-                <p class="text-gray-500 text-center">Tạo đề trắc nghiệm tự động theo chủ đề. Có chế độ trình chiếu dạy học ngay lập tức.</p>
+                <p class="text-gray-500 text-center">Tạo đề trắc nghiệm tự động. Có chế độ trình chiếu dạy học.</p>
             </a>
 
             <a href="tronde.html" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border-t-4 border-green-600 block">
-                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto">
-                    <i class="fas fa-random"></i>
-                </div>
+                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto"><i class="fas fa-random"></i></div>
                 <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">Trộn Đề Thi</h3>
-                <p class="text-gray-500 text-center">Trộn đề từ file Word/PDF. Hỗ trợ Server trộn và AI Vision trộn đề ảnh PDF.</p>
+                <p class="text-gray-500 text-center">Trộn đề từ file Word/PDF. Hỗ trợ Server trộn và AI Vision trộn đề ảnh.</p>
             </a>
 
             <a href="thitructuyen.html" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border-t-4 border-blue-600 block">
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto">
-                    <i class="fas fa-globe"></i>
-                </div>
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto"><i class="fas fa-globe"></i></div>
                 <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">Thi Trực Tuyến</h3>
-                <p class="text-gray-500 text-center">Tổ chức thi, tạo QR Code, chấm điểm tự động, quản lý học sinh và xuất báo cáo.</p>
+                <p class="text-gray-500 text-center">Tổ chức thi, QR Code, chấm điểm tự động, quản lý học sinh.</p>
             </a>
         </div>
     </div>
