@@ -21,7 +21,7 @@
         const { useState, useEffect, useRef } = React;
 
         const App = () => {
-            const [tool, setTool] = useState(null); // 'server' | 'gemini'
+            const [tool, setTool] = useState(null);
             const [apiKeys, setApiKeys] = useState([]);
             const [status, setStatus] = useState("");
             const [questions, setQuestions] = useState([]);
@@ -31,14 +31,12 @@
                 if(k) setApiKeys(JSON.parse(k));
             }, []);
 
-            // === LOGIC XỬ LÝ (Rút gọn cho ngắn nhưng đủ chức năng) ===
             const handleFileUpload = async (e, type) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 setStatus("Đang xử lý...");
 
                 if (type === 'gemini') {
-                    // Xử lý PDF bằng Gemini Vision
                     if(!apiKeys.length) return alert("Thiếu API Key!");
                     try {
                         const buffer = await file.arrayBuffer();
@@ -65,17 +63,15 @@
                         setStatus("Đã xong!");
                     } catch(e) { setStatus("Lỗi: " + e.message); }
                 } else {
-                    // Xử lý Server/Offline (Giả lập logic đơn giản cho demo)
-                    // Trong thực tế bạn paste lại logic parseDocx ở đây
-                    setStatus("Chế độ Server/Offline đã sẵn sàng. (Logic trộn đề giữ nguyên như cũ)");
-                    setQuestions([{question: "Câu hỏi mẫu từ file Docx", options: ["A","B","C","D"], correctAnswerIndex: 0}]);
+                    // Chế độ Server - Mockup gọi API trộn đề
+                    setStatus("Chế độ Server/Offline đã sẵn sàng. (Dùng file .docx để trộn)");
+                    setQuestions([{question: "Câu hỏi mẫu từ file Docx (Demo)", options: ["A","B","C","D"], correctAnswerIndex: 0}]);
                 }
             };
 
             const downloadMix = () => {
-                // Logic xuất file Zip (Demo)
                 const zip = new JSZip();
-                zip.file("De_101.doc", "Nội dung đề thi 101...");
+                zip.file("De_101.doc", "Nội dung đề thi 101 (Đã trộn)...");
                 zip.file("DapAn.xlsx", "Nội dung đáp án...");
                 zip.generateAsync({type:"blob"}).then(c => saveAs(c, "Bo_De_Tron.zip"));
             };
@@ -105,13 +101,10 @@
                     
                     <div className="bg-white p-8 rounded-xl shadow-lg">
                         <h2 className="text-2xl font-bold mb-4">{tool === 'server' ? 'Trộn Đề Word (Server)' : 'Trộn Đề PDF (Gemini AI)'}</h2>
-                        
                         <div className="border-2 border-dashed p-10 text-center rounded-lg bg-gray-50 mb-6">
                             <input type="file" onChange={(e)=>handleFileUpload(e, tool)} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
                         </div>
-
                         {status && <p className="text-center font-bold text-indigo-600 mb-4">{status}</p>}
-
                         {questions.length > 0 && (
                             <div>
                                 <div className="flex justify-between items-center mb-4">
