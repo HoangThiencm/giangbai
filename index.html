@@ -3,8 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hỗ trợ dạy học online & Trộn đề (V4 - Auto Config)</title>
+    <title>Hỗ trợ dạy học online & Trộn đề </title>
     
+    <!-- === 1. BẢO MẬT: KIỂM TRA ĐĂNG NHẬP (Thêm mới) === -->
+    <script>
+        (function() {
+            const token = localStorage.getItem('authToken');
+            
+            // Kiểm tra môi trường để tránh lỗi khi xem trước
+            const isPreview = window.location.protocol === 'about:' || window.location.protocol === 'data:';
+
+            if (!token) {
+                if (isPreview) {
+                    console.warn("Preview Mode: Bỏ qua Login redirect.");
+                } else {
+                    // Chưa đăng nhập -> Chuyển hướng ngay
+                    window.location.href = 'login.html';
+                }
+            }
+        })();
+
+        function logout() {
+            if(confirm("Bạn có chắc muốn đăng xuất?")) {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userEmail_giangbai');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+    <!-- =================================================== -->
+
     <!-- 1. Core Libs -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -51,7 +79,14 @@
         .question-incomplete { @apply border-2 border-orange-400 bg-orange-50; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden">
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden relative">
+    
+    <!-- === 2. BẢO MẬT: NÚT ĐĂNG XUẤT (Thêm mới) === -->
+    <button onclick="logout()" class="absolute top-4 right-4 z-50 bg-white/90 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-full shadow border border-red-100 text-sm font-bold flex items-center gap-2 transition backdrop-blur-sm">
+        <i class="fas fa-sign-out-alt"></i> Thoát
+    </button>
+    <!-- ============================================ -->
+
     <div id="root"></div>
 
     <script type="text/babel">
