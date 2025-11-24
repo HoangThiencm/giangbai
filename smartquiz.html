@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartQuiz AI - Soạn & Dạy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>.katex { font-size: 1.2em; }</style>
+</head>
+<body class="bg-gray-50 h-screen overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const MathText = ({ text }) => {
+            const html = text.replace(/\$([^$]+)\$/g, (m, t) => {
+                try { return katex.renderToString(t, {throwOnError: false}); } catch { return m; }
+            });
+            return <span dangerouslySetInnerHTML={{__html: html}} />;
+        };
+
+        // --- CHẾ ĐỘ TRÌNH CHIẾU ---
+        const PresentationMode = ({ questions, onExit }) => {
+            const [idx, setIdx] = useState(0);
+            const [showAns, setShowAns] = useState(false);
+            const q = questions[idx];
+
+            return (
+                <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={onExit} className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600"><i className="fas fa-times mr-2"></i> Thoát</button>
+                        <h2 className="text-xl font-bold">Câu {idx+1}/{questions.length}</h2>
+                        <div className="w-20"></div>
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col justify-center items-center max-w-5xl mx-auto w-full">
+                        <div className="bg-white text-slate-900 p-10 rounded-2xl shadow-2xl w-full min-h-[400px]">
+                            <h3 className="text-3xl font-bold mb-8 leading-relaxed"><MathText text={q.question} /></h3>
+                            <div className="grid grid-cols-2 gap-6">
+                                {q.options.map((opt, i) => (
+                                    <div key={i} className={`p-6 rounded-xl text-xl border-2 transition ${showAns && i===q.correctAnswerIndex ? 'bg-green-100 border-green-500 text-green-900 font-bold scale-105 shadow-lg' : 'border-gray-200'}`}>
+                                        <span className="font-bold mr-3">{String.fromCharCode(65+i)}.</span> <MathText text={opt} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-center gap-6">
+                        <button disabled={idx===0} onClick={()=>{setIdx(idx-1); setShowAns(false)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-left text-2xl"></i></button>
+                        <button onClick={()=>setShowAns(!showAns)} className="px-8 bg-yellow-500 text-black font-bold rounded-xl text-xl hover:bg-yellow-400 min-w-[200px]">{showAns ? "Ẩn Đáp Án" : "Hiện Đáp Án"}</button>
+                        <button disabled={idx===questions.length-1} onClick={()=>{setIdx(idx+1); setShowAns(false)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-right text-2xl"></i></button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- APP CHÍNH ---
+        const App = () => {
+            const [step, setStep] = useState(1);
+            const [topic, setTopic] = useState("");
+            const [questions, setQuestions] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [apiKeys, setApiKeys] = useState([]);
+
+            useEffect(() => {
+                const keys = localStorage.getItem('global_gemini_keys');
+                if(keys) setApiKeys(JSON.parse(keys));
+                else alert("Chưa có API Key! Hãy quay lại Trang Chủ để nhập.");
+            }, []);
+
+            const generate = async () => {
+                if(!apiKeys.length) return alert("Thiếu API Key!");
+                setLoading(true);
+                try {
+                    const prompt = `Tạo 5 câu trắc nghiệm chủ đề "${topic}". Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":0}]`;
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
+                    });
+                    const data = await res.json();
+                    const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    setQuestions(JSON.parse(txt));
+                    setStep(2);
+                } catch(e) { alert("Lỗi: " + e.message); }
+                setLoading(false);
+            };
+
+            const exportWord = () => {
+                const content = questions.map((q,i) => `Câu ${i+1}: ${q.question}\nA. ${q.options[0]}\nB. ${q.options[1]}\nC. ${q.options[2]}\nD. ${q.options[3]}`).join('\n\n');
+                const blob = new Blob([content], {type: "application/msword"});
+                saveAs(blob, "De_Thi.doc");
+            };
+
+            if(step === 3) return <PresentationMode questions={questions} onExit={()=>setStep(2)} />;
+
+            return (
+                <div className="max-w-4xl mx-auto p-6">
+                    <div className="flex justify-between mb-6 items-center">
+                        <button onClick={()=>window.location.href='index.html'} className="text-gray-500 hover:text-blue-600 font-bold"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
+                        <h1 className="text-2xl font-bold text-indigo-700">SmartQuiz AI Generator</h1>
+                    </div>
+
+                    {step === 1 && (
+                        <div className="bg-white p-8 rounded-xl shadow-lg">
+                            <label className="block font-bold mb-2">Chủ đề:</label>
+                            <input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full border p-3 rounded mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="VD: Lịch sử Việt Nam..." />
+                            <button onClick={generate} disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700">
+                                {loading ? "Đang suy nghĩ..." : "TẠO ĐỀ NGAY"}
+                            </button>
+                        </div>
+                    )}
+
+                    {step === 2 && (
+                        <div>
+                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded-lg shadow sticky top-0 z-10">
+                                <h2 className="font-bold text-lg">{questions.length} Câu hỏi</h2>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>setStep(1)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Soạn lại</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"><i className="fas fa-file-word mr-2"></i> Xuất Word</button>
+                                    
+                                    {/* NÚT DẠY NGAY ĐÃ ĐƯỢC THÊM */}
+                                    <button onClick={()=>setStep(3)} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow-lg animate-pulse">
+                                        <i className="fas fa-chalkboard-teacher mr-2"></i> DẠY NGAY
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-4 pb-20">
+                                {questions.map((q,i) => (
+                                    <div key={i} className="bg-white p-6 rounded-lg shadow border">
+                                        <p className="font-bold text-blue-800 mb-2">Câu {i+1}</p>
+                                        <h3 className="text-lg mb-4"><MathText text={q.question}/></h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {q.options.map((o, idx) => (
+                                                <div key={idx} className={`p-2 border rounded ${idx===q.correctAnswerIndex ? 'bg-green-50 border-green-500' : ''}`}>
+                                                    {String.fromCharCode(65+idx)}. <MathText text={o}/>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
