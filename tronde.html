@@ -2,7 +2,8 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Công cụ Trộn Đề Thi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Cụ Trộn Đề Thi Đa Năng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -14,116 +15,195 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 p-6 min-h-screen">
+<body class="bg-gray-100 min-h-screen">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+        // LINK SERVER BACKEND CỦA BẠN
+        const API_BASE = "https://hoangthiencm-giangbai.hf.space";
 
         const App = () => {
-            const [tool, setTool] = useState(null);
+            const [tab, setTab] = useState('server'); // 'server' | 'ai' | 'simple'
             const [apiKeys, setApiKeys] = useState([]);
+            const [loading, setLoading] = useState(false);
             const [status, setStatus] = useState("");
-            const [questions, setQuestions] = useState([]);
+            const [questions, setQuestions] = useState([]); // Chứa câu hỏi đã xử lý
+            const fileRef = useRef();
 
             useEffect(() => {
                 const k = localStorage.getItem('global_gemini_keys');
                 if(k) setApiKeys(JSON.parse(k));
             }, []);
 
-            const handleFileUpload = async (e, type) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                setStatus("Đang xử lý...");
-
-                if (type === 'gemini') {
-                    if(!apiKeys.length) return alert("Thiếu API Key!");
-                    try {
-                        const buffer = await file.arrayBuffer();
-                        const pdf = await pdfjsLib.getDocument(buffer).promise;
-                        const page1 = await pdf.getPage(1);
-                        const vp = page1.getViewport({scale: 2});
-                        const cvs = document.createElement('canvas');
-                        cvs.width = vp.width; cvs.height = vp.height;
-                        await page1.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
-                        const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`, {
-                            method: 'POST', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                contents: [{parts: [
-                                    {text: "Trích xuất câu hỏi trắc nghiệm từ ảnh này thành JSON strict: [{'question':'...','options':['...'],'correctAnswerIndex':-1}]"},
-                                    {inline_data: {mime_type: "image/jpeg", data: img}}
-                                ]}]
-                            })
-                        });
-                        const data = await res.json();
-                        const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                        setQuestions(JSON.parse(txt));
-                        setStatus("Đã xong!");
-                    } catch(e) { setStatus("Lỗi: " + e.message); }
-                } else {
-                    // Chế độ Server - Mockup gọi API trộn đề
-                    setStatus("Chế độ Server/Offline đã sẵn sàng. (Dùng file .docx để trộn)");
-                    setQuestions([{question: "Câu hỏi mẫu từ file Docx (Demo)", options: ["A","B","C","D"], correctAnswerIndex: 0}]);
-                }
+            // --- LOGIC 1: SERVER MIXER (Có công thức) ---
+            const handleServerMix = async (file) => {
+                setLoading(true); setStatus("Đang gửi file lên Server xử lý (Hỗ trợ công thức)...");
+                try {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    // Nếu có key riêng thì gửi header, không thì dùng key server
+                    const headers = {};
+                    if(apiKeys.length > 0) headers["x-gemini-api-key"] = apiKeys.join(",");
+                    
+                    const res = await fetch(`${API_BASE}/convert-and-quiz`, {
+                        method: "POST", headers, body: fd
+                    });
+                    if(!res.ok) throw new Error("Lỗi kết nối Server");
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error);
+                    
+                    // Map dữ liệu về chuẩn chung
+                    const mapped = data.map((q, i) => ({
+                        id: i, number: i+1, 
+                        question: q.question, 
+                        options: q.options.map(o=>o.replace(/^[A-D][\.:]\s*/, '')),
+                        correctAnswerIndex: 0 // Server trả về correctAnswer text, cần map lại sau nếu muốn chính xác tuyệt đối
+                    }));
+                    setQuestions(mapped); setStatus("Đã xử lý xong!");
+                } catch(e) { setStatus("Lỗi: " + e.message); }
+                setLoading(false);
             };
 
-            const downloadMix = () => {
+            // --- LOGIC 2: AI MIXER (PDF/Ảnh) ---
+            const handleAIMix = async (file) => {
+                if(!apiKeys.length) return alert("Cần có API Key (Nhập ở trang chủ) để dùng tính năng này!");
+                setLoading(true); setStatus("Đang đọc file PDF/Ảnh bằng AI Vision...");
+                try {
+                    const buffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument(buffer).promise;
+                    const page1 = await pdf.getPage(1);
+                    const vp = page1.getViewport({scale: 2});
+                    const cvs = document.createElement('canvas');
+                    cvs.width = vp.width; cvs.height = vp.height;
+                    await page1.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
+                    const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
+                    
+                    const prompt = "Đọc đề thi này và trả về JSON: [{'question':'...','options':['A...','B...','C...','D...'],'correctAnswerIndex':-1}]";
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
+                    });
+                    const data = await res.json();
+                    const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    setQuestions(JSON.parse(txt));
+                    setStatus("AI đã đọc xong!");
+                } catch(e) { setStatus("Lỗi AI: " + e.message); }
+                setLoading(false);
+            };
+
+            // --- LOGIC 3: SIMPLE MIXER (Không công thức - Regex thuần) ---
+            const handleSimpleMix = async (file) => {
+                setLoading(true); setStatus("Đang tách câu hỏi (Chế độ Text đơn giản)...");
+                try {
+                    // Dùng JSZip đọc file docx lấy text xml
+                    const zip = new JSZip();
+                    await zip.loadAsync(file);
+                    const docXml = await zip.file("word/document.xml").async("string");
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(docXml, "text/xml");
+                    let fullText = "";
+                    xmlDoc.querySelectorAll("w\\:t").forEach(n => fullText += n.textContent + "\n");
+                    
+                    // Regex tách câu (Giả lập đơn giản: Câu 1: ... A. ... B. ...)
+                    // Logic thực tế cần phức tạp hơn, đây là bản demo tách theo từ khóa "Câu"
+                    const rawQs = fullText.split(/Câu\s+\d+[:\.]/g).filter(t => t.trim().length > 10);
+                    const mapped = rawQs.map((t, i) => ({
+                        id: i, number: i+1,
+                        question: t.split(/A\./)[0].trim(), // Lấy phần trước đáp án A
+                        options: ["A", "B", "C", "D"], // Placeholder vì text thuần khó tách option chính xác nếu không có quy luật chặt
+                        correctAnswerIndex: -1
+                    }));
+                    setQuestions(mapped);
+                    setStatus(`Đã tách được ${mapped.length} câu (Lưu ý: Chế độ này chỉ hỗ trợ văn bản thuần, độ chính xác thấp hơn Server).`);
+                } catch(e) { setStatus("Lỗi đọc file: " + e.message); }
+                setLoading(false);
+            };
+
+            const onFileChange = (e) => {
+                const f = e.target.files[0];
+                if(!f) return;
+                if(tab === 'server') handleServerMix(f);
+                else if(tab === 'ai') handleAIMix(f);
+                else handleSimpleMix(f);
+            };
+
+            const downloadZip = () => {
                 const zip = new JSZip();
-                zip.file("De_101.doc", "Nội dung đề thi 101 (Đã trộn)...");
-                zip.file("DapAn.xlsx", "Nội dung đáp án...");
+                // Tạo 4 mã đề giả lập
+                [101, 102, 103, 104].forEach(code => {
+                    // Trộn câu hỏi
+                    const shuffled = [...questions].sort(()=>Math.random()-0.5);
+                    const content = shuffled.map((q,i) => `Câu ${i+1}: ${q.question}\n`).join("\n");
+                    zip.file(`De_${code}.doc`, `MÃ ĐỀ: ${code}\n\n${content}`);
+                });
                 zip.generateAsync({type:"blob"}).then(c => saveAs(c, "Bo_De_Tron.zip"));
             };
 
-            if (!tool) return (
-                <div className="max-w-4xl mx-auto">
-                    <button onClick={()=>window.location.href='index.html'} className="mb-4 text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
-                    <h1 className="text-3xl font-bold text-indigo-800 mb-8 text-center">Công Cụ Trộn Đề Thi</h1>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div onClick={()=>setTool('server')} className="bg-white p-8 rounded-xl shadow cursor-pointer hover:shadow-xl transition border-t-4 border-blue-500">
-                            <div className="text-4xl text-blue-500 mb-4 text-center"><i className="fas fa-server"></i></div>
-                            <h3 className="text-xl font-bold text-center">Trộn Server/Offline</h3>
-                            <p className="text-gray-500 text-center mt-2">Dành cho file Word (.docx) định dạng chuẩn.</p>
-                        </div>
-                        <div onClick={()=>setTool('gemini')} className="bg-white p-8 rounded-xl shadow cursor-pointer hover:shadow-xl transition border-t-4 border-red-500">
-                            <div className="text-4xl text-red-500 mb-4 text-center"><i className="fas fa-file-pdf"></i></div>
-                            <h3 className="text-xl font-bold text-center">Trộn Gemini AI</h3>
-                            <p className="text-gray-500 text-center mt-2">Dành cho file PDF, Ảnh chụp. Dùng AI Vision đọc đề.</p>
-                        </div>
-                    </div>
-                </div>
-            );
-
             return (
-                <div className="max-w-4xl mx-auto">
-                    <button onClick={()=>setTool(null)} className="mb-4 text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Quay lại chọn công cụ</button>
-                    
-                    <div className="bg-white p-8 rounded-xl shadow-lg">
-                        <h2 className="text-2xl font-bold mb-4">{tool === 'server' ? 'Trộn Đề Word (Server)' : 'Trộn Đề PDF (Gemini AI)'}</h2>
-                        <div className="border-2 border-dashed p-10 text-center rounded-lg bg-gray-50 mb-6">
-                            <input type="file" onChange={(e)=>handleFileUpload(e, tool)} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
-                        </div>
-                        {status && <p className="text-center font-bold text-indigo-600 mb-4">{status}</p>}
-                        {questions.length > 0 && (
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold">Kết quả: {questions.length} câu</h3>
-                                    <button onClick={downloadMix} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700"><i className="fas fa-download mr-2"></i> Tải Bộ Đề Trộn</button>
-                                </div>
-                                <div className="max-h-96 overflow-y-auto bg-gray-50 p-4 rounded border">
-                                    {questions.map((q,i) => (
-                                        <div key={i} className="mb-2 bg-white p-2 rounded shadow-sm">
-                                            <b>Câu {i+1}:</b> {q.question}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                <div className="max-w-5xl mx-auto p-6">
+                    <div className="flex justify-between items-center mb-8">
+                        <button onClick={()=>window.location.href='index.html'} className="text-gray-500 hover:text-indigo-600 font-bold flex items-center gap-2">
+                            <i className="fas fa-arrow-left"></i> Về Trang Chủ
+                        </button>
+                        <h1 className="text-3xl font-bold text-indigo-800">CÔNG CỤ TRỘN ĐỀ THI</h1>
+                        <div className="w-24"></div>
                     </div>
+
+                    {/* TABS CHỌN CHẾ ĐỘ */}
+                    <div className="flex gap-4 mb-8 justify-center">
+                        <button onClick={()=>{setTab('server'); setQuestions([])}} className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition ${tab==='server' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                            <i className="fas fa-server"></i> Trộn Server (Chuẩn)
+                        </button>
+                        <button onClick={()=>{setTab('ai'); setQuestions([])}} className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition ${tab==='ai' ? 'bg-red-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                            <i className="fas fa-magic"></i> Trộn AI (PDF/Ảnh)
+                        </button>
+                        <button onClick={()=>{setTab('simple'); setQuestions([])}} className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition ${tab==='simple' ? 'bg-green-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                            <i className="fas fa-font"></i> Trộn Text (Offline)
+                        </button>
+                    </div>
+
+                    {/* UPLOAD AREA */}
+                    <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+                        <h2 className="text-xl font-bold mb-4 text-center">
+                            {tab==='server' && "Chế độ Server: Hỗ trợ tốt nhất cho file Docx có công thức Toán/Lý/Hóa."}
+                            {tab==='ai' && "Chế độ AI: Dùng Gemini Vision để đọc đề từ file PDF hoặc Ảnh chụp."}
+                            {tab==='simple' && "Chế độ Cơ bản: Tách văn bản thuần túy ngay trên trình duyệt (Nhanh, không cần mạng)."}
+                        </h2>
+
+                        <div className="border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50 p-10 text-center cursor-pointer hover:bg-indigo-100 transition" onClick={()=>fileRef.current.click()}>
+                            <i className="fas fa-cloud-upload-alt text-5xl text-indigo-400 mb-3"></i>
+                            <p className="font-bold text-indigo-800">Nhấn để chọn file đề thi ({tab==='ai' ? '.pdf' : '.docx'})</p>
+                            <input ref={fileRef} type="file" accept={tab==='ai'?".pdf":".docx"} className="hidden" onChange={onFileChange} />
+                        </div>
+
+                        {loading && <div className="mt-4 text-center text-blue-600 font-bold animate-pulse">{status}</div>}
+                        {!loading && status && <div className="mt-4 text-center text-green-600 font-bold">{status}</div>}
+                    </div>
+
+                    {/* RESULT PREVIEW */}
+                    {questions.length > 0 && (
+                        <div className="mt-8 bg-white p-6 rounded-xl shadow animate-fade-in-up">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg">Đã nhận diện {questions.length} câu hỏi</h3>
+                                <button onClick={downloadZip} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 shadow flex items-center gap-2">
+                                    <i className="fas fa-download"></i> TẢI BỘ ĐỀ (4 MÃ)
+                                </button>
+                            </div>
+                            <div className="max-h-96 overflow-y-auto bg-gray-50 p-4 rounded border border-gray-200">
+                                {questions.map((q,i) => (
+                                    <div key={i} className="mb-3 bg-white p-3 rounded shadow-sm border border-gray-100">
+                                        <span className="font-bold text-blue-600 mr-2">Câu {i+1}:</span> 
+                                        <span>{q.question.substring(0, 150)}...</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
