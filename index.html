@@ -883,6 +883,8 @@
                 try {
                     const images = await convertPdfToImages(file);
                     setProgress("AI Vision đang đọc đề (Không quét đáp án)...");
+                    
+                    // Prompt giữ nguyên
                     const prompt = `
                         Bạn là chuyên gia số hóa đề thi. Nhiệm vụ: OCR chính xác nội dung câu hỏi.
                         1. KHÔNG TỰ GIẢI ĐÁP ÁN. Hãy để mặc định correctAnswer = "A". Tôi sẽ nạp đáp án sau.
@@ -894,11 +896,11 @@
                         Output JSON:
                         [{"number":"1","question":"...","options":["...","...","...","..."],"correctAnswer":"A"}]
                     `;
+                    
                     const data = await fetchWithRetry(apiKeys, prompt, images);
                     const txt = data.candidates[0].content.parts[0].text;
                     
                     let jsonString = cleanJsonString(txt);
-                    
                     let result;
                     try { 
                         result = JSON.parse(jsonString); 
@@ -906,10 +908,27 @@
                         try { result = JSON.parse(jsonString.replace(/\\([a-zA-Z0-9])/g, "\\\\$1")); } 
                         catch(e2) { throw new Error("Lỗi đọc dữ liệu AI (JSON Error). Hãy thử lại."); } 
                     }
+
+                    // --- ĐOẠN CODE SỬA LỖI LẶP ĐÁP ÁN (QUAN TRỌNG) ---
                     const cleanedResult = result.map((q, idx) => {
-                        // --- SAFETY: Default Answer to -1 ---
-                        return { ...q, id: Date.now() + idx, number: idx + 1, correctAnswerIndex: -1, correctAnswerText: "" };
+                        // Regex mạnh hơn: Chấp nhận khoảng trắng đầu dòng (^[\s]*), chấp nhận các loại dấu chấm/ngoặc/gạch ngang
+                        const cleanOptions = q.options.map(opt => {
+                            if (!opt) return "";
+                            // Xóa: "A. ", " A. ", "1. ", "(A) ", "A) " ...
+                            return opt.replace(/^[\s\t]*([A-Da-d0-9]+)[\.\)\:\-]\s*/, '').trim();
+                        });
+
+                        return { 
+                            ...q, 
+                            options: cleanOptions, // Dùng options đã làm sạch
+                            id: Date.now() + idx, 
+                            number: idx + 1, 
+                            correctAnswerIndex: -1, 
+                            correctAnswerText: "" 
+                        };
                     });
+                    // --------------------------------------------------
+
                     setQuestions(cleanedResult); setStep(2); 
                     setTimeout(() => alert("Đã đọc xong đề! Vui lòng dùng chức năng 'Nạp Đáp Án' để nhập đáp án chuẩn."), 500);
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); setProgress(""); }
