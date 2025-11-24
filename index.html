@@ -112,9 +112,11 @@
             });
         };
 
+        // Hàm này nhận vào danh sách câu hỏi ĐÃ ĐƯỢC TRỘN (kèm correctAnswerIndex chính xác)
         const createDocContentGlobal = (questions, title = "ĐỀ KIỂM TRA") => {
             let bodyContent = `<h2 style='text-align:center; font-size:16pt; margin-bottom:20pt; font-family: "Times New Roman"'>${title.toUpperCase()}</h2>`;
             questions.forEach(q => {
+                // SỬ DỤNG q.number (đã được cập nhật sau khi trộn câu hỏi)
                 bodyContent += `<p style='margin-bottom:6pt; text-align:justify; font-size:12pt; font-family: "Times New Roman"'><b>Câu ${q.number}:</b> ${formatMathForWord(q.question)}</p>`;
                 const options = q.options || [];
                 if(options.length === 4) {
@@ -143,6 +145,7 @@
                     const qNum = r*10 + c + 1;
                     if(qNum <= totalQs) {
                         const q = questions[qNum-1];
+                        // SỬ DỤNG q.correctAnswerIndex ĐÃ ĐƯỢC CẬP NHẬT TRONG LOGIC TRỘN ĐỀ
                         const ansLetter = q.correctAnswerIndex !== -1 ? String.fromCharCode(65 + q.correctAnswerIndex) : "?";
                         bodyContent += `<td style="padding: 5px; color: blue;">${ansLetter}</td>`;
                     } else bodyContent += `<td></td>`;
@@ -375,6 +378,7 @@
             };
 
             const handleExportWord = () => {
+                // Trong SmartQuiz không cần trộn đáp án, chỉ cần xuất đề
                 const docContent = createDocContentGlobal(questions, topic || "ĐỀ KIỂM TRA");
                 const blob = new Blob([docContent], { type: "application/msword;charset=utf-8" });
                 saveAs(blob, `De_Kiem_Tra_AI.doc`);
@@ -557,14 +561,29 @@
 
             const createDocContent = (code, questions) => createDocContentGlobal(questions, `MÃ ĐỀ: ${code}`);
 
+            // === SỬA LỖI TRỘN ĐÁP ÁN CHO SERVER MIXER ===
             const generateExamVariant = (originalQuestions, code) => {
                 const shuffledQuestions = [...originalQuestions].sort(() => Math.random() - 0.5);
+                
                 return { code, questions: shuffledQuestions.map((q, i) => {
                     const optsWithMeta = q.options.map((opt, index) => ({ content: opt, isCorrect: index === q.correctAnswerIndex }));
                     const shuffledOpts = optsWithMeta.sort(() => Math.random() - 0.5);
-                    return { ...q, number: i + 1, options: shuffledOpts.map(o => o.content), correctAnswerLetter: String.fromCharCode(65 + shuffledOpts.findIndex(o => o.isCorrect)) };
+
+                    // 1. Tìm index MỚI của đáp án đúng trong mảng đã trộn (shuffledOpts)
+                    const newCorrectAnswerIndex = shuffledOpts.findIndex(o => o.isCorrect);
+
+                    // 2. Tạo đối tượng câu hỏi mới với các option đã trộn
+                    return { 
+                        ...q, 
+                        number: i + 1, 
+                        options: shuffledOpts.map(o => o.content),
+                        // 3. Cập nhật CORRECT ANSWER INDEX mới
+                        correctAnswerIndex: newCorrectAnswerIndex, 
+                        correctAnswerLetter: String.fromCharCode(65 + newCorrectAnswerIndex) 
+                    };
                 })};
             };
+            // ==============================================
 
             const handleExportZip = () => {
                 // Validation Check
@@ -575,10 +594,25 @@
 
                 const zip = new JSZip(); const codes = Array.from({length: numVariants}, (_, i) => 101 + i);
                 let allVariants = [];
-                codes.forEach(code => { const variant = generateExamVariant(questions, code); allVariants.push(variant); zip.file(`De_${code}.doc`, createDocContent(code, variant.questions)); });
+                codes.forEach(code => { 
+                    const variant = generateExamVariant(questions, code); 
+                    allVariants.push(variant); 
+                    // createDocContentGlobal sẽ dùng variant.questions đã có correctAnswerIndex mới
+                    zip.file(`De_${code}.doc`, createDocContent(code, variant.questions)); 
+                });
+                
+                // === XUẤT EXCEL ĐÁP ÁN (Dùng correctAnswerLetter đã được tính toán trong generateExamVariant) ===
                 let table = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table border="1"><tr><th>MÃ ĐỀ</th>`;
                 for(let i=1; i<=questions.length; i++) { table += `<th>CÂU ${i}</th>`; } table += `</tr>`;
-                allVariants.forEach(v => { table += `<tr><td>${v.code}</td>`; v.questions.sort((a,b) => a.number - b.number).forEach(q => { table += `<td>${q.correctAnswerLetter}</td>`; }); table += `</tr>`; });
+                allVariants.forEach(v => { 
+                    table += `<tr><td>${v.code}</td>`; 
+                    // Sắp xếp lại theo q.number trước khi xuất Excel
+                    v.questions.sort((a,b) => a.number - b.number).forEach(q => { 
+                        // Đảm bảo correctAnswerLetter đã được tính đúng trong generateExamVariant
+                        table += `<td>${q.correctAnswerLetter}</td>`; 
+                    }); 
+                    table += `</tr>`; 
+                });
                 table += `</table></body></html>`;
                 zip.file(`TongHopDapAn.xls`, table);
                 zip.generateAsync({type:"blob"}).then(c => saveAs(c, `Bo_De_${codes.length}Ma.zip`));
@@ -683,7 +717,10 @@
                     const ansChar = match[2].toUpperCase();
                     const ansIdx = ansChar.charCodeAt(0) - 65;
                     const qIdx = newQuestions.findIndex(q => parseInt(q.number) === qNum);
-                    if (qIdx !== -1 && newQuestions[qIdx].options[ansIdx]) { newQuestions[qIdx].correctAnswerIndex = ansIdx; }
+                    // CHECK: Đảm bảo đáp án hợp lệ trước khi gán
+                    if (qIdx !== -1 && ansIdx >= 0 && ansIdx <= 3 && newQuestions[qIdx].options.length > ansIdx) { 
+                        newQuestions[qIdx].correctAnswerIndex = ansIdx; 
+                    }
                 }
                 setQuestions(newQuestions); alert("Đã cập nhật đáp án!");
             };
@@ -864,6 +901,7 @@
                 const r = new FileReader(); r.onload = (ev) => { const k = ev.target.result.split('\n').map(x => x.trim()).filter(x => x); if(k.length) { setApiKeys(k); localStorage.setItem('sq_pro_api_key_autosave_v2', JSON.stringify(k)); alert(`Đã nạp ${k.length} keys!`); } }; r.readAsText(f);
             };
 
+            // === SỬA LỖI TRỘN ĐÁP ÁN CHO GEMINI MIXER ===
             const handleExportUltimate = () => {
                 // Validation Check
                 const unanswered = questions.filter(q => q.correctAnswerIndex === -1);
@@ -874,22 +912,51 @@
                 const zip = new JSZip();
                 const codes = Array.from({length: numVariants}, (_, i) => 101 + i);
                 let excelData = [];
+                
                 codes.forEach(code => {
                     const shuffledQs = [...questions].sort(() => Math.random() - 0.5);
-                    const variantQs = shuffledQs.map((q, idx) => {
-                        const originalOpts = q.options.map((txt, i) => ({ text: txt, isCorrect: i === q.correctAnswerIndex }));
-                        const shuffledOpts = originalOpts.sort(() => Math.random() - 0.5);
-                        // Safety check: if correct index is -1, newCorrectIndex will be -1
-                        const newCorrectIndex = shuffledOpts.findIndex(o => o.isCorrect);
-                        return { number: idx + 1, question: q.question, options: shuffledOpts.map(o => o.text), correctAnswerLetter: newCorrectIndex !== -1 ? String.fromCharCode(65 + newCorrectIndex) : "?" };
-                    });
-                    let rowData = { "Mã Đề": code }; variantQs.forEach(q => rowData[`Câu ${q.number}`] = q.correctAnswerLetter); excelData.push(rowData);
                     
+                    const variantQs = shuffledQs.map((q, idx) => {
+                        // 1. Tạo options với meta data
+                        const originalOpts = q.options.map((txt, i) => ({ text: txt, isCorrect: i === q.correctAnswerIndex }));
+                        
+                        // 2. Trộn options
+                        const shuffledOpts = originalOpts.sort(() => Math.random() - 0.5);
+                        
+                        // 3. Tìm index MỚI
+                        const newCorrectIndex = shuffledOpts.findIndex(o => o.isCorrect);
+                        
+                        // 4. Tạo câu hỏi của đề mới
+                        return { 
+                            number: idx + 1, // Số thứ tự mới sau khi trộn câu hỏi
+                            question: q.question, 
+                            options: shuffledOpts.map(o => o.text), 
+                            // 5. Cập nhật CORRECT ANSWER INDEX mới cho file Word
+                            correctAnswerIndex: newCorrectIndex, 
+                            correctAnswerLetter: newCorrectIndex !== -1 ? String.fromCharCode(65 + newCorrectIndex) : "?" 
+                        };
+                    });
+                    
+                    // Chuẩn bị dữ liệu Excel
+                    let rowData = { "Mã Đề": code }; 
+                    variantQs.sort((a,b) => a.number - b.number).forEach(q => rowData[`Câu ${q.number}`] = q.correctAnswerLetter); 
+                    excelData.push(rowData);
+                    
+                    // Tạo file Word (sẽ dùng correctAnswerIndex đã được cập nhật)
                     const docContent = createDocContentGlobal(variantQs, `MÃ ĐỀ: ${code}`);
                     zip.file(`De_${code}.doc`, docContent);
                 });
-                const ws = XLSX.utils.json_to_sheet(excelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "DapAn"); const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); zip.file("Bang_Dap_An.xlsx", excelBuffer); zip.generateAsync({type:"blob"}).then(c => saveAs(c, `SmartQuiz_Pro_${Date.now()}.zip`));
+
+                // Xuất file Excel
+                const ws = XLSX.utils.json_to_sheet(excelData); 
+                const wb = XLSX.utils.book_new(); 
+                XLSX.utils.book_append_sheet(wb, ws, "DapAn"); 
+                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); 
+                zip.file("Bang_Dap_An.xlsx", excelBuffer); 
+                zip.generateAsync({type:"blob"}).then(c => saveAs(c, `SmartQuiz_Pro_${Date.now()}.zip`));
             };
+            // ==============================================
+
 
             const handleBatchUpdateAnswers = (text) => { const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' '); const regex = /(\d+)\s*([A-D])/g; let match; const newMap = {}; while ((match = regex.exec(raw)) !== null) { newMap[parseInt(match[1])] = match[2].charCodeAt(0) - 65; } setQuestions(questions.map(q => newMap[q.number] !== undefined ? { ...q, correctAnswerIndex: newMap[q.number] } : q)); alert("Đã cập nhật!"); };
             const handleUpdateAnswer = (qId, newIndex) => { setQuestions(questions.map(q => q.id === qId ? { ...q, correctAnswerIndex: newIndex } : q)); };
