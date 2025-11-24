@@ -3,76 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống Giáo Viên AI - Trang Chủ</title>
+    <title>Hệ thống Giáo Viên AI - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
+        // 1. Check Login
         if (!localStorage.getItem('authToken')) window.location.href = 'login.html';
 
+        // 2. Logout
         function logout() {
-            if(confirm("Đăng xuất?")) { localStorage.clear(); window.location.href = 'login.html'; }
+            if(confirm("Đăng xuất khỏi hệ thống?")) { 
+                localStorage.clear(); 
+                window.location.href = 'login.html'; 
+            }
         }
 
+        // 3. Quản lý Key Tập Trung
         function saveKeys() {
             const keys = document.getElementById('apiKeys').value.trim();
             if(keys) {
                 const keyList = keys.split('\n').map(k=>k.trim()).filter(k=>k);
                 localStorage.setItem('global_gemini_keys', JSON.stringify(keyList));
-                alert(`✅ Đã lưu ${keyList.length} API Keys! Các module khác sẽ tự động sử dụng.`);
-            } else { alert("Vui lòng nhập Key!"); }
+                alert(`✅ Đã lưu ${keyList.length} API Keys! Các chức năng (SmartQuiz, Trộn đề AI...) sẽ tự động dùng key này.`);
+            } else {
+                alert("Vui lòng nhập ít nhất 1 Key!");
+            }
         }
 
         function loadKeys() {
+            // Load Key
             const stored = localStorage.getItem('global_gemini_keys');
             if(stored) document.getElementById('apiKeys').value = JSON.parse(stored).join('\n');
+            
+            // Load User Info
             const email = localStorage.getItem('userEmail');
             if(email) document.getElementById('userEmailDisplay').innerText = email;
         }
     </script>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen" onload="loadKeys()">
-    <nav class="bg-indigo-900 text-white p-4 shadow-lg flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-white text-indigo-900 rounded-full flex items-center justify-center font-bold text-xl">AI</div>
-            <div>
-                <h1 class="text-xl font-bold">Trợ Lý Giáo Viên</h1>
-                <p class="text-xs text-indigo-300" id="userEmailDisplay">...</p>
+<body class="bg-gray-50 font-sans min-h-screen" onload="loadKeys()">
+
+    <nav class="bg-indigo-900 text-white p-4 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white text-indigo-900 rounded-full flex items-center justify-center font-bold text-xl border-2 border-indigo-300">AI</div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">TRỢ LÝ GIÁO VIÊN</h1>
+                    <p class="text-xs text-indigo-300 font-mono" id="userEmailDisplay">dangtai...</p>
+                </div>
             </div>
+            <button onclick="logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-1 rounded transition">
+                <i class="fas fa-sign-out-alt mr-1"></i> Thoát
+            </button>
         </div>
-        <button onclick="logout()" class="text-red-300 hover:text-white font-bold"><i class="fas fa-sign-out-alt"></i> Thoát</button>
     </nav>
 
-    <div class="max-w-6xl mx-auto p-8">
-        <div class="bg-white p-6 rounded-xl shadow-md mb-8 border-l-4 border-yellow-500">
-            <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-key text-yellow-500 mr-2"></i> Cấu Hình Gemini API Key (Toàn Hệ Thống)</h2>
-            <p class="text-sm text-gray-500 mb-2">Nhập danh sách API Key vào đây (mỗi key 1 dòng). Các module khác sẽ tự động dùng.</p>
-            <textarea id="apiKeys" class="w-full p-3 border rounded-lg bg-gray-50 font-mono text-sm h-24 focus:ring-2 focus:ring-yellow-400 outline-none" placeholder="Dán key vào đây..."></textarea>
-            <div class="mt-3 text-right">
-                <button onclick="saveKeys()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg font-bold shadow transition">
-                    <i class="fas fa-save mr-2"></i> Lưu Cấu Hình
+    <div class="max-w-7xl mx-auto p-6">
+        
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 mb-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-yellow-500"></div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <i class="fas fa-key text-yellow-500"></i> Cấu Hình API Key
+            </h2>
+            <p class="text-sm text-gray-500 mb-3">
+                Nhập danh sách Google Gemini API Key vào đây (mỗi dòng 1 key). 
+                <br>Toàn bộ các chức năng AI (SmartQuiz, Trộn đề, Chấm thi) sẽ dùng chung kho key này.
+            </p>
+            <div class="flex gap-4">
+                <textarea id="apiKeys" class="flex-1 p-3 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm h-24 focus:ring-2 focus:ring-yellow-400 outline-none resize-none" placeholder="Dán key vào đây (ví dụ: AIzaSy...)..."></textarea>
+                <button onclick="saveKeys()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 rounded-lg font-bold shadow-lg transition flex flex-col items-center justify-center gap-2 min-w-[120px]">
+                    <i class="fas fa-save text-2xl"></i>
+                    <span>LƯU KEY</span>
                 </button>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <a href="smartquiz.html" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border-t-4 border-indigo-600 block">
-                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto"><i class="fas fa-bolt"></i></div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">SmartQuiz AI</h3>
-                <p class="text-gray-500 text-center">Tạo đề trắc nghiệm tự động. Có chế độ trình chiếu dạy học.</p>
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Công Cụ Dạy Học</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <a href="gslides.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-yellow-500 cursor-pointer flex flex-col h-full">
+                <div class="w-14 h-14 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition mx-auto">
+                    <i class="fas fa-presentation-screen"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Google Slides</h3>
+                <p class="text-sm text-gray-500 text-center flex-1">Trình chiếu bài giảng trực tiếp từ Google Slides không cần tải về. Tích hợp công cụ vẽ/note.</p>
+                <div class="mt-4 text-center text-yellow-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
-            <a href="tronde.html" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border-t-4 border-green-600 block">
-                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto"><i class="fas fa-random"></i></div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">Trộn Đề Thi</h3>
-                <p class="text-gray-500 text-center">Trộn đề từ file Word/PDF. Hỗ trợ Server trộn và AI Vision trộn đề ảnh.</p>
+            <a href="smartquiz.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-indigo-600 cursor-pointer flex flex-col h-full">
+                <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Soạn Đề AI</h3>
+                <p class="text-sm text-gray-500 text-center flex-1">Nhập chủ đề -> AI tạo câu hỏi trắc nghiệm ngay lập tức. Hỗ trợ xuất Word và Dạy ngay.</p>
+                <div class="mt-4 text-center text-indigo-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
-            <a href="thitructuyen.html" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border-t-4 border-blue-600 block">
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition mx-auto"><i class="fas fa-globe"></i></div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">Thi Trực Tuyến</h3>
-                <p class="text-gray-500 text-center">Tổ chức thi, QR Code, chấm điểm tự động, quản lý học sinh.</p>
+            <a href="tronde.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-green-600 cursor-pointer flex flex-col h-full">
+                <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
+                    <i class="fas fa-random"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Trộn Đề Thi</h3>
+                <p class="text-sm text-gray-500 text-center flex-1">3 chế độ: Trộn Server (Word/PDF công thức), Trộn AI (Ảnh Scan), và Trộn nhanh (Text đơn giản).</p>
+                <div class="mt-4 text-center text-green-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
+
+            <a href="thitructuyen.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-blue-600 cursor-pointer flex flex-col h-full">
+                <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Thi Online</h3>
+                <p class="text-sm text-gray-500 text-center flex-1">Tổ chức kỳ thi, tạo mã QR, chấm điểm tự động, quản lý học sinh và xuất báo cáo.</p>
+                <div class="mt-4 text-center text-blue-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
+            </a>
+
         </div>
     </div>
+    
+    <footer class="text-center p-6 text-gray-400 text-sm mt-8">
+        &copy; 2024 Trợ Lý Giáo Viên AI. All rights reserved.
+    </footer>
 </body>
 </html>
