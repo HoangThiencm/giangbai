@@ -101,17 +101,36 @@
             return text.substring(start, end + 1);
         };
 
+
         const formatMathForWord = (text) => {
             if (!text) return "";
             let content = text;
-            return content.replace(/\$([^$]+)\$/g, (match, tex) => {
+
+            // 1. Xử lý Math (KaTeX -> MathML) trước để tránh hỏng công thức
+            content = content.replace(/\$([^$]+)\$/g, (match, tex) => {
                 try { 
                     let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
+                    // Xóa thẻ annotation thừa để Word không bị rối
                     return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, ''); 
                 } catch (e) { return match; }
             });
-        };
 
+            // 2. Xử lý Markdown (**text** -> <b>text</b>, *text* -> <i>text</i>)
+            // Word hỗ trợ các thẻ HTML cơ bản này khi copy nội dung vào
+            content = content.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+            content = content.replace(/\*(.*?)\*/g, "<i>$1</i>");
+
+            // 3. Xử lý các ký tự escape thừa (\ [, \ {, \ .) thường gặp do AI sinh ra
+            // Đây là nguyên nhân chính gây ra lỗi dư dấu \
+            content = content
+                .replace(/\\{/g, "{").replace(/\\}/g, "}")
+                .replace(/\\\[/g, "[").replace(/\\\]/g, "]")
+                .replace(/\\\(/g, "(").replace(/\\\)/g, ")")
+                .replace(/\\([.:])/g, "$1"); // Fix lỗi \. hoặc \:
+
+            return content;
+        };
+        
         // Hàm này nhận vào danh sách câu hỏi ĐÃ ĐƯỢC TRỘN (kèm correctAnswerIndex chính xác)
         const createDocContentGlobal = (questions, title = "ĐỀ KIỂM TRA") => {
             let bodyContent = `<h2 style='text-align:center; font-size:16pt; margin-bottom:20pt; font-family: "Times New Roman"'>${title.toUpperCase()}</h2>`;
