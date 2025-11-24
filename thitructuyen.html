@@ -35,18 +35,41 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
+        // Hàm xóa "A.", "B." ở đầu đáp án (Xử lý phía Frontend cho chắc chắn)
+        const cleanOptionText = (text) => {
+            if(!text) return "";
+            // Regex: Tìm chữ cái A-D hoặc số, theo sau là dấu chấm/ngoặc, và khoảng trắng
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+        };
+
+        // Component MathText NÂNG CẤP: Tự động sửa lỗi hiển thị công thức
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text) return;
-                const parts = text.split(/(\$[^$]+\$)/g);
+                
+                // Logic tự động bọc $ nếu thấy ký tự toán học đặc biệt mà thiếu $
+                // Ví dụ: \{ \} hoặc \[ \] hoặc \frac
+                let processedText = text;
+                if (!text.includes('$') && (text.includes('\\{') || text.includes('\\['))) {
+                    processedText = `$${text}$`;
+                }
+
+                const parts = processedText.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
+                
                 parts.forEach(part => {
                     if (part.startsWith("$") && part.endsWith("$")) {
                         const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false }); } catch { span.innerText = part; }
+                        try { 
+                            // Render LaTeX
+                            katex.render(part.slice(1, -1), span, { throwOnError: false }); 
+                        } catch { span.innerText = part; }
                         ref.current.appendChild(span);
-                    } else { ref.current.appendChild(document.createTextNode(part)); }
+                    } else {
+                        // Text thường
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
                 });
             }, [text]);
             return <span ref={ref} />;
@@ -265,52 +288,46 @@
             );
         };
 
-        // --- 4. HỌC SINH THI (CHỐNG CHEAT + TRỘN ĐỀ) ---
+        // --- 4. HỌC SINH THI ---
         const StudentView = ({ examId }) => {
             const [step, setStep] = useState("check");
             const [info, setInfo] = useState({ name: "", class: "", sbd: "" });
             const [exam, setExam] = useState(null);
             const [answers, setAnswers] = useState({});
             const [timeLeft, setTimeLeft] = useState(0);
-            const [violations, setViolations] = useState(0); // Đếm số lần thoát màn hình
+            const [violations, setViolations] = useState(0);
             const [isLocked, setIsLocked] = useState(false);
 
-            // Tải đề
             useEffect(() => {
                 axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => {
                     const data = res.data;
                     const now = Date.now();
                     if (now < new Date(data.info.start_time)) return alert("Chưa đến giờ thi!");
                     if (now > new Date(data.info.end_time)) return alert("Đã hết giờ!");
-                    
                     setExam(data); setStep("info");
                     setTimeLeft(data.info.duration_mins * 60);
                 }).catch(() => alert("Lỗi tải đề!"));
             }, [examId]);
 
-            // Chống Cheat (Thoát màn hình)
             useEffect(() => {
                 if (step !== "exam" || isLocked) return;
-
                 const handleVisibility = () => {
                     if (document.hidden) {
                         const count = violations + 1;
                         setViolations(count);
                         if (count >= 3) {
                             setIsLocked(true);
-                            alert("BẠN ĐÃ VI PHẠM QUY CHẾ 3 LẦN! HỆ THỐNG SẼ TỰ ĐỘNG NỘP BÀI.");
-                            handleSubmit(true); // Nộp bài cưỡng chế
+                            alert("VI PHẠM QUY CHẾ 3 LẦN! TỰ ĐỘNG NỘP BÀI.");
+                            handleSubmit(true);
                         } else {
-                            alert(`CẢNH BÁO: Bạn đã thoát màn hình! (${count}/3 lần).\nNếu vi phạm 3 lần bài thi sẽ bị hủy.`);
+                            alert(`CẢNH BÁO: Thoát màn hình! (${count}/3)`);
                         }
                     }
                 };
-
                 document.addEventListener("visibilitychange", handleVisibility);
                 return () => document.removeEventListener("visibilitychange", handleVisibility);
             }, [step, violations, isLocked]);
 
-            // Timer
             useEffect(() => {
                 if (step !== "exam" || isLocked) return;
                 if (timeLeft <= 0) { handleSubmit(true); return; }
@@ -320,7 +337,6 @@
 
             const handleStart = () => {
                 if(!info.name || !info.sbd) return alert("Nhập đủ thông tin!");
-                // Trộn đề ngẫu nhiên (Mỗi máy 1 mã đề ảo)
                 const shuffled = exam.questions.map((q,i)=>({...q, originalIndex:i})).sort(()=>Math.random()-0.5);
                 setExam({...exam, questions: shuffled});
                 setStep("exam");
@@ -331,12 +347,9 @@
                 const payload = { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: {} };
                 exam.questions.forEach((q, i) => { if (answers[i] !== undefined) payload.answers[q.originalIndex] = answers[i]; });
                 
-                // Ghi chú vi phạm vào bài làm (Optional - Backend cần hỗ trợ lưu field này nếu muốn)
-                // payload.note = `Vi phạm thoát màn hình: ${violations} lần`;
-
                 try {
                     const res = await axios.post(`${API_BASE}/api/exam/submit`, payload);
-                    setStep("result"); setExam(res.data); // exam giờ chứa kết quả
+                    setStep("result"); setExam(res.data);
                 } catch(e) { alert("Lỗi nộp bài!"); }
             };
 
@@ -378,8 +391,9 @@
                             <div className="flex gap-2 mb-3"><span className="font-bold text-blue-600">Câu {i+1}:</span> <MathText text={q.question}/></div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-4">
                                 {q.options.map((o, idx) => (
-                                    <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded cursor-pointer ${answers[i]===idx?'bg-blue-100 border-blue-500':'hover:bg-gray-50'}`}>
-                                        <b>{String.fromCharCode(65+idx)}.</b> <MathText text={o}/>
+                                    <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded cursor-pointer flex items-center gap-2 transition ${answers[i]===idx?'bg-blue-100 border-blue-500 ring-1 ring-blue-500':'hover:bg-gray-50'}`}>
+                                        <span className={`w-6 h-6 flex items-center justify-center rounded-full font-bold text-xs ${answers[i]===idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{String.fromCharCode(65+idx)}</span>
+                                        <MathText text={cleanOptionText(o)}/>
                                     </div>
                                 ))}
                             </div>
