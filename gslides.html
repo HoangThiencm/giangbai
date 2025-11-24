@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Chiếu Google Slides</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-900 h-screen flex flex-col overflow-hidden">
+
+    <div class="bg-gray-800 text-white p-3 flex items-center justify-between shadow-md z-20">
+        <button onclick="window.location.href='index.html'" class="text-gray-400 hover:text-white font-bold flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-700 transition">
+            <i class="fas fa-arrow-left"></i> Trang Chủ
+        </button>
+        
+        <div class="flex-1 max-w-3xl mx-4 flex gap-2">
+            <input type="text" id="slideUrl" class="w-full bg-gray-700 border border-gray-600 text-white rounded px-4 py-2 outline-none focus:border-yellow-500 transition" placeholder="Dán link Google Slides vào đây (Link chia sẻ hoặc link edit đều được)...">
+            <button onclick="loadSlide()" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-6 py-2 rounded transition">
+                <i class="fas fa-play mr-1"></i> CHIẾU
+            </button>
+        </div>
+
+        <div class="text-xs text-gray-500">Hỗ trợ Fullscreen</div>
+    </div>
+
+    <div class="flex-1 relative bg-black flex items-center justify-center">
+        <div id="placeholder" class="text-center text-gray-600">
+            <i class="fas fa-chalkboard text-6xl mb-4 opacity-50"></i>
+            <p class="text-lg">Chưa có bài giảng nào được tải.</p>
+            <p class="text-sm mt-2">Hãy dán link Google Slides vào ô bên trên để bắt đầu.</p>
+        </div>
+        
+        <iframe id="slideFrame" class="w-full h-full hidden border-0" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+    </div>
+
+    <script>
+        function loadSlide() {
+            const input = document.getElementById('slideUrl').value.trim();
+            const frame = document.getElementById('slideFrame');
+            const placeholder = document.getElementById('placeholder');
+
+            if (!input) {
+                alert("Vui lòng nhập đường link Google Slides!");
+                return;
+            }
+
+            let embedUrl = input;
+            
+            // Logic chuyển link thường thành link embed
+            if (input.includes("/pub?")) {
+                // Link publish
+                embedUrl = input.replace("/pub?", "/embed?");
+            } else if (input.includes("/edit")) {
+                // Link edit
+                const baseUrl = input.split("/edit")[0];
+                embedUrl = baseUrl + "/embed?start=false&loop=false&delayms=3000";
+            } else if (!input.includes("/embed?")) {
+                // Cố gắng đoán format nếu link lạ
+                if(input.endsWith("/")) embedUrl = input + "embed?start=false&loop=false&delayms=3000";
+                else embedUrl = input + "/embed?start=false&loop=false&delayms=3000";
+            }
+
+            frame.src = embedUrl;
+            frame.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        }
+        
+        // Hỗ trợ phím Enter
+        document.getElementById('slideUrl').addEventListener("keypress", function(event) {
+            if (event.key === "Enter") loadSlide();
+        });
+    </script>
+</body>
+</html>
