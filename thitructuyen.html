@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Thi Trực Tuyến AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .katex { font-size: 1.2em; color: #1e3a8a; }
+        input[type="datetime-local"] { color: #333; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
+        // const API_BASE = "http://localhost:8000"; // Dùng dòng này nếu chạy local
+
+        // --- UTILS ---
+        const formatDate = (isoString) => {
+            if (!isoString) return "";
+            return new Date(isoString).toLocaleString('vi-VN');
+        };
+
+        // --- COMPONENT RENDER TOÁN ---
+        const MathText = ({ text }) => {
+            const ref = useRef();
+            useEffect(() => {
+                if (!text) return;
+                const parts = text.split(/(\$[^$]+\$)/g);
+                ref.current.innerHTML = "";
+                parts.forEach(part => {
+                    if (part.startsWith("$") && part.endsWith("$")) {
+                        const span = document.createElement("span");
+                        try {
+                            katex.render(part.slice(1, -1), span, { throwOnError: false });
+                        } catch { span.innerText = part; }
+                        ref.current.appendChild(span);
+                    } else {
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        // --- VIEW 1: GIÁO VIÊN UPLOAD ---
+        const TeacherView = ({ onExamReady }) => {
+            const [form, setForm] = useState({ 
+                title: "", school: "", subject: "", grade: "", 
+                duration: 45, startTime: "", endTime: "" 
+            });
+            const [apiKeys, setApiKeys] = useState([]);
+            const [keyMessage, setKeyMessage] = useState("");
+            const [loading, setLoading] = useState(false);
+            const fileRef = useRef();
+
+            // Xử lý đọc file Key .txt
+            const handleKeyFile = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const text = await file.text();
+                // Tách dòng và lọc dòng trống
+                const keys = text.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+                
+                setApiKeys(keys);
+                setKeyMessage(`✅ Đã nhận được ${keys.length} API keys.`);
+            };
+
+            const handleUpload = async () => {
+                if (apiKeys.length === 0) return alert("Chưa tải lên file API Key!");
+                const file = fileRef.current.files[0];
+                if (!file) return alert("Chưa chọn file đề thi!");
+                if (!form.startTime || !form.endTime) return alert("Vui lòng chọn thời gian bắt đầu và kết thúc!");
+
+                setLoading(true);
+                const fd = new FormData();
+                fd.append("file", file);
+                fd.append("title", form.title);
+                fd.append("school", form.school);
+                fd.append("subject", form.subject);
+                fd.append("grade", form.grade);
+                fd.append("duration", form.duration);
+                fd.append("start_time", form.startTime);
+                fd.append("end_time", form.endTime);
+                fd.append("api_keys_json", JSON.stringify(apiKeys)); // Gửi danh sách key lên
+
+                try {
+                    const res = await axios.post(`${API_BASE}/api/exam/upload`, fd);
+                    alert(`✅ Tạo kỳ thi thành công!\nSẵn sàng tổ chức thi.`);
+                    onExamReady(res.data.exam_id);
+                } catch (e) {
+                    alert("Lỗi: " + (e.response?.data?.detail || e.message));
+                } finally { setLoading(false); }
+            };
+
+            return (
+                <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg">
+                    <h2 className="text-2xl font-bold text-indigo-700 mb-6"><i className="fas fa-chalkboard-teacher"></i> TẠO KỲ THI MỚI</h2>
+                    
+                    {/* Thông tin chung */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <input className="border p-2 rounded" placeholder="Tên Trường" value={form.school} onChange={e=>setForm({...form, school: e.target.value})} />
+                        <input className="border p-2 rounded" placeholder="Tên Kỳ Thi" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} />
+                        <input className="border p-2 rounded" placeholder="Môn học" value={form.subject} onChange={e=>setForm({...form, subject: e.target.value})} />
+                        <input className="border p-2 rounded" placeholder="Lớp/Khối" value={form.grade} onChange={e=>setForm({...form, grade: e.target.value})} />
+                    </div>
+
+                    <hr className="my-4"/>
+
+                    {/* API Keys */}
+                    <div className="mb-4">
+                        <label className="block font-bold mb-1">File API Key (Gemini .txt):</label>
+                        <input className="w-full border p-2 rounded bg-gray-50" type="file" accept=".txt" onChange={handleKeyFile} />
+                        {keyMessage && <p className="text-sm mt-1 font-semibold text-green-600">{keyMessage}</p>}
+                        <p className="text-xs text-gray-500 mt-1">File .txt, mỗi dòng là 1 key. Hệ thống sẽ xoay vòng key khi hết quota.</p>
+                    </div>
+
+                    {/* Thời gian */}
+                    <div className="grid grid-cols-3 gap-4 mb-4 bg-blue-50 p-4 rounded border border-blue-100">
+                        <div>
+                            <label className="block text-xs font-bold mb-1 text-blue-800">Thời lượng (phút)</label>
+                            <input type="number" className="border p-2 rounded w-full" value={form.duration} onChange={e=>setForm({...form, duration: e.target.value})} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold mb-1 text-blue-800">Bắt đầu (Mở đề)</label>
+                            <input type="datetime-local" className="border p-2 rounded w-full" onChange={e=>setForm({...form, startTime: e.target.value})} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold mb-1 text-blue-800">Kết thúc (Khóa)</label>
+                            <input type="datetime-local" className="border p-2 rounded w-full" onChange={e=>setForm({...form, endTime: e.target.value})} />
+                        </div>
+                    </div>
+
+                    {/* File Đề */}
+                    <div className="mb-6 border-2 border-dashed border-gray-300 p-6 text-center rounded-lg hover:bg-gray-50 transition">
+                        <input ref={fileRef} type="file" accept=".docx,.pdf" />
+                        <p className="text-sm text-gray-500 mt-2">Hỗ trợ PDF và Word. Tự động nhận diện công thức Toán.</p>
+                    </div>
+
+                    <button onClick={handleUpload} disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700 transition">
+                        {loading ? "Đang xử lý AI (Vui lòng đợi)..." : "TẢI ĐỀ LÊN & TẠO MÃ QR"}
+                    </button>
+                </div>
+            );
+        };
+
+        // --- VIEW 2: MÀN HÌNH CHỜ (LOBBY) ---
+        const LobbyView = ({ examId, onTeacherMonitor }) => {
+            const qrRef = useRef();
+            const [examLink, setExamLink] = useState("");
+
+            useEffect(() => {
+                const link = `${window.location.href.split('?')[0]}?mode=student&examId=${examId}`;
+                setExamLink(link);
+                // Clear cũ trước khi vẽ mới
+                if (qrRef.current) {
+                    qrRef.current.innerHTML = "";
+                    new QRCode(qrRef.current, { text: link, width: 200, height: 200 });
+                }
+            }, [examId]);
+
+            const copyLink = () => {
+                navigator.clipboard.writeText(examLink);
+                alert("Đã sao chép link!");
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+                        <h2 className="text-xl font-bold text-green-600 mb-4">PHÒNG THI SẴN SÀNG</h2>
+                        <div ref={qrRef} className="inline-block p-2 border rounded mx-auto mb-4 bg-white"></div>
+                        
+                        <div className="mt-2">
+                             <p className="text-gray-600 text-sm mb-1">Link tham gia:</p>
+                             <div className="flex items-center gap-2 bg-gray-100 p-2 rounded">
+                                <input readOnly value={examLink} className="bg-transparent text-xs w-full outline-none text-gray-500 font-mono"/>
+                                <button onClick={copyLink} className="text-blue-600 font-bold text-xs whitespace-nowrap">COPY</button>
+                             </div>
+                        </div>
+
+                        <div className="mt-4 bg-blue-50 p-3 rounded text-blue-800 font-mono text-sm">
+                            ID Phòng: <b>{examId}</b>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white p-8 rounded-xl shadow-lg flex flex-col justify-center items-center">
+                        <i className="fas fa-chart-line text-6xl text-indigo-200 mb-4"></i>
+                        <h3 className="text-xl font-bold mb-2">Khu vực Giáo viên</h3>
+                        <p className="text-gray-500 mb-6 text-center">Theo dõi danh sách nộp bài, điểm số và nhận xét của AI.</p>
+                        <button onClick={onTeacherMonitor} className="bg-indigo-600 text-white px-6 py-2 rounded-full font-bold hover:bg-indigo-700">
+                            XEM KẾT QUẢ THI
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- VIEW 3: HỌC SINH THI ---
+        const StudentView = ({ examId }) => {
+            const [step, setStep] = useState("check"); // check | info | exam | result | error
+            const [info, setInfo] = useState({ name: "", class: "", sbd: "" });
+            const [exam, setExam] = useState(null);
+            const [answers, setAnswers] = useState({});
+            const [submitted, setSubmitted] = useState(null);
+            const [errorMsg, setErrorMsg] = useState("");
+            const [timeLeft, setTimeLeft] = useState(0); // giây
+
+            // Load Exam Info & Check Time
+            useEffect(() => {
+                axios.get(`${API_BASE}/api/exam/get/${examId}`)
+                    .then(res => {
+                        const data = res.data;
+                        const now = new Date().getTime();
+                        const start = new Date(data.info.start_time).getTime();
+                        const end = new Date(data.info.end_time).getTime();
+
+                        if (now < start) {
+                            setStep("error");
+                            setErrorMsg(`Chưa đến giờ làm bài!\nThời gian mở: ${formatDate(data.info.start_time)}`);
+                            return;
+                        }
+                        if (now > end) {
+                            setStep("error");
+                            setErrorMsg(`Kỳ thi đã kết thúc lúc: ${formatDate(data.info.end_time)}`);
+                            return;
+                        }
+
+                        setExam(data);
+                        setStep("info");
+                        // Tính thời gian còn lại (theo duration hoặc theo end_time nếu sắp hết giờ)
+                        const durationMs = data.info.duration_mins * 60 * 1000;
+                        const timeUntilEnd = end - now;
+                        // Lấy min giữa thời lượng bài thi và thời gian còn lại của kỳ thi
+                        setTimeLeft(Math.floor(Math.min(durationMs, timeUntilEnd) / 1000));
+
+                    })
+                    .catch(() => {
+                        setStep("error");
+                        setErrorMsg("Không tìm thấy đề thi hoặc lỗi kết nối.");
+                    });
+            }, [examId]);
+
+            // Countdown Timer
+            useEffect(() => {
+                if (step !== "exam") return;
+                if (timeLeft <= 0) {
+                    handleSubmit(true); // Auto submit
+                    return;
+                }
+                const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+                return () => clearInterval(timer);
+            }, [step, timeLeft]);
+
+            const formatTime = (s) => {
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+            };
+
+            const handleStart = () => {
+                if (!info.name || !info.sbd) return alert("Vui lòng nhập đủ thông tin!");
+                setStep("exam");
+                // Trộn đề
+                if (exam && exam.questions) {
+                    // Clone và thêm index gốc để map lại sau này
+                    const qWithIdx = exam.questions.map((q, i) => ({...q, originalIndex: i}));
+                    const shuffled = qWithIdx.sort(() => Math.random() - 0.5);
+                    setExam({ ...exam, questions: shuffled });
+                }
+            };
+
+            const handleSubmit = async (auto = false) => {
+                if (!auto && !confirm("Bạn chắc chắn muốn nộp bài?")) return;
+                
+                const payload = {
+                    exam_id: examId,
+                    student_name: info.name,
+                    sbd: info.sbd,
+                    student_class: info.class,
+                    answers: {}
+                };
+                
+                // Map câu trả lời về index gốc
+                exam.questions.forEach((q, currentIdx) => {
+                    if (answers[currentIdx] !== undefined) {
+                        payload.answers[q.originalIndex] = answers[currentIdx];
+                    }
+                });
+
+                try {
+                    setStep("loading");
+                    const res = await axios.post(`${API_BASE}/api/exam/submit`, payload);
+                    setSubmitted(res.data);
+                    setStep("result");
+                } catch (e) { 
+                    alert("Lỗi nộp bài: " + e.message); 
+                    setStep("exam");
+                }
+            };
+
+            // Render Screens
+            if (step === "error") return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                    <div className="bg-white p-8 rounded-xl shadow text-center max-w-md">
+                        <div className="text-5xl mb-4">⚠️</div>
+                        <h3 className="text-xl font-bold text-red-600 mb-2">Thông Báo</h3>
+                        <p className="whitespace-pre-line text-gray-700">{errorMsg}</p>
+                    </div>
+                </div>
+            );
+
+            if (step === "result" && submitted) return (
+                <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+                    <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full text-center">
+                        <div className="text-6xl mb-4">🎉</div>
+                        <h2 className="text-2xl font-bold text-green-700 mb-2">Hoàn thành!</h2>
+                        <p className="text-4xl font-extrabold text-gray-800 mb-4">{submitted.score} điểm</p>
+                        <div className="bg-yellow-50 p-4 rounded text-left text-sm text-gray-700 border border-yellow-200">
+                            <strong>🤖 AI Nhận xét:</strong>
+                            <p className="mt-1 italic">"{submitted.feedback}"</p>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (step === "info") return (
+                <div className="max-w-md mx-auto mt-20 bg-white p-8 rounded-xl shadow-lg">
+                    <h2 className="text-xl font-bold mb-2 text-center text-blue-800">{exam?.info?.school}</h2>
+                    <h3 className="text-lg font-semibold mb-6 text-center">{exam?.info?.title}</h3>
+                    
+                    <div className="bg-gray-50 p-3 rounded mb-4 text-sm border">
+                         <p>⏰ Thời gian làm bài: <b>{exam?.info?.duration_mins} phút</b></p>
+                         <p>📅 Hạn chót: {formatDate(exam?.info?.end_time)}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <input className="w-full border p-3 rounded" placeholder="Họ và tên" value={info.name} onChange={e=>setInfo({...info, name: e.target.value})} />
+                        <input className="w-full border p-3 rounded" placeholder="Lớp" value={info.class} onChange={e=>setInfo({...info, class: e.target.value})} />
+                        <input className="w-full border p-3 rounded" placeholder="Số Báo Danh (SBD)" value={info.sbd} onChange={e=>setInfo({...info, sbd: e.target.value})} />
+                        <button onClick={handleStart} className="w-full bg-blue-600 text-white py-3 rounded font-bold shadow hover:bg-blue-700 transition">VÀO THI</button>
+                    </div>
+                </div>
+            );
+
+            if (step === "loading") return <div className="text-center mt-20">Đang nộp bài...</div>;
+
+            // Màn hình làm bài
+            return (
+                <div className="max-w-3xl mx-auto p-4 pb-20">
+                    <div className="sticky top-0 bg-white p-4 shadow-md z-10 flex justify-between items-center mb-4 rounded-lg ring-1 ring-gray-200">
+                        <div>
+                            <div className="font-bold text-gray-800">{info.name}</div>
+                            <div className="text-xs text-gray-500">SBD: {info.sbd}</div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className={`text-xl font-mono font-bold ${timeLeft < 60 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                                {formatTime(timeLeft)}
+                            </div>
+                            <button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700">Nộp Bài</button>
+                        </div>
+                    </div>
+                    
+                    {exam && exam.questions.map((q, idx) => (
+                        <div key={idx} className="bg-white p-6 rounded-lg shadow-sm mb-4 border border-gray-100">
+                            <div className="flex gap-2 mb-3">
+                                <span className="font-bold text-blue-600 whitespace-nowrap">Câu {idx+1}:</span>
+                                <div className="text-gray-800"><MathText text={q.question} /></div>
+                            </div>
+                            <div className="space-y-2 ml-4">
+                                {q.options.map((opt, oIdx) => (
+                                    <div key={oIdx} onClick={()=>setAnswers({...answers, [idx]: oIdx})}
+                                         className={`p-3 border rounded-lg cursor-pointer transition flex gap-2 items-center
+                                            ${answers[idx]===oIdx ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'hover:bg-gray-50 border-gray-200'}`}>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border
+                                            ${answers[idx]===oIdx ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-500 border-gray-300'}`}>
+                                            {String.fromCharCode(65+oIdx)}
+                                        </div>
+                                        <div className="flex-1"><MathText text={opt} /></div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        // --- VIEW 4: KẾT QUẢ (GIÁO VIÊN) ---
+        const ResultsDashboard = ({ examId, onBack }) => {
+            const [results, setResults] = useState([]);
+            useEffect(() => {
+                const fetch = async () => {
+                    try {
+                        const res = await axios.get(`${API_BASE}/api/exam/results/${examId}`);
+                        setResults(res.data);
+                    } catch (e) { console.error(e); }
+                };
+                fetch();
+                const interval = setInterval(fetch, 5000);
+                return () => clearInterval(interval);
+            }, [examId]);
+
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    <button onClick={onBack} className="mb-4 text-gray-500 hover:text-black flex items-center gap-2">
+                        <span>⬅</span> Quay lại
+                    </button>
+                    <h2 className="text-2xl font-bold mb-4 text-indigo-800">Kết Quả Thi Trực Tuyến</h2>
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-100 text-gray-600 uppercase text-sm font-bold">
+                                <tr>
+                                    <th className="p-4">Thời gian nộp</th>
+                                    <th className="p-4">SBD</th>
+                                    <th className="p-4">Họ Tên</th>
+                                    <th className="p-4">Lớp</th>
+                                    <th className="p-4">Điểm</th>
+                                    <th className="p-4">Đúng/Tổng</th>
+                                    <th className="p-4 w-1/3">AI Nhận Xét</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {results.map((r, i) => (
+                                    <tr key={i} className="border-t hover:bg-gray-50 transition">
+                                        <td className="p-4 text-sm text-gray-500">{new Date(r.created_at).toLocaleTimeString()}</td>
+                                        <td className="p-4 font-mono text-blue-600 font-bold">{r.sbd}</td>
+                                        <td className="p-4 font-bold text-gray-800">{r.student_name}</td>
+                                        <td className="p-4">{r.student_class}</td>
+                                        <td className="p-4 font-bold text-lg text-indigo-600">{r.score}</td>
+                                        <td className="p-4">{r.correct_count}/{r.total_questions}</td>
+                                        <td className="p-4 text-sm text-gray-600 italic">"{r.ai_feedback}"</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {results.length === 0 && <div className="p-10 text-center text-gray-400">Chưa có bài nộp nào.</div>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- APP MAIN ---
+        const App = () => {
+            const [view, setView] = useState("upload");
+            const [examId, setExamId] = useState(null);
+
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get("mode") === "student") {
+                    setExamId(params.get("examId"));
+                    setView("student");
+                }
+            }, []);
+
+            return (
+                <div>
+                    {view === "upload" && <TeacherView onExamReady={(id) => { setExamId(id); setView("lobby"); }} />}
+                    {view === "lobby" && <LobbyView examId={examId} onTeacherMonitor={() => setView("results")} />}
+                    {view === "student" && <StudentView examId={examId} />}
+                    {view === "results" && <ResultsDashboard examId={examId} onBack={() => setView("lobby")} />}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
