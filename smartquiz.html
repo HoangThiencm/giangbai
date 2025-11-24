@@ -26,10 +26,18 @@
             return <span dangerouslySetInnerHTML={{__html: html}} />;
         };
 
+        // --- PRESENTATION MODE (DẠY NGAY - ĐÃ NÂNG CẤP) ---
         const PresentationMode = ({ questions, onExit }) => {
             const [idx, setIdx] = useState(0);
             const [showAns, setShowAns] = useState(false);
+            const [selectedOpt, setSelectedOpt] = useState(null); // Lưu đáp án người dùng chọn
             const q = questions[idx];
+
+            // Reset trạng thái khi chuyển câu hỏi
+            useEffect(() => {
+                setShowAns(false);
+                setSelectedOpt(null);
+            }, [idx]);
 
             return (
                 <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-6">
@@ -38,30 +46,58 @@
                         <h2 className="text-xl font-bold">Câu {idx+1}/{questions.length}</h2>
                         <div className="w-20"></div>
                     </div>
+                    
                     <div className="flex-1 flex flex-col justify-center items-center max-w-5xl mx-auto w-full">
                         <div className="bg-white text-slate-900 p-10 rounded-2xl shadow-2xl w-full min-h-[400px]">
                             <h3 className="text-3xl font-bold mb-8 leading-relaxed"><MathText text={q.question} /></h3>
+                            
                             <div className="grid grid-cols-2 gap-6">
-                                {q.options.map((opt, i) => (
-                                    <div key={i} className={`p-6 rounded-xl text-xl border-2 transition ${showAns && i===q.correctAnswerIndex ? 'bg-green-100 border-green-500 text-green-900 font-bold scale-105 shadow-lg' : 'border-gray-200'}`}>
-                                        <span className="font-bold mr-3">{String.fromCharCode(65+i)}.</span> <MathText text={opt} />
-                                    </div>
-                                ))}
+                                {q.options.map((opt, i) => {
+                                    // LOGIC MÀU SẮC:
+                                    // 1. Nếu đang hiện đáp án (showAns) VÀ đây là đáp án đúng -> Màu Đỏ (theo yêu cầu)
+                                    // 2. Nếu người dùng chọn ô này (selectedOpt === i) -> Viền Xanh Lá
+                                    
+                                    let containerClass = "p-6 rounded-xl text-xl border-4 transition cursor-pointer ";
+                                    
+                                    if (showAns && i === q.correctAnswerIndex) {
+                                        // Đáp án đúng hiện màu đỏ
+                                        containerClass += "bg-red-100 border-red-500 text-red-700 font-bold shadow-lg scale-105";
+                                    } else if (selectedOpt === i) {
+                                        // Người dùng chọn -> Viền xanh lá
+                                        containerClass += "bg-green-50 border-green-500 text-green-900";
+                                    } else {
+                                        // Bình thường
+                                        containerClass += "border-gray-200 hover:bg-gray-50";
+                                    }
+
+                                    return (
+                                        <div key={i} onClick={() => !showAns && setSelectedOpt(i)} className={containerClass}>
+                                            <span className="font-bold mr-3">{String.fromCharCode(65+i)}.</span> <MathText text={opt} />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
+
                     <div className="mt-8 flex justify-center gap-6">
-                        <button disabled={idx===0} onClick={()=>{setIdx(idx-1); setShowAns(false)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-left text-2xl"></i></button>
-                        <button onClick={()=>setShowAns(!showAns)} className="px-8 bg-yellow-500 text-black font-bold rounded-xl text-xl hover:bg-yellow-400 min-w-[200px]">{showAns ? "Ẩn Đáp Án" : "Hiện Đáp Án"}</button>
-                        <button disabled={idx===questions.length-1} onClick={()=>{setIdx(idx+1); setShowAns(false)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-right text-2xl"></i></button>
+                        <button disabled={idx===0} onClick={()=>{setIdx(idx-1)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-left text-2xl"></i></button>
+                        
+                        <button onClick={()=>setShowAns(!showAns)} className="px-8 bg-yellow-500 text-black font-bold rounded-xl text-xl hover:bg-yellow-400 min-w-[200px] shadow-lg transition transform active:scale-95">
+                            {showAns ? "Ẩn Đáp Án" : "Hiện Đáp Án"}
+                        </button>
+                        
+                        <button disabled={idx===questions.length-1} onClick={()=>{setIdx(idx+1)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-right text-2xl"></i></button>
                     </div>
                 </div>
             );
         };
 
+        // --- APP CHÍNH ---
         const App = () => {
             const [step, setStep] = useState(1);
             const [topic, setTopic] = useState("");
+            const [numQ, setNumQ] = useState(5); // State số lượng câu hỏi
             const [questions, setQuestions] = useState([]);
             const [loading, setLoading] = useState(false);
             const [apiKeys, setApiKeys] = useState([]);
@@ -74,13 +110,18 @@
 
             const generate = async () => {
                 if(!apiKeys.length) return alert("Thiếu API Key!");
+                if(!topic) return alert("Vui lòng nhập chủ đề!");
+                
                 setLoading(true);
                 try {
-                    const prompt = `Tạo 5 câu trắc nghiệm chủ đề "${topic}". Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":0}]`;
+                    // Prompt đã được cập nhật để dùng biến numQ (Số lượng)
+                    const prompt = `Tạo ${numQ} câu trắc nghiệm chủ đề "${topic}". Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":0}]`;
+                    
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`, {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
                     });
+                    
                     const data = await res.json();
                     const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
                     setQuestions(JSON.parse(txt));
@@ -101,36 +142,57 @@
                 <div className="max-w-4xl mx-auto p-6">
                     <div className="flex justify-between mb-6 items-center">
                         <button onClick={()=>window.location.href='index.html'} className="text-gray-500 hover:text-blue-600 font-bold"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
-                        <h1 className="text-2xl font-bold text-indigo-700">SmartQuiz AI Generator</h1>
+                        <h1 className="text-2xl font-bold text-indigo-700">TẠO BỘ CÂU HỎI</h1>
                     </div>
+
                     {step === 1 && (
-                        <div className="bg-white p-8 rounded-xl shadow-lg">
-                            <label className="block font-bold mb-2">Chủ đề:</label>
-                            <input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full border p-3 rounded mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="VD: Lịch sử Việt Nam..." />
-                            <button onClick={generate} disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700">
-                                {loading ? "Đang suy nghĩ..." : "TẠO ĐỀ NGAY"}
+                        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+                            <div className="mb-4">
+                                <label className="block font-bold mb-2 text-gray-700">Chủ đề:</label>
+                                <input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full border p-3 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="VD: Lịch sử Việt Nam, Hàm số mũ..." />
+                            </div>
+                            
+                            {/* Thêm input nhập số lượng câu hỏi */}
+                            <div className="mb-6">
+                                <label className="block font-bold mb-2 text-gray-700">Số lượng câu hỏi:</label>
+                                <div className="flex items-center gap-4">
+                                    <input type="range" min="1" max="20" value={numQ} onChange={e=>setNumQ(e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                    <span className="font-bold text-indigo-600 text-xl w-12 text-center">{numQ}</span>
+                                </div>
+                            </div>
+
+                            <button onClick={generate} disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center gap-2">
+                                {loading ? <><i className="fas fa-spinner fa-spin"></i> Đang suy nghĩ...</> : "TẠO ĐỀ NGAY"}
                             </button>
                         </div>
                     )}
+
                     {step === 2 && (
                         <div>
-                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded-lg shadow sticky top-0 z-10">
-                                <h2 className="font-bold text-lg">{questions.length} Câu hỏi</h2>
+                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded-lg shadow sticky top-0 z-10 border border-indigo-100">
+                                <h2 className="font-bold text-lg text-gray-700">{questions.length} Câu hỏi về "{topic}"</h2>
                                 <div className="flex gap-2">
-                                    <button onClick={()=>setStep(1)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Soạn lại</button>
-                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"><i className="fas fa-file-word mr-2"></i> Xuất Word</button>
-                                    <button onClick={()=>setStep(3)} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow-lg animate-pulse"><i className="fas fa-chalkboard-teacher mr-2"></i> DẠY NGAY</button>
+                                    <button onClick={()=>setStep(1)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 font-medium text-sm">Soạn lại</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 text-sm flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                    
+                                    <button onClick={()=>setStep(3)} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow-lg animate-pulse text-sm flex items-center gap-2">
+                                        <i className="fas fa-chalkboard-teacher"></i> DẠY NGAY
+                                    </button>
                                 </div>
                             </div>
+                            
                             <div className="space-y-4 pb-20">
                                 {questions.map((q,i) => (
-                                    <div key={i} className="bg-white p-6 rounded-lg shadow border">
+                                    <div key={i} className="bg-white p-6 rounded-lg shadow border border-gray-200 hover:shadow-md transition">
                                         <p className="font-bold text-blue-800 mb-2">Câu {i+1}</p>
-                                        <h3 className="text-lg mb-4"><MathText text={q.question}/></h3>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <h3 className="text-lg mb-4 font-medium"><MathText text={q.question}/></h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             {q.options.map((o, idx) => (
-                                                <div key={idx} className={`p-2 border rounded ${idx===q.correctAnswerIndex ? 'bg-green-50 border-green-500' : ''}`}>
-                                                    {String.fromCharCode(65+idx)}. <MathText text={o}/>
+                                                <div key={idx} className={`p-3 border rounded-lg flex items-center gap-2 ${idx===q.correctAnswerIndex ? 'bg-green-50 border-green-500' : 'bg-gray-50'}`}>
+                                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${idx===q.correctAnswerIndex ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                                                        {String.fromCharCode(65+idx)}
+                                                    </span>
+                                                    <span className="text-gray-700"><MathText text={o}/></span>
                                                 </div>
                                             ))}
                                         </div>
