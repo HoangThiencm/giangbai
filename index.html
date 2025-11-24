@@ -18,26 +18,78 @@
             }
         }
 
-        // 3. Quản lý Key Tập Trung
-        function saveKeys() {
-            const keys = document.getElementById('apiKeys').value.trim();
-            if(keys) {
-                const keyList = keys.split('\n').map(k=>k.trim()).filter(k=>k);
-                localStorage.setItem('global_gemini_keys', JSON.stringify(keyList));
-                alert(`✅ Đã lưu ${keyList.length} API Keys! Các chức năng (SmartQuiz, Trộn đề AI...) sẽ tự động dùng key này.`);
+        // 3. Xử lý File Key
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                // Tách dòng và lọc key rỗng
+                const keys = content.split('\n').map(k => k.trim()).filter(k => k.length > 5);
+                
+                if (keys.length > 0) {
+                    // Lưu nội dung key vào bộ nhớ trình duyệt
+                    localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
+                    localStorage.setItem('key_file_name', file.name); // Lưu tên file để hiển thị cho đẹp
+                    
+                    updateKeyStatus(keys.length, file.name);
+                    alert(`✅ Đã đọc và ghi nhớ ${keys.length} API Keys từ file "${file.name}"!`);
+                } else {
+                    alert("File này không chứa nội dung hợp lệ!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateKeyStatus(count, fileName) {
+            const statusDiv = document.getElementById('keyStatus');
+            const uploadDiv = document.getElementById('uploadArea');
+            
+            if (count > 0) {
+                statusDiv.classList.remove('hidden');
+                statusDiv.innerHTML = `
+                    <div class="flex items-center gap-3 text-green-700 bg-green-50 p-3 rounded-lg border border-green-200">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                        <div>
+                            <p class="font-bold">Hệ thống đang ghi nhớ ${count} API Keys</p>
+                            <p class="text-xs">Nguồn: ${fileName || 'File đã nạp trước đó'}</p>
+                        </div>
+                        <button onclick="clearKeys()" class="ml-auto text-red-500 text-xs hover:underline">Xóa / Nạp lại</button>
+                    </div>
+                `;
+                // Ẩn vùng upload đi cho gọn, chỉ hiện khi chưa có key hoặc muốn nạp lại
+                uploadDiv.classList.add('hidden');
             } else {
-                alert("Vui lòng nhập ít nhất 1 Key!");
+                statusDiv.classList.add('hidden');
+                uploadDiv.classList.remove('hidden');
+            }
+        }
+
+        function clearKeys() {
+            if(confirm("Bạn muốn xóa danh sách Key đã lưu để nạp file mới?")) {
+                localStorage.removeItem('global_gemini_keys');
+                localStorage.removeItem('key_file_name');
+                location.reload(); // Load lại trang để reset giao diện
             }
         }
 
         function loadKeys() {
-            // Load Key
-            const stored = localStorage.getItem('global_gemini_keys');
-            if(stored) document.getElementById('apiKeys').value = JSON.parse(stored).join('\n');
-            
             // Load User Info
             const email = localStorage.getItem('userEmail');
             if(email) document.getElementById('userEmailDisplay').innerText = email;
+
+            // Load Key Status
+            const stored = localStorage.getItem('global_gemini_keys');
+            const fileName = localStorage.getItem('key_file_name');
+            
+            if(stored) {
+                const keys = JSON.parse(stored);
+                updateKeyStatus(keys.length, fileName);
+            } else {
+                updateKeyStatus(0, null);
+            }
         }
     </script>
 </head>
@@ -49,7 +101,7 @@
                 <div class="w-10 h-10 bg-white text-indigo-900 rounded-full flex items-center justify-center font-bold text-xl border-2 border-indigo-300">AI</div>
                 <div>
                     <h1 class="text-lg font-bold leading-tight">TRỢ LÝ GIÁO VIÊN</h1>
-                    <p class="text-xs text-indigo-300 font-mono" id="userEmailDisplay">dangtai...</p>
+                    <p class="text-xs text-indigo-300 font-mono" id="userEmailDisplay">...</p>
                 </div>
             </div>
             <button onclick="logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-1 rounded transition">
@@ -65,16 +117,20 @@
             <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
                 <i class="fas fa-key text-yellow-500"></i> Cấu Hình API Key
             </h2>
-            <p class="text-sm text-gray-500 mb-3">
-                Nhập danh sách Google Gemini API Key vào đây (mỗi dòng 1 key). 
-                <br>Toàn bộ các chức năng AI (SmartQuiz, Trộn đề, Chấm thi) sẽ dùng chung kho key này.
+            <p class="text-sm text-gray-500 mb-4">
+                Hệ thống cần file <b>API Keys.txt</b> để hoạt động (SmartQuiz, Trộn đề, Chấm thi).
+                <br>Bạn chỉ cần nạp 1 lần, trình duyệt sẽ tự động ghi nhớ.
             </p>
-            <div class="flex gap-4">
-                <textarea id="apiKeys" class="flex-1 p-3 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm h-24 focus:ring-2 focus:ring-yellow-400 outline-none resize-none" placeholder="Dán key vào đây (ví dụ: AIzaSy...)..."></textarea>
-                <button onclick="saveKeys()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 rounded-lg font-bold shadow-lg transition flex flex-col items-center justify-center gap-2 min-w-[120px]">
-                    <i class="fas fa-save text-2xl"></i>
-                    <span>LƯU KEY</span>
-                </button>
+
+            <div id="keyStatus" class="hidden mb-4"></div>
+
+            <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                <input type="file" id="keyFileInput" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(event)">
+                <div class="pointer-events-none">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-3"></i>
+                    <h3 class="font-bold text-gray-700">Nhấn vào đây để chọn file keys.txt</h3>
+                    <p class="text-xs text-gray-400 mt-1">(Hoặc kéo thả file vào đây)</p>
+                </div>
             </div>
         </div>
 
@@ -86,7 +142,7 @@
                     <i class="fas fa-presentation-screen"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Google Slides</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Trình chiếu bài giảng trực tiếp từ Google Slides không cần tải về. Tích hợp công cụ vẽ/note.</p>
+                <p class="text-sm text-gray-500 text-center flex-1">Trình chiếu bài giảng trực tiếp từ Google Slides không cần tải về.</p>
                 <div class="mt-4 text-center text-yellow-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
@@ -95,7 +151,7 @@
                     <i class="fas fa-bolt"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Soạn Đề AI</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Nhập chủ đề -> AI tạo câu hỏi trắc nghiệm ngay lập tức. Hỗ trợ xuất Word và Dạy ngay.</p>
+                <p class="text-sm text-gray-500 text-center flex-1">Nhập chủ đề -> AI tạo câu hỏi trắc nghiệm. Hỗ trợ Dạy ngay.</p>
                 <div class="mt-4 text-center text-indigo-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
@@ -104,7 +160,7 @@
                     <i class="fas fa-random"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Trộn Đề Thi</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">3 chế độ: Trộn Server (Word/PDF công thức), Trộn AI (Ảnh Scan), và Trộn nhanh (Text đơn giản).</p>
+                <p class="text-sm text-gray-500 text-center flex-1">3 chế độ: Server (Công thức), AI (Ảnh), Offline (Text).</p>
                 <div class="mt-4 text-center text-green-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
@@ -113,7 +169,7 @@
                     <i class="fas fa-globe"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Thi Online</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Tổ chức kỳ thi, tạo mã QR, chấm điểm tự động, quản lý học sinh và xuất báo cáo.</p>
+                <p class="text-sm text-gray-500 text-center flex-1">Tổ chức kỳ thi, mã QR, chấm điểm tự động, báo cáo.</p>
                 <div class="mt-4 text-center text-blue-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
