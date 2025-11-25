@@ -177,21 +177,30 @@
         const CreateExam = ({ onBack }) => {
             const [form, setForm] = useState({ title: "", school: "", subject: "", grade: "", duration: 45, startTime: "", endTime: "" });
             const [apiKeys, setApiKeys] = useState([]);
+            const [fileName, setFileName] = useState(""); // State hiển thị tên file
             const [loading, setLoading] = useState(false);
             const fileRef = useRef();
 
-            const handleKeyFile = async (e) => {
+            // 1. TỰ ĐỘNG LOAD KEY TỪ LOCALSTORAGE (Theo yêu cầu)
+            useEffect(() => {
+                const savedKeys = localStorage.getItem('global_gemini_keys');
+                if (savedKeys) {
+                    try {
+                        const keys = JSON.parse(savedKeys);
+                        if (keys && keys.length > 0) setApiKeys(keys);
+                    } catch (e) {}
+                }
+            }, []);
+
+            const handleFileSelect = (e) => {
                 const file = e.target.files[0];
-                if (!file) return;
-                const text = await file.text();
-                setApiKeys(text.split('\n').map(k => k.trim()).filter(k => k.length > 0));
-            };
+                if(file) setFileName(file.name);
+            }
 
             const handleUpload = async () => {
-                // VALIDATION FRONTEND
-                if (apiKeys.length === 0) return alert("Thiếu API Key! Vui lòng nạp file Key.");
+                if (apiKeys.length === 0) return alert("Chưa có API Key! Vui lòng nạp ở Trang Chủ.");
                 if (!form.title) return alert("Vui lòng nhập Tên Kỳ Thi!");
-                if (!form.startTime || !form.endTime) return alert("Vui lòng chọn Thời gian bắt đầu và kết thúc!");
+                if (!form.startTime || !form.endTime) return alert("Vui lòng chọn Thời gian!");
                 
                 const file = fileRef.current.files[0];
                 if (!file) return alert("Thiếu file đề thi!");
@@ -199,8 +208,6 @@
                 setLoading(true);
                 const fd = new FormData();
                 fd.append("file", file);
-                
-                // Map fields chuẩn xác
                 fd.append("title", form.title);
                 fd.append("school", form.school);
                 fd.append("subject", form.subject);
@@ -208,7 +215,6 @@
                 fd.append("duration", form.duration);
                 fd.append("start_time", form.startTime);
                 fd.append("end_time", form.endTime);
-                
                 fd.append("api_keys_json", JSON.stringify(apiKeys));
                 fd.append("teacher_email", userEmail);
 
@@ -217,9 +223,8 @@
                     alert("✅ Tạo đề thi thành công!"); 
                     onBack();
                 } catch (e) { 
-                    // HIỂN THỊ LỖI CHI TIẾT TỪ SERVER
                     const serverMsg = e.response?.data?.detail || e.message;
-                    alert("❌ Lỗi: " + serverMsg + "\n(Gợi ý: Kiểm tra lại file đề hoặc API Key)");
+                    alert("❌ Lỗi: " + serverMsg);
                 } 
                 finally { setLoading(false); }
             };
@@ -251,19 +256,39 @@
                         </div>
                     </div>
                     
-                    <div className="mb-4 bg-yellow-50 p-3 rounded border border-yellow-200">
-                        <label className="block font-bold text-sm mb-1"><i className="fas fa-key text-yellow-600"></i> API Keys (.txt):</label>
-                        <input type="file" accept=".txt" onChange={handleKeyFile} className="w-full text-sm"/>
+                    {/* Trạng thái API Key */}
+                    <div className="mb-4">
+                        {apiKeys.length > 0 ? (
+                            <div className="text-green-600 bg-green-50 p-3 rounded border border-green-200 text-sm flex items-center gap-2">
+                                <i className="fas fa-check-circle"></i> Đã tự động nhận {apiKeys.length} API Keys từ hệ thống.
+                            </div>
+                        ) : (
+                            <div className="text-red-500 bg-red-50 p-3 rounded border border-red-200 text-sm">
+                                <i className="fas fa-exclamation-circle"></i> Chưa tìm thấy API Key. Hãy quay lại Trang Chủ để nạp.
+                            </div>
+                        )}
                     </div>
                     
-                    <div className="mb-6 border-2 border-dashed border-indigo-200 p-6 text-center rounded hover:bg-indigo-50 cursor-pointer transition" onClick={()=>fileRef.current.click()}>
-                        <input ref={fileRef} type="file" accept=".docx,.pdf" className="hidden"/>
-                        <i className="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i>
-                        <p className="font-bold text-gray-700">Chọn file đề thi (Word/PDF)</p>
-                        <p className="text-xs text-red-500 mt-1 italic">* Lưu ý: Nên dùng file gốc, tránh dùng file Scan/Ảnh chụp mờ.</p>
+                    {/* Vùng chọn File & Hiển thị tên file */}
+                    <div className={`mb-6 border-2 border-dashed p-6 text-center rounded cursor-pointer transition ${fileName ? 'border-green-400 bg-green-50' : 'border-indigo-200 hover:bg-indigo-50'}`} onClick={()=>fileRef.current.click()}>
+                        <input ref={fileRef} type="file" accept=".docx,.pdf" className="hidden" onChange={handleFileSelect}/>
+                        
+                        {fileName ? (
+                            <div>
+                                <i className="fas fa-file-alt text-4xl text-green-500 mb-2"></i>
+                                <p className="font-bold text-green-700 text-lg">{fileName}</p>
+                                <p className="text-xs text-green-600">Nhấn để chọn lại file khác</p>
+                            </div>
+                        ) : (
+                            <div>
+                                <i className="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i>
+                                <p className="font-bold text-gray-700">Chọn file đề thi (Word/PDF)</p>
+                                <p className="text-xs text-gray-400 mt-1">Hỗ trợ tốt nhất: PDF gốc hoặc Word</p>
+                            </div>
+                        )}
                     </div>
                     
-                    <button onClick={handleUpload} disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2">
+                    <button onClick={handleUpload} disabled={loading || apiKeys.length===0} className="w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2 transition">
                         {loading ? <><i className="fas fa-spinner fa-spin"></i> Đang xử lý AI (có thể mất 30s)...</> : "Hoàn Tất & Tạo Đề"}
                     </button>
                 </div>
@@ -444,8 +469,6 @@
                     setIsStudent(true); 
                 }
                 else if(!userEmail) {
-                    // Thay vì redirect ngay lập tức gây lỗi trong môi trường preview
-                    // window.location.href = 'login.html'; 
                     setNeedsLogin(true);
                 }
             }, []);
