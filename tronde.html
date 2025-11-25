@@ -43,17 +43,23 @@
         const SERVER_URL = "https://hoangthiencm-giangbai.hf.space";
         const MODEL_NAME = "gemini-2.5-flash";
 
-        // --- HELPER 1: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD (QUAN TRỌNG) ---
+        // --- HELPER 1: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD (ĐÃ NÂNG CẤP) ---
         const convertToMathML = (text) => {
             if (!text) return "";
             
-            // Chuẩn hóa dấu toán học
+            // 1. Chuẩn hóa dấu toán học cơ bản
             let standardized = text
                 .replace(/`([^`]+)`/g, '$$$1$$') 
                 .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
                 .replace(/\\\((.*?)\\\)/g, '$$$1$$');
 
-            // Render LaTeX thành MathML
+            // 2. QUAN TRỌNG: TỰ ĐỘNG BỌC $ NẾU PHÁT HIỆN LỆNH LATEX "TRẦN" (Fix lỗi dư dấu \)
+            // Nếu chuỗi chưa có $, nhưng lại chứa ký tự \ (như \to, \{), ^ hoặc _ -> Bọc toàn bộ vào $
+            if (!standardized.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(standardized)) {
+                 standardized = `$${standardized}$`;
+            }
+
+            // 3. Render LaTeX thành MathML
             return standardized.replace(/\$([^$]+)\$/g, (match, latex) => {
                 try {
                     return katex.renderToString(latex, {
@@ -79,7 +85,9 @@
             useEffect(() => {
                 if (!text) return;
                 let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$').replace(/\\\((.*?)\\\)/g, '$$$1$$');
-                if (!processed.includes('$') && (processed.includes('\\{') || processed.includes('\\['))) {
+                
+                // Logic tương tự cho hiển thị Web
+                if (!processed.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(processed)) {
                     processed = `$${processed}$`;
                 }
 
@@ -408,17 +416,17 @@
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div onClick={()=>setTab('server')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-blue-600 text-center group">
                             <i className="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Trộn bằng Server</h3>
+                            <h3 className="text-xl font-bold mb-2">Server Mix</h3>
                             <p className="text-gray-500 text-sm">Word/PDF chuẩn (Có công thức)</p>
                         </div>
                         <div onClick={()=>setTab('ai')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-red-600 text-center group">
                             <i className="fas fa-eye text-5xl text-red-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Dùng AI Trộn</h3>
+                            <h3 className="text-xl font-bold mb-2">AI Vision Mix</h3>
                             <p className="text-gray-500 text-sm">PDF Scan/Ảnh (Tự tìm đáp án)</p>
                         </div>
                         <div onClick={()=>setTab('simple')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-green-600 text-center group">
                             <i className="fas fa-font text-5xl text-green-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Trộn đề không công thức</h3>
+                            <h3 className="text-xl font-bold mb-2">Text Offline</h3>
                             <p className="text-gray-500 text-sm">Nhanh, không cần mạng</p>
                         </div>
                     </div>
