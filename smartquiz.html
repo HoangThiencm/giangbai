@@ -8,71 +8,159 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- KaTeX cho hiển thị toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>.katex { font-size: 1.2em; }</style>
+    <style>
+        .katex { font-size: 1.2em; color: #1e3a8a; }
+        /* Animation nhẹ */
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
-<body class="bg-gray-50 h-screen overflow-hidden">
+<body class="bg-slate-50 h-screen overflow-hidden font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
+        // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ HƠN ---
         const MathText = ({ text }) => {
-            const html = text.replace(/\$([^$]+)\$/g, (m, t) => {
-                try { return katex.renderToString(t, {throwOnError: false}); } catch { return m; }
-            });
-            return <span dangerouslySetInnerHTML={{__html: html}} />;
+            const ref = useRef(null);
+
+            useEffect(() => {
+                if (!text || !ref.current) return;
+
+                // 1. Chuẩn hóa dữ liệu đầu vào:
+                // Thay thế dấu backtick `...` thành $...$ để KaTeX hiểu
+                // Thay thế \[...\] thành $$...$$
+                let processed = text
+                    .replace(/`([^`]+)`/g, '$$$1$$') // `code` -> $code$
+                    .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$') // \[...\] -> $$...$$
+                    .replace(/\\\((.*?)\\\)/g, '$$$1$$'); // \(...\) -> $...$
+
+                // Tự động thêm $ nếu thấy ký tự toán học đặc trưng mà chưa có $ (ví dụ \frac, \sqrt, ^2)
+                if (!processed.includes('$')) {
+                    if (/\\[a-zA-Z]+|[\^\_]/.test(processed)) {
+                       // processed = `$${processed}$`; 
+                    }
+                }
+
+                ref.current.innerHTML = processed;
+
+                // 2. Render bằng KaTeX Auto-render
+                if (window.renderMathInElement) {
+                    try {
+                        window.renderMathInElement(ref.current, {
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true},
+                                {left: '$', right: '$', display: false},
+                                {left: '\\(', right: '\\)', display: false},
+                                {left: '\\[', right: '\\]', display: true}
+                            ],
+                            throwOnError: false
+                        });
+                    } catch (e) {
+                        console.error("KaTeX error:", e);
+                    }
+                } else if (window.katex) {
+                     const parts = processed.split(/(\$[^$]+\$)/g);
+                     ref.current.innerHTML = "";
+                     parts.forEach(part => {
+                        if (part.startsWith("$") && part.endsWith("$")) {
+                            const span = document.createElement("span");
+                            try { 
+                                katex.render(part.slice(1, -1), span, { throwOnError: false }); 
+                            } catch { span.innerText = part; }
+                            ref.current.appendChild(span);
+                        } else {
+                            ref.current.appendChild(document.createTextNode(part));
+                        }
+                    });
+                }
+            }, [text]);
+
+            return <span ref={ref} />;
         };
 
-        // --- PRESENTATION MODE (DẠY NGAY - ĐÃ NÂNG CẤP) ---
+        // --- PRESENTATION MODE (DẠY NGAY) ---
         const PresentationMode = ({ questions, onExit }) => {
             const [idx, setIdx] = useState(0);
             const [showAns, setShowAns] = useState(false);
-            const [selectedOpt, setSelectedOpt] = useState(null); // Lưu đáp án người dùng chọn
+            const [selectedOpt, setSelectedOpt] = useState(null);
             const q = questions[idx];
 
-            // Reset trạng thái khi chuyển câu hỏi
             useEffect(() => {
                 setShowAns(false);
                 setSelectedOpt(null);
             }, [idx]);
 
+            // Xử lý phím tắt
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === "ArrowRight" && idx < questions.length - 1) setIdx(i => i + 1);
+                    if (e.key === "ArrowLeft" && idx > 0) setIdx(i => i - 1);
+                    if (e.key === " " || e.key === "Enter") setShowAns(prev => !prev);
+                    if (e.key === "Escape") onExit();
+                };
+                window.addEventListener("keydown", handleKeyDown);
+                return () => window.removeEventListener("keydown", handleKeyDown);
+            }, [idx, questions.length, onExit]);
+
             return (
-                <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <button onClick={onExit} className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600"><i className="fas fa-times mr-2"></i> Thoát</button>
-                        <h2 className="text-xl font-bold">Câu {idx+1}/{questions.length}</h2>
-                        <div className="w-20"></div>
+                <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-4 md:p-6 transition-colors duration-500">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-4">
+                        <button onClick={onExit} className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span>
+                        </button>
+                        <div className="text-xl font-bold text-gray-300">Câu {idx+1} <span className="text-sm font-normal text-gray-500">/ {questions.length}</span></div>
+                        <div className="w-20"></div> {/* Spacer */}
                     </div>
                     
-                    <div className="flex-1 flex flex-col justify-center items-center max-w-5xl mx-auto w-full">
-                        <div className="bg-white text-slate-900 p-10 rounded-2xl shadow-2xl w-full min-h-[400px]">
-                            <h3 className="text-3xl font-bold mb-8 leading-relaxed"><MathText text={q.question} /></h3>
+                    {/* Content Card */}
+                    <div className="flex-1 flex flex-col justify-center items-center max-w-6xl mx-auto w-full">
+                        <div className="bg-white text-slate-900 p-8 md:p-12 rounded-3xl shadow-2xl w-full min-h-[50vh] flex flex-col justify-center relative overflow-hidden">
+                            {/* Decorative blob */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100 rounded-bl-full -z-0 opacity-50"></div>
+
+                            <h3 className="text-2xl md:text-4xl font-bold mb-10 leading-relaxed text-slate-800 z-10 border-l-8 border-indigo-500 pl-6">
+                                <MathText text={q.question} />
+                            </h3>
                             
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 z-10">
                                 {q.options.map((opt, i) => {
-                                    // LOGIC MÀU SẮC:
-                                    // 1. Nếu đang hiện đáp án (showAns) VÀ đây là đáp án đúng -> Màu Đỏ (theo yêu cầu)
-                                    // 2. Nếu người dùng chọn ô này (selectedOpt === i) -> Viền Xanh Lá
-                                    
-                                    let containerClass = "p-6 rounded-xl text-xl border-4 transition cursor-pointer ";
+                                    let containerClass = "p-6 rounded-2xl text-xl border-2 transition-all duration-300 cursor-pointer flex items-center gap-4 relative overflow-hidden ";
                                     
                                     if (showAns && i === q.correctAnswerIndex) {
-                                        // Đáp án đúng hiện màu đỏ
-                                        containerClass += "bg-red-100 border-red-500 text-red-700 font-bold shadow-lg scale-105";
+                                        // Đáp án đúng
+                                        containerClass += "bg-green-50 border-green-500 text-green-900 font-bold shadow-lg transform scale-105 ring-4 ring-green-100";
                                     } else if (selectedOpt === i) {
-                                        // Người dùng chọn -> Viền xanh lá
-                                        containerClass += "bg-green-50 border-green-500 text-green-900";
+                                        // Người dùng chọn (chưa hiện đáp án)
+                                        containerClass += "bg-blue-50 border-blue-500 text-blue-900 shadow-md";
+                                    } else if (showAns && selectedOpt === i && i !== q.correctAnswerIndex) {
+                                         // Người dùng chọn sai (khi đã hiện đáp án)
+                                         containerClass += "bg-red-50 border-red-300 text-red-900 opacity-70";
                                     } else {
                                         // Bình thường
-                                        containerClass += "border-gray-200 hover:bg-gray-50";
+                                        containerClass += "border-gray-200 hover:bg-gray-50 hover:border-indigo-300";
+                                        if (showAns) containerClass += " opacity-40 grayscale"; // Làm mờ các đáp án sai khác
                                     }
 
                                     return (
                                         <div key={i} onClick={() => !showAns && setSelectedOpt(i)} className={containerClass}>
-                                            <span className="font-bold mr-3">{String.fromCharCode(65+i)}.</span> <MathText text={opt} />
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 transition-colors ${
+                                                showAns && i === q.correctAnswerIndex ? 'bg-green-600 text-white' : 
+                                                selectedOpt === i ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                                            }`}>
+                                                {String.fromCharCode(65+i)}
+                                            </div>
+                                            <div className="flex-1"><MathText text={opt} /></div>
+                                            {showAns && i === q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600 text-2xl absolute right-4"></i>}
                                         </div>
                                     );
                                 })}
@@ -80,14 +168,22 @@
                         </div>
                     </div>
 
-                    <div className="mt-8 flex justify-center gap-6">
-                        <button disabled={idx===0} onClick={()=>{setIdx(idx-1)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-left text-2xl"></i></button>
-                        
-                        <button onClick={()=>setShowAns(!showAns)} className="px-8 bg-yellow-500 text-black font-bold rounded-xl text-xl hover:bg-yellow-400 min-w-[200px] shadow-lg transition transform active:scale-95">
-                            {showAns ? "Ẩn Đáp Án" : "Hiện Đáp Án"}
+                    {/* Footer Controls */}
+                    <div className="mt-8 flex justify-center items-center gap-6">
+                        <button disabled={idx===0} onClick={()=>{setIdx(idx-1)}} className="w-14 h-14 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg">
+                            <i className="fas fa-arrow-left text-2xl"></i>
                         </button>
                         
-                        <button disabled={idx===questions.length-1} onClick={()=>{setIdx(idx+1)}} className="p-4 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-50"><i className="fas fa-arrow-right text-2xl"></i></button>
+                        <button onClick={()=>setShowAns(!showAns)} className="px-10 py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-extrabold rounded-2xl text-xl shadow-xl transition transform active:scale-95 flex items-center gap-3 min-w-[240px] justify-center">
+                            {showAns ? <><i className="fas fa-eye-slash"></i> Ẩn Đáp Án</> : <><i className="fas fa-eye"></i> Hiện Đáp Án</>}
+                        </button>
+                        
+                        <button disabled={idx===questions.length-1} onClick={()=>{setIdx(idx+1)}} className="w-14 h-14 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg">
+                            <i className="fas fa-arrow-right text-2xl"></i>
+                        </button>
+                    </div>
+                    <div className="text-center mt-4 text-gray-500 text-sm hidden md:block">
+                        Phím tắt: [←] Câu trước | [→] Câu sau | [Space] Đáp án | [Esc] Thoát
                     </div>
                 </div>
             );
@@ -97,102 +193,208 @@
         const App = () => {
             const [step, setStep] = useState(1);
             const [topic, setTopic] = useState("");
-            const [numQ, setNumQ] = useState(5); // State số lượng câu hỏi
+            const [numQ, setNumQ] = useState(5);
+            const [level, setLevel] = useState("Trung bình"); // Mặc định
             const [questions, setQuestions] = useState([]);
             const [loading, setLoading] = useState(false);
             const [apiKeys, setApiKeys] = useState([]);
 
+            // Danh sách các mức độ
+            const LEVELS = ["Cơ bản", "Trung bình", "Nâng cao", "Hỗn hợp"];
+
             useEffect(() => {
                 const keys = localStorage.getItem('global_gemini_keys');
                 if(keys) setApiKeys(JSON.parse(keys));
-                else alert("Chưa có API Key! Hãy quay lại Trang Chủ để nhập.");
             }, []);
 
             const generate = async () => {
-                if(!apiKeys.length) return alert("Thiếu API Key!");
-                if(!topic) return alert("Vui lòng nhập chủ đề!");
+                if(!apiKeys.length) return alert("Thiếu API Key! Vui lòng quay lại trang chủ nạp Key.");
+                if(!topic.trim()) return alert("Vui lòng nhập chủ đề!");
                 
                 setLoading(true);
                 try {
-                    // Prompt đã được cập nhật để dùng biến numQ (Số lượng)
-                    const prompt = `Tạo ${numQ} câu trắc nghiệm chủ đề "${topic}". Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":0}]`;
+                    // Xử lý mức độ cho Prompt
+                    let levelPrompt = level;
+                    if (level === "Hỗn hợp") {
+                        levelPrompt = "Hỗn hợp (Bao gồm khoảng 30% Cơ bản, 40% Trung bình và 30% Nâng cao)";
+                    }
+
+                    const prompt = `
+                    Đóng vai giáo viên giỏi. Tạo ${numQ} câu hỏi trắc nghiệm khách quan về chủ đề: "${topic}".
+                    Mức độ: ${levelPrompt}.
                     
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`, {
+                    QUY TẮC ĐỊNH DẠNG TOÁN HỌC (BẮT BUỘC):
+                    1. Mọi công thức toán, ký hiệu, phương trình PHẢI được bao quanh bởi dấu $.
+                       -> Sai: 2x + 1 = 0
+                       -> Đúng: $2x + 1 = 0$
+                       -> Sai: \`sqrt(2)\`
+                       -> Đúng: $\\sqrt{2}$
+                    2. KHÔNG dùng dấu huyền (\`) cho công thức.
+                    3. KHÔNG dùng \\( ... \\) hoặc \\[ ... \\], chỉ dùng $.
+                    
+                    Output JSON Strict format: 
+                    [
+                        {
+                            "question": "Nội dung câu hỏi (có math $...$)",
+                            "options": ["Đáp án A (có math)", "Đáp án B", "Đáp án C", "Đáp án D"],
+                            "correctAnswerIndex": 0 
+                        }
+                    ]
+                    `;
+                    
+                    const randomKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+                    
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${randomKey}`, {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
                     });
                     
                     const data = await res.json();
-                    const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                    setQuestions(JSON.parse(txt));
+                    if(data.error) throw new Error(data.error.message);
+
+                    const txt = data.candidates[0].content.parts[0].text;
+                    const jsonStr = txt.replace(/```json|```/g, '').trim(); 
+                    
+                    setQuestions(JSON.parse(jsonStr));
                     setStep(2);
-                } catch(e) { alert("Lỗi: " + e.message); }
+                } catch(e) { 
+                    alert("Lỗi tạo đề: " + e.message + "\n(Vui lòng thử lại hoặc kiểm tra Key)"); 
+                    console.error(e);
+                }
                 setLoading(false);
             };
 
             const exportWord = () => {
-                const content = questions.map((q,i) => `Câu ${i+1}: ${q.question}\nA. ${q.options[0]}\nB. ${q.options[1]}\nC. ${q.options[2]}\nD. ${q.options[3]}`).join('\n\n');
-                const blob = new Blob([content], {type: "application/msword"});
-                saveAs(blob, "De_Thi.doc");
+                const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>De Thi</title></head><body>`;
+                const footer = "</body></html>";
+                
+                let body = `<h1 style="text-align:center">ĐỀ THI TRẮC NGHIỆM: ${topic.toUpperCase()}</h1>`;
+                body += `<p style="text-align:center"><i>Mức độ: ${level}</i></p>`;
+                
+                questions.forEach((q, i) => {
+                    body += `<p><b>Câu ${i+1}:</b> ${q.question}</p>`;
+                    body += `<p>A. ${q.options[0]}</p>`;
+                    body += `<p>B. ${q.options[1]}</p>`;
+                    body += `<p>C. ${q.options[2]}</p>`;
+                    body += `<p>D. ${q.options[3]}</p>`;
+                    body += `<p style="color:red; display:none">Đáp án đúng: ${String.fromCharCode(65+q.correctAnswerIndex)}</p>`;
+                    body += `<br/>`;
+                });
+
+                const blob = new Blob([header + body + footer], {type: "application/msword"});
+                saveAs(blob, `De_Thi_${topic.replace(/\s+/g, '_')}.doc`);
             };
 
             if(step === 3) return <PresentationMode questions={questions} onExit={()=>setStep(2)} />;
 
             return (
-                <div className="max-w-4xl mx-auto p-6">
-                    <div className="flex justify-between mb-6 items-center">
-                        <button onClick={()=>window.location.href='index.html'} className="text-gray-500 hover:text-blue-600 font-bold"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
-                        <h1 className="text-2xl font-bold text-indigo-700">TẠO BỘ CÂU HỎI</h1>
+                <div className="max-w-4xl mx-auto p-4 md:p-8 font-sans">
+                    {/* Header Bar */}
+                    <div className="flex justify-between items-center mb-8">
+                        <button onClick={()=>window.location.href='index.html'} className="text-slate-500 hover:text-indigo-600 font-bold transition flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
+                            <i className="fas fa-arrow-left"></i> Về Trang Chủ
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg">AI</div>
+                            <h1 className="text-xl md:text-2xl font-bold text-indigo-900">SMART QUIZ</h1>
+                        </div>
                     </div>
 
                     {step === 1 && (
-                        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-                            <div className="mb-4">
-                                <label className="block font-bold mb-2 text-gray-700">Chủ đề:</label>
-                                <input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full border p-3 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="VD: Lịch sử Việt Nam, Hàm số mũ..." />
+                        <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-indigo-50 relative overflow-hidden fade-in">
+                            <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-100 to-transparent w-40 h-full opacity-50 pointer-events-none"></div>
+                            
+                            <h2 className="text-2xl font-bold text-slate-800 mb-6">Thiết lập đề thi</h2>
+
+                            <div className="mb-6">
+                                <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Chủ đề bài học</label>
+                                <div className="relative">
+                                    <i className="fas fa-book-open absolute left-4 top-4 text-indigo-400"></i>
+                                    <input 
+                                        value={topic} 
+                                        onChange={e=>setTopic(e.target.value)} 
+                                        onKeyDown={e => e.key === 'Enter' && generate()}
+                                        className="w-full border border-gray-200 bg-slate-50 p-3 pl-12 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition text-lg" 
+                                        placeholder="Nhập chủ đề (VD: Hàm số lượng giác, Lịch sử 12...)" 
+                                        autoFocus
+                                    />
+                                </div>
                             </div>
                             
-                            {/* Thêm input nhập số lượng câu hỏi */}
-                            <div className="mb-6">
-                                <label className="block font-bold mb-2 text-gray-700">Số lượng câu hỏi:</label>
-                                <div className="flex items-center gap-4">
-                                    <input type="range" min="1" max="20" value={numQ} onChange={e=>setNumQ(e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                    <span className="font-bold text-indigo-600 text-xl w-12 text-center">{numQ}</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div>
+                                    <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Số lượng câu</label>
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-gray-200">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-bold text-indigo-600 text-2xl">{numQ}</span>
+                                            <span className="text-xs text-gray-400">câu hỏi</span>
+                                        </div>
+                                        <input type="range" min="3" max="50" value={numQ} onChange={e=>setNumQ(Number(e.target.value))} className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                                        <div className="flex justify-between text-xs text-gray-400 mt-2">
+                                            <span>3</span>
+                                            <span>25</span>
+                                            <span>50</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Mức độ khó</label>
+                                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded-xl border border-gray-200 h-full content-center">
+                                        {LEVELS.map(l => (
+                                            <button 
+                                                key={l}
+                                                onClick={()=>setLevel(l)}
+                                                className={`py-2 px-2 rounded-lg text-xs md:text-sm font-bold transition ${level===l ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                                            >
+                                                {l}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            <button onClick={generate} disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center gap-2">
-                                {loading ? <><i className="fas fa-spinner fa-spin"></i> Đang suy nghĩ...</> : "TẠO ĐỀ NGAY"}
+                            <button onClick={generate} disabled={loading} className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold hover:shadow-lg hover:scale-[1.01] transition disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center gap-3 text-lg">
+                                {loading ? <><i className="fas fa-circle-notch fa-spin"></i> Đang suy nghĩ...</> : <><i className="fas fa-magic"></i> TẠO ĐỀ NGAY</>}
                             </button>
+                            
+                            {!apiKeys.length && <p className="text-red-500 text-center mt-4 text-sm bg-red-50 p-2 rounded"><i className="fas fa-exclamation-circle"></i> Chưa tìm thấy API Key. Vui lòng quay lại Dashboard nạp file key.</p>}
                         </div>
                     )}
 
                     {step === 2 && (
-                        <div>
-                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded-lg shadow sticky top-0 z-10 border border-indigo-100">
-                                <h2 className="font-bold text-lg text-gray-700">{questions.length} Câu hỏi về "{topic}"</h2>
+                        <div className="fade-in">
+                            {/* Toolbar */}
+                            <div className="sticky top-2 z-30 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-indigo-100 mb-6 flex flex-wrap justify-between items-center gap-4">
+                                <div>
+                                    <h2 className="font-bold text-lg text-slate-800 line-clamp-1">Output: {topic}</h2>
+                                    <p className="text-xs text-slate-500">{questions.length} câu • {level}</p>
+                                </div>
                                 <div className="flex gap-2">
-                                    <button onClick={()=>setStep(1)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 font-medium text-sm">Soạn lại</button>
-                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 text-sm flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                    <button onClick={()=>setStep(1)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-sm transition"><i className="fas fa-redo"></i> Tạo lại</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 font-bold text-sm transition"><i className="fas fa-file-word"></i> Word</button>
                                     
-                                    <button onClick={()=>setStep(3)} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow-lg animate-pulse text-sm flex items-center gap-2">
+                                    <button onClick={()=>setStep(3)} className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition flex items-center gap-2 text-sm shadow-green-200">
                                         <i className="fas fa-chalkboard-teacher"></i> DẠY NGAY
                                     </button>
                                 </div>
                             </div>
                             
-                            <div className="space-y-4 pb-20">
+                            {/* List Questions */}
+                            <div className="space-y-6 pb-20">
                                 {questions.map((q,i) => (
-                                    <div key={i} className="bg-white p-6 rounded-lg shadow border border-gray-200 hover:shadow-md transition">
-                                        <p className="font-bold text-blue-800 mb-2">Câu {i+1}</p>
-                                        <h3 className="text-lg mb-4 font-medium"><MathText text={q.question}/></h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition group">
+                                        <div className="flex gap-3 mb-4">
+                                            <span className="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Câu {i+1}</span>
+                                            <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={q.question}/></h3>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-12">
                                             {q.options.map((o, idx) => (
-                                                <div key={idx} className={`p-3 border rounded-lg flex items-center gap-2 ${idx===q.correctAnswerIndex ? 'bg-green-50 border-green-500' : 'bg-gray-50'}`}>
-                                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${idx===q.correctAnswerIndex ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                                                <div key={idx} className={`p-3 border rounded-xl flex items-center gap-3 transition ${idx===q.correctAnswerIndex ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-slate-200 group-hover:bg-white'}`}>
+                                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${idx===q.correctAnswerIndex ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                                                         {String.fromCharCode(65+idx)}
                                                     </span>
-                                                    <span className="text-gray-700"><MathText text={o}/></span>
+                                                    <span className="text-slate-700"><MathText text={o}/></span>
                                                 </div>
                                             ))}
                                         </div>
