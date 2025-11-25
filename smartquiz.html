@@ -39,18 +39,15 @@
                 .replace(/\\\((.*?)\\\)/g, '$$$1$$');
 
             // 2. Tìm các đoạn $...$ và render thành MathML
-            // Lưu ý: Replace callback nhận vào match và group captured (nội dung latex)
             return standardized.replace(/\$([^$]+)\$/g, (match, latex) => {
                 try {
-                    // Dùng Katex render ra MathML string
-                    // output: 'mathml' giúp tạo ra thẻ <math> mà Word hiểu được
                     return katex.renderToString(latex, {
                         throwOnError: false,
                         output: 'mathml', 
                         displayMode: false
                     });
                 } catch (e) {
-                    return match; // Lỗi thì giữ nguyên text cũ
+                    return match;
                 }
             });
         };
@@ -62,7 +59,6 @@
             useEffect(() => {
                 if (!text || !ref.current) return;
 
-                // Chuẩn hóa dữ liệu đầu vào cho hiển thị Web
                 let processed = text
                     .replace(/`([^`]+)`/g, '$$$1$$')
                     .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
@@ -70,7 +66,6 @@
 
                 ref.current.innerHTML = processed;
 
-                // Render bằng KaTeX Auto-render cho Web
                 if (window.renderMathInElement) {
                     try {
                         window.renderMathInElement(ref.current, {
@@ -89,7 +84,7 @@
             return <span ref={ref} />;
         };
 
-        // --- PRESENTATION MODE (GIỮ NGUYÊN) ---
+        // --- PRESENTATION MODE ---
         const PresentationMode = ({ questions, onExit }) => {
             const [idx, setIdx] = useState(0);
             const [showAns, setShowAns] = useState(false);
@@ -216,7 +211,6 @@
 
             // --- HÀM XUẤT WORD CẢI TIẾN ---
             const exportWord = () => {
-                // Header XML để Word hiểu đây là file HTML chứa nội dung Word
                 const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' 
                       xmlns:w='urn:schemas-microsoft-com:office:word' 
@@ -230,8 +224,8 @@
                         .question-block { margin-bottom: 15pt; text-align: justify; }
                         .options-table { width: 100%; border-collapse: collapse; margin-top: 5pt; }
                         .options-table td { padding: 3pt 0; vertical-align: top; }
-                        .answer-key { margin-top: 50px; page-break-before: always; }
-                        .answer-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+                        .answer-key { margin-top: 30px; page-break-before: always; }
+                        .answer-table { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 20px; }
                         .answer-table td, .answer-table th { border: 1px solid #000; padding: 5px; text-align: center; }
                     </style>
                 </head>
@@ -244,7 +238,6 @@
                 
                 // 1. Phần Câu hỏi
                 questions.forEach((q, i) => {
-                    // Chuyển đổi LaTeX sang MathML cho câu hỏi và đáp án
                     const qText = convertToMathML(q.question);
                     const optA = convertToMathML(q.options[0]);
                     const optB = convertToMathML(q.options[1]);
@@ -267,46 +260,37 @@
                     </div>`;
                 });
 
-                // 2. Phần Bảng Đáp Án (Cuối đề)
-                bodyContent += `
-                <div class="answer-key">
-                    <h2 style="text-align:center;">BẢNG ĐÁP ÁN</h2>
-                    <table class="answer-table">
-                        <thead>
-                            <tr>
-                                <th style="background-color:#f0f0f0;">Câu</th>
-                                <th style="background-color:#f0f0f0;">Đáp án</th>
-                                <th style="background-color:#f0f0f0;">Câu</th>
-                                <th style="background-color:#f0f0f0;">Đáp án</th>
-                                <th style="background-color:#f0f0f0;">Câu</th>
-                                <th style="background-color:#f0f0f0;">Đáp án</th>
-                                <th style="background-color:#f0f0f0;">Câu</th>
-                                <th style="background-color:#f0f0f0;">Đáp án</th>
-                                <th style="background-color:#f0f0f0;">Câu</th>
-                                <th style="background-color:#f0f0f0;">Đáp án</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>`;
+                // 2. Phần Bảng Đáp Án (Ngang - Chia theo block 10 câu)
+                bodyContent += `<div class="answer-key"><h2 style="text-align:center; margin-bottom: 15px;">BẢNG ĐÁP ÁN</h2>`;
                 
-                // Logic tạo bảng 10 cột (5 cặp Câu-Đáp án) cho gọn
-                for(let i = 0; i < questions.length; i++) {
-                    const ansLetter = String.fromCharCode(65 + questions[i].correctAnswerIndex);
-                    bodyContent += `<td>${i+1}</td><td><b>${ansLetter}</b></td>`;
+                const chunkSize = 10;
+                for (let i = 0; i < questions.length; i += chunkSize) {
+                    const chunk = questions.slice(i, i + chunkSize);
                     
-                    // Xuống dòng mỗi 5 câu (tức là 10 ô <td>)
-                    if ((i + 1) % 5 === 0 && i !== questions.length - 1) {
-                        bodyContent += `</tr><tr>`;
+                    bodyContent += `<table class="answer-table">`;
+                    
+                    // Hàng 1: Số câu
+                    bodyContent += `<tr><td style="font-weight:bold; background-color:#f0f0f0; width: 100px;">Câu hỏi</td>`;
+                    chunk.forEach((_, idx) => {
+                        bodyContent += `<td>${i + idx + 1}</td>`;
+                    });
+                    // Lấp đầy ô trống nếu block cuối không đủ 10
+                    for(let k = chunk.length; k < chunkSize; k++) {
+                         bodyContent += `<td></td>`;
                     }
+                    bodyContent += `</tr>`;
+                    
+                    // Hàng 2: Đáp án
+                    bodyContent += `<tr><td style="font-weight:bold; background-color:#f0f0f0;">Đáp án</td>`;
+                    chunk.forEach(q => {
+                        bodyContent += `<td style="font-weight:bold;">${String.fromCharCode(65 + q.correctAnswerIndex)}</td>`;
+                    });
+                     for(let k = chunk.length; k < chunkSize; k++) {
+                         bodyContent += `<td></td>`;
+                    }
+                    bodyContent += `</tr></table>`;
                 }
-                
-                // Lấp đầy các ô trống nếu hàng cuối chưa đủ 5 cặp
-                const remaining = 5 - (questions.length % 5);
-                if (remaining < 5 && remaining > 0) {
-                    for(let j=0; j<remaining; j++) bodyContent += `<td></td><td></td>`;
-                }
-
-                bodyContent += `</tr></tbody></table></div>`;
+                bodyContent += `</div>`;
 
                 const blob = new Blob([header + bodyContent + footer], {type: "application/msword"});
                 saveAs(blob, `De_Thi_${topic.replace(/\s+/g, '_')}.doc`);
