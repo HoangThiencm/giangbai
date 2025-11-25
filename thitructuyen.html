@@ -39,7 +39,6 @@
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
         // --- HELPER: LÀM SẠCH OPTION ---
-        // Backend mới đã xử lý rồi, nhưng frontend làm thêm lần nữa cho chắc chắn hiển thị đẹp
         const cleanOptionText = (text) => {
             if (!text) return "";
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
@@ -206,7 +205,7 @@
                                     {q.correct_index === -1 && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">Chưa có đáp án</span>}
                                 </div>
                                 <textarea className="w-full p-2 border rounded mb-3 font-medium focus:ring-2 focus:ring-blue-200" value={q.question} onChange={(e) => handleTextChange(i, 'question', e.target.value)} rows={2} />
-                                <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-dashed border-gray-300"><span className="font-bold mr-2">[Preview]:</span> <MathText text={q.question}/></div>
+                                {/* Đã xóa phần Preview thừa thãi */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {q.options.map((opt, idx) => (
                                         <div key={idx} className={`flex items-center gap-2 p-2 rounded border ${q.correct_index === idx ? 'bg-green-100 border-green-500' : 'bg-gray-50'}`}>
