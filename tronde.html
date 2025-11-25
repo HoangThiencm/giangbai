@@ -41,6 +41,13 @@
         const SERVER_URL = "https://hoangthiencm-giangbai.hf.space";
         const MODEL_NAME = "gemini-2.5-flash";
 
+        // --- HELPER: LÀM SẠCH NỘI DUNG OPTION (XÓA A. B.) ---
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            // Regex xóa: A. A) 1. 1) ở đầu dòng
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+        };
+
         // --- HELPER: FORMAT TEXT CHO WORD ---
         const formatMathForWord = (text) => {
             if (!text) return "";
@@ -60,7 +67,13 @@
             const ref = useRef();
             useEffect(() => {
                 if (!text) return;
-                const parts = text.split(/(\$[^$]+\$)/g);
+                // Tự động sửa lỗi thiếu $
+                let processed = text;
+                if (!text.includes('$') && (text.includes('\\{') || text.includes('\\['))) {
+                    processed = `$${text}$`;
+                }
+
+                const parts = processed.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
                 parts.forEach(part => {
                     if (part.startsWith("$") && part.endsWith("$")) {
@@ -155,7 +168,7 @@
 
         // --- APP MAIN ---
         const App = () => {
-            const [tab, setTab] = useState(null); // 'server' | 'ai' | 'simple'
+            const [tab, setTab] = useState(null); 
             const [apiKeys, setApiKeys] = useState([]);
             const [status, setStatus] = useState("");
             const [loading, setLoading] = useState(false);
@@ -197,8 +210,8 @@
                     
                     const mapped = data.map((q, i) => ({
                         id: i, number: i+1, question: q.question, 
-                        options: q.options.map(o=>o.replace(/^[A-D][\.:]\s*/, '')),
-                        // Nếu server tìm được đáp án (correctAnswer text) thì map về index, còn không thì -1
+                        // SỬ DỤNG HÀM cleanOptionText ĐỂ XÓA "A. A"
+                        options: q.options.map(o => cleanOptionText(o)),
                         correctAnswerIndex: q.correctAnswer ? q.options.findIndex(o => o.includes(q.correctAnswer)) : -1 
                     }));
                     setQuestions(mapped); setStatus(`Đã nhận diện ${mapped.length} câu.`);
@@ -206,35 +219,60 @@
                 setLoading(false);
             };
 
-            // 2. AI VISION MIX (Mode 2 - Khôi phục & Nâng cấp)
+            // 2. AI VISION MIX (Mode 2 - Đã nâng cấp vòng lặp đọc hết PDF)
             const handleAIMix = async (file) => {
                 if(!apiKeys.length) return alert("Cần API Key!");
-                setLoading(true); setStatus("AI đang đọc PDF (Tự tìm đáp án đúng)...");
+                setLoading(true); 
+                
                 try {
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
-                    const page1 = await pdf.getPage(1); // Demo trang 1 (Thực tế cần loop)
-                    const vp = page1.getViewport({scale: 2});
-                    const cvs = document.createElement('canvas');
-                    cvs.width = vp.width; cvs.height = vp.height;
-                    await page1.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
-                    const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
+                    let allQuestions = [];
+                    
+                    // VÒNG LẶP ĐỌC TẤT CẢ CÁC TRANG (Thay vì chỉ trang 1)
+                    for(let i = 1; i <= pdf.numPages; i++) {
+                        setStatus(`Đang đọc trang ${i}/${pdf.numPages} (Tìm đáp án tô đỏ/gạch chân)...`);
+                        
+                        const page = await pdf.getPage(i); 
+                        const vp = page.getViewport({scale: 2});
+                        const cvs = document.createElement('canvas');
+                        cvs.width = vp.width; cvs.height = vp.height;
+                        await page.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
+                        const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
 
-                    const prompt = `Đọc đề thi từ ảnh này.
-                    QUY TẮC TÌM ĐÁP ÁN:
-                    1. Nếu thấy đáp án nào được TÔ ĐỎ, GẠCH CHÂN, hoặc có dấu TÍCH (✓) -> Đó là đáp án đúng.
-                    2. Nếu thấy BẢNG ĐÁP ÁN ở cuối -> Lấy đáp án từ đó.
-                    
-                    Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":-1}] (Nếu tìm thấy đáp án thì điền index 0-3, ko thì -1)`;
-                    
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKeys[0]}`, {
-                        method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
-                    });
-                    const data = await res.json();
-                    const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                    setQuestions(JSON.parse(txt).map((q,i)=>({...q, id: i, number: i+1})));
-                    setStatus("AI Đã đọc xong & Tự động điền đáp án!");
+                        const prompt = `Đọc đề thi từ ảnh này.
+                        QUY TẮC QUAN TRỌNG:
+                        1. Loại bỏ chữ "A.", "B.", "C.", "D." ở đầu nội dung đáp án. (Ví dụ: "A. 5cm" -> Chỉ lấy "5cm").
+                        2. TÌM ĐÁP ÁN ĐÚNG: Nếu thấy đáp án nào TÔ ĐỎ, GẠCH CHÂN, hoặc có dấu TÍCH (✓) -> Lấy index (0=A, 1=B...).
+                        3. Nếu thấy BẢNG ĐÁP ÁN ở cuối trang -> Dùng nó.
+                        
+                        Output JSON strict: [{"question":"...","options":["...","...","...","..."],"correctAnswerIndex":-1}]`;
+                        
+                        const currentKey = apiKeys[i % apiKeys.length]; // Xoay vòng key nếu nhiều trang
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentKey}`, {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
+                        });
+                        
+                        const data = await res.json();
+                        if(data.candidates) {
+                            const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                            const pageQs = JSON.parse(txt);
+                            allQuestions = [...allQuestions, ...pageQs];
+                        }
+                    }
+
+                    // Map lại ID và làm sạch options lần nữa
+                    const finalMapped = allQuestions.map((q, i) => ({
+                        id: i, 
+                        number: i+1, 
+                        question: q.question,
+                        options: q.options.map(o => cleanOptionText(o)),
+                        correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1
+                    }));
+
+                    setQuestions(finalMapped);
+                    setStatus(`Hoàn tất! Đã đọc ${finalMapped.length} câu hỏi từ ${pdf.numPages} trang.`);
                 } catch(e) { setStatus("Lỗi AI: " + e.message); }
                 setLoading(false);
             };
@@ -248,7 +286,12 @@
                     const parser = new DOMParser(); const xml = parser.parseFromString(docXml, "text/xml");
                     let text = ""; xml.querySelectorAll("w\\:t").forEach(n => text += n.textContent + "\n");
                     const raw = text.split(/Câu\s+\d+[:\.]/g).filter(t=>t.length>10);
-                    setQuestions(raw.map((t,i)=>({id:i, number:i+1, question: t.substring(0,100)+"...", options:["A","B","C","D"], correctAnswerIndex:-1})));
+                    setQuestions(raw.map((t,i)=>({
+                        id:i, number:i+1, 
+                        question: t.substring(0,100)+"...", 
+                        options:["A", "B", "C", "D"], 
+                        correctAnswerIndex:-1
+                    })));
                     setStatus(`Tách được ${raw.length} câu.`);
                 } catch(e) { setStatus("Lỗi: " + e.message); }
                 setLoading(false);
