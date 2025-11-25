@@ -44,56 +44,43 @@
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
         };
 
-        // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ (NÂNG CẤP REGEX) ---
+        // --- COMPONENT HIỂN THỊ TOÁN (ĐÃ FIX: BỎ AUTO-WRAP GÂY LỖI) ---
         const MathText = ({ text }) => {
             const ref = useRef();
             
             useEffect(() => {
                 if (!text || !ref.current) return;
 
-                // 1. Chuẩn hóa sơ bộ: Chuyển các định dạng lạ về $...$
+                // 1. Chuẩn hóa các định dạng bao quanh về $...$
                 let processed = text
-                    .replace(/`([^`]+)`/g, '$$$1$$') 
-                    .replace(/\\\[(.*?)\\\]/gs, '$$$$$1$$$$')
-                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$');
+                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$') // \(...\) -> $...$
+                    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') // \[...\] -> $...$ 
+                    .replace(/`([^`]+)`/g, '$$$1$$');     // `...` -> $...$
 
-                // 2. Tự động phát hiện lệnh LaTeX trần (không có $) và bao gói lại
-                // Regex mở rộng để bắt được nhiều lệnh hơn
-                const latexKeywords = /(?:\\frac|\\sqrt|\\int|\\sum|\\lim|\\vec|\\hat|\\angle|\\approx|\\pi|\\infty|\\cdot|\\leq|\\geq|\\neq|\\in|\\subset|\\cup|\\cap|\\alpha|\\beta|\\gamma|\\Delta|\\theta|\\lambda|\\sigma|\\omega|\\mu|\\rho|\\phi|\\psi|\\Omega|\\Phi|\\Psi|\\epsilon|\\delta|\\tau|\\partial|\\nabla|\\times|\\div|\\pm|\\mp|\\circ|\\bullet|\\oplus|\\otimes|\\le|\\ge|\\equiv|\\sim|\\simeq|\\cong|\\propto|\\perp|\\parallel|\\rightarrow|\\leftarrow|\\Rightarrow|\\Leftarrow|\\leftrightarrow|\\Leftrightarrow|\\mapsto|\\to|\\dots|\\ldots|\\mid|\\|)/;
-                
-                if (latexKeywords.test(processed) && !processed.includes('$')) {
-                    // Nếu tìm thấy từ khóa LaTeX mà không thấy dấu $, thử bao toàn bộ chuỗi lại
-                    // Lưu ý: Cách này an toàn cho các chuỗi ngắn (như đáp án)
-                    processed = `$${processed}$`;
-                }
+                // LƯU Ý: Đã bỏ đoạn code tự động thêm $ khi thấy từ khóa LaTeX
+                // để tránh bao gói cả tiếng Việt gây lỗi hiển thị.
 
-                // 3. Render thủ công
+                // 2. Tách chuỗi và render
                 const parts = processed.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
                 
                 parts.forEach(part => {
+                    if (!part) return;
+
                     if (part.startsWith("$") && part.endsWith("$")) {
                         const span = document.createElement("span");
                         try {
+                            // Bỏ 2 dấu $ ở đầu và cuối để lấy nội dung LaTeX
                             const latex = part.slice(1, -1);
                             katex.render(latex, span, { throwOnError: false, displayMode: false });
                         } catch (e) {
-                            span.innerText = part;
+                            // Nếu KaTeX lỗi, hiển thị nguyên văn để debug
+                            span.textContent = part;
                         }
                         ref.current.appendChild(span);
-                    } else if (part.length > 0) {
-                        // Kiểm tra lại lần nữa xem trong text thường có sót lệnh latex không
-                        if (latexKeywords.test(part)) {
-                             const span = document.createElement("span");
-                             try {
-                                katex.render(part, span, { throwOnError: false, displayMode: false });
-                                ref.current.appendChild(span);
-                             } catch(e) {
-                                ref.current.appendChild(document.createTextNode(part));
-                             }
-                        } else {
-                            ref.current.appendChild(document.createTextNode(part));
-                        }
+                    } else {
+                        // Text thường -> Render text node (giữ nguyên tiếng Việt, không bị lỗi)
+                        ref.current.appendChild(document.createTextNode(part));
                     }
                 });
             }, [text]);
