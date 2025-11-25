@@ -38,10 +38,10 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
-        // --- HELPER: LÀM SẠCH OPTION (FIX LỖI TRÙNG A. A.) ---
+        // --- HELPER: LÀM SẠCH OPTION ---
+        // Backend mới đã xử lý rồi, nhưng frontend làm thêm lần nữa cho chắc chắn hiển thị đẹp
         const cleanOptionText = (text) => {
             if (!text) return "";
-            // Regex xóa A. B. C. 1. 1) ở đầu dòng
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
         };
 
@@ -52,18 +52,15 @@
             useEffect(() => {
                 if (!text || !ref.current) return;
 
-                // 1. Chuẩn hóa sơ bộ
                 let processed = text
                     .replace(/`([^`]+)`/g, '$$$1$$') 
                     .replace(/\\\[(.*?)\\\]/gs, '$$$$$1$$$$')
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$');
 
-                // 2. Tự động bao gói lệnh LaTeX trần (nếu thiếu $)
                 if (!processed.includes('$') && /[\\](frac|sqrt|int|sum|lim|vec|hat|angle|approx|pi|infty|cdot|leq|geq|neq|in|subset|cup|cap|alpha|beta|gamma|Delta|theta)/.test(processed)) {
                     processed = `$${processed}$`;
                 }
 
-                // 3. Render thủ công từng phần
                 const parts = processed.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
                 
@@ -216,7 +213,7 @@
                                             <input type="radio" name={`q-${i}`} checked={q.correct_index === idx} onChange={() => handleOptionChange(i, idx)} className="w-5 h-5 cursor-pointer" />
                                             <div className="flex-1 flex flex-col">
                                                 <input className="bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full" value={opt} onChange={(e) => handleTextChange(i, 'options', e.target.value, idx)} />
-                                                <div className="text-xs text-gray-500 mt-1"><MathText text={opt}/></div>
+                                                <div className="text-xs text-gray-500 mt-1"><MathText text={cleanOptionText(opt)}/></div>
                                             </div>
                                         </div>
                                     ))}
@@ -261,6 +258,7 @@
             useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); }, []);
             const handleFileSelect = (e) => { const f = e.target.files[0]; if(f) setFileName(f.name); }
 
+            // --- 1. SỬA ĐỔI QUAN TRỌNG TẠI ĐÂY ---
             const handleParse = async () => {
                 if (!apiKeys.length) return alert("Thiếu API Key!");
                 if (!form.title || !form.startTime) return alert("Nhập thông tin!");
@@ -269,48 +267,36 @@
                 setLoading(true);
                 const fd = new FormData();
                 fd.append("file", fileRef.current.files[0]);
-                
-                // --- KẾT NỐI SERVER TRỘN ĐỀ (convert-and-quiz) ---
-                const config = { headers: { 'x-gemini-api-key': apiKeys.join(',') } };
+                // Backend mới yêu cầu 'api_keys_json' trong form data
+                fd.append("api_keys_json", JSON.stringify(apiKeys));
 
                 try {
-                    const res = await axios.post(`${API_BASE}/convert-and-quiz`, fd, config);
+                    // Gọi đúng endpoint của thtracnghiem.py
+                    const res = await axios.post(`${API_BASE}/api/exam/parse`, fd);
                     const data = res.data;
-                    if (data.error) throw new Error(data.error);
+                    
+                    if (!data.questions) throw new Error("Không có câu hỏi trả về");
 
-                    // Map dữ liệu từ Server Trộn Đề -> Thi Trực Tuyến
-                    const mapped = data.map((q) => {
-                        // 1. Tìm index đúng TRƯỚC khi làm sạch
-                        let cIndex = -1;
-                        if(q.correctAnswer) {
-                             cIndex = q.options.findIndex(o => o.includes(q.correctAnswer));
-                             // Fallback
-                             if(cIndex === -1) {
-                                 const cleanAns = cleanOptionText(q.correctAnswer);
-                                 cIndex = q.options.findIndex(o => cleanOptionText(o).includes(cleanAns));
-                             }
-                        }
-
-                        // 2. Làm sạch option cho hiển thị
-                        const cleanOpts = q.options.map(o => cleanOptionText(o));
-
+                    // Map dữ liệu
+                    const mapped = data.questions.map((q) => {
+                        // Backend mới đã trả về đúng correct_index (int), dùng luôn
+                        // Chỉ cần clean options cho đẹp
                         return { 
                             question: q.question, 
-                            options: cleanOpts, 
-                            correct_index: cIndex 
+                            options: q.options.map(o => cleanOptionText(o)), 
+                            correct_index: q.correct_index !== undefined ? q.correct_index : -1 
                         };
                     });
 
                     setParsedQuestions(mapped);
                     setStep("review");
-                } catch (e) { alert("Lỗi đọc file: " + (e.response?.data?.error || e.message)); } 
+                } catch (e) { alert("Lỗi đọc file: " + (e.response?.data?.detail || e.message)); } 
                 finally { setLoading(false); }
             };
 
             const handleSave = async () => {
                 setLoading(true);
                 try {
-                    // Fix lỗi 422: Map lại startTime -> start_time
                     const payload = {
                         title: form.title,
                         school: form.school,
