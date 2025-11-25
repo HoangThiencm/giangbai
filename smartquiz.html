@@ -36,19 +36,10 @@
                 if (!text || !ref.current) return;
 
                 // 1. Chuẩn hóa dữ liệu đầu vào:
-                // Thay thế dấu backtick `...` thành $...$ để KaTeX hiểu
-                // Thay thế \[...\] thành $$...$$
                 let processed = text
                     .replace(/`([^`]+)`/g, '$$$1$$') // `code` -> $code$
                     .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$') // \[...\] -> $$...$$
                     .replace(/\\\((.*?)\\\)/g, '$$$1$$'); // \(...\) -> $...$
-
-                // Tự động thêm $ nếu thấy ký tự toán học đặc trưng mà chưa có $ (ví dụ \frac, \sqrt, ^2)
-                if (!processed.includes('$')) {
-                    if (/\\[a-zA-Z]+|[\^\_]/.test(processed)) {
-                       // processed = `$${processed}$`; 
-                    }
-                }
 
                 ref.current.innerHTML = processed;
 
@@ -194,10 +185,11 @@
             const [step, setStep] = useState(1);
             const [topic, setTopic] = useState("");
             const [numQ, setNumQ] = useState(5);
-            const [level, setLevel] = useState("Trung bình"); // Mặc định
+            const [level, setLevel] = useState("Trung bình");
             const [questions, setQuestions] = useState([]);
             const [loading, setLoading] = useState(false);
             const [apiKeys, setApiKeys] = useState([]);
+            const [retryCount, setRetryCount] = useState(0);
 
             // Danh sách các mức độ
             const LEVELS = ["Cơ bản", "Trung bình", "Nâng cao", "Hỗn hợp"];
@@ -212,67 +204,92 @@
                 if(!topic.trim()) return alert("Vui lòng nhập chủ đề!");
                 
                 setLoading(true);
-                try {
-                    // Xử lý mức độ cho Prompt
-                    let levelPrompt = level;
-                    if (level === "Hỗn hợp") {
-                        levelPrompt = "Hỗn hợp (Bao gồm khoảng 30% Cơ bản, 40% Trung bình và 30% Nâng cao)";
-                    }
-
-                    const prompt = `
-                    Đóng vai giáo viên giỏi. Tạo ${numQ} câu hỏi trắc nghiệm khách quan về chủ đề: "${topic}".
-                    Mức độ: ${levelPrompt}.
-                    
-                    QUY TẮC ĐỊNH DẠNG TOÁN HỌC (BẮT BUỘC):
-                    1. Mọi công thức toán, ký hiệu, phương trình PHẢI được bao quanh bởi dấu $.
-                       -> Sai: 2x + 1 = 0
-                       -> Đúng: $2x + 1 = 0$
-                       -> Sai: \`sqrt(2)\`
-                       -> Đúng: $\\sqrt{2}$
-                    2. KHÔNG dùng dấu huyền (\`) cho công thức.
-                    3. KHÔNG dùng \\( ... \\) hoặc \\[ ... \\], chỉ dùng $.
-                    
-                    Output JSON Strict format: 
-                    [
-                        {
-                            "question": "Nội dung câu hỏi (có math $...$)",
-                            "options": ["Đáp án A (có math)", "Đáp án B", "Đáp án C", "Đáp án D"],
-                            "correctAnswerIndex": 0 
-                        }
-                    ]
-                    `;
-                    
-                    const randomKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
-                    
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${randomKey}`, {
-                        method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
-                    });
-                    
-                    const data = await res.json();
-                    if(data.error) throw new Error(data.error.message);
-
-                    const txt = data.candidates[0].content.parts[0].text;
-                    
-                    // --- KHẮC PHỤC LỖI "Unexpected token" ---
-                    // Tìm vị trí bắt đầu [ và kết thúc ] của JSON Array
-                    const startIdx = txt.indexOf('[');
-                    const endIdx = txt.lastIndexOf(']');
-                    
-                    let jsonStr = "";
-                    if (startIdx !== -1 && endIdx !== -1) {
-                        jsonStr = txt.substring(startIdx, endIdx + 1);
-                    } else {
-                        // Fallback nếu AI không trả về đúng format array
-                        jsonStr = txt.replace(/```json|```/g, '').trim(); 
-                    }
-                    
-                    setQuestions(JSON.parse(jsonStr));
-                    setStep(2);
-                } catch(e) { 
-                    alert("Lỗi tạo đề: " + e.message + "\n(Vui lòng thử lại hoặc kiểm tra Key)"); 
-                    console.error(e);
+                setRetryCount(0);
+                
+                // Xử lý mức độ cho Prompt
+                let levelPrompt = level;
+                if (level === "Hỗn hợp") {
+                    levelPrompt = "Hỗn hợp (Bao gồm khoảng 30% Cơ bản, 40% Trung bình và 30% Nâng cao)";
                 }
+
+                const prompt = `
+                Đóng vai giáo viên giỏi. Tạo ${numQ} câu hỏi trắc nghiệm khách quan về chủ đề: "${topic}".
+                Mức độ: ${levelPrompt}.
+                
+                QUY TẮC ĐỊNH DẠNG TOÁN HỌC (BẮT BUỘC):
+                1. Mọi công thức toán, ký hiệu, phương trình PHẢI được bao quanh bởi dấu $.
+                   -> Sai: 2x + 1 = 0
+                   -> Đúng: $2x + 1 = 0$
+                   -> Sai: \`sqrt(2)\`
+                   -> Đúng: $\\sqrt{2}$
+                2. KHÔNG dùng dấu huyền (\`) cho công thức.
+                3. KHÔNG dùng \\( ... \\) hoặc \\[ ... \\], chỉ dùng $.
+                
+                Output JSON Strict format: 
+                [
+                    {
+                        "question": "Nội dung câu hỏi (có math $...$)",
+                        "options": ["Đáp án A (có math)", "Đáp án B", "Đáp án C", "Đáp án D"],
+                        "correctAnswerIndex": 0 
+                    }
+                ]
+                `;
+
+                // --- LOGIC XOAY VÒNG KEY (AUTO-RETRY) ---
+                let success = false;
+                let finalError = "";
+                
+                // Xáo trộn key để tránh dùng mãi 1 key đầu tiên
+                const shuffledKeys = [...apiKeys].sort(() => Math.random() - 0.5);
+
+                for (let i = 0; i < shuffledKeys.length; i++) {
+                    const currentKey = shuffledKeys[i];
+                    try {
+                        // Hiển thị trạng thái đang thử (nếu muốn debug)
+                        if(i > 0) setRetryCount(i);
+                        console.log(`Đang thử Key ${i+1}/${shuffledKeys.length}: ...${currentKey.slice(-4)}`);
+
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`, {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
+                        });
+                        
+                        const data = await res.json();
+                        
+                        // Nếu API trả về lỗi (Quota hoặc lỗi khác) -> Ném lỗi để catch bắt được và chuyển key
+                        if(data.error) throw new Error(data.error.message);
+                        if(!data.candidates || !data.candidates[0].content) throw new Error("Không có phản hồi từ AI");
+
+                        const txt = data.candidates[0].content.parts[0].text;
+                        
+                        // Parse JSON an toàn
+                        const startIdx = txt.indexOf('[');
+                        const endIdx = txt.lastIndexOf(']');
+                        let jsonStr = "";
+                        if (startIdx !== -1 && endIdx !== -1) {
+                            jsonStr = txt.substring(startIdx, endIdx + 1);
+                        } else {
+                            jsonStr = txt.replace(/```json|```/g, '').trim(); 
+                        }
+                        
+                        const parsedQ = JSON.parse(jsonStr);
+                        if(parsedQ.length > 0) {
+                            setQuestions(parsedQ);
+                            setStep(2);
+                            success = true;
+                            break; // Thành công -> Thoát vòng lặp
+                        }
+                    } catch(e) { 
+                        console.warn(`Key ...${currentKey.slice(-4)} thất bại: ${e.message}`);
+                        finalError = e.message;
+                        // Vòng lặp sẽ tự continue sang key tiếp theo
+                    }
+                }
+
+                if (!success) {
+                    alert(`Thất bại sau khi thử ${shuffledKeys.length} Keys.\nLỗi cuối cùng: ${finalError}`);
+                }
+                
                 setLoading(false);
             };
 
@@ -366,7 +383,10 @@
                             </div>
 
                             <button onClick={generate} disabled={loading} className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold hover:shadow-lg hover:scale-[1.01] transition disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center gap-3 text-lg">
-                                {loading ? <><i className="fas fa-circle-notch fa-spin"></i> Đang suy nghĩ...</> : <><i className="fas fa-magic"></i> TẠO ĐỀ NGAY</>}
+                                {loading ? 
+                                    (retryCount > 0 ? <><i className="fas fa-sync fa-spin"></i> Đổi Key khác ({retryCount})...</> : <><i className="fas fa-circle-notch fa-spin"></i> Đang suy nghĩ...</>) 
+                                    : <><i className="fas fa-magic"></i> TẠO ĐỀ NGAY</>
+                                }
                             </button>
                             
                             {!apiKeys.length && <p className="text-red-500 text-center mt-4 text-sm bg-red-50 p-2 rounded"><i className="fas fa-exclamation-circle"></i> Chưa tìm thấy API Key. Vui lòng quay lại Dashboard nạp file key.</p>}
