@@ -28,6 +28,14 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
+        // --- HELPER: LÀM SẠCH NỘI DUNG OPTION (FIX LỖI TRÙNG LẶP) ---
+        // Hàm này sẽ cắt bỏ "A.", "B)", "1." ở đầu chuỗi
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            // Regex tìm ký tự A-Z hoặc a-z hoặc số, theo sau là dấu chấm, ngoặc đơn, hai chấm hoặc gạch ngang
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+        };
+
         // --- HELPER: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD ---
         const convertToMathML = (text) => {
             if (!text) return "";
@@ -131,7 +139,8 @@
                                     return (
                                         <div key={i} onClick={() => !showAns && setSelectedOpt(i)} className={containerClass}>
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 transition-colors ${showAns && i === q.correctAnswerIndex ? 'bg-green-600 text-white' : selectedOpt === i ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+i)}</div>
-                                            <div className="flex-1"><MathText text={opt} /></div>
+                                            {/* SỬ DỤNG cleanOptionText Ở ĐÂY */}
+                                            <div className="flex-1"><MathText text={cleanOptionText(opt)} /></div>
                                             {showAns && i === q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600 text-2xl absolute right-4"></i>}
                                         </div>
                                     );
@@ -174,9 +183,11 @@
                 setLoading(true); setRetryCount(0);
                 
                 let levelPrompt = level === "Hỗn hợp" ? "Hỗn hợp (30% Cơ bản, 40% Trung bình, 30% Nâng cao)" : level;
+                // CẬP NHẬT PROMPT: Nhắc AI không trả về A. B. C. D. nhưng vẫn dùng cleanOptionText để dự phòng
                 const prompt = `Đóng vai giáo viên giỏi. Tạo ${numQ} câu hỏi trắc nghiệm chủ đề: "${topic}". Mức độ: ${levelPrompt}.
                 QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
-                Output JSON Strict: [{"question":"...","options":["A...","B...","C...","D..."],"correctAnswerIndex":0}]`;
+                QUY TẮC ĐÁP ÁN: Trong mảng "options", CHỈ đưa nội dung đáp án, KHÔNG bao gồm "A.", "B.", "C.", "D." ở đầu.
+                Output JSON Strict: [{"question":"...","options":["Nội dung A","Nội dung B","Nội dung C","Nội dung D"],"correctAnswerIndex":0}]`;
 
                 let success = false;
                 let finalError = "";
@@ -209,7 +220,7 @@
                 setLoading(false);
             };
 
-            // --- HÀM XUẤT WORD CẢI TIẾN ---
+            // --- HÀM XUẤT WORD CẢI TIẾN (ĐÃ DÙNG cleanOptionText) ---
             const exportWord = () => {
                 const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' 
@@ -239,10 +250,11 @@
                 // 1. Phần Câu hỏi
                 questions.forEach((q, i) => {
                     const qText = convertToMathML(q.question);
-                    const optA = convertToMathML(q.options[0]);
-                    const optB = convertToMathML(q.options[1]);
-                    const optC = convertToMathML(q.options[2]);
-                    const optD = convertToMathML(q.options[3]);
+                    // LÀM SẠCH OPTION TRƯỚC KHI XUẤT WORD
+                    const optA = convertToMathML(cleanOptionText(q.options[0]));
+                    const optB = convertToMathML(cleanOptionText(q.options[1]));
+                    const optC = convertToMathML(cleanOptionText(q.options[2]));
+                    const optD = convertToMathML(cleanOptionText(q.options[3]));
 
                     bodyContent += `
                     <div class="question-block">
@@ -361,7 +373,8 @@
                                             {q.options.map((o, idx) => (
                                                 <div key={idx} className={`p-3 border rounded-xl flex items-center gap-3 transition ${idx===q.correctAnswerIndex ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-slate-200 group-hover:bg-white'}`}>
                                                     <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${idx===q.correctAnswerIndex ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}>{String.fromCharCode(65+idx)}</span>
-                                                    <span className="text-slate-700"><MathText text={o}/></span>
+                                                    {/* SỬ DỤNG cleanOptionText Ở ĐÂY ĐỂ XÓA A. B. */}
+                                                    <span className="text-slate-700"><MathText text={cleanOptionText(o)}/></span>
                                                 </div>
                                             ))}
                                         </div>
