@@ -162,6 +162,12 @@
                 alert(`Đã cập nhật ${Object.keys(newMap).length} câu!`);
             };
 
+            const handleOptionChange = (qIndex, optIndex) => {
+                const newQs = [...questions];
+                newQs[qIndex].correct_index = optIndex;
+                onUpdateQuestions(newQs);
+            };
+
             const handleTextChange = (qIndex, field, value, optIndex = null) => {
                 const newQs = [...questions];
                 if (optIndex !== null) newQs[qIndex].options[optIndex] = value;
@@ -353,6 +359,20 @@
             return <div className="max-w-3xl mx-auto p-4 pb-20"><div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4"><b>{info.name}</b><span>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 rounded">Nộp</button></div>{exam.questions.map((q, i) => (<div key={i} className="bg-white p-4 rounded shadow mb-4"><div className="flex gap-2 mb-2"><b>Câu {i+1}:</b> <MathText text={q.question}/></div><div className="grid grid-cols-2 gap-2">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-2 border rounded cursor-pointer ${answers[i]===idx?'bg-blue-100 border-blue-500':''}`}><span className="font-bold mr-2">{String.fromCharCode(65+idx)}</span><MathText text={cleanOptionText(o)}/></div>))}</div></div>))}</div>;
         };
 
+        const App = () => {
+            const [view, setView] = useState("dashboard");
+            const [selectedId, setSelectedId] = useState(null);
+            const [isStudent, setIsStudent] = useState(false);
+            const [needsLogin, setNeedsLogin] = useState(false);
+
+            useEffect(() => { const p = new URLSearchParams(window.location.search); if(p.get("mode") === "student") { setSelectedId(p.get("examId")); setIsStudent(true); } else if(!userEmail) setNeedsLogin(true); }, []);
+            const goToLogin = () => { try { window.location.href = 'login.html'; } catch(e) { alert("Mở file login.html thủ công"); } };
+
+            if (needsLogin) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2>Yêu cầu đăng nhập</h2><button onClick={goToLogin} className="bg-blue-600 text-white px-4 py-2 rounded mt-4">Đăng Nhập</button></div></div>;
+            if(isStudent) return <StudentView examId={selectedId} />;
+
+            return <div>{view==="dashboard" && <TeacherDashboard onCreateNew={()=>setView("create")} onViewDetail={(id)=>{setSelectedId(id); setView("detail")}}/>}{view==="create" && <CreateExam onBack={()=>setView("dashboard")}/>}{view==="detail" && <ResultDetail examId={selectedId} onBack={()=>setView("dashboard")}/>}</div>;
+        };
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
