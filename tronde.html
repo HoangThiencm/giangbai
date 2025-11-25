@@ -16,8 +16,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
+    <!-- KaTeX cho hiển thị toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -41,36 +43,44 @@
         const SERVER_URL = "https://hoangthiencm-giangbai.hf.space";
         const MODEL_NAME = "gemini-2.5-flash";
 
-        // --- HELPER: LÀM SẠCH NỘI DUNG OPTION (XÓA A. B.) ---
-        const cleanOptionText = (text) => {
+        // --- HELPER 1: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD (QUAN TRỌNG) ---
+        const convertToMathML = (text) => {
             if (!text) return "";
-            // Regex xóa: A. A) 1. 1) ở đầu dòng
-            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
-        };
-
-        // --- HELPER: FORMAT TEXT CHO WORD ---
-        const formatMathForWord = (text) => {
-            if (!text) return "";
-            let content = text;
-            if (!content.includes('$') && content.includes('\\')) { content = `$${content}$`; }
             
-            return content.replace(/\$([^$]+)\$/g, (match, tex) => {
+            // Chuẩn hóa dấu toán học
+            let standardized = text
+                .replace(/`([^`]+)`/g, '$$$1$$') 
+                .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
+                .replace(/\\\((.*?)\\\)/g, '$$$1$$');
+
+            // Render LaTeX thành MathML
+            return standardized.replace(/\$([^$]+)\$/g, (match, latex) => {
                 try {
-                    let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
-                    return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
-                } catch (e) { return match; }
+                    return katex.renderToString(latex, {
+                        throwOnError: false,
+                        output: 'mathml', 
+                        displayMode: false
+                    });
+                } catch (e) {
+                    return match;
+                }
             });
         };
 
-        // --- HELPER: RENDER MATH TRÊN WEB ---
+        // --- HELPER 2: LÀM SẠCH NỘI DUNG OPTION ---
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+        };
+
+        // --- HELPER 3: RENDER MATH TRÊN WEB ---
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text) return;
-                // Tự động sửa lỗi thiếu $
-                let processed = text;
-                if (!text.includes('$') && (text.includes('\\{') || text.includes('\\['))) {
-                    processed = `$${text}$`;
+                let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$').replace(/\\\((.*?)\\\)/g, '$$$1$$');
+                if (!processed.includes('$') && (processed.includes('\\{') || processed.includes('\\['))) {
+                    processed = `$${processed}$`;
                 }
 
                 const parts = processed.split(/(\$[^$]+\$)/g);
@@ -86,7 +96,7 @@
             return <span ref={ref} />;
         };
 
-        // --- MODAL: NẠP ĐÁP ÁN THÔNG MINH ---
+        // --- COMPONENT MODAL NHẬP ĐÁP ÁN ---
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
@@ -148,22 +158,79 @@
             );
         };
 
-        // --- HELPER: EXPORT WORD ---
+        // --- HELPER 4: TẠO NỘI DUNG FILE WORD (KÈM BẢNG ĐÁP ÁN CUỐI) ---
         const createDocContent = (code, questions) => {
-            let body = `<h2 style='text-align:center; font-size:16pt; margin-bottom:20pt'>MÃ ĐỀ: ${code}</h2>`;
+            const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                      xmlns:w='urn:schemas-microsoft-com:office:word' 
+                      xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>${code}</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; }
+                        h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20px; }
+                        .question-block { margin-bottom: 12pt; text-align: justify; page-break-inside: avoid; }
+                        .options-table { width: 100%; border-collapse: collapse; margin-top: 3pt; }
+                        .options-table td { padding: 3pt 0; vertical-align: top; }
+                        .answer-key { margin-top: 50px; page-break-before: always; }
+                        .answer-table { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 20px; }
+                        .answer-table td, .answer-table th { border: 1px solid #000; padding: 5px; text-align: center; }
+                    </style>
+                </head>
+                <body>`;
+            
+            let body = `<h1>MÃ ĐỀ: ${code}</h1>`;
+            
+            // 1. Phần Câu hỏi (Render MathML)
             questions.forEach(q => {
-                body += `<p style='margin-bottom:6pt; text-align:justify'><b>Câu ${q.number}:</b> ${formatMathForWord(q.question)}</p>`;
-                const opts = q.options || [];
-                const maxLen = Math.max(...opts.map(o => o.length));
+                const qText = convertToMathML(q.question);
+                const opts = q.options.map(o => convertToMathML(o));
+                
+                body += `<div class="question-block"><b>Câu ${q.number}:</b> ${qText}`;
+                
+                // Format bảng đáp án (2 cột hoặc 4 cột tùy độ dài)
+                const maxLen = Math.max(...q.options.map(o => o.length));
                 if (maxLen < 15) {
-                    body += `<table style='width:100%; border:none; margin-bottom:12pt'><tr><td style='width:25%'><b>A.</b> ${formatMathForWord(opts[0])}</td><td style='width:25%'><b>B.</b> ${formatMathForWord(opts[1])}</td><td style='width:25%'><b>C.</b> ${formatMathForWord(opts[2])}</td><td style='width:25%'><b>D.</b> ${formatMathForWord(opts[3])}</td></tr></table>`;
+                     body += `<table class="options-table"><tr>
+                        <td width="25%"><b>A.</b> ${opts[0]}</td><td width="25%"><b>B.</b> ${opts[1]}</td>
+                        <td width="25%"><b>C.</b> ${opts[2]}</td><td width="25%"><b>D.</b> ${opts[3]}</td>
+                    </tr></table>`;
                 } else if (maxLen < 45) {
-                    body += `<table style='width:100%; border:none; margin-bottom:12pt'><tr><td style='width:50%'><b>A.</b> ${formatMathForWord(opts[0])}</td><td style='width:50%'><b>B.</b> ${formatMathForWord(opts[1])}</td></tr><tr><td style='width:50%'><b>C.</b> ${formatMathForWord(opts[2])}</td><td style='width:50%'><b>D.</b> ${formatMathForWord(opts[3])}</td></tr></table>`;
+                    body += `<table class="options-table"><tr>
+                        <td width="50%"><b>A.</b> ${opts[0]}</td><td width="50%"><b>B.</b> ${opts[1]}</td></tr>
+                        <tr><td width="50%"><b>C.</b> ${opts[2]}</td><td width="50%"><b>D.</b> ${opts[3]}</td>
+                    </tr></table>`;
                 } else {
-                    body += opts.map((o,i) => `<p><b>${String.fromCharCode(65+i)}.</b> ${formatMathForWord(o)}</p>`).join('');
+                    opts.forEach((o, i) => {
+                        body += `<p style="margin: 3pt 0 0 20pt"><b>${String.fromCharCode(65+i)}.</b> ${o}</p>`;
+                    });
                 }
+                body += `</div>`;
             });
-            return `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${code}</title><style>body{font-family:'Times New Roman';font-size:12pt}</style></head><body>${body}</body></html>`;
+
+            // 2. Phần Bảng Đáp Án (Cuối đề) - Dạng Ngang (Block 10 câu)
+            body += `<div class="answer-key"><h2 style="text-align:center;">BẢNG ĐÁP ÁN</h2>`;
+            const chunkSize = 10;
+            for (let i = 0; i < questions.length; i += chunkSize) {
+                const chunk = questions.slice(i, i + chunkSize);
+                body += `<table class="answer-table">`;
+                
+                // Hàng 1: Số câu
+                body += `<tr><td style="font-weight:bold; background-color:#f0f0f0; width:100px">Câu hỏi</td>`;
+                chunk.forEach((_, idx) => body += `<td>${i + idx + 1}</td>`);
+                for(let k = chunk.length; k < chunkSize; k++) body += `<td></td>`;
+                body += `</tr>`;
+                
+                // Hàng 2: Đáp án
+                body += `<tr><td style="font-weight:bold; background-color:#f0f0f0;">Đáp án</td>`;
+                chunk.forEach(q => body += `<td style="font-weight:bold;">${q.correctAnswerLetter}</td>`);
+                for(let k = chunk.length; k < chunkSize; k++) body += `<td></td>`;
+                body += `</tr></table>`;
+            }
+            body += `</div>`;
+
+            return header + body + "</body></html>";
         };
 
         // --- APP MAIN ---
@@ -210,7 +277,6 @@
                     
                     const mapped = data.map((q, i) => ({
                         id: i, number: i+1, question: q.question, 
-                        // SỬ DỤNG HÀM cleanOptionText ĐỂ XÓA "A. A"
                         options: q.options.map(o => cleanOptionText(o)),
                         correctAnswerIndex: q.correctAnswer ? q.options.findIndex(o => o.includes(q.correctAnswer)) : -1 
                     }));
@@ -219,20 +285,17 @@
                 setLoading(false);
             };
 
-            // 2. AI VISION MIX (Mode 2 - Đã nâng cấp vòng lặp đọc hết PDF)
+            // 2. AI VISION MIX (Mode 2)
             const handleAIMix = async (file) => {
                 if(!apiKeys.length) return alert("Cần API Key!");
                 setLoading(true); 
-                
                 try {
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     let allQuestions = [];
                     
-                    // VÒNG LẶP ĐỌC TẤT CẢ CÁC TRANG (Thay vì chỉ trang 1)
                     for(let i = 1; i <= pdf.numPages; i++) {
-                        setStatus(`Đang đọc trang ${i}/${pdf.numPages} (Tìm đáp án tô đỏ/gạch chân)...`);
-                        
+                        setStatus(`Đang đọc trang ${i}/${pdf.numPages}...`);
                         const page = await pdf.getPage(i); 
                         const vp = page.getViewport({scale: 2});
                         const cvs = document.createElement('canvas');
@@ -240,15 +303,8 @@
                         await page.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
                         const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
 
-                        const prompt = `Đọc đề thi từ ảnh này.
-                        QUY TẮC QUAN TRỌNG:
-                        1. Loại bỏ chữ "A.", "B.", "C.", "D." ở đầu nội dung đáp án. (Ví dụ: "A. 5cm" -> Chỉ lấy "5cm").
-                        2. TÌM ĐÁP ÁN ĐÚNG: Nếu thấy đáp án nào TÔ ĐỎ, GẠCH CHÂN, hoặc có dấu TÍCH (✓) -> Lấy index (0=A, 1=B...).
-                        3. Nếu thấy BẢNG ĐÁP ÁN ở cuối trang -> Dùng nó.
-                        
-                        Output JSON strict: [{"question":"...","options":["...","...","...","..."],"correctAnswerIndex":-1}]`;
-                        
-                        const currentKey = apiKeys[i % apiKeys.length]; // Xoay vòng key nếu nhiều trang
+                        const prompt = `Đọc đề thi. Loại bỏ A. B. C. D. ở đầu đáp án. Tìm đáp án đúng (tô đỏ/gạch chân). Output JSON: [{"question":"...","options":["..."],"correctAnswerIndex":-1}]`;
+                        const currentKey = apiKeys[i % apiKeys.length];
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentKey}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
@@ -262,17 +318,13 @@
                         }
                     }
 
-                    // Map lại ID và làm sạch options lần nữa
                     const finalMapped = allQuestions.map((q, i) => ({
-                        id: i, 
-                        number: i+1, 
-                        question: q.question,
+                        id: i, number: i+1, question: q.question,
                         options: q.options.map(o => cleanOptionText(o)),
                         correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1
                     }));
-
                     setQuestions(finalMapped);
-                    setStatus(`Hoàn tất! Đã đọc ${finalMapped.length} câu hỏi từ ${pdf.numPages} trang.`);
+                    setStatus(`Hoàn tất! ${finalMapped.length} câu.`);
                 } catch(e) { setStatus("Lỗi AI: " + e.message); }
                 setLoading(false);
             };
@@ -304,6 +356,7 @@
                 else handleSimpleMix(f);
             };
 
+            // --- HÀM DOWNLOAD ZIP (TRỘN VÀ TẠO FILE) ---
             const downloadZip = () => {
                 if(!questions.length) return alert("Chưa có dữ liệu!");
                 const zip = new JSZip();
@@ -311,19 +364,40 @@
                 let excelData = [];
 
                 codes.forEach(code => {
+                    // 1. Trộn câu hỏi
                     const shuffled = [...questions].sort(()=>Math.random()-0.5);
+                    
+                    // 2. Trộn đáp án & Theo dõi đáp án đúng (Quan trọng!)
                     const variant = shuffled.map((q,i) => {
-                        const opts = q.options.map((txt,idx)=>({txt, isC: idx===q.correctAnswerIndex})).sort(()=>Math.random()-0.5);
+                        // Tạo mảng đối tượng để giữ trace của đáp án đúng (isC = isCorrect)
+                        const opts = q.options.map((txt,idx)=>({txt, isC: idx===q.correctAnswerIndex}))
+                                          .sort(()=>Math.random()-0.5);
+                        
+                        // Tìm vị trí mới của đáp án đúng
                         const newC = opts.findIndex(o=>o.isC);
-                        return { number: i+1, question: q.question, options: opts.map(o=>o.txt), correctAnswerLetter: String.fromCharCode(65+newC) };
+                        
+                        return { 
+                            number: i+1, 
+                            question: q.question, 
+                            options: opts.map(o=>o.txt), 
+                            correctAnswerLetter: String.fromCharCode(65+newC) 
+                        };
                     });
+
+                    // 3. Tạo file Word (Có MathML + Bảng đáp án)
                     zip.file(`De_${code}.doc`, createDocContent(code, variant));
-                    let row = {"Mã Đề": code}; variant.forEach(q => row[`Câu ${q.number}`] = q.correctAnswerLetter); excelData.push(row);
+                    
+                    // 4. Chuẩn bị dữ liệu Excel
+                    let row = {"Mã Đề": code}; 
+                    variant.forEach(q => row[`Câu ${q.number}`] = q.correctAnswerLetter); 
+                    excelData.push(row);
                 });
 
+                // 5. Tạo file Excel tổng hợp
                 const ws = XLSX.utils.json_to_sheet(excelData);
                 const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "DapAn");
                 zip.file("Bang_Dap_An.xlsx", XLSX.write(wb, {bookType:'xlsx', type:'array'}));
+                
                 zip.generateAsync({type:"blob"}).then(c => saveAs(c, "Bo_De_Tron.zip"));
             };
 
@@ -334,17 +408,17 @@
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div onClick={()=>setTab('server')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-blue-600 text-center group">
                             <i className="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Server Mix</h3>
+                            <h3 className="text-xl font-bold mb-2">Trộn bằng Server</h3>
                             <p className="text-gray-500 text-sm">Word/PDF chuẩn (Có công thức)</p>
                         </div>
                         <div onClick={()=>setTab('ai')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-red-600 text-center group">
                             <i className="fas fa-eye text-5xl text-red-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">AI Vision Mix</h3>
+                            <h3 className="text-xl font-bold mb-2">Dùng AI Trộn</h3>
                             <p className="text-gray-500 text-sm">PDF Scan/Ảnh (Tự tìm đáp án)</p>
                         </div>
                         <div onClick={()=>setTab('simple')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-green-600 text-center group">
                             <i className="fas fa-font text-5xl text-green-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Text Offline</h3>
+                            <h3 className="text-xl font-bold mb-2">Trộn đề không công thức</h3>
                             <p className="text-gray-500 text-sm">Nhanh, không cần mạng</p>
                         </div>
                     </div>
@@ -386,7 +460,7 @@
                                         <input type="number" min="1" max="10" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-12 text-center font-bold outline-none"/>
                                     </div>
                                     <button onClick={downloadZip} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-green-700 flex items-center gap-2">
-                                        <i className="fas fa-download"></i> Tải Về
+                                        <i className="fas fa-download"></i> Tải Về (Zip)
                                     </button>
                                 </div>
                             </div>
