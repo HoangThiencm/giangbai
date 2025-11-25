@@ -14,8 +14,7 @@
     <!-- KaTeX cho hiển thị toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <!-- KaTeX Auto-Render (QUAN TRỌNG: Thêm thư viện này để tự động render) -->
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <!-- Không cần auto-render nữa vì ta sẽ render thủ công cho chính xác -->
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -40,61 +39,60 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
-        const cleanOptionText = (text) => text ? text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim() : "";
+        // --- HELPER: LÀM SẠCH OPTION (FIX LỖI TRÙNG A. A.) ---
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+        };
 
-        // --- COMPONENT HIỂN THỊ TOÁN (NÂNG CẤP DÙNG AUTO-RENDER) ---
+        // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ (TỪ TRONDE.HTML) ---
         const MathText = ({ text }) => {
             const ref = useRef();
             
             useEffect(() => {
                 if (!text || !ref.current) return;
 
-                // Chuẩn hóa text trước khi render
+                // 1. Chuẩn hóa sơ bộ
                 let processed = text
-                    .replace(/`([^`]+)`/g, '$$$1$$') // Backtick -> $
-                    .replace(/\\\[(.*?)\\\]/gs, '$$$$$1$$$$') // \[ \] -> $$
-                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$'); // \( \) -> $
+                    .replace(/`([^`]+)`/g, '$$$1$$') 
+                    .replace(/\\\[(.*?)\\\]/gs, '$$$$$1$$$$')
+                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$');
 
-                // Tự động thêm $ nếu thấy lệnh LaTeX trần (ví dụ \frac, \sqrt) mà thiếu $
-                if (!processed.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(processed)) {
+                // 2. Heuristic: Tự động thêm $ nếu thấy lệnh LaTeX trần mà chưa có $
+                // (Chỉ áp dụng nếu cả chuỗi không có dấu $ nào)
+                if (!processed.includes('$') && /[\\](frac|sqrt|int|sum|lim|vec|hat|angle|approx|pi|infty)/.test(processed)) {
                     processed = `$${processed}$`;
                 }
 
-                // Gán nội dung vào div
-                ref.current.innerHTML = processed;
-
-                // Gọi hàm render của KaTeX
-                const renderMath = () => {
-                    if (window.renderMathInElement) {
+                // 3. Render thủ công từng phần
+                // Tách chuỗi bởi dấu $...$
+                const parts = processed.split(/(\$[^$]+\$)/g);
+                
+                ref.current.innerHTML = "";
+                
+                parts.forEach(part => {
+                    if (part.startsWith("$") && part.endsWith("$")) {
+                        // Đây là phần công thức -> Render KaTeX
+                        const span = document.createElement("span");
                         try {
-                            window.renderMathInElement(ref.current, {
-                                delimiters: [
-                                    {left: '$$', right: '$$', display: true},
-                                    {left: '$', right: '$', display: false},
-                                    {left: '\\(', right: '\\)', display: false},
-                                    {left: '\\[', right: '\\]', display: true}
-                                ],
-                                throwOnError: false
+                            const latex = part.slice(1, -1); // Bỏ 2 dấu $
+                            katex.render(latex, span, { 
+                                throwOnError: false, 
+                                displayMode: false 
                             });
-                        } catch (e) { console.error("KaTeX Render Error:", e); }
-                    }
-                };
-
-                // Retry nếu thư viện chưa tải xong
-                if (window.renderMathInElement) {
-                    renderMath();
-                } else {
-                    const interval = setInterval(() => {
-                        if (window.renderMathInElement) {
-                            renderMath();
-                            clearInterval(interval);
+                        } catch (e) {
+                            span.innerText = part; // Fallback nếu lỗi
                         }
-                    }, 100);
-                    return () => clearInterval(interval);
-                }
+                        ref.current.appendChild(span);
+                    } else if (part.length > 0) {
+                        // Đây là văn bản thường -> Render TextNode (An toàn XSS)
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
+                });
+
             }, [text]);
 
-            return <span ref={ref} />;
+            return <span ref={ref} className="math-content" />;
         };
 
         const QRModal = ({ link, onClose }) => {
@@ -253,7 +251,7 @@
                                             <input type="radio" name={`q-${i}`} checked={q.correct_index === idx} onChange={() => handleOptionChange(i, idx)} className="w-5 h-5 cursor-pointer" />
                                             <div className="flex-1 flex flex-col">
                                                 <input className="bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full" value={opt} onChange={(e) => handleTextChange(i, 'options', e.target.value, idx)} />
-                                                <div className="text-xs text-gray-500 mt-1"><MathText text={opt}/></div>
+                                                <div className="text-xs text-gray-500 mt-1"><MathText text={cleanOptionText(opt)}/></div>
                                             </div>
                                         </div>
                                     ))}
