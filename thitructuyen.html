@@ -38,78 +38,47 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
-        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT (FIX LỖI DẤU RỜI RẠC) ---
-        const normalizeText = (text) => {
-            if (!text) return "";
-            // .normalize('NFC') giúp gộp dấu tiếng Việt bị tách rời (dấ´u -> dấu)
-            return text.normalize('NFC').trim();
-        };
-
-        const cleanOptionText = (text) => {
-            if (!text) return "";
-            // Xóa A. B. C. và chuẩn hóa font
-            return normalizeText(text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, ''));
-        };
+        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT ---
+        const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
+        const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, ''));
 
         // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ ---
         const MathText = ({ text }) => {
             const ref = useRef();
-            
             useEffect(() => {
                 if (!text || !ref.current) return;
+                let processed = normalizeText(text)
+                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$') 
+                    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') 
+                    .replace(/`([^`]+)`/g, '$$$1$$');
 
-                // 1. Chuẩn hóa font tiếng Việt trước
-                let processed = normalizeText(text);
-
-                // 2. Chuẩn hóa các định dạng bao quanh về $...$
-                processed = processed
-                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$') // \(...\) -> $...$
-                    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') // \[...\] -> $...$ 
-                    .replace(/`([^`]+)`/g, '$$$1$$');     // `...` -> $...$
-
-                // 3. Tự động phát hiện lệnh LaTeX trần phổ biến (nếu thiếu $)
-                // Chỉ áp dụng cho các lệnh toán học rõ ràng để tránh bắt nhầm chữ thường
                 const latexPattern = /(\\(frac|sqrt|int|sum|lim|vec|hat|angle|approx|pi|infty|cdot|leq|geq|neq|in|subset|cup|cap|alpha|beta|gamma|Delta|theta|lambda|sigma|omega|mu|rho)\s*{?[^}]*}?)/g;
                 
-                // Tách chuỗi và render
                 const parts = processed.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
                 
                 parts.forEach(part => {
                     if (!part) return;
-
                     if (part.startsWith("$") && part.endsWith("$")) {
                         const span = document.createElement("span");
                         try {
-                            const latex = part.slice(1, -1);
-                            katex.render(latex, span, { throwOnError: false, displayMode: false });
-                        } catch (e) {
-                            span.textContent = part;
-                            span.style.color = "red";
-                        }
+                            katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
+                        } catch { span.textContent = part; span.style.color = "red"; }
                         ref.current.appendChild(span);
                     } else {
-                        // Với phần text thường, thử tìm thêm latex trần sót lại
                         const subParts = part.split(latexPattern);
                         if(subParts.length > 1) {
                              subParts.forEach(sub => {
-                                 if (latexPattern.test(sub)) { // Nếu là latex trần
+                                 if (latexPattern.test(sub)) {
                                      const span = document.createElement("span");
-                                     try {
-                                         katex.render(sub, span, { throwOnError: false, displayMode: false });
-                                         ref.current.appendChild(span);
-                                     } catch { ref.current.appendChild(document.createTextNode(sub)); }
-                                 } else {
-                                     ref.current.appendChild(document.createTextNode(sub));
-                                 }
+                                     try { katex.render(sub, span, { throwOnError: false, displayMode: false }); ref.current.appendChild(span); } 
+                                     catch { ref.current.appendChild(document.createTextNode(sub)); }
+                                 } else { ref.current.appendChild(document.createTextNode(sub)); }
                              });
-                        } else {
-                            ref.current.appendChild(document.createTextNode(part));
-                        }
+                        } else { ref.current.appendChild(document.createTextNode(part)); }
                     }
                 });
             }, [text]);
-
             return <span ref={ref} className="math-content font-serif text-lg text-gray-800 inline-block leading-relaxed" />;
         };
 
@@ -157,7 +126,7 @@
                     reader.readAsDataURL(blob);
                     reader.onloadend = async () => {
                         const base64 = reader.result.split(',')[1];
-                        const prompt = `Bạn là trợ lý chấm thi. Hãy nhìn vào ảnh và trích xuất đáp án đúng (Ưu tiên: Bảng kẻ ô, Tô đỏ, Gạch chân). Chỉ trả về chuỗi: 1A 2B 3C...`;
+                        const prompt = `Bạn là trợ lý chấm thi. Hãy nhìn vào ảnh và trích xuất đáp án đúng. Chỉ trả về chuỗi: 1A 2B 3C...`;
                         const currentKey = apiKeys[0];
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentKey}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -198,7 +167,6 @@
                 const regex = /(\d+)\s*([A-D])/g;
                 let match, newMap = {};
                 while ((match = regex.exec(raw)) !== null) newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
-                
                 const newQs = questions.map((q, i) => {
                     if (newMap[i] !== undefined) return { ...q, correct_index: newMap[i] };
                     return q;
@@ -235,15 +203,11 @@
                                     <span className="font-bold text-indigo-800 text-lg">Câu {i + 1}</span>
                                     {q.correct_index === -1 && <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full font-bold">⚠️ Chưa chọn đáp án</span>}
                                 </div>
-                                
-                                {/* PREVIEW CÔNG THỨC (Quan trọng để GV kiểm tra) */}
                                 <div className="mb-2 p-3 bg-blue-50 rounded-lg text-gray-800 border border-blue-100">
                                     <div className="text-xs font-bold text-blue-500 uppercase mb-1"><i className="fas fa-eye"></i> Xem trước:</div>
                                     <MathText text={q.question}/>
                                 </div>
-
                                 <textarea className="w-full p-3 border rounded-lg mb-4 font-medium focus:ring-2 focus:ring-blue-200 outline-none transition" value={q.question} onChange={(e) => handleTextChange(i, 'question', e.target.value)} rows={2} placeholder="Nội dung câu hỏi..." />
-                                
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {q.options.map((opt, idx) => (
                                         <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border transition cursor-pointer hover:bg-gray-50 ${q.correct_index === idx ? 'bg-green-50 border-green-500 ring-1 ring-green-500' : 'border-gray-200'}`} onClick={() => handleOptionChange(i, idx)}>
@@ -251,7 +215,6 @@
                                                 <input type="radio" name={`q-${i}`} checked={q.correct_index === idx} onChange={() => handleOptionChange(i, idx)} className="w-5 h-5 cursor-pointer accent-green-600" />
                                             </div>
                                             <div className="flex-1 flex flex-col">
-                                                {/* Preview Option */}
                                                 <div className="text-sm text-gray-800 mb-1 font-medium">
                                                     <span className="font-bold mr-1">{String.fromCharCode(65+idx)}.</span>
                                                     <MathText text={cleanOptionText(opt)}/>
@@ -305,18 +268,14 @@
                 if (!apiKeys.length) return alert("Thiếu API Key!");
                 if (!form.title || !form.startTime) return alert("Nhập thông tin!");
                 if (!fileRef.current.files[0]) return alert("Thiếu file!");
-                
                 setLoading(true);
                 const fd = new FormData();
                 fd.append("file", fileRef.current.files[0]);
                 fd.append("api_keys_json", JSON.stringify(apiKeys));
-
                 try {
                     const res = await axios.post(`${API_BASE}/api/exam/parse`, fd);
                     const data = res.data;
-                    
                     if (!data.questions) throw new Error("Không có câu hỏi trả về");
-
                     const mapped = data.questions.map((q) => {
                         return { 
                             question: normalizeText(q.question), 
@@ -324,7 +283,6 @@
                             correct_index: q.correct_index !== undefined ? q.correct_index : -1 
                         };
                     });
-
                     setParsedQuestions(mapped);
                     setStep("review");
                 } catch (e) { alert("Lỗi đọc file: " + (e.response?.data?.detail || e.message)); } 
@@ -335,18 +293,10 @@
                 setLoading(true);
                 try {
                     const payload = {
-                        title: form.title,
-                        school: form.school,
-                        subject: form.subject,
-                        grade: form.grade,
-                        duration: form.duration,
-                        start_time: form.startTime,
-                        end_time: form.endTime,
-                        api_keys: apiKeys,
-                        teacher_email: userEmail,
-                        questions: parsedQuestions
+                        title: form.title, school: form.school, subject: form.subject, grade: form.grade,
+                        duration: form.duration, start_time: form.startTime, end_time: form.endTime,
+                        api_keys: apiKeys, teacher_email: userEmail, questions: parsedQuestions
                     };
-
                     await axios.post(`${API_BASE}/api/exam/save`, payload);
                     alert("✅ Tạo đề thành công!"); onBack();
                 } catch (e) { alert("Lỗi lưu: " + e.message); } finally { setLoading(false); }
@@ -379,10 +329,64 @@
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             useEffect(() => { const f = () => axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); f(); const i = setInterval(f, 5000); return () => clearInterval(i); }, [examId]);
-            const exportExcel = () => { const ws = XLSX.utils.json_to_sheet(results); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KQ"); XLSX.writeFile(wb, `KQ_${examId}.xlsx`); };
+            
+            // --- XUẤT EXCEL ĐẸP & VIỆT HÓA ---
+            const exportExcel = () => {
+                const exportData = results.map((row, index) => {
+                    // Parse chi tiết câu sai thành text dễ đọc
+                    let wrongDetailsStr = "Không có câu sai";
+                    try {
+                        if (row.details_json) {
+                            const details = JSON.parse(row.details_json);
+                            if (details.length > 0) {
+                                wrongDetailsStr = details.map((d, i) => {
+                                    return `${i+1}. ${d.question}\n   -> Chọn: ${d.student_choice} | Đáp án đúng: ${d.correct_answer}`;
+                                }).join("\n\n");
+                            }
+                        }
+                    } catch (e) { wrongDetailsStr = "Lỗi đọc dữ liệu chi tiết"; }
+
+                    return {
+                        "STT": index + 1,
+                        "Số Báo Danh": row.sbd,
+                        "Họ và Tên": row.student_name,
+                        "Lớp": row.student_class,
+                        "Điểm số": row.score,
+                        "Số câu đúng": row.correct_count,
+                        "Số câu sai": row.total_questions - row.correct_count,
+                        "Tổng số câu": row.total_questions,
+                        "Nhận xét của AI": row.ai_feedback,
+                        "Chi tiết các câu làm sai": wrongDetailsStr,
+                        "Thời gian nộp bài": new Date(row.created_at).toLocaleString('vi-VN')
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                
+                // Chỉnh độ rộng cột cho đẹp
+                const wscols = [
+                    {wch: 5},  // STT
+                    {wch: 10}, // SBD
+                    {wch: 25}, // Tên
+                    {wch: 10}, // Lớp
+                    {wch: 10}, // Điểm
+                    {wch: 12}, // Đúng
+                    {wch: 12}, // Sai
+                    {wch: 12}, // Tổng
+                    {wch: 50}, // Nhận xét
+                    {wch: 80}, // Chi tiết sai
+                    {wch: 20}  // Thời gian
+                ];
+                ws['!cols'] = wscols;
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "KetQuaThi");
+                XLSX.writeFile(wb, `KetQua_Thi_${examId}.xlsx`);
+            };
+
             return (
-                <div className="max-w-6xl mx-auto p-6"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded">Xuất Excel</button></div>
-                <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Nhận Xét</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b"><td className="p-3">{r.sbd}</td><td className="p-3">{r.student_name}</td><td className="p-3">{r.student_class}</td><td className="p-3 font-bold">{r.score}</td><td className="p-3 text-sm italic">{r.ai_feedback}</td></tr>))}</tbody></table></div></div>
+                <div className="max-w-6xl mx-auto p-6"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-file-excel"></i> Xuất Excel</button></div>
+                <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Nhận Xét</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3">{r.sbd}</td><td className="p-3 font-bold text-indigo-900">{r.student_name}</td><td className="p-3">{r.student_class}</td><td className="p-3 font-bold text-red-600">{r.score}</td><td className="p-3 text-sm italic text-gray-600">{r.ai_feedback}</td></tr>))}</tbody></table></div></div>
             );
         };
 
@@ -395,25 +399,18 @@
             const [examCode, setExamCode] = useState("");
             const [warnings, setWarnings] = useState(0);
 
-            // --- CHỐNG GIAN LẬN ---
             useEffect(() => {
                 if (step !== "exam") return;
-                
                 const handleVisibilityChange = () => {
                     if (document.hidden) {
                         setWarnings(prev => {
                             const newVal = prev + 1;
-                            if (newVal >= 3) {
-                                alert("Bạn đã vi phạm quy chế thi quá 3 lần. Hệ thống sẽ tự động nộp bài.");
-                                handleSubmit(true);
-                            } else {
-                                alert(`CẢNH BÁO: Bạn đã rời khỏi màn hình thi! (${newVal}/3)`);
-                            }
+                            if (newVal >= 3) { alert("Bạn đã vi phạm quy chế thi quá 3 lần. Hệ thống sẽ tự động nộp bài."); handleSubmit(true); } 
+                            else { alert(`CẢNH BÁO: Bạn đã rời khỏi màn hình thi! (${newVal}/3)`); }
                             return newVal;
                         });
                     }
                 };
-                
                 document.addEventListener("visibilitychange", handleVisibilityChange);
                 return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
             }, [step]);
@@ -421,63 +418,14 @@
             useEffect(() => { setExamCode(Math.floor(Math.random() * 899) + 100); axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => { setExam(res.data); setStep("info"); setTimeLeft(res.data.info.duration_mins * 60); }).catch(() => alert("Lỗi tải đề!")); }, [examId]);
             useEffect(() => { if (step === "exam") { if (timeLeft <= 0) handleSubmit(true); const t = setInterval(() => setTimeLeft(v => v - 1), 1000); return () => clearInterval(t); } }, [step, timeLeft]);
 
-            const handleStart = () => { 
-                if(!info.name || !info.class || !info.sbd) return alert("Vui lòng nhập đầy đủ Tên, Lớp, SBD!"); 
-                // TRỘN ĐỀ: Mỗi thiết bị 1 đề (đã có sẵn)
-                setExam({...exam, questions: exam.questions.map((q,i)=>({...q, originalIndex:i})).sort(()=>Math.random()-0.5)}); 
-                setStep("exam"); 
-            };
-            
+            const handleStart = () => { if(!info.name || !info.class || !info.sbd) return alert("Vui lòng nhập đầy đủ Tên, Lớp, SBD!"); setExam({...exam, questions: exam.questions.map((q,i)=>({...q, originalIndex:i})).sort(()=>Math.random()-0.5)}); setStep("exam"); };
             const handleSubmit = async (auto = false) => { if (!auto && !confirm("Nộp?")) return; const payload = { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: {} }; exam.questions.forEach((q, i) => { if (answers[i] !== undefined) payload.answers[q.originalIndex] = answers[i]; }); try { const res = await axios.post(`${API_BASE}/api/exam/submit`, payload); setStep("result"); setExam(res.data); } catch(e) { alert("Lỗi nộp!"); } };
 
             if(step === "check") return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
-            if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center">
-                <h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2>
-                <p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p>
-                
-                <input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/>
-                <input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/>
-                <input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/>
-                
-                <button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI</button>
-            </div>;
-            
+            if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2><p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p><input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI</button></div>;
             if(step === "result") return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="bg-white p-10 rounded shadow text-center"><h2 className="text-2xl font-bold text-green-700">Kết Quả: {exam.score} điểm</h2><p className="mt-4 italic">{exam.feedback}</p></div></div>;
             
-            return (
-                <div className="max-w-3xl mx-auto p-4 pb-20 select-none">
-                    <div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-50 rounded-lg">
-                        <div>
-                            <b className="block">{info.name} - {info.class}</b>
-                            {warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>
-                                {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}
-                            </span>
-                            <button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">Nộp</button>
-                        </div>
-                    </div>
-                    {exam.questions.map((q, i) => (
-                        <div key={i} className="bg-white p-6 rounded-lg shadow mb-4 border border-gray-100">
-                            <div className="flex gap-2 mb-3">
-                                <span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span>
-                                <div className="font-medium"><MathText text={q.question}/></div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {q.options.map((o, idx) => (
-                                    <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}>
-                                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>
-                                            {String.fromCharCode(65+idx)}
-                                        </div>
-                                        <div className="text-sm"><MathText text={cleanOptionText(o)}/></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            );
+            return <div className="max-w-3xl mx-auto p-4 pb-20 select-none"><div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-50 rounded-lg"><div><b className="block">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div><div className="flex items-center gap-3"><span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">Nộp</button></div></div>{exam.questions.map((q, i) => (<div key={i} className="bg-white p-6 rounded-lg shadow mb-4 border border-gray-100"><div className="flex gap-2 mb-3"><span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span><div className="font-medium"><MathText text={q.question}/></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}><div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div><div className="text-sm"><MathText text={cleanOptionText(o)}/></div></div>))}</div></div>))}</div>;
         };
 
         const App = () => {
