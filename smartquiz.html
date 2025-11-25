@@ -253,7 +253,19 @@
                     if(data.error) throw new Error(data.error.message);
 
                     const txt = data.candidates[0].content.parts[0].text;
-                    const jsonStr = txt.replace(/```json|```/g, '').trim(); 
+                    
+                    // --- KHẮC PHỤC LỖI "Unexpected token" ---
+                    // Tìm vị trí bắt đầu [ và kết thúc ] của JSON Array
+                    const startIdx = txt.indexOf('[');
+                    const endIdx = txt.lastIndexOf(']');
+                    
+                    let jsonStr = "";
+                    if (startIdx !== -1 && endIdx !== -1) {
+                        jsonStr = txt.substring(startIdx, endIdx + 1);
+                    } else {
+                        // Fallback nếu AI không trả về đúng format array
+                        jsonStr = txt.replace(/```json|```/g, '').trim(); 
+                    }
                     
                     setQuestions(JSON.parse(jsonStr));
                     setStep(2);
