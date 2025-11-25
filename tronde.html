@@ -11,8 +11,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
+    <!-- KaTeX Core -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <!-- KaTeX Auto-Render (QUAN TRỌNG: Thêm thư viện này để tự động render) -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -38,60 +42,50 @@
 
         const cleanOptionText = (text) => text ? text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim() : "";
 
-        // --- COMPONENT HIỂN THỊ TOÁN (NÂNG CẤP MẠNH MẼ) ---
+        // --- COMPONENT HIỂN THỊ TOÁN (NÂNG CẤP DÙNG AUTO-RENDER) ---
         const MathText = ({ text }) => {
             const ref = useRef();
             
             useEffect(() => {
-                if (!text) return;
+                if (!text || !ref.current) return;
 
+                // Chuẩn hóa text trước khi render
+                let processed = text
+                    .replace(/`([^`]+)`/g, '$$$1$$') // Backtick -> $
+                    .replace(/\\\[(.*?)\\\]/gs, '$$$$$1$$$$') // \[ \] -> $$
+                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$'); // \( \) -> $
+
+                // Tự động thêm $ nếu thấy lệnh LaTeX trần (ví dụ \frac, \sqrt) mà thiếu $
+                if (!processed.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(processed)) {
+                    processed = `$${processed}$`;
+                }
+
+                // Gán nội dung vào div
+                ref.current.innerHTML = processed;
+
+                // Gọi hàm render của KaTeX
                 const renderMath = () => {
-                    if (!window.katex) return; // Chờ thư viện tải xong
-
-                    // 1. Chuẩn hóa các định dạng LaTeX khác nhau về $...$ hoặc $$...$$
-                    let processed = text
-                        .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') // \[...\] -> $$...$$
-                        .replace(/\\\((.*?)\\\)/gs, '$$$1$$'); // \(...\) -> $...$
-
-                    // Tự động thêm $ nếu thấy lệnh LaTeX mà thiếu (Fix lỗi OCR)
-                    if (!processed.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(processed)) {
-                        processed = `$${processed}$`;
+                    if (window.renderMathInElement) {
+                        try {
+                            window.renderMathInElement(ref.current, {
+                                delimiters: [
+                                    {left: '$$', right: '$$', display: true},
+                                    {left: '$', right: '$', display: false},
+                                    {left: '\\(', right: '\\)', display: false},
+                                    {left: '\\[', right: '\\]', display: true}
+                                ],
+                                throwOnError: false
+                            });
+                        } catch (e) { console.error("KaTeX Render Error:", e); }
                     }
-
-                    // 2. Tách chuỗi thành mảng các phần tử (Text thường | Toán)
-                    // Regex bắt: $$...$$ (Display) hoặc $...$ (Inline)
-                    const parts = processed.split(/(\$\$[^$]+\$\$|\$[^\n$]+\$)/g);
-                    
-                    ref.current.innerHTML = "";
-                    
-                    parts.forEach(part => {
-                        if (part.startsWith("$$") && part.endsWith("$$")) {
-                            // Chế độ hiển thị khối (Display Mode - căn giữa)
-                            const div = document.createElement("div");
-                            try { 
-                                katex.render(part.slice(2, -2), div, { throwOnError: false, displayMode: true }); 
-                            } catch { div.innerText = part; }
-                            ref.current.appendChild(div);
-                        } else if (part.startsWith("$") && part.endsWith("$")) {
-                            // Chế độ hiển thị dòng (Inline Mode)
-                            const span = document.createElement("span");
-                            try { 
-                                katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); 
-                            } catch { span.innerText = part; }
-                            ref.current.appendChild(span);
-                        } else {
-                            // Văn bản thường
-                            ref.current.appendChild(document.createTextNode(part));
-                        }
-                    });
                 };
 
-                // Cơ chế Retry: Kiểm tra mỗi 100ms xem KaTeX đã tải chưa
-                if (window.katex) {
+                // Retry nếu thư viện chưa tải xong
+                if (window.renderMathInElement) {
                     renderMath();
                 } else {
                     const interval = setInterval(() => {
-                        if (window.katex) {
+                        if (window.renderMathInElement) {
                             renderMath();
                             clearInterval(interval);
                         }
@@ -100,7 +94,7 @@
                 }
             }, [text]);
 
-            return <span ref={ref}>{text}</span>; // Hiển thị tạm text gốc trong khi chờ render
+            return <span ref={ref} />;
         };
 
         const QRModal = ({ link, onClose }) => {
@@ -246,7 +240,7 @@
                                     {q.correct_index === -1 && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">Chưa có đáp án</span>}
                                 </div>
                                 
-                                {/* Hiển thị MathText trong textarea là không thể, dùng div contentEditable hoặc input thường. Ở đây dùng textarea cho text thô */}
+                                {/* Input Text */}
                                 <textarea className="w-full p-2 border rounded mb-3 font-medium focus:ring-2 focus:ring-blue-200" value={q.question} onChange={(e) => handleTextChange(i, 'question', e.target.value)} rows={2} />
                                 {/* Preview Toán */}
                                 <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-dashed border-gray-300">
