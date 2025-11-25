@@ -38,24 +38,69 @@
 
         const cleanOptionText = (text) => text ? text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim() : "";
 
+        // --- COMPONENT HIỂN THỊ TOÁN (NÂNG CẤP MẠNH MẼ) ---
         const MathText = ({ text }) => {
             const ref = useRef();
+            
             useEffect(() => {
                 if (!text) return;
-                let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$').replace(/\\\((.*?)\\\)/g, '$$$1$$');
-                if (!processed.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(processed)) processed = `$${processed}$`;
-                
-                const parts = processed.split(/(\$[^$]+\$)/g);
-                ref.current.innerHTML = "";
-                parts.forEach(part => {
-                    if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false }); } catch { span.innerText = part; }
-                        ref.current.appendChild(span);
-                    } else { ref.current.appendChild(document.createTextNode(part)); }
-                });
+
+                const renderMath = () => {
+                    if (!window.katex) return; // Chờ thư viện tải xong
+
+                    // 1. Chuẩn hóa các định dạng LaTeX khác nhau về $...$ hoặc $$...$$
+                    let processed = text
+                        .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') // \[...\] -> $$...$$
+                        .replace(/\\\((.*?)\\\)/gs, '$$$1$$'); // \(...\) -> $...$
+
+                    // Tự động thêm $ nếu thấy lệnh LaTeX mà thiếu (Fix lỗi OCR)
+                    if (!processed.includes('$') && /[\\][a-zA-Z{}]+|[\^_]/.test(processed)) {
+                        processed = `$${processed}$`;
+                    }
+
+                    // 2. Tách chuỗi thành mảng các phần tử (Text thường | Toán)
+                    // Regex bắt: $$...$$ (Display) hoặc $...$ (Inline)
+                    const parts = processed.split(/(\$\$[^$]+\$\$|\$[^\n$]+\$)/g);
+                    
+                    ref.current.innerHTML = "";
+                    
+                    parts.forEach(part => {
+                        if (part.startsWith("$$") && part.endsWith("$$")) {
+                            // Chế độ hiển thị khối (Display Mode - căn giữa)
+                            const div = document.createElement("div");
+                            try { 
+                                katex.render(part.slice(2, -2), div, { throwOnError: false, displayMode: true }); 
+                            } catch { div.innerText = part; }
+                            ref.current.appendChild(div);
+                        } else if (part.startsWith("$") && part.endsWith("$")) {
+                            // Chế độ hiển thị dòng (Inline Mode)
+                            const span = document.createElement("span");
+                            try { 
+                                katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); 
+                            } catch { span.innerText = part; }
+                            ref.current.appendChild(span);
+                        } else {
+                            // Văn bản thường
+                            ref.current.appendChild(document.createTextNode(part));
+                        }
+                    });
+                };
+
+                // Cơ chế Retry: Kiểm tra mỗi 100ms xem KaTeX đã tải chưa
+                if (window.katex) {
+                    renderMath();
+                } else {
+                    const interval = setInterval(() => {
+                        if (window.katex) {
+                            renderMath();
+                            clearInterval(interval);
+                        }
+                    }, 100);
+                    return () => clearInterval(interval);
+                }
             }, [text]);
-            return <span ref={ref} />;
+
+            return <span ref={ref}>{text}</span>; // Hiển thị tạm text gốc trong khi chờ render
         };
 
         const QRModal = ({ link, onClose }) => {
@@ -78,7 +123,7 @@
             );
         };
 
-        // --- MODAL NẠP ĐÁP ÁN THÔNG MINH (NEW) ---
+        // --- MODAL NẠP ĐÁP ÁN ---
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
@@ -146,21 +191,17 @@
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions, apiKeys }) => {
             const [showAnsModal, setShowAnsModal] = useState(false);
 
-            // Xử lý nạp đáp án từ Modal
             const handleApplyAnswers = (text) => {
                 const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
                 const regex = /(\d+)\s*([A-D])/g;
                 let match, newMap = {};
                 while ((match = regex.exec(raw)) !== null) {
-                    // Index câu hỏi bắt đầu từ 0, nên giảm 1 (VD: câu 1 -> index 0)
                     newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
                 }
-                
                 const newQs = questions.map((q, i) => {
                     if (newMap[i] !== undefined) return { ...q, correct_index: newMap[i] };
                     return q;
                 });
-                
                 onUpdateQuestions(newQs);
                 alert(`Đã cập nhật đáp án cho ${Object.keys(newMap).length} câu!`);
             };
@@ -186,7 +227,7 @@
                         <div className="flex justify-between items-center flex-wrap gap-2">
                             <h2 className="text-2xl font-bold text-indigo-800">Duyệt Đề ({questions.length} câu)</h2>
                             <div className="flex gap-2">
-                                <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold hover:bg-orange-600 shadow flex items-center gap-2 animate-pulse">
+                                <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold hover:bg-orange-600 shadow flex items-center gap-2">
                                     <i className="fas fa-magic"></i> Nạp Đáp Án
                                 </button>
                                 <button onClick={onBack} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-300">Hủy</button>
@@ -195,7 +236,6 @@
                                 </button>
                             </div>
                         </div>
-                        <p className="text-sm text-red-500 mt-2 italic">* Hãy kiểm tra nội dung và chọn đáp án đúng. Dùng nút "Nạp Đáp Án" để điền nhanh.</p>
                     </div>
 
                     <div className="space-y-4">
@@ -206,13 +246,21 @@
                                     {q.correct_index === -1 && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">Chưa có đáp án</span>}
                                 </div>
                                 
+                                {/* Hiển thị MathText trong textarea là không thể, dùng div contentEditable hoặc input thường. Ở đây dùng textarea cho text thô */}
                                 <textarea className="w-full p-2 border rounded mb-3 font-medium focus:ring-2 focus:ring-blue-200" value={q.question} onChange={(e) => handleTextChange(i, 'question', e.target.value)} rows={2} />
+                                {/* Preview Toán */}
+                                <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-dashed border-gray-300">
+                                    <span className="font-bold mr-2">[Preview]:</span> <MathText text={q.question}/>
+                                </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {q.options.map((opt, idx) => (
                                         <div key={idx} className={`flex items-center gap-2 p-2 rounded border ${q.correct_index === idx ? 'bg-green-100 border-green-500' : 'bg-gray-50'}`}>
                                             <input type="radio" name={`q-${i}`} checked={q.correct_index === idx} onChange={() => handleOptionChange(i, idx)} className="w-5 h-5 cursor-pointer" />
-                                            <input className="flex-1 bg-transparent border-none outline-none" value={opt} onChange={(e) => handleTextChange(i, 'options', e.target.value, idx)} />
+                                            <div className="flex-1 flex flex-col">
+                                                <input className="bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none w-full" value={opt} onChange={(e) => handleTextChange(i, 'options', e.target.value, idx)} />
+                                                <div className="text-xs text-gray-500 mt-1"><MathText text={opt}/></div>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -223,9 +271,7 @@
             );
         };
 
-        // --- CÁC MÀN HÌNH KHÁC GIỮ NGUYÊN (Dashboard, CreateExam Wrapper, StudentView...) ---
-        // Tôi sẽ rút gọn các phần chưa đổi để tập trung vào ReviewExam và CreateExam mới
-
+        // --- 1. DASHBOARD ---
         const TeacherDashboard = ({ onViewDetail, onCreateNew }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
@@ -309,7 +355,6 @@
             );
         };
 
-        // --- 3. KẾT QUẢ & 4. HỌC SINH (GIỮ NGUYÊN LOGIC CŨ NHƯNG RÚT GỌN ĐỂ VỪA FILE) ---
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             useEffect(() => { const f = () => axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); f(); const i = setInterval(f, 5000); return () => clearInterval(i); }, [examId]);
