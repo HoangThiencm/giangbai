@@ -42,18 +42,19 @@
         const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, ''));
 
-        // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ ---
+        // --- COMPONENT HIỂN THỊ TOÁN (SIMPLE - CHUẨN TRONDE) ---
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
+                
+                // Chuẩn hóa cơ bản, không cố gắng bao gói thông minh
                 let processed = normalizeText(text)
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$') 
                     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') 
                     .replace(/`([^`]+)`/g, '$$$1$$');
 
-                const latexPattern = /(\\(frac|sqrt|int|sum|lim|vec|hat|angle|approx|pi|infty|cdot|leq|geq|neq|in|subset|cup|cap|alpha|beta|gamma|Delta|theta|lambda|sigma|omega|mu|rho)\s*{?[^}]*}?)/g;
-                
+                // Chỉ render những gì đã được đánh dấu là $...$
                 const parts = processed.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
                 
@@ -63,19 +64,12 @@
                         const span = document.createElement("span");
                         try {
                             katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
-                        } catch { span.textContent = part; span.style.color = "red"; }
+                        } catch { 
+                            span.textContent = part; 
+                        }
                         ref.current.appendChild(span);
                     } else {
-                        const subParts = part.split(latexPattern);
-                        if(subParts.length > 1) {
-                             subParts.forEach(sub => {
-                                 if (latexPattern.test(sub)) {
-                                     const span = document.createElement("span");
-                                     try { katex.render(sub, span, { throwOnError: false, displayMode: false }); ref.current.appendChild(span); } 
-                                     catch { ref.current.appendChild(document.createTextNode(sub)); }
-                                 } else { ref.current.appendChild(document.createTextNode(sub)); }
-                             });
-                        } else { ref.current.appendChild(document.createTextNode(part)); }
+                        ref.current.appendChild(document.createTextNode(part)); 
                     }
                 });
             }, [text]);
@@ -203,6 +197,7 @@
                                     <span className="font-bold text-indigo-800 text-lg">Câu {i + 1}</span>
                                     {q.correct_index === -1 && <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full font-bold">⚠️ Chưa chọn đáp án</span>}
                                 </div>
+                                {/* PREVIEW CHO CÂU HỎI - GIÚP GV KIỂM TRA */}
                                 <div className="mb-2 p-3 bg-blue-50 rounded-lg text-gray-800 border border-blue-100">
                                     <div className="text-xs font-bold text-blue-500 uppercase mb-1"><i className="fas fa-eye"></i> Xem trước:</div>
                                     <MathText text={q.question}/>
@@ -264,6 +259,7 @@
             useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); }, []);
             const handleFileSelect = (e) => { const f = e.target.files[0]; if(f) setFileName(f.name); }
 
+            // --- GỌI BACKEND MỚI (ĐỒNG BỘ TRONDE) ---
             const handleParse = async () => {
                 if (!apiKeys.length) return alert("Thiếu API Key!");
                 if (!form.title || !form.startTime) return alert("Nhập thông tin!");
@@ -276,6 +272,8 @@
                     const res = await axios.post(`${API_BASE}/api/exam/parse`, fd);
                     const data = res.data;
                     if (!data.questions) throw new Error("Không có câu hỏi trả về");
+                    
+                    // Dữ liệu từ backend mới đã chuẩn, chỉ cần normalize font
                     const mapped = data.questions.map((q) => {
                         return { 
                             question: normalizeText(q.question), 
@@ -333,7 +331,6 @@
             // --- XUẤT EXCEL ĐẸP & VIỆT HÓA ---
             const exportExcel = () => {
                 const exportData = results.map((row, index) => {
-                    // Parse chi tiết câu sai thành text dễ đọc
                     let wrongDetailsStr = "Không có câu sai";
                     try {
                         if (row.details_json) {
@@ -362,23 +359,8 @@
                 });
 
                 const ws = XLSX.utils.json_to_sheet(exportData);
-                
-                // Chỉnh độ rộng cột cho đẹp
-                const wscols = [
-                    {wch: 5},  // STT
-                    {wch: 10}, // SBD
-                    {wch: 25}, // Tên
-                    {wch: 10}, // Lớp
-                    {wch: 10}, // Điểm
-                    {wch: 12}, // Đúng
-                    {wch: 12}, // Sai
-                    {wch: 12}, // Tổng
-                    {wch: 50}, // Nhận xét
-                    {wch: 80}, // Chi tiết sai
-                    {wch: 20}  // Thời gian
-                ];
+                const wscols = [{wch: 5}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 50}, {wch: 80}, {wch: 20}];
                 ws['!cols'] = wscols;
-
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "KetQuaThi");
                 XLSX.writeFile(wb, `KetQua_Thi_${examId}.xlsx`);
@@ -418,7 +400,13 @@
             useEffect(() => { setExamCode(Math.floor(Math.random() * 899) + 100); axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => { setExam(res.data); setStep("info"); setTimeLeft(res.data.info.duration_mins * 60); }).catch(() => alert("Lỗi tải đề!")); }, [examId]);
             useEffect(() => { if (step === "exam") { if (timeLeft <= 0) handleSubmit(true); const t = setInterval(() => setTimeLeft(v => v - 1), 1000); return () => clearInterval(t); } }, [step, timeLeft]);
 
-            const handleStart = () => { if(!info.name || !info.class || !info.sbd) return alert("Vui lòng nhập đầy đủ Tên, Lớp, SBD!"); setExam({...exam, questions: exam.questions.map((q,i)=>({...q, originalIndex:i})).sort(()=>Math.random()-0.5)}); setStep("exam"); };
+            const handleStart = () => { 
+                if(!info.name || !info.class || !info.sbd) return alert("Vui lòng nhập đầy đủ Tên, Lớp, SBD!"); 
+                // TRỘN ĐỀ: Mỗi thiết bị 1 đề (đã có sẵn)
+                setExam({...exam, questions: exam.questions.map((q,i)=>({...q, originalIndex:i})).sort(()=>Math.random()-0.5)}); 
+                setStep("exam"); 
+            };
+            
             const handleSubmit = async (auto = false) => { if (!auto && !confirm("Nộp?")) return; const payload = { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: {} }; exam.questions.forEach((q, i) => { if (answers[i] !== undefined) payload.answers[q.originalIndex] = answers[i]; }); try { const res = await axios.post(`${API_BASE}/api/exam/submit`, payload); setStep("result"); setExam(res.data); } catch(e) { alert("Lỗi nộp!"); } };
 
             if(step === "check") return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
