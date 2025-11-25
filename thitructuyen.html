@@ -14,7 +14,6 @@
     <!-- KaTeX cho hiển thị toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <!-- Không cần auto-render nữa vì ta sẽ render thủ công cho chính xác -->
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -45,7 +44,7 @@
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
         };
 
-        // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ (TỪ TRONDE.HTML) ---
+        // --- COMPONENT HIỂN THỊ TOÁN MẠNH MẼ ---
         const MathText = ({ text }) => {
             const ref = useRef();
             
@@ -58,38 +57,29 @@
                     .replace(/\\\[(.*?)\\\]/gs, '$$$$$1$$$$')
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$');
 
-                // 2. Heuristic: Tự động thêm $ nếu thấy lệnh LaTeX trần mà chưa có $
-                // (Chỉ áp dụng nếu cả chuỗi không có dấu $ nào)
+                // 2. Heuristic: Tự động thêm $ nếu thấy lệnh LaTeX trần
                 if (!processed.includes('$') && /[\\](frac|sqrt|int|sum|lim|vec|hat|angle|approx|pi|infty)/.test(processed)) {
                     processed = `$${processed}$`;
                 }
 
                 // 3. Render thủ công từng phần
-                // Tách chuỗi bởi dấu $...$
                 const parts = processed.split(/(\$[^$]+\$)/g);
-                
                 ref.current.innerHTML = "";
                 
                 parts.forEach(part => {
                     if (part.startsWith("$") && part.endsWith("$")) {
-                        // Đây là phần công thức -> Render KaTeX
                         const span = document.createElement("span");
                         try {
-                            const latex = part.slice(1, -1); // Bỏ 2 dấu $
-                            katex.render(latex, span, { 
-                                throwOnError: false, 
-                                displayMode: false 
-                            });
+                            const latex = part.slice(1, -1);
+                            katex.render(latex, span, { throwOnError: false, displayMode: false });
                         } catch (e) {
-                            span.innerText = part; // Fallback nếu lỗi
+                            span.innerText = part;
                         }
                         ref.current.appendChild(span);
                     } else if (part.length > 0) {
-                        // Đây là văn bản thường -> Render TextNode (An toàn XSS)
                         ref.current.appendChild(document.createTextNode(part));
                     }
                 });
-
             }, [text]);
 
             return <span ref={ref} className="math-content" />;
@@ -115,7 +105,6 @@
             );
         };
 
-        // --- MODAL NẠP ĐÁP ÁN ---
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
@@ -148,8 +137,7 @@
                         });
                         const data = await res.json();
                         if (data.candidates) {
-                            const result = data.candidates[0].content.parts[0].text;
-                            setText(prev => prev + (prev ? "\n" : "") + result.trim());
+                            setText(prev => prev + (prev ? "\n" : "") + data.candidates[0].content.parts[0].text.trim());
                             setStatus("✅ Đã nhận diện xong!");
                         } else setStatus("⚠️ Không tìm thấy đáp án.");
                     };
@@ -159,17 +147,12 @@
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-indigo-800"><i className="fas fa-magic mr-2"></i> Nạp Đáp Án</h3>
-                            <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
-                        </div>
+                        <h3 className="text-xl font-bold text-indigo-800 mb-4">Nạp Đáp Án</h3>
                         <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3 text-left">
-                            <b>Cách dùng:</b><br/>
-                            1. Dán ảnh bảng đáp án (Ctrl+V) để AI đọc.<br/>
-                            2. Hoặc nhập thủ công: <b>1A 2B 3C...</b>
+                            <b>Cách dùng:</b> Dán ảnh bảng đáp án (Ctrl+V) hoặc nhập 1A 2B...
                         </div>
                         {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
-                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Dán ảnh hoặc nhập 1A 2B..."></textarea>
+                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded font-mono outline-none" placeholder="Dán ảnh hoặc nhập 1A 2B..."></textarea>
                         <div className="flex justify-end gap-3 mt-4">
                             <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
                             <button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow">Cập Nhật</button>
@@ -179,7 +162,6 @@
             );
         };
 
-        // --- COMPONENT: REVIEW EXAM ---
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions, apiKeys }) => {
             const [showAnsModal, setShowAnsModal] = useState(false);
 
@@ -187,9 +169,8 @@
                 const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
                 const regex = /(\d+)\s*([A-D])/g;
                 let match, newMap = {};
-                while ((match = regex.exec(raw)) !== null) {
-                    newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
-                }
+                while ((match = regex.exec(raw)) !== null) newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
+                
                 const newQs = questions.map((q, i) => {
                     if (newMap[i] !== undefined) return { ...q, correct_index: newMap[i] };
                     return q;
@@ -199,11 +180,8 @@
             };
 
             const handleOptionChange = (qIndex, optIndex) => {
-                const newQs = [...questions];
-                newQs[qIndex].correct_index = optIndex;
-                onUpdateQuestions(newQs);
+                const newQs = [...questions]; newQs[qIndex].correct_index = optIndex; onUpdateQuestions(newQs);
             };
-
             const handleTextChange = (qIndex, field, value, optIndex = null) => {
                 const newQs = [...questions];
                 if (optIndex !== null) newQs[qIndex].options[optIndex] = value;
@@ -214,22 +192,14 @@
             return (
                 <div className="max-w-5xl mx-auto p-4">
                     <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
-
-                    <div className="bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-0 z-10 border-b border-indigo-100">
-                        <div className="flex justify-between items-center flex-wrap gap-2">
-                            <h2 className="text-2xl font-bold text-indigo-800">Duyệt Đề ({questions.length} câu)</h2>
-                            <div className="flex gap-2">
-                                <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold hover:bg-orange-600 shadow flex items-center gap-2">
-                                    <i className="fas fa-magic"></i> Nạp Đáp Án
-                                </button>
-                                <button onClick={onBack} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-300">Hủy</button>
-                                <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2">
-                                    <i className="fas fa-check"></i> LƯU & TỔ CHỨC
-                                </button>
-                            </div>
+                    <div className="bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-0 z-10 border-b border-indigo-100 flex justify-between items-center">
+                        <h2 className="text-2xl font-bold text-indigo-800">Duyệt Đề ({questions.length} câu)</h2>
+                        <div className="flex gap-2">
+                            <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold hover:bg-orange-600 shadow"><i className="fas fa-magic"></i> Nạp Đáp Án</button>
+                            <button onClick={onBack} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-300">Hủy</button>
+                            <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
                         </div>
                     </div>
-
                     <div className="space-y-4">
                         {questions.map((q, i) => (
                             <div key={i} className={`bg-white p-6 rounded-lg shadow border ${q.correct_index === -1 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
@@ -237,14 +207,8 @@
                                     <span className="font-bold text-indigo-700">Câu {i + 1}</span>
                                     {q.correct_index === -1 && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">Chưa có đáp án</span>}
                                 </div>
-                                
-                                {/* Input Text */}
                                 <textarea className="w-full p-2 border rounded mb-3 font-medium focus:ring-2 focus:ring-blue-200" value={q.question} onChange={(e) => handleTextChange(i, 'question', e.target.value)} rows={2} />
-                                {/* Preview Toán */}
-                                <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-dashed border-gray-300">
-                                    <span className="font-bold mr-2">[Preview]:</span> <MathText text={q.question}/>
-                                </div>
-
+                                <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-dashed border-gray-300"><span className="font-bold mr-2">[Preview]:</span> <MathText text={q.question}/></div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {q.options.map((opt, idx) => (
                                         <div key={idx} className={`flex items-center gap-2 p-2 rounded border ${q.correct_index === idx ? 'bg-green-100 border-green-500' : 'bg-gray-50'}`}>
@@ -263,7 +227,6 @@
             );
         };
 
-        // --- 1. DASHBOARD ---
         const TeacherDashboard = ({ onViewDetail, onCreateNew }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
@@ -303,15 +266,43 @@
                 if (!fileRef.current.files[0]) return alert("Thiếu file!");
                 
                 setLoading(true);
+                // --- SỬ DỤNG API TRỘN ĐỀ (SERVER MIX) CHO CHÍNH XÁC ---
                 const fd = new FormData();
                 fd.append("file", fileRef.current.files[0]);
-                fd.append("api_keys_json", JSON.stringify(apiKeys));
+                
+                // Config Header cho endpoint /convert-and-quiz
+                const config = { headers: { 'x-gemini-api-key': apiKeys.join(',') } };
 
                 try {
-                    const res = await axios.post(`${API_BASE}/api/exam/parse`, fd);
-                    setParsedQuestions(res.data.questions);
+                    // Gọi Endpoint của Trộn Đề (đã được khen là nhận diện công thức tốt)
+                    const res = await axios.post(`${API_BASE}/convert-and-quiz`, fd, config);
+                    const data = res.data;
+                    
+                    if (data.error) throw new Error(data.error);
+
+                    // Map format từ Trộn đề (correctAnswer text) -> Thi Online (correct_index int)
+                    const mapped = data.map((q) => {
+                        const cleanOpts = q.options.map(o => cleanOptionText(o));
+                        let cIndex = -1;
+                        if(q.correctAnswer) {
+                            // Tìm chính xác hoặc chứa trong
+                            cIndex = q.options.findIndex(o => o.includes(q.correctAnswer));
+                            // Fallback: Tìm theo text đã làm sạch
+                            if(cIndex === -1) {
+                                const cleanAns = cleanOptionText(q.correctAnswer);
+                                cIndex = cleanOpts.findIndex(o => o.includes(cleanAns));
+                            }
+                        }
+                        return { 
+                            question: q.question, 
+                            options: cleanOpts, 
+                            correct_index: cIndex 
+                        };
+                    });
+
+                    setParsedQuestions(mapped);
                     setStep("review");
-                } catch (e) { alert("Lỗi đọc file: " + (e.response?.data?.detail || e.message)); } 
+                } catch (e) { alert("Lỗi đọc file: " + (e.response?.data?.error || e.message)); } 
                 finally { setLoading(false); }
             };
 
