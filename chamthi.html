@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Fixed A5 Layout</title>
+    <title>Chấm Thi OMR Pro - Compact A5</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -17,10 +17,10 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI --- */
+        /* --- CẤU HÌNH IN ẤN (TUYỆT ĐỐI KHÔNG LỀ) --- */
         @page { 
-            size: A4; 
-            margin: 0; 
+            size: A4 portrait; 
+            margin: 0mm; 
         }
 
         .sheet-a4 {
@@ -29,41 +29,45 @@
             background: white; 
             margin: 20px auto;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            page-break-after: always;
             
-            /* Layout Grid: Chia đôi tờ giấy chính xác */
+            /* Grid chia đôi chiều cao chính xác */
             display: grid;
-            grid-template-rows: 1fr 1fr; /* Mỗi phiếu chiếm đúng 50% chiều cao */
+            grid-template-rows: 148mm 148mm; 
             padding: 0;
+            page-break-after: always;
         }
 
-        /* Cấu trúc mỗi phiếu (Item) */
-        .omr-item { 
+        /* Layout A5 */
+        .layout-2up .omr-item { 
             width: 100%;
-            height: 100%; /* Lấp đầy ô grid 50% */
+            height: 100%; 
             box-sizing: border-box;
             position: relative;
-            border-bottom: 1px dashed #000; /* Đường cắt */
-            
-            /* Padding trong để nội dung không sát mép giấy */
-            padding: 5mm 8mm; /* Trên/dưới 5mm, Trái/phải 8mm -> Rất tiết kiệm */
-            
-            display: flex;
-            flex-direction: column;
+            border-bottom: 1px dashed #999; 
+            overflow: hidden;
         }
-        /* Xóa border cho phiếu cuối cùng trong trang */
         .sheet-a4 .omr-item:last-child { border-bottom: none; }
 
-        /* Layout 1 phiếu A4 (100 câu) */
+        /* Layout A4 */
         .layout-1up { display: block; }
         .layout-1up .omr-item { height: 100%; border-bottom: none; }
 
-        /* Anchors: 4 Góc định vị */
+        /* Anchors (4 Góc) */
         .anchor { position: absolute; width: 8px; height: 8px; background: black; z-index: 99; }
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
-        /* --- HEADER --- */
+        /* Container nội dung: Padding nhỏ để đẩy sát lề */
+        .omr-inner-container {
+            padding: 5mm 8mm; /* Trên/Dưới 5mm, Trái/Phải 8mm */
+            height: 100%;
+            display: flex; 
+            flex-direction: column;
+            justify-content: flex-start; /* Đẩy toàn bộ nội dung lên trên cùng */
+            box-sizing: border-box;
+        }
+
+        /* --- HEADER (SIÊU GỌN) --- */
         .header-section { 
             border-bottom: 2px solid black; 
             padding-bottom: 2px; 
@@ -73,13 +77,13 @@
         .header-title h1 { 
             font-size: 14pt; font-weight: 900; 
             text-align: center; text-transform: uppercase; 
-            line-height: 1; margin: 0 0 4px 0;
+            line-height: 1; margin: 0 0 2px 0;
         }
         
-        .info-row { display: flex; gap: 15px; margin-bottom: 2px; align-items: flex-end;}
+        .info-row { display: flex; gap: 12px; margin-bottom: 1px; align-items: flex-end;}
         .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
-        .info-label { font-weight: bold; margin-right: 4px; font-size: 9pt;}
-        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 14px; }
+        .info-label { font-weight: bold; margin-right: 3px; font-size: 9pt;}
+        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 13px; }
 
         /* --- BODY (Phần tô) --- */
         .body-section { 
@@ -90,8 +94,8 @@
             overflow: hidden; 
         }
         
-        /* Cột Trái (SBD/Mã đề) */
-        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 4px; }
+        /* Cột Trái */
+        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 3px; }
         .id-box { 
             border: 2px solid black; 
             padding: 2px; 
@@ -113,26 +117,23 @@
             align-items: flex-start; 
         }
         
-        /* Cột bong bóng dọc */
         .col-bubble { 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             height: 100%; 
-            justify-content: space-between; /* Dàn đều từ trên xuống dưới */
+            justify-content: space-between; /* Dàn đều */
+            padding-bottom: 1px;
         }
         
-        /* Ô viết số (Vuông) */
         .write-box { 
             width: 100%; 
-            height: 14px; /* Tăng chiều cao để dễ viết */
+            height: 12px; /* Giảm chiều cao ô viết */
             border: 1px solid #000; 
-            margin-bottom: 2px; 
+            margin-bottom: 1px; 
             background: white;
-            flex-shrink: 0; /* Không bị co lại */
         }
         
-        /* Bong bóng tròn */
         .b { 
             width: 11px; height: 11px; 
             border: 1px solid #000; border-radius: 50%; 
@@ -140,7 +141,7 @@
             font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; 
         }
 
-        /* Cột Phải (Câu hỏi) */
+        /* Cột Phải */
         .right-panel { 
             flex: 1; 
             border: 2px solid black; 
@@ -162,9 +163,8 @@
         .ans-col:last-child { border-right: none; }
         
         .q-row { display: flex; align-items: center; justify-content: flex-end; }
-        .q-num { width: 18px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 4px; line-height: 1; }
+        .q-num { width: 18px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 3px; line-height: 1; }
         
-        /* Bong bóng đáp án */
         .q-b { 
             width: 12px; height: 12px; 
             font-size: 7.5px; font-weight: bold;
@@ -176,8 +176,8 @@
         }
         .q-b:hover { background-color: #ddd; }
 
-        /* --- UI & Tiện ích --- */
-        .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
+        /* UI */
+        .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
         .pulse-ring { width: 40px; height: 40px; border-radius: 50%; border: 4px solid #4f46e5; animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
 
@@ -234,34 +234,32 @@
             return (
                 <div className="omr-item">
                     <div className="anchor tl"></div><div className="anchor tr"></div><div className="anchor bl"></div><div className="anchor br"></div>
-                    
-                    {/* Header */}
-                    <div className="header-section">
-                        <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
-                        <div className="flex flex-col gap-1">
-                            <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
-                            <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
-                            <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
+                    <div className="omr-inner-container">
+                        <div className="header-section">
+                            <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
+                            <div className="flex flex-col gap-1">
+                                <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
+                                <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
+                                <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Body */}
-                    <div className="body-section">
-                        <div className="left-panel">
-                            <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
-                            <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
-                        </div>
-                        <div className="right-panel">
-                            <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'2px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
-                            <div className="ans-grid">
-                                {Array.from({length: cols}).map((_, cIdx) => (
-                                    <div key={cIdx} className="ans-col">
-                                        {Array.from({length: rowsPerCol}).map((_, rIdx) => {
-                                            const qNum = cIdx * rowsPerCol + rIdx + 1;
-                                            return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
-                                        })}
-                                    </div>
-                                ))}
+                        <div className="body-section">
+                            <div className="left-panel">
+                                <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                                <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                            </div>
+                            <div className="right-panel">
+                                <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'2px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
+                                <div className="ans-grid">
+                                    {Array.from({length: cols}).map((_, cIdx) => (
+                                        <div key={cIdx} className="ans-col">
+                                            {Array.from({length: rowsPerCol}).map((_, rIdx) => {
+                                                const qNum = cIdx * rowsPerCol + rIdx + 1;
+                                                return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
