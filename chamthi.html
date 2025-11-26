@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chấm Thi OMR Pro - All in One</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -19,106 +18,64 @@
         .loader { border: 3px solid #e5e7eb; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- CSS IN ẤN CHUẨN (FIX LỖI TRÀN TRANG) --- */
-        @page { 
-            size: A4 portrait; 
-            margin: 0; /* Quan trọng: Xóa lề mặc định của trình duyệt */
-        }
-
+        /* --- CSS IN ẤN CHUẨN --- */
+        @page { size: A4; margin: 0; }
         .sheet-a4 {
-            width: 210mm; 
-            height: 296mm; /* 297mm trừ 1mm an toàn */
-            background: white; 
-            margin: 0 auto;
-            position: relative; 
-            overflow: hidden; 
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            display: flex; 
-            flex-direction: column;
-            page-break-after: always; /* Ngắt trang sau mỗi tờ A4 */
+            width: 210mm; height: 296mm; background: white; margin: 20px auto;
+            position: relative; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column;
         }
 
-        /* Layout A5: Chia đôi chiều cao A4 */
-        .layout-2up .omr-item { 
-            height: 148mm; /* Chính xác 1 nửa A4 */
-            border-bottom: 1px dashed #999; 
-            box-sizing: border-box;
-            overflow: hidden; 
-            position: relative;
-        }
+        .layout-2up .omr-item { height: 148mm; border-bottom: 1px dashed #999; box-sizing: border-box; position: relative; }
         .layout-2up .omr-item:last-child { border-bottom: none; }
-        
-        /* Layout A4 full */
         .layout-1up .omr-item { height: 100%; }
-
         .omr-item { width: 100%; padding: 0; }
         
-        /* Container nội dung: Co lại để tránh lề máy in và Anchor */
         .omr-inner-container {
-            padding: 8mm 10mm; /* Giảm padding để nội dung không bị đẩy */
-            height: 100%;
-            display: flex; 
-            flex-direction: column;
-            box-sizing: border-box;
+            padding: 10mm 10mm; /* Canh lề chuẩn */
+            height: 100%; display: flex; flex-direction: column; box-sizing: border-box;
         }
 
         /* Anchors */
-        .anchor { position: absolute; width: 8px; height: 8px; background: black; z-index: 99; }
+        .anchor { position: absolute; width: 10px; height: 10px; background: black; z-index: 99; }
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
-        /* Chi tiết Phiếu */
-        .header-section { border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 6px; flex-shrink: 0; }
-        .header-title h1 { font-size: 14pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.2; margin: 0;}
-        
-        .info-row { display: flex; gap: 10px; margin-top: 2px; }
-        .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; }
-        .info-label { font-weight: bold; white-space: nowrap; margin-right: 4px; font-size: 8pt;}
-        .info-dots { border-bottom: 1px dotted #555; flex: 1; height: 14px; }
+        /* Components */
+        .header-section { border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 8px; flex-shrink: 0; }
+        .header-title h1 { font-size: 16pt; font-weight: 900; text-align: center; text-transform: uppercase; margin: 0; line-height: 1.2; }
+        .info-row { display: flex; gap: 15px; margin-top: 4px; }
+        .info-line { display: flex; align-items: flex-end; font-size: 10pt; flex: 1; }
+        .info-label { font-weight: bold; white-space: nowrap; margin-right: 5px; font-size: 9pt;}
+        .info-dots { border-bottom: 1px dotted #555; flex: 1; height: 16px; }
 
-        /* Body Section */
-        .body-section { display: flex; flex: 1; gap: 8px; align-items: stretch; overflow: hidden; }
-        
-        /* Cột Trái (SBD/Mã đề) */
-        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 4px; }
-        .id-box { border: 2px solid black; padding: 2px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
-        .box-title { font-size: 7pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
-        
-        .grid-bubbles { display: flex; justify-content: space-around; height: 100%; align-items: flex-start; }
-        .col-bubble { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 95%; }
-        .write-box { width: 100%; height: 12px; border: 1px solid #333; margin-bottom: 1px; }
-        
-        .b { 
-            width: 10px; height: 10px; border: 1px solid #333; border-radius: 50%; 
-            display: flex; justify-content: center; align-items: center; 
-            font-size: 6px; font-weight: 700; font-family: 'Roboto Mono', monospace;
-            line-height: 1;
-        }
+        .body-section { display: flex; flex: 1; gap: 10px; align-items: stretch; overflow: hidden; }
+        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 5px; }
+        .id-box { border: 2px solid black; padding: 4px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
+        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 2px 0; margin-bottom: 4px; }
+        .grid-bubbles { display: flex; justify-content: space-between; height: 100%; }
+        .col-bubble { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: space-between; padding-bottom: 2px; }
+        .write-box { width: 100%; height: 14px; border: 1px solid #333; margin-bottom: 2px; }
+        .b { width: 11px; height: 11px; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; }
 
-        /* Cột Phải (Câu hỏi) */
-        .right-panel { flex: 1; border: 2px solid black; padding: 4px; border-radius: 4px; display: flex; flex-direction: column; }
+        .right-panel { flex: 1; border: 2px solid black; padding: 5px; border-radius: 4px; display: flex; flex-direction: column; }
         .ans-grid { display: flex; flex: 1; height: 100%; }
-        .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 2px; display: flex; flex-direction: column; justify-content: space-between; } /* Dàn đều dọc */
+        .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 2px; display: flex; flex-direction: column; justify-content: space-between; }
         .ans-col:last-child { border-right: none; }
-        
         .q-row { display: flex; align-items: center; }
-        .q-num { width: 16px; font-size: 7pt; font-weight: bold; text-align: right; margin-right: 2px; }
-        .q-b { width: 9px; height: 9px; font-size: 6px; margin-right: 2px; cursor: pointer; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .q-num { width: 18px; font-size: 8pt; font-weight: bold; text-align: right; margin-right: 3px; }
+        .q-b { width: 10px; height: 10px; font-size: 6.5px; margin-right: 3px; cursor: pointer; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
 
         @media print {
             body { background: white; }
             .no-print { display: none !important; }
-            .sheet-a4 { 
-                box-shadow: none; 
-                margin: 0; 
-                width: 210mm; 
-                height: 296mm;
-                page-break-after: always;
-                print-color-adjust: exact;
-            }
-            /* Ẩn header/footer trình duyệt */
-            @page { margin: 0; }
+            .sheet-a4 { box-shadow: none; margin: 0; page-break-after: always; height: 296mm; width: 210mm; }
         }
+        
+        /* Tab styles */
+        .tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: bold; transition: all 0.2s; }
+        .tab-active { background: #4f46e5; color: white; }
+        .tab-inactive { color: #6b7280; hover:bg-gray-100; }
     </style>
 </head>
 <body>
@@ -127,14 +84,12 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- UTILS ---
+        // Utils
         const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
         const compressImage = (file, maxWidth=1000, quality=0.7) => { return new Promise((resolve)=>{ if(!file||!file.type.startsWith('image/')){resolve(file);return;} const reader=new FileReader();reader.readAsDataURL(file);reader.onload=(event)=>{const img=new Image();img.src=event.target.result;img.onload=()=>{try{const canvas=document.createElement('canvas');let w=img.width,h=img.height;if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);const blob=dataURLtoBlob(canvas.toDataURL('image/jpeg',quality));resolve(blob?new File([blob],file.name,{type:'image/jpeg'}):file);}catch(e){resolve(file);}};img.onerror=()=>resolve(file);};reader.onerror=()=>resolve(file);});};
         const parseMultiKey = (text) => { const keys={}; text.split('\n').forEach(line=>{ line=line.trim(); if(!line)return; let code="DEFAULT", ans=line; if(line.includes(':')){const p=line.split(':');code=p[0].trim();ans=p[1].trim();} if(!keys[code])keys[code]={}; const pairs=ans.toUpperCase().split(/\s+/); pairs.forEach(p=>{const num=p.match(/^\d+/);const char=p.match(/[A-D]$/);if(num&&char)keys[code][parseInt(num[0])]=char[0];});}); return keys; };
-        const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
-        const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
 
-        // --- COMPONENT IN PHIẾU (OMR SHEET) ---
+        // --- SHEET COMPONENTS ---
         const BubbleColumn = () => (
             <div className="col-bubble">
                 <div className="write-box"></div>
@@ -157,12 +112,9 @@
 
             return (
                 <div className="omr-item">
-                    {/* 4 GÓC ĐỊNH VỊ */}
                     <div className="anchor tl"></div><div className="anchor tr"></div>
                     <div className="anchor bl"></div><div className="anchor br"></div>
-
                     <div className="omr-inner-container">
-                        {/* Header */}
                         <div className="header-section">
                             <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
                             <div className="flex flex-col gap-1">
@@ -171,18 +123,10 @@
                                 <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn thi:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label text-gray-500">Giám khảo:</span><div className="info-dots"></div></div></div>
                             </div>
                         </div>
-
-                        {/* Body */}
                         <div className="body-section">
                             <div className="left-panel">
-                                <div className="id-box">
-                                    <div className="box-title">SỐ BÁO DANH</div>
-                                    <div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div>
-                                </div>
-                                <div className="id-box">
-                                    <div className="box-title">MÃ ĐỀ</div>
-                                    <div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div>
-                                </div>
+                                <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                                <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
                             </div>
                             <div className="right-panel">
                                 <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'2px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
@@ -203,245 +147,181 @@
             );
         };
 
-        // --- MAIN APP ---
         const App = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const mobileMode = urlParams.get('mode') === 'mobile';
-            const paramSession = urlParams.get('session');
             const DEFAULT_BACKEND = "https://hoangthiencm-giangbai.hf.space";
-
-            const [view, setView] = useState('grading'); // 'grading' | 'sheet'
+            const [view, setView] = useState('grading');
             const [backendUrl, setBackendUrl] = useState(localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
-            const [showConfig, setShowConfig] = useState(!localStorage.getItem("omr_backend_url") && !mobileMode);
+            const mobileMode = new URLSearchParams(window.location.search).get('mode') === 'mobile';
             
-            // Grading State
+            // State
+            const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
-            const [results, setResults] = useState([]);
-            const [processing, setProcessing] = useState(false);
-            const [previewImage, setPreviewImage] = useState(null);
-            const [mobileStatus, setMobileStatus] = useState("");
-            const [showQr, setShowQr] = useState(false);
             const [sessionId, setSessionId] = useState(null);
-            const [useAiSbd, setUseAiSbd] = useState(true);
-            
-            // Sheet State
+            const [results, setResults] = useState([]);
+            const [showQr, setShowQr] = useState(false);
+            const [historyList, setHistoryList] = useState([]);
+            const [historyDetail, setHistoryDetail] = useState(null);
             const [sheetMode, setSheetMode] = useState('30');
             const [subject, setSubject] = useState("TOÁN");
+            const [mobileStatus, setMobileStatus] = useState("");
+            const [processing, setProcessing] = useState(false);
+            const [previewImage, setPreviewImage] = useState(null);
 
             const folderRef = useRef(null);
             const pollRef = useRef(null);
 
-            const saveConfig = (url) => {
-                let clean = url.trim().replace(/\/$/, "");
-                if (!clean.startsWith("http")) clean = "https://" + clean;
-                setBackendUrl(clean); localStorage.setItem("omr_backend_url", clean);
-                setShowConfig(false);
+            // -- Logic --
+            const createSession = async () => {
+                if (!sessionName || !inputText) return alert("Nhập đủ thông tin!");
+                const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText)));
+                try {
+                    const res = await fetch(`${backendUrl}/api/omr/create_session`, { method: 'POST', body: fd });
+                    const d = await res.json();
+                    setSessionId(d.session_id); setShowQr(true);
+                    setTimeout(() => {
+                        document.getElementById("qrcode").innerHTML = "";
+                        new QRCode(document.getElementById("qrcode"), { text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}`, width: 200, height: 200 });
+                    }, 100);
+                } catch(e) { alert("Lỗi: " + e.message); }
             };
 
-            // --- LOGIC CHẤM THI ---
-            const handleMobileUpload = async (files) => {
-                if (!files.length) return;
-                setProcessing(true); setMobileStatus("Đang xử lý...");
-                for (let file of files) {
-                    try {
-                        let fileToSend = await compressImage(file);
-                        const fd = new FormData(); fd.append("file", fileToSend); fd.append("session_id", paramSession);
-                        const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd });
-                        const data = await res.json();
-                        if (res.ok) setMobileStatus(data.status === 'success' ? `✓ Điểm: ${data.score}` : `⚠ ${data.error}`);
-                        else setMobileStatus(`Lỗi Server: ${res.status}`);
-                    } catch (e) { setMobileStatus("Lỗi Mạng"); }
-                }
-                setProcessing(false);
+            const loadHistory = async () => {
+                try { const res = await fetch(`${backendUrl}/api/omr/history`); setHistoryList(await res.json()); } catch(e){}
+            };
+
+            const viewDetail = async (sid) => {
+                try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); setHistoryDetail(await res.json()); } catch(e){}
             };
 
             const processImagesPC = async (files) => {
-                const keys = parseMultiKey(inputText);
+                if(!files.length) return;
                 setProcessing(true);
-                for (let file of files) {
-                    let fileToSend = await compressImage(file);
+                const keys = parseMultiKey(inputText);
+                for(let f of files) {
+                    let fileToSend = await compressImage(f);
                     const fd = new FormData(); fd.append("file", fileToSend); fd.append("answer_key_json", JSON.stringify(keys));
                     try {
                         const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd });
-                        const data = await res.json();
-                        setResults(p => [{filename: file.name, ...data}, ...p]);
+                        const d = await res.json();
+                        setResults(p => [{filename: f.name, ...d}, ...p]);
                     } catch(e) { console.error(e); }
                 }
                 setProcessing(false);
             };
 
-            const handleStartSession = async () => {
-                if (!inputText) return alert("Nhập đáp án trước!");
-                const fd = new FormData(); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText)));
-                try {
-                    const res = await fetch(`${backendUrl}/api/omr/init_session`, { method: 'POST', body: fd });
-                    const d = await res.json();
-                    setSessionId(d.session_id); setShowQr(true);
-                    setTimeout(() => {
-                        document.getElementById("qrcode").innerHTML = "";
-                        new QRCode(document.getElementById("qrcode"), {
-                            text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}&api=${encodeURIComponent(backendUrl)}`,
-                            width: 200, height: 200
-                        });
-                    }, 100);
-                } catch(e) { alert("Lỗi kết nối Server: " + e.message); }
+            const handleMobileUpload = async (files) => {
+                if(!files.length) return;
+                setProcessing(true); setMobileStatus("Đang gửi...");
+                const sid = new URLSearchParams(window.location.search).get('session');
+                for(let f of files) {
+                    try {
+                        let fileToSend = await compressImage(f);
+                        const fd = new FormData(); fd.append("file", fileToSend); fd.append("session_id", sid);
+                        const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd });
+                        const d = await res.json();
+                        setMobileStatus(res.ok ? `✓ Điểm: ${d.score}` : `⚠ ${d.error}`);
+                    } catch(e) { setMobileStatus("Lỗi Mạng"); }
+                }
+                setProcessing(false);
             };
 
             useEffect(() => {
-                if (sessionId && !mobileMode) {
+                if(view === 'history') loadHistory();
+                if(sessionId) {
                     pollRef.current = setInterval(async () => {
                         try {
                             const res = await fetch(`${backendUrl}/api/omr/poll_results/${sessionId}`);
                             const d = await res.json();
-                            if (d.length) setResults(p => [...d, ...p]);
+                            if(d.length) setResults(p => [...d, ...p]);
                         } catch(e){}
                     }, 2000);
                 }
                 return () => clearInterval(pollRef.current);
-            }, [sessionId, backendUrl]);
+            }, [view, sessionId, backendUrl]);
 
-            // --- RENDER: MOBILE VIEW ---
             if (mobileMode) return (
                 <div className="bg-gray-900 min-h-screen text-white p-6 flex flex-col items-center justify-center text-center">
-                    {showConfig && (
-                        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white text-black p-6 rounded-lg w-full max-w-sm">
-                                <h3 className="font-bold mb-2">Cấu Hình Server</h3>
-                                <input value={backendUrl} onChange={e=>setBackendUrl(e.target.value)} className="w-full border p-2 rounded mb-2" placeholder="URL Backend"/>
-                                <button onClick={()=>saveConfig(backendUrl)} className="w-full bg-blue-600 text-white py-2 rounded">Lưu</button>
-                            </div>
-                        </div>
-                    )}
-                    <button onClick={()=>setShowConfig(true)} className="absolute top-4 right-4 p-2 text-gray-400"><i className="fas fa-cog"></i></button>
                     <h1 className="text-2xl font-bold mb-4">Camera Chấm Thi</h1>
-                    {mobileStatus && <div className={`mb-6 p-3 rounded font-bold ${mobileStatus.includes("Lỗi")?"bg-red-600":"bg-green-600"}`}>{mobileStatus}</div>}
+                    {mobileStatus && <div className="mb-6 p-3 bg-green-600 rounded font-bold">{mobileStatus}</div>}
                     <input type="file" accept="image/*" capture="environment" className="hidden" id="cam" onChange={(e)=>handleMobileUpload(e.target.files)}/>
-                    <label htmlFor="cam" className={`w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center active:scale-95 transition shadow-xl cursor-pointer ${processing?'bg-gray-700':'bg-indigo-600'}`}>
-                        {processing ? <div className="loader"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">CHỤP ẢNH</span></>}
+                    <label htmlFor="cam" className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600">
+                        {processing ? <div className="loader"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">CHỤP</span></>}
                     </label>
                 </div>
             );
 
-            // --- RENDER: PC VIEW ---
             return (
-                <div className="min-h-screen flex flex-col bg-gray-100">
-                    {/* Navbar */}
-                    <div className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm no-print z-20">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-indigo-600 text-white p-2 rounded-lg"><i className="fas fa-check-double"></i></div>
-                            <div><h1 className="font-bold text-lg text-indigo-900">OMR PRO</h1></div>
+                <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
+                    <div className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm sticky top-0 z-20 no-print">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center font-bold">OMR</div>
+                            <h1 className="font-bold text-lg text-indigo-900">Quản Lý Chấm Thi</h1>
                         </div>
-                        <div className="flex gap-3">
-                            <button onClick={()=>window.location.href='index.html'} className="text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded font-bold"><i className="fas fa-home"></i> Home</button>
-                            <div className="h-8 w-px bg-gray-300"></div>
-                            <button onClick={()=>setView('grading')} className={`px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 ${view==='grading'?'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200':'text-gray-600 hover:bg-gray-50'}`}><i className="fas fa-tasks"></i> Chấm Thi</button>
-                            <button onClick={()=>setView('sheet')} className={`px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 ${view==='sheet'?'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200':'text-gray-600 hover:bg-gray-50'}`}><i className="fas fa-file-alt"></i> Tạo Phiếu</button>
-                            <button onClick={()=>setShowConfig(true)} className="text-gray-400 hover:text-indigo-600 px-2"><i className="fas fa-cog"></i></button>
+                        <div className="flex gap-2">
+                            <button onClick={()=>window.location.href='index.html'} className="tab-btn text-gray-600 hover:bg-gray-100"><i className="fas fa-home"></i></button>
+                            <div className="w-px bg-gray-300 my-1"></div>
+                            <button onClick={()=>setView('grading')} className={`tab-btn ${view==='grading'?'tab-active':'tab-inactive'}`}><i className="fas fa-play-circle mr-2"></i>Chấm Thi</button>
+                            <button onClick={()=>setView('history')} className={`tab-btn ${view==='history'?'tab-active':'tab-inactive'}`}><i className="fas fa-history mr-2"></i>Lịch Sử</button>
+                            <button onClick={()=>setView('sheet')} className={`tab-btn ${view==='sheet'?'tab-active':'tab-inactive'}`}><i className="fas fa-print mr-2"></i>In Phiếu</button>
                         </div>
                     </div>
 
-                    {/* Config Modal */}
-                    {showConfig && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print">
-                            <div className="bg-white p-6 rounded-lg w-96 shadow-xl relative">
-                                <button onClick={()=>setShowConfig(false)} className="absolute top-2 right-3 text-gray-400">&times;</button>
-                                <h3 className="font-bold mb-4">Cấu Hình Hệ Thống</h3>
-                                <label className="text-xs font-bold text-gray-500">Backend URL:</label>
-                                <input value={backendUrl} onChange={e=>setBackendUrl(e.target.value)} className="w-full border p-2 rounded mb-4"/>
-                                <button onClick={()=>saveConfig(backendUrl)} className="w-full bg-indigo-600 text-white py-2 rounded font-bold">Lưu Cấu Hình</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* VIEW: CHẤM THI */}
-                    {view === 'grading' && (
-                        <div className="flex-1 p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="space-y-4">
-                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                                    <div className="flex justify-between mb-2"><label className="font-bold text-sm">ĐÁP ÁN (KEY)</label><span className="text-xs text-gray-400">VD: 101: 1A 2B...</span></div>
-                                    <textarea value={inputText} onChange={e=>setInputText(e.target.value)} className="w-full border rounded p-3 h-40 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Nhập đáp án..."></textarea>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div onClick={()=>folderRef.current.click()} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-indigo-500 cursor-pointer text-center flex flex-col items-center justify-center h-32 transition">
-                                        <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
-                                        <i className="fas fa-upload text-3xl text-gray-400 mb-2"></i><span className="font-bold text-gray-600">Upload File</span>
+                    <div className="flex-1 p-6 max-w-7xl mx-auto w-full overflow-hidden">
+                        {view === 'grading' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                                <div className="lg:col-span-4 space-y-4">
+                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                                        <h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3>
+                                        <input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none" placeholder="Tên đợt (VD: Toán 12...)"/>
+                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} className="w-full border p-2 rounded h-32 font-mono text-sm outline-none" placeholder="Đáp án (101: 1A 2B...)"></textarea>
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
+                                            <button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold">Tạo Session</button>
+                                            <button onClick={()=>folderRef.current.click()} className="bg-gray-200 text-gray-700 py-2 rounded font-bold">Upload File</button>
+                                            <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
+                                        </div>
                                     </div>
-                                    <div onClick={handleStartSession} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-green-500 cursor-pointer text-center flex flex-col items-center justify-center h-32 transition">
-                                        <i className="fas fa-qrcode text-3xl text-green-500 mb-2"></i><span className="font-bold text-gray-600">Kết Nối ĐT</span>
+                                    {showQr && <div className="bg-white p-5 rounded-xl text-center border border-green-200"><div id="qrcode" className="flex justify-center mb-2"></div><p className="text-xs text-green-700">Quét để chấm trên Mobile</p></div>}
+                                </div>
+                                <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
+                                    <div className="p-4 border-b font-bold text-gray-700 flex justify-between">
+                                        <span>Kết Quả ({results.length})</span>
+                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm">Excel</button>}
+                                    </div>
+                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500">Xem</button></td></tr>))}</tbody></table></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'history' && (
+                            <div className="grid grid-cols-12 gap-6 h-full">
+                                <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]">
+                                    <div className="p-4 border-b bg-gray-50 font-bold">Danh Sách Đợt</div>
+                                    <div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} onClick={()=>viewDetail(h.session_id)} className="p-3 border-b cursor-pointer hover:bg-blue-50"><div className="font-bold">{h.session_name}</div><div className="text-xs text-gray-500">{new Date(h.created_at).toLocaleString()}</div></div>))}</div>
+                                </div>
+                                <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]">
+                                    <div className="p-4 border-b font-bold flex justify-between"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm">Tải Excel</button>}</div>
+                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyDetail?.map((r,i)=>(<tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>))}</tbody></table></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'sheet' && (
+                            <div className="flex flex-col h-full">
+                                <div className="bg-white p-3 rounded-lg shadow mb-4 flex gap-4 items-center no-print">
+                                    <button onClick={()=>setSheetMode('30')} className={`px-3 py-1 rounded font-bold ${sheetMode==='30'?'bg-indigo-600 text-white':'bg-gray-200'}`}>A5 (30 Câu)</button>
+                                    <button onClick={()=>setSheetMode('100')} className={`px-3 py-1 rounded font-bold ${sheetMode==='100'?'bg-indigo-600 text-white':'bg-gray-200'}`}>A4 (100 Câu)</button>
+                                    <input value={subject} onChange={e=>setSubject(e.target.value.toUpperCase())} className="border p-1 rounded" placeholder="Môn thi..."/>
+                                    <button onClick={()=>window.print()} className="ml-auto bg-yellow-500 text-white px-4 py-1 rounded font-bold">IN PHIẾU</button>
+                                </div>
+                                <div className="flex-1 bg-gray-300 p-8 overflow-auto flex justify-center">
+                                    <div className={`sheet-a4 ${sheetMode==='30'?'layout-2up':'layout-1up'}`}>
+                                        {sheetMode === '30' ? <><OmrItem type="A5" data={{subject}}/><OmrItem type="A5" data={{subject}}/></> : <OmrItem type="A4" data={{subject}}/>}
                                     </div>
                                 </div>
                             </div>
-                            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
-                                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                                    <h3 className="font-bold text-gray-700">Kết Quả ({results.length})</h3>
-                                    {results.length > 0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KQ"); XLSX.writeFile(wb, "KetQua.xlsx");}} className="text-green-600 font-bold text-sm"><i className="fas fa-file-excel"></i> Excel</button>}
-                                </div>
-                                <div className="flex-1 overflow-auto p-0">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">Ảnh</th><th className="p-3">SBD / Mã</th><th className="p-3 text-center">Đúng/Sai</th><th className="p-3 text-center">Điểm</th></tr></thead>
-                                        <tbody className="divide-y">
-                                            {results.map((r,i)=>(
-                                                <tr key={i} className="hover:bg-gray-50">
-                                                    <td className="p-3 w-20">{r.image_base64 ? <img src={`data:image/jpeg;base64,${r.image_base64}`} className="w-14 h-10 object-cover rounded cursor-pointer" onClick={()=>setPreviewImage(r.image_base64)}/> : "No Img"}</td>
-                                                    <td className="p-3"><b>{r.student_id}</b><div className="text-xs text-gray-500">Mã: {r.exam_code}</div></td>
-                                                    <td className="p-3 text-center"><span className="text-green-600 font-bold">{r.correct_count}</span> / <span className="text-red-500">{r.wrong_count}</span></td>
-                                                    <td className="p-3 text-center font-bold text-lg text-indigo-600">{r.score}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* VIEW: TẠO PHIẾU (SHEET) */}
-                    {view === 'sheet' && (
-                        <div className="flex-1 flex flex-col bg-gray-300 overflow-hidden">
-                            <div className="bg-indigo-900 text-white p-3 flex justify-between items-center shadow-md z-10 no-print">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-indigo-800 p-1 rounded flex gap-1">
-                                        <button onClick={()=>setSheetMode('30')} className={`px-3 py-1 rounded text-sm font-bold ${sheetMode==='30'?'bg-white text-indigo-900':'text-indigo-300'}`}>A5 (30 Câu)</button>
-                                        <button onClick={()=>setSheetMode('100')} className={`px-3 py-1 rounded text-sm font-bold ${sheetMode==='100'?'bg-white text-indigo-900':'text-indigo-300'}`}>A4 (100 Câu)</button>
-                                    </div>
-                                    <input value={subject} onChange={e=>setSubject(e.target.value.toUpperCase())} className="bg-transparent border-b border-indigo-400 text-white font-bold w-40 px-1 focus:outline-none placeholder-indigo-400 text-sm" placeholder="NHẬP MÔN THI..."/>
-                                </div>
-                                <button onClick={()=>window.print()} className="bg-yellow-500 hover:bg-yellow-400 text-indigo-900 px-4 py-1.5 rounded font-bold text-sm shadow"><i className="fas fa-print mr-2"></i>IN PHIẾU</button>
-                            </div>
-                            
-                            <div className="flex-1 overflow-auto p-8 flex justify-center">
-                                <div className={`sheet-a4 ${sheetMode==='30'?'layout-2up':'layout-1up'}`}>
-                                    {sheetMode === '30' ? (
-                                        <>
-                                            <OmrItem type="A5" data={{subject}} />
-                                            <OmrItem type="A5" data={{subject}} />
-                                            <div className="absolute w-full border-b-2 border-dashed border-gray-400 top-1/2 left-0 flex justify-center items-center no-print z-20 bg-transparent"><span className="bg-white px-2 text-[10px] text-gray-500 border rounded shadow-sm">✄ CẮT ĐÔI</span></div>
-                                        </>
-                                    ) : (
-                                        <OmrItem type="A4" data={{subject}} />
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Modals */}
-                    {showQr && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 no-print">
-                            <div className="bg-white p-6 rounded-xl text-center relative">
-                                <button onClick={()=>setShowQr(false)} className="absolute top-2 right-4 text-xl">&times;</button>
-                                <h3 className="font-bold mb-4">Quét để kết nối Mobile</h3>
-                                <div id="qrcode" className="flex justify-center mb-4"></div>
-                                <p className="text-xs text-gray-500">Dùng camera điện thoại quét mã này</p>
-                            </div>
-                        </div>
-                    )}
-                    {previewImage && (
-                        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 no-print" onClick={()=>setPreviewImage(null)}>
-                            <img src={`data:image/jpeg;base64,${previewImage}`} className="max-w-full max-h-full border-2 border-white rounded"/>
-                            <button className="absolute top-4 right-4 text-white text-3xl">&times;</button>
-                        </div>
-                    )}
+                        )}
+                    </div>
+                    {previewImage && <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50" onClick={()=>setPreviewImage(null)}><img src={`data:image/jpeg;base64,${previewImage}`} className="max-h-full max-w-full"/></div>}
                 </div>
             );
         };
