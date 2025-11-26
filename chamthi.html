@@ -24,13 +24,13 @@
         /* --- CẤU TRÚC PHIẾU (ITEM) --- */
         .omr-item {
             position: relative; box-sizing: border-box;
-            /* Không padding ở đây nữa, dùng inner container */
             width: 100%;
         }
+        
         /* Container nội dung bên trong để tránh anchor */
         .omr-inner-container {
-            margin: 15mm; /* Cách lề 15mm để tránh 4 cục đen ở góc */
-            height: calc(100% - 30mm); /* Chiều cao trừ đi lề trên dưới */
+            margin: 12mm; /* Lề an toàn */
+            height: calc(100% - 24mm);
             display: flex; flex-direction: column;
         }
 
@@ -40,53 +40,56 @@
         /* Layout A4 (1 phiếu trên 1 A4) */
         .layout-1up .omr-item { height: 296mm; }
 
-        /* --- ĐIỂM ĐỊNH VỊ (ANCHORS) --- */
+        /* --- ĐIỂM ĐỊNH VỊ (ANCHORS) - CỰC KỲ QUAN TRỌNG CHO AI --- */
         .anchor { position: absolute; width: 10px; height: 10px; background: black; z-index: 99; }
-        .tl { top: 10mm; left: 10mm; } 
-        .tr { top: 10mm; right: 10mm; }
-        .bl { bottom: 10mm; left: 10mm; } 
-        .br { bottom: 10mm; right: 10mm; }
+        .tl { top: 8mm; left: 8mm; } 
+        .tr { top: 8mm; right: 8mm; }
+        .bl { bottom: 8mm; left: 8mm; } 
+        .br { bottom: 8mm; right: 8mm; }
 
-        /* --- HEADER MỚI --- */
-        .header-section { border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 15px; }
-        .header-title h1 { font-size: 18pt; font-weight: 900; text-align: center; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
+        /* --- HEADER --- */
+        .header-section { border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 10px; }
+        .header-title h1 { font-size: 16pt; font-weight: 900; text-align: center; text-transform: uppercase; letter-spacing: 1px; line-height: 1.1; }
         
-        .info-grid { display: flex; flex-direction: column; gap: 8px; }
-        .info-row { display: flex; gap: 20px; }
-        .info-line { display: flex; align-items: flex-end; font-size: 11pt; flex: 1; }
-        .info-label { font-weight: bold; white-space: nowrap; margin-right: 8px; font-size: 10pt;}
-        .info-dots { border-bottom: 2px dotted #999; flex: 1; height: 20px; }
+        .info-row { display: flex; gap: 15px; margin-top: 4px; }
+        .info-line { display: flex; align-items: flex-end; font-size: 10pt; flex: 1; }
+        .info-label { font-weight: bold; white-space: nowrap; margin-right: 5px; font-size: 9pt;}
+        .info-dots { border-bottom: 1px dotted #555; flex: 1; height: 16px; }
 
-        /* --- BODY & BUBBLES --- */
-        .body-section { display: flex; flex: 1; gap: 15px; align-items: stretch; }
+        /* --- BODY --- */
+        .body-section { display: flex; flex: 1; gap: 10px; align-items: stretch; overflow: hidden; }
         
         /* Cột trái: SBD & Mã đề */
-        .left-panel { width: 30%; display: flex; flex-direction: column; gap: 15px; }
-        .id-box { border: 2px solid black; padding: 8px 5px; border-radius: 4px; height: 100%; display: flex; flex-direction: column; }
-        .box-title { font-size: 9pt; font-weight: bold; text-align: center; margin-bottom: 8px; background: #000; color: #fff; padding: 2px 0; }
+        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 8px; }
+        .id-box { border: 2px solid black; padding: 5px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
+        .box-title { font-size: 8pt; font-weight: bold; text-align: center; margin-bottom: 5px; background: #000; color: #fff; padding: 2px 0; }
         
-        .grid-bubbles { display: flex; justify-content: space-around; flex: 1; align-items: flex-start; }
-        .col-bubble { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .write-box { width: 16px; height: 20px; border: 2px solid black; margin-bottom: 6px; text-align: center; font-weight: bold; font-size: 14px;}
+        .grid-bubbles { display: flex; justify-content: space-between; flex: 1; }
+        .col-bubble { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        
+        /* Ô viết số ở trên (Hỗ trợ nhận diện kép nếu cần) */
+        .write-box { width: 100%; height: 16px; border: 1px solid #333; margin-bottom: 4px; }
         
         /* Bong bóng tô */
         .b { 
-            width: 13px; height: 13px; border: 1px solid #444; border-radius: 50%; 
+            width: 12px; height: 12px; border: 1px solid #333; border-radius: 50%; 
             display: flex; justify-content: center; align-items: center; 
-            font-size: 8px; font-weight: 700;
-            font-family: 'Roboto Mono', monospace;
+            font-size: 7px; font-weight: 700; margin-bottom: 2px;
+            font-family: monospace; transition: background 0.2s;
         }
         /* Bong bóng đáp án */
-        .q-b { width: 12px; height: 12px; font-size: 8px; margin-right: 5px; }
+        .q-b { width: 11px; height: 11px; font-size: 7px; margin-right: 4px; cursor: pointer; }
+        .q-b:hover { background: #eee; }
 
         /* Cột phải: Câu hỏi */
         .right-panel { flex: 1; border: 2px solid black; padding: 5px; border-radius: 4px; position: relative; display: flex; flex-direction: column; }
-        .ans-grid { display: flex; flex: 1; gap: 5px; }
-        .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 8px; display: flex; flex-direction: column; justify-content: space-between; /* Dàn đều theo chiều dọc */ }
+        .ans-grid { display: flex; flex: 1; height: 100%; }
+        /* Dàn đều các cột câu hỏi */
+        .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 2px; display: flex; flex-direction: column; justify-content: space-around; }
         .ans-col:last-child { border-right: none; }
         
-        .q-row { display: flex; align-items: center; padding: 2px 0; }
-        .q-num { width: 22px; font-size: 10pt; font-weight: bold; text-align: right; margin-right: 8px; }
+        .q-row { display: flex; align-items: center; }
+        .q-num { width: 20px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 4px; }
         
         @media print {
             body { background: white; }
@@ -101,6 +104,7 @@
     <script type="text/babel">
         const { useState } = React;
 
+        // Component cột tô số (SBD/Mã đề)
         const BubbleColumn = () => (
             <div className="col-bubble">
                 <div className="write-box"></div>
@@ -108,6 +112,7 @@
             </div>
         );
 
+        // Component hàng câu hỏi
         const QuestionRow = ({ num }) => (
             <div className="q-row">
                 <div className="q-num">{num}</div>
@@ -115,6 +120,7 @@
             </div>
         );
 
+        // Component Phiếu đơn lẻ
         const OmrItem = ({ type, data }) => {
             const isA5 = type === 'A5'; 
             const totalQ = isA5 ? 30 : 100;
@@ -123,46 +129,45 @@
 
             return (
                 <div className="omr-item">
-                    {/* 4 Điểm định vị máy chấm (Nằm ngoài inner-container) */}
+                    {/* 4 GÓC ĐỊNH VỊ (ANCHORS) - KHÔNG ĐƯỢC XOÁ */}
                     <div className="anchor tl"></div><div className="anchor tr"></div>
                     <div className="anchor bl"></div><div className="anchor br"></div>
 
-                    {/* Container nội dung bên trong (Cách lề để tránh anchor) */}
                     <div className="omr-inner-container">
-                        {/* Header Mới */}
+                        {/* Header */}
                         <div className="header-section">
                             <div className="header-title">
                                 <h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1>
                             </div>
-                            <div className="info-grid">
+                            <div className="flex flex-col gap-1">
                                 <div className="info-row">
-                                    <div className="info-line flex-[2]"><span className="info-label">Họ và tên thí sinh:</span><div className="info-dots"></div></div>
-                                    <div className="info-line flex-1"><span className="info-label">SBD (ghi chữ):</span><div className="info-dots"></div></div>
+                                    <div className="info-line flex-[2]"><span className="info-label">Họ tên thí sinh:</span><div className="info-dots"></div></div>
+                                    <div className="info-line flex-1"><span className="info-label">SBD (Chữ):</span><div className="info-dots"></div></div>
                                 </div>
                                 <div className="info-row">
                                     <div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div>
                                     <div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div>
-                                    <div className="info-line flex-1"><span className="info-label">Phòng thi:</span><div className="info-dots"></div></div>
+                                    <div className="info-line flex-1"><span className="info-label">Phòng:</span><div className="info-dots"></div></div>
                                 </div>
-                                {/* Dòng Môn thi và Điểm mới thêm */}
-                                <div className="info-row mt-2">
-                                    <div className="info-line flex-[2]"><span className="info-label">Môn thi:</span><div className="info-dots" style={{fontWeight:'bold'}}>{data.subject}</div></div>
-                                    <div className="info-line flex-1"><span className="info-label" style={{color:'#d00'}}>Điểm:</span><div className="info-dots"></div></div>
+                                <div className="info-row mt-2 pt-1 border-t border-gray-300">
+                                    <div className="info-line flex-[2]"><span className="info-label">Môn thi:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div>
+                                    <div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div>
+                                    <div className="info-line flex-1"><span className="info-label text-gray-500">Giám khảo:</span><div className="info-dots"></div></div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Body */}
                         <div className="body-section">
-                            {/* Panel Trái: SBD & Mã đề */}
+                            {/* Cột trái: SBD & Mã đề */}
                             <div className="left-panel">
-                                <div className="id-box flex-[2]">
+                                <div className="id-box">
                                     <div className="box-title">SỐ BÁO DANH</div>
                                     <div className="grid-bubbles">
                                         {Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}
                                     </div>
                                 </div>
-                                <div className="id-box flex-1">
+                                <div className="id-box">
                                     <div className="box-title">MÃ ĐỀ</div>
                                     <div className="grid-bubbles">
                                         {Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}
@@ -170,9 +175,11 @@
                                 </div>
                             </div>
 
-                            {/* Panel Phải: Câu hỏi (Dàn trang tự động) */}
+                            {/* Cột phải: Câu hỏi */}
                             <div className="right-panel">
-                                <div className="box-title" style={{background:'transparent', color:'#000', borderBottom:'2px solid #000'}}>PHẦN TRẢ LỜI (Tô kín ô tròn tương ứng với đáp án đúng)</div>
+                                <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'5px'}}>
+                                    PHẦN TRẢ LỜI (Tô kín ô tròn)
+                                </div>
                                 <div className="ans-grid">
                                     {Array.from({length: cols}).map((_, cIdx) => (
                                         <div key={cIdx} className="ans-col">
@@ -191,39 +198,45 @@
         };
 
         const App = () => {
-            const [mode, setMode] = useState('30'); // '30' or '100'
-            const [subject, setSubject] = useState("TOÁN"); // Chỉ còn nhập môn thi
+            const [mode, setMode] = useState('30'); // '30' hoặc '100'
+            const [subject, setSubject] = useState("TOÁN"); 
 
             return (
-                <div className="min-h-screen flex flex-col">
+                <div className="min-h-screen flex flex-col bg-gray-100">
                     {/* Toolbar */}
-                    <div className="bg-indigo-900 text-white p-4 shadow-lg flex flex-wrap justify-between items-center no-print z-50 relative gap-4">
+                    <div className="bg-indigo-900 text-white p-3 shadow-lg flex flex-wrap justify-between items-center no-print z-50 sticky top-0">
                         <div className="flex items-center gap-4">
-                            <h2 className="font-bold text-xl hidden md:block"><i className="fas fa-print mr-2"></i>Tạo Phiếu OMR</h2>
-                            <div className="flex bg-indigo-800 rounded-lg p-1">
-                                <button onClick={() => setMode('30')} className={`px-3 py-2 rounded font-bold transition text-sm ${mode==='30' ? 'bg-white text-indigo-900' : 'text-indigo-300 hover:text-white'}`}>A5 (30 Câu)</button>
-                                <button onClick={() => setMode('100')} className={`px-3 py-2 rounded font-bold transition text-sm ${mode==='100' ? 'bg-white text-indigo-900' : 'text-indigo-300 hover:text-white'}`}>A4 (100 Câu)</button>
+                            <h2 className="font-bold text-lg hidden md:block uppercase tracking-wide">
+                                <i className="fas fa-print mr-2 text-yellow-400"></i>Tạo Phiếu OMR
+                            </h2>
+                            <div className="flex bg-indigo-800 rounded-md p-1 gap-1">
+                                <button onClick={() => setMode('30')} className={`px-3 py-1.5 rounded text-sm font-bold transition ${mode==='30' ? 'bg-white text-indigo-900 shadow' : 'text-indigo-300 hover:text-white'}`}>
+                                    A5 (30 Câu)
+                                </button>
+                                <button onClick={() => setMode('100')} className={`px-3 py-1.5 rounded text-sm font-bold transition ${mode==='100' ? 'bg-white text-indigo-900 shadow' : 'text-indigo-300 hover:text-white'}`}>
+                                    A4 (100 Câu)
+                                </button>
                             </div>
-                            <div className="flex items-center gap-2 bg-indigo-800 p-1 rounded-lg">
-                                <span className="text-xs font-bold text-indigo-300 pl-2">Môn:</span>
-                                <input type="text" value={subject} onChange={(e)=>setSubject(e.target.value.toUpperCase())} className="bg-transparent border-b border-indigo-400 text-white font-bold w-32 focus:outline-none focus:border-white text-sm px-1"/>
+                            <div className="flex items-center gap-2 bg-indigo-800 p-1 rounded-md px-3">
+                                <span className="text-xs font-bold text-indigo-300 uppercase">Môn:</span>
+                                <input type="text" value={subject} onChange={(e)=>setSubject(e.target.value.toUpperCase())} className="bg-transparent border-b border-indigo-400 text-white font-bold w-32 focus:outline-none focus:border-yellow-400 text-sm uppercase placeholder-indigo-400" placeholder="NHẬP MÔN..."/>
                             </div>
                         </div>
-                        <div className="flex gap-3">
-                            <button onClick={()=>window.location.href='index.html'} className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded font-bold text-sm"><i className="fas fa-home mr-2"></i>Home</button>
-                            <button onClick={()=>window.print()} className="bg-yellow-500 hover:bg-yellow-400 text-indigo-900 px-6 py-2 rounded font-bold shadow text-sm"><i className="fas fa-print mr-2"></i>IN PHIẾU</button>
+                        <div className="flex gap-2">
+                            <button onClick={()=>window.location.href='index.html'} className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded font-bold text-sm transition flex items-center gap-2"><i className="fas fa-home"></i> <span className="hidden md:inline">Trang chủ</span></button>
+                            <button onClick={()=>window.print()} className="bg-yellow-500 hover:bg-yellow-400 text-indigo-900 px-5 py-2 rounded font-bold shadow text-sm transition flex items-center gap-2 animate-pulse"><i className="fas fa-print"></i> IN PHIẾU</button>
                         </div>
                     </div>
 
-                    {/* Preview */}
-                    <div className="flex-1 bg-gray-300 p-4 md:p-8 overflow-auto flex justify-center">
+                    {/* Preview Area */}
+                    <div className="flex-1 p-4 md:p-8 overflow-auto flex justify-center items-start">
                         <div className={`sheet-a4 ${mode==='30' ? 'layout-2up' : 'layout-1up'}`}>
                             {mode === '30' ? (
                                 <>
                                     <OmrItem type="A5" data={{subject}} />
                                     <OmrItem type="A5" data={{subject}} />
-                                    <div className="absolute w-full border-b-2 border-dashed border-gray-500 top-1/2 left-0 flex justify-center items-center no-print">
-                                        <span className="bg-white px-3 py-1 text-xs font-bold text-gray-600 rounded-full border border-gray-300">✂ Cắt đôi tại đây (Khổ A5)</span>
+                                    <div className="absolute w-full border-b-2 border-dashed border-gray-400 top-1/2 left-0 flex justify-center items-center no-print z-20">
+                                        <span className="bg-white px-2 text-[10px] text-gray-500 font-mono border rounded">✄ CẮT ĐÔI (KHỔ A5)</span>
                                     </div>
                                 </>
                             ) : (
