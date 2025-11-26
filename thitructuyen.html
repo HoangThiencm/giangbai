@@ -17,17 +17,39 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Font chữ đẹp cho Toán học -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+
     <style>
-        body { background-color: #f3f4f6; font-family: 'Segoe UI', sans-serif; user-select: none; } /* Chống bôi đen text */
-        .katex { font-size: 1.1em; color: #1e3a8a; }
+        /* Sử dụng Noto Serif hoặc Times New Roman làm font chính */
+        body { 
+            background-color: #f3f4f6; 
+            font-family: 'Noto Serif', 'Times New Roman', serif; 
+            user-select: none; 
+        } 
+        
+        /* Tinh chỉnh KaTeX để khớp font */
+        .katex { font-size: 1.15em; color: #1e3a8a; }
+        .math-content { font-family: 'Noto Serif', 'Times New Roman', serif; }
+
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 50; display: flex; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 600px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 600px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: 'Segoe UI', sans-serif; } /* Modal dùng font sans-serif cho hiện đại */
         
         /* Chế độ thi nghiêm ngặt */
-        .exam-lockdown { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: white; overflow-y: auto; padding: 20px; }
-        .lockdown-warning { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(220, 38, 38, 0.95); z-index: 10000; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .exam-lockdown { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: #fafafa; overflow-y: auto; padding: 20px; }
+        .lockdown-warning { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(220, 38, 38, 0.98); z-index: 10000; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Style cho câu hỏi đẹp hơn */
+        .question-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        .question-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
 <body oncontextmenu="return false;"> <!-- Chặn chuột phải toàn trang -->
@@ -65,7 +87,7 @@
                     } else { ref.current.appendChild(document.createTextNode(part)); }
                 });
             }, [text]);
-            return <span ref={ref} className="math-content font-serif text-lg text-gray-800 inline-block leading-relaxed" />;
+            return <span ref={ref} className="math-content font-serif text-lg md:text-xl text-gray-900 inline-block leading-relaxed" />;
         };
 
         const QRModal = ({ link, onClose }) => {
@@ -148,7 +170,7 @@
             const handleOptChange = (val, idx) => onUpdate('options', val, idx);
             if (isEditing) {
                 return (
-                    <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-400 mb-6 relative">
+                    <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-400 mb-6 relative font-sans">
                         <div className="absolute top-4 right-4 z-10">
                             <button onClick={() => setIsEditing(false)} className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-blue-700 shadow flex items-center gap-1">
                                 <i className="fas fa-check"></i> Xong
@@ -173,26 +195,26 @@
                 );
             }
             return (
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6 hover:shadow-md transition relative group">
+                <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 mb-8 hover:shadow-md transition relative group question-card">
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition duration-200">
-                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm">
+                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm font-sans">
                             <i className="fas fa-pencil-alt"></i> Sửa
                         </button>
                     </div>
-                    <div className="flex gap-2 mb-4 pr-20">
-                        <span className="font-bold text-indigo-800 whitespace-nowrap text-lg">Câu {index + 1}:</span>
-                        <div className="font-medium text-gray-800 text-lg leading-relaxed"><MathText text={q.question} /></div>
+                    <div className="flex gap-3 mb-6 pr-16 items-start">
+                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg font-bold whitespace-nowrap text-lg font-sans h-fit mt-1">Câu {index + 1}</span>
+                        <div className="font-medium text-gray-900 text-lg md:text-xl leading-relaxed tracking-wide"><MathText text={q.question} /></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-4">
                         {q.options.map((opt, idx) => (
-                            <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${q.correct_index === idx ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-transparent'}`}>
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${q.correct_index === idx ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div>
-                                <div className={`text-base ${q.correct_index === idx ? 'font-medium text-green-900' : 'text-gray-700'}`}><MathText text={cleanOptionText(opt)} /></div>
-                                {q.correct_index === idx && <i className="fas fa-check-circle text-green-500 ml-auto mt-1 text-lg"></i>}
+                            <div key={idx} className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all ${q.correct_index === idx ? 'bg-green-50 border-green-500 ring-1 ring-green-400' : 'bg-white border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 mt-0.5 font-sans ${q.correct_index === idx ? 'bg-green-600 text-white shadow' : 'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div>
+                                <div className={`text-lg md:text-xl ${q.correct_index === idx ? 'font-medium text-green-900' : 'text-gray-800'}`}><MathText text={cleanOptionText(opt)} /></div>
+                                {q.correct_index === idx && <i className="fas fa-check-circle text-green-600 ml-auto mt-1 text-xl"></i>}
                             </div>
                         ))}
                     </div>
-                    {q.correct_index === -1 && <div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng! Vui lòng bấm "Sửa".</div>}
+                    {q.correct_index === -1 && <div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block font-sans"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng! Vui lòng bấm "Sửa".</div>}
                 </div>
             );
         };
@@ -218,7 +240,7 @@
                 const newQs = [...questions]; newQs[qIdx].correct_index = optIdx; onUpdateQuestions(newQs);
             };
             return (
-                <div className="max-w-5xl mx-auto p-4">
+                <div className="max-w-5xl mx-auto p-4 font-sans">
                     <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
                     <div className="bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-0 z-10 border-b border-indigo-100 flex justify-between items-center">
                         <h2 className="text-2xl font-bold text-indigo-800">Duyệt Đề ({questions.length} câu)</h2>
@@ -228,7 +250,7 @@
                             <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
                         </div>
                     </div>
-                    <div className="space-y-2 pb-20">
+                    <div className="space-y-6 pb-20">
                         {questions.map((q, i) => (<QuestionItem key={i} q={q} index={i} onUpdate={(field, val, optIdx) => handleQuestionUpdate(i, field, val, optIdx)} onOptionChange={(optIdx) => handleCorrectChange(i, optIdx)} />))}
                     </div>
                 </div>
@@ -241,7 +263,7 @@
             useEffect(() => { if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data)).catch(console.error); }, []);
             const handleDelete = async (id) => { if(confirm("Xóa?")) try { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); alert("Xóa xong"); setExams(exams.filter(e=>e.id!==id)); } catch(e){alert("Lỗi");} };
             return (
-                <div className="max-w-6xl mx-auto p-6 fade-in">
+                <div className="max-w-6xl mx-auto p-6 fade-in font-sans">
                     {qrLink && <QRModal link={qrLink} onClose={()=>setQrLink(null)} />}
                     <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow border border-indigo-100">
                         <div className="flex items-center gap-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-2xl"><i className="fas fa-user-tie"></i></div><div><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500">{userEmail}</p></div></div>
@@ -305,7 +327,7 @@
             };
             if (step === "review") return <ReviewExam questions={parsedQuestions} onUpdateQuestions={setParsedQuestions} onSave={handleSave} onBack={()=>setStep("upload")} apiKeys={apiKeys} />;
             return (
-                <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg">
+                <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg font-sans">
                     <button onClick={onBack} className="mb-4 text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button>
                     <h2 className="text-2xl font-bold text-indigo-700 mb-6">Bước 1: Thiết lập & Upload</h2>
                     <div className="grid grid-cols-2 gap-4 mb-4">
@@ -353,8 +375,8 @@
                 const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KetQuaThi"); XLSX.writeFile(wb, `KetQua_Thi_${examId}.xlsx`);
             };
             return (
-                <div className="max-w-6xl mx-auto p-6"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-file-excel"></i> Xuất Excel</button></div>
-                <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Nhận Xét</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3">{r.sbd}</td><td className="p-3 font-bold text-indigo-900">{r.student_name}</td><td className="p-3">{r.student_class}</td><td className="p-3 font-bold text-red-600">{r.score}</td><td className="p-3 text-sm italic text-gray-600">{r.ai_feedback}</td></tr>))}</tbody></table></div></div>
+                <div className="max-w-6xl mx-auto p-6 font-sans"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-file-excel"></i> Xuất Excel</button></div>
+                <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Nhận Xét</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3">{r.sbd}</td><td className="p-3 font-bold text-indigo-900">{r.student_name}</td><td className="p-3">{r.student_class}</td><td className="p-3 font-bold text-red-600">{r.score}</td><td className="p-3 text-sm italic text-gray-600"><MathText text={r.ai_feedback} /></td></tr>))}</tbody></table></div></div>
             );
         };
 
@@ -483,11 +505,11 @@
             };
 
             if(step === "check") return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
-            if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2><p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p><input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI (TOÀN MÀN HÌNH)</button></div>;
+            if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center font-sans"><h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2><p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p><input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI (TOÀN MÀN HÌNH)</button></div>;
             
             // [FIX] Kết quả thi dùng MathText để hiển thị công thức trong nhận xét AI
             if(step === "result") return (
-                <div className="min-h-screen bg-green-50 flex items-center justify-center">
+                <div className="min-h-screen bg-green-50 flex items-center justify-center font-sans">
                     <div className="bg-white p-10 rounded shadow text-center max-w-2xl">
                         <h2 className="text-2xl font-bold text-green-700">Kết Quả: {exam.score} điểm</h2>
                         <div className="mt-4 italic text-gray-700">
@@ -499,7 +521,7 @@
             
             // MÀN HÌNH THI (Có lớp phủ Lockdown)
             return (
-                <div className="exam-lockdown">
+                <div className="exam-lockdown font-sans">
                     {/* CẢNH BÁO VI PHẠM */}
                     {isLocked && (
                         <div className="lockdown-warning">
@@ -512,19 +534,22 @@
                         </div>
                     )}
 
-                    <div className="max-w-3xl mx-auto pb-20 select-none relative z-10">
-                        <div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-20 rounded-lg border-b-4 border-indigo-600">
-                            <div><b className="block text-indigo-900">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div>
-                            <div className="flex items-center gap-3"><span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">Nộp</button></div>
+                    <div className="max-w-4xl mx-auto pb-20 select-none relative z-10">
+                        <div className="sticky top-0 bg-white/95 backdrop-blur-sm p-4 shadow flex justify-between mb-6 z-20 rounded-lg border-b-4 border-indigo-600">
+                            <div><b className="block text-indigo-900 text-lg">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div>
+                            <div className="flex items-center gap-4"><span className={`font-mono font-bold text-2xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-6 py-2 rounded-lg shadow hover:bg-green-700 font-bold transition-transform active:scale-95">Nộp Bài</button></div>
                         </div>
                         {exam.questions.map((q, i) => (
-                            <div key={i} className="bg-white p-6 rounded-lg shadow-sm mb-4 border border-gray-200">
-                                <div className="flex gap-2 mb-3"><span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span><div className="font-medium"><MathText text={q.question}/></div></div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm mb-6 border border-gray-100 hover:shadow-md transition">
+                                <div className="flex gap-4 mb-4 items-start">
+                                    <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-bold whitespace-nowrap mt-1">Câu {i+1}</span>
+                                    <div className="font-medium text-gray-900 text-lg md:text-xl leading-relaxed w-full"><MathText text={q.question}/></div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-2">
                                     {q.options.map((o, idx) => (
-                                        <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}>
-                                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div>
-                                            <div className="text-sm"><MathText text={cleanOptionText(o)}/></div>
+                                        <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-4 rounded-xl cursor-pointer transition border-2 flex items-start gap-4 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':'bg-gray-50 border-transparent hover:bg-white hover:border-indigo-200'}`}>
+                                            <div className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5 transition-colors ${answers[i]===idx ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-300'}`}>{String.fromCharCode(65+idx)}</div>
+                                            <div className="text-lg text-gray-800"><MathText text={cleanOptionText(o)}/></div>
                                         </div>
                                     ))}
                                 </div>
