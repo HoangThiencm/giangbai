@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - All in One</title>
+    <title>Chấm Thi OMR Pro - Fixed Layout</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -14,26 +15,61 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
-        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; touch-action: manipulation; }
-        .loader { border: 3px solid #e5e7eb; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
+        
+        /* --- HIỆU ỨNG LOADING --- */
+        .ai-scanning-overlay {
+            position: absolute; inset: 0; background: rgba(255,255,255,0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50; border-radius: 0.5rem;
+        }
+        .scan-line {
+            width: 100%; height: 2px; background: #4f46e5;
+            animation: scan 1.5s infinite linear;
+            box-shadow: 0 0 4px #4f46e5;
+        }
+        @keyframes scan { 0% { transform: translateY(-20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
 
-        /* --- CSS IN ẤN CHUẨN --- */
-        @page { size: A4; margin: 0; }
-        .sheet-a4 {
-            width: 210mm; height: 296mm; background: white; margin: 20px auto;
-            position: relative; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column;
+        /* --- CẤU HÌNH IN ẤN CHUẨN (FIX LỖI TRÀN TRANG) --- */
+        @page { 
+            size: A4 portrait; 
+            margin: 0; /* QUAN TRỌNG: Xóa lề trình duyệt */
         }
 
-        .layout-2up .omr-item { height: 148mm; border-bottom: 1px dashed #999; box-sizing: border-box; position: relative; }
+        .sheet-a4 {
+            width: 210mm; 
+            height: 296mm; /* Giữ chuẩn A4 */
+            background: white; 
+            margin: 20px auto;
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex; 
+            flex-direction: column;
+            page-break-after: always;
+        }
+
+        /* Layout A5: Chia đôi chiều cao A4 chính xác */
+        .layout-2up .omr-item { 
+            height: 148mm; /* Chính xác 1/2 trang */
+            border-bottom: 1px dashed #999; 
+            box-sizing: border-box;
+            overflow: hidden; 
+            position: relative;
+        }
         .layout-2up .omr-item:last-child { border-bottom: none; }
+        
+        /* Layout A4 full */
         .layout-1up .omr-item { height: 100%; }
+
         .omr-item { width: 100%; padding: 0; }
         
         .omr-inner-container {
-            padding: 10mm 10mm; /* Canh lề chuẩn */
-            height: 100%; display: flex; flex-direction: column; box-sizing: border-box;
+            padding: 8mm 10mm; 
+            height: 100%;
+            display: flex; 
+            flex-direction: column;
+            box-sizing: border-box;
         }
 
         /* Anchors */
@@ -41,35 +77,40 @@
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
-        /* Components */
-        .header-section { border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 8px; flex-shrink: 0; }
-        .header-title h1 { font-size: 16pt; font-weight: 900; text-align: center; text-transform: uppercase; margin: 0; line-height: 1.2; }
-        .info-row { display: flex; gap: 15px; margin-top: 4px; }
-        .info-line { display: flex; align-items: flex-end; font-size: 10pt; flex: 1; }
-        .info-label { font-weight: bold; white-space: nowrap; margin-right: 5px; font-size: 9pt;}
-        .info-dots { border-bottom: 1px dotted #555; flex: 1; height: 16px; }
+        /* Header */
+        .header-section { border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 6px; flex-shrink: 0; }
+        .header-title h1 { font-size: 14pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.2; margin: 0;}
+        
+        .info-row { display: flex; gap: 10px; margin-top: 2px; }
+        .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; }
+        .info-label { font-weight: bold; white-space: nowrap; margin-right: 4px; font-size: 8pt;}
+        .info-dots { border-bottom: 1px dotted #555; flex: 1; height: 14px; }
 
-        .body-section { display: flex; flex: 1; gap: 10px; align-items: stretch; overflow: hidden; }
-        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 5px; }
-        .id-box { border: 2px solid black; padding: 4px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
-        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 2px 0; margin-bottom: 4px; }
-        .grid-bubbles { display: flex; justify-content: space-between; height: 100%; }
-        .col-bubble { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: space-between; padding-bottom: 2px; }
-        .write-box { width: 100%; height: 14px; border: 1px solid #333; margin-bottom: 2px; }
-        .b { width: 11px; height: 11px; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; }
+        /* Body */
+        .body-section { display: flex; flex: 1; gap: 8px; align-items: stretch; overflow: hidden; }
+        
+        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 4px; }
+        .id-box { border: 2px solid black; padding: 2px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
+        .box-title { font-size: 7pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
+        
+        .grid-bubbles { display: flex; justify-content: space-around; height: 100%; align-items: flex-start; }
+        .col-bubble { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 96%; }
+        .write-box { width: 100%; height: 12px; border: 1px solid #333; margin-bottom: 1px; }
+        .b { width: 10px; height: 10px; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 6px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; }
 
-        .right-panel { flex: 1; border: 2px solid black; padding: 5px; border-radius: 4px; display: flex; flex-direction: column; }
+        .right-panel { flex: 1; border: 2px solid black; padding: 4px; border-radius: 4px; display: flex; flex-direction: column; }
         .ans-grid { display: flex; flex: 1; height: 100%; }
         .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 2px; display: flex; flex-direction: column; justify-content: space-between; }
         .ans-col:last-child { border-right: none; }
         .q-row { display: flex; align-items: center; }
-        .q-num { width: 18px; font-size: 8pt; font-weight: bold; text-align: right; margin-right: 3px; }
-        .q-b { width: 10px; height: 10px; font-size: 6.5px; margin-right: 3px; cursor: pointer; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .q-num { width: 16px; font-size: 7pt; font-weight: bold; text-align: right; margin-right: 2px; }
+        .q-b { width: 9px; height: 9px; font-size: 6px; margin-right: 2px; cursor: pointer; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
 
         @media print {
             body { background: white; }
             .no-print { display: none !important; }
-            .sheet-a4 { box-shadow: none; margin: 0; page-break-after: always; height: 296mm; width: 210mm; }
+            .sheet-a4 { box-shadow: none; margin: 0; width: 210mm; height: 296mm; }
+            @page { margin: 0; }
         }
         
         /* Tab styles */
@@ -88,21 +129,12 @@
         const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
         const compressImage = (file, maxWidth=1000, quality=0.7) => { return new Promise((resolve)=>{ if(!file||!file.type.startsWith('image/')){resolve(file);return;} const reader=new FileReader();reader.readAsDataURL(file);reader.onload=(event)=>{const img=new Image();img.src=event.target.result;img.onload=()=>{try{const canvas=document.createElement('canvas');let w=img.width,h=img.height;if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);const blob=dataURLtoBlob(canvas.toDataURL('image/jpeg',quality));resolve(blob?new File([blob],file.name,{type:'image/jpeg'}):file);}catch(e){resolve(file);}};img.onerror=()=>resolve(file);};reader.onerror=()=>resolve(file);});};
         const parseMultiKey = (text) => { const keys={}; text.split('\n').forEach(line=>{ line=line.trim(); if(!line)return; let code="DEFAULT", ans=line; if(line.includes(':')){const p=line.split(':');code=p[0].trim();ans=p[1].trim();} if(!keys[code])keys[code]={}; const pairs=ans.toUpperCase().split(/\s+/); pairs.forEach(p=>{const num=p.match(/^\d+/);const char=p.match(/[A-D]$/);if(num&&char)keys[code][parseInt(num[0])]=char[0];});}); return keys; };
+        const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
+        const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
 
-        // --- SHEET COMPONENTS ---
-        const BubbleColumn = () => (
-            <div className="col-bubble">
-                <div className="write-box"></div>
-                {Array.from({length: 10}).map((_, i) => <div key={i} className="b">{i}</div>)}
-            </div>
-        );
-
-        const QuestionRow = ({ num }) => (
-            <div className="q-row">
-                <div className="q-num">{num}</div>
-                {['A','B','C','D'].map(opt => <div key={opt} className="q-b">{opt}</div>)}
-            </div>
-        );
+        // --- COMPONENT IN PHIẾU ---
+        const BubbleColumn = () => (<div className="col-bubble"><div className="write-box"></div>{Array.from({length: 10}).map((_, i) => <div key={i} className="b">{i}</div>)}</div>);
+        const QuestionRow = ({ num }) => (<div className="q-row"><div className="q-num">{num}</div>{['A','B','C','D'].map(opt => <div key={opt} className="q-b">{opt}</div>)}</div>);
 
         const OmrItem = ({ type, data }) => {
             const isA5 = type === 'A5'; 
@@ -112,15 +144,14 @@
 
             return (
                 <div className="omr-item">
-                    <div className="anchor tl"></div><div className="anchor tr"></div>
-                    <div className="anchor bl"></div><div className="anchor br"></div>
+                    <div className="anchor tl"></div><div className="anchor tr"></div><div className="anchor bl"></div><div className="anchor br"></div>
                     <div className="omr-inner-container">
                         <div className="header-section">
                             <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
                             <div className="flex flex-col gap-1">
-                                <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên thí sinh:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD (Chữ):</span><div className="info-dots"></div></div></div>
-                                <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Phòng:</span><div className="info-dots"></div></div></div>
-                                <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn thi:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label text-gray-500">Giám khảo:</span><div className="info-dots"></div></div></div>
+                                <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
+                                <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
+                                <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
                             </div>
                         </div>
                         <div className="body-section">
@@ -147,13 +178,13 @@
             );
         };
 
+        // --- MAIN APP ---
         const App = () => {
             const DEFAULT_BACKEND = "https://hoangthiencm-giangbai.hf.space";
             const [view, setView] = useState('grading');
             const [backendUrl, setBackendUrl] = useState(localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const mobileMode = new URLSearchParams(window.location.search).get('mode') === 'mobile';
             
-            // State
             const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
             const [sessionId, setSessionId] = useState(null);
@@ -166,11 +197,65 @@
             const [mobileStatus, setMobileStatus] = useState("");
             const [processing, setProcessing] = useState(false);
             const [previewImage, setPreviewImage] = useState(null);
+            
+            // State cho hiệu ứng AI đọc ảnh
+            const [aiReading, setAiReading] = useState(false);
 
             const folderRef = useRef(null);
+            const keyImageRef = useRef(null);
             const pollRef = useRef(null);
 
-            // -- Logic --
+            const saveConfig = (url) => {
+                let clean = url.trim().replace(/\/$/, "");
+                if (!clean.startsWith("http")) clean = "https://" + clean;
+                setBackendUrl(clean); localStorage.setItem("omr_backend_url", clean);
+            };
+
+            // --- HÀM AI ĐỌC ẢNH ĐÁP ÁN (OCR) ---
+            const callGeminiVision = async (base64) => {
+                const key = getRandomKey();
+                if (!key) { alert("Chưa nạp API Key ở trang chủ!"); return; }
+                
+                setAiReading(true); // Bật hiệu ứng loading
+                try {
+                    const prompt = "Hãy trích xuất đáp án trắc nghiệm từ ảnh này. Trả về dạng chuỗi: 1A 2B 3C 4D... (Số câu và chữ cái). Chỉ trả về nội dung text, không giải thích.";
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({contents:[{parts:[{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}]})
+                    });
+                    const d = await res.json();
+                    if(d.candidates){
+                        let txt = d.candidates[0].content.parts[0].text.replace(/[*#]/g,'').trim();
+                        // Format lại cho đẹp nếu cần
+                        setInputText(prev => (prev ? prev + "\n" + txt : txt));
+                    }
+                } catch(e) { alert("Lỗi AI: " + e.message); } 
+                finally { setAiReading(false); } // Tắt hiệu ứng
+            };
+
+            const handleKeyImageUpload = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const r = new FileReader();
+                r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]);
+                r.readAsDataURL(file);
+            };
+
+            const handlePaste = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const blob = items[i].getAsFile();
+                        const r = new FileReader();
+                        r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]);
+                        r.readAsDataURL(blob);
+                        return;
+                    }
+                }
+            };
+
+            // ... (Các hàm xử lý chấm thi khác giữ nguyên) ...
             const createSession = async () => {
                 if (!sessionName || !inputText) return alert("Nhập đủ thông tin!");
                 const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText)));
@@ -185,33 +270,22 @@
                 } catch(e) { alert("Lỗi: " + e.message); }
             };
 
-            const loadHistory = async () => {
-                try { const res = await fetch(`${backendUrl}/api/omr/history`); setHistoryList(await res.json()); } catch(e){}
-            };
-
-            const viewDetail = async (sid) => {
-                try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); setHistoryDetail(await res.json()); } catch(e){}
-            };
-
+            const loadHistory = async () => { try { const res = await fetch(`${backendUrl}/api/omr/history`); setHistoryList(await res.json()); } catch(e){} };
+            const viewDetail = async (sid) => { try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); setHistoryDetail(await res.json()); } catch(e){} };
+            
             const processImagesPC = async (files) => {
-                if(!files.length) return;
-                setProcessing(true);
+                if(!files.length) return; setProcessing(true);
                 const keys = parseMultiKey(inputText);
                 for(let f of files) {
                     let fileToSend = await compressImage(f);
                     const fd = new FormData(); fd.append("file", fileToSend); fd.append("answer_key_json", JSON.stringify(keys));
-                    try {
-                        const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd });
-                        const d = await res.json();
-                        setResults(p => [{filename: f.name, ...d}, ...p]);
-                    } catch(e) { console.error(e); }
+                    try { const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); setResults(p => [{filename: f.name, ...await res.json()}, ...p]); } catch(e) {}
                 }
                 setProcessing(false);
             };
 
             const handleMobileUpload = async (files) => {
-                if(!files.length) return;
-                setProcessing(true); setMobileStatus("Đang gửi...");
+                if(!files.length) return; setProcessing(true); setMobileStatus("Đang gửi...");
                 const sid = new URLSearchParams(window.location.search).get('session');
                 for(let f of files) {
                     try {
@@ -227,15 +301,7 @@
 
             useEffect(() => {
                 if(view === 'history') loadHistory();
-                if(sessionId) {
-                    pollRef.current = setInterval(async () => {
-                        try {
-                            const res = await fetch(`${backendUrl}/api/omr/poll_results/${sessionId}`);
-                            const d = await res.json();
-                            if(d.length) setResults(p => [...d, ...p]);
-                        } catch(e){}
-                    }, 2000);
-                }
+                if(sessionId) { pollRef.current = setInterval(async () => { try { const res = await fetch(`${backendUrl}/api/omr/poll_results/${sessionId}`); const d = await res.json(); if(d.length) setResults(p => [...d, ...p]); } catch(e){} }, 2000); }
                 return () => clearInterval(pollRef.current);
             }, [view, sessionId, backendUrl]);
 
@@ -270,13 +336,42 @@
                         {view === 'grading' && (
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                                 <div className="lg:col-span-4 space-y-4">
-                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">
+                                        
+                                        {/* LOADING OVERLAY KHI AI ĐỌC ẢNH */}
+                                        {aiReading && (
+                                            <div className="ai-scanning-overlay">
+                                                <div className="w-16 h-16 relative mb-2">
+                                                    <i className="fas fa-brain text-4xl text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>
+                                                    <div className="absolute inset-0 border-2 border-indigo-200 rounded-full animate-ping"></div>
+                                                </div>
+                                                <span className="text-indigo-700 font-bold text-sm animate-pulse">🤖 AI Đang đọc ảnh...</span>
+                                                <div className="w-32 h-1 bg-gray-200 mt-2 rounded overflow-hidden"><div className="scan-line"></div></div>
+                                            </div>
+                                        )}
+
                                         <h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3>
                                         <input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none" placeholder="Tên đợt (VD: Toán 12...)"/>
-                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} className="w-full border p-2 rounded h-32 font-mono text-sm outline-none" placeholder="Đáp án (101: 1A 2B...)"></textarea>
-                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                            <button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold">Tạo Session</button>
-                                            <button onClick={()=>folderRef.current.click()} className="bg-gray-200 text-gray-700 py-2 rounded font-bold">Upload File</button>
+                                        
+                                        <div className="relative">
+                                            <textarea 
+                                                value={inputText} 
+                                                onChange={e=>setInputText(e.target.value)} 
+                                                onPaste={handlePaste}
+                                                className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" 
+                                                placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V) để AI đọc..."
+                                            ></textarea>
+                                            <div className="absolute bottom-2 right-2 flex gap-2">
+                                                <button onClick={()=>keyImageRef.current.click()} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 border border-gray-300">
+                                                    <i className="fas fa-image"></i> Tải ảnh Key
+                                                </button>
+                                                <input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 mt-3">
+                                            <button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition">Tạo Session</button>
+                                            <button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition">Upload File</button>
                                             <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
                                         </div>
                                     </div>
@@ -285,7 +380,7 @@
                                 <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
                                     <div className="p-4 border-b font-bold text-gray-700 flex justify-between">
                                         <span>Kết Quả ({results.length})</span>
-                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm">Excel</button>}
+                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-file-excel"></i> Excel</button>}
                                     </div>
                                     <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500">Xem</button></td></tr>))}</tbody></table></div>
                                 </div>
