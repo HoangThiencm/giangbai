@@ -2,70 +2,90 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Smart Sheet</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In Phiếu Trả Lời Trắc Nghiệm</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; touch-action: manipulation; }
-        .loader { border: 3px solid #e5e7eb; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+        body { font-family: 'Roboto', sans-serif; background: #e0e0e0; -webkit-print-color-adjust: exact; }
+
+        /* --- CẤU HÌNH TRANG IN --- */
+        @page { size: A4; margin: 0; }
+        .sheet-a4 {
+            width: 210mm; height: 296mm; background: white; margin: 20px auto;
+            position: relative; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        /* --- CẤU TRÚC PHIẾU (ITEM) --- */
+        .omr-item {
+            position: relative; box-sizing: border-box; padding: 8mm;
+            display: flex; flex-direction: column;
+        }
+        /* Layout A5 (2 phiếu trên 1 A4) */
+        .layout-2up .omr-item { height: 148mm; border-bottom: 1px dashed #999; }
+        .layout-2up .omr-item:last-child { border-bottom: none; }
+        /* Layout A4 (1 phiếu trên 1 A4) */
+        .layout-1up .omr-item { height: 296mm; }
+
+        /* --- ĐIỂM ĐỊNH VỊ (ANCHORS) QUAN TRỌNG --- */
+        .anchor { position: absolute; width: 10px; height: 10px; background: black; z-index: 99; }
+        .tl { top: 10mm; left: 10mm; } 
+        .tr { top: 10mm; right: 10mm; }
+        .bl { bottom: 10mm; left: 10mm; } 
+        .br { bottom: 10mm; right: 10mm; }
+
+        /* --- NỘI DUNG PHIẾU --- */
+        .header-section { display: flex; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 10px; }
+        .header-logo { width: 50px; height: 50px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; margin-right: 10px; }
+        .header-text h1 { font-size: 14pt; font-weight: 900; margin: 0; text-transform: uppercase; line-height: 1.2; }
+        .header-text p { font-size: 9pt; margin: 2px 0 0 0; }
         
-        /* OMR Base */
-        .sheet-container-a4 { width: 210mm; height: 297mm; background: white; margin: 0 auto; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .info-line { display: flex; margin-bottom: 4px; font-size: 10pt; }
+        .info-label { font-weight: bold; white-space: nowrap; margin-right: 5px; }
+        .info-dots { border-bottom: 1px dotted #000; flex: 1; }
+
+        /* --- KHUNG TRẢ LỜI --- */
+        .body-section { display: flex; flex: 1; gap: 10px; }
         
-        /* Layout Modes */
-        .layout-1up { padding: 10mm; display: flex; } /* 1 phiếu A4 */
-        .layout-2up { display: flex; flex-direction: column; } /* 2 phiếu A5 */
-        .layout-4up { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; } /* 4 phiếu A6 */
-
-        /* Individual Sheet Item */
-        .omr-item { position: relative; box-sizing: border-box; border: 1px dashed #e5e7eb; padding: 5mm; display: flex; flex-direction: column; }
-        .layout-1up .omr-item { width: 100%; height: 100%; border: none; padding: 0; }
-        .layout-2up .omr-item { width: 100%; height: 50%; border-bottom: 2px dashed #999; }
-        .layout-4up .omr-item { width: 100%; height: 100%; border-right: 1px dashed #ccc; border-bottom: 1px dashed #ccc; }
-
-        /* Anchors (Định vị 4 góc cho TỪNG phiếu) */
-        .anchor { position: absolute; width: 12px; height: 12px; background: black; z-index: 10; }
-        .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
-        .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
-
-        /* Nội dung bên trong */
-        .omr-header { border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 5px; display: flex; align-items: center; }
-        .omr-title h1 { font-size: 11pt; font-weight: 900; margin: 0; text-transform: uppercase; }
-        .field-row { display: flex; align-items: baseline; margin-bottom: 2px; font-size: 10px; }
-        .field-label { font-weight: bold; white-space: nowrap; margin-right: 5px; }
-        .field-dots { border-bottom: 1px dotted #000; flex: 1; }
-
-        /* Vùng tô SBD/Mã đề */
-        .id-section { display: flex; gap: 10px; margin-top: 5px; font-size: 9px; }
-        .id-block { display: flex; flex-direction: column; align-items: center; border: 1px solid black; padding: 2px; }
-        .id-title { writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-size: 8px; letter-spacing: 2px; transform: rotate(180deg); margin-bottom: 5px;}
-        .col-group { display: flex; gap: 2px; }
-        .bubble-col { display: flex; flex-direction: column; align-items: center; }
-        .write-box { width: 12px; height: 14px; border: 1px solid black; margin-bottom: 2px; }
-        .bubble { width: 10px; height: 10px; border: 1px solid black; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 7px; margin-bottom: 1px; line-height: 1; }
+        /* Cột trái: SBD & Mã đề */
+        .left-panel { width: 32%; display: flex; flex-direction: column; gap: 10px; }
+        .id-box { border: 2px solid black; padding: 5px; border-radius: 4px; }
+        .box-title { font-size: 9pt; font-weight: bold; text-align: center; margin-bottom: 5px; background: #000; color: #fff; }
         
-        /* Vùng câu hỏi */
-        .questions-area { flex: 1; margin-top: 5px; display: grid; grid-auto-flow: column; gap: 5px; align-items: start; }
-        .q-col { border-right: 1px dotted #ccc; padding-right: 2px; }
-        .q-row { display: flex; align-items: center; font-size: 9px; margin-bottom: 1px; }
-        .q-num { width: 15px; text-align: right; font-weight: bold; margin-right: 2px; }
-        .q-opts { display: flex; gap: 2px; }
-        .q-bubble { width: 10px; height: 10px; border: 1px solid black; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 6px; }
+        .grid-bubbles { display: flex; justify-content: space-between; }
+        .col-bubble { display: flex; flex-direction: column; align-items: center; }
+        .write-box { width: 14px; height: 18px; border: 1px solid black; margin-bottom: 4px; }
+        
+        /* Bong bóng tô */
+        .b { 
+            width: 12px; height: 12px; border: 1px solid #333; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 8px; font-weight: bold; margin-bottom: 2px;
+            font-family: monospace;
+        }
+        /* Bong bóng đáp án (nhỏ hơn xíu) */
+        .q-b { width: 11px; height: 11px; font-size: 7px; margin-right: 3px; cursor: pointer; }
+        .q-b:hover { background: #ddd; }
 
-        @media print { 
-            body * { visibility: hidden; } 
-            #print-area, #print-area * { visibility: visible; } 
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; } 
-            .no-print { display: none !important; } 
+        /* Cột phải: Câu hỏi */
+        .right-panel { flex: 1; border: 2px solid black; padding: 5px; border-radius: 4px; position: relative; }
+        .ans-grid { display: flex; height: 100%; }
+        .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 4px; display: flex; flex-direction: column; }
+        .ans-col:last-child { border-right: none; }
+        
+        .q-row { display: flex; align-items: center; margin-bottom: 4px; }
+        .q-num { width: 18px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 4px; }
+        
+        /* Ẩn giao diện khi in */
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .sheet-a4 { box-shadow: none; margin: 0; page-break-after: always; }
         }
     </style>
 </head>
@@ -73,167 +93,133 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        const DEFAULT_BACKEND_URL = "https://hoangthiencm-giangbai.hf.space"; 
+        const { useState } = React;
 
-        // --- COMPONENTS ---
-        const OmrItem = ({ config, questionStart, questionEnd }) => {
-            const renderBubbles = (n) => Array.from({length: n}, (_, i) => <div key={i} className="bubble">{i}</div>);
-            const renderQOpts = () => ['A','B','C','D'].map(c => <div key={c} className="q-bubble">{c}</div>);
+        const BubbleColumn = ({ count }) => (
+            <div className="col-bubble">
+                <div className="write-box"></div>
+                {Array.from({length: 10}).map((_, i) => <div key={i} className="b">{i}</div>)}
+            </div>
+        );
 
-            // Tính toán cột câu hỏi
-            const qCount = questionEnd - questionStart + 1;
-            const cols = Math.ceil(qCount / 10); // Mỗi cột 10 câu (chuẩn A6)
+        const QuestionRow = ({ num }) => (
+            <div className="q-row">
+                <div className="q-num">{num}</div>
+                {['A','B','C','D'].map(opt => <div key={opt} className="b q-b">{opt}</div>)}
+            </div>
+        );
+
+        const OmrItem = ({ type, data }) => {
+            // Cấu hình dựa trên loại phiếu
+            const isA5 = type === 'A5'; // 30 câu
+            const totalQ = isA5 ? 30 : 100;
+            const cols = isA5 ? 3 : 4; 
+            const rowsPerCol = isA5 ? 10 : 25;
 
             return (
                 <div className="omr-item">
-                    {/* 4 Góc Định Vị */}
+                    {/* 4 Điểm định vị máy chấm */}
                     <div className="anchor tl"></div><div className="anchor tr"></div>
                     <div className="anchor bl"></div><div className="anchor br"></div>
 
                     {/* Header */}
-                    <div className="omr-header">
-                        <div className="flex-1">
-                            <div className="omr-title">
-                                <h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1>
-                            </div>
+                    <div className="header-section">
+                        <div className="header-logo">LOGO</div>
+                        <div className="header-text flex-1">
+                            <h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1>
+                            <p>{data.schoolName}</p>
                             <div className="mt-2">
-                                <div className="field-row"><span className="field-label">Họ và tên:</span><div className="field-dots"></div></div>
-                                <div className="field-row"><span className="field-label">Lớp:</span><div className="field-dots"></div><span className="field-label ml-2">Ngày thi:</span><div className="field-dots"></div></div>
-                                <div className="field-row"><span className="field-label">Môn thi:</span><div className="field-dots">{config.subject}</div></div>
+                                <div className="info-line"><span className="info-label">Họ và tên:</span><div className="info-dots"></div></div>
+                                <div className="flex gap-4">
+                                    <div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div>
+                                    <div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Body: SBD + Mã Đề + Câu Hỏi */}
-                    <div className="flex gap-2 h-full">
-                        {/* Cột trái: SBD & Mã Đề */}
-                        <div className="flex gap-1 shrink-0">
-                            {/* SBD */}
-                            <div className="id-block">
-                                <div className="col-group">
-                                    <div className="id-title">SỐ BÁO DANH</div>
-                                    {Array.from({length: 6}).map((_, i) => (
-                                        <div key={i} className="bubble-col">
-                                            <div className="write-box"></div>
-                                            {renderBubbles(10)}
-                                        </div>
-                                    ))}
+                    {/* Body */}
+                    <div className="body-section">
+                        {/* Panel Trái: Định danh */}
+                        <div className="left-panel">
+                            <div className="id-box">
+                                <div className="box-title">SỐ BÁO DANH</div>
+                                <div className="grid-bubbles">
+                                    {Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}
                                 </div>
                             </div>
-                            {/* Mã Đề */}
-                            <div className="id-block">
-                                <div className="col-group">
-                                    <div className="id-title">MÃ ĐỀ</div>
-                                    {Array.from({length: 3}).map((_, i) => (
-                                        <div key={i} className="bubble-col">
-                                            <div className="write-box"></div>
-                                            {renderBubbles(10)}
-                                        </div>
-                                    ))}
+                            <div className="id-box">
+                                <div className="box-title">MÃ ĐỀ</div>
+                                <div className="grid-bubbles">
+                                    {Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Cột phải: Câu hỏi */}
-                        <div className="questions-area grid" style={{gridTemplateRows: `repeat(${10}, 1fr)`}}>
-                            {Array.from({length: cols}).map((_, colIdx) => {
-                                const start = questionStart + colIdx * 10;
-                                return (
-                                    <div key={colIdx} className="q-col">
-                                        {Array.from({length: 10}).map((_, rowIdx) => {
-                                            const qNum = start + rowIdx;
-                                            if (qNum > questionEnd) return null;
-                                            return (
-                                                <div key={qNum} className="q-row">
-                                                    <span className="q-num">{qNum}</span>
-                                                    <div className="q-opts">{renderQOpts()}</div>
-                                                </div>
-                                            )
+                        {/* Panel Phải: Câu hỏi */}
+                        <div className="right-panel">
+                            <div className="box-title" style={{background:'transparent', color:'#000', borderBottom:'1px solid #000'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
+                            <div className="ans-grid">
+                                {Array.from({length: cols}).map((_, cIdx) => (
+                                    <div key={cIdx} className="ans-col">
+                                        {Array.from({length: rowsPerCol}).map((_, rIdx) => {
+                                            const qNum = cIdx * rowsPerCol + rIdx + 1;
+                                            return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
                                         })}
                                     </div>
-                                )
-                            })}
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            );
-        };
-
-        const SheetRenderer = ({ config }) => {
-            const qTotal = config.questionCount;
-            
-            // LOGIC CHIA GIẤY:
-            // <= 20 câu: 4 phiếu / A4 (A6)
-            // 21 - 50 câu: 2 phiếu / A4 (A5)
-            // > 50 câu: 1 phiếu / A4 (A4)
-
-            let layoutClass = "layout-1up";
-            let itemsPerSheet = 1;
-
-            if (qTotal <= 20) {
-                layoutClass = "layout-4up";
-                itemsPerSheet = 4;
-            } else if (qTotal <= 50) {
-                layoutClass = "layout-2up";
-                itemsPerSheet = 2;
-            }
-
-            return (
-                <div id="print-area" className={`sheet-container-a4 ${layoutClass}`}>
-                    {Array.from({length: itemsPerSheet}).map((_, i) => (
-                        <OmrItem 
-                            key={i} 
-                            config={config} 
-                            questionStart={1} 
-                            questionEnd={qTotal} 
-                        />
-                    ))}
-                    {itemsPerSheet > 1 && <div className="absolute w-full border-b border-dashed border-gray-400 top-1/2 flex items-center justify-center no-print"><span className="bg-white px-2 text-xs text-gray-500">Cắt tại đây</span></div>}
-                    {itemsPerSheet === 4 && <div className="absolute h-full border-r border-dashed border-gray-400 left-1/2 top-0 no-print"></div>}
                 </div>
             );
         };
 
         const App = () => {
-            const [sheetConfig, setSheetConfig] = useState({ 
-                schoolName: "Trường THPT...", 
-                examName: "Kiểm tra 15 phút", 
-                questionCount: 20, 
-                examDate: "", 
-                subject: "Toán" 
-            });
+            const [mode, setMode] = useState('30'); // '30' or '100'
+            const [info, setInfo] = useState({ schoolName: "TRƯỜNG THPT...", subject: "TOÁN" });
 
             return (
-                <div className="min-h-screen bg-gray-100 flex flex-col">
-                    <div className="bg-white p-4 shadow flex justify-between items-center no-print">
-                        <div className="font-bold text-lg text-indigo-700">Tạo Phiếu OMR Thông Minh</div>
-                        <a href="index.html" className="text-gray-500 hover:text-indigo-600 font-bold">🏠 Trang chủ</a>
+                <div className="min-h-screen flex flex-col">
+                    {/* Toolbar */}
+                    <div className="bg-indigo-900 text-white p-4 shadow-lg flex justify-between items-center no-print z-50 relative">
+                        <div className="flex items-center gap-4">
+                            <h2 className="font-bold text-xl"><i className="fas fa-print mr-2"></i>Tạo Phiếu OMR</h2>
+                            <div className="flex bg-indigo-800 rounded-lg p-1">
+                                <button 
+                                    onClick={() => setMode('30')}
+                                    className={`px-4 py-2 rounded font-bold transition ${mode==='30' ? 'bg-white text-indigo-900' : 'text-indigo-300 hover:text-white'}`}
+                                >
+                                    30 Câu (A5 x2)
+                                </button>
+                                <button 
+                                    onClick={() => setMode('100')}
+                                    className={`px-4 py-2 rounded font-bold transition ${mode==='100' ? 'bg-white text-indigo-900' : 'text-indigo-300 hover:text-white'}`}
+                                >
+                                    100 Câu (A4)
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={()=>window.location.href='index.html'} className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded font-bold"><i className="fas fa-home mr-2"></i>Home</button>
+                            <button onClick={()=>window.print()} className="bg-yellow-500 hover:bg-yellow-400 text-indigo-900 px-6 py-2 rounded font-bold shadow"><i className="fas fa-print mr-2"></i>IN PHIẾU</button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-1 p-6 gap-6 overflow-hidden">
-                        {/* Sidebar Config */}
-                        <div className="w-80 bg-white p-5 rounded-xl shadow h-fit space-y-4 no-print">
-                            <h3 className="font-bold border-b pb-2">Cấu hình Phiếu</h3>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500">Số câu hỏi (Tự động chọn khổ giấy)</label>
-                                <input type="number" value={sheetConfig.questionCount} onChange={e => setSheetConfig({...sheetConfig, questionCount: parseInt(e.target.value) || 20})} className="w-full border p-2 rounded font-bold text-indigo-600 text-lg"/>
-                                <p className="text-[10px] text-gray-400 mt-1">
-                                    ≤ 20 câu: 4 phiếu/A4 (A6)<br/>
-                                    21-50 câu: 2 phiếu/A4 (A5)<br/>
-                                    > 50 câu: 1 phiếu/A4
-                                </p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500">Môn thi</label>
-                                <input value={sheetConfig.subject} onChange={e => setSheetConfig({...sheetConfig, subject: e.target.value})} className="w-full border p-2 rounded text-sm"/>
-                            </div>
-                            <button onClick={() => window.print()} className="w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700">🖨️ IN PHIẾU NGAY</button>
-                        </div>
-
-                        {/* Preview Area */}
-                        <div className="flex-1 bg-gray-500 p-8 overflow-auto flex justify-center">
-                            <SheetRenderer config={sheetConfig} />
+                    {/* Preview */}
+                    <div className="flex-1 bg-gray-300 p-8 overflow-auto flex justify-center">
+                        <div className={`sheet-a4 ${mode==='30' ? 'layout-2up' : 'layout-1up'}`}>
+                            {mode === '30' ? (
+                                <>
+                                    <OmrItem type="A5" data={info} />
+                                    <OmrItem type="A5" data={info} />
+                                    <div className="absolute w-full border-b-2 border-dashed border-gray-400 top-1/2 left-0 flex justify-center items-center no-print">
+                                        <span className="bg-white px-2 text-xs text-gray-500">✂ Cắt đôi tại đây</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <OmrItem type="A4" data={info} />
+                            )}
                         </div>
                     </div>
                 </div>
