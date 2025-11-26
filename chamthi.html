@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Print Perfect</title>
+    <title>Chấm Thi OMR Pro - Print Layout Fixed</title>
     
-    <!-- Thư viện CSS & JS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -18,41 +17,44 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI (NO MARGIN) --- */
+        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI --- */
         @page { 
-            size: A4 portrait; 
-            margin: 0mm; /* Bắt buộc 0 để không bị trình duyệt tự thêm lề */
+            size: A4; 
+            margin: 0; /* Xóa lề trình duyệt */
         }
 
         .sheet-a4 {
             width: 210mm; 
-            height: 296mm; /* Chuẩn A4 (trừ 1mm an toàn cho máy in cũ) */
+            height: 296mm; /* Chuẩn A4 */
             background: white; 
             margin: 20px auto;
             position: relative; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: flex; 
-            flex-direction: column;
+            overflow: hidden; /* Chặn tràn trang */
             page-break-after: always;
         }
 
-        /* Layout A5: Chia đôi A4 chính xác từng milimet */
+        /* Layout A5: Sử dụng Grid để chia đôi chính xác */
+        .layout-2up {
+            display: grid;
+            grid-template-rows: 1fr 1fr; /* Chia đôi chiều cao đều nhau */
+            height: 100%;
+        }
+        
         .layout-2up .omr-item { 
-            height: 148mm; /* 296mm / 2 */
-            width: 100%;
             border-bottom: 1px dashed #999; 
-            box-sizing: border-box;
-            overflow: hidden; /* Ngăn chặn tuyệt đối việc tràn */
+            overflow: hidden;
+            height: 100%; /* Lấp đầy grid cell */
             position: relative;
         }
-        .layout-2up .omr-item:last-child { border-bottom: none; }
         
         /* Layout A4 full */
-        .layout-1up .omr-item { height: 100%; width: 100%; overflow: hidden; position: relative; }
+        .layout-1up { display: block; height: 100%; }
+        .layout-1up .omr-item { height: 100%; position: relative; }
 
-        /* Container nội dung: Đẩy sát lề để phiếu to hơn */
+        /* Nội dung bên trong: Padding an toàn */
         .omr-inner-container {
-            padding: 6mm 8mm; /* Lề an toàn tối thiểu: 6mm trên dưới, 8mm trái phải */
+            padding: 8mm 10mm; /* Lề: Trên dưới 8mm, Trái phải 10mm */
             height: 100%;
             display: flex; 
             flex-direction: column;
@@ -60,106 +62,75 @@
             justify-content: space-between;
         }
 
-        /* Anchors: Điểm định vị máy chấm */
+        /* Anchors */
         .anchor { position: absolute; width: 10px; height: 10px; background: black; z-index: 99; }
-        .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
-        .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
+        .tl { top: 6mm; left: 6mm; } .tr { top: 6mm; right: 6mm; }
+        .bl { bottom: 6mm; left: 6mm; } .br { bottom: 6mm; right: 6mm; }
 
-        /* --- HEADER (Tinh gọn để dành đất cho phần tô) --- */
-        .header-section { 
-            border-bottom: 2px solid black; 
-            padding-bottom: 2px; 
-            margin-bottom: 4px; 
-            flex-shrink: 0; 
-        }
+        /* --- GIAO DIỆN PHIẾU --- */
+        .header-section { border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 4px; flex-shrink: 0; }
         .header-title h1 { font-size: 15pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.1; margin: 0;}
         
-        .info-row { display: flex; gap: 8px; margin-top: 2px; align-items: flex-end;}
+        .info-row { display: flex; gap: 10px; margin-top: 2px; align-items: flex-end;}
         .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
-        .info-label { font-weight: bold; margin-right: 3px; font-size: 9pt;}
+        .info-label { font-weight: bold; margin-right: 4px; font-size: 9pt;}
         .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 14px; }
 
-        /* --- BODY (Phần tô) --- */
         .body-section { 
             display: flex; 
             flex: 1; 
-            gap: 8px; 
+            gap: 10px; 
             align-items: stretch; 
-            overflow: hidden; /* Quan trọng */
-            padding-top: 2px;
+            overflow: hidden; 
+            padding-top: 4px;
         }
         
-        /* Cột Trái (SBD/Mã đề) */
-        .left-panel { width: 27%; display: flex; flex-direction: column; gap: 4px; }
-        .id-box { border: 2px solid black; padding: 2px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
-        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
+        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 6px; }
+        .id-box { border: 2px solid black; padding: 4px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
+        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 2px 0; margin-bottom: 4px; }
         
         .grid-bubbles { display: flex; justify-content: space-around; height: 100%; align-items: flex-start; }
         .col-bubble { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 98%; }
-        .write-box { width: 100%; height: 13px; border: 1px solid #333; margin-bottom: 1px; }
-        
-        /* Bong bóng SBD/Mã đề */
-        .b { 
-            width: 11px; height: 11px; 
-            border: 1px solid #000; border-radius: 50%; 
-            display: flex; justify-content: center; align-items: center; 
-            font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; 
-        }
+        .write-box { width: 100%; height: 14px; border: 1px solid #333; margin-bottom: 2px; }
+        .b { width: 12px; height: 12px; border: 1px solid #000; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; }
 
-        /* Cột Phải (Câu hỏi) */
-        .right-panel { flex: 1; border: 2px solid black; padding: 4px; border-radius: 4px; display: flex; flex-direction: column; }
+        .right-panel { flex: 1; border: 2px solid black; padding: 6px; border-radius: 4px; display: flex; flex-direction: column; }
         .ans-grid { display: flex; flex: 1; height: 100%; }
-        
-        /* Dàn cột câu hỏi */
-        .ans-col { 
-            flex: 1; 
-            border-right: 1px dashed #999; 
-            padding: 0 4px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; /* Dãn đều dọc */
-        }
+        .ans-col { flex: 1; border-right: 1px dashed #999; padding: 0 6px; display: flex; flex-direction: column; justify-content: space-between; }
         .ans-col:last-child { border-right: none; }
         
         .q-row { display: flex; align-items: center; justify-content: flex-end; }
         .q-num { width: 20px; font-size: 10pt; font-weight: bold; text-align: right; margin-right: 4px; line-height: 1; }
-        
-        /* Bong bóng Đáp án (To hơn bản cũ) */
-        .q-b { 
-            width: 13px; height: 13px; /* TĂNG KÍCH THƯỚC */
-            font-size: 8px; font-weight: bold;
-            margin-right: 3px; 
-            cursor: pointer; 
-            border: 1px solid #000; 
-            border-radius: 50%; 
-            display: flex; justify-content: center; align-items: center; 
-        }
+        .q-b { width: 13px; height: 13px; font-size: 8px; font-weight: bold; margin-right: 3px; cursor: pointer; border: 1px solid #000; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
         .q-b:hover { background-color: #ddd; }
 
-        /* Loading Overlay */
-        .ai-scanning-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
-        .scan-line { width: 100%; height: 2px; background: #4f46e5; animation: scan 1.5s infinite linear; box-shadow: 0 0 4px #4f46e5; }
-        @keyframes scan { 0% { transform: translateY(-20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
+        /* --- UI TIỆN ÍCH --- */
+        /* Loading AI */
+        .ai-loading {
+            position: absolute; inset: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 20; border-radius: 0.5rem;
+            border: 2px solid #4f46e5;
+        }
+        .pulse-ring {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 4px solid #4f46e5;
+            animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
 
-        /* Khi in: Ẩn hết giao diện, chỉ hiện tờ giấy */
         @media print {
             body { background: white; }
             .no-print { display: none !important; }
-            .sheet-a4 { 
-                box-shadow: none; 
-                margin: 0; 
-                width: 210mm; height: 296mm; /* Fix cứng */
-                page-break-after: always; 
-                overflow: hidden;
-            }
-            @page { margin: 0; } /* Xóa lề máy in */
+            .sheet-a4 { box-shadow: none; margin: 0; width: 210mm; height: 296mm; page-break-after: always; }
+            @page { margin: 0; }
         }
         
         .tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: bold; transition: all 0.2s; }
         .tab-active { background: #4f46e5; color: white; }
         .tab-inactive { color: #6b7280; hover:bg-gray-100; }
-        
-        /* Error Display */
         #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
     </style>
     <script>
@@ -251,7 +222,6 @@
                             <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
                             <div className="flex flex-col gap-1">
                                 <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
-                                <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
                                 <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
                             </div>
                         </div>
@@ -301,7 +271,6 @@
             const [previewImage, setPreviewImage] = useState(null);
             const [aiReading, setAiReading] = useState(false);
             
-            // Refs
             const folderRef = useRef(null);
             const keyImageRef = useRef(null);
             const pollRef = useRef(null);
@@ -462,33 +431,32 @@
                                 <div className="lg:col-span-4 space-y-4">
                                     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">
                                         {aiReading && (
-                                            <div className="ai-scanning-overlay">
-                                                <div className="w-12 h-12 mb-2"><i className="fas fa-brain text-4xl text-indigo-600 animate-pulse"></i></div>
-                                                <span className="text-indigo-700 font-bold text-sm">AI Đang đọc ảnh...</span>
-                                                <div className="w-32 h-1 bg-gray-200 mt-2 rounded overflow-hidden"><div className="scan-line"></div></div>
+                                            <div className="ai-loading">
+                                                <div className="pulse-ring"></div>
+                                                <span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span>
                                             </div>
                                         )}
                                         <h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3>
-                                        <input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none" placeholder="Tên đợt (VD: Toán 12...)"/>
+                                        <input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/>
                                         <div className="relative">
                                             <textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea>
-                                            <button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded text-xs font-bold border border-gray-300"><i className="fas fa-image"></i> Ảnh Key</button>
+                                            <button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button>
                                             <input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 mt-3">
-                                            <button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition">Tạo Session</button>
-                                            <button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition">Upload File</button>
+                                            <button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition shadow">Tạo Session</button>
+                                            <button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition shadow-sm">Upload File</button>
                                             <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
                                         </div>
                                     </div>
-                                    {showQr && <div className="bg-white p-5 rounded-xl text-center border border-green-200"><div id="qrcode" className="flex justify-center mb-2"></div><p className="text-xs text-green-700">Quét để chấm trên Mobile</p></div>}
+                                    {showQr && <div className="bg-white p-5 rounded-xl text-center border border-green-200 shadow-sm"><div id="qrcode" className="flex justify-center mb-2"></div><p className="text-xs text-green-700 font-bold">Quét để chấm trên Mobile</p></div>}
                                 </div>
                                 <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
-                                    <div className="p-4 border-b font-bold text-gray-700 flex justify-between">
+                                    <div className="p-4 border-b font-bold text-gray-700 flex justify-between bg-gray-50 rounded-t-xl">
                                         <span>Kết Quả ({results.length})</span>
-                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-file-excel"></i> Excel</button>}
+                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm hover:bg-green-100 px-2 py-1 rounded transition"><i className="fas fa-file-excel"></i> Excel</button>}
                                     </div>
-                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500">Xem</button></td></tr>))}</tbody></table></div>
+                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-indigo-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500 hover:underline">Xem</button></td></tr>))}</tbody></table></div>
                                 </div>
                             </div>
                         )}
@@ -496,11 +464,11 @@
                         {view === 'history' && (
                             <div className="grid grid-cols-12 gap-6 h-full">
                                 <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]">
-                                    <div className="p-4 border-b bg-gray-50 font-bold">Danh Sách Đợt</div>
-                                    <div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} onClick={()=>viewDetail(h.session_id)} className="p-3 border-b cursor-pointer hover:bg-blue-50"><div className="font-bold">{h.session_name}</div><div className="text-xs text-gray-500">{new Date(h.created_at).toLocaleString()}</div></div>))}</div>
+                                    <div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Danh Sách Đợt</div>
+                                    <div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} onClick={()=>viewDetail(h.session_id)} className="p-3 border-b cursor-pointer hover:bg-indigo-50 transition"><div className="font-bold text-indigo-900">{h.session_name}</div><div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div></div>))}</div>
                                 </div>
                                 <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]">
-                                    <div className="p-4 border-b font-bold flex justify-between"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm">Tải Excel</button>}</div>
+                                    <div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div>
                                     <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyItems}</tbody></table></div>
                                 </div>
                             </div>
@@ -508,11 +476,11 @@
 
                         {view === 'sheet' && (
                             <div className="flex flex-col h-full">
-                                <div className="bg-white p-3 rounded-lg shadow mb-4 flex gap-4 items-center no-print">
-                                    <button onClick={()=>setSheetMode('30')} className={`px-3 py-1 rounded font-bold ${sheetMode==='30'?'bg-indigo-600 text-white':'bg-gray-200'}`}>A5 (30 Câu)</button>
-                                    <button onClick={()=>setSheetMode('100')} className={`px-3 py-1 rounded font-bold ${sheetMode==='100'?'bg-indigo-600 text-white':'bg-gray-200'}`}>A4 (100 Câu)</button>
-                                    <input value={subject} onChange={e=>setSubject(e.target.value.toUpperCase())} className="border p-1 rounded" placeholder="Môn thi..."/>
-                                    <button onClick={()=>window.print()} className="ml-auto bg-yellow-500 text-white px-4 py-1 rounded font-bold">IN PHIẾU</button>
+                                <div className="bg-white p-3 rounded-lg shadow mb-4 flex gap-4 items-center no-print border border-gray-200">
+                                    <button onClick={()=>setSheetMode('30')} className={`px-3 py-1 rounded font-bold transition ${sheetMode==='30'?'bg-indigo-600 text-white shadow':'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>A5 (30 Câu)</button>
+                                    <button onClick={()=>setSheetMode('100')} className={`px-3 py-1 rounded font-bold transition ${sheetMode==='100'?'bg-indigo-600 text-white shadow':'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>A4 (100 Câu)</button>
+                                    <input value={subject} onChange={e=>setSubject(e.target.value.toUpperCase())} className="border p-1 rounded px-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Môn thi..."/>
+                                    <button onClick={()=>window.print()} className="ml-auto bg-yellow-500 text-indigo-900 px-4 py-1 rounded font-bold hover:bg-yellow-400 transition shadow"><i className="fas fa-print mr-1"></i> IN PHIẾU</button>
                                 </div>
                                 <div className="flex-1 bg-gray-300 p-8 overflow-auto flex justify-center">
                                     <div className={`sheet-a4 ${sheetMode==='30'?'layout-2up':'layout-1up'}`}>
@@ -522,7 +490,7 @@
                             </div>
                         )}
                     </div>
-                    {previewImage && <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50" onClick={()=>setPreviewImage(null)}><img src={`data:image/jpeg;base64,${previewImage}`} className="max-h-full max-w-full"/></div>}
+                    {previewImage && <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50" onClick={()=>setPreviewImage(null)}><img src={`data:image/jpeg;base64,${previewImage}`} className="max-h-full max-w-full rounded shadow-2xl"/></div>}
                 </div>
             );
         };
