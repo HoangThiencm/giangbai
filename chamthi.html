@@ -24,7 +24,7 @@
             var extra = !url ? '' : '<br><small>' + url + ':' + line + '</small>';
             var errDiv = document.getElementById('error-display');
             errDiv.style.display = 'block';
-            errDiv.innerHTML = "<strong>⚠️ LỖI HỆ THỐNG:</strong> " + msg + extra + "<br>Hãy nhấn F12 xem Console để biết chi tiết.";
+            errDiv.innerHTML = "<strong>⚠️ LỖI HỆ THỐNG:</strong> " + msg + extra;
             return false;
         };
     </script>
@@ -104,13 +104,10 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // Bắt đầu code React - Sử dụng Safe Mode
         const { useState, useEffect, useRef } = React;
 
         // --- UTILS ---
-        const dataURLtoBlob = (dataurl) => { 
-            try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}
-        }
+        const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
         
         const compressImage = (file, maxWidth=1000, quality=0.7) => { 
             return new Promise((resolve)=>{ 
@@ -212,7 +209,6 @@
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
             
-            // States
             const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
             const [sessionId, setSessionId] = useState(null);
@@ -231,7 +227,6 @@
             const keyImageRef = useRef(null);
             const pollRef = useRef(null);
 
-            // Xóa loading khi App mounted
             useEffect(() => {
                 document.getElementById('loading').style.display = 'none';
                 const params = new URLSearchParams(window.location.search);
@@ -246,7 +241,6 @@
                 alert("Đã lưu cấu hình!");
             };
 
-            // --- AI KEY READER ---
             const callGeminiVision = async (base64) => {
                 const key = getRandomKey();
                 if (!key) { alert("Chưa nạp API Key ở trang chủ!"); return; }
@@ -288,7 +282,6 @@
                 }
             };
 
-            // --- LOGIC ---
             const createSession = async () => {
                 if (!sessionName || !inputText) return alert("Nhập đủ thông tin!");
                 const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText)));
@@ -304,16 +297,21 @@
                 } catch(e) { alert("Lỗi: " + e.message); }
             };
 
-            const loadHistory = async () => { try { const res = await fetch(`${backendUrl}/api/omr/history`); setHistoryList(await res.json()); } catch(e){} };
-            const viewDetail = async (sid) => { try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); setHistoryDetail(await res.json()); } catch(e){} };
+            const loadHistory = async () => { try { const res = await fetch(`${backendUrl}/api/omr/history`); const d=await res.json(); if(Array.isArray(d)) setHistoryList(d); } catch(e){} };
+            const viewDetail = async (sid) => { try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); const d=await res.json(); if(Array.isArray(d)) setHistoryDetail(d); } catch(e){} };
 
+            // SỬA LỖI AWAIT Ở ĐÂY
             const processImagesPC = async (files) => {
                 if(!files.length) return; setProcessing(true);
                 const keys = parseMultiKey(inputText);
                 for(let f of files) {
                     let fileToSend = await compressImage(f);
                     const fd = new FormData(); fd.append("file", fileToSend); fd.append("answer_key_json", JSON.stringify(keys));
-                    try { const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); setResults(p => [{filename: f.name, ...await res.json()}, ...p]); } catch(e) {}
+                    try { 
+                        const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); 
+                        const data = await res.json();
+                        setResults(p => [{filename: f.name, ...data}, ...p]); 
+                    } catch(e) {}
                 }
                 setProcessing(false);
             };
@@ -333,10 +331,9 @@
                 setProcessing(false);
             };
 
-            // Sử dụng && thay vì ?. cho historyDetail để an toàn
-            const historyItems = historyDetail && historyDetail.map((r, i) => (
+            const historyItems = historyDetail ? historyDetail.map((r, i) => (
                 <tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>
-            ));
+            )) : null;
 
             useEffect(() => {
                 if(view === 'history') loadHistory();
