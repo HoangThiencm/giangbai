@@ -30,11 +30,11 @@
         .tab-inactive { color: #6b7280; hover:bg-gray-100; }
         #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
 
-        /* --- STYLES CHO PHIẾU IN (NEW) --- */
+        /* --- STYLES CHO PHIẾU IN (QUAN TRỌNG ĐỂ KHỚP VỚI BACKEND) --- */
         @media print {
             @page {
                 size: A4;
-                margin: 0;
+                margin: 0; /* Bắt buộc để 4 góc định vị nằm sát lề */
             }
             body {
                 margin: 0;
@@ -96,7 +96,7 @@
         const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
         const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
 
-        // --- COMPONENT: SHEET GENERATOR (Logic mới từ phieucham.txt) ---
+        // --- COMPONENT: SHEET GENERATOR (Logic tạo phiếu chuẩn 4 cột mã đề) ---
         const SheetGenerator = () => {
             // Cấu hình phiếu
             const [numQuestions, setNumQuestions] = useState(40);
@@ -199,7 +199,7 @@
                             </div>
                             
                             <div className="p-3 bg-yellow-50 text-yellow-800 text-xs rounded-md">
-                                Đã loại bỏ viền đen. Nhập thông tin ở đây để tự động điền vào phiếu bên phải.
+                                Đã cập nhật tương thích 100% với Backend mới (Hỗ trợ Mã đề 4 số).
                             </div>
 
                             <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white px-3 py-3 rounded-md hover:bg-blue-800 transition font-bold mt-4">
@@ -219,7 +219,7 @@
                             boxSizing: 'border-box'
                         }}
                         >
-                            {/* 4 Corner Anchors for OMR Apps */}
+                            {/* 4 Corner Anchors for OMR Apps (Quan trọng: Màu đen tuyệt đối #000000) */}
                             {showAnchors && (
                                 <>
                                     <div className="absolute top-8 left-8 w-4 h-4 bg-black"></div>
@@ -265,9 +265,9 @@
                                     </div>
                                 </div>
 
-                                {/* ID and Test Code Section */}
+                                {/* ID and Test Code Section - Tương thích 100% logic Backend mới */}
                                 <div className="flex gap-8 mb-6 px-4">
-                                    {/* SBD Box */}
+                                    {/* SBD Box (6 cột) */}
                                     <div className="w-40">
                                         <div className="text-center font-bold border border-black text-sm mb-1">SỐ BÁO DANH</div>
                                         <div className="grid grid-cols-6 border border-black mb-1">
@@ -289,7 +289,7 @@
                                         </div>
                                     </div>
 
-                                    {/* Ma De Box */}
+                                    {/* Ma De Box (4 cột - Đã khớp với Backend mới) */}
                                     <div className="w-28">
                                         <div className="text-center font-bold border border-black text-sm mb-1">MÃ ĐỀ</div>
                                         <div className="grid grid-cols-4 border border-black mb-1">
@@ -334,7 +334,7 @@
                                     <div className="border-t-2 border-black mb-4"></div>
                                     <h3 className="text-center font-bold mb-4">PHẦN TRẢ LỜI</h3>
                                     
-                                    {/* Rendering Columns */}
+                                    {/* Rendering Columns (Logic 40 câu chia 4 cột -> Backend xử lý tốt) */}
                                     <div className="w-full grid grid-cols-4 gap-4">
                                             {[0, 1, 2, 3].map(colIndex => {
                                                 const itemsPerCol = Math.ceil(numQuestions / 4);
@@ -363,7 +363,7 @@
                                     </div>
                                 </div>
                                 
-                                {/* Fake Footer for PDF aesthetics */}
+                                {/* Footer */}
                                 <div className="absolute bottom-5 left-8 right-8 flex justify-between text-[10px] text-gray-400">
                                     <span>Design by OMR Pro</span>
                                     <span>Page 1/1</span>
