@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Compact A5</title>
+    <title>Chấm Thi OMR Pro</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -17,30 +17,31 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CẤU HÌNH IN ẤN (TUYỆT ĐỐI KHÔNG LỀ) --- */
+        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI --- */
         @page { 
             size: A4 portrait; 
-            margin: 0mm; 
+            margin: 0; 
         }
 
         .sheet-a4 {
             width: 210mm; 
-            height: 296mm; /* 297mm - 1mm an toàn */
+            height: 296mm; 
             background: white; 
             margin: 20px auto;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             
-            /* Grid chia đôi chiều cao chính xác */
+            /* GRID CHIA 2 PHẦN: 135mm + 135mm = 270mm (Dư 26mm an toàn ở đáy) */
             display: grid;
-            grid-template-rows: 148mm 148mm; 
+            grid-template-rows: 135mm 135mm; /* Đã giảm chiều cao để kéo phiếu dưới lên */
             padding: 0;
             page-break-after: always;
+            align-content: start; /* Dồn nội dung lên trên */
         }
 
         /* Layout A5 */
         .layout-2up .omr-item { 
             width: 100%;
-            height: 100%; 
+            height: 100%; /* Chiếm trọn ô 135mm */
             box-sizing: border-box;
             position: relative;
             border-bottom: 1px dashed #999; 
@@ -52,26 +53,26 @@
         .layout-1up { display: block; }
         .layout-1up .omr-item { height: 100%; border-bottom: none; }
 
-        /* Anchors (4 Góc) */
+        /* Anchors */
         .anchor { position: absolute; width: 8px; height: 8px; background: black; z-index: 99; }
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
-        /* Container nội dung: Padding nhỏ để đẩy sát lề */
+        /* Container nội dung: Padding cực nhỏ để đẩy sát lề trên */
         .omr-inner-container {
-            padding: 5mm 8mm; /* Trên/Dưới 5mm, Trái/Phải 8mm */
+            padding: 4mm 8mm; /* Trên/Dưới giảm còn 4mm */
             height: 100%;
             display: flex; 
             flex-direction: column;
-            justify-content: flex-start; /* Đẩy toàn bộ nội dung lên trên cùng */
+            justify-content: flex-start; /* Ưu tiên đẩy lên trên */
             box-sizing: border-box;
         }
 
-        /* --- HEADER (SIÊU GỌN) --- */
+        /* --- HEADER --- */
         .header-section { 
             border-bottom: 2px solid black; 
             padding-bottom: 2px; 
-            margin-bottom: 4px; 
+            margin-bottom: 3px; /* Giảm margin */
             flex-shrink: 0; 
         }
         .header-title h1 { 
@@ -80,18 +81,19 @@
             line-height: 1; margin: 0 0 2px 0;
         }
         
-        .info-row { display: flex; gap: 12px; margin-bottom: 1px; align-items: flex-end;}
+        .info-row { display: flex; gap: 10px; margin-bottom: 1px; align-items: flex-end;}
         .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
-        .info-label { font-weight: bold; margin-right: 3px; font-size: 9pt;}
+        .info-label { font-weight: bold; margin-right: 4px; font-size: 9pt;}
         .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 13px; }
 
-        /* --- BODY (Phần tô) --- */
+        /* --- BODY --- */
         .body-section { 
             display: flex; 
             flex: 1; 
             gap: 8px; 
             align-items: stretch; 
-            overflow: hidden; 
+            overflow: hidden;
+            padding-top: 2px;
         }
         
         /* Cột Trái */
@@ -107,7 +109,7 @@
         .box-title { 
             font-size: 7pt; font-weight: bold; text-align: center; 
             background: #000; color: #fff; 
-            padding: 1px 0; margin-bottom: 2px; 
+            padding: 1px 0; margin-bottom: 1px; 
         }
         
         .grid-bubbles { 
@@ -121,14 +123,14 @@
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            height: 100%; 
-            justify-content: space-between; /* Dàn đều */
+            height: 98%; /* Cho phép co dãn */
+            justify-content: space-between; 
             padding-bottom: 1px;
         }
         
         .write-box { 
             width: 100%; 
-            height: 12px; /* Giảm chiều cao ô viết */
+            height: 11px; /* Giảm chiều cao */
             border: 1px solid #000; 
             margin-bottom: 1px; 
             background: white;
@@ -232,7 +234,7 @@
             const rowsPerCol = isA5 ? 10 : 25;
 
             return (
-                <div className="omr-item">
+                <div className={`omr-item ${isA5 ? 'is-a5' : ''}`}>
                     <div className="anchor tl"></div><div className="anchor tr"></div><div className="anchor bl"></div><div className="anchor br"></div>
                     <div className="omr-inner-container">
                         <div className="header-section">
