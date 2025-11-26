@@ -17,7 +17,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* UI Helpers */
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 30px; height: 30px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -30,42 +29,17 @@
         .tab-inactive { color: #6b7280; hover:bg-gray-100; }
         #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
 
-        /* --- STYLES CHO PHIẾU IN (QUAN TRỌNG ĐỂ KHỚP VỚI BACKEND) --- */
+        /* --- STYLES CHO PHIẾU IN --- */
         @media print {
-            @page {
-                size: A4;
-                margin: 0; /* Bắt buộc để 4 góc định vị nằm sát lề */
-            }
-            body {
-                margin: 0;
-                padding: 0;
-                background: white;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .no-print, .print-hidden {
-                display: none !important;
-            }
-            .print-bg-white {
-                background: white !important;
-            }
-            .print-p-0 {
-                padding: 0 !important;
-            }
-            .print-m-0 {
-                margin: 0 !important;
-            }
-            .print-shadow-none {
-                box-shadow: none !important;
-            }
-            /* Ẩn các thành phần giao diện chính khi in */
-            .main-header, .main-tabs, .sidebar-controls {
-                display: none !important;
-            }
-            .sheet-container {
-                overflow: visible !important;
-                height: auto !important;
-            }
+            @page { size: A4; margin: 0; }
+            body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .no-print, .print-hidden { display: none !important; }
+            .print-bg-white { background: white !important; }
+            .print-p-0 { padding: 0 !important; }
+            .print-m-0 { margin: 0 !important; }
+            .print-shadow-none { box-shadow: none !important; }
+            .main-header, .main-tabs, .sidebar-controls { display: none !important; }
+            .sheet-container { overflow: visible !important; height: auto !important; }
         }
     </style>
     <script>
@@ -96,279 +70,103 @@
         const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
         const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
 
-        // --- COMPONENT: SHEET GENERATOR (Logic tạo phiếu chuẩn 4 cột mã đề) ---
+        // --- COMPONENT: SHEET GENERATOR ---
         const SheetGenerator = () => {
-            // Cấu hình phiếu
             const [numQuestions, setNumQuestions] = useState(40);
             const [showAnchors, setShowAnchors] = useState(true);
             const [title, setTitle] = useState('PHIẾU TRẢ LỜI TRẮC NGHIỆM');
-            
-            // Thông tin bổ sung
             const [schoolName, setSchoolName] = useState('');
             const [examSubject, setExamSubject] = useState('');
             const [examDate, setExamDate] = useState('');
 
-            const handlePrint = () => {
-                window.print();
-            };
-
-            // Helper to create bubble arrays
+            const handlePrint = () => window.print();
             const range = (start, end) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
             const options = ['A', 'B', 'C', 'D'];
 
             return (
                 <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] bg-gray-100 font-sans overflow-hidden sheet-container">
-                    
-                    {/* Sidebar Controls - Editable Inputs */}
+                    {/* Controls */}
                     <div className="w-full lg:w-80 bg-white shadow-lg p-6 no-print flex flex-col gap-4 overflow-y-auto border-r z-10 sidebar-controls">
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 border-b pb-2">
-                        <i className="fas fa-cog w-5 h-5 text-gray-600"></i>
-                        Thông tin Phiếu
-                        </h2>
-                        
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 border-b pb-2"><i className="fas fa-cog w-5 h-5 text-gray-600"></i> Thông tin Phiếu</h2>
                         <div className="space-y-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề lớn</label>
-                                <input 
-                                type="text" 
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 outline-none"
-                                placeholder="VD: PHIẾU TRẢ LỜI..."
-                                />
-                            </div>
-
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề lớn</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 outline-none" placeholder="VD: PHIẾU TRẢ LỜI..."/></div>
                             <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Số câu</label>
-                                    <select 
-                                    value={numQuestions}
-                                    onChange={(e) => setNumQuestions(Number(e.target.value))}
-                                    className="w-full px-3 py-2 border rounded-md outline-none"
-                                    >
-                                    <option value={20}>20 câu</option>
-                                    <option value={40}>40 câu</option>
-                                    <option value={50}>50 câu</option>
-                                    <option value={60}>60 câu</option>
-                                    <option value={100}>100 câu</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ngày thi</label>
-                                    <input 
-                                        type="text" 
-                                        value={examDate}
-                                        onChange={(e) => setExamDate(e.target.value)}
-                                        className="w-full px-3 py-2 border rounded-md outline-none"
-                                        placeholder="dd/mm/yyyy"
-                                    />
-                                </div>
+                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Số câu</label><select value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} className="w-full px-3 py-2 border rounded-md outline-none"><option value={20}>20 câu</option><option value={40}>40 câu</option><option value={50}>50 câu</option><option value={60}>60 câu</option><option value={100}>100 câu</option></select></div>
+                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày thi</label><input type="text" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="dd/mm/yyyy"/></div>
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tên Trường</label>
-                                <input 
-                                type="text" 
-                                value={schoolName}
-                                onChange={(e) => setSchoolName(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md outline-none"
-                                placeholder="Nhập tên trường..."
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Môn Thi</label>
-                                <input 
-                                type="text" 
-                                value={examSubject}
-                                onChange={(e) => setExamSubject(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md outline-none"
-                                placeholder="Nhập môn thi..."
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-2 pt-2 border-t">
-                                <input 
-                                type="checkbox" 
-                                id="anchors"
-                                checked={showAnchors}
-                                onChange={(e) => setShowAnchors(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 rounded"
-                                />
-                                <label htmlFor="anchors" className="text-gray-700 text-sm">Hiển thị 4 góc định vị (Cho App)</label>
-                            </div>
-                            
-                            <div className="p-3 bg-yellow-50 text-yellow-800 text-xs rounded-md">
-                                Đã cập nhật tương thích 100% với Backend mới (Hỗ trợ Mã đề 4 số).
-                            </div>
-
-                            <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white px-3 py-3 rounded-md hover:bg-blue-800 transition font-bold mt-4">
-                                <i className="fas fa-print"></i> IN PHIẾU NGAY
-                            </button>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Tên Trường</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="Nhập tên trường..."/></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Môn Thi</label><input type="text" value={examSubject} onChange={(e) => setExamSubject(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="Nhập môn thi..."/></div>
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t"><input type="checkbox" id="anchors" checked={showAnchors} onChange={(e) => setShowAnchors(e.target.checked)} className="w-4 h-4 text-blue-600 rounded"/><label htmlFor="anchors" className="text-gray-700 text-sm">Hiển thị 4 góc định vị</label></div>
+                            <div className="p-3 bg-green-50 text-green-800 text-xs rounded-md">Đã cập nhật Layout chuẩn để AI cắt vùng chính xác.</div>
+                            <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white px-3 py-3 rounded-md hover:bg-blue-800 transition font-bold mt-4"><i className="fas fa-print"></i> IN PHIẾU NGAY</button>
                         </div>
                     </div>
 
                     {/* Preview Area */}
                     <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center bg-gray-200 print-bg-white print-p-0 print-m-0">
-                        <div 
-                        className="bg-white shadow-2xl relative mx-auto print-shadow-none"
-                        style={{ 
-                            width: '210mm', 
-                            minHeight: '297mm',
-                            padding: '10mm',
-                            boxSizing: 'border-box'
-                        }}
-                        >
-                            {/* 4 Corner Anchors for OMR Apps (Quan trọng: Màu đen tuyệt đối #000000) */}
-                            {showAnchors && (
-                                <>
-                                    <div className="absolute top-8 left-8 w-4 h-4 bg-black"></div>
-                                    <div className="absolute top-8 right-8 w-4 h-4 bg-black"></div>
-                                    <div className="absolute bottom-8 left-8 w-4 h-4 bg-black"></div>
-                                    <div className="absolute bottom-8 right-8 w-4 h-4 bg-black"></div>
-                                </>
-                            )}
+                        <div className="bg-white shadow-2xl relative mx-auto print-shadow-none" style={{ width: '210mm', minHeight: '297mm', padding: '10mm', boxSizing: 'border-box' }}>
+                            {showAnchors && (<><div className="absolute top-8 left-8 w-4 h-4 bg-black"></div><div className="absolute top-8 right-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 left-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 right-8 w-4 h-4 bg-black"></div></>)}
 
-                            {/* Content Container */}
-                            <div className="w-full h-full border-0 border-transparent">
-                                
+                            <div className="w-full h-full border-0 border-transparent relative">
                                 {/* Header Section */}
-                                <div className="flex justify-between items-start mb-6 px-4">
+                                <div className="flex justify-between items-start mb-6 px-4 h-[160px] overflow-hidden">
                                     <div className="w-1/2 pr-4">
                                         <div className="grid grid-cols-[70px_1fr] gap-y-2 text-sm">
-                                            <div className="font-bold pt-1">Trường:</div>
-                                            <div className="border-b border-dotted border-gray-400 pt-1 font-semibold text-blue-900 min-h-[24px]">
-                                                {schoolName}
-                                            </div>
-                                            
-                                            <div className="font-bold pt-1">Lớp:</div>
-                                            <div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div>
-                                            
-                                            <div className="font-bold pt-1">Họ tên:</div>
-                                            <div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div>
+                                            <div className="font-bold pt-1">Trường:</div><div className="border-b border-dotted border-gray-400 pt-1 font-semibold text-blue-900 min-h-[24px]">{schoolName}</div>
+                                            <div className="font-bold pt-1">Lớp:</div><div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div>
+                                            <div className="font-bold pt-1">Họ tên:</div><div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div>
                                         </div>
                                     </div>
                                     <div className="w-1/2 text-center pl-4">
                                         <h1 className="font-bold text-xl uppercase leading-tight mb-2">{title}</h1>
-                                        <div className="flex justify-center items-end gap-1 text-sm italic">
-                                            <span>Môn thi:</span>
-                                            <div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">
-                                                {examSubject}
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-center items-end gap-1 text-sm italic mt-1">
-                                            <span>Ngày thi:</span>
-                                            <div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">
-                                                {examDate}
-                                            </div>
-                                        </div>
+                                        <div className="flex justify-center items-end gap-1 text-sm italic"><span>Môn thi:</span><div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">{examSubject}</div></div>
+                                        <div className="flex justify-center items-end gap-1 text-sm italic mt-1"><span>Ngày thi:</span><div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">{examDate}</div></div>
                                     </div>
                                 </div>
 
-                                {/* ID and Test Code Section - Tương thích 100% logic Backend mới */}
-                                <div className="flex gap-8 mb-6 px-4">
+                                {/* ID and Test Code Section */}
+                                <div className="flex gap-8 mb-6 px-4 h-[200px]">
                                     {/* SBD Box (6 cột) */}
                                     <div className="w-40">
                                         <div className="text-center font-bold border border-black text-sm mb-1">SỐ BÁO DANH</div>
-                                        <div className="grid grid-cols-6 border border-black mb-1">
-                                            {[...Array(6)].map((_, i) => (
-                                                <div key={i} className="h-6 border-r border-black last:border-r-0"></div>
-                                            ))}
-                                        </div>
-                                        {/* Bubbles for SBD */}
-                                        <div className="grid grid-cols-6 gap-x-1">
-                                            {[...Array(6)].map((col, colIdx) => (
-                                                <div key={colIdx} className="flex flex-col items-center gap-1">
-                                                    {[...Array(10)].map((_, num) => (
-                                                        <div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">
-                                                            {num}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <div className="grid grid-cols-6 border border-black mb-1">{[...Array(6)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div>
+                                        <div className="grid grid-cols-6 gap-x-1">{[...Array(6)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div>
                                     </div>
 
-                                    {/* Ma De Box (4 cột - Đã khớp với Backend mới) */}
+                                    {/* Ma De Box (4 cột) */}
                                     <div className="w-28">
                                         <div className="text-center font-bold border border-black text-sm mb-1">MÃ ĐỀ</div>
-                                        <div className="grid grid-cols-4 border border-black mb-1">
-                                            {[...Array(4)].map((_, i) => (
-                                                <div key={i} className="h-6 border-r border-black last:border-r-0"></div>
-                                            ))}
-                                        </div>
-                                        {/* Bubbles for Ma De */}
-                                        <div className="grid grid-cols-4 gap-x-1">
-                                            {[...Array(4)].map((col, colIdx) => (
-                                                <div key={colIdx} className="flex flex-col items-center gap-1">
-                                                    {[...Array(10)].map((_, num) => (
-                                                        <div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">
-                                                            {num}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <div className="grid grid-cols-4 border border-black mb-1">{[...Array(4)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div>
+                                        <div className="grid grid-cols-4 gap-x-1">{[...Array(4)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div>
                                     </div>
 
-                                    {/* Instructions / Marks */}
                                     <div className="flex-1 flex flex-col justify-between py-2">
-                                        <div className="border border-black p-2 h-24 relative">
-                                            <span className="absolute -top-3 left-2 bg-white px-1 text-sm font-bold">Điểm</span>
-                                            <div className="h-full w-full flex items-center justify-center text-4xl font-bold text-gray-100 select-none">
-                                                OMR
-                                            </div>
-                                        </div>
-                                        <div className="text-xs mt-2 text-justify leading-tight">
-                                            <strong>Lưu ý:</strong> Giữ phẳng phiếu. Tô kín và đậm ô tròn tương ứng với đáp án đúng. Không được tẩy xóa lem nhem.
-                                            <div className="flex gap-4 mt-2 justify-center">
-                                                <span className="flex items-center gap-1"><div className="w-3 h-3 bg-black rounded-full"></div> Đúng</span>
-                                                <span className="flex items-center gap-1"><div className="w-3 h-3 border border-black rounded-full flex justify-center items-center text-[8px]">✕</div> Sai</span>
-                                            </div>
-                                        </div>
+                                        <div className="border border-black p-2 h-24 relative"><span className="absolute -top-3 left-2 bg-white px-1 text-sm font-bold">Điểm</span><div className="h-full w-full flex items-center justify-center text-4xl font-bold text-gray-100 select-none">OMR</div></div>
+                                        <div className="text-xs mt-2 text-justify leading-tight"><strong>Lưu ý:</strong> Giữ phẳng phiếu. Tô kín và đậm ô tròn tương ứng với đáp án đúng. Không được tẩy xóa lem nhem.<div className="flex gap-4 mt-2 justify-center"><span className="flex items-center gap-1"><div className="w-3 h-3 bg-black rounded-full"></div> Đúng</span><span className="flex items-center gap-1"><div className="w-3 h-3 border border-black rounded-full flex justify-center items-center text-[8px]">✕</div> Sai</span></div></div>
                                     </div>
                                 </div>
 
                                 {/* Answers Section */}
-                                <div className="px-4">
+                                <div className="px-4 mt-8">
                                     <div className="border-t-2 border-black mb-4"></div>
                                     <h3 className="text-center font-bold mb-4">PHẦN TRẢ LỜI</h3>
-                                    
-                                    {/* Rendering Columns (Logic 40 câu chia 4 cột -> Backend xử lý tốt) */}
                                     <div className="w-full grid grid-cols-4 gap-4">
                                             {[0, 1, 2, 3].map(colIndex => {
                                                 const itemsPerCol = Math.ceil(numQuestions / 4);
                                                 const start = colIndex * itemsPerCol + 1;
                                                 const end = Math.min(start + itemsPerCol - 1, numQuestions);
-                                                
                                                 if (start > numQuestions) return null;
-
                                                 return (
                                                     <div key={colIndex} className="border-r border-gray-300 last:border-0 pr-2">
                                                         {range(start, end).map(qNum => (
-                                                            <div key={qNum} className="flex items-center justify-between mb-2 text-sm">
-                                                                <span className="font-bold w-6 text-right mr-2 text-blue-800">{qNum}</span>
-                                                                <div className="flex gap-1.5">
-                                                                    {options.map(opt => (
-                                                                        <div key={opt} className="w-5 h-5 rounded-full border border-gray-500 flex items-center justify-center text-[10px] font-medium text-gray-700">
-                                                                            {opt}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
+                                                            <div key={qNum} className="flex items-center justify-between mb-2 text-sm"><span className="font-bold w-6 text-right mr-2 text-blue-800">{qNum}</span><div className="flex gap-1.5">{options.map(opt => (<div key={opt} className="w-5 h-5 rounded-full border border-gray-500 flex items-center justify-center text-[10px] font-medium text-gray-700">{opt}</div>))}</div></div>
                                                         ))}
                                                     </div>
                                                 )
                                             })}
                                     </div>
                                 </div>
-                                
-                                {/* Footer */}
-                                <div className="absolute bottom-5 left-8 right-8 flex justify-between text-[10px] text-gray-400">
-                                    <span>Design by OMR Pro</span>
-                                    <span>Page 1/1</span>
-                                </div>
-
+                                <div className="absolute bottom-5 left-8 right-8 flex justify-between text-[10px] text-gray-400"><span>Design by OMR Pro</span><span>Page 1/1</span></div>
                             </div>
                         </div>
                     </div>
@@ -376,14 +174,11 @@
             );
         };
 
-        // --- MAIN APP ---
         const App = () => {
             const DEFAULT_BACKEND = "https://hoangthiencm-giangbai.hf.space";
             const [view, setView] = useState('grading');
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
-            
-            // States
             const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
             const [sessionId, setSessionId] = useState(null);
@@ -395,7 +190,6 @@
             const [processing, setProcessing] = useState(false);
             const [previewImage, setPreviewImage] = useState(null);
             const [aiReading, setAiReading] = useState(false);
-            
             const folderRef = useRef(null);
             const keyImageRef = useRef(null);
             const pollRef = useRef(null);
@@ -407,7 +201,6 @@
                 if (params.get('session')) setSessionId(params.get('session'));
             }, []);
 
-            // --- AI KEY READER ---
             const callGeminiVision = async (base64) => {
                 const key = getRandomKey();
                 if (!key) { alert("Chưa nạp API Key ở trang chủ!"); return; }
@@ -423,175 +216,93 @@
                         let txt = d.candidates[0].content.parts[0].text.replace(/[*#]/g,'').trim();
                         setInputText(prev => (prev ? prev + "\n" + txt : txt));
                     }
-                } catch(e) { alert("Lỗi AI: " + e.message); } 
-                finally { setAiReading(false); }
+                } catch(e) { alert("Lỗi AI: " + e.message); } finally { setAiReading(false); }
             };
 
-            const handleKeyImageUpload = (e) => {
-                const file = e.target.files[0];
-                if(!file) return;
-                const r = new FileReader();
-                r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]);
-                r.readAsDataURL(file);
-            };
-
-            const handlePaste = (e) => {
-                const items = e.clipboardData.items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf("image") !== -1) {
-                        e.preventDefault();
-                        const blob = items[i].getAsFile();
-                        const r = new FileReader();
-                        r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]);
-                        r.readAsDataURL(blob);
-                        return;
-                    }
-                }
-            };
-
-            // --- LOGIC ---
-            const createSession = async () => {
-                if (!sessionName || !inputText) return alert("Nhập đủ thông tin!");
-                const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText)));
-                try {
-                    const res = await fetch(`${backendUrl}/api/omr/create_session`, { method: 'POST', body: fd });
-                    if(!res.ok) throw new Error("Lỗi kết nối Server");
-                    const d = await res.json();
-                    setSessionId(d.session_id); setShowQr(true);
-                    setTimeout(() => {
-                        document.getElementById("qrcode").innerHTML = "";
-                        new QRCode(document.getElementById("qrcode"), { text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}`, width: 200, height: 200 });
-                    }, 100);
-                } catch(e) { alert("Lỗi: " + e.message); }
-            };
-
+            const handleKeyImageUpload = (e) => { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]); r.readAsDataURL(file); };
+            const handlePaste = (e) => { const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf("image") !== -1) { e.preventDefault(); const blob = items[i].getAsFile(); const r = new FileReader(); r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]); r.readAsDataURL(blob); return; } } };
+            const createSession = async () => { if (!sessionName || !inputText) return alert("Nhập đủ thông tin!"); const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText))); try { const res = await fetch(`${backendUrl}/api/omr/create_session`, { method: 'POST', body: fd }); if(!res.ok) throw new Error("Lỗi kết nối Server"); const d = await res.json(); setSessionId(d.session_id); setShowQr(true); setTimeout(() => { document.getElementById("qrcode").innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}`, width: 200, height: 200 }); }, 100); } catch(e) { alert("Lỗi: " + e.message); } };
             const loadHistory = async () => { try { const res = await fetch(`${backendUrl}/api/omr/history`); const d=await res.json(); if(Array.isArray(d)) setHistoryList(d); } catch(e){} };
             const viewDetail = async (sid) => { try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); const d=await res.json(); if(Array.isArray(d)) setHistoryDetail(d); } catch(e){} };
-
-            const processImagesPC = async (files) => {
-                if(!files.length) return; setProcessing(true);
-                const keys = parseMultiKey(inputText);
-                for(let f of files) {
-                    let fileToSend = await compressImage(f);
-                    const fd = new FormData(); fd.append("file", fileToSend); fd.append("answer_key_json", JSON.stringify(keys));
-                    try { 
-                        const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); 
-                        const data = await res.json();
-                        setResults(p => [{filename: f.name, ...data}, ...p]); 
-                    } catch(e) {}
-                }
-                setProcessing(false);
-            };
-
-            const handleMobileUpload = async (files) => {
-                if(!files.length) return; setProcessing(true); setMobileStatus("Đang gửi...");
-                const sid = new URLSearchParams(window.location.search).get('session');
-                for(let f of files) {
+            
+            // --- CÁC HÀM XỬ LÝ MỚI CHO LỊCH SỬ ---
+            const editSession = async (e, s) => {
+                e.stopPropagation();
+                const newName = prompt("Nhập tên mới cho đợt thi:", s.session_name);
+                if (newName && newName !== s.session_name) {
+                    const fd = new FormData(); fd.append("name", newName);
                     try {
-                        let fileToSend = await compressImage(f);
-                        const fd = new FormData(); fd.append("file", fileToSend); fd.append("session_id", sid);
-                        const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd });
-                        const d = await res.json();
-                        setMobileStatus(res.ok ? `✓ Điểm: ${d.score}` : `⚠ ${d.error}`);
-                    } catch(e) { setMobileStatus("Lỗi Mạng"); }
+                        const res = await fetch(`${backendUrl}/api/omr/update_session/${s.session_id}`, { method: 'PUT', body: fd });
+                        if(res.ok) {
+                            setHistoryList(historyList.map(h => h.session_id === s.session_id ? {...h, session_name: newName} : h));
+                        } else alert("Lỗi khi cập nhật");
+                    } catch(e){ alert("Lỗi kết nối"); }
                 }
-                setProcessing(false);
+            };
+            
+            const deleteSession = async (e, sid) => {
+                e.stopPropagation();
+                if(!confirm("Bạn có chắc chắn muốn xóa đợt thi này và TẤT CẢ kết quả của nó không?")) return;
+                try {
+                    const res = await fetch(`${backendUrl}/api/omr/delete_session/${sid}`, { method: 'DELETE' });
+                    if(res.ok) {
+                        setHistoryList(historyList.filter(h => h.session_id !== sid));
+                        if(historyDetail && historyDetail.length && historyDetail[0].session_id === sid) setHistoryDetail(null);
+                    } else alert("Lỗi khi xóa");
+                } catch(e){ alert("Lỗi kết nối"); }
             };
 
-            const historyItems = historyDetail ? historyDetail.map((r, i) => (
-                <tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>
-            )) : null;
+            const processImagesPC = async (files) => { if(!files.length) return; setProcessing(true); const keys = parseMultiKey(inputText); for(let f of files) { let fileToSend = await compressImage(f); const fd = new FormData(); fd.append("file", fileToSend); fd.append("answer_key_json", JSON.stringify(keys)); try { const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); const data = await res.json(); setResults(p => [{filename: f.name, ...data}, ...p]); } catch(e) {} } setProcessing(false); };
+            const handleMobileUpload = async (files) => { if(!files.length) return; setProcessing(true); setMobileStatus("Đang gửi..."); const sid = new URLSearchParams(window.location.search).get('session'); for(let f of files) { try { let fileToSend = await compressImage(f); const fd = new FormData(); fd.append("file", fileToSend); fd.append("session_id", sid); const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd }); const d = await res.json(); setMobileStatus(res.ok ? `✓ Điểm: ${d.score}` : `⚠ ${d.error}`); } catch(e) { setMobileStatus("Lỗi Mạng"); } } setProcessing(false); };
+            const historyItems = historyDetail ? historyDetail.map((r, i) => (<tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>)) : null;
 
             useEffect(() => {
                 if(view === 'history') loadHistory();
-                if(sessionId && !mobileMode) { 
-                    pollRef.current = setInterval(async () => { 
-                        try { 
-                            const res = await fetch(`${backendUrl}/api/omr/poll_results/${sessionId}`); 
-                            const d = await res.json(); 
-                            if(d && d.length) setResults(p => [...d, ...p]); 
-                        } catch(e){} 
-                    }, 2000); 
-                }
+                if(sessionId && !mobileMode) { pollRef.current = setInterval(async () => { try { const res = await fetch(`${backendUrl}/api/omr/poll_results/${sessionId}`); const d = await res.json(); if(d && d.length) setResults(p => [...d, ...p]); } catch(e){} }, 2000); }
                 return () => clearInterval(pollRef.current);
             }, [view, sessionId, backendUrl, mobileMode]);
 
-            if (mobileMode) return (
-                <div className="bg-gray-900 min-h-screen text-white p-6 flex flex-col items-center justify-center text-center">
-                    <h1 className="text-2xl font-bold mb-4">Camera Chấm Thi</h1>
-                    {mobileStatus && <div className="mb-6 p-3 bg-green-600 rounded font-bold">{mobileStatus}</div>}
-                    <input type="file" accept="image/*" capture="environment" className="hidden" id="cam" onChange={(e)=>handleMobileUpload(e.target.files)}/>
-                    <label htmlFor="cam" className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600">
-                        {processing ? <div className="loader"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">CHỤP</span></>}
-                    </label>
-                </div>
-            );
+            if (mobileMode) return (<div className="bg-gray-900 min-h-screen text-white p-6 flex flex-col items-center justify-center text-center"><h1 className="text-2xl font-bold mb-4">Camera Chấm Thi</h1>{mobileStatus && <div className="mb-6 p-3 bg-green-600 rounded font-bold">{mobileStatus}</div>}<input type="file" accept="image/*" capture="environment" className="hidden" id="cam" onChange={(e)=>handleMobileUpload(e.target.files)}/><label htmlFor="cam" className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600">{processing ? <div className="loader"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">CHỤP</span></>}</label></div>);
 
             return (
                 <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
                     <div className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm sticky top-0 z-20 no-print main-header">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center font-bold">OMR</div>
-                            <h1 className="font-bold text-lg text-indigo-900">Quản Lý Chấm Thi</h1>
-                        </div>
-                        <div className="flex gap-2 main-tabs">
-                            <button onClick={()=>window.location.href='index.html'} className="tab-btn text-gray-600 hover:bg-gray-100"><i className="fas fa-home"></i></button>
-                            <div className="w-px bg-gray-300 my-1"></div>
-                            <button onClick={()=>setView('grading')} className={`tab-btn ${view==='grading'?'tab-active':'tab-inactive'}`}><i className="fas fa-play-circle mr-2"></i>Chấm Thi</button>
-                            <button onClick={()=>setView('history')} className={`tab-btn ${view==='history'?'tab-active':'tab-inactive'}`}><i className="fas fa-history mr-2"></i>Lịch Sử</button>
-                            <button onClick={()=>setView('sheet')} className={`tab-btn ${view==='sheet'?'tab-active':'tab-inactive'}`}><i className="fas fa-print mr-2"></i>Tạo Phiếu</button>
-                        </div>
+                        <div className="flex items-center gap-2"><div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center font-bold">OMR</div><h1 className="font-bold text-lg text-indigo-900">Quản Lý Chấm Thi</h1></div>
+                        <div className="flex gap-2 main-tabs"><button onClick={()=>window.location.href='index.html'} className="tab-btn text-gray-600 hover:bg-gray-100"><i className="fas fa-home"></i></button><div className="w-px bg-gray-300 my-1"></div><button onClick={()=>setView('grading')} className={`tab-btn ${view==='grading'?'tab-active':'tab-inactive'}`}><i className="fas fa-play-circle mr-2"></i>Chấm Thi</button><button onClick={()=>setView('history')} className={`tab-btn ${view==='history'?'tab-active':'tab-inactive'}`}><i className="fas fa-history mr-2"></i>Lịch Sử</button><button onClick={()=>setView('sheet')} className={`tab-btn ${view==='sheet'?'tab-active':'tab-inactive'}`}><i className="fas fa-print mr-2"></i>Tạo Phiếu</button></div>
                     </div>
 
                     <div className={`flex-1 w-full overflow-hidden ${view === 'sheet' ? 'p-0' : 'p-6 max-w-7xl mx-auto'}`}>
                         {view === 'grading' && (
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                                 <div className="lg:col-span-4 space-y-4">
-                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">
-                                        {aiReading && (
-                                            <div className="ai-loading">
-                                                <div className="pulse-ring"></div>
-                                                <span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span>
-                                            </div>
-                                        )}
-                                        <h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3>
-                                        <input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/>
-                                        <div className="relative">
-                                            <textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea>
-                                            <button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button>
-                                            <input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 mt-3">
-                                            <button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition shadow">Tạo Session</button>
-                                            <button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition shadow-sm">Upload File</button>
-                                            <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
-                                        </div>
-                                    </div>
+                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">{aiReading && (<div className="ai-loading"><div className="pulse-ring"></div><span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span></div>)}<h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3><input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/><div className="relative"><textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea><button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button><input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/></div><div className="grid grid-cols-2 gap-2 mt-3"><button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition shadow">Tạo Session</button><button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition shadow-sm">Upload File</button><input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/></div></div>
                                     {showQr && <div className="bg-white p-5 rounded-xl text-center border border-green-200 shadow-sm"><div id="qrcode" className="flex justify-center mb-2"></div><p className="text-xs text-green-700 font-bold">Quét để chấm trên Mobile</p></div>}
                                 </div>
-                                <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
-                                    <div className="p-4 border-b font-bold text-gray-700 flex justify-between bg-gray-50 rounded-t-xl">
-                                        <span>Kết Quả ({results.length})</span>
-                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm hover:bg-green-100 px-2 py-1 rounded transition"><i className="fas fa-file-excel"></i> Excel</button>}
-                                    </div>
-                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-indigo-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500 hover:underline">Xem</button></td></tr>))}</tbody></table></div>
-                                </div>
+                                <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]"><div className="p-4 border-b font-bold text-gray-700 flex justify-between bg-gray-50 rounded-t-xl"><span>Kết Quả ({results.length})</span>{results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm hover:bg-green-100 px-2 py-1 rounded transition"><i className="fas fa-file-excel"></i> Excel</button>}</div><div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-indigo-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500 hover:underline">Xem</button></td></tr>))}</tbody></table></div></div>
                             </div>
                         )}
-
                         {view === 'history' && (
                             <div className="grid grid-cols-12 gap-6 h-full">
                                 <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]">
                                     <div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Danh Sách Đợt</div>
-                                    <div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} onClick={()=>viewDetail(h.session_id)} className="p-3 border-b cursor-pointer hover:bg-indigo-50 transition"><div className="font-bold text-indigo-900">{h.session_name}</div><div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div></div>))}</div>
+                                    <div className="flex-1 overflow-auto">
+                                        {historyList.map(h=>(
+                                            <div key={h.session_id} className="p-3 border-b hover:bg-indigo-50 transition group flex justify-between items-center">
+                                                <div onClick={()=>viewDetail(h.session_id)} className="cursor-pointer flex-1">
+                                                    <div className="font-bold text-indigo-900">{h.session_name}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div>
+                                                </div>
+                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                                    <button onClick={(e)=>editSession(e, h)} className="text-blue-600 hover:text-blue-800" title="Sửa tên"><i className="fas fa-edit"></i></button>
+                                                    <button onClick={(e)=>deleteSession(e, h.session_id)} className="text-red-600 hover:text-red-800" title="Xóa đợt"><i className="fas fa-trash"></i></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]">
-                                    <div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div>
-                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyItems}</tbody></table></div>
-                                </div>
+                                <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]"><div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div><div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyItems}</tbody></table></div></div>
                             </div>
                         )}
-
                         {view === 'sheet' && <SheetGenerator />}
                     </div>
                     {previewImage && <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50" onClick={()=>setPreviewImage(null)}><img src={`data:image/jpeg;base64,${previewImage}`} className="max-h-full max-w-full rounded shadow-2xl"/></div>}
