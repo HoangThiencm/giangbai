@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro</title>
+    <title>Chấm Thi OMR Pro - Fixed A5 Overflow</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -17,7 +17,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI --- */
+        /* --- CẤU HÌNH IN ẤN CHUẨN --- */
         @page { 
             size: A4 portrait; 
             margin: 0; 
@@ -25,78 +25,73 @@
 
         .sheet-a4 {
             width: 210mm; 
-            height: 296mm; 
+            height: 296mm; /* Giữ an toàn 1mm để tránh nhảy trang */
             background: white; 
             margin: 20px auto;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            
-            /* GRID CHIA 2 PHẦN: 135mm + 135mm = 270mm (Dư 26mm an toàn ở đáy) */
-            display: grid;
-            grid-template-rows: 135mm 135mm; /* Đã giảm chiều cao để kéo phiếu dưới lên */
             padding: 0;
-            page-break-after: always;
-            align-content: start; /* Dồn nội dung lên trên */
-        }
-
-        /* Layout A5 */
-        .layout-2up .omr-item { 
-            width: 100%;
-            height: 100%; /* Chiếm trọn ô 135mm */
+            display: grid; /* Sử dụng Grid để chia đôi chính xác */
             box-sizing: border-box;
-            position: relative;
-            border-bottom: 1px dashed #999; 
-            overflow: hidden;
+            page-break-after: always;
         }
-        .sheet-a4 .omr-item:last-child { border-bottom: none; }
 
-        /* Layout A4 */
-        .layout-1up { display: block; }
-        .layout-1up .omr-item { height: 100%; border-bottom: none; }
+        /* --- LAYOUT A5 (2 PHIẾU/TRANG) --- */
+        .layout-2up {
+            grid-template-rows: 1fr 1fr; /* Chia đều 50-50 */
+        }
+        
+        .omr-item { 
+            width: 100%;
+            height: 100%; 
+            position: relative;
+            overflow: hidden; /* Cực kỳ quan trọng: Cắt bỏ phần thừa, không cho nhảy trang */
+            box-sizing: border-box;
+            padding: 5mm 8mm; /* Padding tổng thể */
+            display: flex;
+            flex-direction: column;
+        }
 
-        /* Anchors */
-        .anchor { position: absolute; width: 8px; height: 8px; background: black; z-index: 99; }
+        /* Đường kẻ cắt giấy giữa 2 phiếu */
+        .layout-2up .omr-item:first-child {
+            border-bottom: 1px dashed #999;
+        }
+
+        /* Layout A4 (1 phiếu) */
+        .layout-1up { grid-template-rows: 1fr; }
+
+        /* Anchors (4 Góc - dùng để AI định vị) */
+        .anchor { position: absolute; width: 6px; height: 6px; background: black; z-index: 99; }
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
-        /* Container nội dung: Padding cực nhỏ để đẩy sát lề trên */
-        .omr-inner-container {
-            padding: 4mm 8mm; /* Trên/Dưới giảm còn 4mm */
-            height: 100%;
-            display: flex; 
-            flex-direction: column;
-            justify-content: flex-start; /* Ưu tiên đẩy lên trên */
-            box-sizing: border-box;
-        }
-
-        /* --- HEADER --- */
+        /* --- HEADER (ĐÃ ĐƯỢC THU NHỎ CHIỀU CAO) --- */
         .header-section { 
             border-bottom: 2px solid black; 
             padding-bottom: 2px; 
-            margin-bottom: 3px; /* Giảm margin */
-            flex-shrink: 0; 
+            margin-bottom: 4px; 
+            flex-shrink: 0; /* Không cho phép co lại quá mức làm mất chữ */
         }
         .header-title h1 { 
-            font-size: 14pt; font-weight: 900; 
+            font-size: 12pt; /* Giảm size chữ tiêu đề */
+            font-weight: 900; 
             text-align: center; text-transform: uppercase; 
-            line-height: 1; margin: 0 0 2px 0;
+            line-height: 1; margin: 0 0 4px 0;
         }
         
-        .info-row { display: flex; gap: 10px; margin-bottom: 1px; align-items: flex-end;}
-        .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
-        .info-label { font-weight: bold; margin-right: 4px; font-size: 9pt;}
-        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 13px; }
+        .info-row { display: flex; gap: 10px; margin-bottom: 2px; align-items: flex-end;}
+        .info-line { display: flex; align-items: flex-end; font-size: 8.5pt; flex: 1; white-space: nowrap; }
+        .info-label { font-weight: bold; margin-right: 3px; font-size: 8.5pt;}
+        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 12px; }
 
-        /* --- BODY --- */
+        /* --- BODY (Phần tô) --- */
         .body-section { 
             display: flex; 
-            flex: 1; 
-            gap: 8px; 
+            flex: 1; /* Tự động chiếm hết khoảng trống còn lại */
+            min-height: 0; /* Quan trọng: Cho phép flex con co lại nếu không đủ chỗ */
+            gap: 6px; 
             align-items: stretch; 
-            overflow: hidden;
-            padding-top: 2px;
         }
         
-        /* Cột Trái */
+        /* Cột Trái (SBD + Mã đề) */
         .left-panel { width: 28%; display: flex; flex-direction: column; gap: 3px; }
         .id-box { 
             border: 2px solid black; 
@@ -105,11 +100,13 @@
             flex: 1; 
             display: flex; 
             flex-direction: column; 
+            min-height: 0;
         }
         .box-title { 
             font-size: 7pt; font-weight: bold; text-align: center; 
             background: #000; color: #fff; 
             padding: 1px 0; margin-bottom: 1px; 
+            flex-shrink: 0;
         }
         
         .grid-bubbles { 
@@ -117,37 +114,41 @@
             justify-content: space-around; 
             height: 100%; 
             align-items: flex-start; 
+            flex: 1;
         }
         
         .col-bubble { 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            height: 98%; /* Cho phép co dãn */
-            justify-content: space-between; 
+            height: 100%; 
+            justify-content: space-between; /* Dàn đều từ trên xuống dưới */
             padding-bottom: 1px;
         }
         
+        /* Ô viết số ở trên cùng */
         .write-box { 
             width: 100%; 
-            height: 11px; /* Giảm chiều cao */
+            height: 10px; /* Giảm chiều cao */
             border: 1px solid #000; 
             margin-bottom: 1px; 
             background: white;
+            flex-shrink: 0;
         }
         
+        /* Bong bóng tô */
         .b { 
-            width: 11px; height: 11px; 
+            width: 10px; height: 10px; /* Giảm size bong bóng từ 11px xuống 10px */
             border: 1px solid #000; border-radius: 50%; 
             display: flex; justify-content: center; align-items: center; 
-            font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; 
+            font-size: 6.5px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; 
         }
 
-        /* Cột Phải */
+        /* Cột Phải (Đáp án) */
         .right-panel { 
             flex: 1; 
             border: 2px solid black; 
-            padding: 4px; 
+            padding: 3px; 
             border-radius: 3px; 
             display: flex; 
             flex-direction: column; 
@@ -157,28 +158,27 @@
         .ans-col { 
             flex: 1; 
             border-right: 1px dashed #999; 
-            padding: 0 4px; 
+            padding: 0 2px; 
             display: flex; 
             flex-direction: column; 
-            justify-content: space-between; 
+            justify-content: space-between; /* Dàn đều câu hỏi */
         }
         .ans-col:last-child { border-right: none; }
         
         .q-row { display: flex; align-items: center; justify-content: flex-end; }
-        .q-num { width: 18px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 3px; line-height: 1; }
+        .q-num { width: 16px; font-size: 8pt; font-weight: bold; text-align: right; margin-right: 2px; line-height: 1; }
         
         .q-b { 
-            width: 12px; height: 12px; 
-            font-size: 7.5px; font-weight: bold;
-            margin-right: 3px; 
+            width: 11px; height: 11px; /* Giảm size đáp án */
+            font-size: 7px; font-weight: bold;
+            margin-right: 2px; 
             cursor: pointer; 
             border: 1px solid #000; 
             border-radius: 50%; 
             display: flex; justify-content: center; align-items: center; 
         }
-        .q-b:hover { background-color: #ddd; }
 
-        /* UI */
+        /* --- UI WEB --- */
         .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
         .pulse-ring { width: 40px; height: 40px; border-radius: 50%; border: 4px solid #4f46e5; animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
@@ -234,34 +234,32 @@
             const rowsPerCol = isA5 ? 10 : 25;
 
             return (
-                <div className={`omr-item ${isA5 ? 'is-a5' : ''}`}>
+                <div className="omr-item">
                     <div className="anchor tl"></div><div className="anchor tr"></div><div className="anchor bl"></div><div className="anchor br"></div>
-                    <div className="omr-inner-container">
-                        <div className="header-section">
-                            <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
-                            <div className="flex flex-col gap-1">
-                                <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
-                                <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
-                                <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
-                            </div>
+                    <div className="header-section">
+                        <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
+                        <div className="flex flex-col gap-1">
+                            <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
+                            <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
+                            <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
                         </div>
-                        <div className="body-section">
-                            <div className="left-panel">
-                                <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
-                                <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
-                            </div>
-                            <div className="right-panel">
-                                <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'2px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
-                                <div className="ans-grid">
-                                    {Array.from({length: cols}).map((_, cIdx) => (
-                                        <div key={cIdx} className="ans-col">
-                                            {Array.from({length: rowsPerCol}).map((_, rIdx) => {
-                                                const qNum = cIdx * rowsPerCol + rIdx + 1;
-                                                return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
+                    </div>
+                    <div className="body-section">
+                        <div className="left-panel">
+                            <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                            <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                        </div>
+                        <div className="right-panel">
+                            <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'1px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
+                            <div className="ans-grid">
+                                {Array.from({length: cols}).map((_, cIdx) => (
+                                    <div key={cIdx} className="ans-col">
+                                        {Array.from({length: rowsPerCol}).map((_, rIdx) => {
+                                            const qNum = cIdx * rowsPerCol + rIdx + 1;
+                                            return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
+                                        })}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -474,49 +472,4 @@
                                 <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
                                     <div className="p-4 border-b font-bold text-gray-700 flex justify-between bg-gray-50 rounded-t-xl">
                                         <span>Kết Quả ({results.length})</span>
-                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm hover:bg-green-100 px-2 py-1 rounded transition"><i className="fas fa-file-excel"></i> Excel</button>}
-                                    </div>
-                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-indigo-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500 hover:underline">Xem</button></td></tr>))}</tbody></table></div>
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'history' && (
-                            <div className="grid grid-cols-12 gap-6 h-full">
-                                <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]">
-                                    <div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Danh Sách Đợt</div>
-                                    <div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} onClick={()=>viewDetail(h.session_id)} className="p-3 border-b cursor-pointer hover:bg-indigo-50 transition"><div className="font-bold text-indigo-900">{h.session_name}</div><div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div></div>))}</div>
-                                </div>
-                                <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]">
-                                    <div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div>
-                                    <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyItems}</tbody></table></div>
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'sheet' && (
-                            <div className="flex flex-col h-full">
-                                <div className="bg-white p-3 rounded-lg shadow mb-4 flex gap-4 items-center no-print border border-gray-200">
-                                    <button onClick={()=>setSheetMode('30')} className={`px-3 py-1 rounded font-bold transition ${sheetMode==='30'?'bg-indigo-600 text-white shadow':'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>A5 (30 Câu)</button>
-                                    <button onClick={()=>setSheetMode('100')} className={`px-3 py-1 rounded font-bold transition ${sheetMode==='100'?'bg-indigo-600 text-white shadow':'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>A4 (100 Câu)</button>
-                                    <input value={subject} onChange={e=>setSubject(e.target.value.toUpperCase())} className="border p-1 rounded px-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Môn thi..."/>
-                                    <button onClick={()=>window.print()} className="ml-auto bg-yellow-500 text-indigo-900 px-4 py-1 rounded font-bold hover:bg-yellow-400 transition shadow"><i className="fas fa-print mr-1"></i> IN PHIẾU</button>
-                                </div>
-                                <div className="flex-1 bg-gray-300 p-8 overflow-auto flex justify-center">
-                                    <div className={`sheet-a4 ${sheetMode==='30'?'layout-2up':'layout-1up'}`}>
-                                        {sheetMode === '30' ? <><OmrItem type="A5" data={{subject}}/><OmrItem type="A5" data={{subject}}/></> : <OmrItem type="A4" data={{subject}}/>}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    {previewImage && <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50" onClick={()=>setPreviewImage(null)}><img src={`data:image/jpeg;base64,${previewImage}`} className="max-h-full max-w-full rounded shadow-2xl"/></div>}
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+                                        {results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.wr
