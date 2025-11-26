@@ -3,123 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Print Fix</title>
+    <title>Chấm Thi OMR Pro - Print Perfect</title>
     
+    <!-- Thư viện CSS & JS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
-        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; touch-action: manipulation; }
-        .loader { border: 3px solid #e5e7eb; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CSS IN ẤN TỐI ƯU --- */
+        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI (NO MARGIN) --- */
         @page { 
             size: A4 portrait; 
-            margin: 0; 
+            margin: 0mm; /* Bắt buộc 0 để không bị trình duyệt tự thêm lề */
         }
 
         .sheet-a4 {
             width: 210mm; 
-            height: 296mm; /* Chuẩn A4 */
+            height: 296mm; /* Chuẩn A4 (trừ 1mm an toàn cho máy in cũ) */
             background: white; 
             margin: 20px auto;
             position: relative; 
-            overflow: hidden; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex; 
             flex-direction: column;
             page-break-after: always;
         }
 
-        /* Layout A5: Chia đôi chiều cao A4 */
+        /* Layout A5: Chia đôi A4 chính xác từng milimet */
         .layout-2up .omr-item { 
-            height: 148mm; /* Chính xác 1/2 trang */
+            height: 148mm; /* 296mm / 2 */
+            width: 100%;
             border-bottom: 1px dashed #999; 
             box-sizing: border-box;
-            overflow: hidden; 
+            overflow: hidden; /* Ngăn chặn tuyệt đối việc tràn */
             position: relative;
         }
         .layout-2up .omr-item:last-child { border-bottom: none; }
         
         /* Layout A4 full */
-        .layout-1up .omr-item { height: 100%; }
+        .layout-1up .omr-item { height: 100%; width: 100%; overflow: hidden; position: relative; }
 
-        .omr-item { width: 100%; padding: 0; }
-        
-        /* Container nội dung: Đã giảm padding để tiết kiệm diện tích dọc */
+        /* Container nội dung: Đẩy sát lề để phiếu to hơn */
         .omr-inner-container {
-            padding: 6mm 10mm; /* Giảm padding trên dưới xuống 6mm */
+            padding: 6mm 8mm; /* Lề an toàn tối thiểu: 6mm trên dưới, 8mm trái phải */
             height: 100%;
             display: flex; 
             flex-direction: column;
             box-sizing: border-box;
-            justify-content: space-between; /* Dàn đều */
+            justify-content: space-between;
         }
 
-        /* Anchors */
+        /* Anchors: Điểm định vị máy chấm */
         .anchor { position: absolute; width: 10px; height: 10px; background: black; z-index: 99; }
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
-        /* Header Compact hơn */
-        .header-section { border-bottom: 2px solid black; padding-bottom: 2px; margin-bottom: 4px; flex-shrink: 0; }
-        .header-title h1 { font-size: 14pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.1; margin: 0;}
+        /* --- HEADER (Tinh gọn để dành đất cho phần tô) --- */
+        .header-section { 
+            border-bottom: 2px solid black; 
+            padding-bottom: 2px; 
+            margin-bottom: 4px; 
+            flex-shrink: 0; 
+        }
+        .header-title h1 { font-size: 15pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.1; margin: 0;}
         
-        .info-row { display: flex; gap: 10px; margin-top: 2px; }
-        .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; }
-        .info-label { font-weight: bold; white-space: nowrap; margin-right: 4px; font-size: 8pt;}
-        .info-dots { border-bottom: 1px dotted #555; flex: 1; height: 14px; }
+        .info-row { display: flex; gap: 8px; margin-top: 2px; align-items: flex-end;}
+        .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
+        .info-label { font-weight: bold; margin-right: 3px; font-size: 9pt;}
+        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 14px; }
 
-        /* Body Compact hơn */
-        .body-section { display: flex; flex: 1; gap: 8px; align-items: stretch; overflow: hidden; margin-top: 2px; }
+        /* --- BODY (Phần tô) --- */
+        .body-section { 
+            display: flex; 
+            flex: 1; 
+            gap: 8px; 
+            align-items: stretch; 
+            overflow: hidden; /* Quan trọng */
+            padding-top: 2px;
+        }
         
-        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 4px; }
+        /* Cột Trái (SBD/Mã đề) */
+        .left-panel { width: 27%; display: flex; flex-direction: column; gap: 4px; }
         .id-box { border: 2px solid black; padding: 2px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
-        .box-title { font-size: 7pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
+        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
         
         .grid-bubbles { display: flex; justify-content: space-around; height: 100%; align-items: flex-start; }
         .col-bubble { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 98%; }
-        .write-box { width: 100%; height: 11px; border: 1px solid #333; margin-bottom: 1px; } /* Giảm chiều cao ô viết */
+        .write-box { width: 100%; height: 13px; border: 1px solid #333; margin-bottom: 1px; }
         
-        /* Bong bóng nhỏ gọn hơn */
-        .b { width: 10px; height: 10px; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 6px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; }
+        /* Bong bóng SBD/Mã đề */
+        .b { 
+            width: 11px; height: 11px; 
+            border: 1px solid #000; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; 
+        }
 
+        /* Cột Phải (Câu hỏi) */
         .right-panel { flex: 1; border: 2px solid black; padding: 4px; border-radius: 4px; display: flex; flex-direction: column; }
         .ans-grid { display: flex; flex: 1; height: 100%; }
-        .ans-col { flex: 1; border-right: 1px dashed #ccc; padding: 0 2px; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* Dàn cột câu hỏi */
+        .ans-col { 
+            flex: 1; 
+            border-right: 1px dashed #999; 
+            padding: 0 4px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; /* Dãn đều dọc */
+        }
         .ans-col:last-child { border-right: none; }
         
-        .q-row { display: flex; align-items: center; }
-        .q-num { width: 16px; font-size: 7pt; font-weight: bold; text-align: right; margin-right: 2px; }
-        .q-b { width: 9px; height: 9px; font-size: 6px; margin-right: 2px; cursor: pointer; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .q-row { display: flex; align-items: center; justify-content: flex-end; }
+        .q-num { width: 20px; font-size: 10pt; font-weight: bold; text-align: right; margin-right: 4px; line-height: 1; }
+        
+        /* Bong bóng Đáp án (To hơn bản cũ) */
+        .q-b { 
+            width: 13px; height: 13px; /* TĂNG KÍCH THƯỚC */
+            font-size: 8px; font-weight: bold;
+            margin-right: 3px; 
+            cursor: pointer; 
+            border: 1px solid #000; 
+            border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+        .q-b:hover { background-color: #ddd; }
 
         /* Loading Overlay */
         .ai-scanning-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
         .scan-line { width: 100%; height: 2px; background: #4f46e5; animation: scan 1.5s infinite linear; box-shadow: 0 0 4px #4f46e5; }
         @keyframes scan { 0% { transform: translateY(-20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
 
+        /* Khi in: Ẩn hết giao diện, chỉ hiện tờ giấy */
         @media print {
             body { background: white; }
             .no-print { display: none !important; }
-            .sheet-a4 { box-shadow: none; margin: 0; width: 210mm; height: 296mm; page-break-after: always; }
-            @page { margin: 0; }
+            .sheet-a4 { 
+                box-shadow: none; 
+                margin: 0; 
+                width: 210mm; height: 296mm; /* Fix cứng */
+                page-break-after: always; 
+                overflow: hidden;
+            }
+            @page { margin: 0; } /* Xóa lề máy in */
         }
         
         .tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: bold; transition: all 0.2s; }
         .tab-active { background: #4f46e5; color: white; }
         .tab-inactive { color: #6b7280; hover:bg-gray-100; }
+        
+        /* Error Display */
+        #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
     </style>
+    <script>
+        window.onerror = function(msg, url, line) {
+            document.getElementById('loading').style.display = 'none';
+            var errDiv = document.getElementById('error-display');
+            errDiv.style.display = 'block';
+            errDiv.innerText = "⚠️ LỖI: " + msg + " (Dòng " + line + ")";
+            return false;
+        };
+    </script>
 </head>
 <body>
     <div id="error-display"></div>
-    <div id="loading">
+    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
         <div class="loader mb-4"></div>
         <p class="text-gray-600">Đang tải ứng dụng...</p>
     </div>
@@ -130,6 +185,7 @@
 
         // --- UTILS ---
         const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
+        
         const compressImage = (file, maxWidth=1000, quality=0.7) => { 
             return new Promise((resolve)=>{ 
                 if(!file || !file.type.startsWith('image/')){resolve(file);return;} 
@@ -177,7 +233,7 @@
         const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
         const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
 
-        // --- COMPONENT IN PHIẾU ---
+        // --- SHEET COMPONENTS ---
         const BubbleColumn = () => (<div className="col-bubble"><div className="write-box"></div>{Array.from({length: 10}).map((_, i) => <div key={i} className="b">{i}</div>)}</div>);
         const QuestionRow = ({ num }) => (<div className="q-row"><div className="q-num">{num}</div>{['A','B','C','D'].map(opt => <div key={opt} className="q-b">{opt}</div>)}</div>);
 
@@ -230,6 +286,7 @@
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
             
+            // States
             const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
             const [sessionId, setSessionId] = useState(null);
@@ -244,6 +301,7 @@
             const [previewImage, setPreviewImage] = useState(null);
             const [aiReading, setAiReading] = useState(false);
             
+            // Refs
             const folderRef = useRef(null);
             const keyImageRef = useRef(null);
             const pollRef = useRef(null);
