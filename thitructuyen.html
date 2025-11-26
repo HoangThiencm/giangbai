@@ -57,6 +57,14 @@
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
         const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
+        
+        // [MỚI] Hàm làm sạch tiêu đề câu hỏi (Xóa "Câu 1:", "Câu 1.", "Question 1" ở đầu)
+        const cleanQuestionText = (text) => {
+            if (!text) return "";
+            const normalized = normalizeText(text);
+            // Regex xóa: Câu X, Bài X, Question X kèm theo dấu chấm/hai chấm
+            return normalized.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim();
+        };
 
         const MathText = ({ text }) => {
             const ref = useRef();
@@ -128,6 +136,7 @@
                             <button onClick={() => setIsEditing(false)} className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-blue-700 shadow flex items-center gap-1"><i className="fas fa-check"></i> Xong</button>
                         </div>
                         <div className="mb-3"><span className="font-bold text-blue-700 text-lg">Câu {index + 1} (Đang sửa):</span></div>
+                        {/* Trong chế độ sửa, ta vẫn để nguyên text gốc để người dùng biết AI đã đọc gì */}
                         <div className="mb-4"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung câu hỏi</label><textarea className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-200 outline-none font-medium bg-blue-50 text-lg" value={q.question} onChange={(e) => handleQChange(e.target.value)} rows={3} /></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {q.options.map((opt, idx) => (
@@ -147,7 +156,8 @@
                     </div>
                     <div className="flex gap-3 mb-4 pr-16 items-start">
                         <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg font-bold whitespace-nowrap text-lg mt-1">Câu {index + 1}</span>
-                        <div className="font-medium text-gray-900 text-xl leading-relaxed w-full"><MathText text={q.question} /></div>
+                        {/* [SỬA] Sử dụng cleanQuestionText để loại bỏ 'Câu 4.' thừa trong nội dung */}
+                        <div className="font-medium text-gray-900 text-xl leading-relaxed w-full"><MathText text={cleanQuestionText(q.question)} /></div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-4">
                         {q.options.map((opt, idx) => (
@@ -183,7 +193,7 @@
                 }
             }, [originalFile]);
 
-            const handleApplyAnswers = (text) => { /* ... */
+            const handleApplyAnswers = (text) => { 
                 const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
                 const regex = /(\d+)\s*([A-D])/g;
                 let match, newMap = {};
@@ -426,7 +436,7 @@
             };
             return (
                 <div className="max-w-6xl mx-auto p-6"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700"><i className="fas fa-file-excel"></i> Xuất Excel</button></div>
-                <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Chi tiết</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3">{r.sbd}</td><td className="p-3 font-bold text-indigo-900">{r.student_name}</td><td className="p-3 font-bold text-red-600">{r.score}</td><td className="p-3 text-sm italic text-gray-600"><MathText text={r.ai_feedback} /></td></tr>))}</tbody></table></div></div>
+                <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lểm</th><th className="p-3">Chi tiết</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3">{r.sbd}</td><td className="p-3 font-bold text-indigo-900">{r.student_name}</td><td className="p-3 font-bold text-red-600">{r.score}</td><td className="p-3 text-sm italic text-gray-600"><MathText text={r.ai_feedback} /></td></tr>))}</tbody></table></div></div>
             );
         };
 
@@ -481,7 +491,7 @@
                         </div>
                         {exam.questions.map((q, i) => (
                             <div key={i} className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-200">
-                                <div className="flex gap-3 mb-4"><span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded font-bold h-fit">Câu {i+1}</span><div className="text-xl font-medium w-full"><MathText text={q.question}/></div></div>
+                                <div className="flex gap-3 mb-4"><span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded font-bold h-fit">Câu {i+1}</span><div className="text-xl font-medium w-full"><MathText text={cleanQuestionText(q.question)}/></div></div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
                                     {q.options.map((o, idx) => (
                                         <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-4 rounded-lg border-2 cursor-pointer flex gap-3 items-start ${answers[i]===idx?'border-indigo-500 bg-indigo-50':'border-gray-200 hover:border-indigo-300'}`}>
