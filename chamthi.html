@@ -207,17 +207,42 @@
             const [mobileStatus, setMobileStatus] = useState("");
             const [previewImage, setPreviewImage] = useState(null);
             const [sheetConfig, setSheetConfig] = useState({ schoolName: "", examName: "", questionCount: 50, examDate: "", subject: "" });
+            
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
 
             const folderRef = useRef(null);
             const pollRef = useRef(null);
             const keyImageInputRef = useRef(null);
 
-            // Kiểm tra Login
+            // Kiểm tra Login (Đã sửa lỗi crash trên Preview)
             useEffect(() => {
-                if(!mobileMode && !localStorage.getItem('authToken')) {
-                    window.location.href = 'login.html';
+                const token = localStorage.getItem('authToken');
+                if (mobileMode || token) {
+                    setIsAuthenticated(true);
+                } else {
+                    setIsAuthenticated(false); 
                 }
             }, []);
+
+            if (!isAuthenticated && !mobileMode) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
+                        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
+                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                <i className="fas fa-lock"></i>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">Yêu Cầu Đăng Nhập</h2>
+                            <p className="text-gray-500 mb-6">Bạn cần đăng nhập để truy cập công cụ Chấm Thi OMR.</p>
+                            <button 
+                                onClick={() => window.location.href = 'login.html'}
+                                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition"
+                            >
+                                Chuyển đến trang Đăng Nhập
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
 
             // Handle Mobile Upload
             const handleMobileUpload = async (files) => {
@@ -370,11 +395,11 @@
                 <div className="min-h-screen flex flex-col">
                     <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm no-print">
                         <div className="flex items-center gap-2">
-                             <a href="index.html" className="text-gray-500 hover:text-indigo-600 mr-2"><i className="fas fa-arrow-left"></i></a>
                             <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl">AI</div>
                             <div><h1 className="font-bold text-xl text-indigo-900">CHẤM THI OMR</h1><p className="text-xs text-gray-500">Hỗ trợ Đa Mã Đề & AI SBD</p></div>
                         </div>
                         <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'index.html'} className="px-3 py-1.5 rounded font-bold flex items-center gap-2 hover:bg-gray-100 text-gray-600 border border-gray-200 transition"><Icon icon="home"/> Home</button>
                             <button onClick={()=>setView('grading')} className={`px-3 py-1.5 rounded font-bold flex items-center gap-2 ${view==='grading'?'bg-indigo-100 text-indigo-700':'hover:bg-gray-100 text-gray-600'}`}><Icon icon="check"/> Chấm Thi</button>
                             <button onClick={()=>setView('sheet')} className={`px-3 py-1.5 rounded font-bold flex items-center gap-2 ${view==='sheet'?'bg-indigo-100 text-indigo-700':'hover:bg-gray-100 text-gray-600'}`}><Icon icon="file-alt"/> Tạo Phiếu</button>
                         </div>
