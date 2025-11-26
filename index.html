@@ -6,87 +6,191 @@
     <title>Hệ thống Giáo Viên AI - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Modal Styles */
-        .modal { transition: opacity 0.25s ease; }
-        body.modal-active { overflow-x: hidden; overflow-y: visible !important; }
-    </style>
     <script>
-        // 1. Check Login
-        if (!localStorage.getItem('authToken')) window.location.href = 'login.html';
+        // MODULE QUẢN LÝ TẬP TRUNG
+        const SystemConfig = {
+            // 1. Kiểm tra đăng nhập
+            checkAuth: () => {
+                if (!localStorage.getItem('authToken')) {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                return true;
+            },
 
-        // 2. Logout
-        function logout() {
-            if(confirm("Đăng xuất khỏi hệ thống?")) { 
-                localStorage.removeItem('authToken'); // Chỉ xóa token, giữ lại key
-                window.location.href = 'login.html'; 
+            // 2. Logout
+            logout: () => {
+                if(confirm("Đăng xuất khỏi hệ thống?")) { 
+                    localStorage.clear(); 
+                    window.location.href = 'login.html'; 
+                }
+            },
+
+            // 3. Lấy API Keys
+            getApiKeys: () => {
+                const keys = localStorage.getItem('global_gemini_keys');
+                return keys ? JSON.parse(keys) : [];
+            },
+
+            // 4. Lấy danh sách modules
+            getModules: () => {
+                const modules = localStorage.getItem('gemini_modules');
+                return modules ? JSON.parse(modules) : ['gemini-2.5-flash']; // Mặc định
+            },
+
+            // 5. Lấy module mặc định
+            getDefaultModule: () => {
+                const defaultModule = localStorage.getItem('default_gemini_module');
+                return defaultModule || 'gemini-2.5-flash';
+            },
+
+            // 6. Xử lý file API Keys
+            handleApiKeysFile: (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        const keys = content.split('\n')
+                            .map(k => k.trim())
+                            .filter(k => k.length > 5);
+                        
+                        if (keys.length > 0) {
+                            localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
+                            resolve({
+                                count: keys.length,
+                                fileName: file.name
+                            });
+                        } else {
+                            reject("File không chứa API Keys hợp lệ!");
+                        }
+                    };
+                    reader.onerror = () => reject("Lỗi đọc file!");
+                    reader.readAsText(file);
+                });
+            },
+
+            // 7. Xử lý file Modules
+            handleModulesFile: (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        const modules = content.split('\n')
+                            .map(m => m.trim())
+                            .filter(m => m.length > 0);
+                        
+                        if (modules.length > 0) {
+                            localStorage.setItem('gemini_modules', JSON.stringify(modules));
+                            // Set module đầu tiên làm mặc định
+                            localStorage.setItem('default_gemini_module', modules[0]);
+                            resolve({
+                                count: modules.length,
+                                fileName: file.name,
+                                modules: modules
+                            });
+                        } else {
+                            reject("File không chứa modules hợp lệ!");
+                        }
+                    };
+                    reader.onerror = () => reject("Lỗi đọc file!");
+                    reader.readAsText(file);
+                });
+            },
+
+            // 8. Xóa cấu hình
+            clearConfig: () => {
+                if(confirm("Xóa tất cả cấu hình API Keys và Modules?")) {
+                    localStorage.removeItem('global_gemini_keys');
+                    localStorage.removeItem('gemini_modules');
+                    localStorage.removeItem('default_gemini_module');
+                    localStorage.removeItem('key_file_name');
+                    localStorage.removeItem('modules_file_name');
+                    location.reload();
+                }
+            }
+        };
+
+        // XỬ LÝ GIAO DIỆN
+        function updateConfigStatus() {
+            const apiKeys = SystemConfig.getApiKeys();
+            const modules = SystemConfig.getModules();
+            const defaultModule = SystemConfig.getDefaultModule();
+            
+            const statusDiv = document.getElementById('configStatus');
+            const uploadArea = document.getElementById('uploadArea');
+            
+            if (apiKeys.length > 0 && modules.length > 0) {
+                statusDiv.classList.remove('hidden');
+                statusDiv.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center gap-3 text-green-700 mb-3">
+                            <i class="fas fa-check-circle text-2xl"></i>
+                            <div>
+                                <p class="font-bold">Hệ thống đã được cấu hình thành công!</p>
+                                <p class="text-sm text-green-600">Sẵn sàng sử dụng các tính năng AI</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="bg-white p-3 rounded border">
+                                <p class="font-semibold text-gray-700">API Keys</p>
+                                <p class="text-green-600 font-bold">${apiKeys.length} keys</p>
+                                <p class="text-xs text-gray-500">${localStorage.getItem('key_file_name') || 'Đã nạp'}</p>
+                            </div>
+                            <div class="bg-white p-3 rounded border">
+                                <p class="font-semibold text-gray-700">Modules</p>
+                                <p class="text-green-600 font-bold">${modules.length} modules</p>
+                                <p class="text-xs text-gray-500">Mặc định: ${defaultModule}</p>
+                            </div>
+                        </div>
+                        <button onclick="SystemConfig.clearConfig()" class="mt-3 text-red-500 text-xs hover:underline">
+                            <i class="fas fa-redo mr-1"></i>Xóa cấu hình
+                        </button>
+                    </div>
+                `;
+                uploadArea.classList.add('hidden');
+            } else {
+                statusDiv.classList.add('hidden');
+                uploadArea.classList.remove('hidden');
             }
         }
 
-        // 3. INIT & LOAD SETTINGS
-        function loadSettings() {
-            // Load User Info
-            const email = localStorage.getItem('userEmail');
-            if(email) document.getElementById('userEmailDisplay').innerText = email;
-
-            // Load Key Status
-            const savedKeys = localStorage.getItem('gemini_api_keys');
-            if(savedKeys) {
-                try {
-                    const keys = JSON.parse(savedKeys);
-                    if(keys.length > 0) {
-                        document.getElementById('keyStatusText').innerHTML = `<span class="text-green-400 font-bold"><i class="fas fa-check-circle"></i> Đã nạp ${keys.length} API Keys</span>`;
-                        document.getElementById('modalKeyStatus').innerText = `✅ Đang sử dụng ${keys.length} API Keys.`;
-                        document.getElementById('modalKeyStatus').className = "text-xs text-green-600 mt-1 font-bold";
-                    }
-                } catch(e) {}
-            }
-
-            // Load Model
-            const savedModel = localStorage.getItem('gemini_model');
-            if (savedModel) {
-                document.getElementById("modelSelect").value = savedModel;
-            }
-        }
-
-        // 4. MODAL FUNCTIONS
-        function toggleModal(modalID){
-            document.getElementById(modalID).classList.toggle("hidden");
-            document.getElementById(modalID).classList.toggle("flex");
-            document.body.classList.toggle("modal-active");
-        }
-
-        // 5. HANDLE FILE KEY
-        function handleFileSelect(event) {
+        function handleFileSelect(event, type) {
             const file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const content = e.target.result;
-                const keys = content.split('\n').map(k => k.trim()).filter(k => k.length > 5);
-                
-                if (keys.length > 0) {
-                    localStorage.setItem('gemini_api_keys', JSON.stringify(keys));
-                    alert(`✅ Đã đọc thành công ${keys.length} API Keys!`);
-                    loadSettings(); // Cập nhật UI
+            const handler = type === 'keys' 
+                ? SystemConfig.handleApiKeysFile 
+                : SystemConfig.handleModulesFile;
+
+            handler(file).then(result => {
+                // Lưu tên file để hiển thị
+                if (type === 'keys') {
+                    localStorage.setItem('key_file_name', result.fileName);
                 } else {
-                    alert("File không chứa key hợp lệ!");
+                    localStorage.setItem('modules_file_name', result.fileName);
                 }
-            };
-            reader.readAsText(file);
+                
+                updateConfigStatus();
+                alert(`✅ Đã nạp ${result.count} ${type === 'keys' ? 'API Keys' : 'Modules'} từ file "${result.fileName}"!`);
+            }).catch(error => {
+                alert(`❌ Lỗi: ${error}`);
+            });
         }
 
-        // 6. SAVE SETTINGS
-        function saveSettings() {
-            const model = document.getElementById("modelSelect").value;
-            localStorage.setItem("gemini_model", model);
-            toggleModal('settingsModal');
-            alert("Đã lưu cấu hình thành công!");
+        function loadPage() {
+            // Kiểm tra đăng nhập
+            if (!SystemConfig.checkAuth()) return;
+            
+            // Hiển thị email user
+            const email = localStorage.getItem('userEmail');
+            if(email) document.getElementById('userEmailDisplay').innerText = email;
+            
+            // Cập nhật trạng thái cấu hình
+            updateConfigStatus();
         }
     </script>
 </head>
-<body class="bg-gray-50 font-sans min-h-screen" onload="loadSettings()">
+<body class="bg-gray-50 font-sans min-h-screen" onload="loadPage()">
 
     <nav class="bg-indigo-900 text-white p-4 shadow-xl sticky top-0 z-50">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
@@ -97,29 +201,54 @@
                     <p class="text-xs text-indigo-300 font-mono" id="userEmailDisplay">...</p>
                 </div>
             </div>
-            
-            <div class="flex items-center gap-2">
-                <!-- Trạng thái Key -->
-                <div id="keyStatusText" class="hidden md:block text-xs mr-2 text-gray-400">
-                    <i class="fas fa-exclamation-circle"></i> Chưa có Key
-                </div>
-
-                <!-- Nút Cài Đặt -->
-                <button onclick="toggleModal('settingsModal')" class="bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 border border-indigo-600">
-                    <i class="fas fa-cog"></i> Cài đặt
-                </button>
-
-                <!-- Nút Thoát -->
-                <button onclick="logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-2 rounded-lg transition">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
+            <button onclick="SystemConfig.logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-1 rounded transition">
+                <i class="fas fa-sign-out-alt mr-1"></i> Thoát
+            </button>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto p-6">
         
-        <!-- Dashboard Grid -->
+        <!-- PHẦN CẤU HÌNH HỆ THỐNG -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 mb-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-yellow-500"></div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <i class="fas fa-cogs text-yellow-500"></i> Cấu Hình Hệ Thống AI
+            </h2>
+            <p class="text-sm text-gray-500 mb-4">
+                Cần nạp 2 file để hệ thống hoạt động:
+                <br><b>1. API Keys.txt</b> - Mỗi dòng là 1 API Key
+                <br><b>2. Modules.txt</b> - Mỗi dòng là 1 module Gemini (ví dụ: gemini-2.5-flash)
+            </p>
+
+            <div id="configStatus" class="hidden mb-4"></div>
+
+            <div id="uploadArea" class="space-y-4">
+                <!-- UPLOAD API KEYS -->
+                <div class="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:bg-blue-50 transition cursor-pointer relative bg-blue-25">
+                    <input type="file" id="keysFileInput" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                           onchange="handleFileSelect(event, 'keys')">
+                    <div class="pointer-events-none">
+                        <i class="fas fa-key text-3xl text-blue-500 mb-3"></i>
+                        <h3 class="font-bold text-gray-700">File API Keys.txt</h3>
+                        <p class="text-xs text-gray-400 mt-1">Mỗi dòng chứa 1 API Key Gemini</p>
+                    </div>
+                </div>
+
+                <!-- UPLOAD MODULES -->
+                <div class="border-2 border-dashed border-green-300 rounded-lg p-6 text-center hover:bg-green-50 transition cursor-pointer relative bg-green-25">
+                    <input type="file" id="modulesFileInput" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                           onchange="handleFileSelect(event, 'modules')">
+                    <div class="pointer-events-none">
+                        <i class="fas fa-cube text-3xl text-green-500 mb-3"></i>
+                        <h3 class="font-bold text-gray-700">File Modules.txt</h3>
+                        <p class="text-xs text-gray-400 mt-1">Mỗi dòng chứa 1 module (ví dụ: gemini-2.5-flash)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CÔNG CỤ DẠY HỌC -->
         <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Công Cụ Dạy Học</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             
@@ -137,7 +266,7 @@
                     <i class="fas fa-bolt"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Soạn Đề AI</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Nhập chủ đề -> AI tạo câu hỏi trắc nghiệm. Hỗ trợ Dạy ngay.</p>
+                <p class="text-sm text-gray-500 text-center flex-1">Tạo đề trắc nghiệm & tự luận bằng AI. Trình chiếu thông minh.</p>
                 <div class="mt-4 text-center text-indigo-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
@@ -159,51 +288,6 @@
                 <div class="mt-4 text-center text-blue-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
             </a>
 
-        </div>
-    </div>
-
-    <!-- MODAL CÀI ĐẶT -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-2xl overflow-hidden animate-fade-in-up">
-            <!-- Header -->
-            <div class="bg-indigo-900 px-6 py-4 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-white"><i class="fas fa-cog mr-2"></i> Cấu Hình Hệ Thống</h3>
-                <button onclick="toggleModal('settingsModal')" class="text-indigo-200 hover:text-white transition">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-
-            <!-- Body -->
-            <div class="p-6">
-                <!-- 1. API Key -->
-                <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">1. Nạp API Key (File .txt)</label>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition cursor-pointer relative bg-gray-50">
-                        <input type="file" id="apiKeyFile" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(event)">
-                        <div class="pointer-events-none">
-                            <i class="fas fa-file-upload text-2xl text-indigo-400 mb-1"></i>
-                            <p class="text-xs text-gray-500">Nhấn để chọn file chứa Key</p>
-                        </div>
-                    </div>
-                    <p id="modalKeyStatus" class="text-xs text-red-500 mt-2 italic">Chưa có key nào trong bộ nhớ.</p>
-                </div>
-
-                <!-- 2. Model AI -->
-                <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">2. Chọn Model AI</label>
-                    <select id="modelSelect" class="w-full p-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                        <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Khuyên dùng)</option>
-                        <option value="gemini-2.0-flash">gemini-2.0-flash (Nhanh chóng)</option>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Lựa chọn mô hình phù hợp với nhu cầu của bạn.</p>
-                </div>
-
-                <!-- Footer Buttons -->
-                <div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-                    <button onclick="toggleModal('settingsModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm">Đóng</button>
-                    <button onclick="saveSettings()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-sm shadow">Lưu Cấu Hình</button>
-                </div>
-            </div>
         </div>
     </div>
     
