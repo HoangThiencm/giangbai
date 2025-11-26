@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chấm Thi OMR Pro - Hệ Thống Giáo Viên AI</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; touch-action: manipulation; }
+        .loader { border: 3px solid #e5e7eb; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* OMR Sheet CSS */
+        .omr-sheet { width: 210mm; min-height: 297mm; padding: 10mm; background: white; margin: 0 auto; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1); color: black; box-sizing: border-box; }
+        .sheet-container-a5 { width: 210mm; height: 297mm; background: white; margin: 0 auto; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .omr-sheet-a5 { width: 100%; height: 50%; padding: 5mm 10mm; position: relative; box-sizing: border-box; border-bottom: 1px dashed #ccc; }
+        .omr-sheet-a5:last-child { border-bottom: none; }
+        .anchor-tl, .anchor-tr, .anchor-bl, .anchor-br { position: absolute; width: 15px; height: 15px; background: black; z-index: 10; }
+        .omr-sheet .anchor-tl { top: 10mm; left: 10mm; } .omr-sheet .anchor-tr { top: 10mm; right: 10mm; }
+        .omr-sheet .anchor-bl { bottom: 10mm; left: 10mm; } .omr-sheet .anchor-br { bottom: 10mm; right: 10mm; }
+        .omr-sheet-a5 .anchor-tl { top: 5mm; left: 10mm; } .omr-sheet-a5 .anchor-tr { top: 5mm; right: 10mm; }
+        .omr-sheet-a5 .anchor-bl { bottom: 5mm; left: 10mm; } .omr-sheet-a5 .anchor-br { bottom: 5mm; right: 10mm; }
+        .omr-border { border: 3px solid black; padding: 8px; height: 100%; display: flex; flex-direction: column; }
+        .omr-header { display: flex; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 10px; }
+        .omr-logo { width: 60px; height: 60px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 10px; }
+        .omr-title h1 { font-size: 14pt; font-weight: bold; margin: 0; text-transform: uppercase; }
+        .omr-title h2 { font-size: 12pt; font-weight: normal; margin: 2px 0 0 0; }
+        .omr-bubble { width: 11px; height: 11px; border: 1px solid black; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; margin: 1px; font-weight: 600; }
+        .omr-section-title { font-weight: bold; border-bottom: 1px solid black; margin-bottom: 3px; font-size: 9pt; }
+        .omr-grid-col { display: flex; flex-direction: column; align-items: center; margin-right: 3px; }
+        @media print { body * { visibility: hidden; } #print-area, #print-area * { visibility: visible; } #print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; margin: 0; padding: 0; } .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // --- QUẢN LÝ CẤU HÌNH TỪ LOCALSTORAGE (Tương thích index.html) ---
+        const HF_API_URL = "https://hoangthiencm-giangbai.hf.space"; 
+
+        const getApiKeys = () => {
+            const keys = localStorage.getItem('global_gemini_keys');
+            return keys ? JSON.parse(keys) : [];
+        };
+
+        const getRandomKey = () => {
+            const keys = getApiKeys();
+            if(!keys.length) return null;
+            return keys[Math.floor(Math.random() * keys.length)];
+        };
+
+        // --- ICON COMPONENTS ---
+        const Icon = ({ className, icon }) => <i className={`fas fa-${icon} ${className}`}></i>;
+
+        // --- HELPERS ---
+        const compressImage = async (file, maxWidth = 1000, quality = 0.7) => {
+            try {
+                if (!file || !file.type.startsWith('image/')) return file;
+                if (window.createImageBitmap) {
+                    try {
+                        const bitmap = await createImageBitmap(file);
+                        const canvas = document.createElement('canvas');
+                        let { width, height } = bitmap;
+                        if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(bitmap, 0, 0, width, height);
+                        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+                        return new File([blob], file.name, { type: 'image/jpeg' });
+                    } catch (e) { console.warn("Bitmap failed, fallback..."); }
+                }
+                return await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let w = img.width, h = img.height;
+                            if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
+                            canvas.width = w; canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            canvas.toBlob((blob) => resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file), 'image/jpeg', quality);
+                        };
+                        img.onerror = () => resolve(file);
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => resolve(file);
+                });
+            } catch (e) { return file; }
+        };
+
+        const parseMultiKey = (text) => {
+            const keys = {};
+            const lines = text.split('\n');
+            let currentCode = "DEFAULT";
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                if (line.includes(':')) {
+                    const parts = line.split(':');
+                    currentCode = parts[0].trim();
+                    const ansText = parts[1].trim();
+                    keys[currentCode] = parseAnswers(ansText);
+                } else {
+                    if (!keys[currentCode]) keys[currentCode] = {};
+                    Object.assign(keys[currentCode], parseAnswers(line));
+                }
+            });
+            return keys;
+        };
+
+        const parseAnswers = (text) => {
+            const key = {};
+            const pairs = text.toUpperCase().split(/\s+/);
+            pairs.forEach(p => {
+                const num = p.match(/^\d+/);
+                const char = p.match(/[A-D]$/);
+                if (num && char) key[parseInt(num[0])] = char[0];
+            });
+            return key;
+        };
+
+        // --- COMPONENTS ---
+        const OmrContent = ({ config }) => {
+            const { schoolName, examName, questionCount, examDate, subject } = config;
+            const renderBubbles = (count, start = 0) => Array.from({ length: count }).map((_, i) => <div key={i} className="omr-bubble">{i + start}</div>);
+            const renderQuestionRow = (qNum) => (
+                <div key={qNum} className="flex items-center justify-between mb-1 text-[10px]">
+                    <span className="font-bold w-5 text-right mr-1">{qNum}</span>
+                    <div className="flex gap-1">{['A', 'B', 'C', 'D'].map(opt => <div key={opt} className="omr-bubble w-5 h-5 text-[8px]">{opt}</div>)}</div>
+                </div>
+            );
+            const cols = questionCount <= 30 ? 3 : 4;
+            return (
+                <div className="omr-border">
+                    <div className="omr-header">
+                        <div className="omr-logo text-xs text-center p-1 text-gray-400 border border-dashed">Logo</div>
+                        <div className="omr-title flex-1 ml-3">
+                            <h1 className="text-sm font-bold uppercase">{schoolName || "TÊN TRƯỜNG..."}</h1>
+                            <h2 className="text-xs font-normal">{examName || "KỲ THI..."}</h2>
+                            <div className="flex mt-1 gap-4 text-xs font-semibold"><span>Ngày: {examDate}</span><span>Môn: {subject}</span></div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-12 gap-2 mb-2 text-xs">
+                        <div className="col-span-7 space-y-2 pr-2">
+                            {['Họ tên:', 'Lớp:', 'SBD:'].map(lbl => <div key={lbl} className="flex items-end"><span className="w-12 font-bold shrink-0">{lbl}</span> <div className="border-b border-dotted border-black flex-1 h-4"></div></div>)}
+                            <div className="border border-black p-1 mt-2 h-20 flex flex-col"><span className="text-[9px] italic text-center">Giám thị ký</span><div className="flex-1"></div></div>
+                        </div>
+                        <div className="col-span-5 flex gap-2">
+                            <div className="flex-1 border border-black p-1 flex flex-col items-center"><div className="omr-section-title text-[9px] text-center w-full">SBD</div><div className="flex justify-center mb-1 gap-0.5">{Array.from({length:6}).map((_,i)=><div key={i} className="w-3 h-4 border border-black"></div>)}</div><div className="flex gap-0.5">{Array.from({length:6}).map((_, col) => <div key={col} className="omr-grid-col">{renderBubbles(10)}</div>)}</div></div>
+                            <div className="flex-1 border border-black p-1 flex flex-col items-center"><div className="omr-section-title text-[9px] text-center w-full">MÃ ĐỀ</div><div className="flex justify-center mb-1 gap-0.5">{Array.from({length:3}).map((_,i)=><div key={i} className="w-3 h-4 border border-black"></div>)}</div><div className="flex gap-0.5">{Array.from({length:3}).map((_, col) => <div key={col} className="omr-grid-col">{renderBubbles(10)}</div>)}</div></div>
+                        </div>
+                    </div>
+                    <div className="border-t-2 border-black pt-1 flex-1">
+                        <div className="omr-section-title text-center mb-2 text-sm uppercase bg-black text-white inline-block px-3 py-0.5 mx-auto block w-fit rounded">Trả Lời</div>
+                        <div className={`grid grid-cols-${cols} gap-x-2 px-2`}>{Array.from({ length: cols }).map((_, colIndex) => { const itemsPerCol = Math.ceil(questionCount / cols); const start = colIndex * itemsPerCol + 1; return <div key={colIndex} className="border-r border-dotted last:border-0 border-gray-400 pr-1">{Array.from({ length: itemsPerCol }).map((__, idx) => { const qNum = start + idx; return qNum <= questionCount ? renderQuestionRow(qNum) : null; })}</div>; })}</div>
+                    </div>
+                    <div className="text-[9px] text-center mt-auto pt-1 italic border-t border-gray-300">Tô kín ô tròn. Giữ phiếu phẳng.</div>
+                </div>
+            );
+        }
+
+        const AnswerSheetWrapper = ({ config }) => {
+            const isSmall = config.questionCount <= 30;
+            if (isSmall) return (
+                <div id="print-area" className="sheet-container-a5 text-black">
+                    <div className="omr-sheet-a5"><div className="anchor-tl"></div><div className="anchor-tr"></div><div className="anchor-bl"></div><div className="anchor-br"></div><OmrContent config={config} /></div>
+                    <div className="omr-sheet-a5"><div className="anchor-tl"></div><div className="anchor-tr"></div><div className="anchor-bl"></div><div className="anchor-br"></div><OmrContent config={config} /></div>
+                    <div className="absolute w-full border-b-2 border-dashed border-gray-400 top-1/2 flex items-center justify-center"><span className="bg-white px-2 text-xs text-gray-500">✂ Cắt đôi tại đây</span></div>
+                </div>
+            );
+            return (
+                <div id="print-area" className="omr-sheet text-black">
+                    <div className="anchor-tl"></div><div className="anchor-tr"></div><div className="anchor-bl"></div><div className="anchor-br"></div>
+                    <OmrContent config={config} />
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        const App = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mobileMode = urlParams.get('mode') === 'mobile';
+            const paramSession = urlParams.get('session');
+
+            const [view, setView] = useState('grading');
+            const [inputText, setInputText] = useState("");
+            const [useAiSbd, setUseAiSbd] = useState(true); 
+            const [aiReading, setAiReading] = useState(false);
+            const [results, setResults] = useState([]);
+            const [sessionId, setSessionId] = useState(null);
+            const [showQr, setShowQr] = useState(false);
+            const [processing, setProcessing] = useState(false);
+            const [mobileStatus, setMobileStatus] = useState("");
+            const [previewImage, setPreviewImage] = useState(null);
+            const [sheetConfig, setSheetConfig] = useState({ schoolName: "", examName: "", questionCount: 50, examDate: "", subject: "" });
+
+            const folderRef = useRef(null);
+            const pollRef = useRef(null);
+            const keyImageInputRef = useRef(null);
+
+            // Kiểm tra Login
+            useEffect(() => {
+                if(!mobileMode && !localStorage.getItem('authToken')) {
+                    window.location.href = 'login.html';
+                }
+            }, []);
+
+            // Handle Mobile Upload
+            const handleMobileUpload = async (files) => {
+                if (!files.length) return;
+                setProcessing(true);
+                setMobileStatus("Đang xử lý...");
+                
+                for (let file of files) {
+                    try {
+                        let fileToSend = await compressImage(file);
+                        setMobileStatus("Đang gửi...");
+                        const fd = new FormData();
+                        fd.append("file", fileToSend);
+                        fd.append("session_id", paramSession);
+                        
+                        const res = await fetch(`${HF_API_URL}/api/omr/grade_mobile`, { method: 'POST', body: fd });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            if(data.status === 'success') {
+                                setMobileStatus(`✓ Đã chấm: ${data.score}đ`);
+                                if (navigator.vibrate) navigator.vibrate(200);
+                            } else {
+                                setMobileStatus(`⚠ Lỗi: ${data.error}`);
+                            }
+                        } else {
+                            setMobileStatus(`Lỗi Server: ${res.status}`);
+                        }
+                    } catch (e) { 
+                        setMobileStatus("Lỗi Mạng: " + e.message);
+                    }
+                }
+                setProcessing(false);
+            };
+
+            const callGeminiVision = async (base64Image) => {
+                const key = getRandomKey();
+                if (!key) { alert("Chưa nạp API Keys trong Cấu hình (Trang chủ)!"); return; }
+                
+                setAiReading(true);
+                try {
+                    const prompt = `OCR đáp án. YÊU CẦU: Chỉ trả về chuỗi (1A 2B...). Không giải thích.`;
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({contents:[{parts:[{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64Image}}]}]})
+                    });
+                    const data = await res.json();
+                    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    text = text.replace(/[*#]/g, '').trim();
+                    setInputText(prev => (prev ? prev + "\n" + text : text));
+                } catch(e) { alert("Lỗi Gemini: " + e.message); } finally { setAiReading(false); }
+            };
+
+            const handleImagePaste = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) if (items[i].type.indexOf("image") !== -1) {
+                    e.preventDefault(); const blob = items[i].getAsFile();
+                    const r = new FileReader(); r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]); r.readAsDataURL(blob);
+                }
+            };
+
+            useEffect(() => {
+                if (sessionId && !mobileMode) {
+                    pollRef.current = setInterval(async () => {
+                        try {
+                            const res = await fetch(`${HF_API_URL}/api/omr/poll_results/${sessionId}`);
+                            const data = await res.json();
+                            if (data.length) setResults(p => [...data, ...p]);
+                        } catch(e){}
+                    }, 2000);
+                }
+                return () => clearInterval(pollRef.current);
+            }, [sessionId]);
+
+            const handleStartSession = async () => {
+                if (!inputText) return alert("Vui lòng nhập đáp án!");
+                const keys = parseMultiKey(inputText);
+                const fd = new FormData(); fd.append("answer_key_json", JSON.stringify(keys));
+                try {
+                    const res = await fetch(`${HF_API_URL}/api/omr/init_session`, { method: 'POST', body: fd });
+                    const data = await res.json();
+                    setSessionId(data.session_id); setShowQr(true);
+                    setTimeout(() => {
+                        document.getElementById("qrcode").innerHTML = "";
+                        const mobileLink = `${window.location.href.split('?')[0]}?mode=mobile&session=${data.session_id}`;
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: mobileLink,
+                            width: 200, height: 200
+                        });
+                    }, 100);
+                } catch(e) { alert("Lỗi kết nối Server: " + e.message); }
+            };
+
+            const processImagesPC = async (files) => {
+                const keys = parseMultiKey(inputText);
+                const fdKeys = JSON.stringify(keys);
+                setProcessing(true);
+                for (let file of files) {
+                    let fileToSend = await compressImage(file);
+                    const fd = new FormData(); 
+                    fd.append("file", fileToSend); 
+                    fd.append("answer_key_json", fdKeys);
+                    try {
+                        const res = await fetch(`${HF_API_URL}/api/omr/grade`, { method: 'POST', body: fd });
+                        const data = await res.json();
+                        
+                        // SBD AI Fallback
+                        if (useAiSbd && (!data.student_id || data.student_id === "AI_READ")) {
+                            const key = getRandomKey();
+                            if(key) {
+                                const reader = new FileReader();
+                                reader.onload = async (e) => {
+                                    const b64 = e.target.result.split(',')[1];
+                                    try {
+                                        const prompt = "Đọc SBD viết tay trong ảnh. Chỉ trả về số.";
+                                        const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({contents:[{parts:[{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: b64}}]}]})
+                                        });
+                                        const aiData = await aiRes.json();
+                                        const sbd = aiData.candidates[0].content.parts[0].text.replace(/\D/g,'');
+                                        setResults(prev => prev.map(r => r.filename === file.name ? {...r, student_id: sbd + " (AI)"} : r));
+                                    } catch(err) {}
+                                };
+                                reader.readAsDataURL(fileToSend);
+                            }
+                        }
+                        setResults(prev => [{filename: file.name, ...data}, ...prev]);
+                    } catch(e) { console.error(e); }
+                }
+                setProcessing(false);
+            };
+
+            if (mobileMode) {
+                return (
+                    <div className="bg-gray-900 min-h-screen text-white p-6 flex flex-col items-center justify-center text-center">
+                        <h1 className="text-2xl font-bold mb-2">Camera Chấm Thi</h1>
+                        <p className="text-gray-400 mb-4">Phiên: <span className="text-yellow-400 font-mono">{paramSession}</span></p>
+                        {mobileStatus && <div className={`mb-6 p-3 rounded font-bold ${mobileStatus.includes("Lỗi") ? "bg-red-600" : "bg-green-600"}`}>{mobileStatus}</div>}
+                        <input type="file" accept="image/*" capture="environment" className="hidden" id="cam" onChange={(e)=>handleMobileUpload(e.target.files)}/>
+                        <label htmlFor="cam" className={`w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center active:scale-95 transition shadow-xl cursor-pointer ${processing ? 'bg-gray-700' : 'bg-indigo-600'}`}>
+                            {processing ? <div className="loader"></div> : <><Icon icon="camera" className="text-6xl mb-2"/><span className="font-bold text-xl">CHỤP ẢNH</span></>}
+                        </label>
+                        <div className="mt-8 text-sm text-gray-500">Ảnh sẽ tự động nén & gửi về máy tính.<br/>Nhanh & Tiết kiệm 4G.</div>
+                    </div>
+                )
+            }
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm no-print">
+                        <div className="flex items-center gap-2">
+                             <a href="index.html" className="text-gray-500 hover:text-indigo-600 mr-2"><i className="fas fa-arrow-left"></i></a>
+                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl">AI</div>
+                            <div><h1 className="font-bold text-xl text-indigo-900">CHẤM THI OMR</h1><p className="text-xs text-gray-500">Hỗ trợ Đa Mã Đề & AI SBD</p></div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={()=>setView('grading')} className={`px-3 py-1.5 rounded font-bold flex items-center gap-2 ${view==='grading'?'bg-indigo-100 text-indigo-700':'hover:bg-gray-100 text-gray-600'}`}><Icon icon="check"/> Chấm Thi</button>
+                            <button onClick={()=>setView('sheet')} className={`px-3 py-1.5 rounded font-bold flex items-center gap-2 ${view==='sheet'?'bg-indigo-100 text-indigo-700':'hover:bg-gray-100 text-gray-600'}`}><Icon icon="file-alt"/> Tạo Phiếu</button>
+                        </div>
+                    </div>
+
+                    {showQr && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                            <div className="bg-white p-8 rounded-xl text-center relative">
+                                <button onClick={()=>setShowQr(false)} className="absolute top-2 right-4 text-2xl">&times;</button>
+                                <h3 className="font-bold text-xl mb-4">Quét bằng Điện Thoại</h3>
+                                <div id="qrcode" className="inline-block p-2 border bg-white"></div>
+                                <p className="mt-4 text-sm text-gray-500">Điện thoại sẽ hoạt động như máy quét ảnh</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {previewImage && (
+                        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={()=>setPreviewImage(null)}>
+                            <img src={`data:image/jpeg;base64,${previewImage}`} className="max-w-full max-h-full rounded shadow-2xl border-2 border-white"/>
+                            <button className="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
+                        </div>
+                    )}
+
+                    <div className="flex-1 bg-gray-100 p-6 overflow-auto">
+                        {view === 'grading' && (
+                            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-4 space-y-4">
+                                    <div className="bg-white p-4 rounded-xl shadow relative">
+                                        {aiReading && <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 animate-pulse"></div>}
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="font-bold text-sm uppercase text-gray-600">Nhập Đáp Án (Đa Mã Đề)</label>
+                                            <div className="flex gap-2">
+                                                <button onClick={()=>keyImageInputRef.current.click()} disabled={aiReading} className="text-blue-600 text-xs font-bold flex items-center gap-1 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">{aiReading?"Đọc...":<><Icon icon="image"/> AI Quét</>}</button>
+                                                <input type="file" ref={keyImageInputRef} accept="image/*" className="hidden" onChange={e=>{if(e.target.files[0]){const r=new FileReader();r.onload=(ev)=>callGeminiVision(ev.target.result.split(',')[1]);r.readAsDataURL(e.target.files[0]);}}}/>
+                                            </div>
+                                        </div>
+                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handleImagePaste} className="w-full border rounded p-3 h-40 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={"VD: 101: 1A 2B...\n(Ctrl+V ảnh để AI đọc)"}></textarea>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <input type="checkbox" checked={useAiSbd} onChange={e=>setUseAiSbd(e.target.checked)} id="aiSbd"/>
+                                            <label htmlFor="aiSbd" className="text-sm text-gray-700 cursor-pointer flex items-center gap-1"><Icon icon="brain" className="text-pink-600"/> Dùng AI đọc SBD</label>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div onClick={()=>folderRef.current.click()} className="bg-white p-4 rounded-xl shadow text-center cursor-pointer hover:bg-indigo-50 border-dashed border-2 border-gray-300 flex flex-col items-center justify-center h-32">
+                                            <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
+                                            <Icon icon="upload" className="text-3xl text-gray-400 mb-2"/>
+                                            <span className="font-bold text-sm text-gray-600">Tải File (PC)</span>
+                                        </div>
+                                        <div onClick={handleStartSession} className="bg-white p-4 rounded-xl shadow text-center cursor-pointer hover:bg-green-50 border-dashed border-2 border-green-300 flex flex-col items-center justify-center h-32">
+                                            <Icon icon="qrcode" className="text-3xl text-green-600 mb-2"/>
+                                            <span className="font-bold text-sm text-green-700">Kết Nối ĐT</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-8 bg-white p-0 rounded-xl shadow flex flex-col h-[600px]">
+                                    <div className="p-4 border-b bg-gray-50 flex justify-between items-center rounded-t-xl">
+                                        <h3 className="font-bold text-gray-700">Kết Quả ({results.length})</h3>
+                                        {results.length > 0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KQ"); XLSX.writeFile(wb, "KetQua.xlsx");}} className="text-green-600 font-bold text-sm hover:underline">Xuất Excel</button>}
+                                    </div>
+                                    <div className="flex-1 overflow-auto p-0">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-gray-100 sticky top-0 font-semibold text-gray-600"><tr><th className="p-3">Ảnh</th><th className="p-3">SBD/Mã</th><th className="p-3 text-center">Đúng/Sai</th><th className="p-3 text-center">Điểm</th></tr></thead>
+                                            <tbody>
+                                                {results.map((r,i)=>(
+                                                    <tr key={i} className="border-b hover:bg-gray-50 animate-[slideIn_0.3s]">
+                                                        <td className="p-3">
+                                                            {r.image_base64 ? 
+                                                                <img 
+                                                                    src={`data:image/jpeg;base64,${r.image_base64}`} 
+                                                                    className="w-16 h-12 object-cover rounded border border-gray-300 cursor-zoom-in hover:scale-110 transition" 
+                                                                    onClick={()=>setPreviewImage(r.image_base64)}
+                                                                    title="Xem ảnh lớn"
+                                                                /> 
+                                                                : <span className="text-xs text-gray-400">No Img</span>
+                                                            }
+                                                        </td>
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-gray-800">{r.student_id || "---"}</div>
+                                                            <div className="text-xs text-gray-500">Mã: {r.exam_code || "?"}</div>
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <span className="text-green-600 font-bold">{r.correct_count}</span> / <span className="text-red-500 font-bold">{r.wrong_count}</span>
+                                                            <div className="text-[10px] text-gray-400">Tổng: {r.total_questions}</div>
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <span className="font-bold text-xl text-indigo-600 block">{r.score}</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {!results.length && <tr><td colSpan="4" className="p-10 text-center text-gray-400">Chưa có dữ liệu</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                         {view === 'sheet' && (
+                            <div className="max-w-4xl mx-auto space-y-4">
+                                <div className="bg-white p-4 rounded-xl shadow flex gap-4 items-end no-print">
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-1">
+                                        <input className="border p-2 rounded text-sm" placeholder="Tên Trường" value={sheetConfig.schoolName} onChange={e=>setSheetConfig({...sheetConfig, schoolName: e.target.value})}/>
+                                        <input className="border p-2 rounded text-sm" placeholder="Tên Kỳ Thi" value={sheetConfig.examName} onChange={e=>setSheetConfig({...sheetConfig, examName: e.target.value})}/>
+                                        <input className="border p-2 rounded text-sm" placeholder="Môn Thi" value={sheetConfig.subject} onChange={e=>setSheetConfig({...sheetConfig, subject: e.target.value})}/>
+                                        <input type="number" className="border p-2 rounded text-sm" placeholder="Số câu (50)" value={sheetConfig.questionCount} onChange={e=>setSheetConfig({...sheetConfig, questionCount: parseInt(e.target.value)||50})}/>
+                                        <input type="date" className="border p-2 rounded text-sm" value={sheetConfig.examDate} onChange={e=>setSheetConfig({...sheetConfig, examDate: e.target.value})}/>
+                                    </div>
+                                    <button onClick={()=>window.print()} className="bg-blue-600 text-white px-4 py-2 rounded font-bold whitespace-nowrap"><Icon icon="print"/> In Phiếu</button>
+                                </div>
+                                <div className="bg-gray-200 p-8 flex justify-center overflow-auto rounded-xl">
+                                    <AnswerSheetWrapper config={sheetConfig} />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
