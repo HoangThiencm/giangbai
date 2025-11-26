@@ -25,10 +25,8 @@
         .omr-sheet-a5:last-child { border-bottom: none; }
         
         .anchor-tl, .anchor-tr, .anchor-bl, .anchor-br { position: absolute; width: 15px; height: 15px; background: black; z-index: 10; }
-        /* A4 Anchor Positions */
         .omr-sheet .anchor-tl { top: 10mm; left: 10mm; } .omr-sheet .anchor-tr { top: 10mm; right: 10mm; }
         .omr-sheet .anchor-bl { bottom: 10mm; left: 10mm; } .omr-sheet .anchor-br { bottom: 10mm; right: 10mm; }
-        /* A5 Anchor Positions */
         .omr-sheet-a5 .anchor-tl { top: 5mm; left: 10mm; } .omr-sheet-a5 .anchor-tr { top: 5mm; right: 10mm; }
         .omr-sheet-a5 .anchor-bl { bottom: 5mm; left: 10mm; } .omr-sheet-a5 .anchor-br { bottom: 5mm; right: 10mm; }
 
@@ -38,10 +36,7 @@
         .omr-title h1 { font-size: 14pt; font-weight: bold; margin: 0; text-transform: uppercase; }
         .omr-title h2 { font-size: 12pt; font-weight: normal; margin: 2px 0 0 0; }
         
-        /* Standard Bubble (Phần trả lời) */
         .omr-bubble { width: 11px; height: 11px; border: 1px solid black; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; margin: 1px; font-weight: 600; }
-        
-        /* Large Bubble (SBD & Mã đề) - Điều chỉnh to hơn */
         .omr-bubble-lg { width: 14px; height: 14px; border: 1px solid black; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; margin: 1.5px; font-weight: 700; }
         .omr-box-lg { width: 14px; height: 18px; border: 1px solid black; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; }
 
@@ -57,7 +52,20 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Default Backend URL - Hãy thay đổi nếu cần thiết hoặc cấu hình trong giao diện
+        // --- HELPER: LẤY KEY TỪ GLOBAL STORAGE (TỪ INDEX.HTML) ---
+        const getGlobalKeys = () => {
+            try {
+                const keys = localStorage.getItem('global_gemini_keys');
+                return keys ? JSON.parse(keys) : [];
+            } catch (e) { return []; }
+        };
+
+        const getRandomKey = () => {
+            const keys = getGlobalKeys();
+            if (keys.length === 0) return null;
+            return keys[Math.floor(Math.random() * keys.length)];
+        };
+
         const DEFAULT_BACKEND_URL = "https://hoangthiencm-giangbai.hf.space"; 
 
         const Icon = ({ d, className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={d} /></svg>;
@@ -72,72 +80,18 @@
             QrCode: (p) => <Icon {...p} d="M3 3h6v6H3zm12 0h6v6h-6zM3 15h6v6H3zm12 0h6v6h-6z" />,
             Brain: (p) => <Icon {...p} d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />,
             Smartphone: (p) => <Icon {...p} d="M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 17h.01" />,
-            Refresh: (p) => <Icon {...p} d="M23 4v6h-6 M1 20v-6h6 M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            Refresh: (p) => <Icon {...p} d="M23 4v6h-6 M1 20v-6h6 M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />,
+            Home: (p) => <Icon {...p} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         };
 
-        // --- UTILS (Safe Compress) ---
-        const dataURLtoBlob = (dataurl) => {
-            try {
-                var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                    bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-                while(n--) u8arr[n] = bstr.charCodeAt(n);
-                return new Blob([u8arr], {type:mime});
-            } catch (e) { return null; }
-        }
+        const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
+        const compressImage = (file, maxWidth=1000, quality=0.7) => { return new Promise((resolve)=>{ if(!file||!file.type.startsWith('image/')){resolve(file);return;} const reader=new FileReader();reader.readAsDataURL(file);reader.onload=(event)=>{const img=new Image();img.src=event.target.result;img.onload=()=>{try{const canvas=document.createElement('canvas');let w=img.width,h=img.height;if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);const blob=dataURLtoBlob(canvas.toDataURL('image/jpeg',quality));resolve(blob?new File([blob],file.name,{type:'image/jpeg'}):file);}catch(e){resolve(file);}};img.onerror=()=>resolve(file);};reader.onerror=()=>resolve(file);});};
+        const parseMultiKey = (text) => { const keys={}; text.split('\n').forEach(line=>{ line=line.trim(); if(!line)return; let code="DEFAULT", ans=line; if(line.includes(':')){const p=line.split(':');code=p[0].trim();ans=p[1].trim();} if(!keys[code])keys[code]={}; const pairs=ans.toUpperCase().split(/\s+/); pairs.forEach(p=>{const num=p.match(/^\d+/);const char=p.match(/[A-D]$/);if(num&&char)keys[code][parseInt(num[0])]=char[0];});}); return keys; };
 
-        const compressImage = (file, maxWidth = 1000, quality = 0.7) => {
-            return new Promise((resolve) => {
-                if (!file || !file.type.startsWith('image/')) { resolve(file); return; }
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        try {
-                            const canvas = document.createElement('canvas');
-                            let w = img.width, h = img.height;
-                            if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
-                            canvas.width = w; canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, w, h);
-                            const blob = dataURLtoBlob(canvas.toDataURL('image/jpeg', quality));
-                            resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
-                        } catch (e) { resolve(file); }
-                    };
-                    img.onerror = () => resolve(file);
-                };
-                reader.onerror = () => resolve(file);
-            });
-        };
-
-        const parseMultiKey = (text) => {
-            const keys = {};
-            text.split('\n').forEach(line => {
-                line = line.trim();
-                if (!line) return;
-                let code = "DEFAULT", ans = line;
-                if (line.includes(':')) {
-                    const p = line.split(':');
-                    code = p[0].trim(); ans = p[1].trim();
-                }
-                if (!keys[code]) keys[code] = {};
-                const pairs = ans.toUpperCase().split(/\s+/);
-                pairs.forEach(p => {
-                    const num = p.match(/^\d+/); const char = p.match(/[A-D]$/);
-                    if (num && char) keys[code][parseInt(num[0])] = char[0];
-                });
-            });
-            return keys;
-        };
-
-        // --- UPDATED OMR CONTENT (SBD 4 số, Bubble to hơn) ---
         const OmrContent = ({ config }) => {
             const { schoolName, examName, questionCount, examDate, subject } = config;
-            
-            const renderBubblesLg = (count, start = 0) => Array.from({ length: count }).map((_, i) => <div key={i} className="omr-bubble-lg">{i + start}</div>);
-            const renderBubbles = (count, start = 0) => Array.from({ length: count }).map((_, i) => <div key={i} className="omr-bubble">{i + start}</div>);
-            
+            const renderBubblesLg = (count) => Array.from({ length: count }).map((_, i) => <div key={i} className="omr-bubble-lg">{i}</div>);
+            const renderBubbles = (count) => Array.from({ length: count }).map((_, i) => <div key={i} className="omr-bubble">{i}</div>);
             const renderQuestionRow = (qNum) => (
                 <div key={qNum} className="flex items-center justify-between mb-1 text-[10px]">
                     <span className="font-bold w-5 text-right mr-1">{qNum}</span>
@@ -145,7 +99,6 @@
                 </div>
             );
             const cols = questionCount <= 30 ? 3 : 4;
-            
             return (
                 <div className="omr-border">
                     <div className="omr-header">
@@ -162,13 +115,11 @@
                             <div className="border border-black p-1 mt-2 h-20 flex flex-col"><span className="text-[9px] italic text-center">Giám thị ký</span><div className="flex-1"></div></div>
                         </div>
                         <div className="col-span-5 flex gap-2">
-                            {/* SBD - 4 SỐ */}
                             <div className="flex-1 border border-black p-1 flex flex-col items-center">
                                 <div className="omr-section-title text-[9px] text-center w-full">SBD</div>
                                 <div className="flex justify-center mb-1 gap-0.5">{Array.from({length:4}).map((_,i)=><div key={i} className="omr-box-lg"></div>)}</div>
                                 <div className="flex gap-0.5">{Array.from({length:4}).map((_, col) => <div key={col} className="omr-grid-col">{renderBubblesLg(10)}</div>)}</div>
                             </div>
-                            {/* MÃ ĐỀ - 3 SỐ */}
                             <div className="flex-1 border border-black p-1 flex flex-col items-center">
                                 <div className="omr-section-title text-[9px] text-center w-full">MÃ ĐỀ</div>
                                 <div className="flex justify-center mb-1 gap-0.5">{Array.from({length:3}).map((_,i)=><div key={i} className="omr-box-lg"></div>)}</div>
@@ -202,7 +153,6 @@
             );
         };
 
-        // --- MAIN APP LOGIC ---
         const App = () => {
             const urlParams = new URLSearchParams(window.location.search);
             const mobileMode = urlParams.get('mode') === 'mobile';
@@ -211,8 +161,11 @@
 
             const [view, setView] = useState('grading');
             const [backendUrl, setBackendUrl] = useState(localStorage.getItem("omr_backend_url") || paramApi || DEFAULT_BACKEND_URL);
-            const [geminiKey, setGeminiKey] = useState(localStorage.getItem("omr_gemini_key") || "");
+            
+            // XÓA CONFIG NHẬP KEY, THAY BẰNG AUTO COUNT
             const [showConfig, setShowConfig] = useState(!localStorage.getItem("omr_backend_url") && !mobileMode);
+            const [apiKeyCount, setApiKeyCount] = useState(0);
+
             const [inputText, setInputText] = useState("");
             const [useAiSbd, setUseAiSbd] = useState(true); 
             const [aiReading, setAiReading] = useState(false);
@@ -224,23 +177,24 @@
             const [serverStatus, setServerStatus] = useState("checking");
             const [statusMsg, setStatusMsg] = useState("Đang kiểm tra...");
             const [previewImage, setPreviewImage] = useState(null);
-            
             const [sheetConfig, setSheetConfig] = useState({ schoolName: "", examName: "", questionCount: 50, examDate: "", subject: "" });
 
             const folderRef = useRef(null);
             const pollRef = useRef(null);
             const keyImageInputRef = useRef(null);
 
+            // AUTO LOAD API KEY
+            useEffect(() => {
+                const keys = getGlobalKeys();
+                setApiKeyCount(keys.length);
+            }, []);
+
             const checkConnection = async (url) => {
                 if (!url) { setServerStatus("error"); setStatusMsg("Thiếu URL"); return; }
                 setServerStatus("checking"); setStatusMsg("Đang kết nối...");
                 try {
-                    // Thử gọi /api/omr/ (vì file chamthi.py có prefix /api/omr)
                     const baseUrl = url.replace(/\/$/, "");
-                    const res = await fetch(baseUrl + "/", { method: 'GET', mode: 'cors' }).catch(() => 
-                         fetch(baseUrl, { method: 'GET', mode: 'cors' })
-                    );
-                    
+                    const res = await fetch(baseUrl + "/", { method: 'GET', mode: 'cors' }).catch(() => fetch(baseUrl, { method: 'GET', mode: 'cors' }));
                     if (res && res.ok) { setServerStatus("connected"); setStatusMsg("Đã kết nối"); }
                     else { setServerStatus("error"); setStatusMsg(`Lỗi kết nối`); }
                 } catch (e) { setServerStatus("error"); setStatusMsg("Lỗi Mạng"); }
@@ -248,19 +202,17 @@
 
             useEffect(() => { if (backendUrl) checkConnection(backendUrl); }, [backendUrl]);
 
-            const saveConfig = (url, key) => {
+            // CHỈ CẦN LƯU URL
+            const saveConfig = (url) => {
                 let clean = url.trim().replace(/\/$/, "");
                 if (clean.includes("huggingface.co/spaces/")) { 
                     const p = clean.split("huggingface.co/spaces/"); 
                     if (p[1]) { const parts = p[1].split("/"); clean = `https://${parts[0]}-${parts[1]}.hf.space`; }
                 }
                 if (!clean.startsWith("http")) clean = "https://" + clean;
-                
-                // Đảm bảo không bị lặp /api/omr nếu user nhập thiếu
                 if (!clean.endsWith("/api/omr")) clean += "/api/omr";
 
                 setBackendUrl(clean); localStorage.setItem("omr_backend_url", clean);
-                setGeminiKey(key); localStorage.setItem("omr_gemini_key", key);
                 setShowConfig(false); checkConnection(clean);
             };
 
@@ -300,12 +252,15 @@
                     try {
                         const res = await fetch(`${backendUrl}/grade`, { method: 'POST', body: fd });
                         const data = await res.json();
-                        if (useAiSbd && (!data.student_id || data.student_id === "AI_READ") && geminiKey) {
+                        
+                        // AUTO GET KEY FOR AI SBD
+                        const aiKey = getRandomKey();
+                        if (useAiSbd && (!data.student_id || data.student_id === "AI_READ") && aiKey) {
                             const reader = new FileReader();
                             reader.onload = async (e) => {
                                 const b64 = e.target.result.split(',')[1];
                                 try {
-                                    const resAI = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+                                    const resAI = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiKey}`, {
                                         method: 'POST', headers: {'Content-Type': 'application/json'},
                                         body: JSON.stringify({contents:[{parts:[{text: "Đọc SBD viết tay (chỉ lấy số):"}, {inline_data: {mime_type: "image/jpeg", data: b64}}]}]})
                                     });
@@ -323,17 +278,19 @@
             };
 
             const callGeminiVision = async (base64) => {
-                if (!geminiKey) { alert("Cần Gemini Key!"); setShowConfig(true); return; }
+                const key = getRandomKey();
+                if (!key) { alert("Chưa có API Key! Vui lòng quay lại Trang chủ để nạp Key."); return; }
+                
                 setAiReading(true);
                 try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({contents:[{parts:[{text: "OCR Đáp Án (1A 2B...)"}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}]})
                     });
                     const d = await res.json();
                     let txt = d.candidates[0].content.parts[0].text.replace(/[*#]/g,'').trim();
                     setInputText(p => (p ? p+"\n"+txt : txt));
-                } catch(e) { alert(e.message); } finally { setAiReading(false); }
+                } catch(e) { alert("Lỗi đọc ảnh: " + e.message); } finally { setAiReading(false); }
             };
 
             const handleImagePaste = (e) => {
@@ -382,7 +339,7 @@
                                 <button onClick={()=>setShowConfig(false)} className="absolute top-2 right-2 font-bold text-xl">&times;</button>
                                 <h3 className="font-bold mb-4">Cấu Hình</h3>
                                 <input value={backendUrl} onChange={e=>setBackendUrl(e.target.value)} className="w-full border p-2 rounded mb-2" placeholder="URL"/>
-                                <button onClick={()=>saveConfig(backendUrl, geminiKey)} className="w-full bg-indigo-600 text-white py-2 rounded font-bold">Lưu</button>
+                                <button onClick={()=>saveConfig(backendUrl)} className="w-full bg-indigo-600 text-white py-2 rounded font-bold">Lưu</button>
                             </div>
                         </div>
                     )}
@@ -406,6 +363,10 @@
                     <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm no-print">
                         <div className="flex items-center gap-2"><div className="bg-indigo-600 p-1.5 rounded text-white"><Icons.Camera className="w-6 h-6"/></div><div><h1 className="font-bold text-xl text-indigo-900">OMR PRO</h1><p className="text-[10px] text-gray-500 font-medium">AI Grading</p></div></div>
                         <div className="flex gap-2">
+                            {/* NÚT HOME QUAY VỀ TRANG CHỦ */}
+                            <button onClick={()=>window.location.href='index.html'} className="px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 text-gray-600 hover:bg-gray-100 hover:text-indigo-600 border border-transparent hover:border-gray-200 transition"><Icons.Home className="w-4 h-4"/> Home</button>
+                            <div className="w-px h-8 bg-gray-200 mx-1"></div>
+                            
                             <button onClick={()=>setView('grading')} className={`px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 ${view==='grading'?'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200':'text-gray-600 hover:bg-gray-50'}`}><Icons.Check className="w-4 h-4"/> Chấm Thi</button>
                             <button onClick={()=>setView('sheet')} className={`px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-2 ${view==='sheet'?'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200':'text-gray-600 hover:bg-gray-50'}`}><Icons.FileText className="w-4 h-4"/> Tạo Phiếu</button>
                             <button onClick={()=>setShowConfig(true)} className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-600"><Icons.Settings className="w-5 h-5"/></button>
@@ -417,10 +378,26 @@
                             <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl relative">
                                 <button onClick={()=>setShowConfig(false)} className="absolute top-2 right-3 text-gray-400 font-bold text-xl">&times;</button>
                                 <h3 className="font-bold mb-4 border-b pb-2">Cấu Hình</h3>
-                                <div className="space-y-3">
-                                    <div><label className="text-xs font-bold text-gray-500">URL Backend:</label><input value={backendUrl} onChange={e=>setBackendUrl(e.target.value)} className="w-full border p-2 rounded text-sm" placeholder="https://..."/></div>
-                                    <div><label className="text-xs font-bold text-gray-500">Gemini Key:</label><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border p-2 rounded text-sm"/></div>
-                                    <button onClick={()=>saveConfig(backendUrl, geminiKey)} className="w-full bg-indigo-600 text-white py-2 rounded font-bold">Lưu & Kiểm tra</button>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 mb-1 block">URL Backend:</label>
+                                        <input value={backendUrl} onChange={e=>setBackendUrl(e.target.value)} className="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://..."/>
+                                    </div>
+                                    
+                                    {/* HIỂN THỊ TRẠNG THÁI KEY THAY VÌ Ô NHẬP */}
+                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Icons.Brain className="w-4 h-4 text-blue-600"/>
+                                            <span className="text-sm font-bold text-blue-800">Gemini AI Keys</span>
+                                        </div>
+                                        <p className="text-xs text-blue-600">
+                                            {apiKeyCount > 0 
+                                                ? `✓ Đã tìm thấy ${apiKeyCount} keys từ hệ thống.` 
+                                                : "⚠ Chưa có Key nào. Vui lòng nạp ở Trang chủ."}
+                                        </p>
+                                    </div>
+
+                                    <button onClick={()=>saveConfig(backendUrl)} className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md">Lưu Cấu Hình</button>
                                 </div>
                             </div>
                         </div>
