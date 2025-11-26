@@ -38,48 +38,33 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
-        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT (UPDATED) ---
-        // Giữ hàm này đơn giản để không làm biến dạng nội dung gốc
+        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT ---
         const normalizeText = (text) => text ? text.trim() : ""; 
-        
-        // Thay đổi hàm này để không xóa nhầm ký tự đầu câu nếu nó không phải là dạng "1. " hay "A. "
         const cleanOptionText = (text) => {
             if (!text) return "";
-            // Chỉ xóa prefix nếu nó thực sự là dạng liệt kê (A. B. 1. 2.)
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s+/, '');
         };
 
-        // --- COMPONENT HIỂN THỊ TOÁN (SIMPLE & STABLE - UPDATED) ---
-        // Sử dụng logic tách chuỗi đơn giản của 1.html để đảm bảo hiển thị đúng mọi ký tự đặc biệt
+        // --- COMPONENT HIỂN THỊ TOÁN ---
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text) return;
-                
-                // KHÔNG dùng các hàm .replace() phức tạp nữa
-                // Chỉ chia cắt chuỗi bằng dấu $ như 1.html
                 const parts = text.split(/(\$[^$]+\$)/g);
-                
                 if (ref.current) {
                     ref.current.innerHTML = "";
                     parts.forEach(part => {
                         if (part.startsWith("$") && part.endsWith("$")) {
                             const span = document.createElement("span");
-                            try { 
-                                // Render Toán
-                                katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); 
-                            } 
+                            try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } 
                             catch { span.textContent = part; }
                             ref.current.appendChild(span);
                         } else {
-                            // Render văn bản thường (giữ nguyên gốc các ký tự [], {}, -->)
                             ref.current.appendChild(document.createTextNode(part)); 
                         }
                     });
                 }
             }, [text]);
-            
-            // Giữ nguyên class font-serif để hiển thị đẹp hơn 1.html
             return <span ref={ref} className="math-content font-serif text-lg text-gray-800 inline-block leading-relaxed" />;
         };
 
@@ -160,16 +145,12 @@
             );
         };
 
-        // --- COMPONENT: TỪNG CÂU HỎI (CÓ 2 CHẾ ĐỘ: XEM & SỬA) ---
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
-
-            // Handlers cập nhật dữ liệu
             const handleQChange = (val) => onUpdate('question', val);
             const handleOptChange = (val, idx) => onUpdate('options', val, idx);
 
             if (isEditing) {
-                // --- CHẾ ĐỘ EDIT ---
                 return (
                     <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-400 mb-6 relative">
                         <div className="absolute top-4 right-4 z-10">
@@ -177,89 +158,44 @@
                                 <i className="fas fa-check"></i> Xong
                             </button>
                         </div>
-                        
-                        <div className="mb-3">
-                            <span className="font-bold text-blue-700 text-lg">Câu {index + 1} (Đang sửa):</span>
-                        </div>
-
+                        <div className="mb-3"><span className="font-bold text-blue-700 text-lg">Câu {index + 1} (Đang sửa):</span></div>
                         <div className="mb-4">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung câu hỏi</label>
-                            <textarea 
-                                className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-200 outline-none font-medium bg-blue-50" 
-                                value={q.question} 
-                                onChange={(e) => handleQChange(e.target.value)} 
-                                rows={3} 
-                            />
+                            <textarea className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-200 outline-none font-medium bg-blue-50" value={q.question} onChange={(e) => handleQChange(e.target.value)} rows={3} />
                         </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {q.options.map((opt, idx) => (
                                 <div key={idx} className={`flex items-center gap-2 p-3 rounded border ${q.correct_index === idx ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                                    <input 
-                                        type="radio" 
-                                        name={`q-${index}`} 
-                                        checked={q.correct_index === idx} 
-                                        onChange={() => onOptionChange(idx)} 
-                                        className="w-5 h-5 cursor-pointer accent-green-600" 
-                                    />
-                                    <div className="flex-1">
-                                        <input 
-                                            className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-1" 
-                                            value={opt} 
-                                            onChange={(e) => handleOptChange(e.target.value, idx)} 
-                                            placeholder={`Đáp án ${String.fromCharCode(65+idx)}`}
-                                        />
-                                    </div>
+                                    <input type="radio" name={`q-${index}`} checked={q.correct_index === idx} onChange={() => onOptionChange(idx)} className="w-5 h-5 cursor-pointer accent-green-600" />
+                                    <div className="flex-1"><input className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-1" value={opt} onChange={(e) => handleOptChange(e.target.value, idx)} placeholder={`Đáp án ${String.fromCharCode(65+idx)}`}/></div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 );
             }
-
-            // --- CHẾ ĐỘ VIEW (MẶC ĐỊNH) ---
             return (
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6 hover:shadow-md transition relative group">
-                    {/* Nút Chỉnh Sửa chỉ hiện khi hover vào câu hỏi */}
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition duration-200">
-                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm">
-                            <i className="fas fa-pencil-alt"></i> Sửa
-                        </button>
+                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm"><i className="fas fa-pencil-alt"></i> Sửa</button>
                     </div>
-
-                    <div className="flex gap-2 mb-4 pr-20">
-                        <span className="font-bold text-indigo-800 whitespace-nowrap text-lg">Câu {index + 1}:</span>
-                        <div className="font-medium text-gray-800 text-lg leading-relaxed">
-                            <MathText text={q.question} />
-                        </div>
-                    </div>
-
+                    <div className="flex gap-2 mb-4 pr-20"><span className="font-bold text-indigo-800 whitespace-nowrap text-lg">Câu {index + 1}:</span><div className="font-medium text-gray-800 text-lg leading-relaxed"><MathText text={q.question} /></div></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {q.options.map((opt, idx) => (
                             <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${q.correct_index === idx ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-transparent'}`}>
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${q.correct_index === idx ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                                    {String.fromCharCode(65+idx)}
-                                </div>
-                                <div className={`text-base ${q.correct_index === idx ? 'font-medium text-green-900' : 'text-gray-700'}`}>
-                                    <MathText text={cleanOptionText(opt)} />
-                                </div>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${q.correct_index === idx ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div>
+                                <div className={`text-base ${q.correct_index === idx ? 'font-medium text-green-900' : 'text-gray-700'}`}><MathText text={cleanOptionText(opt)} /></div>
                                 {q.correct_index === idx && <i className="fas fa-check-circle text-green-500 ml-auto mt-1 text-lg"></i>}
                             </div>
                         ))}
                     </div>
-                    
-                    {q.correct_index === -1 && (
-                        <div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block">
-                            <i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng! Vui lòng bấm "Sửa".
-                        </div>
-                    )}
+                    {q.correct_index === -1 && (<div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng! Vui lòng bấm "Sửa".</div>)}
                 </div>
             );
         };
 
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions, apiKeys }) => {
             const [showAnsModal, setShowAnsModal] = useState(false);
-
             const handleApplyAnswers = (text) => {
                 const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
                 const regex = /(\d+)\s*([A-D])/g;
@@ -272,21 +208,17 @@
                 onUpdateQuestions(newQs);
                 alert(`Đã cập nhật đáp án cho ${Object.keys(newMap).length} câu!`);
             };
-
-            // Hàm update dùng chung cho QuestionItem
             const handleQuestionUpdate = (idx, field, value, optIdx = null) => {
                 const newQs = [...questions];
                 if (field === 'options') newQs[idx].options[optIdx] = value;
                 else if (field === 'question') newQs[idx].question = value;
                 onUpdateQuestions(newQs);
             };
-
             const handleCorrectChange = (qIdx, optIdx) => {
                 const newQs = [...questions];
                 newQs[qIdx].correct_index = optIdx;
                 onUpdateQuestions(newQs);
             };
-
             return (
                 <div className="max-w-5xl mx-auto p-4">
                     <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
@@ -298,17 +230,8 @@
                             <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
                         </div>
                     </div>
-                    
                     <div className="space-y-2 pb-20">
-                        {questions.map((q, i) => (
-                            <QuestionItem 
-                                key={i} 
-                                q={q} 
-                                index={i} 
-                                onUpdate={(field, val, optIdx) => handleQuestionUpdate(i, field, val, optIdx)}
-                                onOptionChange={(optIdx) => handleCorrectChange(i, optIdx)}
-                            />
-                        ))}
+                        {questions.map((q, i) => (<QuestionItem key={i} q={q} index={i} onUpdate={(field, val, optIdx) => handleQuestionUpdate(i, field, val, optIdx)} onOptionChange={(optIdx) => handleCorrectChange(i, optIdx)}/>))}
                     </div>
                 </div>
             );
@@ -412,8 +335,6 @@
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             useEffect(() => { const f = () => axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); f(); const i = setInterval(f, 5000); return () => clearInterval(i); }, [examId]);
-            
-            // --- XUẤT EXCEL ĐẸP & VIỆT HÓA ---
             const exportExcel = () => {
                 const exportData = results.map((row, index) => {
                     let wrongDetailsStr = "Không có câu sai";
@@ -427,30 +348,18 @@
                             }
                         }
                     } catch (e) { wrongDetailsStr = "Lỗi đọc dữ liệu chi tiết"; }
-
                     return {
-                        "STT": index + 1,
-                        "Số Báo Danh": row.sbd,
-                        "Họ và Tên": row.student_name,
-                        "Lớp": row.student_class,
-                        "Điểm số": row.score,
-                        "Số câu đúng": row.correct_count,
-                        "Số câu sai": row.total_questions - row.correct_count,
-                        "Tổng số câu": row.total_questions,
-                        "Nhận xét của AI": row.ai_feedback,
-                        "Chi tiết các câu làm sai": wrongDetailsStr,
-                        "Thời gian nộp bài": new Date(row.created_at).toLocaleString('vi-VN')
+                        "STT": index + 1, "Số Báo Danh": row.sbd, "Họ và Tên": row.student_name, "Lớp": row.student_class, "Điểm số": row.score,
+                        "Số câu đúng": row.correct_count, "Số câu sai": row.total_questions - row.correct_count, "Tổng số câu": row.total_questions,
+                        "Nhận xét của AI": row.ai_feedback, "Chi tiết các câu làm sai": wrongDetailsStr, "Thời gian nộp bài": new Date(row.created_at).toLocaleString('vi-VN')
                     };
                 });
-
                 const ws = XLSX.utils.json_to_sheet(exportData);
-                const wscols = [{wch: 5}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 50}, {wch: 80}, {wch: 20}];
-                ws['!cols'] = wscols;
+                ws['!cols'] = [{wch: 5}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 50}, {wch: 80}, {wch: 20}];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "KetQuaThi");
                 XLSX.writeFile(wb, `KetQua_Thi_${examId}.xlsx`);
             };
-
             return (
                 <div className="max-w-6xl mx-auto p-6"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-file-excel"></i> Xuất Excel</button></div>
                 <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 border-b"><tr><th className="p-3">SBD</th><th className="p-3">Tên</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Nhận Xét</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3">{r.sbd}</td><td className="p-3 font-bold text-indigo-900">{r.student_name}</td><td className="p-3">{r.student_class}</td><td className="p-3 font-bold text-red-600">{r.score}</td><td className="p-3 text-sm italic text-gray-600">{r.ai_feedback}</td></tr>))}</tbody></table></div></div>
@@ -465,6 +374,7 @@
             const [timeLeft, setTimeLeft] = useState(0);
             const [examCode, setExamCode] = useState("");
             const [warnings, setWarnings] = useState(0);
+            const [aiGenerating, setAiGenerating] = useState(false);
 
             useEffect(() => {
                 if (step !== "exam") return;
@@ -491,13 +401,108 @@
                 setStep("exam"); 
             };
             
-            const handleSubmit = async (auto = false) => { if (!auto && !confirm("Nộp?")) return; const payload = { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: {} }; exam.questions.forEach((q, i) => { if (answers[i] !== undefined) payload.answers[q.originalIndex] = answers[i]; }); try { const res = await axios.post(`${API_BASE}/api/exam/submit`, payload); setStep("result"); setExam(res.data); } catch(e) { alert("Lỗi nộp!"); } };
+            // --- HÀM GỌI AI NHẬN XÉT (Client Side) ---
+            const generateAiFeedback = async (score, correctCount, totalQuestions) => {
+                setAiGenerating(true);
+                // Cố gắng lấy key từ local storage (của giáo viên nếu test chung máy) hoặc từ config
+                // Lưu ý: Trong thực tế, student không có key này, đây là demo để chạy được trên máy test
+                let apiKey = "";
+                const localKeys = localStorage.getItem('global_gemini_keys');
+                if (localKeys) {
+                    const keys = JSON.parse(localKeys);
+                    if (keys.length > 0) apiKey = keys[0];
+                }
+                
+                if (!apiKey) {
+                    // Nếu không có key, trả về default để không lỗi
+                    setAiGenerating(false);
+                    return "Chúc mừng bạn đã hoàn thành bài thi!";
+                }
+
+                try {
+                    const prompt = `Bạn là giáo viên. Học sinh ${info.name} (Lớp ${info.class}) vừa làm bài thi.
+                    Kết quả: ${score} điểm.
+                    Số câu đúng: ${correctCount}/${totalQuestions}.
+                    Hãy đưa ra một nhận xét ngắn gọn (dưới 50 từ), hài hước và động viên học sinh này dựa trên kết quả.
+                    Dùng giọng điệu thân thiện.`;
+
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await res.json();
+                    if (data.candidates && data.candidates[0].content) {
+                        return data.candidates[0].content.parts[0].text;
+                    }
+                } catch (e) { console.error("AI Error:", e); }
+                finally { setAiGenerating(false); }
+                return "Đã ghi nhận kết quả thi.";
+            };
+
+            const handleSubmit = async (auto = false) => { 
+                if (!auto && !confirm("Nộp?")) return; 
+                
+                // 1. Tính toán điểm số client-side để gọi AI ngay lập tức
+                let correct = 0;
+                let total = exam.questions.length;
+                exam.questions.forEach((q, i) => {
+                    const userAns = answers[i]; // answers theo index hiện tại (đã shuffle)
+                    // Check đúng sai: so sánh userAns với correct_index của câu hỏi q
+                    if (userAns !== undefined && userAns === q.correct_index) {
+                        correct++;
+                    }
+                });
+                const score = ((correct / total) * 10).toFixed(1);
+
+                // 2. Gọi AI nhận xét
+                const aiFeedback = await generateAiFeedback(score, correct, total);
+
+                // 3. Gửi về server lưu trữ
+                const payload = { 
+                    exam_id: examId, 
+                    student_name: info.name, 
+                    sbd: info.sbd, 
+                    student_class: info.class, 
+                    answers: {},
+                    // Gửi kèm feedback do client sinh ra (nếu server hỗ trợ lưu)
+                    // Hoặc chỉ để hiển thị client
+                }; 
+                exam.questions.forEach((q, i) => { if (answers[i] !== undefined) payload.answers[q.originalIndex] = answers[i]; }); 
+                
+                try { 
+                    const res = await axios.post(`${API_BASE}/api/exam/submit`, payload); 
+                    // Merge kết quả từ server với feedback AI vừa tạo
+                    setExam({ ...res.data, feedback: aiFeedback, score: score }); 
+                    setStep("result"); 
+                } catch(e) { alert("Lỗi nộp!"); } 
+            };
 
             if(step === "check") return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
             if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2><p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p><input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI</button></div>;
-            if(step === "result") return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="bg-white p-10 rounded shadow text-center"><h2 className="text-2xl font-bold text-green-700">Kết Quả: {exam.score} điểm</h2><p className="mt-4 italic">{exam.feedback}</p></div></div>;
             
-            return <div className="max-w-3xl mx-auto p-4 pb-20 select-none"><div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-50 rounded-lg"><div><b className="block">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div><div className="flex items-center gap-3"><span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">Nộp</button></div></div>{exam.questions.map((q, i) => (<div key={i} className="bg-white p-6 rounded-lg shadow mb-4 border border-gray-100"><div className="flex gap-2 mb-3"><span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span><div className="font-medium"><MathText text={q.question}/></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}><div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div><div className="text-sm"><MathText text={cleanOptionText(o)}/></div></div>))}</div></div>))}</div>;
+            if(step === "result") return (
+                <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+                    <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-lg w-full">
+                        <div className="text-6xl mb-4">🎉</div>
+                        <h2 className="text-3xl font-bold text-green-700 mb-2">Hoàn thành!</h2>
+                        <div className="text-5xl font-extrabold text-gray-800 mb-6">{exam.score} <span className="text-2xl text-gray-500 font-medium">điểm</span></div>
+                        
+                        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left relative">
+                            <div className="absolute -top-3 left-4 bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded uppercase tracking-wide">
+                                <i className="fas fa-robot mr-1"></i> AI Nhận Xét
+                            </div>
+                            <p className="mt-2 text-gray-700 italic text-lg leading-relaxed">
+                                {aiGenerating ? "Đang suy nghĩ..." : `"${exam.feedback}"`}
+                            </p>
+                        </div>
+                        
+                        <button onClick={()=>window.location.reload()} className="mt-8 text-gray-400 hover:text-gray-600 text-sm underline">Làm bài khác</button>
+                    </div>
+                </div>
+            );
+            
+            return <div className="max-w-3xl mx-auto p-4 pb-20 select-none"><div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-50 rounded-lg"><div><b className="block">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div><div className="flex items-center gap-3"><span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">{aiGenerating ? "Đang nộp..." : "Nộp Bài"}</button></div></div>{exam.questions.map((q, i) => (<div key={i} className="bg-white p-6 rounded-lg shadow mb-4 border border-gray-100"><div className="flex gap-2 mb-3"><span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span><div className="font-medium"><MathText text={q.question}/></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}><div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div><div className="text-sm"><MathText text={cleanOptionText(o)}/></div></div>))}</div></div>))}</div>;
         };
 
         const App = () => {
