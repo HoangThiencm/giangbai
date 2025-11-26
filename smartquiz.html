@@ -445,7 +445,7 @@
                                             <div className={`option-letter rounded-full flex items-center justify-center font-bold flex-shrink-0 transition-colors ${showAns && i === q.correctAnswerIndex ? 'bg-green-600 text-white' : selectedOpt === i ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                                                 {String.fromCharCode(65+i)}
                                             </div>
-                                            <div className="flex-1 text-3xl"><MathText text={cleanOptionText(opt)} /></div>
+                                            <div className="flex-1 text-5xl"><MathText text={cleanOptionText(opt)} /></div>
                                             {showAns && i === q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600 text-3xl absolute right-6"></i>}
                                         </div>
                                     );
