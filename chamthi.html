@@ -44,13 +44,24 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // --- SAFETY UTILS ---
+        const safeLocalStorage = {
+            getItem: (key) => {
+                try { return localStorage.getItem(key); } catch (e) { console.error("LocalStorage Error:", e); return null; }
+            },
+            setItem: (key, value) => {
+                try { localStorage.setItem(key, value); } catch (e) { console.error("LocalStorage Set Error:", e); }
+            }
+        };
+
+        // --- INIT REACT ---
         const { useState, useEffect, useRef } = React;
         
-        // --- QUẢN LÝ CẤU HÌNH TỪ LOCALSTORAGE (Tương thích index.html) ---
+        // --- CONFIG ---
         const HF_API_URL = "https://hoangthiencm-giangbai.hf.space"; 
 
         const getApiKeys = () => {
-            const keys = localStorage.getItem('global_gemini_keys');
+            const keys = safeLocalStorage.getItem('global_gemini_keys');
             return keys ? JSON.parse(keys) : [];
         };
 
@@ -61,7 +72,7 @@
         };
 
         // --- ICON COMPONENTS ---
-        const Icon = ({ className, icon }) => <i className={`fas fa-${icon} ${className}`}></i>;
+        const Icon = ({ className = "", icon }) => <i className={`fas fa-${icon} ${className}`}></i>;
 
         // --- HELPERS ---
         const compressImage = async (file, maxWidth = 1000, quality = 0.7) => {
@@ -143,7 +154,11 @@
                     <div className="flex gap-1">{['A', 'B', 'C', 'D'].map(opt => <div key={opt} className="omr-bubble w-5 h-5 text-[8px]">{opt}</div>)}</div>
                 </div>
             );
+            
+            // Tailwind CDN cần class tĩnh để render đúng
             const cols = questionCount <= 30 ? 3 : 4;
+            const gridClass = questionCount <= 30 ? "grid-cols-3" : "grid-cols-4";
+
             return (
                 <div className="omr-border">
                     <div className="omr-header">
@@ -166,7 +181,7 @@
                     </div>
                     <div className="border-t-2 border-black pt-1 flex-1">
                         <div className="omr-section-title text-center mb-2 text-sm uppercase bg-black text-white inline-block px-3 py-0.5 mx-auto block w-fit rounded">Trả Lời</div>
-                        <div className={`grid grid-cols-${cols} gap-x-2 px-2`}>{Array.from({ length: cols }).map((_, colIndex) => { const itemsPerCol = Math.ceil(questionCount / cols); const start = colIndex * itemsPerCol + 1; return <div key={colIndex} className="border-r border-dotted last:border-0 border-gray-400 pr-1">{Array.from({ length: itemsPerCol }).map((__, idx) => { const qNum = start + idx; return qNum <= questionCount ? renderQuestionRow(qNum) : null; })}</div>; })}</div>
+                        <div className={`grid ${gridClass} gap-x-2 px-2`}>{Array.from({ length: cols }).map((_, colIndex) => { const itemsPerCol = Math.ceil(questionCount / cols); const start = colIndex * itemsPerCol + 1; return <div key={colIndex} className="border-r border-dotted last:border-0 border-gray-400 pr-1">{Array.from({ length: itemsPerCol }).map((__, idx) => { const qNum = start + idx; return qNum <= questionCount ? renderQuestionRow(qNum) : null; })}</div>; })}</div>
                     </div>
                     <div className="text-[9px] text-center mt-auto pt-1 italic border-t border-gray-300">Tô kín ô tròn. Giữ phiếu phẳng.</div>
                 </div>
@@ -214,9 +229,9 @@
             const pollRef = useRef(null);
             const keyImageInputRef = useRef(null);
 
-            // Kiểm tra Login (Đã sửa lỗi crash trên Preview)
+            // Kiểm tra Login (An toàn hơn với safeLocalStorage)
             useEffect(() => {
-                const token = localStorage.getItem('authToken');
+                const token = safeLocalStorage.getItem('authToken');
                 if (mobileMode || token) {
                     setIsAuthenticated(true);
                 } else {
@@ -365,164 +380,3 @@
                                         const aiData = await aiRes.json();
                                         const sbd = aiData.candidates[0].content.parts[0].text.replace(/\D/g,'');
                                         setResults(prev => prev.map(r => r.filename === file.name ? {...r, student_id: sbd + " (AI)"} : r));
-                                    } catch(err) {}
-                                };
-                                reader.readAsDataURL(fileToSend);
-                            }
-                        }
-                        setResults(prev => [{filename: file.name, ...data}, ...prev]);
-                    } catch(e) { console.error(e); }
-                }
-                setProcessing(false);
-            };
-
-            if (mobileMode) {
-                return (
-                    <div className="bg-gray-900 min-h-screen text-white p-6 flex flex-col items-center justify-center text-center">
-                        <h1 className="text-2xl font-bold mb-2">Camera Chấm Thi</h1>
-                        <p className="text-gray-400 mb-4">Phiên: <span className="text-yellow-400 font-mono">{paramSession}</span></p>
-                        {mobileStatus && <div className={`mb-6 p-3 rounded font-bold ${mobileStatus.includes("Lỗi") ? "bg-red-600" : "bg-green-600"}`}>{mobileStatus}</div>}
-                        <input type="file" accept="image/*" capture="environment" className="hidden" id="cam" onChange={(e)=>handleMobileUpload(e.target.files)}/>
-                        <label htmlFor="cam" className={`w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center active:scale-95 transition shadow-xl cursor-pointer ${processing ? 'bg-gray-700' : 'bg-indigo-600'}`}>
-                            {processing ? <div className="loader"></div> : <><Icon icon="camera" className="text-6xl mb-2"/><span className="font-bold text-xl">CHỤP ẢNH</span></>}
-                        </label>
-                        <div className="mt-8 text-sm text-gray-500">Ảnh sẽ tự động nén & gửi về máy tính.<br/>Nhanh & Tiết kiệm 4G.</div>
-                    </div>
-                )
-            }
-
-            return (
-                <div className="min-h-screen flex flex-col">
-                    <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm no-print">
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl">AI</div>
-                            <div><h1 className="font-bold text-xl text-indigo-900">CHẤM THI OMR</h1><p className="text-xs text-gray-500">Hỗ trợ Đa Mã Đề & AI SBD</p></div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => window.location.href = 'index.html'} className="px-3 py-1.5 rounded font-bold flex items-center gap-2 hover:bg-gray-100 text-gray-600 border border-gray-200 transition"><Icon icon="home"/> Home</button>
-                            <button onClick={()=>setView('grading')} className={`px-3 py-1.5 rounded font-bold flex items-center gap-2 ${view==='grading'?'bg-indigo-100 text-indigo-700':'hover:bg-gray-100 text-gray-600'}`}><Icon icon="check"/> Chấm Thi</button>
-                            <button onClick={()=>setView('sheet')} className={`px-3 py-1.5 rounded font-bold flex items-center gap-2 ${view==='sheet'?'bg-indigo-100 text-indigo-700':'hover:bg-gray-100 text-gray-600'}`}><Icon icon="file-alt"/> Tạo Phiếu</button>
-                        </div>
-                    </div>
-
-                    {showQr && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                            <div className="bg-white p-8 rounded-xl text-center relative">
-                                <button onClick={()=>setShowQr(false)} className="absolute top-2 right-4 text-2xl">&times;</button>
-                                <h3 className="font-bold text-xl mb-4">Quét bằng Điện Thoại</h3>
-                                <div id="qrcode" className="inline-block p-2 border bg-white"></div>
-                                <p className="mt-4 text-sm text-gray-500">Điện thoại sẽ hoạt động như máy quét ảnh</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {previewImage && (
-                        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={()=>setPreviewImage(null)}>
-                            <img src={`data:image/jpeg;base64,${previewImage}`} className="max-w-full max-h-full rounded shadow-2xl border-2 border-white"/>
-                            <button className="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
-                        </div>
-                    )}
-
-                    <div className="flex-1 bg-gray-100 p-6 overflow-auto">
-                        {view === 'grading' && (
-                            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                <div className="lg:col-span-4 space-y-4">
-                                    <div className="bg-white p-4 rounded-xl shadow relative">
-                                        {aiReading && <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 animate-pulse"></div>}
-                                        <div className="flex justify-between items-center mb-2">
-                                            <label className="font-bold text-sm uppercase text-gray-600">Nhập Đáp Án (Đa Mã Đề)</label>
-                                            <div className="flex gap-2">
-                                                <button onClick={()=>keyImageInputRef.current.click()} disabled={aiReading} className="text-blue-600 text-xs font-bold flex items-center gap-1 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">{aiReading?"Đọc...":<><Icon icon="image"/> AI Quét</>}</button>
-                                                <input type="file" ref={keyImageInputRef} accept="image/*" className="hidden" onChange={e=>{if(e.target.files[0]){const r=new FileReader();r.onload=(ev)=>callGeminiVision(ev.target.result.split(',')[1]);r.readAsDataURL(e.target.files[0]);}}}/>
-                                            </div>
-                                        </div>
-                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handleImagePaste} className="w-full border rounded p-3 h-40 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={"VD: 101: 1A 2B...\n(Ctrl+V ảnh để AI đọc)"}></textarea>
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <input type="checkbox" checked={useAiSbd} onChange={e=>setUseAiSbd(e.target.checked)} id="aiSbd"/>
-                                            <label htmlFor="aiSbd" className="text-sm text-gray-700 cursor-pointer flex items-center gap-1"><Icon icon="brain" className="text-pink-600"/> Dùng AI đọc SBD</label>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div onClick={()=>folderRef.current.click()} className="bg-white p-4 rounded-xl shadow text-center cursor-pointer hover:bg-indigo-50 border-dashed border-2 border-gray-300 flex flex-col items-center justify-center h-32">
-                                            <input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/>
-                                            <Icon icon="upload" className="text-3xl text-gray-400 mb-2"/>
-                                            <span className="font-bold text-sm text-gray-600">Tải File (PC)</span>
-                                        </div>
-                                        <div onClick={handleStartSession} className="bg-white p-4 rounded-xl shadow text-center cursor-pointer hover:bg-green-50 border-dashed border-2 border-green-300 flex flex-col items-center justify-center h-32">
-                                            <Icon icon="qrcode" className="text-3xl text-green-600 mb-2"/>
-                                            <span className="font-bold text-sm text-green-700">Kết Nối ĐT</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="lg:col-span-8 bg-white p-0 rounded-xl shadow flex flex-col h-[600px]">
-                                    <div className="p-4 border-b bg-gray-50 flex justify-between items-center rounded-t-xl">
-                                        <h3 className="font-bold text-gray-700">Kết Quả ({results.length})</h3>
-                                        {results.length > 0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KQ"); XLSX.writeFile(wb, "KetQua.xlsx");}} className="text-green-600 font-bold text-sm hover:underline">Xuất Excel</button>}
-                                    </div>
-                                    <div className="flex-1 overflow-auto p-0">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="bg-gray-100 sticky top-0 font-semibold text-gray-600"><tr><th className="p-3">Ảnh</th><th className="p-3">SBD/Mã</th><th className="p-3 text-center">Đúng/Sai</th><th className="p-3 text-center">Điểm</th></tr></thead>
-                                            <tbody>
-                                                {results.map((r,i)=>(
-                                                    <tr key={i} className="border-b hover:bg-gray-50 animate-[slideIn_0.3s]">
-                                                        <td className="p-3">
-                                                            {r.image_base64 ? 
-                                                                <img 
-                                                                    src={`data:image/jpeg;base64,${r.image_base64}`} 
-                                                                    className="w-16 h-12 object-cover rounded border border-gray-300 cursor-zoom-in hover:scale-110 transition" 
-                                                                    onClick={()=>setPreviewImage(r.image_base64)}
-                                                                    title="Xem ảnh lớn"
-                                                                /> 
-                                                                : <span className="text-xs text-gray-400">No Img</span>
-                                                            }
-                                                        </td>
-                                                        <td className="p-3">
-                                                            <div className="font-bold text-gray-800">{r.student_id || "---"}</div>
-                                                            <div className="text-xs text-gray-500">Mã: {r.exam_code || "?"}</div>
-                                                        </td>
-                                                        <td className="p-3 text-center">
-                                                            <span className="text-green-600 font-bold">{r.correct_count}</span> / <span className="text-red-500 font-bold">{r.wrong_count}</span>
-                                                            <div className="text-[10px] text-gray-400">Tổng: {r.total_questions}</div>
-                                                        </td>
-                                                        <td className="p-3 text-center">
-                                                            <span className="font-bold text-xl text-indigo-600 block">{r.score}</span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {!results.length && <tr><td colSpan="4" className="p-10 text-center text-gray-400">Chưa có dữ liệu</td></tr>}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        
-                         {view === 'sheet' && (
-                            <div className="max-w-4xl mx-auto space-y-4">
-                                <div className="bg-white p-4 rounded-xl shadow flex gap-4 items-end no-print">
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-1">
-                                        <input className="border p-2 rounded text-sm" placeholder="Tên Trường" value={sheetConfig.schoolName} onChange={e=>setSheetConfig({...sheetConfig, schoolName: e.target.value})}/>
-                                        <input className="border p-2 rounded text-sm" placeholder="Tên Kỳ Thi" value={sheetConfig.examName} onChange={e=>setSheetConfig({...sheetConfig, examName: e.target.value})}/>
-                                        <input className="border p-2 rounded text-sm" placeholder="Môn Thi" value={sheetConfig.subject} onChange={e=>setSheetConfig({...sheetConfig, subject: e.target.value})}/>
-                                        <input type="number" className="border p-2 rounded text-sm" placeholder="Số câu (50)" value={sheetConfig.questionCount} onChange={e=>setSheetConfig({...sheetConfig, questionCount: parseInt(e.target.value)||50})}/>
-                                        <input type="date" className="border p-2 rounded text-sm" value={sheetConfig.examDate} onChange={e=>setSheetConfig({...sheetConfig, examDate: e.target.value})}/>
-                                    </div>
-                                    <button onClick={()=>window.print()} className="bg-blue-600 text-white px-4 py-2 rounded font-bold whitespace-nowrap"><Icon icon="print"/> In Phiếu</button>
-                                </div>
-                                <div className="bg-gray-200 p-8 flex justify-center overflow-auto rounded-xl">
-                                    <AnswerSheetWrapper config={sheetConfig} />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
