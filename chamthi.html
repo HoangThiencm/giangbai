@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Fix Tràn Trang</title>
+    <title>Chấm Thi OMR Pro - Fixed A5 Layout</title>
     
-    <!-- Thư viện -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -18,52 +17,48 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CẤU HÌNH IN ẤN (SAFE ZONE) --- */
+        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI --- */
         @page { 
-            size: A4 portrait; 
+            size: A4; 
             margin: 0; 
         }
 
         .sheet-a4 {
             width: 210mm; 
-            height: 296mm; 
+            height: 296mm; /* 297mm - 1mm an toàn */
             background: white; 
             margin: 20px auto;
-            position: relative; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            overflow: hidden; 
             page-break-after: always;
-            display: flex;
-            flex-direction: column;
-            /* Căn nội dung lên trên cùng */
-            justify-content: flex-start; 
-            padding-top: 5mm; /* Lề trên an toàn */
+            
+            /* Layout Grid: Chia đôi tờ giấy chính xác */
+            display: grid;
+            grid-template-rows: 1fr 1fr; /* Mỗi phiếu chiếm đúng 50% chiều cao */
+            padding: 0;
         }
 
-        /* Layout A5: Chiều cao an toàn 135mm (Tổng 2 phiếu = 270mm < 297mm A4) */
-        .layout-2up .omr-item { 
-            height: 135mm; /* Rút ngắn chiều cao để tránh tràn */
+        /* Cấu trúc mỗi phiếu (Item) */
+        .omr-item { 
             width: 100%;
-            border-bottom: 1px dashed #000; 
+            height: 100%; /* Lấp đầy ô grid 50% */
             box-sizing: border-box;
             position: relative;
-            margin-bottom: 5mm; /* Khoảng cách giữa 2 phiếu */
-        }
-        .layout-2up .omr-item:last-child { border-bottom: none; margin-bottom: 0; }
-        
-        /* Layout A4 full */
-        .layout-1up .omr-item { height: 100%; }
-
-        /* Container nội dung: Đẩy sát lề */
-        .omr-inner-container {
-            padding: 5mm 10mm; /* Lề trên dưới 5mm, trái phải 10mm */
-            height: 100%;
-            display: flex; 
+            border-bottom: 1px dashed #000; /* Đường cắt */
+            
+            /* Padding trong để nội dung không sát mép giấy */
+            padding: 5mm 8mm; /* Trên/dưới 5mm, Trái/phải 8mm -> Rất tiết kiệm */
+            
+            display: flex;
             flex-direction: column;
-            box-sizing: border-box;
         }
+        /* Xóa border cho phiếu cuối cùng trong trang */
+        .sheet-a4 .omr-item:last-child { border-bottom: none; }
 
-        /* Anchors */
+        /* Layout 1 phiếu A4 (100 câu) */
+        .layout-1up { display: block; }
+        .layout-1up .omr-item { height: 100%; border-bottom: none; }
+
+        /* Anchors: 4 Góc định vị */
         .anchor { position: absolute; width: 8px; height: 8px; background: black; z-index: 99; }
         .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
         .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
@@ -72,44 +67,72 @@
         .header-section { 
             border-bottom: 2px solid black; 
             padding-bottom: 2px; 
-            margin-bottom: 3px; 
+            margin-bottom: 4px; 
             flex-shrink: 0; 
         }
-        .header-title h1 { font-size: 16pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1; margin: 0;}
+        .header-title h1 { 
+            font-size: 14pt; font-weight: 900; 
+            text-align: center; text-transform: uppercase; 
+            line-height: 1; margin: 0 0 4px 0;
+        }
         
-        .info-row { display: flex; gap: 8px; margin-top: 2px; align-items: flex-end;}
+        .info-row { display: flex; gap: 15px; margin-bottom: 2px; align-items: flex-end;}
         .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
-        .info-label { font-weight: bold; margin-right: 4px; font-size: 8pt;}
-        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 12px; }
+        .info-label { font-weight: bold; margin-right: 4px; font-size: 9pt;}
+        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 14px; }
 
-        /* --- BODY --- */
+        /* --- BODY (Phần tô) --- */
         .body-section { 
             display: flex; 
             flex: 1; 
             gap: 8px; 
             align-items: stretch; 
             overflow: hidden; 
-            padding-top: 2px;
         }
         
         /* Cột Trái (SBD/Mã đề) */
         .left-panel { width: 28%; display: flex; flex-direction: column; gap: 4px; }
-        .id-box { border: 2px solid black; padding: 2px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
-        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
+        .id-box { 
+            border: 2px solid black; 
+            padding: 2px; 
+            border-radius: 3px; 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .box-title { 
+            font-size: 7pt; font-weight: bold; text-align: center; 
+            background: #000; color: #fff; 
+            padding: 1px 0; margin-bottom: 2px; 
+        }
         
-        .grid-bubbles { display: flex; justify-content: space-around; height: 100%; align-items: flex-start; }
+        .grid-bubbles { 
+            display: flex; 
+            justify-content: space-around; 
+            height: 100%; 
+            align-items: flex-start; 
+        }
         
-        /* FIX LỖI MÃ ĐỀ BỊ CẮT: Dùng justify-between để dàn đều */
+        /* Cột bong bóng dọc */
         .col-bubble { 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            height: 98%; 
-            justify-content: space-between; /* Quan trọng: Dàn đều từ 0-9 */
+            height: 100%; 
+            justify-content: space-between; /* Dàn đều từ trên xuống dưới */
         }
-        .write-box { width: 100%; height: 12px; border: 1px solid #333; margin-bottom: 1px; }
         
-        /* Bong bóng SBD nhỏ gọn */
+        /* Ô viết số (Vuông) */
+        .write-box { 
+            width: 100%; 
+            height: 14px; /* Tăng chiều cao để dễ viết */
+            border: 1px solid #000; 
+            margin-bottom: 2px; 
+            background: white;
+            flex-shrink: 0; /* Không bị co lại */
+        }
+        
+        /* Bong bóng tròn */
         .b { 
             width: 11px; height: 11px; 
             border: 1px solid #000; border-radius: 50%; 
@@ -118,7 +141,14 @@
         }
 
         /* Cột Phải (Câu hỏi) */
-        .right-panel { flex: 1; border: 2px solid black; padding: 4px; border-radius: 4px; display: flex; flex-direction: column; }
+        .right-panel { 
+            flex: 1; 
+            border: 2px solid black; 
+            padding: 4px; 
+            border-radius: 3px; 
+            display: flex; 
+            flex-direction: column; 
+        }
         .ans-grid { display: flex; flex: 1; height: 100%; }
         
         .ans-col { 
@@ -127,17 +157,17 @@
             padding: 0 4px; 
             display: flex; 
             flex-direction: column; 
-            justify-content: space-between; /* Dàn đều 10 câu */
+            justify-content: space-between; 
         }
         .ans-col:last-child { border-right: none; }
         
         .q-row { display: flex; align-items: center; justify-content: flex-end; }
         .q-num { width: 18px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 4px; line-height: 1; }
         
-        /* Bong bóng Đáp án (Tăng kích thước theo yêu cầu) */
+        /* Bong bóng đáp án */
         .q-b { 
-            width: 13px; height: 13px; /* TO HƠN */
-            font-size: 8px; font-weight: bold;
+            width: 12px; height: 12px; 
+            font-size: 7.5px; font-weight: bold;
             margin-right: 3px; 
             cursor: pointer; 
             border: 1px solid #000; 
@@ -146,7 +176,7 @@
         }
         .q-b:hover { background-color: #ddd; }
 
-        /* UI & Tiện ích */
+        /* --- UI & Tiện ích --- */
         .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
         .pulse-ring { width: 40px; height: 40px; border-radius: 50%; border: 4px solid #4f46e5; animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
@@ -202,34 +232,36 @@
             const rowsPerCol = isA5 ? 10 : 25;
 
             return (
-                <div className={`omr-item ${isA5 ? 'is-a5' : ''}`}>
+                <div className="omr-item">
                     <div className="anchor tl"></div><div className="anchor tr"></div><div className="anchor bl"></div><div className="anchor br"></div>
-                    <div className="omr-inner-container">
-                        <div className="header-section">
-                            <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
-                            <div className="flex flex-col gap-1">
-                                <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
-                                <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
-                                <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
-                            </div>
+                    
+                    {/* Header */}
+                    <div className="header-section">
+                        <div className="header-title"><h1>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h1></div>
+                        <div className="flex flex-col gap-1">
+                            <div className="info-row"><div className="info-line flex-[2]"><span className="info-label">Họ tên:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">SBD:</span><div className="info-dots"></div></div></div>
+                            <div className="info-row"><div className="info-line flex-1"><span className="info-label">Lớp:</span><div className="info-dots"></div></div><div className="info-line flex-1"><span className="info-label">Ngày thi:</span><div className="info-dots"></div></div></div>
+                            <div className="info-row mt-1 pt-1 border-t border-gray-300"><div className="info-line flex-[2]"><span className="info-label">Môn:</span><div className="info-dots font-bold pl-2">{data.subject}</div></div><div className="info-line flex-1"><span className="info-label text-red-600">ĐIỂM:</span><div className="info-dots"></div></div></div>
                         </div>
-                        <div className="body-section">
-                            <div className="left-panel">
-                                <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
-                                <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
-                            </div>
-                            <div className="right-panel">
-                                <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'2px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
-                                <div className="ans-grid">
-                                    {Array.from({length: cols}).map((_, cIdx) => (
-                                        <div key={cIdx} className="ans-col">
-                                            {Array.from({length: rowsPerCol}).map((_, rIdx) => {
-                                                const qNum = cIdx * rowsPerCol + rIdx + 1;
-                                                return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="body-section">
+                        <div className="left-panel">
+                            <div className="id-box"><div className="box-title">SỐ BÁO DANH</div><div className="grid-bubbles">{Array.from({length: 6}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                            <div className="id-box"><div className="box-title">MÃ ĐỀ</div><div className="grid-bubbles">{Array.from({length: 3}).map((_,i) => <BubbleColumn key={i}/>)}</div></div>
+                        </div>
+                        <div className="right-panel">
+                            <div className="box-title" style={{background:'white', color:'black', borderBottom:'1px solid #000', marginBottom:'2px'}}>PHẦN TRẢ LỜI (Tô kín ô tròn)</div>
+                            <div className="ans-grid">
+                                {Array.from({length: cols}).map((_, cIdx) => (
+                                    <div key={cIdx} className="ans-col">
+                                        {Array.from({length: rowsPerCol}).map((_, rIdx) => {
+                                            const qNum = cIdx * rowsPerCol + rIdx + 1;
+                                            return qNum <= totalQ ? <QuestionRow key={qNum} num={qNum} /> : null;
+                                        })}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -244,6 +276,7 @@
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
             
+            // States
             const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
             const [sessionId, setSessionId] = useState(null);
@@ -276,6 +309,7 @@
                 alert("Đã lưu cấu hình!");
             };
 
+            // --- AI KEY READER ---
             const callGeminiVision = async (base64) => {
                 const key = getRandomKey();
                 if (!key) { alert("Chưa nạp API Key ở trang chủ!"); return; }
@@ -317,6 +351,7 @@
                 }
             };
 
+            // --- LOGIC ---
             const createSession = async () => {
                 if (!sessionName || !inputText) return alert("Nhập đủ thông tin!");
                 const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText)));
@@ -416,7 +451,7 @@
                                 <div className="lg:col-span-4 space-y-4">
                                     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">
                                         {aiReading && (
-                                            <div className="ai-loading">
+                                            <div className="ai-scanning-overlay">
                                                 <div className="pulse-ring"></div>
                                                 <span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span>
                                             </div>
