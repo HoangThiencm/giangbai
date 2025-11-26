@@ -6,6 +6,15 @@
     <title>Hệ thống Giáo Viên AI - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .file-input-hidden {
+            position: absolute;
+            opacity: 0;
+            width: 0.1px;
+            height: 0.1px;
+            overflow: hidden;
+        }
+    </style>
     <script>
         // MODULE QUẢN LÝ TẬP TRUNG
         const SystemConfig = {
@@ -107,11 +116,22 @@
                     localStorage.removeItem('modules_file_name');
                     location.reload();
                 }
+            },
+
+            // 9. Mở modal cấu hình
+            openConfigModal: () => {
+                document.getElementById('configModal').classList.remove('hidden');
+                updateConfigModal();
+            },
+
+            // 10. Đóng modal cấu hình
+            closeConfigModal: () => {
+                document.getElementById('configModal').classList.add('hidden');
             }
         };
 
-        // XỬ LÝ GIAO DIỆN
-        function updateConfigStatus() {
+        // XỬ LÝ GIAO DIỆN MODAL
+        function updateConfigModal() {
             const apiKeys = SystemConfig.getApiKeys();
             const modules = SystemConfig.getModules();
             const defaultModule = SystemConfig.getDefaultModule();
@@ -142,8 +162,8 @@
                                 <p class="text-xs text-gray-500">Mặc định: ${defaultModule}</p>
                             </div>
                         </div>
-                        <button onclick="SystemConfig.clearConfig()" class="mt-3 text-red-500 text-xs hover:underline">
-                            <i class="fas fa-redo mr-1"></i>Xóa cấu hình
+                        <button onclick="SystemConfig.clearConfig()" class="mt-3 text-red-500 text-xs hover:underline flex items-center gap-1">
+                            <i class="fas fa-redo"></i> Xóa cấu hình
                         </button>
                     </div>
                 `;
@@ -170,11 +190,16 @@
                     localStorage.setItem('modules_file_name', result.fileName);
                 }
                 
-                updateConfigStatus();
+                updateConfigModal();
                 alert(`✅ Đã nạp ${result.count} ${type === 'keys' ? 'API Keys' : 'Modules'} từ file "${result.fileName}"!`);
             }).catch(error => {
                 alert(`❌ Lỗi: ${error}`);
             });
+        }
+
+        function triggerFileInput(type) {
+            const inputId = type === 'keys' ? 'keysFileInput' : 'modulesFileInput';
+            document.getElementById(inputId).click();
         }
 
         function loadPage() {
@@ -184,10 +209,15 @@
             // Hiển thị email user
             const email = localStorage.getItem('userEmail');
             if(email) document.getElementById('userEmailDisplay').innerText = email;
-            
-            // Cập nhật trạng thái cấu hình
-            updateConfigStatus();
         }
+
+        // Đóng modal khi click bên ngoài
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('configModal');
+            if (event.target === modal) {
+                SystemConfig.closeConfigModal();
+            }
+        });
     </script>
 </head>
 <body class="bg-gray-50 font-sans min-h-screen" onload="loadPage()">
@@ -201,53 +231,19 @@
                     <p class="text-xs text-indigo-300 font-mono" id="userEmailDisplay">...</p>
                 </div>
             </div>
-            <button onclick="SystemConfig.logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-1 rounded transition">
-                <i class="fas fa-sign-out-alt mr-1"></i> Thoát
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="SystemConfig.openConfigModal()" class="text-white hover:text-yellow-300 font-bold text-sm border border-white/30 hover:border-yellow-300 px-3 py-1 rounded transition flex items-center gap-2">
+                    <i class="fas fa-cog"></i> Cấu hình
+                </button>
+                <button onclick="SystemConfig.logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-1 rounded transition">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Thoát
+                </button>
+            </div>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto p-6">
         
-        <!-- PHẦN CẤU HÌNH HỆ THỐNG -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 mb-8 relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-2 h-full bg-yellow-500"></div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-                <i class="fas fa-cogs text-yellow-500"></i> Cấu Hình Hệ Thống AI
-            </h2>
-            <p class="text-sm text-gray-500 mb-4">
-                Cần nạp 2 file để hệ thống hoạt động:
-                <br><b>1. API Keys.txt</b> - Mỗi dòng là 1 API Key
-                <br><b>2. Modules.txt</b> - Mỗi dòng là 1 module Gemini (ví dụ: gemini-2.5-flash)
-            </p>
-
-            <div id="configStatus" class="hidden mb-4"></div>
-
-            <div id="uploadArea" class="space-y-4">
-                <!-- UPLOAD API KEYS -->
-                <div class="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:bg-blue-50 transition cursor-pointer relative bg-blue-25">
-                    <input type="file" id="keysFileInput" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                           onchange="handleFileSelect(event, 'keys')">
-                    <div class="pointer-events-none">
-                        <i class="fas fa-key text-3xl text-blue-500 mb-3"></i>
-                        <h3 class="font-bold text-gray-700">File API Keys.txt</h3>
-                        <p class="text-xs text-gray-400 mt-1">Mỗi dòng chứa 1 API Key Gemini</p>
-                    </div>
-                </div>
-
-                <!-- UPLOAD MODULES -->
-                <div class="border-2 border-dashed border-green-300 rounded-lg p-6 text-center hover:bg-green-50 transition cursor-pointer relative bg-green-25">
-                    <input type="file" id="modulesFileInput" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                           onchange="handleFileSelect(event, 'modules')">
-                    <div class="pointer-events-none">
-                        <i class="fas fa-cube text-3xl text-green-500 mb-3"></i>
-                        <h3 class="font-bold text-gray-700">File Modules.txt</h3>
-                        <p class="text-xs text-gray-400 mt-1">Mỗi dòng chứa 1 module (ví dụ: gemini-2.5-flash)</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- CÔNG CỤ DẠY HỌC -->
         <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Công Cụ Dạy Học</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -290,9 +286,94 @@
 
         </div>
     </div>
+
+    <!-- MODAL CẤU HÌNH -->
+    <div id="configModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="bg-indigo-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-cogs"></i>
+                        Cấu Hình Hệ Thống AI
+                    </h2>
+                    <button onclick="SystemConfig.closeConfigModal()" class="text-white hover:text-yellow-300 text-xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <p class="text-indigo-100 text-sm mt-2">
+                    Cần nạp 2 file để hệ thống hoạt động
+                </p>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <!-- Trạng thái cấu hình -->
+                <div id="configStatus" class="hidden mb-6"></div>
+
+                <!-- Vùng upload -->
+                <div id="uploadArea" class="space-y-4">
+                    <div class="text-center text-gray-600 mb-4">
+                        <p class="font-semibold">Cần nạp 2 file để hệ thống hoạt động:</p>
+                        <p class="text-sm">1. <b>API Keys.txt</b> - Mỗi dòng là 1 API Key</p>
+                        <p class="text-sm">2. <b>Modules.txt</b> - Mỗi dòng là 1 module Gemini</p>
+                    </div>
+
+                    <!-- UPLOAD API KEYS -->
+                    <div class="border-2 border-dashed border-blue-300 rounded-xl p-5 text-center hover:bg-blue-50 transition cursor-pointer bg-blue-25 relative">
+                        <input type="file" id="keysFileInput" accept=".txt" class="file-input-hidden" 
+                               onchange="handleFileSelect(event, 'keys')">
+                        <div class="pointer-events-none">
+                            <i class="fas fa-key text-3xl text-blue-500 mb-3"></i>
+                            <h3 class="font-bold text-gray-700 text-lg">File API Keys.txt</h3>
+                            <p class="text-sm text-gray-500 mt-2">Mỗi dòng chứa 1 API Key Gemini</p>
+                        </div>
+                        <button onclick="triggerFileInput('keys')" 
+                                class="absolute bottom-3 right-3 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                    </div>
+
+                    <!-- UPLOAD MODULES -->
+                    <div class="border-2 border-dashed border-green-300 rounded-xl p-5 text-center hover:bg-green-50 transition cursor-pointer bg-green-25 relative">
+                        <input type="file" id="modulesFileInput" accept=".txt" class="file-input-hidden" 
+                               onchange="handleFileSelect(event, 'modules')">
+                        <div class="pointer-events-none">
+                            <i class="fas fa-cube text-3xl text-green-500 mb-3"></i>
+                            <h3 class="font-bold text-gray-700 text-lg">File Modules.txt</h3>
+                            <p class="text-sm text-gray-500 mt-2">Mỗi dòng chứa 1 module (ví dụ: gemini-2.5-flash)</p>
+                        </div>
+                        <button onclick="triggerFileInput('modules')" 
+                                class="absolute bottom-3 right-3 bg-green-500 hover:bg-green-600 text-white p-2 rounded-full transition">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hướng dẫn -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 class="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-blue-500"></i>
+                        Hướng dẫn:
+                    </h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Tạo file <b>API Keys.txt</b> với mỗi dòng là 1 API Key</li>
+                        <li>• Tạo file <b>Modules.txt</b> với mỗi dòng là 1 module</li>
+                        <li>• Hệ thống sẽ tự động ghi nhớ cấu hình</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <footer class="text-center p-6 text-gray-400 text-sm mt-8">
         &copy; 2025 Trợ Lý Giáo Viên AI. Phát triển bởi Hoàng Tấn Thiên - SĐT/Zalo: 0984410912.
     </footer>
+
+    <!-- File inputs ẩn -->
+    <input type="file" id="keysFileInput" accept=".txt" class="file-input-hidden" 
+           onchange="handleFileSelect(event, 'keys')">
+    <input type="file" id="modulesFileInput" accept=".txt" class="file-input-hidden" 
+           onchange="handleFileSelect(event, 'modules')">
 </body>
 </html>
