@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chấm Thi OMR Pro - Optimized Layout</title>
+    <title>Chấm Thi OMR Pro - Fix Tràn Trang</title>
     
+    <!-- Thư viện -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -17,121 +18,136 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        /* --- CẤU HÌNH IN ẤN TUYỆT ĐỐI --- */
+        /* --- CẤU HÌNH IN ẤN (SAFE ZONE) --- */
         @page { 
-            size: A4; 
-            margin: 0; /* Quan trọng: Xóa lề trình duyệt */
+            size: A4 portrait; 
+            margin: 0; 
         }
 
         .sheet-a4 {
             width: 210mm; 
-            height: 296mm; /* Chuẩn A4 */
+            height: 296mm; 
             background: white; 
             margin: 20px auto;
             position: relative; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             overflow: hidden; 
             page-break-after: always;
-        }
-
-        /* Layout A5: Sử dụng Grid để chia đôi chính xác */
-        .layout-2up {
-            display: grid;
-            grid-template-rows: 1fr 1fr; /* Chia đôi chiều cao đều nhau (50%-50%) */
-            height: 100%;
-        }
-        
-        .layout-2up .omr-item { 
-            border-bottom: 1px dashed #999; 
-            overflow: hidden;
-            height: 100%; 
-            position: relative;
             display: flex;
             flex-direction: column;
+            /* Căn nội dung lên trên cùng */
+            justify-content: flex-start; 
+            padding-top: 5mm; /* Lề trên an toàn */
         }
-        .layout-2up .omr-item:last-child { border-bottom: none; }
+
+        /* Layout A5: Chiều cao an toàn 135mm (Tổng 2 phiếu = 270mm < 297mm A4) */
+        .layout-2up .omr-item { 
+            height: 135mm; /* Rút ngắn chiều cao để tránh tràn */
+            width: 100%;
+            border-bottom: 1px dashed #000; 
+            box-sizing: border-box;
+            position: relative;
+            margin-bottom: 5mm; /* Khoảng cách giữa 2 phiếu */
+        }
+        .layout-2up .omr-item:last-child { border-bottom: none; margin-bottom: 0; }
         
         /* Layout A4 full */
-        .layout-1up { display: block; height: 100%; }
-        .layout-1up .omr-item { height: 100%; position: relative; }
+        .layout-1up .omr-item { height: 100%; }
 
-        /* Nội dung bên trong */
+        /* Container nội dung: Đẩy sát lề */
         .omr-inner-container {
-            padding: 8mm 10mm;
-            flex: 1;
+            padding: 5mm 10mm; /* Lề trên dưới 5mm, trái phải 10mm */
+            height: 100%;
             display: flex; 
             flex-direction: column;
             box-sizing: border-box;
-            justify-content: space-between;
         }
 
         /* Anchors */
-        .anchor { position: absolute; width: 10px; height: 10px; background: black; z-index: 99; }
-        .tl { top: 6mm; left: 6mm; } .tr { top: 6mm; right: 6mm; }
-        .bl { bottom: 6mm; left: 6mm; } .br { bottom: 6mm; right: 6mm; }
+        .anchor { position: absolute; width: 8px; height: 8px; background: black; z-index: 99; }
+        .tl { top: 5mm; left: 5mm; } .tr { top: 5mm; right: 5mm; }
+        .bl { bottom: 5mm; left: 5mm; } .br { bottom: 5mm; right: 5mm; }
 
         /* --- HEADER --- */
-        .header-section { border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 4px; flex-shrink: 0; }
-        .header-title h1 { font-size: 15pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.1; margin: 0;}
+        .header-section { 
+            border-bottom: 2px solid black; 
+            padding-bottom: 2px; 
+            margin-bottom: 3px; 
+            flex-shrink: 0; 
+        }
+        .header-title h1 { font-size: 16pt; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1; margin: 0;}
         
-        .info-row { display: flex; gap: 10px; margin-top: 2px; align-items: flex-end;}
+        .info-row { display: flex; gap: 8px; margin-top: 2px; align-items: flex-end;}
         .info-line { display: flex; align-items: flex-end; font-size: 9pt; flex: 1; white-space: nowrap; }
-        .info-label { font-weight: bold; margin-right: 4px; font-size: 9pt;}
-        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 14px; }
+        .info-label { font-weight: bold; margin-right: 4px; font-size: 8pt;}
+        .info-dots { border-bottom: 1px dotted #000; flex: 1; height: 12px; }
 
         /* --- BODY --- */
         .body-section { 
             display: flex; 
             flex: 1; 
-            gap: 10px; 
+            gap: 8px; 
             align-items: stretch; 
             overflow: hidden; 
-            padding-top: 4px;
+            padding-top: 2px;
         }
         
-        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 6px; }
-        .id-box { border: 2px solid black; padding: 4px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
-        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 2px 0; margin-bottom: 4px; }
+        /* Cột Trái (SBD/Mã đề) */
+        .left-panel { width: 28%; display: flex; flex-direction: column; gap: 4px; }
+        .id-box { border: 2px solid black; padding: 2px; border-radius: 4px; flex: 1; display: flex; flex-direction: column; }
+        .box-title { font-size: 8pt; font-weight: bold; text-align: center; background: #000; color: #fff; padding: 1px 0; margin-bottom: 2px; }
         
         .grid-bubbles { display: flex; justify-content: space-around; height: 100%; align-items: flex-start; }
-        .col-bubble { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 98%; }
-        .write-box { width: 100%; height: 14px; border: 1px solid #333; margin-bottom: 2px; }
         
-        /* Style mặc định (cho A4 100 câu) */
-        .b { width: 12px; height: 12px; border: 1px solid #000; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; }
-        .q-b { width: 13px; height: 13px; font-size: 8px; font-weight: bold; margin-right: 3px; cursor: pointer; border: 1px solid #000; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-        .q-row { display: flex; align-items: center; justify-content: flex-end; }
-        .q-num { width: 20px; font-size: 10pt; font-weight: bold; text-align: right; margin-right: 4px; line-height: 1; }
+        /* FIX LỖI MÃ ĐỀ BỊ CẮT: Dùng justify-between để dàn đều */
+        .col-bubble { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            height: 98%; 
+            justify-content: space-between; /* Quan trọng: Dàn đều từ 0-9 */
+        }
+        .write-box { width: 100%; height: 12px; border: 1px solid #333; margin-bottom: 1px; }
+        
+        /* Bong bóng SBD nhỏ gọn */
+        .b { 
+            width: 11px; height: 11px; 
+            border: 1px solid #000; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 7px; font-weight: 700; font-family: 'Roboto Mono', monospace; line-height: 1; 
+        }
 
-        /* --- STYLE RIÊNG CHO PHIẾU A5 (30 CÂU) - PHÓNG TO --- */
-        .is-a5 .header-title h1 { font-size: 18pt; margin-bottom: 5px; }
-        .is-a5 .info-label { font-size: 10pt; }
-        .is-a5 .info-line { font-size: 11pt; margin-bottom: 4px; }
-        
-        .is-a5 .box-title { font-size: 9pt; padding: 3px 0; }
-        .is-a5 .write-box { height: 16px; margin-bottom: 4px; }
-        
-        /* Bong bóng to hơn */
-        .is-a5 .b { width: 14px; height: 14px; font-size: 9px; border-width: 1.5px; }
-        .is-a5 .q-b { width: 15px; height: 15px; font-size: 9px; margin-right: 6px; border-width: 1.5px; }
-        .is-a5 .q-num { font-size: 12pt; width: 25px; margin-right: 6px; }
-        
-        /* Khoảng cách thoáng hơn */
-        .is-a5 .col-bubble { justify-content: space-evenly; }
-        .is-a5 .ans-col { justify-content: space-evenly; }
-        .is-a5 .id-box { padding: 6px; }
-        .is-a5 .right-panel { padding: 8px; }
-
-        /* Panel Phải */
-        .right-panel { flex: 1; border: 2px solid black; padding: 6px; border-radius: 4px; display: flex; flex-direction: column; }
+        /* Cột Phải (Câu hỏi) */
+        .right-panel { flex: 1; border: 2px solid black; padding: 4px; border-radius: 4px; display: flex; flex-direction: column; }
         .ans-grid { display: flex; flex: 1; height: 100%; }
-        .ans-col { flex: 1; border-right: 1px dashed #999; padding: 0 6px; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .ans-col { 
+            flex: 1; 
+            border-right: 1px dashed #999; 
+            padding: 0 4px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; /* Dàn đều 10 câu */
+        }
         .ans-col:last-child { border-right: none; }
         
+        .q-row { display: flex; align-items: center; justify-content: flex-end; }
+        .q-num { width: 18px; font-size: 9pt; font-weight: bold; text-align: right; margin-right: 4px; line-height: 1; }
+        
+        /* Bong bóng Đáp án (Tăng kích thước theo yêu cầu) */
+        .q-b { 
+            width: 13px; height: 13px; /* TO HƠN */
+            font-size: 8px; font-weight: bold;
+            margin-right: 3px; 
+            cursor: pointer; 
+            border: 1px solid #000; 
+            border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+        }
         .q-b:hover { background-color: #ddd; }
 
-        /* Loading AI */
-        .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; border-radius: 0.5rem; border: 2px solid #4f46e5; }
+        /* UI & Tiện ích */
+        .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
         .pulse-ring { width: 40px; height: 40px; border-radius: 50%; border: 4px solid #4f46e5; animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
 
@@ -228,7 +244,6 @@
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
             
-            // States
             const [sessionName, setSessionName] = useState("");
             const [inputText, setInputText] = useState("");
             const [sessionId, setSessionId] = useState(null);
