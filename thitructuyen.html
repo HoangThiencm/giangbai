@@ -38,32 +38,48 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
 
-        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT ---
-        const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
-        const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, ''));
+        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT (UPDATED) ---
+        // Giữ hàm này đơn giản để không làm biến dạng nội dung gốc
+        const normalizeText = (text) => text ? text.trim() : ""; 
+        
+        // Thay đổi hàm này để không xóa nhầm ký tự đầu câu nếu nó không phải là dạng "1. " hay "A. "
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            // Chỉ xóa prefix nếu nó thực sự là dạng liệt kê (A. B. 1. 2.)
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s+/, '');
+        };
 
-        // --- COMPONENT HIỂN THỊ TOÁN (SIMPLE) ---
+        // --- COMPONENT HIỂN THỊ TOÁN (SIMPLE & STABLE - UPDATED) ---
+        // Sử dụng logic tách chuỗi đơn giản của 1.html để đảm bảo hiển thị đúng mọi ký tự đặc biệt
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
-                if (!text || !ref.current) return;
-                let processed = normalizeText(text)
-                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$') 
-                    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') 
-                    .replace(/`([^`]+)`/g, '$$$1$$');
-
-                const parts = processed.split(/(\$[^$]+\$)/g);
-                ref.current.innerHTML = "";
-                parts.forEach(part => {
-                    if (!part) return;
-                    if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } 
-                        catch { span.textContent = part; }
-                        ref.current.appendChild(span);
-                    } else { ref.current.appendChild(document.createTextNode(part)); }
-                });
+                if (!text) return;
+                
+                // KHÔNG dùng các hàm .replace() phức tạp nữa
+                // Chỉ chia cắt chuỗi bằng dấu $ như 1.html
+                const parts = text.split(/(\$[^$]+\$)/g);
+                
+                if (ref.current) {
+                    ref.current.innerHTML = "";
+                    parts.forEach(part => {
+                        if (part.startsWith("$") && part.endsWith("$")) {
+                            const span = document.createElement("span");
+                            try { 
+                                // Render Toán
+                                katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); 
+                            } 
+                            catch { span.textContent = part; }
+                            ref.current.appendChild(span);
+                        } else {
+                            // Render văn bản thường (giữ nguyên gốc các ký tự [], {}, -->)
+                            ref.current.appendChild(document.createTextNode(part)); 
+                        }
+                    });
+                }
             }, [text]);
+            
+            // Giữ nguyên class font-serif để hiển thị đẹp hơn 1.html
             return <span ref={ref} className="math-content font-serif text-lg text-gray-800 inline-block leading-relaxed" />;
         };
 
