@@ -18,15 +18,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { background-color: #f3f4f6; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', sans-serif; user-select: none; } /* Chống bôi đen text */
         .katex { font-size: 1.1em; color: #1e3a8a; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 50; display: flex; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 600px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        
+        /* Chế độ thi nghiêm ngặt */
+        .exam-lockdown { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: white; overflow-y: auto; padding: 20px; }
+        .lockdown-warning { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(220, 38, 38, 0.95); z-index: 10000; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;"> <!-- Chặn chuột phải toàn trang -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -34,40 +38,34 @@
         const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
         const MODEL_NAME = "gemini-2.5-flash";
 
-        // --- UTILS ---
+        // ... existing helper functions (normalizeText, cleanOptionText, MathText, QRModal, AnswerModal, QuestionItem, ReviewExam, TeacherDashboard, CreateExam, ResultDetail) ...
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
+        const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
+        const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, '')); // Update Regex Client Side
 
-        // --- HELPER: LÀM SẠCH & CHUẨN HÓA FONT ---
-        const normalizeText = (text) => text ? text.trim() : ""; 
-        const cleanOptionText = (text) => {
-            if (!text) return "";
-            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s+/, '');
-        };
-
-        // --- COMPONENT HIỂN THỊ TOÁN ---
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
-                if (!text) return;
-                const parts = text.split(/(\$[^$]+\$)/g);
-                if (ref.current) {
-                    ref.current.innerHTML = "";
-                    parts.forEach(part => {
-                        if (part.startsWith("$") && part.endsWith("$")) {
-                            const span = document.createElement("span");
-                            try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } 
-                            catch { span.textContent = part; }
-                            ref.current.appendChild(span);
-                        } else {
-                            ref.current.appendChild(document.createTextNode(part)); 
-                        }
-                    });
-                }
+                if (!text || !ref.current) return;
+                let processed = normalizeText(text)
+                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$') 
+                    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') 
+                    .replace(/`([^`]+)`/g, '$$$1$$');
+                const parts = processed.split(/(\$[^$]+\$)/g);
+                ref.current.innerHTML = "";
+                parts.forEach(part => {
+                    if (!part) return;
+                    if (part.startsWith("$") && part.endsWith("$")) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } 
+                        catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else { ref.current.appendChild(document.createTextNode(part)); }
+                });
             }, [text]);
             return <span ref={ref} className="math-content font-serif text-lg text-gray-800 inline-block leading-relaxed" />;
         };
-
         const QRModal = ({ link, onClose }) => {
             const qrRef = useRef();
             useEffect(() => {
@@ -87,12 +85,10 @@
                 </div>
             );
         };
-
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
             const [status, setStatus] = useState("");
-            
             const handlePaste = async (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -104,7 +100,6 @@
                     }
                 }
             };
-
             const processImage = async (blob) => {
                 setStatus("🤖 AI đang quét ảnh tìm đáp án...");
                 try {
@@ -126,7 +121,6 @@
                     };
                 } catch (e) { setStatus("❌ Lỗi AI: " + e.message); }
             };
-
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -144,12 +138,10 @@
                 </div>
             );
         };
-
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
             const handleQChange = (val) => onUpdate('question', val);
             const handleOptChange = (val, idx) => onUpdate('options', val, idx);
-
             if (isEditing) {
                 return (
                     <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-400 mb-6 relative">
@@ -167,7 +159,9 @@
                             {q.options.map((opt, idx) => (
                                 <div key={idx} className={`flex items-center gap-2 p-3 rounded border ${q.correct_index === idx ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
                                     <input type="radio" name={`q-${index}`} checked={q.correct_index === idx} onChange={() => onOptionChange(idx)} className="w-5 h-5 cursor-pointer accent-green-600" />
-                                    <div className="flex-1"><input className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-1" value={opt} onChange={(e) => handleOptChange(e.target.value, idx)} placeholder={`Đáp án ${String.fromCharCode(65+idx)}`}/></div>
+                                    <div className="flex-1">
+                                        <input className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-1" value={opt} onChange={(e) => handleOptChange(e.target.value, idx)} placeholder={`Đáp án ${String.fromCharCode(65+idx)}`}/>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -177,9 +171,14 @@
             return (
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6 hover:shadow-md transition relative group">
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition duration-200">
-                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm"><i className="fas fa-pencil-alt"></i> Sửa</button>
+                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm">
+                            <i className="fas fa-pencil-alt"></i> Sửa
+                        </button>
                     </div>
-                    <div className="flex gap-2 mb-4 pr-20"><span className="font-bold text-indigo-800 whitespace-nowrap text-lg">Câu {index + 1}:</span><div className="font-medium text-gray-800 text-lg leading-relaxed"><MathText text={q.question} /></div></div>
+                    <div className="flex gap-2 mb-4 pr-20">
+                        <span className="font-bold text-indigo-800 whitespace-nowrap text-lg">Câu {index + 1}:</span>
+                        <div className="font-medium text-gray-800 text-lg leading-relaxed"><MathText text={q.question} /></div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {q.options.map((opt, idx) => (
                             <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${q.correct_index === idx ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-transparent'}`}>
@@ -189,11 +188,10 @@
                             </div>
                         ))}
                     </div>
-                    {q.correct_index === -1 && (<div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng! Vui lòng bấm "Sửa".</div>)}
+                    {q.correct_index === -1 && <div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng! Vui lòng bấm "Sửa".</div>}
                 </div>
             );
         };
-
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions, apiKeys }) => {
             const [showAnsModal, setShowAnsModal] = useState(false);
             const handleApplyAnswers = (text) => {
@@ -201,10 +199,7 @@
                 const regex = /(\d+)\s*([A-D])/g;
                 let match, newMap = {};
                 while ((match = regex.exec(raw)) !== null) newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
-                const newQs = questions.map((q, i) => {
-                    if (newMap[i] !== undefined) return { ...q, correct_index: newMap[i] };
-                    return q;
-                });
+                const newQs = questions.map((q, i) => { if (newMap[i] !== undefined) return { ...q, correct_index: newMap[i] }; return q; });
                 onUpdateQuestions(newQs);
                 alert(`Đã cập nhật đáp án cho ${Object.keys(newMap).length} câu!`);
             };
@@ -215,9 +210,7 @@
                 onUpdateQuestions(newQs);
             };
             const handleCorrectChange = (qIdx, optIdx) => {
-                const newQs = [...questions];
-                newQs[qIdx].correct_index = optIdx;
-                onUpdateQuestions(newQs);
+                const newQs = [...questions]; newQs[qIdx].correct_index = optIdx; onUpdateQuestions(newQs);
             };
             return (
                 <div className="max-w-5xl mx-auto p-4">
@@ -231,12 +224,11 @@
                         </div>
                     </div>
                     <div className="space-y-2 pb-20">
-                        {questions.map((q, i) => (<QuestionItem key={i} q={q} index={i} onUpdate={(field, val, optIdx) => handleQuestionUpdate(i, field, val, optIdx)} onOptionChange={(optIdx) => handleCorrectChange(i, optIdx)}/>))}
+                        {questions.map((q, i) => (<QuestionItem key={i} q={q} index={i} onUpdate={(field, val, optIdx) => handleQuestionUpdate(i, field, val, optIdx)} onOptionChange={(optIdx) => handleCorrectChange(i, optIdx)} />))}
                     </div>
                 </div>
             );
         };
-
         const TeacherDashboard = ({ onViewDetail, onCreateNew }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
@@ -257,7 +249,6 @@
                 </div>
             );
         };
-
         const CreateExam = ({ onBack }) => {
             const [step, setStep] = useState("upload");
             const [form, setForm] = useState({ title: "", school: "", subject: "", grade: "", duration: 45, startTime: "", endTime: "" });
@@ -269,7 +260,6 @@
 
             useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); }, []);
             const handleFileSelect = (e) => { const f = e.target.files[0]; if(f) setFileName(f.name); }
-
             const handleParse = async () => {
                 if (!apiKeys.length) return alert("Thiếu API Key!");
                 if (!form.title || !form.startTime) return alert("Nhập thông tin!");
@@ -294,7 +284,6 @@
                 } catch (e) { alert("Lỗi đọc file: " + (e.response?.data?.detail || e.message)); } 
                 finally { setLoading(false); }
             };
-
             const handleSave = async () => {
                 setLoading(true);
                 try {
@@ -307,9 +296,7 @@
                     alert("✅ Tạo đề thành công!"); onBack();
                 } catch (e) { alert("Lỗi lưu: " + e.message); } finally { setLoading(false); }
             };
-
             if (step === "review") return <ReviewExam questions={parsedQuestions} onUpdateQuestions={setParsedQuestions} onSave={handleSave} onBack={()=>setStep("upload")} apiKeys={apiKeys} />;
-
             return (
                 <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg">
                     <button onClick={onBack} className="mb-4 text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button>
@@ -331,7 +318,6 @@
                 </div>
             );
         };
-
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             useEffect(() => { const f = () => axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); f(); const i = setInterval(f, 5000); return () => clearInterval(i); }, [examId]);
@@ -342,23 +328,21 @@
                         if (row.details_json) {
                             const details = JSON.parse(row.details_json);
                             if (details.length > 0) {
-                                wrongDetailsStr = details.map((d, i) => {
-                                    return `${i+1}. ${d.question}\n   -> Chọn: ${d.student_choice} | Đáp án đúng: ${d.correct_answer}`;
-                                }).join("\n\n");
+                                wrongDetailsStr = details.map((d, i) => `${i+1}. ${d.question}\n   -> Chọn: ${d.student_choice} | Đáp án đúng: ${d.correct_answer}`).join("\n\n");
                             }
                         }
                     } catch (e) { wrongDetailsStr = "Lỗi đọc dữ liệu chi tiết"; }
                     return {
-                        "STT": index + 1, "Số Báo Danh": row.sbd, "Họ và Tên": row.student_name, "Lớp": row.student_class, "Điểm số": row.score,
-                        "Số câu đúng": row.correct_count, "Số câu sai": row.total_questions - row.correct_count, "Tổng số câu": row.total_questions,
-                        "Nhận xét của AI": row.ai_feedback, "Chi tiết các câu làm sai": wrongDetailsStr, "Thời gian nộp bài": new Date(row.created_at).toLocaleString('vi-VN')
+                        "STT": index + 1, "Số Báo Danh": row.sbd, "Họ và Tên": row.student_name, "Lớp": row.student_class,
+                        "Điểm số": row.score, "Số câu đúng": row.correct_count, "Số câu sai": row.total_questions - row.correct_count,
+                        "Tổng số câu": row.total_questions, "Nhận xét của AI": row.ai_feedback, "Chi tiết các câu làm sai": wrongDetailsStr,
+                        "Thời gian nộp bài": new Date(row.created_at).toLocaleString('vi-VN')
                     };
                 });
                 const ws = XLSX.utils.json_to_sheet(exportData);
-                ws['!cols'] = [{wch: 5}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 50}, {wch: 80}, {wch: 20}];
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "KetQuaThi");
-                XLSX.writeFile(wb, `KetQua_Thi_${examId}.xlsx`);
+                const wscols = [{wch: 5}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 50}, {wch: 80}, {wch: 20}];
+                ws['!cols'] = wscols;
+                const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KetQuaThi"); XLSX.writeFile(wb, `KetQua_Thi_${examId}.xlsx`);
             };
             return (
                 <div className="max-w-6xl mx-auto p-6"><div className="flex justify-between mb-6"><button onClick={onBack} className="font-bold text-gray-500">Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-file-excel"></i> Xuất Excel</button></div>
@@ -374,135 +358,143 @@
             const [timeLeft, setTimeLeft] = useState(0);
             const [examCode, setExamCode] = useState("");
             const [warnings, setWarnings] = useState(0);
-            const [aiGenerating, setAiGenerating] = useState(false);
+            const [isLocked, setIsLocked] = useState(false); // Trạng thái bị khóa do vi phạm
 
+            // 1. Chống gian lận (Tab switch / Minimize)
             useEffect(() => {
                 if (step !== "exam") return;
+
                 const handleVisibilityChange = () => {
                     if (document.hidden) {
-                        setWarnings(prev => {
-                            const newVal = prev + 1;
-                            if (newVal >= 3) { alert("Bạn đã vi phạm quy chế thi quá 3 lần. Hệ thống sẽ tự động nộp bài."); handleSubmit(true); } 
-                            else { alert(`CẢNH BÁO: Bạn đã rời khỏi màn hình thi! (${newVal}/3)`); }
-                            return newVal;
-                        });
+                        recordViolation("Rời khỏi màn hình thi");
                     }
                 };
+
+                const handleBlur = () => {
+                    recordViolation("Chuyển tab hoặc cửa sổ");
+                };
+
+                const handleFullscreenChange = () => {
+                    if (!document.fullscreenElement) {
+                        setIsLocked(true); // Khóa màn hình lại ngay
+                    }
+                };
+
+                // Chặn chuột phải & Copy Paste
+                const preventCopy = (e) => e.preventDefault();
+                
                 document.addEventListener("visibilitychange", handleVisibilityChange);
-                return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+                window.addEventListener("blur", handleBlur);
+                document.addEventListener("fullscreenchange", handleFullscreenChange);
+                document.addEventListener("contextmenu", preventCopy);
+                document.addEventListener("copy", preventCopy);
+                document.addEventListener("paste", preventCopy);
+                document.addEventListener("keydown", preventReload);
+
+                return () => {
+                    document.removeEventListener("visibilitychange", handleVisibilityChange);
+                    window.removeEventListener("blur", handleBlur);
+                    document.removeEventListener("fullscreenchange", handleFullscreenChange);
+                    document.removeEventListener("contextmenu", preventCopy);
+                    document.removeEventListener("copy", preventCopy);
+                    document.removeEventListener("paste", preventCopy);
+                    document.removeEventListener("keydown", preventReload);
+                };
             }, [step]);
+
+            const preventReload = (e) => {
+                // Chặn F5, Ctrl+R
+                if ((e.which || e.keyCode) == 116 || ((e.which || e.keyCode) == 82 && e.ctrlKey)) {
+                    e.preventDefault();
+                    alert("Không được tải lại trang!");
+                }
+            };
+
+            const recordViolation = (reason) => {
+                setWarnings(prev => {
+                    const newVal = prev + 1;
+                    if (newVal >= 3) {
+                        alert(`BẠN ĐÃ VI PHẠM QUY CHẾ 3 LẦN: ${reason}. BÀI THI SẼ TỰ ĐỘNG NỘP.`);
+                        handleSubmit(true);
+                    } else {
+                        // Hiện cảnh báo Full màn hình
+                        setIsLocked(true); 
+                    }
+                    return newVal;
+                });
+            };
+
+            const enterFullscreen = () => {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen().catch(err => console.log(err));
+                }
+                setIsLocked(false);
+            };
 
             useEffect(() => { setExamCode(Math.floor(Math.random() * 899) + 100); axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => { setExam(res.data); setStep("info"); setTimeLeft(res.data.info.duration_mins * 60); }).catch(() => alert("Lỗi tải đề!")); }, [examId]);
             useEffect(() => { if (step === "exam") { if (timeLeft <= 0) handleSubmit(true); const t = setInterval(() => setTimeLeft(v => v - 1), 1000); return () => clearInterval(t); } }, [step, timeLeft]);
 
             const handleStart = () => { 
                 if(!info.name || !info.class || !info.sbd) return alert("Vui lòng nhập đầy đủ Tên, Lớp, SBD!"); 
+                // Bắt buộc Fullscreen khi bắt đầu
+                enterFullscreen();
+                
                 setExam({...exam, questions: exam.questions.map((q,i)=>({...q, originalIndex:i})).sort(()=>Math.random()-0.5)}); 
                 setStep("exam"); 
             };
             
-            // --- HÀM GỌI AI NHẬN XÉT (Client Side) ---
-            const generateAiFeedback = async (score, correctCount, totalQuestions) => {
-                setAiGenerating(true);
-                // Cố gắng lấy key từ local storage (của giáo viên nếu test chung máy) hoặc từ config
-                // Lưu ý: Trong thực tế, student không có key này, đây là demo để chạy được trên máy test
-                let apiKey = "";
-                const localKeys = localStorage.getItem('global_gemini_keys');
-                if (localKeys) {
-                    const keys = JSON.parse(localKeys);
-                    if (keys.length > 0) apiKey = keys[0];
-                }
-                
-                if (!apiKey) {
-                    // Nếu không có key, trả về default để không lỗi
-                    setAiGenerating(false);
-                    return "Chúc mừng bạn đã hoàn thành bài thi!";
-                }
-
-                try {
-                    const prompt = `Bạn là giáo viên. Học sinh ${info.name} (Lớp ${info.class}) vừa làm bài thi.
-                    Kết quả: ${score} điểm.
-                    Số câu đúng: ${correctCount}/${totalQuestions}.
-                    Hãy đưa ra một nhận xét ngắn gọn (dưới 50 từ), hài hước và động viên học sinh này dựa trên kết quả.
-                    Dùng giọng điệu thân thiện.`;
-
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                    });
-                    const data = await res.json();
-                    if (data.candidates && data.candidates[0].content) {
-                        return data.candidates[0].content.parts[0].text;
-                    }
-                } catch (e) { console.error("AI Error:", e); }
-                finally { setAiGenerating(false); }
-                return "Đã ghi nhận kết quả thi.";
-            };
-
             const handleSubmit = async (auto = false) => { 
-                if (!auto && !confirm("Nộp?")) return; 
+                if (!auto && !confirm("Nộp bài? Bạn sẽ không thể sửa lại.")) return; 
                 
-                // 1. Tính toán điểm số client-side để gọi AI ngay lập tức
-                let correct = 0;
-                let total = exam.questions.length;
-                exam.questions.forEach((q, i) => {
-                    const userAns = answers[i]; // answers theo index hiện tại (đã shuffle)
-                    // Check đúng sai: so sánh userAns với correct_index của câu hỏi q
-                    if (userAns !== undefined && userAns === q.correct_index) {
-                        correct++;
-                    }
-                });
-                const score = ((correct / total) * 10).toFixed(1);
+                // Thoát Fullscreen khi nộp
+                if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
 
-                // 2. Gọi AI nhận xét
-                const aiFeedback = await generateAiFeedback(score, correct, total);
-
-                // 3. Gửi về server lưu trữ
-                const payload = { 
-                    exam_id: examId, 
-                    student_name: info.name, 
-                    sbd: info.sbd, 
-                    student_class: info.class, 
-                    answers: {},
-                    // Gửi kèm feedback do client sinh ra (nếu server hỗ trợ lưu)
-                    // Hoặc chỉ để hiển thị client
-                }; 
+                const payload = { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: {} }; 
                 exam.questions.forEach((q, i) => { if (answers[i] !== undefined) payload.answers[q.originalIndex] = answers[i]; }); 
-                
-                try { 
-                    const res = await axios.post(`${API_BASE}/api/exam/submit`, payload); 
-                    // Merge kết quả từ server với feedback AI vừa tạo
-                    setExam({ ...res.data, feedback: aiFeedback, score: score }); 
-                    setStep("result"); 
-                } catch(e) { alert("Lỗi nộp!"); } 
+                try { const res = await axios.post(`${API_BASE}/api/exam/submit`, payload); setStep("result"); setExam(res.data); } catch(e) { alert("Lỗi nộp!"); } 
             };
 
             if(step === "check") return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
-            if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2><p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p><input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI</button></div>;
+            if(step === "info") return <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold"><MathText text={exam?.info?.title} /></h2><p className="text-sm text-gray-500 mb-4">Mã đề: {examCode}</p><input className="border p-2 w-full mb-2 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-2 w-full mb-2 rounded" placeholder="Lớp (VD: 12A1)" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-2 w-full mb-4 rounded" placeholder="Số Báo Danh" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-blue-600 text-white w-full py-2 rounded font-bold hover:bg-blue-700">VÀO THI (TOÀN MÀN HÌNH)</button></div>;
+            if(step === "result") return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="bg-white p-10 rounded shadow text-center"><h2 className="text-2xl font-bold text-green-700">Kết Quả: {exam.score} điểm</h2><p className="mt-4 italic">{exam.feedback}</p></div></div>;
             
-            if(step === "result") return (
-                <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-                    <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-lg w-full">
-                        <div className="text-6xl mb-4">🎉</div>
-                        <h2 className="text-3xl font-bold text-green-700 mb-2">Hoàn thành!</h2>
-                        <div className="text-5xl font-extrabold text-gray-800 mb-6">{exam.score} <span className="text-2xl text-gray-500 font-medium">điểm</span></div>
-                        
-                        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left relative">
-                            <div className="absolute -top-3 left-4 bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded uppercase tracking-wide">
-                                <i className="fas fa-robot mr-1"></i> AI Nhận Xét
-                            </div>
-                            <p className="mt-2 text-gray-700 italic text-lg leading-relaxed">
-                                {aiGenerating ? "Đang suy nghĩ..." : `"${exam.feedback}"`}
-                            </p>
+            // MÀN HÌNH THI (Có lớp phủ Lockdown)
+            return (
+                <div className="exam-lockdown">
+                    {/* CẢNH BÁO VI PHẠM */}
+                    {isLocked && (
+                        <div className="lockdown-warning">
+                            <h1 className="text-4xl font-bold mb-4">⚠️ CẢNH BÁO VI PHẠM</h1>
+                            <p className="text-xl mb-6">Bạn đã thoát khỏi màn hình thi! ({warnings}/3)</p>
+                            <p className="mb-8">Vui lòng quay lại ngay lập tức, nếu không bài thi sẽ bị hủy.</p>
+                            <button onClick={enterFullscreen} className="bg-white text-red-600 px-8 py-3 rounded-full font-bold text-xl hover:bg-gray-100 shadow-lg animate-bounce">
+                                QUAY LẠI LÀM BÀI
+                            </button>
                         </div>
-                        
-                        <button onClick={()=>window.location.reload()} className="mt-8 text-gray-400 hover:text-gray-600 text-sm underline">Làm bài khác</button>
+                    )}
+
+                    <div className="max-w-3xl mx-auto pb-20 select-none relative z-10">
+                        <div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-20 rounded-lg border-b-4 border-indigo-600">
+                            <div><b className="block text-indigo-900">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div>
+                            <div className="flex items-center gap-3"><span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">Nộp</button></div>
+                        </div>
+                        {exam.questions.map((q, i) => (
+                            <div key={i} className="bg-white p-6 rounded-lg shadow-sm mb-4 border border-gray-200">
+                                <div className="flex gap-2 mb-3"><span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span><div className="font-medium"><MathText text={q.question}/></div></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {q.options.map((o, idx) => (
+                                        <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}>
+                                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div>
+                                            <div className="text-sm"><MathText text={cleanOptionText(o)}/></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
-            
-            return <div className="max-w-3xl mx-auto p-4 pb-20 select-none"><div className="sticky top-0 bg-white p-4 shadow flex justify-between mb-4 z-50 rounded-lg"><div><b className="block">{info.name} - {info.class}</b>{warnings > 0 && <span className="text-red-500 text-xs font-bold">Vi phạm: {warnings}/3</span>}</div><div className="flex items-center gap-3"><span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span><button onClick={()=>handleSubmit(false)} className="bg-green-600 text-white px-4 py-1 rounded shadow hover:bg-green-700">{aiGenerating ? "Đang nộp..." : "Nộp Bài"}</button></div></div>{exam.questions.map((q, i) => (<div key={i} className="bg-white p-6 rounded-lg shadow mb-4 border border-gray-100"><div className="flex gap-2 mb-3"><span className="font-bold text-indigo-600 whitespace-nowrap">Câu {i+1}:</span><div className="font-medium"><MathText text={q.question}/></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 border rounded-lg cursor-pointer transition hover:bg-gray-50 flex items-start gap-2 ${answers[i]===idx?'bg-blue-50 border-blue-500 ring-1 ring-blue-500':''}`}><div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${answers[i]===idx ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-500'}`}>{String.fromCharCode(65+idx)}</div><div className="text-sm"><MathText text={cleanOptionText(o)}/></div></div>))}</div></div>))}</div>;
         };
 
         const App = () => {
@@ -510,13 +502,10 @@
             const [selectedId, setSelectedId] = useState(null);
             const [isStudent, setIsStudent] = useState(false);
             const [needsLogin, setNeedsLogin] = useState(false);
-
             useEffect(() => { const p = new URLSearchParams(window.location.search); if(p.get("mode") === "student") { setSelectedId(p.get("examId")); setIsStudent(true); } else if(!userEmail) setNeedsLogin(true); }, []);
             const goToLogin = () => { try { window.location.href = 'login.html'; } catch(e) { alert("Mở file login.html thủ công"); } };
-
             if (needsLogin) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2>Yêu cầu đăng nhập</h2><button onClick={goToLogin} className="bg-blue-600 text-white px-4 py-2 rounded mt-4">Đăng Nhập</button></div></div>;
             if(isStudent) return <StudentView examId={selectedId} />;
-
             return <div>{view==="dashboard" && <TeacherDashboard onCreateNew={()=>setView("create")} onViewDetail={(id)=>{setSelectedId(id); setView("detail")}}/>}{view==="create" && <CreateExam onBack={()=>setView("dashboard")}/>}{view==="detail" && <ResultDetail examId={selectedId} onBack={()=>setView("dashboard")}/>}</div>;
         };
         const root = ReactDOM.createRoot(document.getElementById('root'));
