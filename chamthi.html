@@ -190,6 +190,9 @@
             const [processing, setProcessing] = useState(false);
             const [previewImage, setPreviewImage] = useState(null);
             const [aiReading, setAiReading] = useState(false);
+            // State mới cho tính năng đọc chữ viết tay
+            const [enableHandwriting, setEnableHandwriting] = useState(false);
+            
             const folderRef = useRef(null);
             const keyImageRef = useRef(null);
             const pollRef = useRef(null);
@@ -252,7 +255,26 @@
                 } catch(e){ alert("Lỗi kết nối"); }
             };
 
-            const processImagesPC = async (files) => { if(!files.length) return; setProcessing(true); const keys = parseMultiKey(inputText); for(let f of files) { let fileToSend = await compressImage(f); const fd = new FormData(); fd.append("file", fileToSend); fd.append("answer_key_json", JSON.stringify(keys)); try { const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); const data = await res.json(); setResults(p => [{filename: f.name, ...data}, ...p]); } catch(e) {} } setProcessing(false); };
+            const processImagesPC = async (files) => { 
+                if(!files.length) return; 
+                setProcessing(true); 
+                const keys = parseMultiKey(inputText); 
+                for(let f of files) { 
+                    let fileToSend = await compressImage(f); 
+                    const fd = new FormData(); 
+                    fd.append("file", fileToSend); 
+                    fd.append("answer_key_json", JSON.stringify(keys)); 
+                    // Gửi thêm flag nếu bật chế độ đọc chữ viết tay
+                    if(enableHandwriting) fd.append("handwriting", "true");
+                    
+                    try { 
+                        const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); 
+                        const data = await res.json(); 
+                        setResults(p => [{filename: f.name, ...data}, ...p]); 
+                    } catch(e) {} 
+                } 
+                setProcessing(false); 
+            };
             const handleMobileUpload = async (files) => { if(!files.length) return; setProcessing(true); setMobileStatus("Đang gửi..."); const sid = new URLSearchParams(window.location.search).get('session'); for(let f of files) { try { let fileToSend = await compressImage(f); const fd = new FormData(); fd.append("file", fileToSend); fd.append("session_id", sid); const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd }); const d = await res.json(); setMobileStatus(res.ok ? `✓ Điểm: ${d.score}` : `⚠ ${d.error}`); } catch(e) { setMobileStatus("Lỗi Mạng"); } } setProcessing(false); };
             const historyItems = historyDetail ? historyDetail.map((r, i) => (<tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>)) : null;
 
@@ -275,7 +297,23 @@
                         {view === 'grading' && (
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                                 <div className="lg:col-span-4 space-y-4">
-                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">{aiReading && (<div className="ai-loading"><div className="pulse-ring"></div><span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span></div>)}<h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3><input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/><div className="relative"><textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea><button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button><input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/></div><div className="grid grid-cols-2 gap-2 mt-3"><button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition shadow">Tạo Session</button><button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition shadow-sm">Upload File</button><input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/></div></div>
+                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">{aiReading && (<div className="ai-loading"><div className="pulse-ring"></div><span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span></div>)}<h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3><input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/><div className="relative"><textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea><button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button><input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/></div>
+                                    
+                                    {/* --- UI CHECKBOX ĐỌC CHỮ VIẾT TAY (MỚI) --- */}
+                                    <div className="mt-2 flex items-center p-2 bg-pink-50 rounded border border-pink-100">
+                                        <input 
+                                            type="checkbox" 
+                                            id="handwriting_toggle"
+                                            checked={enableHandwriting}
+                                            onChange={(e) => setEnableHandwriting(e.target.checked)}
+                                            className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500 cursor-pointer"
+                                        />
+                                        <label htmlFor="handwriting_toggle" className="ml-2 text-sm font-medium text-pink-700 cursor-pointer select-none">
+                                            <i className="fas fa-pen-nib mr-1"></i> Tự động đọc SBD viết tay
+                                        </label>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 mt-3"><button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition shadow">Tạo Session</button><button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition shadow-sm">Upload File</button><input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/></div></div>
                                     {showQr && <div className="bg-white p-5 rounded-xl text-center border border-green-200 shadow-sm"><div id="qrcode" className="flex justify-center mb-2"></div><p className="text-xs text-green-700 font-bold">Quét để chấm trên Mobile</p></div>}
                                 </div>
                                 <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]"><div className="p-4 border-b font-bold text-gray-700 flex justify-between bg-gray-50 rounded-t-xl"><span>Kết Quả ({results.length})</span>{results.length>0 && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(results);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"KetQua.xlsx")}} className="text-green-600 text-sm hover:bg-green-100 px-2 py-1 rounded transition"><i className="fas fa-file-excel"></i> Excel</button>}</div><div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Mã</th><th className="p-3">Điểm</th><th className="p-3">Ảnh</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-indigo-50"><td className="p-3 font-bold">{r.student_id}</td><td className="p-3">{r.exam_code}</td><td className="p-3 text-indigo-600 font-bold">{r.score}</td><td className="p-3"><button onClick={()=>setPreviewImage(r.image_base64)} className="text-blue-500 hover:underline">Xem</button></td></tr>))}</tbody></table></div></div>
