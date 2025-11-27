@@ -34,6 +34,19 @@
         video { width: 100%; height: auto; display: block; }
         canvas.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
         
+        /* Hiệu ứng đếm ngược chụp */
+        .countdown-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80px; height: 80px; border-radius: 50%;
+            border: 6px solid rgba(255, 255, 255, 0.8);
+            border-top-color: #00ff00;
+            animation: spin 1s linear infinite;
+            z-index: 20;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.3);
+            color: white; font-weight: bold;
+        }
+
         @media print {
             @page { size: A4; margin: 0; }
             body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -53,7 +66,6 @@
     <div id="root"></div>
 
     <script>
-        // Safety Timeout: Nếu 8s chưa tải xong thì hiện nút bỏ qua loading
         setTimeout(() => {
             const btn = document.getElementById('force-load-btn');
             const txt = document.getElementById('loading-text');
@@ -71,7 +83,7 @@
     </script>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useCallback } = React;
 
         // --- UTILS ---
         const toInt = (x) => Math.floor(x);
@@ -172,7 +184,7 @@
                     gray.delete(); contours.delete(); hierarchy.delete();
                     // src và docCnt được quản lý bên ngoài hoặc clone
                 } catch(e) {
-                    // console.error(e); // Bỏ log để đỡ lag
+                    // console.error(e); 
                 }
                 
                 if(ScanHelper.isScanning) requestAnimationFrame(() => ScanHelper.processFrame(videoEl, callback));
@@ -210,18 +222,21 @@
             }
         };
 
-        // --- CAMERA COMPONENT ---
+        // --- CAMERA COMPONENT (NÂNG CẤP) ---
         const CameraScanner = ({ onCaptured, onClose }) => {
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
             const [canCapture, setCanCapture] = useState(false);
             const cvState = useRef({ src: null, contour: null });
+            
+            // Auto Capture Refs
+            const autoCaptureTimer = useRef(null);
+            const [isAutoCapturing, setIsAutoCapturing] = useState(false);
+            const capturedRef = useRef(false); // Chống chụp 2 lần
 
             useEffect(() => {
                 if (window.cvLoadError) {
-                    alert("Không tải được thư viện xử lý ảnh (OpenCV). Vui lòng kiểm tra mạng!");
-                    onClose();
-                    return;
+                    alert("Không tải được thư viện AI. Bạn vẫn có thể chụp thủ công!");
                 }
                 
                 ScanHelper.startCamera(videoRef.current, (contour, srcMat) => {
@@ -243,9 +258,10 @@
                         cvState.current.contour = contour.clone();
                         cvState.current.src = srcMat.clone();
                     } else {
+                        // Vẫn lưu srcMat để cho phép chụp thủ công (Manual Fallback)
                         setCanCapture(false);
                         cvState.current.contour = null;
-                        cvState.current.src = null;
+                        cvState.current.src = srcMat.clone();
                     }
                     
                     if(srcMat) srcMat.delete();
@@ -256,47 +272,93 @@
                     ScanHelper.stopCamera();
                     if(cvState.current.contour) cvState.current.contour.delete();
                     if(cvState.current.src) cvState.current.src.delete();
+                    if(autoCaptureTimer.current) clearTimeout(autoCaptureTimer.current);
                 };
             }, []);
 
-            const handleCapture = () => {
-                const { src, contour } = cvState.current;
-                if (!canCapture || !src || !contour) return;
+            // Handle Manual / Final Capture
+            const handleCapture = useCallback(() => {
+                if (capturedRef.current) return;
                 
+                const { src, contour } = cvState.current;
+                if (!src) return alert("Camera chưa sẵn sàng!");
+
                 try {
-                    const warped = ScanHelper.warpImage(src, contour);
+                    let outMat;
+                    // Logic: Nếu có contour thì warp, không thì lấy ảnh gốc (fallback)
+                    if(contour) {
+                        outMat = ScanHelper.warpImage(src, contour);
+                    } else {
+                        outMat = src.clone(); // Fallback
+                    }
+
+                    capturedRef.current = true;
+                    
                     const outCanvas = document.createElement('canvas');
-                    outCanvas.width = warped.cols;
-                    outCanvas.height = warped.rows;
-                    cv.imshow(outCanvas, warped);
+                    outCanvas.width = outMat.cols;
+                    outCanvas.height = outMat.rows;
+                    cv.imshow(outCanvas, outMat);
                     
                     outCanvas.toBlob(blob => {
                         onCaptured(blob);
-                        warped.delete();
+                        outMat.delete();
                     }, 'image/jpeg', 0.9);
                 } catch(e) {
-                    alert("Lỗi xử lý: " + e.message);
+                    capturedRef.current = false;
+                    alert("Lỗi xử lý ảnh: " + e.message);
                 }
-            };
+            }, [onCaptured]);
+
+            // Auto Capture Logic
+            useEffect(() => {
+                if (canCapture && !capturedRef.current) {
+                    setIsAutoCapturing(true);
+                    if (autoCaptureTimer.current) clearTimeout(autoCaptureTimer.current);
+                    
+                    // Đợi 800ms nếu vẫn giữ yên khung xanh thì chụp
+                    autoCaptureTimer.current = setTimeout(() => {
+                        if (canCapture) handleCapture();
+                    }, 800);
+                } else {
+                    setIsAutoCapturing(false);
+                    if (autoCaptureTimer.current) clearTimeout(autoCaptureTimer.current);
+                }
+            }, [canCapture, handleCapture]);
 
             return (
                 <div className="fixed inset-0 bg-black z-50 flex flex-col">
-                    <div className="p-4 flex justify-between items-center text-white">
-                        <h2 className="text-lg font-bold">Quét Phiếu (AI)</h2>
+                    <div className="p-4 flex justify-between items-center text-white bg-black/50 absolute top-0 w-full z-20">
+                        <h2 className="text-lg font-bold">Quét Phiếu</h2>
                         <button onClick={onClose} className="text-gray-300 px-3 py-1">Đóng</button>
                     </div>
+                    
                     <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
-                        <div className="video-container">
-                            <video ref={videoRef} playsInline muted autoPlay></video>
+                        <div className="video-container w-full h-full">
+                            <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-cover"></video>
                             <canvas ref={canvasRef} className="overlay" width={1280} height={720}></canvas>
                         </div>
-                        <div className={`absolute top-4 px-4 py-2 rounded-full text-sm font-bold pointer-events-none transition-colors ${canCapture ? 'bg-green-500 text-white' : 'bg-black/50 text-gray-300'}`}>
-                            {canCapture ? "✅ Đã bắt được phiếu!" : "🔍 Đưa phiếu vào khung hình..."}
+                        
+                        {/* Overlay trạng thái */}
+                        <div className={`absolute top-16 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm font-bold pointer-events-none transition-colors shadow-lg whitespace-nowrap z-30 ${canCapture ? 'bg-green-500 text-white' : 'bg-black/60 text-gray-200'}`}>
+                            {canCapture ? "✅ Giữ yên để tự chụp..." : "🔍 Đưa phiếu vào khung hình"}
                         </div>
-                        {!window.cvLoaded && <div className="absolute bottom-4 text-yellow-400 text-xs">⚠️ Đang tải thư viện AI... (Có thể chụp chậm)</div>}
+
+                        {/* Vòng quay Auto Capture */}
+                        {isAutoCapturing && !capturedRef.current && (
+                            <div className="countdown-overlay">
+                                <i className="fas fa-camera text-3xl"></i>
+                            </div>
+                        )}
+                        
+                        {!window.cvLoaded && <div className="absolute bottom-20 text-yellow-400 text-xs w-full text-center">⚠️ AI chưa sẵn sàng. Bạn vẫn có thể chụp thủ công.</div>}
                     </div>
-                    <div className="p-6 bg-gray-900 flex justify-center">
-                        <button onClick={handleCapture} disabled={!canCapture} className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all ${canCapture ? 'border-white bg-green-500 scale-110' : 'border-gray-600 bg-gray-800 opacity-50'}`}>
+
+                    <div className="p-8 bg-black/80 flex justify-center z-20">
+                        <button 
+                            onClick={handleCapture} 
+                            // BỎ disabled={!canCapture} ĐỂ CHO PHÉP CHỤP THỦ CÔNG
+                            className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all active:scale-95 ${canCapture ? 'border-green-400 bg-green-600' : 'border-white bg-white/20'}`}
+                        >
                             <i className="fas fa-camera text-3xl text-white"></i>
                         </button>
                     </div>
@@ -304,7 +366,7 @@
             );
         };
 
-        // --- SHEET GENERATOR ---
+        // --- SHEET GENERATOR (GIỮ NGUYÊN) ---
         const SheetGenerator = () => {
             const [numQuestions, setNumQuestions] = useState(40);
             const [showAnchors, setShowAnchors] = useState(true);
@@ -481,7 +543,7 @@
                             <button onClick={() => setShowCamera(true)} className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all">
                                 {processing ? <div className="loader border-white border-t-indigo-500"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">QUÉT PHIẾU</span></>}
                             </button>
-                            <p className="mt-6 text-gray-400 text-sm px-4">Hướng dẫn: Đưa camera vào phiếu sao cho <b>khung xanh</b> bao trọn tờ giấy, sau đó bấm nút Chụp.</p>
+                            <p className="mt-6 text-gray-400 text-sm px-4">Hướng dẫn: Đưa camera vào phiếu. AI sẽ <b>tự chụp</b> khi bắt được khung, hoặc bạn có thể <b>bấm nút</b> để chụp ngay.</p>
                         </div>
                     </div>
                 );
@@ -508,7 +570,7 @@
                         {view === 'history' && (
                             <div className="grid grid-cols-12 gap-6 h-full">
                                 <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]"><div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Danh Sách Đợt</div><div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} className="p-3 border-b hover:bg-indigo-50 transition group flex justify-between items-center"><div onClick={()=>viewDetail(h.session_id)} className="cursor-pointer flex-1"><div className="font-bold text-indigo-900">{h.session_name}</div><div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div></div><div className="flex gap-2 opacity-0 group-hover:opacity-100 transition"><button onClick={(e)=>editSession(e, h)} className="text-blue-600 hover:text-blue-800" title="Sửa tên"><i className="fas fa-edit"></i></button><button onClick={(e)=>deleteSession(e, h.session_id)} className="text-red-600 hover:text-red-800" title="Xóa đợt"><i className="fas fa-trash"></i></button></div></div>))}</div></div>
-                                <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]"><div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div><div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyItems}</tbody></table></div></div>
+                                <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]"><div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div><div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyDetail?.map((r,i)=>(<tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold text-indigo-600">{r.score}</td></tr>))}</tbody></table></div></div>
                             </div>
                         )}
                         {view === 'sheet' && <SheetGenerator />}
