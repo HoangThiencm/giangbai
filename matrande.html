@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Đề Từ Ma Trận (AI Vision)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f3f4f6; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .katex { font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- GEMINI HELPER ---
+        const GeminiService = {
+            getKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
+            
+            callVision: async (base64Image, prompt) => {
+                const keys = GeminiService.getKeys();
+                if (!keys.length) throw new Error("Chưa có API Key. Vui lòng quay lại trang chủ để nạp key.");
+                
+                // Thử ngẫu nhiên key để tránh rate limit
+                const key = keys[Math.floor(Math.random() * keys.length)];
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+                            ]
+                        }]
+                    })
+                });
+
+                if (!response.ok) throw new Error(`Lỗi API: ${response.statusText}`);
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            },
+
+            callText: async (prompt) => {
+                const keys = GeminiService.getKeys();
+                const key = keys[Math.floor(Math.random() * keys.length)];
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            }
+        };
+
+        // --- PDF TO IMAGE HELPER ---
+        const convertFileToBase64 = (file) => {
+            return new Promise(async (resolve, reject) => {
+                if (file.type.includes("image")) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                } else if (file.type === "application/pdf") {
+                    try {
+                        const buffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(buffer).promise;
+                        // Chỉ lấy trang 1 làm mẫu (thường ma trận ở trang đầu)
+                        const page = await pdf.getPage(1);
+                        const viewport = page.getViewport({ scale: 2 }); // Scale 2 để nét hơn
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        await page.render({ canvasContext: context, viewport: viewport }).promise;
+                        resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+                    } catch (e) {
+                        reject(e);
+                    }
+                } else {
+                    reject(new Error("Định dạng không hỗ trợ"));
+                }
+            });
+        };
+
+        // --- MATH RENDERER ---
+        const MathText = ({ text }) => {
+            const ref = useRef();
+            useEffect(() => {
+                if (!ref.current) return;
+                try {
+                    let processed = text
+                        .replace(/\\\[/g, '$$$').replace(/\\\]/g, '$$$')
+                        .replace(/\\\(/g, '$').replace(/\\\)/g, '$');
+                    
+                    // Render thủ công các đoạn math
+                    const parts = processed.split(/(\$[^$]+\$)/g);
+                    ref.current.innerHTML = '';
+                    parts.forEach(part => {
+                        if (part.startsWith('$') && part.endsWith('$')) {
+                            const span = document.createElement('span');
+                            try {
+                                katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
+                            } catch { span.innerText = part; }
+                            ref.current.appendChild(span);
+                        } else {
+                            ref.current.appendChild(document.createTextNode(part));
+                        }
+                    });
+                } catch (e) { ref.current.innerText = text; }
+            }, [text]);
+            return <div ref={ref} className="text-gray-800"></div>;
+        };
+
+        // --- MAIN COMPONENT ---
+        const App = () => {
+            const [step, setStep] = useState(1); // 1: Upload, 2: Edit Matrix, 3: Generating, 4: Result
+            const [loading, setLoading] = useState(false);
+            const [status, setStatus] = useState("");
+            const [matrixData, setMatrixData] = useState([]);
+            const [generatedQuestions, setGeneratedQuestions] = useState([]);
+            const [previewImg, setPreviewImg] = useState(null);
+
+            // Step 1: Handle Upload & Analyze
+            const handleFileUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                setLoading(true);
+                setStatus("Đang xử lý ảnh/PDF...");
+                try {
+                    const base64 = await convertFileToBase64(file);
+                    setPreviewImg(`data:image/jpeg;base64,${base64}`);
+                    
+                    setStatus("AI đang đọc bảng ma trận (Gemini Vision)...");
+                    const prompt = `
+                        Bạn là chuyên gia giáo dục. Hãy nhìn vào bảng ma trận đề thi này.
+                        Nhiệm vụ: Trích xuất dữ liệu cấu trúc đề thi thành JSON.
+                        
+                        Hãy tìm các hàng chứa thông tin về:
+                        1. Nội dung/Chủ đề kiến thức.
+                        2. Mức độ nhận thức (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao).
+                        3. Số lượng câu hỏi.
+                        4. Loại câu hỏi (Trắc nghiệm hay Tự luận).
+
+                        Lưu ý:
+                        - Nếu bảng gộp mức độ (VD: Cột "Nhận biết" có số 2), hãy hiểu là 2 câu Nhận biết.
+                        - Bỏ qua các hàng tổng cộng.
+                        
+                        Output JSON Format (Array):
+                        [
+                            { "topic": "Tên chủ đề", "level": "Nhận biết/Thông hiểu/...", "count": 2, "type": "Trắc nghiệm" }
+                        ]
+                        Chỉ trả về JSON thuần, không markdown.
+                    `;
+                    
+                    const resultText = await GeminiService.callVision(base64, prompt);
+                    const cleanJson = resultText.replace(/```json|```/g, '').trim();
+                    const parsed = JSON.parse(cleanJson);
+                    
+                    // Thêm ID cho dễ quản lý
+                    setMatrixData(parsed.map((row, i) => ({ ...row, id: Date.now() + i })));
+                    setStep(2);
+                } catch (err) {
+                    alert("Lỗi: " + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Step 2: Edit Matrix Logic
+            const updateRow = (id, field, value) => {
+                setMatrixData(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+            };
+            const deleteRow = (id) => setMatrixData(prev => prev.filter(r => r.id !== id));
+            const addRow = () => setMatrixData(prev => [...prev, { id: Date.now(), topic: "Chủ đề mới", level: "Nhận biết", count: 1, type: "Trắc nghiệm" }]);
+
+            // Step 3: Generate Questions
+            const handleGenerate = async () => {
+                setStep(3);
+                setLoading(true);
+                let allQuestions = [];
+                let total = matrixData.reduce((sum, r) => sum + parseInt(r.count), 0);
+                let done = 0;
+
+                try {
+                    for (const row of matrixData) {
+                        const count = parseInt(row.count);
+                        if (count <= 0) continue;
+
+                        setStatus(`Đang sinh ${count} câu ${row.level} về "${row.topic}"...`);
+                        
+                        const prompt = `
+                            Đóng vai giáo viên giỏi. Hãy soạn ${count} câu hỏi ${row.type} về chủ đề "${row.topic}".
+                            Mức độ: ${row.level}.
+                            Yêu cầu:
+                            - Nội dung chính xác, không trùng lặp.
+                            - Công thức toán học dùng định dạng LaTeX đặt trong dấu $ (ví dụ: $x^2$).
+                            - KHÔNG dùng dấu \` cho toán học.
+                            
+                            Output JSON Format:
+                            [
+                                {
+                                    "question": "Nội dung câu hỏi...",
+                                    "options": ["A. ...", "B. ...", "C. ...", "D. ..."] (Nếu là trắc nghiệm, nếu tự luận để mảng rỗng),
+                                    "correct": "Đáp án đúng (hoặc lời giải vắn tắt nếu tự luận)"
+                                }
+                            ]
+                        `;
+
+                        const resText = await GeminiService.callText(prompt);
+                        try {
+                            const clean = resText.replace(/```json|```/g, '').trim();
+                            const qs = JSON.parse(clean);
+                            // Gán thêm metadata để dễ tracking
+                            const qsWithMeta = qs.map(q => ({ ...q, meta: row }));
+                            allQuestions = [...allQuestions, ...qsWithMeta];
+                        } catch (e) {
+                            console.error("Lỗi parse JSON đoạn con:", e);
+                        }
+                        
+                        done += count;
+                    }
+                    setGeneratedQuestions(allQuestions);
+                    setStep(4);
+                } catch (err) {
+                    alert("Lỗi sinh đề: " + err.message);
+                    setStep(2); // Quay lại bước 2
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Step 4: Export Word
+            const exportWord = () => {
+                const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>De Thi</title>
+                <style>body{font-family:'Times New Roman';font-size:12pt} .question{margin-bottom:12pt} .options{margin-left:20px}</style>
+                </head><body>
+                <h1 style="text-align:center">ĐỀ THI ĐƯỢC TẠO TỪ MA TRẬN</h1>`;
+                
+                let body = "";
+                
+                // Tách phần trắc nghiệm và tự luận
+                const tn = generatedQuestions.filter(q => q.options && q.options.length > 0);
+                const tl = generatedQuestions.filter(q => !q.options || q.options.length === 0);
+
+                if (tn.length > 0) {
+                    body += "<h3>I. PHẦN TRẮC NGHIỆM</h3>";
+                    tn.forEach((q, i) => {
+                        // Chuyển $LaTeX$ thành MathML (đơn giản hoá bằng cách giữ nguyên text cho Word xử lý hoặc dùng thư viện, ở đây ta giữ nguyên text $...$ để giáo viên dùng Mathtype convert nếu cần, hoặc Word 365 tự hiểu)
+                        // Cách tốt nhất cho web-to-word đơn giản là giữ nguyên text $...$
+                        body += `<div class='question'><b>Câu ${i+1}:</b> ${q.question}<br/>`;
+                        body += `<table width="100%"><tr>`;
+                        q.options.forEach((opt, idx) => {
+                            if(idx % 2 === 0 && idx !== 0) body += `</tr><tr>`;
+                            body += `<td width="50%">${opt}</td>`;
+                        });
+                        body += `</tr></table></div>`;
+                    });
+                }
+
+                if (tl.length > 0) {
+                    body += "<h3>II. PHẦN TỰ LUẬN</h3>";
+                    tl.forEach((q, i) => {
+                        body += `<div class='question'><b>Bài ${i+1}:</b> ${q.question}</div>`;
+                    });
+                }
+
+                // Đáp án
+                body += "<br/><hr/><h3>ĐÁP ÁN THAM KHẢO</h3>";
+                generatedQuestions.forEach((q, i) => {
+                    body += `<p><b>Câu ${i+1}:</b> ${q.correct}</p>`;
+                });
+
+                const footer = "</body></html>";
+                const source = header + body + footer;
+                const blob = new Blob(['\ufeff', source], { type: 'application/msword' });
+                saveAs(blob, 'De_Thi_Ma_Tran.doc');
+            };
+
+            return (
+                <div className="max-w-5xl mx-auto p-6 min-h-screen">
+                    <div className="flex justify-between items-center mb-8">
+                        <button onClick={() => window.location.href='index.html'} className="text-gray-600 hover:text-indigo-600 font-bold flex items-center gap-2">
+                            <i className="fas fa-arrow-left"></i> Trang Chủ
+                        </button>
+                        <h1 className="text-2xl font-bold text-indigo-900 uppercase">Tạo Đề Từ Ma Trận (AI Vision)</h1>
+                    </div>
+
+                    {/* STEP 1: UPLOAD */}
+                    {step === 1 && (
+                        <div className="bg-white p-10 rounded-2xl shadow-lg text-center fade-in border-2 border-dashed border-indigo-200 hover:border-indigo-500 transition-colors">
+                            {loading ? (
+                                <div>
+                                    <div className="loader"></div>
+                                    <p className="mt-4 text-indigo-600 font-bold">{status}</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <i className="fas fa-cloud-upload-alt text-6xl text-indigo-400 mb-4"></i>
+                                    <h2 className="text-xl font-bold text-gray-800 mb-2">Tải lên Ma Trận Đề Thi</h2>
+                                    <p className="text-gray-500 mb-6">Hỗ trợ file Ảnh (.png, .jpg) hoặc PDF (Trang đầu)</p>
+                                    <label className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold cursor-pointer hover:bg-indigo-700 transition shadow-lg">
+                                        Chọn File
+                                        <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileUpload} />
+                                    </label>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STEP 2: EDIT MATRIX */}
+                    {step === 2 && (
+                        <div className="bg-white p-6 rounded-2xl shadow-lg fade-in">
+                            <h2 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-indigo-500 pl-3">Kiểm tra cấu trúc đề thi</h2>
+                            
+                            {/* Preview Ảnh nhỏ */}
+                            {previewImg && (
+                                <details className="mb-4">
+                                    <summary className="cursor-pointer text-sm text-indigo-600 font-bold">Xem ảnh gốc ma trận</summary>
+                                    <img src={previewImg} className="mt-2 max-w-full h-auto border rounded" alt="Matrix Preview" />
+                                </details>
+                            )}
+
+                            <div className="overflow-x-auto mb-6">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-100 text-gray-700 text-sm uppercase">
+                                            <th className="p-3 border">Chủ đề</th>
+                                            <th className="p-3 border">Mức độ</th>
+                                            <th className="p-3 border text-center">Số lượng</th>
+                                            <th className="p-3 border">Loại câu</th>
+                                            <th className="p-3 border text-center">Xóa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {matrixData.map(row => (
+                                            <tr key={row.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-2 border"><input className="w-full bg-transparent outline-none font-medium" value={row.topic} onChange={e => updateRow(row.id, 'topic', e.target.value)} /></td>
+                                                <td className="p-2 border">
+                                                    <select className="bg-transparent outline-none" value={row.level} onChange={e => updateRow(row.id, 'level', e.target.value)}>
+                                                        <option>Nhận biết</option><option>Thông hiểu</option><option>Vận dụng</option><option>Vận dụng cao</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-2 border text-center"><input type="number" className="w-16 text-center bg-transparent outline-none font-bold text-indigo-600" value={row.count} onChange={e => updateRow(row.id, 'count', e.target.value)} /></td>
+                                                <td className="p-2 border">
+                                                    <select className="bg-transparent outline-none" value={row.type} onChange={e => updateRow(row.id, 'type', e.target.value)}>
+                                                        <option>Trắc nghiệm</option><option>Tự luận</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-2 border text-center"><button onClick={() => deleteRow(row.id)} className="text-red-500 hover:text-red-700"><i className="fas fa-trash"></i></button></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <button onClick={addRow} className="mt-2 text-sm text-indigo-600 font-bold hover:underline"><i className="fas fa-plus"></i> Thêm dòng</button>
+                            </div>
+
+                            <div className="flex justify-end gap-3">
+                                <button onClick={() => setStep(1)} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded">Chọn lại file</button>
+                                <button onClick={handleGenerate} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 shadow-lg flex items-center gap-2">
+                                    <i className="fas fa-magic"></i> SINH ĐỀ THI
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: LOADING GENERATION */}
+                    {step === 3 && (
+                        <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl shadow-lg fade-in">
+                            <div className="loader w-12 h-12 border-4 border-indigo-600 border-t-transparent"></div>
+                            <p className="mt-4 text-lg font-bold text-gray-700">AI đang soạn đề thi...</p>
+                            <p className="text-sm text-gray-500 mt-2">{status}</p>
+                        </div>
+                    )}
+
+                    {/* STEP 4: RESULT */}
+                    {step === 4 && (
+                        <div className="fade-in">
+                            <div className="bg-white p-4 rounded-xl shadow mb-6 sticky top-0 z-10 flex justify-between items-center border border-indigo-100">
+                                <div>
+                                    <h2 className="font-bold text-lg text-indigo-900">Kết quả: {generatedQuestions.length} câu hỏi</h2>
+                                    <p className="text-xs text-gray-500">Đã kiểm duyệt cấu trúc ma trận</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setStep(2)} className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded hover:bg-gray-200"><i className="fas fa-arrow-left"></i> Sửa lại</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 shadow"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {generatedQuestions.map((q, idx) => (
+                                    <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-sm">Câu {idx + 1} ({q.meta.level})</span>
+                                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">{q.meta.topic}</span>
+                                        </div>
+                                        <div className="mb-4 text-gray-800 font-medium">
+                                            <MathText text={q.question} />
+                                        </div>
+                                        {q.options && q.options.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {q.options.map((opt, i) => (
+                                                    <div key={i} className={`p-3 rounded border ${opt.includes(q.correct) || q.correct === String.fromCharCode(65+i) ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-200'}`}>
+                                                        <MathText text={opt} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm text-gray-700">
+                                                <strong>Đáp án/Gợi ý:</strong> <MathText text={q.correct} />
+                                            </div>
+                                        )}
+                                        
+                                        {q.options && q.options.length > 0 && (
+                                            <div className="mt-3 text-sm text-green-700 font-bold">
+                                                Đáp án đúng: {q.correct}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
