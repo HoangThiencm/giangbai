@@ -35,6 +35,29 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
+        // --- HÀM TRÍCH XUẤT JSON MẠNH MẼ (FIX LỖI "Unexpected token") ---
+        const extractJson = (text) => {
+            try {
+                // 1. Thử parse trực tiếp
+                return JSON.parse(text);
+            } catch (e) {
+                // 2. Nếu lỗi, cố gắng tìm mảng [...] hoặc đối tượng {...}
+                const startArray = text.indexOf('[');
+                const endArray = text.lastIndexOf(']');
+                if (startArray !== -1 && endArray !== -1 && endArray > startArray) {
+                    try {
+                        return JSON.parse(text.substring(startArray, endArray + 1));
+                    } catch (e2) {}
+                }
+                
+                // Trường hợp AI trả về markdown ```json ... ```
+                const cleanMd = text.replace(/```json|```/g, '').trim();
+                try { return JSON.parse(cleanMd); } catch (e3) {}
+
+                throw new Error("Không tìm thấy dữ liệu JSON hợp lệ trong phản hồi của AI.");
+            }
+        };
+
         const AIAdapter = {
             getConfig: () => ({
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
@@ -150,7 +173,6 @@
             const [preview, setPreview] = useState(null);
             
             // matrixData: Chứa thông tin cấu trúc đề + Trạng thái sinh + Dữ liệu câu hỏi đã sinh
-            // { id, topic, level, count, type, status: 'pending'|'generating'|'done'|'error', questions: [] }
             const [matrix, setMatrix] = useState([]);
 
             const handleUpload = async (e) => {
@@ -165,13 +187,14 @@
                     const prompt = `
                         Hãy phân tích hình ảnh này (Ma trận đề thi/Bảng đặc tả).
                         Trích xuất danh sách các chủ đề kiến thức và số lượng câu hỏi.
-                        Yêu cầu đầu ra JSON thuần túy (Array):
-                        [ { "topic": "Tên chủ đề", "level": "Mức độ", "count": số_lượng, "type": "Trắc nghiệm"|"Đúng/Sai"|"Tự luận" } ]
+                        
+                        Quy tắc JSON: KHÔNG trả lời vòng vo, CHỈ trả về JSON.
+                        Output: [ { "topic": "Tên chủ đề", "level": "Mức độ", "count": số_lượng, "type": "Trắc nghiệm"|"Đúng/Sai"|"Tự luận" } ]
                     `;
                     const res = await AIAdapter.analyzeImage(base64, prompt);
-                    const jsonStr = res.replace(/```json|```/g, '').trim();
-                    // Thêm trạng thái ban đầu cho mỗi dòng
-                    setMatrix(JSON.parse(jsonStr).map((r, i) => ({...r, id: i, status: 'pending', questions: []})));
+                    // SỬ DỤNG HÀM TRÍCH XUẤT JSON MỚI
+                    const data = extractJson(res);
+                    setMatrix(data.map((r, i) => ({...r, id: i, status: 'pending', questions: []})));
                     setStep(2);
                 } catch (err) { alert("Lỗi đọc ma trận: " + err.message); } finally { setLoading(false); }
             };
@@ -185,7 +208,6 @@
                 const row = matrix.find(r => r.id === rowId);
                 if (!row || row.count <= 0) return;
 
-                // Cập nhật trạng thái đang chạy
                 setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'generating'} : r));
 
                 const prompt = `
@@ -195,17 +217,16 @@
                     2. Nếu là "Đúng/Sai": Trả về mảng "a" chứa 4 mệnh đề a,b,c,d.
                     3. Nếu là "Tự luận": Trả về mảng "a" rỗng.
                     4. Toán học dùng LaTeX chuẩn $...$.
+                    5. KHÔNG trả lời vòng vo, CHỈ trả về JSON Array.
                     
-                    Output JSON strict: [ { "q": "...", "a": [], "c": "..." } ]
+                    Output: [ { "q": "...", "a": [], "c": "..." } ]
                 `;
 
                 try {
                     const res = await AIAdapter.generateText(prompt);
-                    const cleanRes = res.replace(/```json|```/g, '').trim();
-                    const qs = JSON.parse(cleanRes);
-                    const qsWithMeta = qs.map(q => ({...q, meta: { ...row }})); // Gán meta để biết câu hỏi thuộc dòng nào
+                    const qs = extractJson(res); // Sử dụng extractJson thay vì JSON.parse thuần
+                    const qsWithMeta = qs.map(q => ({...q, meta: { ...row }})); 
                     
-                    // Cập nhật trạng thái xong
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', questions: qsWithMeta} : r));
                 } catch (e) {
                     console.error(e);
@@ -213,32 +234,25 @@
                 }
             };
 
-            // HÀM SINH TỰ ĐỘNG TOÀN BỘ (CÓ DELAY ĐỂ TRÁNH RATE LIMIT)
             const handleGenerateAll = async () => {
                 let hasPending = false;
-                
-                // Duyệt qua từng dòng, nếu chưa sinh thì sinh
                 for (let i = 0; i < matrix.length; i++) {
                     const row = matrix[i];
                     if (row.status === 'pending' || row.status === 'error') {
                         hasPending = true;
-                        // Scroll tới dòng đang chạy (UX)
                         const el = document.getElementById(`row-${row.id}`);
                         if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
                         await generateRowQuestions(row.id);
                         
-                        // DELAY 3 GIÂY ĐỂ THỬ KEY KHÁC & TRÁNH RATE LIMIT
                         if (i < matrix.length - 1) {
                             await new Promise(resolve => setTimeout(resolve, 3000));
                         }
                     }
                 }
-
                 if (!hasPending) alert("Đã hoàn thành sinh đề!");
             };
 
-            // Chuyển sang bước xem kết quả
             const goToPreview = () => {
                 // Gom tất cả câu hỏi từ các dòng đã xong
                 const allQs = matrix.filter(r => r.status === 'done').flatMap(r => r.questions);
@@ -248,7 +262,6 @@
             };
 
             const exportWord = () => {
-                // Logic export giữ nguyên...
                 let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>De Thi</title></head><body><h2 style='text-align:center'>ĐỀ THI</h2>`;
                 
                 const tn = examData.filter(q => q.meta.type === "Trắc nghiệm");
