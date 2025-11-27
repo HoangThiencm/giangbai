@@ -5,16 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chấm Thi OMR Pro</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js](https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js)"></script>
+    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js](https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js)"></script>
+    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js](https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js)"></script>
+    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
+    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
+    <!-- OpenCV.js cho Real-time Detection -->
+    <script async src="[https://docs.opencv.org/4.8.0/opencv.js](https://docs.opencv.org/4.8.0/opencv.js)" onload="window.cvLoaded=true"></script>
+    
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
+        @import url('[https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap](https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap)');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 30px; height: 30px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
@@ -29,7 +32,11 @@
         .tab-inactive { color: #6b7280; hover:bg-gray-100; }
         #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
 
-        /* --- STYLES CHO PHIẾU IN --- */
+        /* Camera Overlay Style */
+        .video-container { position: relative; width: 100%; max-width: 480px; margin: 0 auto; overflow: hidden; border-radius: 12px; background: black; }
+        video { width: 100%; height: auto; display: block; }
+        canvas.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        
         @media print {
             @page { size: A4; margin: 0; }
             body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -55,8 +62,10 @@
 <body>
     <div id="error-display"></div>
     <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div class="loader mb-4"></div>
-        <p class="text-gray-600">Đang tải ứng dụng...</p>
+        <div class="flex flex-col items-center">
+            <div class="loader mb-4"></div>
+            <p class="text-gray-600">Đang tải ứng dụng & AI...</p>
+        </div>
     </div>
     <div id="root"></div>
 
@@ -65,10 +74,132 @@
 
         // --- UTILS ---
         const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
-        const compressImage = (file, maxWidth=1000, quality=0.7) => { return new Promise((resolve)=>{ if(!file||!file.type.startsWith('image/')){resolve(file);return;} const reader=new FileReader();reader.readAsDataURL(file);reader.onload=(event)=>{const img=new Image();img.src=event.target.result;img.onload=()=>{try{const canvas=document.createElement('canvas');let w=img.width,h=img.height;if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);const blob=dataURLtoBlob(canvas.toDataURL('image/jpeg',quality));resolve(blob?new File([blob],file.name,{type:'image/jpeg'}):file);}catch(e){resolve(file);}};img.onerror=()=>resolve(file);};reader.onerror=()=>resolve(file);});};
         const parseMultiKey = (text) => { if(!text) return {}; const keys={}; text.split('\n').forEach(line=>{ line=line.trim(); if(!line)return; let code="DEFAULT", ans=line; if(line.includes(':')){const p=line.split(':');code=p[0].trim();ans=p[1].trim();} if(!keys[code])keys[code]={}; const pairs=ans.toUpperCase().split(/\s+/); pairs.forEach(p=>{const num=p.match(/^\d+/);const char=p.match(/[A-D]$/);if(num&&char) keys[code][parseInt(num[0])]=char[0];});}); return keys; };
         const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
         const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
+
+        // --- OPENCV HELPER FOR SCANNING ---
+        const ScanHelper = {
+            videoStream: null,
+            isScanning: false,
+            
+            startCamera: async (videoElement, onFrame) => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                    });
+                    videoElement.srcObject = stream;
+                    videoElement.play();
+                    ScanHelper.videoStream = stream;
+                    ScanHelper.isScanning = true;
+                    requestAnimationFrame(() => ScanHelper.processFrame(videoElement, onFrame));
+                } catch (err) {
+                    alert("Không thể mở camera: " + err.message);
+                }
+            },
+
+            stopCamera: () => {
+                ScanHelper.isScanning = false;
+                if (ScanHelper.videoStream) {
+                    ScanHelper.videoStream.getTracks().forEach(track => track.stop());
+                    ScanHelper.videoStream = null;
+                }
+            },
+
+            processFrame: (video, callback) => {
+                if (!ScanHelper.isScanning || !window.cv || !window.cvLoaded) return;
+                
+                try {
+                    const cap = new cv.VideoCapture(video);
+                    const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+                    cap.read(src);
+                    
+                    // Logic tìm 4 góc
+                    let gray = new cv.Mat();
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                    cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+                    cv.Canny(gray, gray, 75, 200);
+                    
+                    let contours = new cv.MatVector();
+                    let hierarchy = new cv.Mat();
+                    cv.findContours(gray, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                    
+                    let docCnt = null;
+                    let maxArea = 0;
+
+                    for (let i = 0; i < contours.size(); ++i) {
+                        let cnt = contours.get(i);
+                        let area = cv.contourArea(cnt);
+                        if (area > 5000) { // Lọc nhiễu
+                            let peri = cv.arcLength(cnt, true);
+                            let approx = new cv.Mat();
+                            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+                            if (approx.rows === 4 && area > maxArea) {
+                                maxArea = area;
+                                docCnt = approx; // Giữ Mat contour
+                            } else {
+                                approx.delete();
+                            }
+                        }
+                    }
+
+                    // Gửi contour tìm được (hoặc null) về để vẽ
+                    callback(docCnt, src); // src sẽ được dùng để cắt ảnh nếu cần
+
+                    // Cleanup
+                    gray.delete(); contours.delete(); hierarchy.delete(); src.delete(); 
+                    // docCnt nếu có sẽ được delete ở callback, nếu không phải delete contour
+                } catch(e) {
+                    console.error(e);
+                }
+                
+                if(ScanHelper.isScanning) requestAnimationFrame(() => ScanHelper.processFrame(video, callback));
+            },
+
+            warpImage: (srcMat, contour) => {
+                // 1. Sắp xếp điểm
+                let pts = [];
+                for(let i=0; i<4; i++) {
+                    pts.push({x: contour.data32S[i*2], y: contour.data32S[i*2+1]});
+                }
+                
+                // Sắp xếp: TL, TR, BR, BL
+                pts.sort((a,b) => a.y - b.y);
+                let top = pts.slice(0,2).sort((a,b) => a.x - b.x);
+                let bottom = pts.slice(2,4).sort((a,b) => a.x - b.x);
+                let ordered = [top[0], top[1], bottom[1], bottom[0]]; // TL, TR, BR, BL
+
+                let tl = ordered[0], tr = ordered[1], br = ordered[2], bl = ordered[3];
+
+                let widthA = Math.sqrt(Math.pow(br.x - bl.x, 2) + Math.pow(br.y - bl.y, 2));
+                let widthB = Math.sqrt(Math.pow(tr.x - tl.x, 2) + Math.pow(tr.y - tl.y, 2));
+                let maxWidth = Math.max(int(widthA), int(widthB));
+
+                let heightA = Math.sqrt(Math.pow(tr.x - br.x, 2) + Math.pow(tr.y - br.y, 2));
+                let heightB = Math.sqrt(Math.pow(tl.x - bl.x, 2) + Math.pow(tl.y - bl.y, 2));
+                let maxHeight = Math.max(int(heightA), int(heightB));
+
+                // Fix tỷ lệ A4 (W:1600 -> H:~2260)
+                let dstWidth = 1600;
+                let dstHeight = 2260;
+
+                let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y
+                ]);
+                let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
+                ]);
+
+                let M = cv.getPerspectiveTransform(srcTri, dstTri);
+                let warped = new cv.Mat();
+                cv.warpPerspective(srcMat, warped, M, new cv.Size(dstWidth, dstHeight));
+
+                srcTri.delete(); dstTri.delete(); M.delete();
+                return warped;
+            }
+        };
+        
+        function int(x) { return Math.floor(x); }
 
         // --- COMPONENT: SHEET GENERATOR ---
         const SheetGenerator = () => {
@@ -97,7 +228,6 @@
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Tên Trường</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="Nhập tên trường..."/></div>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Môn Thi</label><input type="text" value={examSubject} onChange={(e) => setExamSubject(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="Nhập môn thi..."/></div>
                             <div className="flex items-center gap-2 mt-2 pt-2 border-t"><input type="checkbox" id="anchors" checked={showAnchors} onChange={(e) => setShowAnchors(e.target.checked)} className="w-4 h-4 text-blue-600 rounded"/><label htmlFor="anchors" className="text-gray-700 text-sm">Hiển thị 4 góc định vị</label></div>
-                            <div className="p-3 bg-green-50 text-green-800 text-xs rounded-md">Đã cập nhật Layout chuẩn để AI cắt vùng chính xác.</div>
                             <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white px-3 py-3 rounded-md hover:bg-blue-800 transition font-bold mt-4"><i className="fas fa-print"></i> IN PHIẾU NGAY</button>
                         </div>
                     </div>
@@ -108,7 +238,7 @@
                             {showAnchors && (<><div className="absolute top-8 left-8 w-4 h-4 bg-black"></div><div className="absolute top-8 right-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 left-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 right-8 w-4 h-4 bg-black"></div></>)}
 
                             <div className="w-full h-full border-0 border-transparent relative">
-                                {/* Header Section */}
+                                {/* Header */}
                                 <div className="flex justify-between items-start mb-6 px-4 h-[160px] overflow-hidden">
                                     <div className="w-1/2 pr-4">
                                         <div className="grid grid-cols-[70px_1fr] gap-y-2 text-sm">
@@ -124,29 +254,25 @@
                                     </div>
                                 </div>
 
-                                {/* ID and Test Code Section */}
+                                {/* ID and Code */}
                                 <div className="flex gap-8 mb-6 px-4 h-[200px]">
-                                    {/* SBD Box (6 cột) */}
                                     <div className="w-40">
                                         <div className="text-center font-bold border border-black text-sm mb-1">SỐ BÁO DANH</div>
                                         <div className="grid grid-cols-6 border border-black mb-1">{[...Array(6)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div>
                                         <div className="grid grid-cols-6 gap-x-1">{[...Array(6)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div>
                                     </div>
-
-                                    {/* Ma De Box (4 cột) */}
                                     <div className="w-28">
                                         <div className="text-center font-bold border border-black text-sm mb-1">MÃ ĐỀ</div>
                                         <div className="grid grid-cols-4 border border-black mb-1">{[...Array(4)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div>
                                         <div className="grid grid-cols-4 gap-x-1">{[...Array(4)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div>
                                     </div>
-
                                     <div className="flex-1 flex flex-col justify-between py-2">
                                         <div className="border border-black p-2 h-24 relative"><span className="absolute -top-3 left-2 bg-white px-1 text-sm font-bold">Điểm</span><div className="h-full w-full flex items-center justify-center text-4xl font-bold text-gray-100 select-none">OMR</div></div>
-                                        <div className="text-xs mt-2 text-justify leading-tight"><strong>Lưu ý:</strong> Giữ phẳng phiếu. Tô kín và đậm ô tròn tương ứng với đáp án đúng. Không được tẩy xóa lem nhem.<div className="flex gap-4 mt-2 justify-center"><span className="flex items-center gap-1"><div className="w-3 h-3 bg-black rounded-full"></div> Đúng</span><span className="flex items-center gap-1"><div className="w-3 h-3 border border-black rounded-full flex justify-center items-center text-[8px]">✕</div> Sai</span></div></div>
+                                        <div className="text-xs mt-2 text-justify leading-tight"><strong>Lưu ý:</strong> Giữ phẳng phiếu. Tô kín. <div className="flex gap-4 mt-2 justify-center"><span className="flex items-center gap-1"><div className="w-3 h-3 bg-black rounded-full"></div> Đúng</span><span className="flex items-center gap-1"><div className="w-3 h-3 border border-black rounded-full flex justify-center items-center text-[8px]">✕</div> Sai</span></div></div>
                                     </div>
                                 </div>
 
-                                {/* Answers Section */}
+                                {/* Answers */}
                                 <div className="px-4 mt-8">
                                     <div className="border-t-2 border-black mb-4"></div>
                                     <h3 className="text-center font-bold mb-4">PHẦN TRẢ LỜI</h3>
@@ -174,8 +300,99 @@
             );
         };
 
+        // --- CAMERA SCAN COMPONENT (MỚI) ---
+        const CameraScanner = ({ onCaptured, onClose }) => {
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+            const [canCapture, setCanCapture] = useState(false);
+            const [currentContour, setCurrentContour] = useState(null);
+            const [currentSrc, setCurrentSrc] = useState(null);
+
+            useEffect(() => {
+                if (!window.cvLoaded) { alert("OpenCV chưa tải xong, vui lòng đợi!"); onClose(); return; }
+                
+                ScanHelper.startCamera(videoRef.current, (contour, srcMat) => {
+                    const ctx = canvasRef.current.getContext('2d');
+                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                    
+                    if (contour) {
+                        // Vẽ contour
+                        const pts = contour.data32S;
+                        ctx.strokeStyle = '#00FF00';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.moveTo(pts[0], pts[1]);
+                        ctx.lineTo(pts[2], pts[3]);
+                        ctx.lineTo(pts[4], pts[5]);
+                        ctx.lineTo(pts[6], pts[7]);
+                        ctx.closePath();
+                        ctx.stroke();
+                        
+                        setCanCapture(true);
+                        setCurrentContour(contour);
+                        // Clone src để dùng khi chụp
+                        if(currentSrc) currentSrc.delete();
+                        setCurrentSrc(srcMat.clone());
+                    } else {
+                        setCanCapture(false);
+                        if(currentSrc) { currentSrc.delete(); setCurrentSrc(null); }
+                    }
+                });
+
+                return () => {
+                    ScanHelper.stopCamera();
+                    if(currentSrc) currentSrc.delete();
+                };
+            }, []);
+
+            const handleCapture = () => {
+                if (!canCapture || !currentSrc || !currentContour) return;
+                
+                // Warp ảnh
+                const warped = ScanHelper.warpImage(currentSrc, currentContour);
+                
+                // Convert to Blob
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = warped.cols;
+                outCanvas.height = warped.rows;
+                cv.imshow(outCanvas, warped);
+                
+                outCanvas.toBlob(blob => {
+                    onCaptured(blob);
+                    warped.delete();
+                }, 'image/jpeg', 0.9);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black z-50 flex flex-col">
+                    <div className="p-4 flex justify-between items-center text-white">
+                        <h2 className="text-lg font-bold">Quét Phiếu</h2>
+                        <button onClick={onClose} className="text-gray-300 px-3 py-1">Đóng</button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center bg-black relative">
+                        <div className="video-container">
+                            <video ref={videoRef} playsInline muted autoPlay></video>
+                            <canvas ref={canvasRef} className="overlay" width={1280} height={720}></canvas>
+                        </div>
+                        <div className="absolute top-4 bg-black/50 text-white px-4 py-2 rounded-full text-sm pointer-events-none">
+                            {canCapture ? "✅ Đã bắt được phiếu!" : "🔍 Hãy đưa phiếu vào khung hình..."}
+                        </div>
+                    </div>
+                    <div className="p-6 bg-gray-900 flex justify-center">
+                        <button 
+                            onClick={handleCapture}
+                            disabled={!canCapture}
+                            className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all ${canCapture ? 'border-white bg-green-500 scale-110' : 'border-gray-600 bg-gray-800 opacity-50'}`}
+                        >
+                            <i className="fas fa-camera text-3xl text-white"></i>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
-            const DEFAULT_BACKEND = "https://hoangthiencm-giangbai.hf.space";
+            const DEFAULT_BACKEND = "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)";
             const [view, setView] = useState('grading');
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
@@ -190,8 +407,8 @@
             const [processing, setProcessing] = useState(false);
             const [previewImage, setPreviewImage] = useState(null);
             const [aiReading, setAiReading] = useState(false);
-            // State mới cho tính năng đọc chữ viết tay
             const [enableHandwriting, setEnableHandwriting] = useState(false);
+            const [showCamera, setShowCamera] = useState(false); // State bật camera
             
             const folderRef = useRef(null);
             const keyImageRef = useRef(null);
@@ -202,6 +419,11 @@
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('mode') === 'mobile') setMobileMode(true);
                 if (params.get('session')) setSessionId(params.get('session'));
+                
+                // Fix lỗi Zalo
+                if (typeof zaloJSV2 !== 'undefined') {
+                    console.log("Zalo SDK found");
+                }
             }, []);
 
             const callGeminiVision = async (base64) => {
@@ -227,44 +449,18 @@
             const createSession = async () => { if (!sessionName || !inputText) return alert("Nhập đủ thông tin!"); const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText))); try { const res = await fetch(`${backendUrl}/api/omr/create_session`, { method: 'POST', body: fd }); if(!res.ok) throw new Error("Lỗi kết nối Server"); const d = await res.json(); setSessionId(d.session_id); setShowQr(true); setTimeout(() => { document.getElementById("qrcode").innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}`, width: 200, height: 200 }); }, 100); } catch(e) { alert("Lỗi: " + e.message); } };
             const loadHistory = async () => { try { const res = await fetch(`${backendUrl}/api/omr/history`); const d=await res.json(); if(Array.isArray(d)) setHistoryList(d); } catch(e){} };
             const viewDetail = async (sid) => { try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); const d=await res.json(); if(Array.isArray(d)) setHistoryDetail(d); } catch(e){} };
-            
-            // --- CÁC HÀM XỬ LÝ MỚI CHO LỊCH SỬ ---
-            const editSession = async (e, s) => {
-                e.stopPropagation();
-                const newName = prompt("Nhập tên mới cho đợt thi:", s.session_name);
-                if (newName && newName !== s.session_name) {
-                    const fd = new FormData(); fd.append("name", newName);
-                    try {
-                        const res = await fetch(`${backendUrl}/api/omr/update_session/${s.session_id}`, { method: 'PUT', body: fd });
-                        if(res.ok) {
-                            setHistoryList(historyList.map(h => h.session_id === s.session_id ? {...h, session_name: newName} : h));
-                        } else alert("Lỗi khi cập nhật");
-                    } catch(e){ alert("Lỗi kết nối"); }
-                }
-            };
-            
-            const deleteSession = async (e, sid) => {
-                e.stopPropagation();
-                if(!confirm("Bạn có chắc chắn muốn xóa đợt thi này và TẤT CẢ kết quả của nó không?")) return;
-                try {
-                    const res = await fetch(`${backendUrl}/api/omr/delete_session/${sid}`, { method: 'DELETE' });
-                    if(res.ok) {
-                        setHistoryList(historyList.filter(h => h.session_id !== sid));
-                        if(historyDetail && historyDetail.length && historyDetail[0].session_id === sid) setHistoryDetail(null);
-                    } else alert("Lỗi khi xóa");
-                } catch(e){ alert("Lỗi kết nối"); }
-            };
+            const editSession = async (e, s) => { e.stopPropagation(); const newName = prompt("Nhập tên mới cho đợt thi:", s.session_name); if (newName && newName !== s.session_name) { const fd = new FormData(); fd.append("name", newName); try { const res = await fetch(`${backendUrl}/api/omr/update_session/${s.session_id}`, { method: 'PUT', body: fd }); if(res.ok) { setHistoryList(historyList.map(h => h.session_id === s.session_id ? {...h, session_name: newName} : h)); } else alert("Lỗi khi cập nhật"); } catch(e){ alert("Lỗi kết nối"); } } };
+            const deleteSession = async (e, sid) => { e.stopPropagation(); if(!confirm("Bạn có chắc chắn muốn xóa đợt thi này và TẤT CẢ kết quả của nó không?")) return; try { const res = await fetch(`${backendUrl}/api/omr/delete_session/${sid}`, { method: 'DELETE' }); if(res.ok) { setHistoryList(historyList.filter(h => h.session_id !== sid)); if(historyDetail && historyDetail.length && historyDetail[0].session_id === sid) setHistoryDetail(null); } else alert("Lỗi khi xóa"); } catch(e){ alert("Lỗi kết nối"); } };
 
             const processImagesPC = async (files) => { 
                 if(!files.length) return; 
                 setProcessing(true); 
                 const keys = parseMultiKey(inputText); 
                 for(let f of files) { 
-                    let fileToSend = await compressImage(f); 
+                    // Với PC, tạm thời ko pre-warp, gửi ảnh gốc
                     const fd = new FormData(); 
-                    fd.append("file", fileToSend); 
+                    fd.append("file", f); 
                     fd.append("answer_key_json", JSON.stringify(keys)); 
-                    // Gửi thêm flag nếu bật chế độ đọc chữ viết tay
                     if(enableHandwriting) fd.append("handwriting", "true");
                     
                     try { 
@@ -275,7 +471,29 @@
                 } 
                 setProcessing(false); 
             };
-            const handleMobileUpload = async (files) => { if(!files.length) return; setProcessing(true); setMobileStatus("Đang gửi..."); const sid = new URLSearchParams(window.location.search).get('session'); for(let f of files) { try { let fileToSend = await compressImage(f); const fd = new FormData(); fd.append("file", fileToSend); fd.append("session_id", sid); const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd }); const d = await res.json(); setMobileStatus(res.ok ? `✓ Điểm: ${d.score}` : `⚠ ${d.error}`); } catch(e) { setMobileStatus("Lỗi Mạng"); } } setProcessing(false); };
+
+            const handleMobileCapture = async (blob) => {
+                setShowCamera(false);
+                setProcessing(true);
+                setMobileStatus("Đang gửi ảnh đã căn chỉnh...");
+                
+                const sid = new URLSearchParams(window.location.search).get('session');
+                
+                try {
+                    const fd = new FormData();
+                    fd.append("file", blob, "capture.jpg");
+                    fd.append("session_id", sid);
+                    fd.append("pre_warped", "true"); // Báo backend là ảnh đã phẳng
+                    
+                    const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd });
+                    const d = await res.json();
+                    setMobileStatus(res.ok ? `✓ SBD: ${d.student_id} | Điểm: ${d.score}` : `⚠ ${d.error}`);
+                } catch(e) {
+                    setMobileStatus("Lỗi Mạng");
+                }
+                setProcessing(false);
+            };
+
             const historyItems = historyDetail ? historyDetail.map((r, i) => (<tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>)) : null;
 
             useEffect(() => {
@@ -284,7 +502,41 @@
                 return () => clearInterval(pollRef.current);
             }, [view, sessionId, backendUrl, mobileMode]);
 
-            if (mobileMode) return (<div className="bg-gray-900 min-h-screen text-white p-6 flex flex-col items-center justify-center text-center"><h1 className="text-2xl font-bold mb-4">Camera Chấm Thi</h1>{mobileStatus && <div className="mb-6 p-3 bg-green-600 rounded font-bold">{mobileStatus}</div>}<input type="file" accept="image/*" capture="environment" className="hidden" id="cam" onChange={(e)=>handleMobileUpload(e.target.files)}/><label htmlFor="cam" className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600">{processing ? <div className="loader"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">CHỤP</span></>}</label></div>);
+            if (mobileMode) {
+                return (
+                    <div className="bg-gray-900 min-h-screen text-white flex flex-col">
+                        {showCamera && <CameraScanner onCaptured={handleMobileCapture} onClose={()=>setShowCamera(false)} />}
+                        
+                        <div className="p-6 flex-1 flex flex-col items-center justify-center text-center">
+                            <h1 className="text-2xl font-bold mb-4 text-indigo-400">Camera Chấm Thi AI</h1>
+                            
+                            {mobileStatus && (
+                                <div className={`mb-6 p-4 rounded-lg font-bold w-full ${mobileStatus.includes('✓') ? 'bg-green-600' : 'bg-red-600'}`}>
+                                    {mobileStatus}
+                                </div>
+                            )}
+                            
+                            <button 
+                                onClick={() => setShowCamera(true)}
+                                className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all"
+                            >
+                                {processing ? (
+                                    <div className="loader border-white border-t-indigo-500"></div>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-camera text-6xl mb-2"></i>
+                                        <span className="font-bold text-xl">QUÉT PHIẾU</span>
+                                    </>
+                                )}
+                            </button>
+                            
+                            <p className="mt-6 text-gray-400 text-sm px-4">
+                                Hướng dẫn: Đưa camera vào phiếu sao cho <b>khung xanh</b> bao trọn tờ giấy, sau đó bấm nút Chụp.
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -299,7 +551,6 @@
                                 <div className="lg:col-span-4 space-y-4">
                                     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">{aiReading && (<div className="ai-loading"><div className="pulse-ring"></div><span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span></div>)}<h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3><input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/><div className="relative"><textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea><button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button><input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/></div>
                                     
-                                    {/* --- UI CHECKBOX ĐỌC CHỮ VIẾT TAY (MỚI) --- */}
                                     <div className="mt-2 flex items-center p-2 bg-pink-50 rounded border border-pink-100">
                                         <input 
                                             type="checkbox" 
