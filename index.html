@@ -21,27 +21,30 @@
             getHFToken: () => localStorage.getItem('hf_token') || "",
 
             // --- ACTIONS ---
-            handleFile: (file, key) => {
+            handleFile: (file, type) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const lines = e.target.result.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
-                    if(lines.length){ 
-                        localStorage.setItem(key, JSON.stringify(lines)); 
-                        alert(`✅ Đã nạp thành công ${lines.length} dòng!`); 
-                        SystemConfig.renderConfig(); 
+                    const content = e.target.result.trim();
+                    
+                    if (type === 'gemini') {
+                        const lines = content.split('\n').map(l=>l.trim()).filter(l=>l.length>5);
+                        if(lines.length){ 
+                            localStorage.setItem('global_gemini_keys', JSON.stringify(lines)); 
+                            alert(`✅ Đã nạp ${lines.length} Gemini Keys!`); 
+                        }
+                    } else if (type === 'hf') {
+                        // Token HF thường chỉ có 1 dòng hoặc user lưu nhiều dòng thì lấy dòng đầu tiên có chữ hf_
+                        const token = content.split('\n').map(l=>l.trim()).find(l => l.startsWith('hf_'));
+                        if(token){
+                            localStorage.setItem('hf_token', token);
+                            alert(`✅ Đã nạp Token Hugging Face!`);
+                        } else {
+                            alert("❌ Không tìm thấy token bắt đầu bằng 'hf_' trong file.");
+                        }
                     }
+                    SystemConfig.renderConfig(); 
                 };
                 reader.readAsText(file);
-            },
-
-            saveHFToken: () => {
-                const token = document.getElementById('hfTokenInput').value.trim();
-                if(!token) return alert("Vui lòng nhập Token!");
-                if(!token.startsWith('hf_')) return alert("Token Hugging Face phải bắt đầu bằng 'hf_'");
-                
-                localStorage.setItem('hf_token', token);
-                alert("✅ Đã lưu Token Hugging Face! Hệ thống sẽ dùng nó khi Gemini quá tải.");
-                SystemConfig.renderConfig();
             },
 
             clearHFToken: () => {
@@ -67,7 +70,7 @@
                         <span class="text-xs text-gray-500">Sẵn sàng</span>
                     </div>`;
                 } else {
-                    geminiStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic">Chưa có API Key nào. Vui lòng nạp file.</div>`;
+                    geminiStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic">Chưa có API Key nào.</div>`;
                 }
 
                 // 2. Render HF Status
@@ -85,11 +88,13 @@
                     `;
                 } else {
                     hfContainer.innerHTML = `
-                        <div class="flex gap-2">
-                            <input type="text" id="hfTokenInput" placeholder="Dán Token hf_... vào đây" class="flex-1 border p-2 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none">
-                            <button onclick="SystemConfig.saveHFToken()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700">Lưu</button>
+                        <div class="flex items-center gap-2">
+                            <label class="flex-1 cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-300 rounded px-4 py-2 text-sm font-medium transition text-center">
+                                <i class="fas fa-file-upload mr-2"></i> Chọn file Token (txt)
+                                <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'hf')" class="hidden"/>
+                            </label>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Dùng để chạy model Qwen 2.5 (Giỏi toán & Tiếng Việt) miễn phí.</p>
+                        <p class="text-xs text-gray-400 mt-1">Hoặc file chứa token bắt đầu bằng hf_...</p>
                     `;
                 }
             }
@@ -120,18 +125,17 @@
 
     <div class="max-w-7xl mx-auto p-8">
         
-        <!-- SECTION 1: CÔNG CỤ TẠO NỘI DUNG -->
         <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i class="fas fa-pen-nib text-indigo-500"></i> Soạn Giảng & Đề Thi</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             
-            <!-- MA TRẬN ĐỀ THI (NEW FEATURE) -->
+            <!-- MA TRẬN ĐỀ THI -->
             <a href="matrande.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer">
                 <div class="absolute top-0 right-0 bg-pink-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">MỚI</div>
                 <div class="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
                     <i class="fas fa-table"></i>
                 </div>
                 <h3 class="text-lg font-bold text-slate-800 mb-1">Tạo Đề Từ Ma Trận</h3>
-                <p class="text-sm text-slate-500 mb-4">Quét ảnh ma trận -> Dùng Gemini/Qwen sinh đề chuẩn -> Xuất Word.</p>
+                <p class="text-sm text-slate-500 mb-4">Quét Ma trận / Bảng đặc tả -> Sinh đề thi Trắc nghiệm & Tự luận -> Xuất Word chuẩn.</p>
                 <span class="text-pink-600 font-bold text-sm group-hover:underline">Sử dụng ngay <i class="fas fa-arrow-right ml-1"></i></span>
             </a>
 
@@ -156,11 +160,9 @@
             </a>
         </div>
 
-        <!-- SECTION 2: CÔNG CỤ LỚP HỌC -->
         <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> Quản Lý Lớp Học</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            <!-- THI ONLINE -->
             <a href="thitructuyen.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
                 <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
                     <i class="fas fa-globe"></i>
@@ -170,7 +172,6 @@
                 <span class="text-blue-600 font-bold text-sm group-hover:underline">Truy cập <i class="fas fa-arrow-right ml-1"></i></span>
             </a>
 
-            <!-- GOOGLE SLIDES -->
             <a href="gslides.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
                 <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
                     <i class="fas fa-desktop"></i>
@@ -180,7 +181,6 @@
                 <span class="text-amber-600 font-bold text-sm group-hover:underline">Truy cập <i class="fas fa-arrow-right ml-1"></i></span>
             </a>
 
-            <!-- CHẤM THI OMR (LOCKED) -->
             <div class="bg-slate-100 p-6 rounded-2xl border border-slate-200 opacity-75 cursor-not-allowed">
                 <div class="w-14 h-14 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center text-2xl mb-4">
                     <i class="fas fa-camera"></i>
@@ -193,7 +193,7 @@
 
     </div>
 
-    <!-- CONFIG MODAL (NEW) -->
+    <!-- CONFIG MODAL -->
     <div id="configModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
@@ -210,7 +210,7 @@
                     <div class="flex items-center gap-2">
                         <label class="flex-1 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 rounded px-4 py-2 text-sm font-medium transition text-center">
                             <i class="fas fa-file-upload mr-2"></i> Chọn file Keys.txt
-                            <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'global_gemini_keys')" class="hidden"/>
+                            <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'gemini')" class="hidden"/>
                         </label>
                     </div>
                 </div>
@@ -220,9 +220,7 @@
                 <!-- 2. HUGGING FACE CONFIG -->
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-2">Hugging Face (Token)</label>
-                    <div id="hfConfigContainer">
-                        <!-- JS sẽ render input tại đây -->
-                    </div>
+                    <div id="hfConfigContainer"></div>
                 </div>
 
                 <div class="bg-yellow-50 p-3 rounded text-xs text-yellow-800 mt-4">
