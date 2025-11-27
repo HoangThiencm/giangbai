@@ -7,399 +7,142 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .file-input-hidden {
-            position: absolute;
-            opacity: 0;
-            width: 0.1px;
-            height: 0.1px;
-            overflow: hidden;
-        }
+        .file-input-hidden { position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; }
+        .hover-card { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .hover-card:hover { transform: translateY(-5px); box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08); }
     </style>
     <script>
-        // MODULE QUẢN LÝ TẬP TRUNG
         const SystemConfig = {
-            // 1. Kiểm tra đăng nhập
-            checkAuth: () => {
-                if (!localStorage.getItem('authToken')) {
-                    window.location.href = 'login.html';
-                    return false;
-                }
-                return true;
-            },
-
-            // 2. Logout
-            logout: () => {
-                if(confirm("Đăng xuất khỏi hệ thống?")) { 
-                    localStorage.clear(); 
-                    window.location.href = 'login.html'; 
-                }
-            },
-
-            // 3. Lấy API Keys
-            getApiKeys: () => {
-                const keys = localStorage.getItem('global_gemini_keys');
-                return keys ? JSON.parse(keys) : [];
-            },
-
-            // 4. Lấy danh sách modules
-            getModules: () => {
-                const modules = localStorage.getItem('gemini_modules');
-                return modules ? JSON.parse(modules) : ['gemini-2.5-flash']; // Mặc định
-            },
-
-            // 5. Lấy module mặc định
-            getDefaultModule: () => {
-                const defaultModule = localStorage.getItem('default_gemini_module');
-                return defaultModule || 'gemini-2.5-flash';
-            },
-
-            // 6. Xử lý file API Keys
-            handleApiKeysFile: (file) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const content = e.target.result;
-                        const keys = content.split('\n')
-                            .map(k => k.trim())
-                            .filter(k => k.length > 5);
-                        
-                        if (keys.length > 0) {
-                            localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
-                            resolve({
-                                count: keys.length,
-                                fileName: file.name
-                            });
-                        } else {
-                            reject("File không chứa API Keys hợp lệ!");
-                        }
-                    };
-                    reader.onerror = () => reject("Lỗi đọc file!");
-                    reader.readAsText(file);
-                });
-            },
-
-            // 7. Xử lý file Modules
-            handleModulesFile: (file) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const content = e.target.result;
-                        const modules = content.split('\n')
-                            .map(m => m.trim())
-                            .filter(m => m.length > 0);
-                        
-                        if (modules.length > 0) {
-                            localStorage.setItem('gemini_modules', JSON.stringify(modules));
-                            // Set module đầu tiên làm mặc định
-                            localStorage.setItem('default_gemini_module', modules[0]);
-                            resolve({
-                                count: modules.length,
-                                fileName: file.name,
-                                modules: modules
-                            });
-                        } else {
-                            reject("File không chứa modules hợp lệ!");
-                        }
-                    };
-                    reader.onerror = () => reject("Lỗi đọc file!");
-                    reader.readAsText(file);
-                });
-            },
-
-            // 8. Xóa cấu hình
-            clearConfig: () => {
-                if(confirm("Xóa tất cả cấu hình API Keys và Modules?")) {
-                    localStorage.removeItem('global_gemini_keys');
-                    localStorage.removeItem('gemini_modules');
-                    localStorage.removeItem('default_gemini_module');
-                    localStorage.removeItem('key_file_name');
-                    localStorage.removeItem('modules_file_name');
-                    location.reload();
-                }
-            },
-
-            // 9. Mở modal cấu hình
-            openConfigModal: () => {
-                document.getElementById('configModal').classList.remove('hidden');
-                updateConfigModal();
-            },
-
-            // 10. Đóng modal cấu hình
-            closeConfigModal: () => {
-                document.getElementById('configModal').classList.add('hidden');
+            checkAuth: () => { if (!localStorage.getItem('authToken')) { window.location.href = 'login.html'; return false; } return true; },
+            logout: () => { if(confirm("Đăng xuất?")) { localStorage.clear(); window.location.href = 'login.html'; } },
+            getApiKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
+            getModules: () => JSON.parse(localStorage.getItem('gemini_modules') || "['gemini-2.5-flash']"),
+            handleFile: (file, key) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const lines = e.target.result.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+                    if(lines.length){ localStorage.setItem(key, JSON.stringify(lines)); alert(`Đã nạp ${lines.length} dòng!`); location.reload(); }
+                };
+                reader.readAsText(file);
             }
         };
-
-        // XỬ LÝ GIAO DIỆN MODAL
-        function updateConfigModal() {
-            const apiKeys = SystemConfig.getApiKeys();
-            const modules = SystemConfig.getModules();
-            const defaultModule = SystemConfig.getDefaultModule();
-            
-            const statusDiv = document.getElementById('configStatus');
-            const uploadArea = document.getElementById('uploadArea');
-            
-            if (apiKeys.length > 0 && modules.length > 0) {
-                statusDiv.classList.remove('hidden');
-                statusDiv.innerHTML = `
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div class="flex items-center gap-3 text-green-700 mb-3">
-                            <i class="fas fa-check-circle text-2xl"></i>
-                            <div>
-                                <p class="font-bold">Hệ thống đã được cấu hình thành công!</p>
-                                <p class="text-sm text-green-600">Sẵn sàng sử dụng các tính năng AI</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div class="bg-white p-3 rounded border">
-                                <p class="font-semibold text-gray-700">API Keys</p>
-                                <p class="text-green-600 font-bold">${apiKeys.length} keys</p>
-                                <p class="text-xs text-gray-500">${localStorage.getItem('key_file_name') || 'Đã nạp'}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <p class="font-semibold text-gray-700">Modules</p>
-                                <p class="text-green-600 font-bold">${modules.length} modules</p>
-                                <p class="text-xs text-gray-500">Mặc định: ${defaultModule}</p>
-                            </div>
-                        </div>
-                        <button onclick="SystemConfig.clearConfig()" class="mt-3 text-red-500 text-xs hover:underline flex items-center gap-1">
-                            <i class="fas fa-redo"></i> Xóa cấu hình
-                        </button>
-                    </div>
-                `;
-                uploadArea.classList.add('hidden');
-            } else {
-                statusDiv.classList.add('hidden');
-                uploadArea.classList.remove('hidden');
-            }
-        }
-
-        function handleFileSelect(event, type) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const handler = type === 'keys' 
-                ? SystemConfig.handleApiKeysFile 
-                : SystemConfig.handleModulesFile;
-
-            handler(file).then(result => {
-                // Lưu tên file để hiển thị
-                if (type === 'keys') {
-                    localStorage.setItem('key_file_name', result.fileName);
-                } else {
-                    localStorage.setItem('modules_file_name', result.fileName);
-                }
-                
-                updateConfigModal();
-                alert(`✅ Đã nạp ${result.count} ${type === 'keys' ? 'API Keys' : 'Modules'} từ file "${result.fileName}"!`);
-            }).catch(error => {
-                alert(`❌ Lỗi: ${error}`);
-            });
-        }
-
-        function triggerFileInput(type) {
-            const inputId = type === 'keys' ? 'keysFileInput' : 'modulesFileInput';
-            document.getElementById(inputId).click();
-        }
-
-        function loadPage() {
-            // Kiểm tra đăng nhập
-            if (!SystemConfig.checkAuth()) return;
-            
-            // Hiển thị email user
-            const email = localStorage.getItem('userEmail');
-            if(email) document.getElementById('userEmailDisplay').innerText = email;
-        }
-
-        // Đóng modal khi click bên ngoài
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('configModal');
-            if (event.target === modal) {
-                SystemConfig.closeConfigModal();
-            }
-        });
     </script>
 </head>
-<body class="bg-gray-50 font-sans min-h-screen" onload="loadPage()">
+<body class="bg-slate-50 font-sans min-h-screen text-slate-800">
 
-    <nav class="bg-indigo-900 text-white p-4 shadow-xl sticky top-0 z-50">
+    <nav class="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white text-indigo-900 rounded-full flex items-center justify-center font-bold text-xl border-2 border-indigo-300">AI</div>
+                <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-200">AI</div>
                 <div>
-                    <h1 class="text-lg font-bold leading-tight">TRỢ LÝ GIÁO VIÊN</h1>
-                    <p class="text-xs text-indigo-300 font-mono" id="userEmailDisplay">...</p>
+                    <h1 class="font-bold text-lg text-slate-800">TRỢ LÝ GIÁO VIÊN</h1>
+                    <p class="text-xs text-slate-500 font-medium">Phiên bản Thử nghiệm (Pilot)</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button onclick="SystemConfig.openConfigModal()" class="text-white hover:text-yellow-300 font-bold text-sm border border-white/30 hover:border-yellow-300 px-3 py-1 rounded transition flex items-center gap-2">
-                    <i class="fas fa-cog"></i> Cấu hình
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('configModal').classList.remove('hidden')" class="text-slate-600 hover:text-indigo-600 font-bold text-sm px-3 py-2 rounded-lg hover:bg-slate-100 transition flex items-center gap-2">
+                    <i class="fas fa-cogs"></i> Cấu hình
                 </button>
-                <button onclick="SystemConfig.logout()" class="text-red-300 hover:text-white font-bold text-sm border border-red-300 hover:bg-red-600 hover:border-transparent px-3 py-1 rounded transition">
-                    <i class="fas fa-sign-out-alt mr-1"></i> Thoát
+                <button onclick="SystemConfig.logout()" class="text-red-500 hover:text-red-700 font-bold text-sm px-3 py-2 rounded-lg hover:bg-red-50 transition">
+                    <i class="fas fa-power-off"></i>
                 </button>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto p-6">
+    <div class="max-w-7xl mx-auto p-8">
         
-        <!-- CÔNG CỤ DẠY HỌC -->
-        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Công Cụ Dạy Học</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- SECTION 1: CÔNG CỤ TẠO NỘI DUNG -->
+        <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i class="fas fa-pen-nib text-indigo-500"></i> Soạn Giảng & Đề Thi</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             
-            <!-- 1. GOOGLE SLIDES -->
-            <a href="gslides.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-yellow-500 cursor-pointer flex flex-col h-full">
-                <div class="w-14 h-14 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition mx-auto">
-                    <i class="fas fa-presentation-screen"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Google Slides</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Trình chiếu bài giảng trực tiếp từ Google Slides không cần tải về.</p>
-                <div class="mt-4 text-center text-yellow-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
-            </a>
-
-            <!-- 2. SMART QUIZ -->
-            <a href="smartquiz.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-indigo-600 cursor-pointer flex flex-col h-full">
-                <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Soạn Đề AI</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Tạo đề trắc nghiệm & tự luận bằng AI. Trình chiếu thông minh.</p>
-                <div class="mt-4 text-center text-indigo-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
-            </a>
-
-            <!-- 3. TRỘN ĐỀ -->
-            <a href="tronde.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-green-600 cursor-pointer flex flex-col h-full">
-                <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
-                    <i class="fas fa-random"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Trộn Đề Thi</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">3 chế độ: Server (Công thức), AI (Ảnh), Offline (Text).</p>
-                <div class="mt-4 text-center text-green-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
-            </a>
-
-            <!-- 4. THI ONLINE -->
-            <a href="thitructuyen.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-blue-600 cursor-pointer flex flex-col h-full">
-                <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
-                    <i class="fas fa-globe"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Thi Online</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Tổ chức kỳ thi, mã QR, chấm điểm tự động, báo cáo.</p>
-                <div class="mt-4 text-center text-blue-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
-            </a>
-
-            <!-- 5. TẠO ĐỀ TỪ MA TRẬN (MỚI) -->
-            <a href="matrande.html" class="group bg-white p-6 rounded-2xl shadow hover:shadow-2xl transition transform hover:-translate-y-1 border-t-4 border-pink-600 cursor-pointer flex flex-col h-full">
-                <div class="w-14 h-14 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition mx-auto">
+            <!-- MA TRẬN ĐỀ THI (NEW FEATURE) -->
+            <a href="matrande.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer">
+                <div class="absolute top-0 right-0 bg-pink-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">MỚI</div>
+                <div class="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
                     <i class="fas fa-table"></i>
                 </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Tạo Đề Ma Trận</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Quét ảnh ma trận đề thi -> Sinh câu hỏi AI -> Xuất Word chuẩn.</p>
-                <div class="mt-4 text-center text-pink-600 font-bold text-sm">Mở công cụ <i class="fas fa-arrow-right ml-1"></i></div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Tạo Đề Từ Ma Trận</h3>
+                <p class="text-sm text-slate-500 mb-4">Quét ảnh bảng ma trận/đặc tả -> Sinh đề thi trắc nghiệm & tự luận chuẩn xác -> Xuất Word.</p>
+                <span class="text-pink-600 font-bold text-sm group-hover:underline">Sử dụng ngay <i class="fas fa-arrow-right ml-1"></i></span>
             </a>
 
-            <!-- 6. CHẤM THI OMR (LOCKED) -->
-            <div class="group bg-gray-100 p-6 rounded-2xl shadow-inner border-t-4 border-gray-400 cursor-not-allowed flex flex-col h-full opacity-75">
-                <div class="w-14 h-14 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-2xl mb-4 mx-auto">
-                    <i class="fas fa-lock"></i>
+            <!-- SOẠN ĐỀ AI -->
+            <a href="smartquiz.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
+                <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                    <i class="fas fa-magic"></i>
                 </div>
-                <h3 class="text-xl font-bold text-gray-600 mb-2 text-center">Chấm Thi OMR</h3>
-                <p class="text-sm text-gray-500 text-center flex-1">Tính năng đang được nâng cấp và bảo trì. Vui lòng quay lại sau!</p>
-                <div class="mt-4 text-center text-gray-500 font-bold text-sm flex justify-center items-center gap-2">
-                    <i class="fas fa-tools"></i> Đang phát triển
-                </div>
-            </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Soạn Đề Thông Minh</h3>
+                <p class="text-sm text-slate-500 mb-4">Nhập chủ đề bất kỳ, AI sẽ soạn câu hỏi và tạo slide trình chiếu dạy học tức thì.</p>
+                <span class="text-indigo-600 font-bold text-sm group-hover:underline">Sử dụng ngay <i class="fas fa-arrow-right ml-1"></i></span>
+            </a>
 
+            <!-- TRỘN ĐỀ -->
+            <a href="tronde.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                    <i class="fas fa-random"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Trộn Đề Thi 4 Mã</h3>
+                <p class="text-sm text-slate-500 mb-4">Xáo trộn câu hỏi từ file Word/PDF. Hỗ trợ giữ định dạng công thức Toán học.</p>
+                <span class="text-emerald-600 font-bold text-sm group-hover:underline">Sử dụng ngay <i class="fas fa-arrow-right ml-1"></i></span>
+            </a>
         </div>
+
+        <!-- SECTION 2: CÔNG CỤ LỚP HỌC -->
+        <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> Quản Lý Lớp Học</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- THI ONLINE -->
+            <a href="thitructuyen.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
+                <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Tổ Chức Thi Online</h3>
+                <p class="text-sm text-slate-500 mb-4">Tạo kỳ thi, cấp mã QR cho học sinh làm bài trên điện thoại. Chấm điểm tự động.</p>
+                <span class="text-blue-600 font-bold text-sm group-hover:underline">Truy cập <i class="fas fa-arrow-right ml-1"></i></span>
+            </a>
+
+            <!-- GOOGLE SLIDES -->
+            <a href="gslides.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
+                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                    <i class="fas fa-desktop"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Trình Chiếu Bài Giảng</h3>
+                <p class="text-sm text-slate-500 mb-4">Công cụ hỗ trợ trình chiếu Google Slides mượt mà, không quảng cáo.</p>
+                <span class="text-amber-600 font-bold text-sm group-hover:underline">Truy cập <i class="fas fa-arrow-right ml-1"></i></span>
+            </a>
+
+            <!-- CHẤM THI OMR (LOCKED) -->
+            <div class="bg-slate-100 p-6 rounded-2xl border border-slate-200 opacity-75 cursor-not-allowed">
+                <div class="w-14 h-14 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center text-2xl mb-4">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-500 mb-1">Chấm Thi Camera (OMR)</h3>
+                <p class="text-sm text-slate-400 mb-4">Tính năng đang được nâng cấp để hỗ trợ AI nhận diện chữ viết tay.</p>
+                <span class="text-slate-400 font-bold text-sm bg-slate-200 px-2 py-1 rounded"><i class="fas fa-tools"></i> Đang bảo trì</span>
+            </div>
+        </div>
+
     </div>
 
-    <!-- MODAL CẤU HÌNH -->
-    <div id="configModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <!-- Header -->
-            <div class="bg-indigo-600 text-white p-6 rounded-t-2xl">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold flex items-center gap-2">
-                        <i class="fas fa-cogs"></i>
-                        Cấu Hình Hệ Thống AI
-                    </h2>
-                    <button onclick="SystemConfig.closeConfigModal()" class="text-white hover:text-yellow-300 text-xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <p class="text-indigo-100 text-sm mt-2">
-                    Cần nạp 2 file để hệ thống hoạt động
-                </p>
+    <!-- CONFIG MODAL -->
+    <div id="configModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold">Cấu hình Hệ thống</h3>
+                <button onclick="document.getElementById('configModal').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
-
-            <!-- Content -->
-            <div class="p-6">
-                <!-- Trạng thái cấu hình -->
-                <div id="configStatus" class="hidden mb-6"></div>
-
-                <!-- Vùng upload -->
-                <div id="uploadArea" class="space-y-4">
-                    <div class="text-center text-gray-600 mb-4">
-                        <p class="font-semibold">Cần nạp 2 file để hệ thống hoạt động:</p>
-                        <p class="text-sm">1. <b>API Keys.txt</b> - Mỗi dòng là 1 API Key</p>
-                        <p class="text-sm">2. <b>Modules.txt</b> - Mỗi dòng là 1 module Gemini</p>
-                    </div>
-
-                    <!-- UPLOAD API KEYS -->
-                    <div class="border-2 border-dashed border-blue-300 rounded-xl p-5 text-center hover:bg-blue-50 transition cursor-pointer bg-blue-25 relative">
-                        <input type="file" id="keysFileInput" accept=".txt" class="file-input-hidden" 
-                               onchange="handleFileSelect(event, 'keys')">
-                        <div class="pointer-events-none">
-                            <i class="fas fa-key text-3xl text-blue-500 mb-3"></i>
-                            <h3 class="font-bold text-gray-700 text-lg">File API Keys.txt</h3>
-                            <p class="text-sm text-gray-500 mt-2">Mỗi dòng chứa 1 API Key Gemini</p>
-                        </div>
-                        <button onclick="triggerFileInput('keys')" 
-                                class="absolute bottom-3 right-3 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition">
-                            <i class="fas fa-upload"></i>
-                        </button>
-                    </div>
-
-                    <!-- UPLOAD MODULES -->
-                    <div class="border-2 border-dashed border-green-300 rounded-xl p-5 text-center hover:bg-green-50 transition cursor-pointer bg-green-25 relative">
-                        <input type="file" id="modulesFileInput" accept=".txt" class="file-input-hidden" 
-                               onchange="handleFileSelect(event, 'modules')">
-                        <div class="pointer-events-none">
-                            <i class="fas fa-cube text-3xl text-green-500 mb-3"></i>
-                            <h3 class="font-bold text-gray-700 text-lg">File Modules.txt</h3>
-                            <p class="text-sm text-gray-500 mt-2">Mỗi dòng chứa 1 module (ví dụ: gemini-2.5-flash)</p>
-                        </div>
-                        <button onclick="triggerFileInput('modules')" 
-                                class="absolute bottom-3 right-3 bg-green-500 hover:bg-green-600 text-white p-2 rounded-full transition">
-                            <i class="fas fa-upload"></i>
-                        </button>
-                    </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Nạp file API Keys (Gemini)</label>
+                    <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'global_gemini_keys')" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
                 </div>
-
-                <!-- Hướng dẫn -->
-                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 class="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-info-circle text-blue-500"></i>
-                        Hướng dẫn:
-                    </h4>
-                    <ul class="text-sm text-gray-600 space-y-1">
-                        <li>• Tạo file <b>API Keys.txt</b> với mỗi dòng là 1 API Key</li>
-                        <li>• Tạo file <b>Modules.txt</b> với mỗi dòng là 1 module</li>
-                        <li>• Hệ thống sẽ tự động ghi nhớ cấu hình</li>
-                    </ul>
+                <div class="bg-yellow-50 p-3 rounded text-sm text-yellow-800">
+                    <i class="fas fa-info-circle"></i> Hệ thống đang chạy trên chế độ <b>Pilot (Thử nghiệm)</b>. Dữ liệu được lưu cục bộ trên trình duyệt.
                 </div>
             </div>
         </div>
     </div>
-    
-    <footer class="text-center p-6 text-gray-400 text-sm mt-8">
-        &copy; 2025 Trợ Lý Giáo Viên AI. Phát triển bởi Hoàng Tấn Thiên - SĐT/Zalo: 0984410912.
-    </footer>
 
-    <!-- File inputs ẩn -->
-    <input type="file" id="keysFileInput" accept=".txt" class="file-input-hidden" 
-           onchange="handleFileSelect(event, 'keys')">
-    <input type="file" id="modulesFileInput" accept=".txt" class="file-input-hidden" 
-           onchange="handleFileSelect(event, 'modules')">
 </body>
 </html>
