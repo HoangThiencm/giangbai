@@ -15,15 +15,83 @@
         const SystemConfig = {
             checkAuth: () => { if (!localStorage.getItem('authToken')) { window.location.href = 'login.html'; return false; } return true; },
             logout: () => { if(confirm("Đăng xuất?")) { localStorage.clear(); window.location.href = 'login.html'; } },
+            
+            // --- GETTERS ---
             getApiKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
-            getModules: () => JSON.parse(localStorage.getItem('gemini_modules') || "['gemini-2.5-flash']"),
+            getHFToken: () => localStorage.getItem('hf_token') || "",
+
+            // --- ACTIONS ---
             handleFile: (file, key) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const lines = e.target.result.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
-                    if(lines.length){ localStorage.setItem(key, JSON.stringify(lines)); alert(`Đã nạp ${lines.length} dòng!`); location.reload(); }
+                    if(lines.length){ 
+                        localStorage.setItem(key, JSON.stringify(lines)); 
+                        alert(`✅ Đã nạp thành công ${lines.length} dòng!`); 
+                        SystemConfig.renderConfig(); 
+                    }
                 };
                 reader.readAsText(file);
+            },
+
+            saveHFToken: () => {
+                const token = document.getElementById('hfTokenInput').value.trim();
+                if(!token) return alert("Vui lòng nhập Token!");
+                if(!token.startsWith('hf_')) return alert("Token Hugging Face phải bắt đầu bằng 'hf_'");
+                
+                localStorage.setItem('hf_token', token);
+                alert("✅ Đã lưu Token Hugging Face! Hệ thống sẽ dùng nó khi Gemini quá tải.");
+                SystemConfig.renderConfig();
+            },
+
+            clearHFToken: () => {
+                if(confirm("Xóa Token Hugging Face?")) {
+                    localStorage.removeItem('hf_token');
+                    SystemConfig.renderConfig();
+                }
+            },
+
+            // --- UI RENDERER ---
+            openModal: () => {
+                document.getElementById('configModal').classList.remove('hidden');
+                SystemConfig.renderConfig();
+            },
+
+            renderConfig: () => {
+                // 1. Render Gemini Status
+                const keys = SystemConfig.getApiKeys();
+                const geminiStatus = document.getElementById('geminiStatus');
+                if(keys.length > 0) {
+                    geminiStatus.innerHTML = `<div class="flex justify-between items-center bg-green-50 p-3 rounded border border-green-200">
+                        <span class="text-green-700 font-bold"><i class="fas fa-check-circle"></i> Đã nạp ${keys.length} API Keys</span>
+                        <span class="text-xs text-gray-500">Sẵn sàng</span>
+                    </div>`;
+                } else {
+                    geminiStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic">Chưa có API Key nào. Vui lòng nạp file.</div>`;
+                }
+
+                // 2. Render HF Status
+                const hfToken = SystemConfig.getHFToken();
+                const hfContainer = document.getElementById('hfConfigContainer');
+                if(hfToken) {
+                    hfContainer.innerHTML = `
+                        <div class="flex justify-between items-center bg-purple-50 p-3 rounded border border-purple-200">
+                            <div>
+                                <span class="text-purple-700 font-bold block"><i class="fas fa-robot"></i> Hugging Face</span>
+                                <span class="text-xs text-gray-500">Token: ${hfToken.substring(0, 6)}...******</span>
+                            </div>
+                            <button onclick="SystemConfig.clearHFToken()" class="text-red-500 hover:text-red-700 text-sm underline">Xóa</button>
+                        </div>
+                    `;
+                } else {
+                    hfContainer.innerHTML = `
+                        <div class="flex gap-2">
+                            <input type="text" id="hfTokenInput" placeholder="Dán Token hf_... vào đây" class="flex-1 border p-2 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                            <button onclick="SystemConfig.saveHFToken()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700">Lưu</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Dùng để chạy model Qwen 2.5 (Giỏi toán & Tiếng Việt) miễn phí.</p>
+                    `;
+                }
             }
         };
     </script>
@@ -40,7 +108,7 @@
                 </div>
             </div>
             <div class="flex gap-3">
-                <button onclick="document.getElementById('configModal').classList.remove('hidden')" class="text-slate-600 hover:text-indigo-600 font-bold text-sm px-3 py-2 rounded-lg hover:bg-slate-100 transition flex items-center gap-2">
+                <button onclick="SystemConfig.openModal()" class="text-slate-600 hover:text-indigo-600 font-bold text-sm px-3 py-2 rounded-lg hover:bg-slate-100 transition flex items-center gap-2">
                     <i class="fas fa-cogs"></i> Cấu hình
                 </button>
                 <button onclick="SystemConfig.logout()" class="text-red-500 hover:text-red-700 font-bold text-sm px-3 py-2 rounded-lg hover:bg-red-50 transition">
@@ -63,7 +131,7 @@
                     <i class="fas fa-table"></i>
                 </div>
                 <h3 class="text-lg font-bold text-slate-800 mb-1">Tạo Đề Từ Ma Trận</h3>
-                <p class="text-sm text-slate-500 mb-4">Quét ảnh bảng ma trận/đặc tả -> Sinh đề thi trắc nghiệm & tự luận chuẩn xác -> Xuất Word.</p>
+                <p class="text-sm text-slate-500 mb-4">Quét ảnh ma trận -> Dùng Gemini/Qwen sinh đề chuẩn -> Xuất Word.</p>
                 <span class="text-pink-600 font-bold text-sm group-hover:underline">Sử dụng ngay <i class="fas fa-arrow-right ml-1"></i></span>
             </a>
 
@@ -125,20 +193,40 @@
 
     </div>
 
-    <!-- CONFIG MODAL -->
+    <!-- CONFIG MODAL (NEW) -->
     <div id="configModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
-                <h3 class="font-bold">Cấu hình Hệ thống</h3>
+                <h3 class="font-bold">Cấu hình Hệ thống AI</h3>
                 <button onclick="document.getElementById('configModal').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
-            <div class="p-6 space-y-4">
+            
+            <div class="p-6 space-y-6">
+                
+                <!-- 1. GEMINI CONFIG -->
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">Nạp file API Keys (Gemini)</label>
-                    <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'global_gemini_keys')" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Google Gemini (API Keys)</label>
+                    <div id="geminiStatus" class="mb-3"></div>
+                    <div class="flex items-center gap-2">
+                        <label class="flex-1 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 rounded px-4 py-2 text-sm font-medium transition text-center">
+                            <i class="fas fa-file-upload mr-2"></i> Chọn file Keys.txt
+                            <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'global_gemini_keys')" class="hidden"/>
+                        </label>
+                    </div>
                 </div>
-                <div class="bg-yellow-50 p-3 rounded text-sm text-yellow-800">
-                    <i class="fas fa-info-circle"></i> Hệ thống đang chạy trên chế độ <b>Pilot (Thử nghiệm)</b>. Dữ liệu được lưu cục bộ trên trình duyệt.
+
+                <hr class="border-slate-200"/>
+
+                <!-- 2. HUGGING FACE CONFIG -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Hugging Face (Token)</label>
+                    <div id="hfConfigContainer">
+                        <!-- JS sẽ render input tại đây -->
+                    </div>
+                </div>
+
+                <div class="bg-yellow-50 p-3 rounded text-xs text-yellow-800 mt-4">
+                    <i class="fas fa-info-circle"></i> Dữ liệu cấu hình được lưu cục bộ trên trình duyệt của bạn (Local Storage) để đảm bảo riêng tư.
                 </div>
             </div>
         </div>
