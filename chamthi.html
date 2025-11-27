@@ -12,7 +12,7 @@
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
-    <!-- Load OpenCV từ CDN nhanh hơn -->
+    <!-- Load OpenCV -->
     <script async src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.min.js" onload="window.cvLoaded=true" onerror="window.cvLoadError=true"></script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -31,10 +31,9 @@
         #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
 
         .video-container { position: relative; width: 100%; max-width: 480px; margin: 0 auto; overflow: hidden; border-radius: 12px; background: black; }
-        video { width: 100%; height: auto; display: block; }
+        video { width: 100%; height: auto; display: block; object-fit: cover; }
         canvas.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
         
-        /* Hiệu ứng đếm ngược chụp */
         .countdown-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 80px; height: 80px; border-radius: 50%;
@@ -61,7 +60,7 @@
     <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center flex-col gap-3">
         <div class="loader"></div>
         <p class="text-gray-600 font-medium" id="loading-text">Đang tải ứng dụng & AI...</p>
-        <button onclick="document.getElementById('loading').style.display='none'" class="mt-4 text-sm text-blue-500 underline hidden" id="force-load-btn">Vẫn không tải được? Bấm vào đây</button>
+        <button onclick="document.getElementById('loading').style.display='none'" class="mt-4 text-sm text-blue-500 underline hidden" id="force-load-btn">Bỏ qua Loading</button>
     </div>
     <div id="root"></div>
 
@@ -70,14 +69,14 @@
             const btn = document.getElementById('force-load-btn');
             const txt = document.getElementById('loading-text');
             if(btn) btn.classList.remove('hidden');
-            if(txt) txt.innerText = "Mạng có vẻ chậm...";
-        }, 8000);
+            if(txt) txt.innerText = "Mạng chậm hoặc lỗi thư viện AI...";
+        }, 5000);
 
         window.onerror = function(msg, url, line) {
             document.getElementById('loading').style.display = 'none';
             var errDiv = document.getElementById('error-display');
             errDiv.style.display = 'block';
-            errDiv.innerText = "⚠️ LỖI JS: " + msg + " (Dòng " + line + ")";
+            errDiv.innerText = "⚠️ LỖI JS: " + msg;
             return false;
         };
     </script>
@@ -115,16 +114,23 @@
             
             startCamera: async (videoEl, onFrame) => {
                 try {
+                    // Yêu cầu camera sau (environment)
                     const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                        video: { 
+                            facingMode: "environment",
+                            width: { ideal: 1920 }, // Cố gắng lấy độ phân giải cao
+                            height: { ideal: 1080 } 
+                        } 
                     });
                     videoEl.srcObject = stream;
-                    videoEl.play();
+                    // Phải gọi play() để video bắt đầu chạy
+                    await videoEl.play();
+                    
                     ScanHelper.videoStream = stream;
                     ScanHelper.isScanning = true;
                     requestAnimationFrame(() => ScanHelper.processFrame(videoEl, onFrame));
                 } catch (err) {
-                    alert("Lỗi Camera: " + err.message);
+                    alert("Không mở được Camera: " + err.message + "\nHãy kiểm tra quyền truy cập hoặc thử trình duyệt khác (Chrome/Safari).");
                 }
             },
 
@@ -139,7 +145,7 @@
             processFrame: (videoEl, callback) => {
                 if (!ScanHelper.isScanning) return;
                 
-                // Nếu OpenCV chưa tải xong hoặc lỗi, cứ chạy tiếp video nhưng không xử lý AI
+                // Nếu OpenCV chưa tải xong, vẫn lặp lại để giữ luồng nhưng không xử lý
                 if (!window.cv || !window.cvLoaded) {
                     requestAnimationFrame(() => ScanHelper.processFrame(videoEl, callback));
                     return;
@@ -152,6 +158,7 @@
                     
                     let gray = new cv.Mat();
                     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                    // Giảm nhiễu
                     cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
                     cv.Canny(gray, gray, 75, 200);
                     
@@ -165,6 +172,7 @@
                     for (let i = 0; i < contours.size(); ++i) {
                         let cnt = contours.get(i);
                         let area = cv.contourArea(cnt);
+                        // Chỉ lấy khung lớn > 5000px
                         if (area > 5000) { 
                             let peri = cv.arcLength(cnt, true);
                             let approx = new cv.Mat();
@@ -182,9 +190,8 @@
                     callback(docCnt, src); 
 
                     gray.delete(); contours.delete(); hierarchy.delete();
-                    // src và docCnt được quản lý bên ngoài hoặc clone
                 } catch(e) {
-                    // console.error(e); 
+                    // Silent fail to keep loop running
                 }
                 
                 if(ScanHelper.isScanning) requestAnimationFrame(() => ScanHelper.processFrame(videoEl, callback));
@@ -194,6 +201,7 @@
                 let pts = [];
                 for(let i=0; i<4; i++) pts.push({x: contour.data32S[i*2], y: contour.data32S[i*2+1]});
                 
+                // Sắp xếp 4 điểm
                 pts.sort((a,b) => a.y - b.y);
                 let top = pts.slice(0,2).sort((a,b) => a.x - b.x);
                 let bottom = pts.slice(2,4).sort((a,b) => a.x - b.x);
@@ -207,6 +215,7 @@
                 let heightB = Math.sqrt(Math.pow(tl.x - bl.x, 2) + Math.pow(tl.y - bl.y, 2));
                 let maxHeight = Math.max(toInt(heightA), toInt(heightB));
 
+                // Kích thước chuẩn A4 (tỷ lệ) hoặc fix cứng để OCR tốt hơn
                 let dstWidth = 1600;
                 let dstHeight = 2260;
 
@@ -222,7 +231,7 @@
             }
         };
 
-        // --- CAMERA COMPONENT (NÂNG CẤP) ---
+        // --- CAMERA COMPONENT ---
         const CameraScanner = ({ onCaptured, onClose }) => {
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
@@ -232,13 +241,9 @@
             // Auto Capture Refs
             const autoCaptureTimer = useRef(null);
             const [isAutoCapturing, setIsAutoCapturing] = useState(false);
-            const capturedRef = useRef(false); // Chống chụp 2 lần
+            const capturedRef = useRef(false);
 
             useEffect(() => {
-                if (window.cvLoadError) {
-                    alert("Không tải được thư viện AI. Bạn vẫn có thể chụp thủ công!");
-                }
-                
                 ScanHelper.startCamera(videoRef.current, (contour, srcMat) => {
                     const canvas = canvasRef.current;
                     if(!canvas) { if(srcMat) srcMat.delete(); if(contour) contour.delete(); return; }
@@ -250,15 +255,16 @@
                     if(cvState.current.src) cvState.current.src.delete();
                     
                     if (contour) {
+                        // Vẽ khung xanh
                         const pts = contour.data32S;
-                        ctx.strokeStyle = '#00FF00'; ctx.lineWidth = 4;
+                        ctx.strokeStyle = '#00FF00'; ctx.lineWidth = 5;
                         ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(pts[4], pts[5]); ctx.lineTo(pts[6], pts[7]); ctx.closePath(); ctx.stroke();
                         
                         setCanCapture(true);
                         cvState.current.contour = contour.clone();
                         cvState.current.src = srcMat.clone();
                     } else {
-                        // Vẫn lưu srcMat để cho phép chụp thủ công (Manual Fallback)
+                        // Không có khung, nhưng vẫn lưu src để fallback manual capture
                         setCanCapture(false);
                         cvState.current.contour = null;
                         cvState.current.src = srcMat.clone();
@@ -276,36 +282,56 @@
                 };
             }, []);
 
-            // Handle Manual / Final Capture
+            // --- HÀM CHỤP ẢNH (QUAN TRỌNG) ---
             const handleCapture = useCallback(() => {
                 if (capturedRef.current) return;
                 
-                const { src, contour } = cvState.current;
-                if (!src) return alert("Camera chưa sẵn sàng!");
+                // 1. Kiểm tra Video
+                const video = videoRef.current;
+                if (!video || video.readyState !== 4) return alert("Camera chưa sẵn sàng (đang tải stream)...");
 
                 try {
-                    let outMat;
-                    // Logic: Nếu có contour thì warp, không thì lấy ảnh gốc (fallback)
-                    if(contour) {
-                        outMat = ScanHelper.warpImage(src, contour);
-                    } else {
-                        outMat = src.clone(); // Fallback
+                    const { src, contour } = cvState.current;
+                    let outCanvas = document.createElement('canvas');
+                    
+                    // 2. Ưu tiên dùng OpenCV nếu đã load xong và có frame
+                    if (src && window.cv && window.cvLoaded) {
+                        let outMat;
+                        if(contour) {
+                            // Có khung -> Warp cho đẹp
+                            outMat = ScanHelper.warpImage(src, contour);
+                        } else {
+                            // Không khung -> Lấy ảnh gốc OpenCV
+                            outMat = src.clone();
+                        }
+                        outCanvas.width = outMat.cols;
+                        outCanvas.height = outMat.rows;
+                        cv.imshow(outCanvas, outMat);
+                        outMat.delete();
+                    } 
+                    // 3. FALLBACK: Nếu OpenCV lỗi/chậm -> Chụp thẳng từ Video Tag
+                    else {
+                        outCanvas.width = video.videoWidth;
+                        outCanvas.height = video.videoHeight;
+                        const ctx = outCanvas.getContext('2d');
+                        ctx.drawImage(video, 0, 0, outCanvas.width, outCanvas.height);
                     }
 
                     capturedRef.current = true;
                     
-                    const outCanvas = document.createElement('canvas');
-                    outCanvas.width = outMat.cols;
-                    outCanvas.height = outMat.rows;
-                    cv.imshow(outCanvas, outMat);
-                    
+                    // 4. Xuất ảnh
                     outCanvas.toBlob(blob => {
-                        onCaptured(blob);
-                        outMat.delete();
-                    }, 'image/jpeg', 0.9);
+                        if(blob) {
+                             onCaptured(blob);
+                        } else {
+                             alert("Lỗi tạo ảnh Blob!");
+                             capturedRef.current = false;
+                        }
+                    }, 'image/jpeg', 0.95); // Chất lượng cao
+                    
                 } catch(e) {
                     capturedRef.current = false;
-                    alert("Lỗi xử lý ảnh: " + e.message);
+                    alert("Lỗi chụp ảnh: " + e.message);
                 }
             }, [onCaptured]);
 
@@ -315,10 +341,10 @@
                     setIsAutoCapturing(true);
                     if (autoCaptureTimer.current) clearTimeout(autoCaptureTimer.current);
                     
-                    // Đợi 800ms nếu vẫn giữ yên khung xanh thì chụp
+                    // Giữ yên 0.7s thì chụp
                     autoCaptureTimer.current = setTimeout(() => {
                         if (canCapture) handleCapture();
-                    }, 800);
+                    }, 700);
                 } else {
                     setIsAutoCapturing(false);
                     if (autoCaptureTimer.current) clearTimeout(autoCaptureTimer.current);
@@ -334,29 +360,25 @@
                     
                     <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
                         <div className="video-container w-full h-full">
-                            <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-cover"></video>
+                            {/* Object-fit contain để thấy toàn bộ khung hình */}
+                            <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-contain"></video>
                             <canvas ref={canvasRef} className="overlay" width={1280} height={720}></canvas>
                         </div>
                         
-                        {/* Overlay trạng thái */}
-                        <div className={`absolute top-16 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm font-bold pointer-events-none transition-colors shadow-lg whitespace-nowrap z-30 ${canCapture ? 'bg-green-500 text-white' : 'bg-black/60 text-gray-200'}`}>
-                            {canCapture ? "✅ Giữ yên để tự chụp..." : "🔍 Đưa phiếu vào khung hình"}
+                        <div className={`absolute top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm font-bold pointer-events-none transition-colors shadow-lg whitespace-nowrap z-30 ${canCapture ? 'bg-green-500 text-white' : 'bg-black/60 text-gray-200'}`}>
+                            {canCapture ? "✅ Giữ yên..." : "🔍 Đưa phiếu vào khung"}
                         </div>
 
-                        {/* Vòng quay Auto Capture */}
                         {isAutoCapturing && !capturedRef.current && (
-                            <div className="countdown-overlay">
-                                <i className="fas fa-camera text-3xl"></i>
-                            </div>
+                            <div className="countdown-overlay"><i className="fas fa-camera text-3xl"></i></div>
                         )}
                         
-                        {!window.cvLoaded && <div className="absolute bottom-20 text-yellow-400 text-xs w-full text-center">⚠️ AI chưa sẵn sàng. Bạn vẫn có thể chụp thủ công.</div>}
+                        {!window.cvLoaded && <div className="absolute bottom-24 bg-yellow-600/80 text-white px-3 py-1 rounded text-xs">⚠️ AI đang tải... Bấm nút dưới để chụp tay</div>}
                     </div>
 
                     <div className="p-8 bg-black/80 flex justify-center z-20">
                         <button 
                             onClick={handleCapture} 
-                            // BỎ disabled={!canCapture} ĐỂ CHO PHÉP CHỤP THỦ CÔNG
                             className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all active:scale-95 ${canCapture ? 'border-green-400 bg-green-600' : 'border-white bg-white/20'}`}
                         >
                             <i className="fas fa-camera text-3xl text-white"></i>
@@ -513,7 +535,7 @@
             const handleMobileCapture = async (blob) => {
                 setShowCamera(false);
                 setProcessing(true);
-                setMobileStatus("Đang gửi ảnh đã căn chỉnh...");
+                setMobileStatus("Đang gửi ảnh...");
                 const sid = new URLSearchParams(window.location.search).get('session');
                 try {
                     const fd = new FormData();
@@ -543,7 +565,7 @@
                             <button onClick={() => setShowCamera(true)} className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all">
                                 {processing ? <div className="loader border-white border-t-indigo-500"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">QUÉT PHIẾU</span></>}
                             </button>
-                            <p className="mt-6 text-gray-400 text-sm px-4">Hướng dẫn: Đưa camera vào phiếu. AI sẽ <b>tự chụp</b> khi bắt được khung, hoặc bạn có thể <b>bấm nút</b> để chụp ngay.</p>
+                            <p className="mt-6 text-gray-400 text-sm px-4">Đưa phiếu vào camera. Máy sẽ tự chụp khi có khung xanh hoặc bạn bấm chụp.</p>
                         </div>
                     </div>
                 );
