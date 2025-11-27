@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Từ Ma Trận Pro</title>
+    <title>Tạo Đề Từ Ma Trận (Chuyên Nghiệp)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -12,37 +12,33 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     
-    <!-- KaTeX -->
+    <!-- KaTeX cho hiển thị trên Web -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f1f5f9; }
-        .loader { border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+        body { font-family: 'Times New Roman', serif; background-color: #f3f4f6; }
+        .font-sans { font-family: 'Segoe UI', sans-serif; } /* Cho UI điều khiển */
+        
+        .loader { border: 4px solid #e5e7eb; border-top: 4px solid #2563eb; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* Table Styles */
-        .matrix-table th { background-color: #f8fafc; color: #334155; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
-        .matrix-table td { border-bottom: 1px solid #e2e8f0; vertical-align: middle; padding: 8px; }
-        .matrix-table tr:hover td { background-color: #f1f5f9; }
-
-        /* Input Styles */
-        .input-std { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; transition: all 0.2s; }
-        .input-std:focus { border-color: #3b82f6; ring: 2px solid #bfdbfe; }
+        /* Mô phỏng trang A4 */
+        .a4-page {
+            background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); color: black; line-height: 1.3;
+        }
         
-        /* Editor Area */
-        .q-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; transition: box-shadow 0.2s; }
-        .q-card:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .q-edit-area { width: 100%; min-height: 60px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; line-height: 1.5; outline: none; resize: vertical; }
-        .q-edit-area:focus { border-color: #6366f1; }
+        /* Editor Styles */
+        .editable { border: 1px dashed transparent; padding: 2px; transition: all 0.2s; outline: none; }
+        .editable:hover, .editable:focus { border-color: #94a3b8; background-color: #f8fafc; }
+        
+        /* Math Preview */
+        .katex { font-size: 1.1em; }
     </style>
 </head>
 <body>
@@ -51,76 +47,19 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- DANH SÁCH MÔN HỌC ---
+        // --- CẤU HÌNH MÔN HỌC ---
         const SUBJECTS = [
-            { id: "Toán", name: "Toán học", type: "natural" },
-            { id: "Lý", name: "Vật lý", type: "natural" },
-            { id: "Hóa", name: "Hóa học", type: "natural" },
-            { id: "Sinh", name: "Sinh học", type: "natural" },
-            { id: "Tin", name: "Tin học", type: "natural" },
-            { id: "Văn", name: "Ngữ văn", type: "social" },
-            { id: "Sử", name: "Lịch sử", type: "social" },
-            { id: "Địa", name: "Địa lý", type: "social" },
-            { id: "GDCD", name: "GDCD", type: "social" },
-            { id: "Anh", name: "Tiếng Anh", type: "lang" }
+            { id: "Toan", name: "Toán học", group: "TN", hint: "Tập trung tính toán, giải phương trình, hình học. Dùng LaTeX $...$." },
+            { id: "Ly", name: "Vật lý", group: "TN", hint: "Bài tập định luật, công thức, tính toán số liệu." },
+            { id: "Hoa", name: "Hóa học", group: "TN", hint: "Phương trình phản ứng, cân bằng, tính toán mol." },
+            { id: "Sinh", name: "Sinh học", group: "TN", hint: "Di truyền, sinh thái, cơ chế sinh học." },
+            { id: "Van", name: "Ngữ văn", group: "XH", hint: "Phân tích, cảm thụ, nghị luận xã hội/văn học. Không dùng công thức toán." },
+            { id: "Su", name: "Lịch sử", group: "XH", hint: "Sự kiện, mốc thời gian, ý nghĩa lịch sử." },
+            { id: "Dia", name: "Địa lý", group: "XH", hint: "Đặc điểm tự nhiên, kinh tế xã hội, biểu đồ." },
+            { id: "Anh", name: "Tiếng Anh", group: "NN", hint: "Ngữ pháp, từ vựng, đọc hiểu." }
         ];
 
-        // --- HELPER FUNCTIONS ---
-        const extractJson = (text) => {
-            try { return JSON.parse(text); } catch (e) {
-                const start = text.indexOf('['); const end = text.lastIndexOf(']');
-                if (start !== -1 && end !== -1) { try { return JSON.parse(text.substring(start, end + 1)); } catch (e2) {} }
-                try { return JSON.parse(text.replace(/```json|```/g, '').trim()); } catch (e3) {}
-                throw new Error("AI trả về định dạng không hợp lệ.");
-            }
-        };
-
-        // Convert LaTeX to MathML for Word
-        const latexToMathML = (latex) => {
-            try {
-                // Bỏ các ký tự LaTeX không cần thiết cho MathML đơn giản
-                let clean = latex.replace(/\\\[/g, '').replace(/\\\]/g, '').replace(/\\\(/g, '').replace(/\\\)/g, '');
-                const html = katex.renderToString(clean, { throwOnError: false, output: 'mathml', displayMode: false });
-                // Thêm namespace cho Word
-                return html.replace(/<math/g, '<m:math').replace(/<\/math>/g, '</m:math>')
-                           .replace(/xmlns=".*?"/g, ''); // Xóa xmlns mặc định của katex để tránh xung đột
-            } catch (e) { return latex; }
-        };
-
-        const convertTextToWordHTML = (text) => {
-            if (!text) return "";
-            // 1. Chuẩn hóa
-            let clean = text.replace(/\\\[/g, '$').replace(/\\\]/g, '$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
-            // 2. Tìm công thức $...$ và convert
-            return clean.replace(/\$([^$]+)\$/g, (match, tex) => latexToMathML(tex));
-        };
-
-        // --- COMPONENTS ---
-        const MathPreview = ({ text }) => {
-            const ref = useRef();
-            useEffect(() => {
-                if (!text || !ref.current) return;
-                try {
-                    const processed = text.replace(/\\\[/g, '$$').replace(/\\\]/g, '$$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
-                    // Render text thường trước
-                    ref.current.innerHTML = ""; 
-                    // Tách và render từng phần
-                    const parts = processed.split(/(\$[^$]+\$)/g);
-                    parts.forEach(part => {
-                        if (part.startsWith('$') && part.endsWith('$')) {
-                            const span = document.createElement('span');
-                            try { katex.render(part.slice(1, -1), span, { throwOnError: false }); } catch { span.innerText = part; }
-                            ref.current.appendChild(span);
-                        } else {
-                            ref.current.appendChild(document.createTextNode(part));
-                        }
-                    });
-                } catch (e) { ref.current.innerText = text; }
-            }, [text]);
-            return <div ref={ref} className="text-slate-700 text-sm mt-2 font-serif"></div>;
-        };
-
-        // --- AI SERVICE ---
+        // --- AI ADAPTER ---
         const AIAdapter = {
             getConfig: () => ({
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
@@ -129,22 +68,22 @@
             
             callVision: async (base64, prompt) => {
                 const { geminiKeys } = AIAdapter.getConfig();
-                if(!geminiKeys.length) throw new Error("Thiếu Gemini Key.");
+                if(!geminiKeys.length) throw new Error("Vui lòng nạp Gemini API Key để đọc ma trận (Vision).");
                 const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
+                
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ contents: [{ parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}] }] })
                 });
-                if(!res.ok) throw new Error("Lỗi Gemini Vision");
+                if(!res.ok) throw new Error("Lỗi kết nối AI Vision");
                 const data = await res.json();
                 return data.candidates[0].content.parts[0].text;
             },
 
             callText: async (prompt) => {
                 const { geminiKeys, hfTokens } = AIAdapter.getConfig();
-                
                 // Ưu tiên Gemini
-                if (geminiKeys.length) {
+                if(geminiKeys.length) {
                     try {
                         const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
@@ -153,11 +92,10 @@
                         });
                         const data = await res.json();
                         return data.candidates[0].content.parts[0].text;
-                    } catch(e) { console.warn("Gemini fail, switch HF"); }
+                    } catch(e) { console.warn("Gemini lỗi, chuyển HF"); }
                 }
-
-                // Fallback HF
-                if (hfTokens.length) {
+                // Fallback HF (Qwen 2.5)
+                if(hfTokens.length) {
                     const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
                     const res = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct", {
                         method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
@@ -170,323 +108,410 @@
             }
         };
 
+        // --- MATH CONVERSION (LATEX -> MATHML) ---
+        const latexToMathML = (latex) => {
+            try {
+                // Render ra MathML string
+                const html = katex.renderToString(latex, { throwOnError: false, output: 'mathml', displayMode: false });
+                // Clean up để Word hiểu (bỏ các thẻ thừa của Katex)
+                // Word cần <math> chứ không phải <span class="katex">...
+                const mathContent = html.match(/<math[\s\S]*?<\/math>/);
+                if (mathContent) {
+                    return mathContent[0]
+                        .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
+                        .replace(/annotation/g, 'annotation-xml'); // Word thích annotation-xml hơn
+                }
+                return latex;
+            } catch (e) { return latex; }
+        };
+
+        const processTextForWord = (text) => {
+            if(!text) return "";
+            // 1. Chuẩn hóa dấu
+            let clean = text.replace(/\\\[/g, '$').replace(/\\\]/g, '$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
+            // 2. Thay thế $...$ bằng MathML
+            return clean.replace(/\$([^$]+)\$/g, (match, tex) => latexToMathML(tex));
+        };
+
+        const MathView = ({ text }) => {
+            const ref = useRef();
+            useEffect(() => {
+                if(!ref.current) return;
+                try {
+                    const clean = text.replace(/\\\[/g, '$').replace(/\\\]/g, '$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
+                    const parts = clean.split(/(\$[^$]+\$)/g);
+                    ref.current.innerHTML = "";
+                    parts.forEach(part => {
+                        if(part.startsWith('$') && part.endsWith('$')) {
+                            const span = document.createElement('span');
+                            try { katex.render(part.slice(1,-1), span, {throwOnError:false}); } catch{ span.innerText=part;}
+                            ref.current.appendChild(span);
+                        } else {
+                            ref.current.appendChild(document.createTextNode(part));
+                        }
+                    });
+                } catch(e){}
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
         // --- MAIN APP ---
         const App = () => {
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
             const [status, setStatus] = useState("");
             
-            // Data State
-            const [examInfo, setExamInfo] = useState({
-                school: "THCS NGUYỄN CÔNG TRỨ",
-                department: "Sở Giáo dục và Đào tạo tỉnh Đồng Nai",
-                title: "ĐỀ KIỂM TRA GIỮA KỲ I",
-                subject: "Toán",
+            // Exam Info
+            const [info, setInfo] = useState({
+                dept: "SỞ GIÁO DỤC VÀ ĐÀO TẠO ĐỒNG NAI",
+                school: "TRƯỜNG THCS NGUYỄN CÔNG TRỨ",
+                title: "KIỂM TRA CUỐI HỌC KỲ I",
+                year: "NĂM HỌC 2025 - 2026",
+                subject: "Toan",
                 time: "90",
-                year: "2025 - 2026"
+                grade: "9"
             });
-            const [matrix, setMatrix] = useState([]);
-            const [questions, setQuestions] = useState([]); // Dữ liệu cuối cùng để in
 
-            // --- STEP 1: CONFIG & UPLOAD ---
+            const [matrix, setMatrix] = useState([]);
+            const [questions, setQuestions] = useState([]);
+
+            // STEP 1: UPLOAD
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
-                if (!file) return;
-                setLoading(true);
-                setStatus("Đang phân tích ma trận...");
+                if(!file) return;
+                setLoading(true); setStatus("Đang phân tích Ma trận & Bảng đặc tả...");
                 
                 try {
-                    // Convert file
+                    // Convert to base64
                     let base64 = "";
                     if (file.type.includes("pdf")) {
                         const buffer = await file.arrayBuffer();
                         const pdf = await pdfjsLib.getDocument(buffer).promise;
                         const page = await pdf.getPage(1);
-                        const vp = page.getViewport({ scale: 2.0 });
+                        const vp = page.getViewport({ scale: 2 });
                         const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
                         await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
-                        base64 = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
+                        base64 = cvs.toDataURL('image/jpeg').split(',')[1];
                     } else {
                         const reader = new FileReader();
-                        base64 = await new Promise(resolve => { reader.onload = e => resolve(e.target.result.split(',')[1]); reader.readAsDataURL(file); });
+                        base64 = await new Promise(r => { reader.onload = ev => r(ev.target.result.split(',')[1]); reader.readAsDataURL(file); });
                     }
 
-                    // Call AI
                     const prompt = `
-                        Phân tích bảng ma trận/đặc tả đề thi môn ${examInfo.subject}.
-                        Trích xuất: Chủ đề, Mức độ, Số lượng câu, Loại câu (Trắc nghiệm / Đúng sai / Tự luận).
-                        Output JSON Strict: [{"topic": "...", "level": "...", "count": 1, "type": "..."}]
+                        Bạn là chuyên gia giáo dục. Hãy phân tích ảnh (Ma trận đề thi/Bảng đặc tả) này.
+                        Trích xuất cấu trúc đề thi gồm các nhóm câu hỏi.
+                        
+                        Yêu cầu đầu ra JSON (Array):
+                        [
+                            {
+                                "topic": "Tên chủ đề / Nội dung kiến thức",
+                                "level": "Mức độ (Nhận biết/Thông hiểu/Vận dụng)",
+                                "count": số_lượng_câu (số nguyên),
+                                "type": "Trắc nghiệm" hoặc "Đúng/Sai" hoặc "Tự luận"
+                            }
+                        ]
+                        Chú ý: Nếu bảng ghi gộp, hãy tách dòng riêng.
                     `;
+                    
                     const text = await AIAdapter.callVision(base64, prompt);
-                    const data = extractJson(text);
+                    let data = [];
+                    try { data = JSON.parse(text.replace(/```json|```/g, '').trim()); } 
+                    catch { // Thử trích xuất mảng nếu AI nói nhiều
+                        const match = text.match(/\[.*\]/s);
+                        if(match) data = JSON.parse(match[0]);
+                    }
+                    
                     setMatrix(data.map((r, i) => ({...r, id: i, status: 'pending', qs: []})));
                     setStep(2);
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
             };
 
-            // --- STEP 2: MATRIX EDIT & GENERATE ---
+            // STEP 2: GENERATE
             const generateRow = async (rowId) => {
                 const row = matrix.find(r => r.id === rowId);
-                if (!row || row.count <= 0) return;
+                const subj = SUBJECTS.find(s => s.id === info.subject);
                 
+                // Cập nhật trạng thái
                 setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'generating'} : r));
-                
-                // Build Prompt based on Subject Type
-                const subjObj = SUBJECTS.find(s => s.id === examInfo.subject) || SUBJECTS[0];
-                let styleNote = "";
-                if (subjObj.type === 'natural') styleNote = "Thiên về bài tập tính toán, tư duy logic. BẮT BUỘC dùng LaTeX $...$ cho công thức.";
-                else styleNote = "Thiên về lý thuyết, nhận định, phân tích. Hạn chế tính toán.";
 
                 const prompt = `
-                    Đóng vai giáo viên môn ${subjObj.name}. Soạn ${row.count} câu hỏi dạng "${row.type}" về "${row.topic}". Mức độ: ${row.level}.
-                    Yêu cầu:
-                    - ${styleNote}
-                    - Trắc nghiệm: 4 đáp án A,B,C,D.
-                    - Đúng/Sai: 4 ý a,b,c,d.
-                    - Tự luận: Không có đáp án chọn.
+                    Đóng vai giáo viên môn ${subj.name} lớp ${info.grade}. 
+                    Nhiệm vụ: Soạn ${row.count} câu hỏi dạng "${row.type}" về chủ đề "${row.topic}". Mức độ: ${row.level}.
                     
-                    Output JSON: [ { "q": "Nội dung câu hỏi...", "a": ["A...", "B..."] (hoặc [] nếu tự luận), "c": "Đáp án đúng/Lời giải" } ]
+                    ĐẶC TRƯNG MÔN HỌC: ${subj.hint}
+                    
+                    YÊU CẦU ĐỊNH DẠNG JSON (Tuyệt đối không thêm lời dẫn):
+                    [
+                        {
+                            "q": "Nội dung câu hỏi (Ngắn gọn, súc tích). Nếu có công thức toán dùng $...$",
+                            "a": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"], (Nếu tự luận để mảng rỗng [])
+                            "c": "Đáp án đúng (A/B/C/D) hoặc Lời giải vắn tắt"
+                        }
+                    ]
                 `;
 
                 try {
                     const text = await AIAdapter.callText(prompt);
-                    const qs = extractJson(text);
+                    let qs = [];
+                    try { qs = JSON.parse(text.replace(/```json|```/g, '').trim()); }
+                    catch { const m = text.match(/\[.*\]/s); if(m) qs = JSON.parse(m[0]); }
+                    
+                    // Gán metadata
                     const qsMeta = qs.map(q => ({...q, meta: {...row}}));
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', qs: qsMeta} : r));
-                } catch (e) {
-                    console.error(e);
+                } catch(e) { 
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'error'} : r));
                 }
             };
 
-            const handleAutoGenerate = async () => {
-                for (let i = 0; i < matrix.length; i++) {
-                    if (matrix[i].status !== 'done') {
+            const handleAuto = async () => {
+                for(let i=0; i<matrix.length; i++) {
+                    if(matrix[i].status !== 'done') {
                         await generateRow(matrix[i].id);
-                        if(i < matrix.length - 1) await new Promise(r => setTimeout(r, 2000)); // Delay 2s
+                        await new Promise(r => setTimeout(r, 2000)); // Delay tránh rate limit
                     }
                 }
-                alert("Đã sinh xong!");
             };
 
-            const goToPreview = () => {
-                const all = matrix.reduce((acc, r) => (r.status === 'done' ? acc.concat(r.qs) : acc), []);
-                if (!all.length) return alert("Chưa có câu hỏi nào!");
+            const finishGen = () => {
+                const all = matrix.reduce((acc, r) => acc.concat(r.qs || []), []);
+                if(!all.length) return alert("Chưa có câu hỏi nào!");
                 setQuestions(all);
                 setStep(3);
             };
 
-            // --- STEP 3: PREVIEW & EDIT ---
-            const updateQ = (idx, field, val) => {
-                const newQs = [...questions]; newQs[idx][field] = val; setQuestions(newQs);
+            // STEP 3: PREVIEW & EXPORT
+            const updateQuestion = (idx, field, val) => {
+                const n = [...questions]; n[idx][field] = val; setQuestions(n);
             };
             const updateOpt = (qIdx, optIdx, val) => {
-                const newQs = [...questions]; newQs[qIdx].a[optIdx] = val; setQuestions(newQs);
+                const n = [...questions]; n[qIdx].a[optIdx] = val; setQuestions(n);
             };
 
             const exportWord = () => {
-                // Header chuẩn Việt Nam
-                const headerHtml = `
-                    <table style="width:100%; border:none; margin-bottom:20px; font-family:'Times New Roman';">
-                        <tr>
-                            <td style="text-align:center; width:40%; vertical-align:top">
-                                <b>${examInfo.department.toUpperCase()}</b><br/>
-                                <b>${examInfo.school.toUpperCase()}</b>
-                                <div style="border-top:1px solid black; width:80px; margin:5px auto"></div>
-                            </td>
-                            <td style="text-align:center; width:60%; vertical-align:top">
-                                <b>${examInfo.title.toUpperCase()}</b><br/>
-                                <b>MÔN: ${SUBJECTS.find(s=>s.id===examInfo.subject)?.name.toUpperCase()}</b><br/>
-                                <i>Thời gian làm bài: ${examInfo.time} phút</i>
-                            </td>
-                        </tr>
-                    </table>
-                    <p style="text-align:center; font-weight:bold; margin-bottom:20px">Mã đề thi: 101</p>
+                // Header chuẩn
+                let html = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>De Thi</title>
+                <style>
+                    body { font-family: 'Times New Roman'; font-size: 12pt; }
+                    table { width: 100%; border-collapse: collapse; }
+                    .header-table td { text-align: center; vertical-align: top; }
+                    .ans-table td { border: 1px solid black; text-align: center; padding: 5px; }
+                    .ans-table th { border: 1px solid black; background: #eee; }
+                </style>
+                </head><body>
+                
+                <!-- HEADER -->
+                <table class="header-table">
+                    <tr>
+                        <td width="40%">
+                            ${info.dept.toUpperCase()}<br/>
+                            <b>${info.school.toUpperCase()}</b>
+                            <div style="border-top:1px solid black; width:80px; margin:5px auto"></div>
+                        </td>
+                        <td width="60%">
+                            <b>${info.title.toUpperCase()}</b><br/>
+                            <b>MÔN: ${SUBJECTS.find(s=>s.id===info.subject).name.toUpperCase()}</b><br/>
+                            <i>Thời gian làm bài: ${info.time} phút</i>
+                            <div style="border-top:1px solid black; width:120px; margin:5px auto"></div>
+                        </td>
+                    </tr>
+                </table>
+                <p style="text-align:center"><b>Mã đề thi: 101</b></p>
+                <br/>
                 `;
 
-                let contentHtml = "";
-                
-                // Render từng phần
-                const types = ["Trắc nghiệm", "Đúng/Sai", "Tự luận"];
-                const typeLabels = ["PHẦN I. TRẮC NGHIỆM", "PHẦN II. ĐÚNG SAI", "PHẦN III. TỰ LUẬN"];
-                
-                types.forEach((type, tIdx) => {
-                    const partQs = questions.filter(q => q.meta.type === type);
-                    if (partQs.length > 0) {
-                        contentHtml += `<h3>${typeLabels[tIdx]} (${partQs.length} câu)</h3>`;
-                        partQs.forEach((q, i) => {
-                            contentHtml += `<p style="margin-bottom:5px"><b>Câu ${i+1}:</b> ${convertTextToWordHTML(q.q)}</p>`;
-                            
-                            if (type === "Trắc nghiệm") {
-                                contentHtml += `<table style="width:100%; border:none"><tr>`;
-                                q.a.forEach((opt, k) => {
-                                    if (k%2===0 && k>0) contentHtml += `</tr><tr>`;
-                                    contentHtml += `<td style="width:50%">${String.fromCharCode(65+k)}. ${convertTextToWordHTML(opt)}</td>`;
-                                });
-                                contentHtml += `</tr></table>`;
-                            } else if (type === "Đúng/Sai") {
-                                contentHtml += `<ul style="list-style:none; padding-left:20px">`;
-                                q.a.forEach(opt => contentHtml += `<li>${convertTextToWordHTML(opt)}</li>`);
-                                contentHtml += `</ul>`;
-                            } else {
-                                contentHtml += `<p>......................................................................................</p>`;
-                            }
-                        });
-                    }
-                });
+                // NỘI DUNG ĐỀ
+                const tn = questions.filter(q => q.meta.type === "Trắc nghiệm");
+                const ds = questions.filter(q => q.meta.type === "Đúng/Sai");
+                const tl = questions.filter(q => q.meta.type === "Tự luận");
 
-                // Bảng đáp án (Grid) cho Trắc nghiệm
-                const tnQs = questions.filter(q => q.meta.type === "Trắc nghiệm");
-                if (tnQs.length > 0) {
-                    contentHtml += `<br style="page-break-before:always"/><h3>ĐÁP ÁN TRẮC NGHIỆM</h3>`;
-                    contentHtml += `<table border="1" style="border-collapse:collapse; width:100%; text-align:center">`;
-                    
-                    // Chia bảng thành các dòng 10 câu
-                    for(let i=0; i<tnQs.length; i+=10) {
-                        const chunk = tnQs.slice(i, i+10);
-                        contentHtml += `<tr style="background:#f0f0f0">`;
-                        chunk.forEach((_, k) => contentHtml += `<td><b>${i+k+1}</b></td>`);
-                        contentHtml += `</tr><tr>`;
-                        chunk.forEach(q => {
-                            // Lấy ký tự đầu của đáp án (A,B,C,D)
-                            const ansChar = q.c.trim().charAt(0).toUpperCase();
-                            contentHtml += `<td>${ansChar.match(/[A-D]/) ? ansChar : '?'}</td>`;
+                if(tn.length) {
+                    html += `<h3>I. PHẦN TRẮC NGHIỆM (${tn.length} câu)</h3>`;
+                    tn.forEach((q, i) => {
+                        html += `<p><b>Câu ${i+1}:</b> ${processTextForWord(q.q)}</p>`;
+                        html += `<table style="border:none"><tr>`;
+                        q.a.forEach((opt, k) => {
+                            // Chia 2 cột hoặc 4 cột tùy độ dài
+                            if(k%2===0 && k>0) html += `</tr><tr>`;
+                            html += `<td width="50%"><b>${String.fromCharCode(65+k)}.</b> ${processTextForWord(opt)}</td>`;
                         });
-                        contentHtml += `</tr>`;
-                    }
-                    contentHtml += `</table>`;
+                        html += `</tr></table>`;
+                    });
                 }
 
-                // Lời giải chi tiết
-                contentHtml += `<h3>HƯỚNG DẪN GIẢI CHI TIẾT</h3>`;
+                if(ds.length) {
+                    html += `<h3>II. PHẦN TRẮC NGHIỆM ĐÚNG SAI</h3>`;
+                    ds.forEach((q, i) => {
+                        html += `<p><b>Câu ${i+1}:</b> ${processTextForWord(q.q)}</p>`;
+                        q.a.forEach(opt => html += `<p style="margin-left:20px">- ${processTextForWord(opt)}</p>`);
+                    });
+                }
+
+                if(tl.length) {
+                    html += `<h3>III. PHẦN TỰ LUẬN</h3>`;
+                    tl.forEach((q, i) => {
+                        html += `<p><b>Câu ${i+1} (${q.meta.level}):</b> ${processTextForWord(q.q)}</p>`;
+                        html += `<p style="color:#999">...................................................................................</p><br/>`;
+                    });
+                }
+
+                // BẢNG ĐÁP ÁN (Chỉ trắc nghiệm)
+                if(tn.length) {
+                    html += `<br style="page-break-before:always" /><h3 style="text-align:center">HƯỚNG DẪN CHẤM</h3>`;
+                    html += `<h4>1. Bảng đáp án trắc nghiệm</h4>`;
+                    html += `<table class="ans-table">`;
+                    
+                    // Header bảng (1-10, 11-20...)
+                    for(let i=0; i<tn.length; i+=10) {
+                        const chunk = tn.slice(i, i+10);
+                        html += `<tr>`;
+                        chunk.forEach((_, k) => html += `<th>${i+k+1}</th>`);
+                        html += `</tr><tr>`;
+                        chunk.forEach(q => {
+                            // Lấy chữ cái đầu của đáp án (A,B,C,D)
+                            let ans = q.c.trim().charAt(0).toUpperCase();
+                            if(!['A','B','C','D'].includes(ans)) ans = "?";
+                            html += `<td>${ans}</td>`;
+                        });
+                        html += `</tr>`;
+                    }
+                    html += `</table>`;
+                }
+
+                // LỜI GIẢI CHI TIẾT
+                html += `<h4>2. Lời giải chi tiết / Tự luận</h4>`;
                 questions.forEach((q, i) => {
-                    contentHtml += `<p><b>Câu ${i+1}:</b> ${convertTextToWordHTML(q.c)}</p>`;
+                    html += `<p><b>Câu ${i+1}:</b> ${processTextForWord(q.c)}</p>`;
                 });
 
-                const docHtml = `
-                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' xmlns='http://www.w3.org/TR/REC-html40'>
-                    <head><meta charset='utf-8'><title>De Thi</title></head>
-                    <body>${headerHtml}${contentHtml}</body></html>
-                `;
-                
-                saveAs(new Blob(['\ufeff', docHtml], {type: 'application/msword'}), `De_Thi_${examInfo.subject}.doc`);
+                html += `</body></html>`;
+                saveAs(new Blob(['\ufeff', html], {type: 'application/msword'}), `De_Thi_${info.subject}.doc`);
             };
 
-            // --- UI ---
             return (
-                <div className="min-h-screen max-w-6xl mx-auto p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <button onClick={()=>window.location.href='index.html'} className="text-gray-600 font-bold flex items-center gap-2"><i className="fas fa-arrow-left"></i> Trang chủ</button>
-                        <h1 className="text-2xl font-bold text-blue-700">TẠO ĐỀ TỪ MA TRẬN</h1>
+                <div className="min-h-screen p-8 bg-gray-100 font-sans">
+                    {/* NAV */}
+                    <div className="flex justify-between items-center mb-6 max-w-6xl mx-auto">
+                        <button onClick={()=>window.location.href='index.html'} className="text-gray-600 font-bold"><i className="fas fa-arrow-left"></i> Trang chủ</button>
+                        <h1 className="text-2xl font-bold text-blue-800 uppercase">Tạo Đề Chuẩn Sư Phạm</h1>
                     </div>
 
-                    {/* STEP 1: CONFIG */}
-                    {step === 1 && (
-                        <div className="bg-white p-8 rounded-xl shadow-lg fade-in">
-                            <h2 className="text-xl font-bold mb-4 border-b pb-2 text-gray-700">1. Thông tin Kỳ thi & Upload</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div><label className="block text-sm font-bold text-gray-600 mb-1">Sở / Phòng GD&ĐT</label><input className="input-std" value={examInfo.department} onChange={e=>setExamInfo({...examInfo, department: e.target.value})}/></div>
-                                <div><label className="block text-sm font-bold text-gray-600 mb-1">Trường THPT/THCS</label><input className="input-std" value={examInfo.school} onChange={e=>setExamInfo({...examInfo, school: e.target.value})}/></div>
-                                <div><label className="block text-sm font-bold text-gray-600 mb-1">Tên Kỳ Thi</label><input className="input-std" value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title: e.target.value})}/></div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div><label className="block text-sm font-bold text-gray-600 mb-1">Thời gian (phút)</label><input type="number" className="input-std" value={examInfo.time} onChange={e=>setExamInfo({...examInfo, time: e.target.value})}/></div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-600 mb-1">Môn học</label>
-                                        <select className="input-std" value={examInfo.subject} onChange={e=>setExamInfo({...examInfo, subject: e.target.value})}>
-                                            {SUBJECTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
+                    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden min-h-[600px]">
+                        
+                        {/* STEP 1: CONFIG */}
+                        {step === 1 && (
+                            <div className="p-8">
+                                <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-2">1. Thông tin Kỳ thi</h2>
+                                <div className="grid grid-cols-2 gap-6 mb-6">
+                                    <div className="space-y-4">
+                                        <div><label className="block text-sm font-bold text-gray-600">Sở / Phòng GD&ĐT</label><input className="input-std w-full border p-2 rounded" value={info.dept} onChange={e=>setInfo({...info, dept: e.target.value})}/></div>
+                                        <div><label className="block text-sm font-bold text-gray-600">Trường</label><input className="input-std w-full border p-2 rounded" value={info.school} onChange={e=>setInfo({...info, school: e.target.value})}/></div>
+                                        <div><label className="block text-sm font-bold text-gray-600">Tên Kỳ Thi</label><input className="input-std w-full border p-2 rounded" value={info.title} onChange={e=>setInfo({...info, title: e.target.value})}/></div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-600">Môn học</label>
+                                            <select className="w-full border p-2 rounded" value={info.subject} onChange={e=>setInfo({...info, subject: e.target.value})}>
+                                                {SUBJECTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div><label className="block text-sm font-bold text-gray-600">Lớp</label><input className="w-full border p-2 rounded" value={info.grade} onChange={e=>setInfo({...info, grade: e.target.value})}/></div>
+                                            <div><label className="block text-sm font-bold text-gray-600">Thời gian (phút)</label><input className="w-full border p-2 rounded" value={info.time} onChange={e=>setInfo({...info, time: e.target.value})}/></div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div className="border-2 border-dashed border-blue-200 rounded-xl p-8 text-center cursor-pointer hover:bg-blue-50 transition" onClick={()=>document.getElementById('fileInput').click()}>
-                                <input id="fileInput" type="file" accept="image/*,.pdf" className="hidden" onChange={handleUpload}/>
-                                {loading ? <div className="loader"></div> : <><i className="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-2"></i><p className="text-gray-600 font-medium">Chọn file Ma trận (Ảnh/PDF) để phân tích</p></>}
-                                <p className="text-blue-500 text-sm mt-2 font-bold">{status}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 2: MATRIX */}
-                    {step === 2 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg fade-in">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-gray-700">2. Cấu trúc đề ({examInfo.subject})</h2>
-                                <div className="flex gap-2">
-                                    <button onClick={handleAutoGenerate} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow"><i className="fas fa-robot mr-1"></i> Sinh Toàn bộ (Auto)</button>
-                                    <button onClick={goToPreview} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 shadow">Tiếp tục <i className="fas fa-arrow-right ml-1"></i></button>
+                                <div className="border-2 border-dashed border-blue-300 rounded-xl p-10 text-center cursor-pointer hover:bg-blue-50 transition" onClick={()=>document.getElementById('fileInput').click()}>
+                                    <input type="file" id="fileInput" className="hidden" accept="image/*,.pdf" onChange={handleUpload}/>
+                                    {loading ? <div className="loader"></div> : <><i className="fas fa-file-upload text-4xl text-blue-500 mb-2"></i><p className="font-bold text-gray-600">Chọn File Ma trận / Bảng đặc tả</p><p className="text-sm text-gray-400">Hỗ trợ Ảnh & PDF</p></>}
                                 </div>
                             </div>
-                            <div className="overflow-x-auto max-h-[500px]">
-                                <table className="w-full matrix-table text-sm">
-                                    <thead className="sticky top-0 shadow">
-                                        <tr><th>Chủ đề</th><th>Mức độ</th><th className="text-center">SL</th><th>Loại</th><th className="text-center">Trạng thái</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        {matrix.map(row => (
-                                            <tr key={row.id} className={row.status === 'done' ? 'bg-green-50' : ''}>
-                                                <td><input className="bg-transparent w-full outline-none" value={row.topic} onChange={e => {const n=[...matrix]; n[row.id].topic=e.target.value; setMatrix(n)}}/></td>
-                                                <td>{row.level}</td>
-                                                <td className="text-center font-bold">{row.count}</td>
-                                                <td>{row.type}</td>
-                                                <td className="text-center">
-                                                    {row.status === 'pending' && <button onClick={()=>generateRow(row.id)} className="text-blue-600 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Tạo</button>}
-                                                    {row.status === 'generating' && <div className="loader w-4 h-4"></div>}
-                                                    {row.status === 'done' && <span className="text-green-600 font-bold text-xs"><i className="fas fa-check"></i> Xong</span>}
-                                                    {row.status === 'error' && <span className="text-red-500 font-bold text-xs">Lỗi</span>}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* STEP 3: PREVIEW & EDIT */}
-                    {step === 3 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg fade-in">
-                            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 py-2 border-b">
-                                <h2 className="text-xl font-bold text-gray-700">3. Chỉnh sửa & Xuất file</h2>
-                                <div className="flex gap-2">
-                                    <button onClick={()=>setStep(2)} className="text-gray-500 font-bold px-3">Quay lại</button>
-                                    <button onClick={exportWord} className="bg-indigo-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-indigo-700 shadow flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word Chuẩn</button>
+                        {/* STEP 2: MATRIX */}
+                        {step === 2 && (
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-gray-800">2. Khung Ma Trận Đề</h2>
+                                    <div className="space-x-2">
+                                        <button onClick={handleAuto} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow"><i className="fas fa-robot"></i> Sinh Toàn Bộ</button>
+                                        <button onClick={finishGen} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow">Tiếp tục <i className="fas fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                                <div className="overflow-auto max-h-[500px] border rounded">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-100 uppercase text-gray-600 sticky top-0">
+                                            <tr><th className="p-3">Chủ đề</th><th className="p-3">Mức độ</th><th className="p-3 text-center">SL</th><th className="p-3">Loại</th><th className="p-3 text-center">Trạng thái</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {matrix.map(row => (
+                                                <tr key={row.id} className="border-b hover:bg-gray-50">
+                                                    <td className="p-2"><input className="w-full bg-transparent outline-none" value={row.topic} onChange={e=>{const n=[...matrix];n[row.id].topic=e.target.value;setMatrix(n)}}/></td>
+                                                    <td className="p-2">{row.level}</td>
+                                                    <td className="p-2 text-center font-bold text-blue-600">{row.count}</td>
+                                                    <td className="p-2">{row.type}</td>
+                                                    <td className="p-2 text-center">
+                                                        {row.status==='pending' && <button onClick={()=>generateRow(row.id)} className="text-blue-500 font-bold border px-2 rounded hover:bg-blue-50">Tạo</button>}
+                                                        {row.status==='generating' && <div className="loader w-4 h-4"></div>}
+                                                        {row.status==='done' && <span className="text-green-600 font-bold"><i className="fas fa-check"></i> Xong</span>}
+                                                        {row.status==='error' && <span className="text-red-500 font-bold">Lỗi</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                            <div className="space-y-6">
-                                {questions.map((q, i) => (
-                                    <div key={i} className="q-card">
-                                        <div className="flex justify-between mb-2">
-                                            <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded">Câu {i+1} ({q.meta.type})</span>
-                                            <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button>
-                                        </div>
-                                        
-                                        {/* Editable Question */}
-                                        <textarea className="q-edit-area" value={q.q} onChange={e => updateQ(i, 'q', e.target.value)} placeholder="Nội dung câu hỏi..."></textarea>
-                                        <MathPreview text={q.q}/>
+                        )}
 
-                                        {/* Editable Options */}
-                                        {q.meta.type !== 'Tự luận' && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-                                                {q.a.map((opt, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2">
-                                                        <span className="font-bold text-gray-400 text-sm">{String.fromCharCode(65+idx)}.</span>
-                                                        <input className="input-std text-sm" value={opt} onChange={e => updateOpt(i, idx, e.target.value)}/>
-                                                    </div>
-                                                ))}
+                        {/* STEP 3: EDITOR */}
+                        {step === 3 && (
+                            <div className="p-6 h-full flex flex-col">
+                                <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 py-2 border-b">
+                                    <h2 className="text-xl font-bold text-gray-800">3. Chỉnh sửa & Xuất bản</h2>
+                                    <div className="space-x-2">
+                                        <button onClick={()=>setStep(2)} className="px-4 py-2 text-gray-500 font-bold">Quay lại</button>
+                                        <button onClick={exportWord} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-file-word"></i> Xuất Word Chuẩn</button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-auto space-y-6">
+                                    {questions.map((q, i) => (
+                                        <div key={i} className="border rounded-lg p-4 bg-white shadow-sm">
+                                            <div className="flex justify-between mb-2">
+                                                <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Câu {i+1} ({q.meta.type})</span>
+                                                <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button>
                                             </div>
-                                        )}
+                                            
+                                            {/* Question Editor */}
+                                            <textarea className="w-full border p-2 rounded mb-2 font-serif text-lg outline-none focus:border-blue-500" rows="2" value={q.q} onChange={e=>updateQuestion(i,'q',e.target.value)}></textarea>
+                                            <div className="bg-gray-50 p-2 rounded mb-2"><MathView text={q.q}/></div>
 
-                                        {/* Editable Answer */}
-                                        <div className="mt-3 bg-green-50 p-3 rounded border border-green-100">
-                                            <label className="block text-xs font-bold text-green-700 mb-1">LỜI GIẢI / ĐÁP ÁN:</label>
-                                            <textarea className="w-full bg-transparent outline-none text-sm text-green-800 font-mono" rows="2" value={q.c} onChange={e => updateQ(i, 'c', e.target.value)}></textarea>
+                                            {/* Options */}
+                                            {q.meta.type !== 'Tự luận' && (
+                                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                                    {q.a.map((opt, k) => (
+                                                        <div key={k} className="flex gap-2 items-center">
+                                                            <b className="text-gray-500">{String.fromCharCode(65+k)}.</b>
+                                                            <input className="w-full border p-1 rounded font-serif" value={opt} onChange={e=>updateOpt(i,k,e.target.value)}/>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Answer */}
+                                            <div className="mt-2">
+                                                <label className="text-xs font-bold text-green-700">ĐÁP ÁN / HƯỚNG DẪN:</label>
+                                                <textarea className="w-full border border-green-200 bg-green-50 p-2 rounded text-sm font-mono" value={q.c} onChange={e=>updateQuestion(i,'c',e.target.value)}></textarea>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                    </div>
                 </div>
             );
         };
