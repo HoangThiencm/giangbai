@@ -18,26 +18,28 @@
             
             // --- GETTERS ---
             getApiKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
-            getHFToken: () => localStorage.getItem('hf_token') || "",
+            // [UPDATED] Lấy danh sách HF Tokens
+            getHFTokens: () => JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
 
             // --- ACTIONS ---
             handleFile: (file, type) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const content = e.target.result.trim();
+                    const lines = content.split('\n').map(l=>l.trim());
                     
                     if (type === 'gemini') {
-                        const lines = content.split('\n').map(l=>l.trim()).filter(l=>l.length>5);
-                        if(lines.length){ 
-                            localStorage.setItem('global_gemini_keys', JSON.stringify(lines)); 
-                            alert(`✅ Đã nạp ${lines.length} Gemini Keys!`); 
-                        }
+                        const keys = lines.filter(l => l.length > 5 && !l.startsWith('hf_'));
+                        if(keys.length){ 
+                            localStorage.setItem('global_gemini_keys', JSON.stringify(keys)); 
+                            alert(`✅ Đã nạp ${keys.length} Gemini Keys!`); 
+                        } else alert("❌ Không tìm thấy Gemini Key hợp lệ.");
                     } else if (type === 'hf') {
-                        // Token HF thường chỉ có 1 dòng hoặc user lưu nhiều dòng thì lấy dòng đầu tiên có chữ hf_
-                        const token = content.split('\n').map(l=>l.trim()).find(l => l.startsWith('hf_'));
-                        if(token){
-                            localStorage.setItem('hf_token', token);
-                            alert(`✅ Đã nạp Token Hugging Face!`);
+                        // [UPDATED] Lọc tất cả các dòng bắt đầu bằng hf_
+                        const tokens = lines.filter(l => l.startsWith('hf_'));
+                        if(tokens.length){
+                            localStorage.setItem('hf_tokens', JSON.stringify(tokens));
+                            alert(`✅ Đã nạp ${tokens.length} Token Hugging Face!`);
                         } else {
                             alert("❌ Không tìm thấy token bắt đầu bằng 'hf_' trong file.");
                         }
@@ -47,9 +49,20 @@
                 reader.readAsText(file);
             },
 
+            saveHFToken: () => {
+                const token = document.getElementById('hfTokenInput').value.trim();
+                if(!token) return alert("Vui lòng nhập Token!");
+                if(!token.startsWith('hf_')) return alert("Token Hugging Face phải bắt đầu bằng 'hf_'");
+                
+                // Lưu thành mảng 1 phần tử
+                localStorage.setItem('hf_tokens', JSON.stringify([token]));
+                alert("✅ Đã lưu Token Hugging Face!");
+                SystemConfig.renderConfig();
+            },
+
             clearHFToken: () => {
-                if(confirm("Xóa Token Hugging Face?")) {
-                    localStorage.removeItem('hf_token');
+                if(confirm("Xóa tất cả Token Hugging Face?")) {
+                    localStorage.removeItem('hf_tokens');
                     SystemConfig.renderConfig();
                 }
             },
@@ -73,28 +86,32 @@
                     geminiStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic">Chưa có API Key nào.</div>`;
                 }
 
-                // 2. Render HF Status
-                const hfToken = SystemConfig.getHFToken();
+                // 2. Render HF Status [UPDATED]
+                const hfTokens = SystemConfig.getHFTokens();
                 const hfContainer = document.getElementById('hfConfigContainer');
-                if(hfToken) {
+                if(hfTokens.length > 0) {
                     hfContainer.innerHTML = `
                         <div class="flex justify-between items-center bg-purple-50 p-3 rounded border border-purple-200">
                             <div>
                                 <span class="text-purple-700 font-bold block"><i class="fas fa-robot"></i> Hugging Face</span>
-                                <span class="text-xs text-gray-500">Token: ${hfToken.substring(0, 6)}...******</span>
+                                <span class="text-xs text-gray-500">Đã nạp ${hfTokens.length} Tokens (Xoay vòng)</span>
                             </div>
                             <button onclick="SystemConfig.clearHFToken()" class="text-red-500 hover:text-red-700 text-sm underline">Xóa</button>
                         </div>
                     `;
                 } else {
                     hfContainer.innerHTML = `
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 mb-2">
                             <label class="flex-1 cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-300 rounded px-4 py-2 text-sm font-medium transition text-center">
-                                <i class="fas fa-file-upload mr-2"></i> Chọn file Token (txt)
+                                <i class="fas fa-file-upload mr-2"></i> Chọn file Tokens.txt
                                 <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'hf')" class="hidden"/>
                             </label>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Hoặc file chứa token bắt đầu bằng hf_...</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="hfTokenInput" placeholder="Hoặc dán 1 Token (hf_...)" class="flex-1 border p-2 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                            <button onclick="SystemConfig.saveHFToken()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700">Lưu</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Hỗ trợ file chứa nhiều dòng token hf_... để chạy Qwen 2.5 miễn phí cực mạnh.</p>
                     `;
                 }
             }
@@ -219,7 +236,7 @@
 
                 <!-- 2. HUGGING FACE CONFIG -->
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">Hugging Face (Token)</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Hugging Face (Tokens)</label>
                     <div id="hfConfigContainer"></div>
                 </div>
 
