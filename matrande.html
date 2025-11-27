@@ -19,13 +19,13 @@
 
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #6366f1; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #6366f1; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .katex { font-size: 1.1em; color: #1e3a8a; }
         .matrix-table th { background-color: #f1f5f9; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
-        .matrix-table td { border-bottom: 1px solid #e2e8f0; }
+        .matrix-table td { border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .matrix-table tr:hover td { background-color: #f8fafc; }
     </style>
 </head>
@@ -148,8 +148,10 @@
             const [loading, setLoading] = useState(false);
             const [status, setStatus] = useState("");
             const [preview, setPreview] = useState(null);
+            
+            // matrixData: Chứa thông tin cấu trúc đề + Trạng thái sinh + Dữ liệu câu hỏi đã sinh
+            // { id, topic, level, count, type, status: 'pending'|'generating'|'done'|'error', questions: [] }
             const [matrix, setMatrix] = useState([]);
-            const [examData, setExamData] = useState([]);
 
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
@@ -158,83 +160,97 @@
                 try {
                     const base64 = await FileUtils.toBase64(file);
                     setPreview(`data:image/jpeg;base64,${base64}`);
-                    setStatus("AI đang đọc Ma trận / Bảng đặc tả...");
+                    setStatus("AI đang đọc Ma trận...");
                     
                     const prompt = `
-                        Hãy phân tích hình ảnh này (Ma trận đề thi hoặc Bảng đặc tả kỹ thuật).
+                        Hãy phân tích hình ảnh này (Ma trận đề thi/Bảng đặc tả).
                         Trích xuất danh sách các chủ đề kiến thức và số lượng câu hỏi.
-                        
-                        Quan trọng: Hãy nhận diện chính xác loại câu hỏi:
-                        1. "Trắc nghiệm" (4 lựa chọn A,B,C,D).
-                        2. "Đúng/Sai" (Trắc nghiệm đúng sai).
-                        3. "Tự luận" (Trả lời ngắn/dài).
-
                         Yêu cầu đầu ra JSON thuần túy (Array):
-                        [
-                            {
-                                "topic": "Tên chủ đề",
-                                "level": "Mức độ (NB/TH/VD/VDC)",
-                                "count": số_lượng_câu,
-                                "type": "Trắc nghiệm" hoặc "Đúng/Sai" hoặc "Tự luận"
-                            }
-                        ]
+                        [ { "topic": "Tên chủ đề", "level": "Mức độ", "count": số_lượng, "type": "Trắc nghiệm"|"Đúng/Sai"|"Tự luận" } ]
                     `;
                     const res = await AIAdapter.analyzeImage(base64, prompt);
                     const jsonStr = res.replace(/```json|```/g, '').trim();
-                    setMatrix(JSON.parse(jsonStr).map((r, i) => ({...r, id: i})));
+                    // Thêm trạng thái ban đầu cho mỗi dòng
+                    setMatrix(JSON.parse(jsonStr).map((r, i) => ({...r, id: i, status: 'pending', questions: []})));
                     setStep(2);
                 } catch (err) { alert("Lỗi đọc ma trận: " + err.message); } finally { setLoading(false); }
             };
 
             const updateRow = (id, key, val) => setMatrix(prev => prev.map(r => r.id === id ? {...r, [key]: val} : r));
             const deleteRow = (id) => setMatrix(prev => prev.filter(r => r.id !== id));
-            const addRow = () => setMatrix(prev => [...prev, {id: Date.now(), topic: "", level: "Thông hiểu", count: 1, type: "Trắc nghiệm"}]);
+            const addRow = () => setMatrix(prev => [...prev, {id: Date.now(), topic: "", level: "Thông hiểu", count: 1, type: "Trắc nghiệm", status: 'pending', questions: []}]);
 
-            const handleGenerate = async () => {
-                setStep(3); setLoading(true);
-                let results = [];
+            // HÀM SINH CÂU HỎI CHO 1 DÒNG CỤ THỂ
+            const generateRowQuestions = async (rowId) => {
+                const row = matrix.find(r => r.id === rowId);
+                if (!row || row.count <= 0) return;
+
+                // Cập nhật trạng thái đang chạy
+                setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'generating'} : r));
+
+                const prompt = `
+                    Đóng vai giáo viên. Soạn ${row.count} câu hỏi dạng "${row.type}" về "${row.topic}". Mức độ: ${row.level}.
+                    Yêu cầu:
+                    1. Nếu là "Trắc nghiệm": Trả về mảng "a" chứa 4 đáp án.
+                    2. Nếu là "Đúng/Sai": Trả về mảng "a" chứa 4 mệnh đề a,b,c,d.
+                    3. Nếu là "Tự luận": Trả về mảng "a" rỗng.
+                    4. Toán học dùng LaTeX chuẩn $...$.
+                    
+                    Output JSON strict: [ { "q": "...", "a": [], "c": "..." } ]
+                `;
+
                 try {
-                    for (const row of matrix) {
-                        const count = parseInt(row.count);
-                        if(count <= 0) continue;
-                        setStatus(`Đang soạn ${count} câu ${row.type} phần "${row.topic}"...`);
-                        
-                        const prompt = `
-                            Đóng vai giáo viên. Soạn ${count} câu hỏi dạng "${row.type}" về "${row.topic}". Mức độ: ${row.level}.
-                            
-                            Quy tắc định dạng JSON strict:
-                            
-                            1. NẾU LÀ "Trắc nghiệm":
-                            { "q": "Câu hỏi...", "a": ["A. ...", "B. ...", "C. ...", "D. ..."], "c": "Đáp án đúng (A/B/C/D)" }
-                            
-                            2. NẾU LÀ "Đúng/Sai" (Theo chương trình mới 2025):
-                            { 
-                                "q": "Câu dẫn chính...", 
-                                "a": ["a) Mệnh đề 1", "b) Mệnh đề 2", "c) Mệnh đề 3", "d) Mệnh đề 4"],
-                                "c": "a) Đúng, b) Sai, c) Đúng, d) Sai"
-                            }
-                            
-                            3. NẾU LÀ "Tự luận":
-                            { "q": "Câu hỏi...", "a": [], "c": "Lời giải chi tiết" }
+                    const res = await AIAdapter.generateText(prompt);
+                    const cleanRes = res.replace(/```json|```/g, '').trim();
+                    const qs = JSON.parse(cleanRes);
+                    const qsWithMeta = qs.map(q => ({...q, meta: { ...row }})); // Gán meta để biết câu hỏi thuộc dòng nào
+                    
+                    // Cập nhật trạng thái xong
+                    setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', questions: qsWithMeta} : r));
+                } catch (e) {
+                    console.error(e);
+                    setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'error'} : r));
+                }
+            };
 
-                            Toán học dùng LaTeX chuẩn $...$. Trả về mảng JSON chứa các câu hỏi.
-                        `;
-                        const res = await AIAdapter.generateText(prompt);
-                        const cleanRes = res.replace(/```json|```/g, '').trim();
-                        try { 
-                            const qs = JSON.parse(cleanRes);
-                            results = [...results, ...qs.map(q => ({...q, meta: row}))];
-                        } catch(e) {}
+            // HÀM SINH TỰ ĐỘNG TOÀN BỘ (CÓ DELAY ĐỂ TRÁNH RATE LIMIT)
+            const handleGenerateAll = async () => {
+                let hasPending = false;
+                
+                // Duyệt qua từng dòng, nếu chưa sinh thì sinh
+                for (let i = 0; i < matrix.length; i++) {
+                    const row = matrix[i];
+                    if (row.status === 'pending' || row.status === 'error') {
+                        hasPending = true;
+                        // Scroll tới dòng đang chạy (UX)
+                        const el = document.getElementById(`row-${row.id}`);
+                        if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        await generateRowQuestions(row.id);
+                        
+                        // DELAY 3 GIÂY ĐỂ THỬ KEY KHÁC & TRÁNH RATE LIMIT
+                        if (i < matrix.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                        }
                     }
-                    setExamData(results);
-                    setStep(4);
-                } catch(err) { alert("Lỗi sinh đề: " + err.message); setStep(2); } finally { setLoading(false); }
+                }
+
+                if (!hasPending) alert("Đã hoàn thành sinh đề!");
+            };
+
+            // Chuyển sang bước xem kết quả
+            const goToPreview = () => {
+                // Gom tất cả câu hỏi từ các dòng đã xong
+                const allQs = matrix.filter(r => r.status === 'done').flatMap(r => r.questions);
+                if (allQs.length === 0) return alert("Chưa có câu hỏi nào được sinh ra!");
+                setExamData(allQs);
+                setStep(4);
             };
 
             const exportWord = () => {
+                // Logic export giữ nguyên...
                 let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>De Thi</title></head><body><h2 style='text-align:center'>ĐỀ THI</h2>`;
                 
-                // Phân loại để in đẹp hơn
                 const tn = examData.filter(q => q.meta.type === "Trắc nghiệm");
                 const ds = examData.filter(q => q.meta.type === "Đúng/Sai");
                 const tl = examData.filter(q => q.meta.type === "Tự luận");
@@ -267,7 +283,6 @@
                     });
                 }
 
-                // Đáp án
                 html += `<br/><hr/><h3>HƯỚNG DẪN CHẤM</h3>`;
                 examData.forEach((q, i) => {
                     html += `<p><b>Câu ${i+1} (${q.meta.type}):</b> ${q.c}</p>`;
@@ -296,18 +311,49 @@
 
                         {step === 2 && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
-                                <div className="lg:col-span-1 bg-white p-4 rounded-xl shadow h-fit"><h3 className="font-bold text-slate-700 mb-2">Ảnh gốc:</h3><img src={preview} className="w-full rounded border" /></div>
+                                <div className="lg:col-span-1 bg-white p-4 rounded-xl shadow h-fit hidden lg:block"><h3 className="font-bold text-slate-700 mb-2">Ảnh gốc:</h3><img src={preview} className="w-full rounded border" /></div>
                                 <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-xl">
-                                    <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-xl text-slate-800">Cấu Trúc Đề Thi</h3><button onClick={handleGenerate} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:shadow-indigo-500/50 transition flex items-center gap-2"><i className="fas fa-magic"></i> SINH ĐỀ THI</button></div>
-                                    <div className="overflow-x-auto"><table className="w-full matrix-table text-sm"><thead><tr><th className="p-3 text-left">Chủ đề</th><th className="p-3 text-left">Mức độ</th><th className="p-3 text-center">Số câu</th><th className="p-3 text-left">Loại</th><th className="p-3"></th></tr></thead><tbody>{matrix.map(row => (<tr key={row.id}><td className="p-2"><input value={row.topic} onChange={e=>updateRow(row.id,'topic',e.target.value)} className="w-full bg-transparent outline-none font-medium text-slate-700"/></td><td className="p-2"><select value={row.level} onChange={e=>updateRow(row.id,'level',e.target.value)} className="bg-transparent outline-none cursor-pointer"><option>Nhận biết</option><option>Thông hiểu</option><option>Vận dụng</option><option>Vận dụng cao</option></select></td><td className="p-2 text-center"><input type="number" value={row.count} onChange={e=>updateRow(row.id,'count',e.target.value)} className="w-12 text-center font-bold text-indigo-600 bg-indigo-50 rounded"/></td><td className="p-2"><select value={row.type} onChange={e=>updateRow(row.id,'type',e.target.value)} className="bg-transparent outline-none font-bold text-blue-700"><option>Trắc nghiệm</option><option>Đúng/Sai</option><option>Tự luận</option></select></td><td className="p-2 text-center"><button onClick={()=>deleteRow(row.id)} className="text-slate-400 hover:text-red-500"><i className="fas fa-times"></i></button></td></tr>))}</tbody></table><button onClick={addRow} className="mt-3 text-sm font-bold text-indigo-600 hover:underline flex items-center gap-1"><i className="fas fa-plus-circle"></i> Thêm dòng</button></div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-xl text-slate-800">Cấu Trúc Đề Thi</h3>
+                                        <div className="flex gap-2">
+                                            <button onClick={handleGenerateAll} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:shadow-lg transition flex items-center gap-2 text-sm">
+                                                <i className="fas fa-play-circle"></i> SINH TẤT CẢ (AUTO)
+                                            </button>
+                                            <button onClick={goToPreview} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm">
+                                                XEM & XUẤT FILE <i className="fas fa-arrow-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto max-h-[600px]">
+                                        <table className="w-full matrix-table text-sm">
+                                            <thead className="sticky top-0 z-10 shadow-sm"><tr><th className="p-3 text-left">Chủ đề</th><th className="p-3 text-left">Mức độ</th><th className="p-3 text-center">SL</th><th className="p-3 text-left">Loại</th><th className="p-3 text-center">Trạng thái</th><th className="p-3"></th></tr></thead>
+                                            <tbody>{matrix.map(row => (
+                                                <tr key={row.id} id={`row-${row.id}`} className={row.status === 'done' ? 'bg-green-50' : ''}>
+                                                    <td className="p-2"><input value={row.topic} onChange={e=>updateRow(row.id,'topic',e.target.value)} className="w-full bg-transparent outline-none font-medium text-slate-700"/></td>
+                                                    <td className="p-2"><select value={row.level} onChange={e=>updateRow(row.id,'level',e.target.value)} className="bg-transparent outline-none cursor-pointer"><option>Nhận biết</option><option>Thông hiểu</option><option>Vận dụng</option><option>Vận dụng cao</option></select></td>
+                                                    <td className="p-2 text-center"><input type="number" value={row.count} onChange={e=>updateRow(row.id,'count',e.target.value)} className="w-10 text-center font-bold text-indigo-600 bg-indigo-50 rounded"/></td>
+                                                    <td className="p-2"><select value={row.type} onChange={e=>updateRow(row.id,'type',e.target.value)} className="bg-transparent outline-none font-bold text-blue-700"><option>Trắc nghiệm</option><option>Đúng/Sai</option><option>Tự luận</option></select></td>
+                                                    
+                                                    {/* CỘT TRẠNG THÁI & ACTION */}
+                                                    <td className="p-2 text-center">
+                                                        {row.status === 'pending' && <button onClick={()=>generateRowQuestions(row.id)} className="bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded text-xs font-bold shadow-sm">Tạo ngay</button>}
+                                                        {row.status === 'generating' && <div className="loader w-4 h-4 border-2 border-indigo-600"></div>}
+                                                        {row.status === 'done' && <span className="text-green-600 font-bold text-xs flex items-center justify-center gap-1"><i className="fas fa-check-circle"></i> Xong ({row.questions.length})</span>}
+                                                        {row.status === 'error' && <button onClick={()=>generateRowQuestions(row.id)} className="text-red-500 hover:underline text-xs font-bold"><i className="fas fa-redo"></i> Lỗi (Thử lại)</button>}
+                                                    </td>
+
+                                                    <td className="p-2 text-center"><button onClick={()=>deleteRow(row.id)} className="text-slate-400 hover:text-red-500"><i className="fas fa-times"></i></button></td>
+                                                </tr>
+                                            ))}</tbody>
+                                        </table>
+                                        <button onClick={addRow} className="mt-3 text-sm font-bold text-indigo-600 hover:underline flex items-center gap-1"><i className="fas fa-plus-circle"></i> Thêm dòng</button>
+                                    </div>
                                 </div>
                             </div>
                         )}
 
-                        {step === 3 && (<div className="flex flex-col items-center justify-center min-h-[50vh] fade-in"><div className="loader w-16 h-16 border-4 mb-6"></div><h2 className="text-2xl font-bold text-slate-700">AI đang soạn đề thi...</h2><p className="text-slate-500 mt-2">{status}</p></div>)}
-
                         {step === 4 && (<div className="bg-white rounded-xl shadow-xl overflow-hidden fade-in">
-                            <div className="p-4 bg-slate-50 border-b flex justify-between items-center sticky top-0 z-10"><div className="font-bold text-slate-700">Kết quả: {examData.length} câu hỏi</div><div className="flex gap-2"><button onClick={()=>setStep(2)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded font-bold">Sửa lại</button><button onClick={exportWord} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word</button></div></div>
+                            <div className="p-4 bg-slate-50 border-b flex justify-between items-center sticky top-0 z-10"><div className="font-bold text-slate-700">Kết quả: {examData.length} câu hỏi</div><div className="flex gap-2"><button onClick={()=>setStep(2)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded font-bold">Quay lại bảng</button><button onClick={exportWord} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word</button></div></div>
                             <div className="p-8 space-y-8 max-w-4xl mx-auto">
                                 {examData.map((q, i) => (
                                     <div key={i} className="border-b border-slate-100 pb-6 last:border-0">
@@ -316,32 +362,11 @@
                                             <div className="font-medium text-slate-800 text-lg w-full"><MathText text={q.q} /></div>
                                         </div>
                                         
-                                        {/* Trắc nghiệm ABCD */}
-                                        {q.meta.type === 'Trắc nghiệm' && q.a && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10">{q.a.map((opt, idx) => (<div key={idx} className="bg-slate-50 p-3 rounded text-slate-700"><MathText text={opt} /></div>))}</div>
-                                        )}
+                                        {q.meta.type === 'Trắc nghiệm' && q.a && (<div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10">{q.a.map((opt, idx) => (<div key={idx} className="bg-slate-50 p-3 rounded text-slate-700"><MathText text={opt} /></div>))}</div>)}
 
-                                        {/* Đúng Sai (Chương trình mới) */}
-                                        {q.meta.type === 'Đúng/Sai' && q.a && (
-                                            <div className="pl-10 space-y-2">
-                                                {q.a.map((opt, idx) => (
-                                                    <div key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200">
-                                                        <div className="flex-1"><MathText text={opt} /></div>
-                                                        <div className="flex gap-2 text-sm font-bold text-slate-400">
-                                                            <span className="border px-2 py-1 rounded">Đ</span>
-                                                            <span className="border px-2 py-1 rounded">S</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                        {q.meta.type === 'Đúng/Sai' && q.a && (<div className="pl-10 space-y-2">{q.a.map((opt, idx) => (<div key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200"><div className="flex-1"><MathText text={opt} /></div><div className="flex gap-2 text-sm font-bold text-slate-400"><span className="border px-2 py-1 rounded">Đ</span><span className="border px-2 py-1 rounded">S</span></div></div>))}</div>)}
 
-                                        {/* Tự luận */}
-                                        {q.meta.type === 'Tự luận' && (
-                                            <div className="pl-10 text-slate-400 italic bg-slate-50 p-6 rounded border border-dashed border-slate-300">
-                                                (Khoảng trống làm bài)
-                                            </div>
-                                        )}
+                                        {q.meta.type === 'Tự luận' && (<div className="pl-10 text-slate-400 italic bg-slate-50 p-6 rounded border border-dashed border-slate-300">(Khoảng trống làm bài)</div>)}
 
                                         <div className="mt-3 pl-10 text-sm text-green-600 font-bold bg-green-50 p-2 rounded w-fit">Đáp án: <MathText text={q.c} /></div>
                                     </div>
