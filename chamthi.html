@@ -5,34 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chấm Thi OMR Pro</title>
     
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js](https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js)"></script>
-    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js](https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js)"></script>
-    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js](https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js)"></script>
-    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
-    <script crossorigin="anonymous" src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <!-- OpenCV.js cho Real-time Detection -->
-    <script async src="[https://docs.opencv.org/4.8.0/opencv.js](https://docs.opencv.org/4.8.0/opencv.js)" onload="window.cvLoaded=true"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <!-- Load OpenCV từ CDN nhanh hơn -->
+    <script async src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.min.js" onload="window.cvLoaded=true" onerror="window.cvLoadError=true"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap](https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap');
         body { font-family: 'Roboto', sans-serif; background-color: #e5e7eb; }
 
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 30px; height: 30px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .ai-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; border-radius: 0.5rem; }
-        .pulse-ring { width: 40px; height: 40px; border-radius: 50%; border: 4px solid #4f46e5; animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
-        @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
-
         .tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: bold; transition: all 0.2s; }
         .tab-active { background: #4f46e5; color: white; }
         .tab-inactive { color: #6b7280; hover:bg-gray-100; }
         #error-display { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 15px; z-index: 9999; border-bottom: 3px solid #b91c1c; text-align: center; font-weight: bold;}
 
-        /* Camera Overlay Style */
         .video-container { position: relative; width: 100%; max-width: 480px; margin: 0 auto; overflow: hidden; border-radius: 12px; background: black; }
         video { width: 100%; height: auto; display: block; }
         canvas.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
@@ -40,61 +37,82 @@
         @media print {
             @page { size: A4; margin: 0; }
             body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .no-print, .print-hidden { display: none !important; }
-            .print-bg-white { background: white !important; }
-            .print-p-0 { padding: 0 !important; }
-            .print-m-0 { margin: 0 !important; }
-            .print-shadow-none { box-shadow: none !important; }
+            .no-print { display: none !important; }
             .main-header, .main-tabs, .sidebar-controls { display: none !important; }
             .sheet-container { overflow: visible !important; height: auto !important; }
         }
     </style>
+</head>
+<body>
+    <div id="error-display"></div>
+    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center flex-col gap-3">
+        <div class="loader"></div>
+        <p class="text-gray-600 font-medium" id="loading-text">Đang tải ứng dụng & AI...</p>
+        <button onclick="document.getElementById('loading').style.display='none'" class="mt-4 text-sm text-blue-500 underline hidden" id="force-load-btn">Vẫn không tải được? Bấm vào đây</button>
+    </div>
+    <div id="root"></div>
+
     <script>
+        // Safety Timeout: Nếu 8s chưa tải xong thì hiện nút bỏ qua loading
+        setTimeout(() => {
+            const btn = document.getElementById('force-load-btn');
+            const txt = document.getElementById('loading-text');
+            if(btn) btn.classList.remove('hidden');
+            if(txt) txt.innerText = "Mạng có vẻ chậm...";
+        }, 8000);
+
         window.onerror = function(msg, url, line) {
             document.getElementById('loading').style.display = 'none';
             var errDiv = document.getElementById('error-display');
             errDiv.style.display = 'block';
-            errDiv.innerText = "⚠️ LỖI: " + msg + " (Dòng " + line + ")";
+            errDiv.innerText = "⚠️ LỖI JS: " + msg + " (Dòng " + line + ")";
             return false;
         };
     </script>
-</head>
-<body>
-    <div id="error-display"></div>
-    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div class="flex flex-col items-center">
-            <div class="loader mb-4"></div>
-            <p class="text-gray-600">Đang tải ứng dụng & AI...</p>
-        </div>
-    </div>
-    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
         // --- UTILS ---
-        const dataURLtoBlob = (dataurl) => { try { var arr=dataurl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]),n=bstr.length,u8arr=new Uint8Array(n);while(n--)u8arr[n]=bstr.charCodeAt(n);return new Blob([u8arr],{type:mime});}catch(e){return null;}}
-        const parseMultiKey = (text) => { if(!text) return {}; const keys={}; text.split('\n').forEach(line=>{ line=line.trim(); if(!line)return; let code="DEFAULT", ans=line; if(line.includes(':')){const p=line.split(':');code=p[0].trim();ans=p[1].trim();} if(!keys[code])keys[code]={}; const pairs=ans.toUpperCase().split(/\s+/); pairs.forEach(p=>{const num=p.match(/^\d+/);const char=p.match(/[A-D]$/);if(num&&char) keys[code][parseInt(num[0])]=char[0];});}); return keys; };
+        const toInt = (x) => Math.floor(x);
+        const parseMultiKey = (text) => { 
+            if(!text) return {}; 
+            const keys={}; 
+            text.split('\n').forEach(line=>{ 
+                line=line.trim(); 
+                if(!line) return; 
+                let code="DEFAULT", ans=line; 
+                if(line.includes(':')){const p=line.split(':');code=p[0].trim();ans=p[1].trim();} 
+                if(!keys[code]) keys[code]={}; 
+                const pairs=ans.toUpperCase().split(/\s+/); 
+                pairs.forEach(p=>{
+                    const num=p.match(/^\d+/);
+                    const char=p.match(/[A-D]$/);
+                    if(num&&char) keys[code][parseInt(num[0])]=char[0];
+                });
+            }); 
+            return keys; 
+        };
         const getGlobalKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys')) || []; } catch { return []; } };
         const getRandomKey = () => { const k=getGlobalKeys(); return k.length?k[Math.floor(Math.random()*k.length)]:null; };
 
-        // --- OPENCV HELPER FOR SCANNING ---
+        // --- OPENCV HELPER ---
         const ScanHelper = {
             videoStream: null,
             isScanning: false,
             
-            startCamera: async (videoElement, onFrame) => {
+            startCamera: async (videoEl, onFrame) => {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ 
                         video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
                     });
-                    videoElement.srcObject = stream;
-                    videoElement.play();
+                    videoEl.srcObject = stream;
+                    videoEl.play();
                     ScanHelper.videoStream = stream;
                     ScanHelper.isScanning = true;
-                    requestAnimationFrame(() => ScanHelper.processFrame(videoElement, onFrame));
+                    requestAnimationFrame(() => ScanHelper.processFrame(videoEl, onFrame));
                 } catch (err) {
-                    alert("Không thể mở camera: " + err.message);
+                    alert("Lỗi Camera: " + err.message);
                 }
             },
 
@@ -106,18 +124,23 @@
                 }
             },
 
-            processFrame: (video, callback) => {
-                if (!ScanHelper.isScanning || !window.cv || !window.cvLoaded) return;
+            processFrame: (videoEl, callback) => {
+                if (!ScanHelper.isScanning) return;
                 
+                // Nếu OpenCV chưa tải xong hoặc lỗi, cứ chạy tiếp video nhưng không xử lý AI
+                if (!window.cv || !window.cvLoaded) {
+                    requestAnimationFrame(() => ScanHelper.processFrame(videoEl, callback));
+                    return;
+                }
+
                 try {
-                    const cap = new cv.VideoCapture(video);
-                    const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+                    let cap = new cv.VideoCapture(videoEl);
+                    let src = new cv.Mat(videoEl.videoHeight, videoEl.videoWidth, cv.CV_8UC4);
                     cap.read(src);
                     
-                    // Logic tìm 4 góc
                     let gray = new cv.Mat();
-                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                    cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                    cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
                     cv.Canny(gray, gray, 75, 200);
                     
                     let contours = new cv.MatVector();
@@ -130,65 +153,53 @@
                     for (let i = 0; i < contours.size(); ++i) {
                         let cnt = contours.get(i);
                         let area = cv.contourArea(cnt);
-                        if (area > 5000) { // Lọc nhiễu
+                        if (area > 5000) { 
                             let peri = cv.arcLength(cnt, true);
                             let approx = new cv.Mat();
                             cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
                             if (approx.rows === 4 && area > maxArea) {
                                 maxArea = area;
-                                docCnt = approx; // Giữ Mat contour
+                                if(docCnt) docCnt.delete();
+                                docCnt = approx;
                             } else {
                                 approx.delete();
                             }
                         }
                     }
 
-                    // Gửi contour tìm được (hoặc null) về để vẽ
-                    callback(docCnt, src); // src sẽ được dùng để cắt ảnh nếu cần
+                    callback(docCnt, src); 
 
-                    // Cleanup
-                    gray.delete(); contours.delete(); hierarchy.delete(); src.delete(); 
-                    // docCnt nếu có sẽ được delete ở callback, nếu không phải delete contour
+                    gray.delete(); contours.delete(); hierarchy.delete();
+                    // src và docCnt được quản lý bên ngoài hoặc clone
                 } catch(e) {
-                    console.error(e);
+                    // console.error(e); // Bỏ log để đỡ lag
                 }
                 
-                if(ScanHelper.isScanning) requestAnimationFrame(() => ScanHelper.processFrame(video, callback));
+                if(ScanHelper.isScanning) requestAnimationFrame(() => ScanHelper.processFrame(videoEl, callback));
             },
 
             warpImage: (srcMat, contour) => {
-                // 1. Sắp xếp điểm
                 let pts = [];
-                for(let i=0; i<4; i++) {
-                    pts.push({x: contour.data32S[i*2], y: contour.data32S[i*2+1]});
-                }
+                for(let i=0; i<4; i++) pts.push({x: contour.data32S[i*2], y: contour.data32S[i*2+1]});
                 
-                // Sắp xếp: TL, TR, BR, BL
                 pts.sort((a,b) => a.y - b.y);
                 let top = pts.slice(0,2).sort((a,b) => a.x - b.x);
                 let bottom = pts.slice(2,4).sort((a,b) => a.x - b.x);
-                let ordered = [top[0], top[1], bottom[1], bottom[0]]; // TL, TR, BR, BL
-
-                let tl = ordered[0], tr = ordered[1], br = ordered[2], bl = ordered[3];
+                let tl = top[0], tr = top[1], br = bottom[1], bl = bottom[0];
 
                 let widthA = Math.sqrt(Math.pow(br.x - bl.x, 2) + Math.pow(br.y - bl.y, 2));
                 let widthB = Math.sqrt(Math.pow(tr.x - tl.x, 2) + Math.pow(tr.y - tl.y, 2));
-                let maxWidth = Math.max(int(widthA), int(widthB));
+                let maxWidth = Math.max(toInt(widthA), toInt(widthB));
 
                 let heightA = Math.sqrt(Math.pow(tr.x - br.x, 2) + Math.pow(tr.y - br.y, 2));
                 let heightB = Math.sqrt(Math.pow(tl.x - bl.x, 2) + Math.pow(tl.y - bl.y, 2));
-                let maxHeight = Math.max(int(heightA), int(heightB));
+                let maxHeight = Math.max(toInt(heightA), toInt(heightB));
 
-                // Fix tỷ lệ A4 (W:1600 -> H:~2260)
                 let dstWidth = 1600;
                 let dstHeight = 2260;
 
-                let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-                    tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y
-                ]);
-                let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-                    0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
-                ]);
+                let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight]);
 
                 let M = cv.getPerspectiveTransform(srcTri, dstTri);
                 let warped = new cv.Mat();
@@ -198,192 +209,94 @@
                 return warped;
             }
         };
-        
-        function int(x) { return Math.floor(x); }
 
-        // --- COMPONENT: SHEET GENERATOR ---
-        const SheetGenerator = () => {
-            const [numQuestions, setNumQuestions] = useState(40);
-            const [showAnchors, setShowAnchors] = useState(true);
-            const [title, setTitle] = useState('PHIẾU TRẢ LỜI TRẮC NGHIỆM');
-            const [schoolName, setSchoolName] = useState('');
-            const [examSubject, setExamSubject] = useState('');
-            const [examDate, setExamDate] = useState('');
-
-            const handlePrint = () => window.print();
-            const range = (start, end) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
-            const options = ['A', 'B', 'C', 'D'];
-
-            return (
-                <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] bg-gray-100 font-sans overflow-hidden sheet-container">
-                    {/* Controls */}
-                    <div className="w-full lg:w-80 bg-white shadow-lg p-6 no-print flex flex-col gap-4 overflow-y-auto border-r z-10 sidebar-controls">
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 border-b pb-2"><i className="fas fa-cog w-5 h-5 text-gray-600"></i> Thông tin Phiếu</h2>
-                        <div className="space-y-3">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề lớn</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 outline-none" placeholder="VD: PHIẾU TRẢ LỜI..."/></div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Số câu</label><select value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} className="w-full px-3 py-2 border rounded-md outline-none"><option value={20}>20 câu</option><option value={40}>40 câu</option><option value={50}>50 câu</option><option value={60}>60 câu</option><option value={100}>100 câu</option></select></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày thi</label><input type="text" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="dd/mm/yyyy"/></div>
-                            </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Tên Trường</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="Nhập tên trường..."/></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Môn Thi</label><input type="text" value={examSubject} onChange={(e) => setExamSubject(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none" placeholder="Nhập môn thi..."/></div>
-                            <div className="flex items-center gap-2 mt-2 pt-2 border-t"><input type="checkbox" id="anchors" checked={showAnchors} onChange={(e) => setShowAnchors(e.target.checked)} className="w-4 h-4 text-blue-600 rounded"/><label htmlFor="anchors" className="text-gray-700 text-sm">Hiển thị 4 góc định vị</label></div>
-                            <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white px-3 py-3 rounded-md hover:bg-blue-800 transition font-bold mt-4"><i className="fas fa-print"></i> IN PHIẾU NGAY</button>
-                        </div>
-                    </div>
-
-                    {/* Preview Area */}
-                    <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center bg-gray-200 print-bg-white print-p-0 print-m-0">
-                        <div className="bg-white shadow-2xl relative mx-auto print-shadow-none" style={{ width: '210mm', minHeight: '297mm', padding: '10mm', boxSizing: 'border-box' }}>
-                            {showAnchors && (<><div className="absolute top-8 left-8 w-4 h-4 bg-black"></div><div className="absolute top-8 right-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 left-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 right-8 w-4 h-4 bg-black"></div></>)}
-
-                            <div className="w-full h-full border-0 border-transparent relative">
-                                {/* Header */}
-                                <div className="flex justify-between items-start mb-6 px-4 h-[160px] overflow-hidden">
-                                    <div className="w-1/2 pr-4">
-                                        <div className="grid grid-cols-[70px_1fr] gap-y-2 text-sm">
-                                            <div className="font-bold pt-1">Trường:</div><div className="border-b border-dotted border-gray-400 pt-1 font-semibold text-blue-900 min-h-[24px]">{schoolName}</div>
-                                            <div className="font-bold pt-1">Lớp:</div><div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div>
-                                            <div className="font-bold pt-1">Họ tên:</div><div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div>
-                                        </div>
-                                    </div>
-                                    <div className="w-1/2 text-center pl-4">
-                                        <h1 className="font-bold text-xl uppercase leading-tight mb-2">{title}</h1>
-                                        <div className="flex justify-center items-end gap-1 text-sm italic"><span>Môn thi:</span><div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">{examSubject}</div></div>
-                                        <div className="flex justify-center items-end gap-1 text-sm italic mt-1"><span>Ngày thi:</span><div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">{examDate}</div></div>
-                                    </div>
-                                </div>
-
-                                {/* ID and Code */}
-                                <div className="flex gap-8 mb-6 px-4 h-[200px]">
-                                    <div className="w-40">
-                                        <div className="text-center font-bold border border-black text-sm mb-1">SỐ BÁO DANH</div>
-                                        <div className="grid grid-cols-6 border border-black mb-1">{[...Array(6)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div>
-                                        <div className="grid grid-cols-6 gap-x-1">{[...Array(6)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div>
-                                    </div>
-                                    <div className="w-28">
-                                        <div className="text-center font-bold border border-black text-sm mb-1">MÃ ĐỀ</div>
-                                        <div className="grid grid-cols-4 border border-black mb-1">{[...Array(4)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div>
-                                        <div className="grid grid-cols-4 gap-x-1">{[...Array(4)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div>
-                                    </div>
-                                    <div className="flex-1 flex flex-col justify-between py-2">
-                                        <div className="border border-black p-2 h-24 relative"><span className="absolute -top-3 left-2 bg-white px-1 text-sm font-bold">Điểm</span><div className="h-full w-full flex items-center justify-center text-4xl font-bold text-gray-100 select-none">OMR</div></div>
-                                        <div className="text-xs mt-2 text-justify leading-tight"><strong>Lưu ý:</strong> Giữ phẳng phiếu. Tô kín. <div className="flex gap-4 mt-2 justify-center"><span className="flex items-center gap-1"><div className="w-3 h-3 bg-black rounded-full"></div> Đúng</span><span className="flex items-center gap-1"><div className="w-3 h-3 border border-black rounded-full flex justify-center items-center text-[8px]">✕</div> Sai</span></div></div>
-                                    </div>
-                                </div>
-
-                                {/* Answers */}
-                                <div className="px-4 mt-8">
-                                    <div className="border-t-2 border-black mb-4"></div>
-                                    <h3 className="text-center font-bold mb-4">PHẦN TRẢ LỜI</h3>
-                                    <div className="w-full grid grid-cols-4 gap-4">
-                                            {[0, 1, 2, 3].map(colIndex => {
-                                                const itemsPerCol = Math.ceil(numQuestions / 4);
-                                                const start = colIndex * itemsPerCol + 1;
-                                                const end = Math.min(start + itemsPerCol - 1, numQuestions);
-                                                if (start > numQuestions) return null;
-                                                return (
-                                                    <div key={colIndex} className="border-r border-gray-300 last:border-0 pr-2">
-                                                        {range(start, end).map(qNum => (
-                                                            <div key={qNum} className="flex items-center justify-between mb-2 text-sm"><span className="font-bold w-6 text-right mr-2 text-blue-800">{qNum}</span><div className="flex gap-1.5">{options.map(opt => (<div key={opt} className="w-5 h-5 rounded-full border border-gray-500 flex items-center justify-center text-[10px] font-medium text-gray-700">{opt}</div>))}</div></div>
-                                                        ))}
-                                                    </div>
-                                                )
-                                            })}
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-5 left-8 right-8 flex justify-between text-[10px] text-gray-400"><span>Design by OMR Pro</span><span>Page 1/1</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- CAMERA SCAN COMPONENT (MỚI) ---
+        // --- CAMERA COMPONENT ---
         const CameraScanner = ({ onCaptured, onClose }) => {
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
             const [canCapture, setCanCapture] = useState(false);
-            const [currentContour, setCurrentContour] = useState(null);
-            const [currentSrc, setCurrentSrc] = useState(null);
+            const cvState = useRef({ src: null, contour: null });
 
             useEffect(() => {
-                if (!window.cvLoaded) { alert("OpenCV chưa tải xong, vui lòng đợi!"); onClose(); return; }
+                if (window.cvLoadError) {
+                    alert("Không tải được thư viện xử lý ảnh (OpenCV). Vui lòng kiểm tra mạng!");
+                    onClose();
+                    return;
+                }
                 
                 ScanHelper.startCamera(videoRef.current, (contour, srcMat) => {
-                    const ctx = canvasRef.current.getContext('2d');
-                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                    const canvas = canvasRef.current;
+                    if(!canvas) { if(srcMat) srcMat.delete(); if(contour) contour.delete(); return; }
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    if(cvState.current.contour) cvState.current.contour.delete();
+                    if(cvState.current.src) cvState.current.src.delete();
                     
                     if (contour) {
-                        // Vẽ contour
                         const pts = contour.data32S;
-                        ctx.strokeStyle = '#00FF00';
-                        ctx.lineWidth = 4;
-                        ctx.beginPath();
-                        ctx.moveTo(pts[0], pts[1]);
-                        ctx.lineTo(pts[2], pts[3]);
-                        ctx.lineTo(pts[4], pts[5]);
-                        ctx.lineTo(pts[6], pts[7]);
-                        ctx.closePath();
-                        ctx.stroke();
+                        ctx.strokeStyle = '#00FF00'; ctx.lineWidth = 4;
+                        ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(pts[4], pts[5]); ctx.lineTo(pts[6], pts[7]); ctx.closePath(); ctx.stroke();
                         
                         setCanCapture(true);
-                        setCurrentContour(contour);
-                        // Clone src để dùng khi chụp
-                        if(currentSrc) currentSrc.delete();
-                        setCurrentSrc(srcMat.clone());
+                        cvState.current.contour = contour.clone();
+                        cvState.current.src = srcMat.clone();
                     } else {
                         setCanCapture(false);
-                        if(currentSrc) { currentSrc.delete(); setCurrentSrc(null); }
+                        cvState.current.contour = null;
+                        cvState.current.src = null;
                     }
+                    
+                    if(srcMat) srcMat.delete();
+                    if(contour) contour.delete();
                 });
 
                 return () => {
                     ScanHelper.stopCamera();
-                    if(currentSrc) currentSrc.delete();
+                    if(cvState.current.contour) cvState.current.contour.delete();
+                    if(cvState.current.src) cvState.current.src.delete();
                 };
             }, []);
 
             const handleCapture = () => {
-                if (!canCapture || !currentSrc || !currentContour) return;
+                const { src, contour } = cvState.current;
+                if (!canCapture || !src || !contour) return;
                 
-                // Warp ảnh
-                const warped = ScanHelper.warpImage(currentSrc, currentContour);
-                
-                // Convert to Blob
-                const outCanvas = document.createElement('canvas');
-                outCanvas.width = warped.cols;
-                outCanvas.height = warped.rows;
-                cv.imshow(outCanvas, warped);
-                
-                outCanvas.toBlob(blob => {
-                    onCaptured(blob);
-                    warped.delete();
-                }, 'image/jpeg', 0.9);
+                try {
+                    const warped = ScanHelper.warpImage(src, contour);
+                    const outCanvas = document.createElement('canvas');
+                    outCanvas.width = warped.cols;
+                    outCanvas.height = warped.rows;
+                    cv.imshow(outCanvas, warped);
+                    
+                    outCanvas.toBlob(blob => {
+                        onCaptured(blob);
+                        warped.delete();
+                    }, 'image/jpeg', 0.9);
+                } catch(e) {
+                    alert("Lỗi xử lý: " + e.message);
+                }
             };
 
             return (
                 <div className="fixed inset-0 bg-black z-50 flex flex-col">
                     <div className="p-4 flex justify-between items-center text-white">
-                        <h2 className="text-lg font-bold">Quét Phiếu</h2>
+                        <h2 className="text-lg font-bold">Quét Phiếu (AI)</h2>
                         <button onClick={onClose} className="text-gray-300 px-3 py-1">Đóng</button>
                     </div>
-                    <div className="flex-1 flex items-center justify-center bg-black relative">
+                    <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
                         <div className="video-container">
                             <video ref={videoRef} playsInline muted autoPlay></video>
                             <canvas ref={canvasRef} className="overlay" width={1280} height={720}></canvas>
                         </div>
-                        <div className="absolute top-4 bg-black/50 text-white px-4 py-2 rounded-full text-sm pointer-events-none">
-                            {canCapture ? "✅ Đã bắt được phiếu!" : "🔍 Hãy đưa phiếu vào khung hình..."}
+                        <div className={`absolute top-4 px-4 py-2 rounded-full text-sm font-bold pointer-events-none transition-colors ${canCapture ? 'bg-green-500 text-white' : 'bg-black/50 text-gray-300'}`}>
+                            {canCapture ? "✅ Đã bắt được phiếu!" : "🔍 Đưa phiếu vào khung hình..."}
                         </div>
+                        {!window.cvLoaded && <div className="absolute bottom-4 text-yellow-400 text-xs">⚠️ Đang tải thư viện AI... (Có thể chụp chậm)</div>}
                     </div>
                     <div className="p-6 bg-gray-900 flex justify-center">
-                        <button 
-                            onClick={handleCapture}
-                            disabled={!canCapture}
-                            className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all ${canCapture ? 'border-white bg-green-500 scale-110' : 'border-gray-600 bg-gray-800 opacity-50'}`}
-                        >
+                        <button onClick={handleCapture} disabled={!canCapture} className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all ${canCapture ? 'border-white bg-green-500 scale-110' : 'border-gray-600 bg-gray-800 opacity-50'}`}>
                             <i className="fas fa-camera text-3xl text-white"></i>
                         </button>
                     </div>
@@ -391,8 +304,61 @@
             );
         };
 
+        // --- SHEET GENERATOR ---
+        const SheetGenerator = () => {
+            const [numQuestions, setNumQuestions] = useState(40);
+            const [showAnchors, setShowAnchors] = useState(true);
+            const [title, setTitle] = useState('PHIẾU TRẢ LỜI TRẮC NGHIỆM');
+            const [schoolName, setSchoolName] = useState('');
+            const [examSubject, setExamSubject] = useState('');
+            const [examDate, setExamDate] = useState('');
+            const handlePrint = () => window.print();
+            const range = (start, end) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
+            const options = ['A', 'B', 'C', 'D'];
+
+            return (
+                <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] bg-gray-100 font-sans overflow-hidden sheet-container">
+                    <div className="w-full lg:w-80 bg-white shadow-lg p-6 no-print flex flex-col gap-4 overflow-y-auto border-r z-10 sidebar-controls">
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 border-b pb-2"><i className="fas fa-cog w-5 h-5 text-gray-600"></i> Thông tin Phiếu</h2>
+                        <div className="space-y-3">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề lớn</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none"/></div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Số câu</label><select value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} className="w-full px-3 py-2 border rounded-md outline-none"><option value={20}>20 câu</option><option value={40}>40 câu</option><option value={50}>50 câu</option><option value={60}>60 câu</option><option value={100}>100 câu</option></select></div>
+                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Ngày thi</label><input type="text" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none"/></div>
+                            </div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Tên Trường</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none"/></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Môn Thi</label><input type="text" value={examSubject} onChange={(e) => setExamSubject(e.target.value)} className="w-full px-3 py-2 border rounded-md outline-none"/></div>
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t"><input type="checkbox" checked={showAnchors} onChange={(e) => setShowAnchors(e.target.checked)}/><label className="text-gray-700 text-sm">Hiển thị 4 góc định vị</label></div>
+                            <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white px-3 py-3 rounded-md hover:bg-blue-800 transition font-bold mt-4"><i className="fas fa-print"></i> IN PHIẾU NGAY</button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center bg-gray-200 print-bg-white print-p-0 print-m-0">
+                        <div className="bg-white shadow-2xl relative mx-auto print-shadow-none" style={{ width: '210mm', minHeight: '297mm', padding: '10mm', boxSizing: 'border-box' }}>
+                            {showAnchors && <><div className="absolute top-8 left-8 w-4 h-4 bg-black"></div><div className="absolute top-8 right-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 left-8 w-4 h-4 bg-black"></div><div className="absolute bottom-8 right-8 w-4 h-4 bg-black"></div></>}
+                            <div className="w-full h-full border-0 border-transparent relative">
+                                <div className="flex justify-between items-start mb-6 px-4 h-[160px] overflow-hidden">
+                                    <div className="w-1/2 pr-4"><div className="grid grid-cols-[70px_1fr] gap-y-2 text-sm"><div className="font-bold pt-1">Trường:</div><div className="border-b border-dotted border-gray-400 pt-1 font-semibold text-blue-900 min-h-[24px]">{schoolName}</div><div className="font-bold pt-1">Lớp:</div><div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div><div className="font-bold pt-1">Họ tên:</div><div className="border-b border-dotted border-gray-400 pt-1 min-h-[24px]"></div></div></div>
+                                    <div className="w-1/2 text-center pl-4"><h1 className="font-bold text-xl uppercase leading-tight mb-2">{title}</h1><div className="flex justify-center items-end gap-1 text-sm italic"><span>Môn thi:</span><div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">{examSubject}</div></div><div className="flex justify-center items-end gap-1 text-sm italic mt-1"><span>Ngày thi:</span><div className="border-b border-dotted border-gray-400 min-w-[100px] text-blue-900 font-semibold px-2">{examDate}</div></div></div>
+                                </div>
+                                <div className="flex gap-8 mb-6 px-4 h-[200px]">
+                                    <div className="w-40"><div className="text-center font-bold border border-black text-sm mb-1">SỐ BÁO DANH</div><div className="grid grid-cols-6 border border-black mb-1">{[...Array(6)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div><div className="grid grid-cols-6 gap-x-1">{[...Array(6)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div></div>
+                                    <div className="w-28"><div className="text-center font-bold border border-black text-sm mb-1">MÃ ĐỀ</div><div className="grid grid-cols-4 border border-black mb-1">{[...Array(4)].map((_, i) => (<div key={i} className="h-6 border-r border-black last:border-r-0"></div>))}</div><div className="grid grid-cols-4 gap-x-1">{[...Array(4)].map((col, colIdx) => (<div key={colIdx} className="flex flex-col items-center gap-1">{[...Array(10)].map((_, num) => (<div key={num} className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[9px] font-bold text-gray-600">{num}</div>))}</div>))}</div></div>
+                                    <div className="flex-1 flex flex-col justify-between py-2"><div className="border border-black p-2 h-24 relative"><span className="absolute -top-3 left-2 bg-white px-1 text-sm font-bold">Điểm</span><div className="h-full w-full flex items-center justify-center text-4xl font-bold text-gray-100 select-none">OMR</div></div><div className="text-xs mt-2 text-justify leading-tight"><strong>Lưu ý:</strong> Giữ phẳng phiếu. Tô kín. <div className="flex gap-4 mt-2 justify-center"><span className="flex items-center gap-1"><div className="w-3 h-3 bg-black rounded-full"></div> Đúng</span><span className="flex items-center gap-1"><div className="w-3 h-3 border border-black rounded-full flex justify-center items-center text-[8px]">✕</div> Sai</span></div></div></div>
+                                </div>
+                                <div className="px-4 mt-8">
+                                    <div className="border-t-2 border-black mb-4"></div><h3 className="text-center font-bold mb-4">PHẦN TRẢ LỜI</h3>
+                                    <div className="w-full grid grid-cols-4 gap-4">{[0, 1, 2, 3].map(colIndex => { const itemsPerCol = Math.ceil(numQuestions / 4); const start = colIndex * itemsPerCol + 1; const end = Math.min(start + itemsPerCol - 1, numQuestions); if (start > numQuestions) return null; return (<div key={colIndex} className="border-r border-gray-300 last:border-0 pr-2">{range(start, end).map(qNum => (<div key={qNum} className="flex items-center justify-between mb-2 text-sm"><span className="font-bold w-6 text-right mr-2 text-blue-800">{qNum}</span><div className="flex gap-1.5">{options.map(opt => (<div key={opt} className="w-5 h-5 rounded-full border border-gray-500 flex items-center justify-center text-[10px] font-medium text-gray-700">{opt}</div>))}</div></div>))}</div>)})}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
         const App = () => {
-            const DEFAULT_BACKEND = "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)";
+            const DEFAULT_BACKEND = "https://hoangthiencm-giangbai.hf.space";
             const [view, setView] = useState('grading');
             const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem("omr_backend_url") || DEFAULT_BACKEND);
             const [mobileMode, setMobileMode] = useState(false);
@@ -408,22 +374,20 @@
             const [previewImage, setPreviewImage] = useState(null);
             const [aiReading, setAiReading] = useState(false);
             const [enableHandwriting, setEnableHandwriting] = useState(false);
-            const [showCamera, setShowCamera] = useState(false); // State bật camera
+            const [showCamera, setShowCamera] = useState(false);
             
             const folderRef = useRef(null);
             const keyImageRef = useRef(null);
             const pollRef = useRef(null);
 
             useEffect(() => {
-                document.getElementById('loading').style.display = 'none';
+                // Tắt màn hình loading ngay khi App mount thành công
+                const loader = document.getElementById('loading');
+                if(loader) loader.style.display = 'none';
+
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('mode') === 'mobile') setMobileMode(true);
                 if (params.get('session')) setSessionId(params.get('session'));
-                
-                // Fix lỗi Zalo
-                if (typeof zaloJSV2 !== 'undefined') {
-                    console.log("Zalo SDK found");
-                }
             }, []);
 
             const callGeminiVision = async (base64) => {
@@ -446,7 +410,21 @@
 
             const handleKeyImageUpload = (e) => { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]); r.readAsDataURL(file); };
             const handlePaste = (e) => { const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf("image") !== -1) { e.preventDefault(); const blob = items[i].getAsFile(); const r = new FileReader(); r.onload = (ev) => callGeminiVision(ev.target.result.split(',')[1]); r.readAsDataURL(blob); return; } } };
-            const createSession = async () => { if (!sessionName || !inputText) return alert("Nhập đủ thông tin!"); const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText))); try { const res = await fetch(`${backendUrl}/api/omr/create_session`, { method: 'POST', body: fd }); if(!res.ok) throw new Error("Lỗi kết nối Server"); const d = await res.json(); setSessionId(d.session_id); setShowQr(true); setTimeout(() => { document.getElementById("qrcode").innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}`, width: 200, height: 200 }); }, 100); } catch(e) { alert("Lỗi: " + e.message); } };
+            
+            const createSession = async () => { 
+                if (!sessionName || !inputText) return alert("Nhập đủ thông tin!"); 
+                const fd = new FormData(); fd.append("name", sessionName); fd.append("answer_key_json", JSON.stringify(parseMultiKey(inputText))); 
+                try { 
+                    const res = await fetch(`${backendUrl}/api/omr/create_session`, { method: 'POST', body: fd }); 
+                    if(!res.ok) throw new Error("Lỗi kết nối Server"); 
+                    const d = await res.json(); setSessionId(d.session_id); setShowQr(true); 
+                    setTimeout(() => { 
+                        const qrDiv = document.getElementById("qrcode");
+                        if(qrDiv) { qrDiv.innerHTML = ""; new QRCode(qrDiv, { text: `${window.location.href.split('?')[0]}?mode=mobile&session=${d.session_id}`, width: 200, height: 200 }); }
+                    }, 100); 
+                } catch(e) { alert("Lỗi: " + e.message); } 
+            };
+
             const loadHistory = async () => { try { const res = await fetch(`${backendUrl}/api/omr/history`); const d=await res.json(); if(Array.isArray(d)) setHistoryList(d); } catch(e){} };
             const viewDetail = async (sid) => { try { const res = await fetch(`${backendUrl}/api/omr/history/${sid}`); const d=await res.json(); if(Array.isArray(d)) setHistoryDetail(d); } catch(e){} };
             const editSession = async (e, s) => { e.stopPropagation(); const newName = prompt("Nhập tên mới cho đợt thi:", s.session_name); if (newName && newName !== s.session_name) { const fd = new FormData(); fd.append("name", newName); try { const res = await fetch(`${backendUrl}/api/omr/update_session/${s.session_id}`, { method: 'PUT', body: fd }); if(res.ok) { setHistoryList(historyList.map(h => h.session_id === s.session_id ? {...h, session_name: newName} : h)); } else alert("Lỗi khi cập nhật"); } catch(e){ alert("Lỗi kết nối"); } } };
@@ -457,12 +435,10 @@
                 setProcessing(true); 
                 const keys = parseMultiKey(inputText); 
                 for(let f of files) { 
-                    // Với PC, tạm thời ko pre-warp, gửi ảnh gốc
                     const fd = new FormData(); 
                     fd.append("file", f); 
                     fd.append("answer_key_json", JSON.stringify(keys)); 
                     if(enableHandwriting) fd.append("handwriting", "true");
-                    
                     try { 
                         const res = await fetch(`${backendUrl}/api/omr/grade`, { method: 'POST', body: fd }); 
                         const data = await res.json(); 
@@ -476,25 +452,18 @@
                 setShowCamera(false);
                 setProcessing(true);
                 setMobileStatus("Đang gửi ảnh đã căn chỉnh...");
-                
                 const sid = new URLSearchParams(window.location.search).get('session');
-                
                 try {
                     const fd = new FormData();
                     fd.append("file", blob, "capture.jpg");
                     fd.append("session_id", sid);
-                    fd.append("pre_warped", "true"); // Báo backend là ảnh đã phẳng
-                    
+                    fd.append("pre_warped", "true"); 
                     const res = await fetch(`${backendUrl}/api/omr/grade_mobile`, { method: 'POST', body: fd });
                     const d = await res.json();
                     setMobileStatus(res.ok ? `✓ SBD: ${d.student_id} | Điểm: ${d.score}` : `⚠ ${d.error}`);
-                } catch(e) {
-                    setMobileStatus("Lỗi Mạng");
-                }
+                } catch(e) { setMobileStatus("Lỗi Mạng"); }
                 setProcessing(false);
             };
-
-            const historyItems = historyDetail ? historyDetail.map((r, i) => (<tr key={i} className="border-b"><td className="p-3">{r.student_id}</td><td className="p-3 font-bold">{r.score}</td></tr>)) : null;
 
             useEffect(() => {
                 if(view === 'history') loadHistory();
@@ -506,33 +475,13 @@
                 return (
                     <div className="bg-gray-900 min-h-screen text-white flex flex-col">
                         {showCamera && <CameraScanner onCaptured={handleMobileCapture} onClose={()=>setShowCamera(false)} />}
-                        
                         <div className="p-6 flex-1 flex flex-col items-center justify-center text-center">
                             <h1 className="text-2xl font-bold mb-4 text-indigo-400">Camera Chấm Thi AI</h1>
-                            
-                            {mobileStatus && (
-                                <div className={`mb-6 p-4 rounded-lg font-bold w-full ${mobileStatus.includes('✓') ? 'bg-green-600' : 'bg-red-600'}`}>
-                                    {mobileStatus}
-                                </div>
-                            )}
-                            
-                            <button 
-                                onClick={() => setShowCamera(true)}
-                                className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all"
-                            >
-                                {processing ? (
-                                    <div className="loader border-white border-t-indigo-500"></div>
-                                ) : (
-                                    <>
-                                        <i className="fas fa-camera text-6xl mb-2"></i>
-                                        <span className="font-bold text-xl">QUÉT PHIẾU</span>
-                                    </>
-                                )}
+                            {mobileStatus && <div className={`mb-6 p-4 rounded-lg font-bold w-full ${mobileStatus.includes('✓') ? 'bg-green-600' : 'bg-red-600'}`}>{mobileStatus}</div>}
+                            <button onClick={() => setShowCamera(true)} className="w-64 h-64 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-xl cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all">
+                                {processing ? <div className="loader border-white border-t-indigo-500"></div> : <><i className="fas fa-camera text-6xl mb-2"></i><span className="font-bold text-xl">QUÉT PHIẾU</span></>}
                             </button>
-                            
-                            <p className="mt-6 text-gray-400 text-sm px-4">
-                                Hướng dẫn: Đưa camera vào phiếu sao cho <b>khung xanh</b> bao trọn tờ giấy, sau đó bấm nút Chụp.
-                            </p>
+                            <p className="mt-6 text-gray-400 text-sm px-4">Hướng dẫn: Đưa camera vào phiếu sao cho <b>khung xanh</b> bao trọn tờ giấy, sau đó bấm nút Chụp.</p>
                         </div>
                     </div>
                 );
@@ -544,26 +493,12 @@
                         <div className="flex items-center gap-2"><div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center font-bold">OMR</div><h1 className="font-bold text-lg text-indigo-900">Quản Lý Chấm Thi</h1></div>
                         <div className="flex gap-2 main-tabs"><button onClick={()=>window.location.href='index.html'} className="tab-btn text-gray-600 hover:bg-gray-100"><i className="fas fa-home"></i></button><div className="w-px bg-gray-300 my-1"></div><button onClick={()=>setView('grading')} className={`tab-btn ${view==='grading'?'tab-active':'tab-inactive'}`}><i className="fas fa-play-circle mr-2"></i>Chấm Thi</button><button onClick={()=>setView('history')} className={`tab-btn ${view==='history'?'tab-active':'tab-inactive'}`}><i className="fas fa-history mr-2"></i>Lịch Sử</button><button onClick={()=>setView('sheet')} className={`tab-btn ${view==='sheet'?'tab-active':'tab-inactive'}`}><i className="fas fa-print mr-2"></i>Tạo Phiếu</button></div>
                     </div>
-
                     <div className={`flex-1 w-full overflow-hidden ${view === 'sheet' ? 'p-0' : 'p-6 max-w-7xl mx-auto'}`}>
                         {view === 'grading' && (
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                                 <div className="lg:col-span-4 space-y-4">
                                     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative">{aiReading && (<div className="ai-loading"><div className="pulse-ring"></div><span className="mt-3 text-indigo-700 font-bold text-sm animate-pulse">AI Đang Đọc Ảnh...</span></div>)}<h3 className="font-bold text-gray-800 mb-3">1. Tạo Đợt Chấm</h3><input value={sessionName} onChange={e=>setSessionName(e.target.value)} className="w-full border p-2 rounded mb-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tên đợt (VD: Toán 12...)"/><div className="relative"><textarea value={inputText} onChange={e=>setInputText(e.target.value)} onPaste={handlePaste} className="w-full border p-2 rounded h-40 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập đáp án (101: 1A...) hoặc Dán ảnh (Ctrl+V)..."></textarea><button onClick={()=>keyImageRef.current.click()} className="absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold border border-gray-300 shadow-sm flex items-center gap-1"><i className="fas fa-image"></i> Ảnh Key</button><input type="file" ref={keyImageRef} className="hidden" accept="image/*" onChange={handleKeyImageUpload}/></div>
-                                    
-                                    <div className="mt-2 flex items-center p-2 bg-pink-50 rounded border border-pink-100">
-                                        <input 
-                                            type="checkbox" 
-                                            id="handwriting_toggle"
-                                            checked={enableHandwriting}
-                                            onChange={(e) => setEnableHandwriting(e.target.checked)}
-                                            className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500 cursor-pointer"
-                                        />
-                                        <label htmlFor="handwriting_toggle" className="ml-2 text-sm font-medium text-pink-700 cursor-pointer select-none">
-                                            <i className="fas fa-pen-nib mr-1"></i> Tự động đọc SBD viết tay
-                                        </label>
-                                    </div>
-
+                                    <div className="mt-2 flex items-center p-2 bg-pink-50 rounded border border-pink-100"><input type="checkbox" id="handwriting_toggle" checked={enableHandwriting} onChange={(e) => setEnableHandwriting(e.target.checked)} className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500 cursor-pointer"/><label htmlFor="handwriting_toggle" className="ml-2 text-sm font-medium text-pink-700 cursor-pointer select-none"><i className="fas fa-pen-nib mr-1"></i> Tự động đọc SBD viết tay</label></div>
                                     <div className="grid grid-cols-2 gap-2 mt-3"><button onClick={createSession} className="bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 transition shadow">Tạo Session</button><button onClick={()=>folderRef.current.click()} className="bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50 transition shadow-sm">Upload File</button><input type="file" multiple ref={folderRef} className="hidden" onChange={e=>processImagesPC(Array.from(e.target.files))}/></div></div>
                                     {showQr && <div className="bg-white p-5 rounded-xl text-center border border-green-200 shadow-sm"><div id="qrcode" className="flex justify-center mb-2"></div><p className="text-xs text-green-700 font-bold">Quét để chấm trên Mobile</p></div>}
                                 </div>
@@ -572,23 +507,7 @@
                         )}
                         {view === 'history' && (
                             <div className="grid grid-cols-12 gap-6 h-full">
-                                <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]">
-                                    <div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Danh Sách Đợt</div>
-                                    <div className="flex-1 overflow-auto">
-                                        {historyList.map(h=>(
-                                            <div key={h.session_id} className="p-3 border-b hover:bg-indigo-50 transition group flex justify-between items-center">
-                                                <div onClick={()=>viewDetail(h.session_id)} className="cursor-pointer flex-1">
-                                                    <div className="font-bold text-indigo-900">{h.session_name}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div>
-                                                </div>
-                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                                                    <button onClick={(e)=>editSession(e, h)} className="text-blue-600 hover:text-blue-800" title="Sửa tên"><i className="fas fa-edit"></i></button>
-                                                    <button onClick={(e)=>deleteSession(e, h.session_id)} className="text-red-600 hover:text-red-800" title="Xóa đợt"><i className="fas fa-trash"></i></button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <div className="col-span-4 bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-[600px]"><div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Danh Sách Đợt</div><div className="flex-1 overflow-auto">{historyList.map(h=>(<div key={h.session_id} className="p-3 border-b hover:bg-indigo-50 transition group flex justify-between items-center"><div onClick={()=>viewDetail(h.session_id)} className="cursor-pointer flex-1"><div className="font-bold text-indigo-900">{h.session_name}</div><div className="text-xs text-gray-500 mt-1">{new Date(h.created_at).toLocaleString()}</div></div><div className="flex gap-2 opacity-0 group-hover:opacity-100 transition"><button onClick={(e)=>editSession(e, h)} className="text-blue-600 hover:text-blue-800" title="Sửa tên"><i className="fas fa-edit"></i></button><button onClick={(e)=>deleteSession(e, h.session_id)} className="text-red-600 hover:text-red-800" title="Xóa đợt"><i className="fas fa-trash"></i></button></div></div>))}</div></div>
                                 <div className="col-span-8 bg-white rounded-xl shadow-sm border flex flex-col h-[600px]"><div className="p-4 border-b font-bold flex justify-between bg-gray-50 rounded-t-xl"><span>Chi Tiết</span>{historyDetail && <button onClick={()=>{const ws=XLSX.utils.json_to_sheet(historyDetail);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"KQ");XLSX.writeFile(wb,"History.xlsx")}} className="text-green-600 text-sm"><i className="fas fa-download"></i> Tải Excel</button>}</div><div className="flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-3">SBD</th><th className="p-3">Điểm</th></tr></thead><tbody>{historyItems}</tbody></table></div></div>
                             </div>
                         )}
@@ -599,8 +518,14 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch(err) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-display').style.display = 'block';
+            document.getElementById('error-display').innerText = "🔥 CRITICAL ERROR: " + err.message;
+        }
     </script>
 </body>
 </html>
