@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 Từ Ma Trận (Fix Word Equation)</title>
+    <title>Tạo Đề Toán 9 Từ Ma Trận (Fix Upload)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -118,30 +118,21 @@
                 .replace(/\\\)/g, '$');  // Replace \) with $
 
             // Regex tìm $$...$$ (Display) và $...$ (Inline)
-            // Cần xử lý cẩn thận để tránh replace nhầm
             return clean.replace(/(\$\$)([^$]+)(\$\$)|(\$)([^$]+)(\$)/g, (match, d1, dTex, d2, i1, iTex, i2) => {
                 const tex = dTex || iTex;
                 const isDisplay = !!dTex;
-                
                 try {
-                    // Render ra MathML string
                     const mathML = katex.renderToString(tex, {
                         throwOnError: false,
                         output: 'mathml',
                         displayMode: isDisplay
                     });
-                    
-                    // KaTeX output thường bọc trong <span class="katex">...<math>...</math>...</span>
-                    // Word cần thẻ <math> chuẩn.
                     const matchMath = mathML.match(/<math[\s\S]*?<\/math>/);
                     if (matchMath) {
-                        // Thêm namespace m: cho Word nếu cần, nhưng MathML chuẩn thường Word tự nhận diện nếu nằm trong HTML
                         return matchMath[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"'); 
                     }
                     return match;
-                } catch (e) { 
-                    return match; 
-                }
+                } catch (e) { return match; }
             });
         };
 
@@ -410,8 +401,8 @@
                                 </div>
                             </div>
 
-                            <div className="border-2 border-dashed border-blue-300 rounded-lg p-10 text-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative group">
-                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} accept="image/*,.pdf"/>
+                            <label className="block border-2 border-dashed border-blue-300 rounded-lg p-10 text-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative group">
+                                <input type="file" className="hidden" onChange={handleUpload} accept="image/*,.pdf"/>
                                 {loading ? <div className="loader loader-blue"></div> : (
                                     <div className="group-hover:scale-105 transition-transform">
                                         <i className="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-3"></i>
@@ -419,7 +410,7 @@
                                         <p className="text-sm text-gray-500 mt-1">Hệ thống sẽ tự nhận diện bài Tự luận & Trắc nghiệm</p>
                                     </div>
                                 )}
-                            </div>
+                            </label>
                         </div>
                     )}
 
