@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9</title>
+    <title>Tạo Đề Toán 9 </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -23,14 +23,18 @@
         @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
         body { font-family: 'Times New Roman', serif; background-color: #f0f2f5; }
         .font-ui { font-family: system-ui, -apple-system, sans-serif; }
-        .loader { width: 24px; height: 24px; border: 3px solid #FFF; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
-        .loader-blue { border-color: #2563eb; border-bottom-color: transparent; }
+        .loader { width: 16px; height: 16px; border: 2px solid #2563eb; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .paper-shadow { box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1); }
         .section-header { background-color: #e0e7ff; color: #3730a3; font-weight: bold; padding: 10px; border-radius: 6px; margin-top: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        input, select, textarea { transition: all 0.2s; }
-        input:focus, select:focus, textarea:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+        input, select, textarea { transition: all 0.2s; font-size: 13px; }
+        input:focus, select:focus, textarea:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 1px rgba(37,99,235,0.2); }
+        
+        /* Trạng thái row */
+        .status-done { border-left: 3px solid #22c55e; background-color: #f0fdf4; }
+        .status-error { border-left: 3px solid #ef4444; background-color: #fef2f2; }
+        .status-generating { border-left: 3px solid #3b82f6; background-color: #eff6ff; }
     </style>
 </head>
 <body>
@@ -45,7 +49,7 @@
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
             }),
             
-            callMultiImage: async (payloadParts) => {
+            call: async (payload) => {
                 const { geminiKeys } = AIAdapter.getConfig();
                 if(!geminiKeys.length) throw new Error("MISSING_KEYS");
                 
@@ -55,40 +59,28 @@
                         const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ contents: [{ parts: payloadParts }] })
+                            body: JSON.stringify(payload)
                         });
-                        if(!res.ok) {
-                            const err = await res.json();
-                            throw new Error(err.error?.message || res.statusText);
-                        }
+                        if(!res.ok) throw new Error((await res.json()).error?.message || res.statusText);
                         const data = await res.json();
                         return data.candidates[0].content.parts[0].text;
-                    } catch(e) { 
-                        console.warn(`Retry ${i+1} failed:`, e);
-                        lastError = e; 
-                        await new Promise(r => setTimeout(r, 2000)); 
-                    }
+                    } catch(e) { lastError = e; await new Promise(r => setTimeout(r, 1000)); }
                 }
                 throw lastError;
             }
         };
 
         // --- UTILS ---
-        const cleanContent = (text) => {
-            if (!text) return "";
-            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>');
-        };
+        const cleanContent = (text) => text?.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>') || "";
 
         const processTextForWord = (text) => {
             if (!text) return "";
             let clean = cleanContent(text);
             clean = clean.replace(/\\\[/g, '$$$').replace(/\\\]/g, '$$$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
             return clean.replace(/(\$\$)([^$]+)(\$\$)|(\$)([^$]+)(\$)/g, (match, d1, dTex, d2, i1, iTex, i2) => {
-                let tex = dTex || iTex;
-                const isDisplay = !!dTex;
-                tex = tex.replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
+                let tex = (dTex || iTex).replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
                 try {
-                    const mathML = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: isDisplay, strict: false });
+                    const mathML = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: !!dTex, strict: false });
                     const matchMath = mathML.match(/<math[\s\S]*?<\/math>/);
                     return matchMath ? matchMath[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '') : match;
                 } catch (e) { return match; }
@@ -106,8 +98,7 @@
                     parts.forEach(part => {
                         if((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
                             const span = document.createElement('span');
-                            let tex = part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1);
-                            tex = tex.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
+                            let tex = (part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1)).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
                             try { katex.render(tex, span, { throwOnError: false, displayMode: part.startsWith('$$'), strict: false }); } catch(e) { span.innerText = part; }
                             ref.current.appendChild(span);
                         } else {
@@ -116,245 +107,212 @@
                     });
                 } catch(e){}
             }, [text]);
-            return <div ref={ref} className="font-serif text-lg leading-relaxed text-gray-800"/>;
+            return <div ref={ref} className="font-serif text-sm leading-relaxed text-gray-800"/>;
         };
 
-        // --- APP COMPONENT ---
+        // --- APP ---
         const App = () => {
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
             const [loadingText, setLoadingText] = useState("");
             const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
             const [keysReady, setKeysReady] = useState(false);
-            
             const [blueprint, setBlueprint] = useState(null);
-            const [examData, setExamData] = useState(null);
 
             useEffect(() => {
                 const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
                 setKeysReady(keys.length > 0);
             }, []);
 
-            // --- BLUEPRINT ACTIONS ---
-            const updateQuestion = (sectionIdx, qIdx, field, value) => {
-                const newBp = {...blueprint};
-                newBp.sections[sectionIdx].questions[qIdx][field] = value;
-                setBlueprint(newBp);
+            // ACTIONS
+            const updateQ = (sIdx, qIdx, field, val) => {
+                const n = {...blueprint}; n.sections[sIdx].questions[qIdx][field] = val; setBlueprint(n);
             };
-
-            const addQuestion = (sectionIdx) => {
-                const newBp = {...blueprint};
-                // Tạo câu mới với mã tự tăng
-                const nextCode = `Câu ${newBp.sections[sectionIdx].questions.length + 1}`;
-                newBp.sections[sectionIdx].questions.push({
-                    code: nextCode,
-                    group: "",
-                    topic: "Chủ đề mới...",
-                    level: "TH",
-                    type: "TN", // Mặc định TN
-                    score: 0.25,
-                    spec: "..."
+            
+            const addQ = (sIdx) => {
+                const n = {...blueprint};
+                n.sections[sIdx].questions.push({ 
+                    code: `Câu ${n.sections[sIdx].questions.length + 1}`, group: "", topic: "Chủ đề mới...", 
+                    level: "TH", type: "TN", score: 0.25, spec: "...", status: 'pending', q: "", a: [], c: "" 
                 });
-                setBlueprint(newBp);
+                setBlueprint(n);
             };
 
-            const removeQuestion = (sectionIdx, qIdx) => {
-                if(!confirm("Xóa dòng này?")) return;
-                const newBp = {...blueprint};
-                newBp.sections[sectionIdx].questions.splice(qIdx, 1);
-                setBlueprint(newBp);
+            const removeQ = (sIdx, qIdx) => {
+                if(confirm("Xóa dòng này?")) {
+                    const n = {...blueprint}; n.sections[sIdx].questions.splice(qIdx, 1); setBlueprint(n);
+                }
             };
 
             // 1. UPLOAD
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
-                setLoading(true);
-                setLoadingText("Đang đọc PDF (Tối đa 15 trang)...");
-                
+                setLoading(true); setLoadingText("Đang đọc PDF (Max 15 trang)...");
                 try {
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     const images = [];
-                    const maxPages = Math.min(pdf.numPages, 15); 
-                    for (let p = 1; p <= maxPages; p++) {
-                        const page = await pdf.getPage(p);
+                    for(let i=1; i<=Math.min(pdf.numPages, 15); i++) {
+                        const page = await pdf.getPage(i);
                         const vp = page.getViewport({ scale: 2 });
-                        const cvs = document.createElement('canvas');
-                        cvs.width = vp.width; cvs.height = vp.height;
+                        const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
                         await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
                         images.push(cvs.toDataURL('image/jpeg').split(',')[1]);
                     }
 
-                    const parts = [
-                        { text: `
-                            Bạn là chuyên gia khảo thí. Hãy phân tích cấu trúc đề thi từ các ảnh Ma trận/Đặc tả này.
-                            
-                            NHIỆM VỤ QUAN TRỌNG (FIX LỖI NHẬN DIỆN THIẾU):
-                            1. Quét TOÀN BỘ các dòng trong bảng. Đừng bỏ sót dòng nào.
-                            2. Nếu bảng có các dòng con (ví dụ C1a, C1b...), hãy tách riêng thành từng câu hỏi trong JSON.
-                            3. Phân biệt Loại câu hỏi (Type):
-                               - "TN": Trắc nghiệm 4 lựa chọn (A,B,C,D).
-                               - "TF": Trắc nghiệm Đúng/Sai (True/False).
-                               - "TL": Tự luận.
-                            
-                            OUTPUT JSON:
-                            {
-                                "exam_type": "TN+TL" hoặc "TL",
-                                "sections": [
-                                    {
-                                        "id": "I", "name": "PHẦN TRẮC NGHIỆM", "score": 3.0,
-                                        "questions": [
-                                            { 
-                                              "code": "C1a",       
-                                              "group": "Bài 1",    // Nhóm (QUAN TRỌNG ĐỂ GỘP CÂU)
-                                              "topic": "...", 
-                                              "level": "NB", 
-                                              "type": "TL",        // TN, TF, hoặc TL
-                                              "score": 1.0, 
-                                              "spec": "..." 
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        `},
-                        ...images.map(img => ({ inline_data: { mime_type: "image/jpeg", data: img } }))
-                    ];
-
-                    const jsonText = await AIAdapter.callMultiImage(parts);
-                    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-                    
-                    if(!jsonMatch) {
-                        // FALLBACK: Nếu AI không trả về JSON, tạo JSON rỗng để người dùng tự nhập
-                        alert("AI không tìm thấy cấu trúc bảng rõ ràng. Hệ thống sẽ tạo bảng trắng để bạn nhập liệu.");
-                        setBlueprint({
-                            exam_type: "TL",
-                            sections: [{ id: "I", name: "PHẦN 1", score: 10, questions: [] }]
-                        });
-                    } else {
-                        const parsed = JSON.parse(jsonMatch[0]);
-                        // Kiểm tra nếu rỗng thì cảnh báo
-                        if (!parsed.sections || parsed.sections.length === 0 || parsed.sections[0].questions.length === 0) {
-                            alert("Cảnh báo: AI nhận diện được rất ít câu hỏi. Vui lòng kiểm tra và dùng nút 'Thêm câu hỏi' để bổ sung.");
-                        }
-                        setBlueprint(parsed);
-                    }
-                    setStep(2);
-                } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
-            };
-
-            // 2. GENERATE
-            const generateExamContent = async () => {
-                if(!blueprint) return;
-                setLoading(true);
-                setLoadingText("Đang biên soạn từng câu hỏi (Mất khoảng 30-60s)...");
-
-                try {
                     const prompt = `
-                        Giáo viên Toán 9, soạn đề dựa trên cấu trúc JSON sau:
-                        ${JSON.stringify(blueprint)}
-
-                        QUY TẮC SOẠN THẢO (STRICT):
-                        1. Sinh câu hỏi CHO TỪNG DÒNG trong blueprint. Không được bỏ sót/gộp bừa.
-                        2. Định dạng Type:
-                           - "TN": Sinh câu hỏi + 4 đáp án A,B,C,D.
-                           - "TF": Sinh câu hỏi dạng Đúng/Sai (thường có 4 ý nhỏ a,b,c,d để check Đ/S).
-                           - "TL": Sinh câu hỏi tự luận.
-                        3. Nhóm câu (Group): 
-                           - Nếu các câu có cùng "group" (VD: Bài 1), hãy đặt nội dung liên quan nhau hoặc là các ý nhỏ a,b,c của một bài toán lớn.
-                        4. Toán học: Dùng LaTeX $...$.
-
+                        Phân tích ảnh Ma trận đề thi Toán 9. Trích xuất JSON cấu trúc.
+                        QUAN TRỌNG:
+                        1. Quét TOÀN BỘ các dòng. Không bỏ sót.
+                        2. Cột "Nhóm" (Group): Nếu có "Bài 1", "Bài 2"... hãy trích xuất để gộp câu.
+                        3. Cột "Mã": C1, C2...
+                        4. Loại câu (Type): "TN" (Trắc nghiệm), "TL" (Tự luận), "TF" (Đúng/Sai).
+                        
                         OUTPUT JSON:
                         {
-                            "exam_content": [
+                            "exam_type": "TN+TL",
+                            "sections": [
                                 {
-                                    "section_id": "I",
+                                    "id": "I", "name": "PHẦN TRẮC NGHIỆM", "score": 3.0,
                                     "questions": [
-                                        { "id": "1", "group_label": "Bài 1", "q": "...", "a": ["A","B","C","D"], "c": "..." }
+                                        { "code": "C1", "group": "", "topic": "...", "level": "NB", "type": "TN", "score": 0.25, "spec": "..." }
                                     ]
                                 }
                             ]
                         }
                     `;
+                    
+                    const res = await AIAdapter.call({ contents: [{ parts: [{text: prompt}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))] }] });
+                    const json = JSON.parse(res.match(/\{[\s\S]*\}/)[0]);
+                    
+                    // Init status & content fields
+                    json.sections.forEach(s => s.questions.forEach(q => {
+                        q.status = 'pending'; q.q = ""; q.a = []; q.c = "";
+                    }));
+                    
+                    setBlueprint(json);
+                    setStep(2);
+                } catch(e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
+            };
 
-                    const contentText = await AIAdapter.callMultiImage([{ text: prompt }]);
-                    const jsonMatch = contentText.match(/\{[\s\S]*\}/);
-                    if(!jsonMatch) throw new Error("Lỗi sinh đề");
-                    setExamData(JSON.parse(jsonMatch[0]));
-                    setStep(3);
-                } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
+            // 2. GENERATE SINGLE QUESTION
+            const generateSingle = async (sIdx, qIdx) => {
+                const qData = blueprint.sections[sIdx].questions[qIdx];
+                updateQ(sIdx, qIdx, 'status', 'generating');
+                
+                try {
+                    const prompt = `
+                        Đóng vai Giáo viên Toán 9. Soạn 1 câu hỏi kiểm tra:
+                        - Chủ đề: ${qData.topic}
+                        - Mức độ: ${qData.level}
+                        - Loại: ${qData.type} (TN=Trắc nghiệm 4 đáp án, TL=Tự luận, TF=Đúng/Sai)
+                        - Đặc tả: ${qData.spec}
+                        ${qData.group ? `- Lưu ý: Câu này thuộc nhóm "${qData.group}".` : ""}
+
+                        YÊU CẦU:
+                        1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases} (escape \\\\\\\\).
+                        2. Nếu TF (Đúng/Sai): Câu hỏi chứa 4 ý a), b), c), d). Đáp án giải thích từng ý.
+                        3. Nếu TL (Tự luận): Lời giải chi tiết từng bước.
+                        4. QUAN TRỌNG: Bắt buộc trả về trường "c" chứa đáp án/lời giải.
+
+                        JSON Output: { 
+                            "q": "Nội dung câu hỏi...", 
+                            "a": ["A","B","C","D"] (nếu là TN, ngược lại để rỗng []), 
+                            "c": "Đáp án đúng (A/B/C/D) hoặc Lời giải chi tiết" 
+                        }
+                    `;
+                    
+                    const res = await AIAdapter.call({ contents: [{ parts: [{text: prompt}] }] });
+                    const jsonMatch = res.match(/\{[\s\S]*\}/);
+                    
+                    if (!jsonMatch) throw new Error("AI không trả về JSON hợp lệ");
+                    
+                    const json = JSON.parse(jsonMatch[0]);
+                    
+                    // Fallback nếu thiếu trường c
+                    if (!json.c) json.c = "AI chưa sinh đáp án. Vui lòng tự bổ sung.";
+
+                    const newBp = {...blueprint};
+                    const target = newBp.sections[sIdx].questions[qIdx];
+                    target.q = json.q || "Lỗi nội dung";
+                    target.a = json.a || [];
+                    target.c = json.c;
+                    target.status = 'done';
+                    setBlueprint(newBp);
+                } catch(e) {
+                    console.error(e);
+                    updateQ(sIdx, qIdx, 'status', 'error');
+                }
+            };
+
+            const generateAll = async () => {
+                if(!confirm("Hệ thống sẽ sinh nội dung cho TẤT CẢ các câu chưa có dữ liệu. Tiếp tục?")) return;
+                for(let s=0; s<blueprint.sections.length; s++) {
+                    for(let q=0; q<blueprint.sections[s].questions.length; q++) {
+                        if(blueprint.sections[s].questions[q].status !== 'done') {
+                            await generateSingle(s, q);
+                            await new Promise(r => setTimeout(r, 1000)); // Delay tránh lỗi 429
+                        }
+                    }
+                }
+                alert("Đã hoàn tất sinh đề!");
             };
 
             // 3. EXPORT
             const exportWord = () => {
-                if(!examData || !blueprint) return;
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
                     <head><meta charset='utf-8'><style>body{font-family:'Times New Roman';font-size:13pt}table{width:100%;border-collapse:collapse}td{vertical-align:top}</style></head><body>
                     <div style="text-align:center;font-weight:bold;margin-bottom:20px"><p>${info.dept.toUpperCase()}</p><p>${info.school.toUpperCase()}</p><p>${info.title.toUpperCase()}</p><p>MÔN: TOÁN 9 - Thời gian: ${info.time} phút</p></div><hr/>
                 `;
 
-                examData.exam_content.forEach((sec, idx) => {
-                    const bpSection = blueprint.sections[idx] || { name: `PHẦN ${sec.section_id}` };
-                    html += `<div style='font-weight:bold;margin-top:15px;margin-bottom:10px'>${bpSection.name}</div>`;
-                    
-                    // Logic nhóm câu (Group)
+                blueprint.sections.forEach(sec => {
+                    html += `<div style='font-weight:bold;margin-top:15px;margin-bottom:10px;text-transform:uppercase'>${sec.name}</div>`;
                     let currentGroup = null;
-                    
                     sec.questions.forEach(q => {
-                        // Nếu câu này thuộc một nhóm mới -> In tiêu đề nhóm
-                        if (q.group_label && q.group_label !== currentGroup) {
-                            html += `<p><b>${q.group_label}:</b></p>`;
-                            currentGroup = q.group_label;
-                        } else if (!q.group_label) {
-                            currentGroup = null; // Reset nếu không có nhóm
-                        }
-
-                        // Label câu: Nếu đang trong nhóm thì dùng a), b)... Nếu không thì dùng Câu 1, Câu 2...
-                        // Tuy nhiên, để an toàn, ta vẫn dùng label từ dữ liệu hoặc ID
-                        const label = currentGroup ? `<b>${q.id})</b>` : `<b>Câu ${q.id}:</b>`;
+                        if(q.group && q.group !== currentGroup) { html += `<p><b>${q.group}:</b></p>`; currentGroup = q.group; }
+                        else if(!q.group) currentGroup = null;
                         
-                        html += `<div style='margin-bottom:10px;text-align:justify;margin-left:${currentGroup ? '20px' : '0'}'>${label} ${processTextForWord(q.q)}</div>`;
+                        const label = currentGroup ? `<b>(${q.code})</b>` : `<b>Câu ${q.code}:</b>`;
+                        html += `<div style='margin-bottom:10px;text-align:justify;margin-left:${currentGroup?'20px':0}'>${label} ${processTextForWord(q.q)}</div>`;
                         
-                        if(q.a && q.a.length > 0) {
-                            // Trắc nghiệm
-                            html += `<table style='margin-left:${currentGroup ? '20px' : '0'}'><tr>`;
+                        if(q.type === 'TN' && q.a?.length) {
+                            html += `<table style='margin-left:${currentGroup?'20px':0}'><tr>`;
                             q.a.forEach((opt, k) => html += `<td width="50%"><b>${String.fromCharCode(65+k)}.</b> ${processTextForWord(opt)}</td>${k%2!==0?'</tr><tr>':''}`);
                             html += `</tr></table><br/>`;
-                        } else { 
-                            html += `<br/>`; // Tự luận
-                        }
+                        } else { html += `<br/>`; }
                     });
                 });
 
                 html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
-                
-                examData.exam_content.forEach((sec, idx) => {
-                    const bpSection = blueprint.sections[idx];
-                    html += `<h4>${bpSection.name}</h4>`;
-                    
-                    sec.questions.forEach(q => {
-                        html += `<p><b>${q.group_label ? q.group_label + " - " : ""}Câu ${q.id}:</b></p>`;
-                        html += `<div>${processTextForWord(q.c)}</div><hr/>`; 
-                    });
+                blueprint.sections.forEach(sec => {
+                    html += `<h4>${sec.name}</h4>`;
+                    const isTN = sec.questions.some(q => q.type === 'TN');
+                    if(isTN) {
+                        html += `<table border="1" cellpadding="5" style="text-align:center"><tr>`;
+                        sec.questions.forEach(q => html += `<td>${q.code}</td>`);
+                        html += `</tr><tr>`;
+                        sec.questions.forEach(q => html += `<td><b>${processTextForWord(q.c)}</b></td>`);
+                        html += `</tr></table><br/>`;
+                    } else {
+                        sec.questions.forEach(q => { html += `<p><b>${q.group?q.group+" - ":""}${q.code}:</b></p><div>${processTextForWord(q.c)}</div><hr/>`; });
+                    }
                 });
-                
-                html += `</body></html>`;
                 saveAs(new Blob(['\ufeff', html], {type: 'application/msword'}), `De_Thi_Toan_9.doc`);
             };
 
             return (
-                <div className="max-w-7xl mx-auto p-6 font-ui">
+                <div className="max-w-[95%] mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">HỆ THỐNG RA ĐỀ TOÁN 9 (V9.4)</h1><p className="text-gray-500 text-sm">V9.4: Hỗ trợ Đúng/Sai + Nhóm Bài (a,b,c) + Fix lỗi nhận diện thiếu</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">HỆ THỐNG RA ĐỀ TOÁN 9 (V9.6)</h1><p className="text-gray-500 text-sm">Features: Fix Lỗi Mất Đáp Án + Sinh từng câu + Group Bài</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 font-medium text-sm"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
                     {!keysReady && <div className="bg-red-50 text-red-700 p-4 rounded border mb-6">⚠️ Vui lòng quay lại Dashboard nạp API Key!</div>}
 
                     {step === 1 && keysReady && (
-                        <div className="bg-white p-8 rounded-xl shadow animate-fade-in">
+                        <div className="bg-white p-8 rounded-xl shadow animate-fade-in max-w-4xl mx-auto">
                             <div className="grid grid-cols-4 gap-4 mb-6">
                                 <input className="border p-2 rounded" placeholder="Sở/Phòng" value={info.dept} onChange={e=>setInfo({...info, dept:e.target.value})}/>
                                 <input className="border p-2 rounded" placeholder="Trường" value={info.school} onChange={e=>setInfo({...info, school:e.target.value})}/>
@@ -363,101 +321,92 @@
                             </div>
                             <label className="block border-2 border-dashed border-indigo-200 bg-indigo-50 rounded-xl p-12 text-center cursor-pointer hover:bg-indigo-100 transition">
                                 <input type="file" className="hidden" accept=".pdf" onChange={handleUpload} />
-                                {loading ? <div><div className="loader loader-blue mb-2"></div><p className="text-indigo-600 font-bold">{loadingText}</p></div> : <div><i className="fas fa-file-pdf text-5xl text-indigo-500 mb-3"></i><p className="font-bold text-indigo-700 text-lg">Tải lên File PDF (Max 15 trang)</p></div>}
+                                {loading ? <div><div className="loader border-indigo-600 mb-2"></div><p className="text-indigo-600 font-bold">{loadingText}</p></div> : <div><i className="fas fa-file-pdf text-5xl text-indigo-500 mb-3"></i><p className="font-bold text-indigo-700 text-lg">Tải lên File PDF (Max 15 trang)</p></div>}
                             </label>
                         </div>
                     )}
 
                     {step === 2 && blueprint && (
-                        <div className="bg-white p-6 rounded-xl shadow animate-fade-in">
+                        <div className="bg-white p-4 rounded-xl shadow animate-fade-in flex flex-col h-[85vh]">
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-gray-800">2. Chỉnh sửa Ma trận đề (Blueprint)</h2>
-                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm font-bold">{blueprint.exam_type}</span>
-                            </div>
-                            
-                            <div className="bg-yellow-50 p-3 mb-4 rounded border border-yellow-200 text-sm flex gap-2">
-                                <i className="fas fa-info-circle mt-1 text-yellow-600"></i>
-                                <div>
-                                    <p><b>Mẹo:</b> Kiểm tra kỹ cột <b>Nhóm</b>. Các câu cùng nhóm (VD: "Bài 1") sẽ được gộp chung khi in đề.</p>
-                                    <p>Nếu thấy thiếu câu, hãy bấm <b>"Thêm câu hỏi"</b> ở cuối mỗi phần.</p>
+                                <h2 className="text-xl font-bold text-gray-800">2. Biên soạn & Chỉnh sửa Đề thi</h2>
+                                <div className="space-x-2">
+                                    <button onClick={generateAll} className="px-4 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 text-sm"><i className="fas fa-bolt"></i> Sinh toàn bộ</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 text-sm"><i className="fas fa-file-word"></i> Xuất Word</button>
                                 </div>
                             </div>
-
-                            <div className="overflow-auto max-h-[65vh] border rounded-lg mb-6 bg-slate-50">
-                                {blueprint.sections.map((sec, secIdx) => (
-                                    <div key={secIdx} className="p-4 border-b last:border-0">
+                            
+                            <div className="flex-1 overflow-auto bg-slate-50 border rounded-lg p-4">
+                                {blueprint.sections.map((sec, sIdx) => (
+                                    <div key={sIdx} className="mb-8 bg-white rounded shadow-sm border p-4">
                                         <div className="section-header">
-                                            <input className="bg-transparent font-bold text-indigo-800 outline-none w-1/2" value={sec.name} onChange={e=>{const n={...blueprint};n.sections[secIdx].name=e.target.value;setBlueprint(n)}} />
-                                            <span className="text-sm bg-white px-2 py-1 rounded">Tổng: {sec.score}đ</span>
+                                            <input className="bg-transparent font-bold text-lg text-indigo-800 w-1/2" value={sec.name} onChange={e=>{const n={...blueprint};n.sections[sIdx].name=e.target.value;setBlueprint(n)}} />
+                                            <button onClick={()=>addQ(sIdx)} className="text-xs bg-white text-indigo-600 px-2 py-1 rounded border border-indigo-200 hover:bg-indigo-50 font-bold">+ Thêm câu</button>
                                         </div>
-                                        <table className="w-full text-sm text-left bg-white rounded shadow-sm overflow-hidden">
+                                        
+                                        <table className="w-full text-sm text-left border-collapse">
                                             <thead className="bg-gray-100 text-gray-600 font-bold">
-                                                <tr><th className="p-2 w-16">Mã</th><th className="p-2 w-20">Nhóm</th><th className="p-2">Chủ đề</th><th className="p-2 w-1/4">Đặc tả</th><th className="p-2 w-20">Mức độ</th><th className="p-2 w-24">Loại</th><th className="p-2 w-16">Điểm</th><th className="p-2 w-10"></th></tr>
+                                                <tr><th className="p-2 w-16">Mã</th><th className="p-2 w-20">Nhóm</th><th className="p-2 w-16">Loại</th><th className="p-2">Chủ đề & Nội dung câu hỏi (Đã sinh)</th><th className="p-2 w-10"></th></tr>
                                             </thead>
                                             <tbody className="divide-y">
                                                 {sec.questions.map((q, qIdx) => (
-                                                    <tr key={qIdx} className="hover:bg-gray-50">
-                                                        <td className="p-2"><input className="w-full border rounded p-1 font-bold text-indigo-700" value={q.code} onChange={e=>updateQuestion(secIdx, qIdx, 'code', e.target.value)}/></td>
-                                                        <td className="p-2"><input className="w-full border rounded p-1 font-semibold bg-yellow-50" placeholder="VD: Bài 1" value={q.group||''} onChange={e=>updateQuestion(secIdx, qIdx, 'group', e.target.value)}/></td>
-                                                        <td className="p-2"><textarea className="w-full border rounded p-1 h-16 resize-none" value={q.topic} onChange={e=>updateQuestion(secIdx, qIdx, 'topic', e.target.value)}/></td>
-                                                        <td className="p-2"><textarea className="w-full border rounded p-1 h-16 resize-none text-xs" value={q.spec} onChange={e=>updateQuestion(secIdx, qIdx, 'spec', e.target.value)}/></td>
+                                                    <tr key={qIdx} className={`hover:bg-gray-50 group align-top status-${q.status}`}>
                                                         <td className="p-2">
-                                                            <select className="w-full border rounded p-1" value={q.level} onChange={e=>updateQuestion(secIdx, qIdx, 'level', e.target.value)}>
+                                                            <input className="w-full border rounded p-1 font-bold text-center mb-1" value={q.code} onChange={e=>updateQ(sIdx, qIdx, 'code', e.target.value)}/>
+                                                            <input className="w-full border rounded p-1 text-center text-xs" value={q.score} type="number" onChange={e=>updateQ(sIdx, qIdx, 'score', e.target.value)}/>
+                                                        </td>
+                                                        <td className="p-2"><input className="w-full border rounded p-1 font-semibold bg-yellow-50 text-xs" placeholder="Nhóm..." value={q.group||''} onChange={e=>updateQ(sIdx, qIdx, 'group', e.target.value)}/></td>
+                                                        <td className="p-2">
+                                                            <select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e=>updateQ(sIdx, qIdx, 'type', e.target.value)}>
+                                                                <option value="TN">TN</option><option value="TF">Đ/S</option><option value="TL">TL</option>
+                                                            </select>
+                                                            <select className="w-full border rounded p-1 mt-1 text-xs" value={q.level} onChange={e=>updateQ(sIdx, qIdx, 'level', e.target.value)}>
                                                                 <option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option>
                                                             </select>
                                                         </td>
                                                         <td className="p-2">
-                                                            <select className={`w-full border rounded p-1 font-bold ${q.type==='TL'?'text-purple-600 bg-purple-50': (q.type==='TN'?'text-blue-600 bg-blue-50':'text-orange-600 bg-orange-50')}`} value={q.type} onChange={e=>updateQuestion(secIdx, qIdx, 'type', e.target.value)}>
-                                                                <option value="TN">TN (4)</option>
-                                                                <option value="TF">Đ/S</option>
-                                                                <option value="TL">Tự luận</option>
-                                                            </select>
+                                                            <div className="mb-2">
+                                                                <input className="w-full border-b border-dashed mb-1 bg-transparent text-gray-600 text-xs italic w-full" value={q.topic} onChange={e=>updateQ(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..."/>
+                                                                <textarea className="w-full border rounded p-1 h-10 resize-none text-xs text-gray-500 mb-2" value={q.spec} onChange={e=>updateQ(sIdx, qIdx, 'spec', e.target.value)} placeholder="Đặc tả..."/>
+                                                            </div>
+                                                            
+                                                            {/* Generated Content Area */}
+                                                            {q.status === 'done' ? (
+                                                                <div className="bg-slate-50 p-2 rounded border border-indigo-100">
+                                                                    <div className="mb-1 font-semibold text-indigo-700">Nội dung:</div>
+                                                                    <textarea className="w-full border p-2 rounded text-sm font-serif h-24 mb-1" value={q.q} onChange={e=>updateQ(sIdx, qIdx, 'q', e.target.value)}></textarea>
+                                                                    <div className="text-xs text-gray-400 mb-2"><MathView text={q.q}/></div>
+                                                                    
+                                                                    {q.type === 'TN' && (
+                                                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                                                            {q.a.map((opt, k) => (
+                                                                                <div key={k} className="flex gap-1 items-center">
+                                                                                    <span className="font-bold text-xs">{String.fromCharCode(65+k)}</span>
+                                                                                    <input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e=>{const na=[...q.a]; na[k]=e.target.value; updateQ(sIdx, qIdx, 'a', na)}}/>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    
+                                                                    <div className="mb-1 font-semibold text-green-700">Đáp án/Lời giải:</div>
+                                                                    <textarea className="w-full border border-green-200 bg-green-50 p-2 rounded text-sm font-mono h-16" value={q.c} onChange={e=>updateQ(sIdx, qIdx, 'c', e.target.value)} placeholder="Đáp án chưa được sinh..."></textarea>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-center text-gray-400 italic text-sm py-4 border-2 border-dashed rounded">
+                                                                    {q.status === 'generating' ? <span className="text-blue-600 flex items-center justify-center gap-2"><div className="loader h-4 w-4"></div> Đang soạn...</span> : "Chưa có nội dung"}
+                                                                </div>
+                                                            )}
                                                         </td>
-                                                        <td className="p-2"><input type="number" className="w-full border rounded p-1 text-center" value={q.score} onChange={e=>updateQuestion(secIdx, qIdx, 'score', e.target.value)}/></td>
-                                                        <td className="p-2 text-center"><button onClick={()=>removeQuestion(secIdx, qIdx)} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button></td>
+                                                        <td className="p-2 text-center flex flex-col gap-2">
+                                                            <button onClick={()=>generateSingle(sIdx, qIdx)} className="text-white bg-blue-600 hover:bg-blue-700 p-2 rounded shadow text-xs font-bold whitespace-nowrap" title="Tạo/Soạn lại">
+                                                                <i className="fas fa-magic"></i> {q.status==='done'?'Sửa':'Tạo'}
+                                                            </button>
+                                                            <button onClick={()=>removeQ(sIdx, qIdx)} className="text-red-400 hover:text-red-600 p-2"><i className="fas fa-trash"></i></button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
-                                        <button onClick={()=>addQuestion(secIdx)} className="mt-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded flex items-center gap-1"><i className="fas fa-plus"></i> Thêm câu hỏi</button>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex justify-end gap-3 pt-4 border-t">
-                                <button onClick={()=>setStep(1)} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-50">Làm lại</button>
-                                <button onClick={generateExamContent} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow-lg flex items-center gap-2">
-                                    {loading ? <div className="loader w-4 h-4 border-white"></div> : <i className="fas fa-magic"></i>} Sinh đề thi
-                                </button>
-                            </div>
-                            {loading && <p className="text-center text-indigo-600 mt-2 font-bold animate-pulse">{loadingText}</p>}
-                        </div>
-                    )}
-
-                    {step === 3 && examData && (
-                        <div className="h-[85vh] flex flex-col bg-white rounded-xl shadow overflow-hidden">
-                            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                                <h2 className="text-xl font-bold text-gray-800">3. Xem trước & Xuất bản</h2>
-                                <div className="space-x-2"><button onClick={()=>setStep(2)} className="px-4 py-2 border rounded font-bold text-gray-600">Quay lại</button><button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow"><i className="fas fa-file-word"></i> Xuất Word</button></div>
-                            </div>
-                            <div className="flex-1 overflow-auto p-8 bg-white">
-                                <div className="text-center font-bold mb-8 font-serif"><p>{info.dept.toUpperCase()}</p><p>{info.school.toUpperCase()}</p><div className="w-16 h-0.5 bg-black mx-auto my-2"></div><p className="text-lg">{info.title.toUpperCase()}</p><p>MÔN: TOÁN 9</p></div>
-                                {examData.exam_content.map((sec, idx) => (
-                                    <div key={idx} className="mb-8"><h3 className="font-bold text-lg mb-4 uppercase">{blueprint.sections[idx]?.name || sec.section_id}</h3>
-                                        <div className="space-y-6">
-                                            {sec.questions.map((q, qIdx) => (
-                                                <div key={qIdx} className="bg-slate-50 p-4 rounded-lg border hover:border-indigo-300 transition">
-                                                    {/* Hiển thị Nhóm nếu có */}
-                                                    {q.group_label && <div className="mb-2 text-indigo-700 font-bold border-b border-indigo-100 pb-1">{q.group_label}</div>}
-                                                    
-                                                    <div className="mb-2">
-                                                        <span className="font-bold text-indigo-800 mr-2">{q.group_label ? `(${q.id})` : `Câu ${q.id}:`}</span>
-                                                        <div className="inline-block"><MathView text={q.q} /></div>
-                                                    </div>
-                                                    {q.a && q.a.length > 0 && <div className="grid grid-cols-2 gap-4 ml-4 mt-2">{q.a.map((opt, k) => <div key={k} className="flex gap-2"><span className="font-bold text-gray-600">{String.fromCharCode(65+k)}.</span><MathView text={opt} /></div>)}</div>}
-                                                    <div className="mt-4 pt-3 border-t border-slate-200"><p className="text-xs font-bold text-green-700 uppercase mb-1">Hướng dẫn chấm:</p><div className="text-sm text-gray-700 font-mono bg-white p-2 rounded border"><MathView text={q.c} /></div></div>
-                                                </div>
-                                            ))}
-                                        </div>
                                     </div>
                                 ))}
                             </div>
