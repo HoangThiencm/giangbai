@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V13.2 - Fixed Qwen Engine)</title>
+    <title>Tạo Đề Toán 9 (V14 - Strict Logic)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -45,13 +45,49 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 1. HYBRID AI ENGINE ---
+        // --- 1. LOGIC XỬ LÝ DỮ LIỆU (FIXED) ---
+
+        // Hàm chuẩn hóa loại câu hỏi dựa trên Text và Tên Phần
+        const normalizeQuestionType = (rawType, sectionName = "") => {
+            const s = (rawType || "").toString().trim().toUpperCase();
+            const sec = (sectionName || "").toString().trim().toUpperCase();
+
+            // Ưu tiên 1: Tên phần chứa từ khóa rõ ràng
+            if (sec.includes("TỰ LUẬN") || sec.includes("TU LUAN")) return "TL";
+            if (sec.includes("ĐÚNG SAI") || sec.includes("DUNG SAI") || sec.includes("TRUE/FALSE")) return "TF";
+            if (sec.includes("TRẮC NGHIỆM") || sec.includes("TRAC NGHIEM")) return "TN";
+
+            // Ưu tiên 2: Loại câu hỏi từ AI
+            if (s.includes("TL") || s.includes("TỰ") || s.includes("TU")) return "TL";
+            if (s.includes("TF") || s.includes("ĐÚNG") || s.includes("SAI")) return "TF";
+            
+            // Mặc định an toàn
+            return "TN";
+        };
+
+        // Hàm tính tổng điểm
+        const calcExamTotals = (bp) => {
+            let questionTotal = 0;
+            bp.sections.forEach(sec => {
+                let secTotal = 0;
+                (sec.questions || []).forEach(q => {
+                    const s = parseFloat(q.score);
+                    if (!isNaN(s)) {
+                        secTotal += s;
+                        questionTotal += s;
+                    }
+                });
+                sec.score = parseFloat(secTotal.toFixed(2)); // Cập nhật lại điểm phần
+            });
+            return parseFloat(questionTotal.toFixed(2));
+        };
+
+        // --- 2. HYBRID AI ENGINE ---
         const AIAdapter = {
             getConfig: () => ({
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
                 geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
-                // Dùng bản 7B Math Instruct: Nhẹ, nhanh, chuyên toán, ít bị lỗi timeout hơn bản 72B
                 hfModel: 'Qwen/Qwen2.5-Math-7B-Instruct' 
             }),
             
@@ -82,59 +118,33 @@
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
 
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
-                
-                // Format prompt theo chuẩn Qwen ChatML để model hiểu rõ hơn
                 const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học chuyên nghiệp. Chỉ trả về JSON thuần.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
 
                 for(let i=0; i<3; i++) {
                     try {
-                        // Dùng endpoint chuẩn của HF Inference API (không phải /v1/chat/completions)
                         const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
                             method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                inputs: formattedPrompt,
-                                parameters: {
-                                    max_new_tokens: 2048,
-                                    temperature: 0.5, // Giảm nhiệt độ để toán chính xác hơn
-                                    return_full_text: false
-                                }
-                            })
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 2048, temperature: 0.5, return_full_text: false } })
                         });
 
                         if(!res.ok) {
-                            const errText = await res.text();
-                            // Nếu model đang load (503), đợi 10s rồi thử lại
-                            if (res.status === 503) {
-                                console.warn("HF Model loading (Cold start)... Waiting 10s");
-                                await new Promise(r => setTimeout(r, 10000)); 
-                                continue; 
-                            }
-                            throw new Error(`HF Error ${res.status}: ${errText}`);
+                            if (res.status === 503) { await new Promise(r => setTimeout(r, 10000)); continue; }
+                            throw new Error(`HF Error ${res.status}`);
                         }
                         
                         const data = await res.json();
-                        // HF Inference trả về mảng: [{ generated_text: "..." }]
-                        if (Array.isArray(data) && data[0] && data[0].generated_text) {
-                            return data[0].generated_text;
-                        } else if (data.error) {
-                            throw new Error(data.error);
-                        }
+                        if (Array.isArray(data) && data[0] && data[0].generated_text) return data[0].generated_text;
+                        else if (data.error) throw new Error(data.error);
                         return JSON.stringify(data);
 
-                    } catch(e) { 
-                        console.warn(`HF try ${i+1} fail:`, e); 
-                        await new Promise(r => setTimeout(r, 2000));
-                    }
+                    } catch(e) { await new Promise(r => setTimeout(r, 2000)); }
                 }
                 throw new Error("Hugging Face API lỗi (Timeout/Overload).");
             }
         };
 
-        // --- 2. TEXT PROCESSING ---
+        // --- 3. TEXT PROCESSING (FIXED WORD EXPORT) ---
         
         const normalizeLatexDelimiters = (text) => {
             if (!text) return "";
@@ -165,7 +175,12 @@
                     } catch (e) {}
                     return part.replace(/\$/g, '');
                 }
-                return part.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>');
+                // FIX: Xử lý dấu \\ trong văn bản thường thành <br/> để không bị lỗi hiển thị Word
+                return part
+                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                    .replace(/\\\\/g, '<br/>')  // <--- FIX QUAN TRỌNG
+                    .replace(/\\n/g, '<br/>')
+                    .replace(/\n/g, '<br/>');
             }).join('');
         };
 
@@ -185,7 +200,12 @@
                         ref.current.appendChild(span);
                     } else {
                         const span = document.createElement('span');
-                        span.innerHTML = part.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>');
+                        // FIX: Hiển thị đúng xuống dòng trên web preview
+                        span.innerHTML = part
+                            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                            .replace(/\\\\/g, '<br/>') // <--- FIX QUAN TRỌNG
+                            .replace(/\\n/g, '<br/>')
+                            .replace(/\n/g, '<br/>');
                         ref.current.appendChild(span);
                     }
                 });
@@ -193,7 +213,7 @@
             return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>;
         };
 
-        // --- 3. APP UI ---
+        // --- 4. APP UI ---
         const App = () => {
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
@@ -202,7 +222,6 @@
             const [images, setImages] = useState([]);
             const [blueprint, setBlueprint] = useState(null);
             
-            // Trạng thái nguồn AI
             const [hfStatus, setHfStatus] = useState(false);
 
             useEffect(() => {
@@ -212,11 +231,10 @@
 
             const hasGemini = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]").length > 0;
 
-            // BƯỚC 1: UPLOAD & PHÂN TÍCH (LUÔN DÙNG GEMINI VÌ CẦN VISION)
+            // BƯỚC 1: UPLOAD & PHÂN TÍCH (CÓ RETRY CHECK TỔNG ĐIỂM)
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
-                setLoading(true); setLoadingMsg("Đang đọc Ma trận (Dùng Gemini Vision)...");
                 
                 try {
                     const buffer = await file.arrayBuffer();
@@ -231,23 +249,87 @@
                     }
                     setImages(imgs);
 
-                    const prompt = `Phân tích ảnh Ma trận đề thi. Trích xuất cấu trúc JSON.
-                        QUAN TRỌNG: Quét TOÀN BỘ các dòng. Cột "Nhóm" (Group): Nếu có "Bài 1", "Bài 2"... hãy trích xuất.
-                        OUTPUT JSON: { "exam_type": "TN+TL", "sections": [ { "id": "I", "name": "PHẦN TRẮC NGHIỆM", "score": 3.0, "questions": [ { "code": "C1", "group": "", "topic": "...", "level": "NB", "type": "TN", "score": 0.25, "spec": "..." } ] } ] }`;
+                    // PROMPT ĐÃ ĐƯỢC TỐI ƯU ĐỂ CHECK ĐIỂM VÀ LOẠI CÂU HỎI
+                    const prompt = `
+                        Phân tích ảnh Ma trận đề thi môn Toán 9. Trích xuất cấu trúc JSON DUY NHẤT.
+
+                        YÊU CẦU QUAN TRỌNG:
+                        1. Đọc TOÀN BỘ bảng, cả phần trắc nghiệm, tự luận, đúng/sai.
+                        2. Với mỗi câu hỏi trích: "code", "group", "topic", "level", "type", "score", "spec".
+                        3. "type": "TN" (Trắc nghiệm), "TL" (Tự luận), "TF" (Đúng/Sai).
+                        4. QUY TẮC NHẬN DIỆN LOẠI CÂU:
+                           - Nếu tên phần chứa "TRẮC NGHIỆM" -> type="TN".
+                           - Nếu tên phần chứa "TỰ LUẬN" -> type="TL".
+                           - Nếu tên phần chứa "ĐÚNG SAI" -> type="TF".
+                        5. QUY TẮC ĐIỂM SỐ:
+                           - TỔNG ĐIỂM TOÀN BÀI PHẢI BẰNG 10.0.
+                           - Hãy cộng dồn điểm các câu, nếu thiếu hoặc thừa, hãy tự cân đối lại điểm của các câu (ưu tiên câu Vận dụng cao hoặc Tự luận) sao cho tổng đúng bằng 10.
+
+                        OUTPUT JSON:
+                        {
+                          "exam_type": "TN+TL",
+                          "sections": [
+                            { "id": "I", "name": "PHẦN I. TRẮC NGHIỆM", "score": 3.0, "questions": [ { "code": "C1", "group": "", "topic": "...", "level": "NB", "type": "TN", "score": 0.25, "spec": "..." } ] }
+                          ]
+                        }
+                    `;
                     
-                    const res = await AIAdapter.callGemini([{text: prompt}, ...imgs.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))]);
-                    const json = JSON.parse(res.match(/\{[\s\S]*\}/)[0]);
+                    let finalJson = null;
                     
-                    json.sections.forEach(s => s.questions.forEach(q => {
+                    // RETRY LOOP: Thử tối đa 3 lần nếu tổng điểm != 10
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        setLoading(true); 
+                        setLoadingMsg(`Đang phân tích Ma trận (Lần ${attempt})...`);
+                        
+                        try {
+                            const res = await AIAdapter.callGemini([{text: prompt}, ...imgs.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))]);
+                            const jsonMatch = res.match(/\{[\s\S]*\}/);
+                            if(!jsonMatch) continue;
+                            
+                            const parsed = JSON.parse(jsonMatch[0]);
+
+                            // Post-processing: Chuẩn hóa Type & Tính tổng điểm
+                            parsed.sections.forEach(sec => {
+                                sec.questions = sec.questions || [];
+                                sec.questions.forEach(q => {
+                                    q.type = normalizeQuestionType(q.type, sec.name); // FIX 2: Chuẩn hóa Type
+                                });
+                            });
+
+                            const totalScore = calcExamTotals(parsed);
+                            console.log(`Attempt ${attempt}: Total Score = ${totalScore}`);
+
+                            if (Math.abs(totalScore - 10.0) < 0.1) {
+                                finalJson = parsed;
+                                break; // OK, thoát vòng lặp
+                            } else {
+                                finalJson = parsed; // Lưu tạm, nếu hết 3 lần vẫn sai thì dùng cái này
+                            }
+                        } catch(err) {
+                            console.error(err);
+                        }
+                    }
+
+                    if (!finalJson) throw new Error("Không đọc được cấu trúc ma trận sau 3 lần thử.");
+
+                    // Kiểm tra cuối cùng
+                    const finalTotal = calcExamTotals(finalJson);
+                    if (Math.abs(finalTotal - 10.0) >= 0.1) {
+                        alert(`⚠️ CẢNH BÁO: Tổng điểm nhận diện là ${finalTotal} (Chưa bằng 10). Vui lòng kiểm tra và sửa lại điểm số ở bước tiếp theo.`);
+                    }
+
+                    // Khởi tạo trạng thái
+                    finalJson.sections.forEach(s => s.questions.forEach(q => {
                         q.status = 'pending'; q.q = ""; q.a = []; q.c = "";
                     }));
                     
-                    setBlueprint(json);
+                    setBlueprint(finalJson);
                     setStep(2);
-                } catch(e) { alert("Lỗi phân tích: " + e.message); } finally { setLoading(false); }
+
+                } catch(e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
             };
 
-            // BƯỚC 2: TẠO CÂU HỎI (AUTO SWITCH: HF -> GEMINI)
+            // BƯỚC 2: TẠO CÂU HỎI
             const generateQuestion = async (sIdx, qIdx) => {
                 const qData = blueprint.sections[sIdx].questions[qIdx];
                 const newBp = {...blueprint};
@@ -257,13 +339,13 @@
                 const promptText = `
                     Đóng vai Giáo viên Toán 9. Soạn câu hỏi thi:
                     - Chủ đề: ${qData.topic}
-                    - Mức độ: ${qData.level} | Loại: ${qData.type} (TN=Trắc nghiệm, TL=Tự luận, TF=Đúng Sai)
-                    - Đặc tả chi tiết: ${qData.spec}
-                    ${qData.group ? `- Thuộc nhóm bài: ${qData.group}` : ""}
+                    - Mức độ: ${qData.level} | Loại: ${qData.type}
+                    - Đặc tả: ${qData.spec}
+                    ${qData.group ? `- Nhóm bài: ${qData.group}` : ""}
 
                     YÊU CẦU:
-                    1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases} (escape backslash cẩn thận).
-                    2. Output JSON Strict (KHÔNG Markdown): { "q": "Nội dung câu hỏi...", "a": ["A","B","C","D"], "c": "Lời giải chi tiết..." }
+                    1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases} (escape backslash).
+                    2. Output JSON: { "q": "Nội dung câu hỏi...", "a": ["A","B","C","D"], "c": "Lời giải..." }
                 `;
 
                 try {
@@ -271,31 +353,23 @@
                     let usedSource = "Gemini";
                     const { hfTokens } = AIAdapter.getConfig();
 
-                    // --- LOGIC CHUYỂN MẠCH THÔNG MINH (CÓ FALLBACK) ---
                     if (hfTokens.length > 0) {
                         try {
-                            console.log("Attempting Hugging Face Qwen...");
-                            // Thử dùng HF (Truyền string prompt, không phải messages)
                             jsonStr = await AIAdapter.callHF(promptText);
                             usedSource = "Qwen2.5-Math";
                         } catch (hfErr) {
-                            console.warn("HF Failed, Falling back to Gemini...", hfErr);
-                            // FALLBACK NGAY LẬP TỨC SANG GEMINI
                             const payload = [{text: promptText}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))];
                             jsonStr = await AIAdapter.callGemini(payload);
                             usedSource = "Gemini (Fallback)";
                         }
                     } else {
-                        // KHÔNG CÓ HF -> DÙNG GEMINI LUÔN
                         const payload = [{text: promptText}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))];
                         jsonStr = await AIAdapter.callGemini(payload);
                     }
 
-                    // Xử lý chuỗi JSON (Clean Markdown của Qwen nếu có)
                     const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                     const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
-                    
-                    if (!jsonMatch) throw new Error("AI output invalid JSON: " + jsonStr.substring(0, 50) + "...");
+                    if (!jsonMatch) throw new Error("Invalid JSON");
                     const json = JSON.parse(jsonMatch[0]);
                     
                     const finalBp = {...blueprint};
@@ -308,23 +382,19 @@
                     setBlueprint(finalBp);
 
                 } catch(e) {
-                    console.error("GEN ERROR:", e);
                     const errBp = {...blueprint};
                     errBp.sections[sIdx].questions[qIdx].status = 'error';
-                    // Lưu lỗi vào để debug
-                    errBp.sections[sIdx].questions[qIdx].source = "ERR: " + e.message.substring(0, 10);
                     setBlueprint(errBp);
                 }
             };
 
             const generateAll = async () => {
-                if(!confirm(`Hệ thống sẽ dùng ${hfStatus ? "Qwen 2.5 Math (Ưu tiên)" : "Gemini"} để tạo nội dung. Nếu lỗi sẽ tự chuyển kênh. Tiếp tục?`)) return;
+                if(!confirm(`Hệ thống sẽ tạo nội dung toàn bộ đề. Tiếp tục?`)) return;
                 for(let s=0; s<blueprint.sections.length; s++) {
                     for(let q=0; q<blueprint.sections[s].questions.length; q++) {
                         if(blueprint.sections[s].questions[q].status !== 'done') {
                             await generateQuestion(s, q);
-                            // Delay nhẹ để tránh rate limit
-                            await new Promise(r => setTimeout(r, 1500));
+                            await new Promise(r => setTimeout(r, 1000));
                         }
                     }
                 }
@@ -334,6 +404,10 @@
             const updateData = (sIdx, qIdx, field, val) => {
                 const n = {...blueprint};
                 n.sections[sIdx].questions[qIdx][field] = val;
+                // Nếu sửa điểm số -> Tính lại tổng điểm hiển thị
+                if(field === 'score') {
+                    calcExamTotals(n);
+                }
                 setBlueprint(n);
             };
 
@@ -380,8 +454,8 @@
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V13.2)</h1>
-                            <p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold"><i className="fas fa-robot"></i> Hybrid (Qwen Math 7B + Fallback)</span> : <span className="text-blue-600 font-bold"><i className="fas fa-bolt"></i> Gemini Only</span>}</p>
+                            <h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V14)</h1>
+                            <p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold"><i className="fas fa-robot"></i> Hybrid</span> : <span className="text-blue-600 font-bold"><i className="fas fa-bolt"></i> Gemini</span>}</p>
                         </div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
