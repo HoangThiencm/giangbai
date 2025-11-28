@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Từ Ma Trận (Chuyên Nghiệp)</title>
+    <title>Hệ Thống Ra Đề Toán 9 Chuẩn (V2)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -12,33 +12,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     
-    <!-- KaTeX cho hiển thị trên Web -->
+    <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     
-    <!-- Font Awesome -->
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
-        body { font-family: 'Times New Roman', serif; background-color: #f3f4f6; }
-        .font-sans { font-family: 'Segoe UI', sans-serif; } /* Cho UI điều khiển */
+        body { font-family: 'Times New Roman', serif; background-color: #f8fafc; }
+        .font-ui { font-family: system-ui, -apple-system, sans-serif; }
+        .loader { width: 20px; height: 20px; border: 3px solid #FFF; border-bottom-color: transparent; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        .loader-blue { border-color: #2563eb; border-bottom-color: transparent; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .loader { border: 4px solid #e5e7eb; border-top: 4px solid #2563eb; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Mô phỏng trang A4 */
-        .a4-page {
-            background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1); color: black; line-height: 1.3;
-        }
-        
-        /* Editor Styles */
-        .editable { border: 1px dashed transparent; padding: 2px; transition: all 0.2s; outline: none; }
-        .editable:hover, .editable:focus { border-color: #94a3b8; background-color: #f8fafc; }
-        
-        /* Math Preview */
-        .katex { font-size: 1.1em; }
+        .question-card { transition: all 0.2s; border-left: 4px solid transparent; }
+        .question-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .type-tl { border-left-color: #9333ea; } /* Tự luận màu tím */
+        .type-tn { border-left-color: #2563eb; } /* Trắc nghiệm màu xanh */
     </style>
 </head>
 <body>
@@ -47,97 +39,51 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- CẤU HÌNH MÔN HỌC ---
-        const SUBJECTS = [
-            { id: "Toan", name: "Toán học", group: "TN", hint: "Tập trung tính toán, giải phương trình, hình học. Dùng LaTeX $...$." },
-            { id: "Ly", name: "Vật lý", group: "TN", hint: "Bài tập định luật, công thức, tính toán số liệu." },
-            { id: "Hoa", name: "Hóa học", group: "TN", hint: "Phương trình phản ứng, cân bằng, tính toán mol." },
-            { id: "Sinh", name: "Sinh học", group: "TN", hint: "Di truyền, sinh thái, cơ chế sinh học." },
-            { id: "Van", name: "Ngữ văn", group: "XH", hint: "Phân tích, cảm thụ, nghị luận xã hội/văn học. Không dùng công thức toán." },
-            { id: "Su", name: "Lịch sử", group: "XH", hint: "Sự kiện, mốc thời gian, ý nghĩa lịch sử." },
-            { id: "Dia", name: "Địa lý", group: "XH", hint: "Đặc điểm tự nhiên, kinh tế xã hội, biểu đồ." },
-            { id: "Anh", name: "Tiếng Anh", group: "NN", hint: "Ngữ pháp, từ vựng, đọc hiểu." }
-        ];
+        // --- CẤU HÌNH ---
+        // Logic mới: Chia rõ đặc tả cho Tự luận và Trắc nghiệm
+        const SUBJECT_CONFIG = {
+            id: "Toan9", 
+            name: "Toán học 9",
+            prompts: {
+                TL: "Tự luận: Đề bài phải đặt câu hỏi rõ ràng (Ví dụ: 'Giải phương trình...', 'Cho tam giác...'). Đáp án phải là HƯỚNG DẪN CHẤM chi tiết từng bước, có thang điểm (0.25đ, 0.5đ). Không sinh các đáp án A,B,C,D.",
+                TN: "Trắc nghiệm: Đề bài ngắn gọn. Phải sinh 4 đáp án A, B, C, D trong đó có 1 đáp án đúng và 3 phương án nhiễu hợp lý."
+            }
+        };
 
-        // --- AI ADAPTER ---
         const AIAdapter = {
             getConfig: () => ({
-                geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
-                hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]")
+                geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]")
             }),
             
-            callVision: async (base64, prompt) => {
+            call: async (payload) => {
                 const { geminiKeys } = AIAdapter.getConfig();
-                if(!geminiKeys.length) throw new Error("Vui lòng nạp Gemini API Key để đọc ma trận (Vision).");
-                const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
+                if(!geminiKeys.length) throw new Error("Vui lòng nhập API Key trước!");
                 
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}] }] })
-                });
-                if(!res.ok) throw new Error("Lỗi kết nối AI Vision");
-                const data = await res.json();
-                return data.candidates[0].content.parts[0].text;
-            },
-
-            callText: async (prompt) => {
-                const { geminiKeys, hfTokens } = AIAdapter.getConfig();
-                // Ưu tiên Gemini
-                if(geminiKeys.length) {
+                // Retry logic with random keys
+                let lastError;
+                for(let i=0; i<3; i++) {
                     try {
                         const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ contents: [{ parts: [{text: prompt}] }] })
+                            body: JSON.stringify(payload)
                         });
+                        if(!res.ok) throw new Error(`API Error: ${res.status}`);
                         const data = await res.json();
                         return data.candidates[0].content.parts[0].text;
-                    } catch(e) { console.warn("Gemini lỗi, chuyển HF"); }
+                    } catch(e) { lastError = e; await new Promise(r => setTimeout(r, 1000)); }
                 }
-                // Fallback HF (Qwen 2.5)
-                if(hfTokens.length) {
-                    const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
-                    const res = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct", {
-                        method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-                        body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 3000, temperature: 0.7, return_full_text: false } })
-                    });
-                    const data = await res.json();
-                    return Array.isArray(data) ? data[0].generated_text : "";
-                }
-                throw new Error("Không có API Key nào khả dụng.");
+                throw lastError;
             }
         };
 
-        // --- MATH CONVERSION (LATEX -> MATHML) ---
-        const latexToMathML = (latex) => {
-            try {
-                // Render ra MathML string
-                const html = katex.renderToString(latex, { throwOnError: false, output: 'mathml', displayMode: false });
-                // Clean up để Word hiểu (bỏ các thẻ thừa của Katex)
-                // Word cần <math> chứ không phải <span class="katex">...
-                const mathContent = html.match(/<math[\s\S]*?<\/math>/);
-                if (mathContent) {
-                    return mathContent[0]
-                        .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
-                        .replace(/annotation/g, 'annotation-xml'); // Word thích annotation-xml hơn
-                }
-                return latex;
-            } catch (e) { return latex; }
-        };
-
-        const processTextForWord = (text) => {
-            if(!text) return "";
-            // 1. Chuẩn hóa dấu
-            let clean = text.replace(/\\\[/g, '$').replace(/\\\]/g, '$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
-            // 2. Thay thế $...$ bằng MathML
-            return clean.replace(/\$([^$]+)\$/g, (match, tex) => latexToMathML(tex));
-        };
-
+        // --- UTILS ---
         const MathView = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
-                if(!ref.current) return;
+                if(!ref.current || !text) return;
                 try {
+                    // Chuẩn hóa LaTeX cho KaTeX
                     const clean = text.replace(/\\\[/g, '$').replace(/\\\]/g, '$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
                     const parts = clean.split(/(\$[^$]+\$)/g);
                     ref.current.innerHTML = "";
@@ -152,37 +98,35 @@
                     });
                 } catch(e){}
             }, [text]);
-            return <span ref={ref} />;
+            return <span ref={ref} className="font-serif text-lg leading-relaxed"/>;
         };
 
-        // --- MAIN APP ---
         const App = () => {
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
-            const [status, setStatus] = useState("");
-            
-            // Exam Info
-            const [info, setInfo] = useState({
-                dept: "SỞ GIÁO DỤC VÀ ĐÀO TẠO ĐỒNG NAI",
-                school: "TRƯỜNG THCS NGUYỄN CÔNG TRỨ",
-                title: "KIỂM TRA CUỐI HỌC KỲ I",
-                year: "NĂM HỌC 2025 - 2026",
-                subject: "Toan",
-                time: "90",
-                grade: "9"
-            });
-
+            const [keys, setKeys] = useState("");
+            const [info, setInfo] = useState({ dept: "SỞ GD&ĐT ĐỒNG NAI", school: "TRƯỜNG THCS NGUYỄN CÔNG TRỨ", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
             const [matrix, setMatrix] = useState([]);
             const [questions, setQuestions] = useState([]);
 
-            // STEP 1: UPLOAD
+            useEffect(() => {
+                const saved = localStorage.getItem('global_gemini_keys');
+                if(saved) setKeys(JSON.parse(saved).join('\n'));
+            }, []);
+
+            const saveKeys = () => {
+                const k = keys.split('\n').map(s=>s.trim()).filter(s=>s);
+                localStorage.setItem('global_gemini_keys', JSON.stringify(k));
+                alert(`Đã lưu ${k.length} API Keys!`);
+            };
+
+            // 1. UPLOAD & ANALYZE
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
-                setLoading(true); setStatus("Đang phân tích Ma trận & Bảng đặc tả...");
                 
+                setLoading(true);
                 try {
-                    // Convert to base64
                     let base64 = "";
                     if (file.type.includes("pdf")) {
                         const buffer = await file.arrayBuffer();
@@ -198,320 +142,362 @@
                     }
 
                     const prompt = `
-                        Bạn là chuyên gia giáo dục. Hãy phân tích ảnh (Ma trận đề thi/Bảng đặc tả) này.
-                        Trích xuất cấu trúc đề thi gồm các nhóm câu hỏi.
+                        Phân tích ảnh Ma trận đề thi Toán 9. Hãy trích xuất thành JSON.
+                        QUAN TRỌNG: Cần phân biệt rõ cột "Tự luận" (TL) và "Trắc nghiệm" (TN).
+                        Nếu đề bài có cột "TL" và các số liệu nằm ở đó, hãy đánh dấu type: "TL".
                         
-                        Yêu cầu đầu ra JSON (Array):
+                        Output JSON Format:
                         [
                             {
-                                "topic": "Tên chủ đề / Nội dung kiến thức",
-                                "level": "Mức độ (Nhận biết/Thông hiểu/Vận dụng)",
-                                "count": số_lượng_câu (số nguyên),
-                                "type": "Trắc nghiệm" hoặc "Đúng/Sai" hoặc "Tự luận"
+                                "topic": "Tên chủ đề (VD: Phương trình bậc nhất, Hệ thức lượng...)",
+                                "level": "NB/TH/VD/VDC",
+                                "count": số_lượng_câu,
+                                "type": "TL" hoặc "TN" (Nếu không rõ thì mặc định TN),
+                                "desc": "Mô tả ngắn về yêu cầu cần đạt (nếu thấy)"
                             }
                         ]
-                        Chú ý: Nếu bảng ghi gộp, hãy tách dòng riêng.
+                        Chỉ trả về JSON, không lời dẫn.
                     `;
                     
-                    const text = await AIAdapter.callVision(base64, prompt);
-                    let data = [];
-                    try { data = JSON.parse(text.replace(/```json|```/g, '').trim()); } 
-                    catch { // Thử trích xuất mảng nếu AI nói nhiều
-                        const match = text.match(/\[.*\]/s);
-                        if(match) data = JSON.parse(match[0]);
-                    }
+                    const text = await AIAdapter.call({ contents: [{ parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}] }] });
+                    const jsonStr = text.match(/\[[\s\S]*\]/)[0];
+                    const data = JSON.parse(jsonStr);
                     
-                    setMatrix(data.map((r, i) => ({...r, id: i, status: 'pending', qs: []})));
+                    setMatrix(data.map((r, i) => ({...r, id: Date.now()+i, status: 'pending', qs: []})));
                     setStep(2);
-                } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
+                } catch (err) { alert("Lỗi phân tích: " + err.message); } 
+                finally { setLoading(false); }
             };
 
-            // STEP 2: GENERATE
+            // 2. GENERATE ROW (CORE LOGIC)
             const generateRow = async (rowId) => {
-                const row = matrix.find(r => r.id === rowId);
-                const subj = SUBJECTS.find(s => s.id === info.subject);
-                
-                // Cập nhật trạng thái
                 setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'generating'} : r));
-
+                
+                const row = matrix.find(r => r.id === rowId);
+                const isEssay = row.type === 'TL'; // Logic tư duy: Tự luận vs Trắc nghiệm
+                
+                // Prompt được tinh chỉnh theo style Đinh Tiên Hoàng
                 const prompt = `
-                    Đóng vai giáo viên môn ${subj.name} lớp ${info.grade}. 
-                    Nhiệm vụ: Soạn ${row.count} câu hỏi dạng "${row.type}" về chủ đề "${row.topic}". Mức độ: ${row.level}.
+                    Đóng vai giáo viên Toán lớp 9, soạn câu hỏi kiểm tra học kỳ 1.
                     
-                    ĐẶC TRƯNG MÔN HỌC: ${subj.hint}
+                    YÊU CẦU:
+                    - Chủ đề: ${row.topic}
+                    - Mức độ: ${row.level} (NB: Nhận biết, TH: Thông hiểu, VD: Vận dụng thấp, VDC: Vận dụng cao)
+                    - Loại câu hỏi: ${isEssay ? "TỰ LUẬN (Essay)" : "TRẮC NGHIỆM (Multiple Choice)"}
+                    - Số lượng: ${row.count} câu.
                     
-                    YÊU CẦU ĐỊNH DẠNG JSON (Tuyệt đối không thêm lời dẫn):
+                    ${isEssay 
+                        ? `STYLE TỰ LUẬN (Theo mẫu đề thi chuẩn):
+                           - Đề bài phải chuẩn mực (VD: "Giải phương trình...", "Cho tam giác ABC vuông tại A...").
+                           - Tuyệt đối KHÔNG sinh đáp án A,B,C,D.
+                           - Phần đáp án trả về trường "c" phải là LỜI GIẢI CHI TIẾT và THANG ĐIỂM.` 
+                        : `STYLE TRẮC NGHIỆM:
+                           - Câu dẫn ngắn gọn.
+                           - Sinh 4 đáp án A,B,C,D.`
+                    }
+
+                    ĐỊNH DẠNG JSON TRẢ VỀ (Array):
                     [
                         {
-                            "q": "Nội dung câu hỏi (Ngắn gọn, súc tích). Nếu có công thức toán dùng $...$",
-                            "a": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"], (Nếu tự luận để mảng rỗng [])
-                            "c": "Đáp án đúng (A/B/C/D) hoặc Lời giải vắn tắt"
+                            "q": "Nội dung câu hỏi (Dùng LaTeX $...$ cho công thức)",
+                            "a": ${isEssay ? "[]" : `["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"]`},
+                            "c": "${isEssay ? "Lời giải chi tiết..." : "Đáp án đúng (A/B/C/D)"}"
                         }
                     ]
                 `;
 
                 try {
-                    const text = await AIAdapter.callText(prompt);
-                    let qs = [];
-                    try { qs = JSON.parse(text.replace(/```json|```/g, '').trim()); }
-                    catch { const m = text.match(/\[.*\]/s); if(m) qs = JSON.parse(m[0]); }
+                    const text = await AIAdapter.call({ contents: [{ parts: [{text: prompt}] }] });
+                    const jsonStr = text.match(/\[[\s\S]*\]/)[0]; // Lọc lấy mảng JSON
+                    let generatedQs = JSON.parse(jsonStr);
                     
-                    // Gán metadata
-                    const qsMeta = qs.map(q => ({...q, meta: {...row}}));
-                    setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', qs: qsMeta} : r));
-                } catch(e) { 
+                    // Gắn metadata
+                    generatedQs = generatedQs.map(q => ({
+                        ...q, 
+                        meta: { topic: row.topic, level: row.level, type: row.type }
+                    }));
+
+                    setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', qs: generatedQs} : r));
+                } catch (e) {
+                    console.error(e);
+                    // Quan trọng: Set status 'error' để hiện nút thử lại
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'error'} : r));
                 }
             };
 
-            const handleAuto = async () => {
-                for(let i=0; i<matrix.length; i++) {
-                    if(matrix[i].status !== 'done') {
-                        await generateRow(matrix[i].id);
-                        await new Promise(r => setTimeout(r, 2000)); // Delay tránh rate limit
-                    }
-                }
-            };
-
-            const finishGen = () => {
-                const all = matrix.reduce((acc, r) => acc.concat(r.qs || []), []);
-                if(!all.length) return alert("Chưa có câu hỏi nào!");
+            const finalize = () => {
+                const all = matrix.flatMap(r => r.qs || []);
+                if(all.length === 0) return alert("Chưa có câu hỏi nào được tạo!");
                 setQuestions(all);
                 setStep(3);
             };
 
-            // STEP 3: PREVIEW & EXPORT
-            const updateQuestion = (idx, field, val) => {
-                const n = [...questions]; n[idx][field] = val; setQuestions(n);
-            };
-            const updateOpt = (qIdx, optIdx, val) => {
-                const n = [...questions]; n[qIdx].a[optIdx] = val; setQuestions(n);
-            };
-
+            // 3. EXPORT WORD (Improved Logic for TL)
             const exportWord = () => {
-                // Header chuẩn
                 let html = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>De Thi</title>
-                <style>
-                    body { font-family: 'Times New Roman'; font-size: 12pt; }
-                    table { width: 100%; border-collapse: collapse; }
-                    .header-table td { text-align: center; vertical-align: top; }
-                    .ans-table td { border: 1px solid black; text-align: center; padding: 5px; }
-                    .ans-table th { border: 1px solid black; background: #eee; }
-                </style>
-                </head><body>
-                
-                <!-- HEADER -->
-                <table class="header-table">
-                    <tr>
-                        <td width="40%">
-                            ${info.dept.toUpperCase()}<br/>
-                            <b>${info.school.toUpperCase()}</b>
-                            <div style="border-top:1px solid black; width:80px; margin:5px auto"></div>
-                        </td>
-                        <td width="60%">
-                            <b>${info.title.toUpperCase()}</b><br/>
-                            <b>MÔN: ${SUBJECTS.find(s=>s.id===info.subject).name.toUpperCase()}</b><br/>
-                            <i>Thời gian làm bài: ${info.time} phút</i>
-                            <div style="border-top:1px solid black; width:120px; margin:5px auto"></div>
-                        </td>
-                    </tr>
-                </table>
-                <p style="text-align:center"><b>Mã đề thi: 101</b></p>
-                <br/>
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+                    <head><meta charset='utf-8'><title>De Thi</title>
+                    <style>
+                        body { font-family: 'Times New Roman'; font-size: 13pt; line-height: 1.3; }
+                        table { border-collapse: collapse; width: 100%; }
+                        .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
+                        .qs-content { margin-bottom: 10px; }
+                        .ans-grid { display: flex; flex-wrap: wrap; }
+                        .ans-item { width: 50%; margin-bottom: 5px; }
+                    </style>
+                    </head><body>
+                    <div class="header">
+                        <p>${info.dept.toUpperCase()}<br/>${info.school.toUpperCase()}</p>
+                        <p>${info.title.toUpperCase()}<br/>MÔN: TOÁN 9 - Thời gian: ${info.time} phút</p>
+                    </div>
+                    <hr/>
                 `;
 
-                // NỘI DUNG ĐỀ
-                const tn = questions.filter(q => q.meta.type === "Trắc nghiệm");
-                const ds = questions.filter(q => q.meta.type === "Đúng/Sai");
-                const tl = questions.filter(q => q.meta.type === "Tự luận");
+                // Tách TN và TL
+                const tn = questions.filter(q => q.meta.type === 'TN');
+                const tl = questions.filter(q => q.meta.type === 'TL');
 
-                if(tn.length) {
+                if(tn.length > 0) {
                     html += `<h3>I. PHẦN TRẮC NGHIỆM (${tn.length} câu)</h3>`;
                     tn.forEach((q, i) => {
-                        html += `<p><b>Câu ${i+1}:</b> ${processTextForWord(q.q)}</p>`;
-                        html += `<table style="border:none"><tr>`;
+                        html += `<div class='qs-content'><b>Câu ${i+1}:</b> ${q.q.replace(/\n/g, '<br/>')}</div>`;
+                        html += `<table><tr>`;
                         q.a.forEach((opt, k) => {
-                            // Chia 2 cột hoặc 4 cột tùy độ dài
                             if(k%2===0 && k>0) html += `</tr><tr>`;
-                            html += `<td width="50%"><b>${String.fromCharCode(65+k)}.</b> ${processTextForWord(opt)}</td>`;
+                            html += `<td width="50%"><b>${String.fromCharCode(65+k)}.</b> ${opt}</td>`;
                         });
-                        html += `</tr></table>`;
+                        html += `</tr></table><br/>`;
                     });
                 }
 
-                if(ds.length) {
-                    html += `<h3>II. PHẦN TRẮC NGHIỆM ĐÚNG SAI</h3>`;
-                    ds.forEach((q, i) => {
-                        html += `<p><b>Câu ${i+1}:</b> ${processTextForWord(q.q)}</p>`;
-                        q.a.forEach(opt => html += `<p style="margin-left:20px">- ${processTextForWord(opt)}</p>`);
-                    });
-                }
-
-                if(tl.length) {
-                    html += `<h3>III. PHẦN TỰ LUẬN</h3>`;
+                if(tl.length > 0) {
+                    html += `<h3>II. PHẦN TỰ LUẬN (${tl.length} câu)</h3>`;
                     tl.forEach((q, i) => {
-                        html += `<p><b>Câu ${i+1} (${q.meta.level}):</b> ${processTextForWord(q.q)}</p>`;
-                        html += `<p style="color:#999">...................................................................................</p><br/>`;
+                        // Logic tư duy: Tự luận thường đặt là Bài 1, Bài 2... hoặc Câu 1, Câu 2...
+                        html += `<div class='qs-content'><b>Câu ${i+1} (${q.meta.level}):</b> ${q.q.replace(/\n/g, '<br/>')}</div>`;
+                        html += `<br/>`; // Khoảng trống cho HS làm bài
                     });
                 }
 
-                // BẢNG ĐÁP ÁN (Chỉ trắc nghiệm)
-                if(tn.length) {
-                    html += `<br style="page-break-before:always" /><h3 style="text-align:center">HƯỚNG DẪN CHẤM</h3>`;
-                    html += `<h4>1. Bảng đáp án trắc nghiệm</h4>`;
-                    html += `<table class="ans-table">`;
-                    
-                    // Header bảng (1-10, 11-20...)
-                    for(let i=0; i<tn.length; i+=10) {
-                        const chunk = tn.slice(i, i+10);
-                        html += `<tr>`;
-                        chunk.forEach((_, k) => html += `<th>${i+k+1}</th>`);
-                        html += `</tr><tr>`;
-                        chunk.forEach(q => {
-                            // Lấy chữ cái đầu của đáp án (A,B,C,D)
-                            let ans = q.c.trim().charAt(0).toUpperCase();
-                            if(!['A','B','C','D'].includes(ans)) ans = "?";
-                            html += `<td>${ans}</td>`;
-                        });
-                        html += `</tr>`;
-                    }
-                    html += `</table>`;
+                // Đáp án
+                html += `<br clear=all style='mso-special-character:line-break;page-break-before:always'>`;
+                html += `<h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
+                
+                if(tn.length > 0) {
+                    html += `<h4>A. TRẮC NGHIỆM</h4><table border="1" cellpadding="5"><tr>`;
+                    tn.forEach((q, i) => html += `<td>${i+1}</td>`);
+                    html += `</tr><tr>`;
+                    tn.forEach(q => html += `<td><b>${q.c}</b></td>`);
+                    html += `</tr></table>`;
                 }
 
-                // LỜI GIẢI CHI TIẾT
-                html += `<h4>2. Lời giải chi tiết / Tự luận</h4>`;
-                questions.forEach((q, i) => {
-                    html += `<p><b>Câu ${i+1}:</b> ${processTextForWord(q.c)}</p>`;
-                });
+                if(tl.length > 0) {
+                    html += `<h4>B. TỰ LUẬN</h4>`;
+                    tl.forEach((q, i) => {
+                        html += `<p><b>Câu ${i+1}:</b></p>`;
+                        html += `<div>${q.c.replace(/\n/g, '<br/>')}</div><hr/>`;
+                    });
+                }
 
                 html += `</body></html>`;
-                saveAs(new Blob(['\ufeff', html], {type: 'application/msword'}), `De_Thi_${info.subject}.doc`);
+                const blob = new Blob(['\ufeff', html], {type: 'application/msword'});
+                saveAs(blob, "De_Thi_Toan_9.doc");
             };
 
             return (
-                <div className="min-h-screen p-8 bg-gray-100 font-sans">
-                    {/* NAV */}
-                    <div className="flex justify-between items-center mb-6 max-w-6xl mx-auto">
-                        <button onClick={()=>window.location.href='index.html'} className="text-gray-600 font-bold"><i className="fas fa-arrow-left"></i> Trang chủ</button>
-                        <h1 className="text-2xl font-bold text-blue-800 uppercase">Tạo Đề Chuẩn Sư Phạm</h1>
+                <div className="max-w-5xl mx-auto p-6 font-ui">
+                    {/* Header */}
+                    <div className="flex justify-between items-end border-b pb-4 mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold text-blue-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (PRO)</h1>
+                            <p className="text-gray-500 text-sm">Hỗ trợ đặc biệt: Ma trận Tự luận & Trắc nghiệm</p>
+                        </div>
+                        <button onClick={()=>setStep(1)} className="text-blue-600 hover:underline">Làm mới</button>
                     </div>
 
-                    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden min-h-[600px]">
-                        
-                        {/* STEP 1: CONFIG */}
-                        {step === 1 && (
-                            <div className="p-8">
-                                <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-2">1. Thông tin Kỳ thi</h2>
-                                <div className="grid grid-cols-2 gap-6 mb-6">
-                                    <div className="space-y-4">
-                                        <div><label className="block text-sm font-bold text-gray-600">Sở / Phòng GD&ĐT</label><input className="input-std w-full border p-2 rounded" value={info.dept} onChange={e=>setInfo({...info, dept: e.target.value})}/></div>
-                                        <div><label className="block text-sm font-bold text-gray-600">Trường</label><input className="input-std w-full border p-2 rounded" value={info.school} onChange={e=>setInfo({...info, school: e.target.value})}/></div>
-                                        <div><label className="block text-sm font-bold text-gray-600">Tên Kỳ Thi</label><input className="input-std w-full border p-2 rounded" value={info.title} onChange={e=>setInfo({...info, title: e.target.value})}/></div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-600">Môn học</label>
-                                            <select className="w-full border p-2 rounded" value={info.subject} onChange={e=>setInfo({...info, subject: e.target.value})}>
-                                                {SUBJECTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div><label className="block text-sm font-bold text-gray-600">Lớp</label><input className="w-full border p-2 rounded" value={info.grade} onChange={e=>setInfo({...info, grade: e.target.value})}/></div>
-                                            <div><label className="block text-sm font-bold text-gray-600">Thời gian (phút)</label><input className="w-full border p-2 rounded" value={info.time} onChange={e=>setInfo({...info, time: e.target.value})}/></div>
-                                        </div>
-                                    </div>
+                    {/* Step 1: Config & Upload */}
+                    {step === 1 && (
+                        <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1">Đơn vị (Sở/Phòng)</label>
+                                    <input className="w-full border p-2 rounded" value={info.dept} onChange={e=>setInfo({...info, dept:e.target.value})}/>
                                 </div>
-                                <div className="border-2 border-dashed border-blue-300 rounded-xl p-10 text-center cursor-pointer hover:bg-blue-50 transition" onClick={()=>document.getElementById('fileInput').click()}>
-                                    <input type="file" id="fileInput" className="hidden" accept="image/*,.pdf" onChange={handleUpload}/>
-                                    {loading ? <div className="loader"></div> : <><i className="fas fa-file-upload text-4xl text-blue-500 mb-2"></i><p className="font-bold text-gray-600">Chọn File Ma trận / Bảng đặc tả</p><p className="text-sm text-gray-400">Hỗ trợ Ảnh & PDF</p></>}
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1">Trường</label>
+                                    <input className="w-full border p-2 rounded" value={info.school} onChange={e=>setInfo({...info, school:e.target.value})}/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1">Tên kỳ thi</label>
+                                    <input className="w-full border p-2 rounded" value={info.title} onChange={e=>setInfo({...info, title:e.target.value})}/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1">API Keys (Mỗi dòng 1 key - Để tránh lỗi quota)</label>
+                                    <textarea className="w-full border p-2 rounded h-10 focus:h-24 transition-all" placeholder="Paste Gemini Keys here..." value={keys} onChange={e=>setKeys(e.target.value)} onBlur={saveKeys}/>
                                 </div>
                             </div>
-                        )}
 
-                        {/* STEP 2: MATRIX */}
-                        {step === 2 && (
-                            <div className="p-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold text-gray-800">2. Khung Ma Trận Đề</h2>
-                                    <div className="space-x-2">
-                                        <button onClick={handleAuto} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow"><i className="fas fa-robot"></i> Sinh Toàn Bộ</button>
-                                        <button onClick={finishGen} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow">Tiếp tục <i className="fas fa-arrow-right"></i></button>
-                                    </div>
-                                </div>
-                                <div className="overflow-auto max-h-[500px] border rounded">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-100 uppercase text-gray-600 sticky top-0">
-                                            <tr><th className="p-3">Chủ đề</th><th className="p-3">Mức độ</th><th className="p-3 text-center">SL</th><th className="p-3">Loại</th><th className="p-3 text-center">Trạng thái</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            {matrix.map(row => (
-                                                <tr key={row.id} className="border-b hover:bg-gray-50">
-                                                    <td className="p-2"><input className="w-full bg-transparent outline-none" value={row.topic} onChange={e=>{const n=[...matrix];n[row.id].topic=e.target.value;setMatrix(n)}}/></td>
-                                                    <td className="p-2">{row.level}</td>
-                                                    <td className="p-2 text-center font-bold text-blue-600">{row.count}</td>
-                                                    <td className="p-2">{row.type}</td>
-                                                    <td className="p-2 text-center">
-                                                        {row.status==='pending' && <button onClick={()=>generateRow(row.id)} className="text-blue-500 font-bold border px-2 rounded hover:bg-blue-50">Tạo</button>}
-                                                        {row.status==='generating' && <div className="loader w-4 h-4"></div>}
-                                                        {row.status==='done' && <span className="text-green-600 font-bold"><i className="fas fa-check"></i> Xong</span>}
-                                                        {row.status==='error' && <span className="text-red-500 font-bold">Lỗi</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                            <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative">
+                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} accept="image/*,.pdf"/>
+                                {loading ? <div className="loader loader-blue"></div> : (
+                                    <>
+                                        <i className="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-2"></i>
+                                        <p className="font-bold text-blue-700">Tải lên Ma trận đề (Ảnh hoặc PDF)</p>
+                                        <p className="text-sm text-gray-500">Hệ thống sẽ tự nhận diện Tự luận (TL) và Trắc nghiệm (TN)</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 2: Matrix & Generation */}
+                    {step === 2 && (
+                        <div className="space-y-4">
+                            <div className="bg-yellow-50 p-4 rounded border border-yellow-200 text-sm text-yellow-800 flex items-start gap-2">
+                                <i className="fas fa-info-circle mt-1"></i>
+                                <div>
+                                    <strong>Lưu ý về tư duy ra đề:</strong>
+                                    <ul className="list-disc ml-4 mt-1">
+                                        <li>Cột <b>Loại</b> quyết định cấu trúc câu hỏi. Hãy chỉnh sửa nếu AI nhận diện sai.</li>
+                                        <li>Nếu chọn <b>TL (Tự luận)</b>: AI sẽ không sinh đáp án nhiễu A,B,C,D mà sinh lời giải chi tiết.</li>
+                                    </ul>
                                 </div>
                             </div>
-                        )}
 
-                        {/* STEP 3: EDITOR */}
-                        {step === 3 && (
-                            <div className="p-6 h-full flex flex-col">
-                                <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 py-2 border-b">
-                                    <h2 className="text-xl font-bold text-gray-800">3. Chỉnh sửa & Xuất bản</h2>
-                                    <div className="space-x-2">
-                                        <button onClick={()=>setStep(2)} className="px-4 py-2 text-gray-500 font-bold">Quay lại</button>
-                                        <button onClick={exportWord} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-file-word"></i> Xuất Word Chuẩn</button>
-                                    </div>
+                            <div className="bg-white rounded shadow overflow-hidden">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
+                                        <tr>
+                                            <th className="p-3 border-b">Chủ đề</th>
+                                            <th className="p-3 border-b">Mức độ</th>
+                                            <th className="p-3 border-b w-20">Số câu</th>
+                                            <th className="p-3 border-b w-32">Loại</th>
+                                            <th className="p-3 border-b w-32 text-center">Tác vụ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {matrix.map((row, idx) => (
+                                            <tr key={row.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-2"><input className="w-full border-b border-transparent focus:border-blue-500 outline-none bg-transparent" value={row.topic} onChange={e=>{const n=[...matrix];n[idx].topic=e.target.value;setMatrix(n)}}/></td>
+                                                <td className="p-2">
+                                                    <select className="bg-transparent outline-none" value={row.level} onChange={e=>{const n=[...matrix];n[idx].level=e.target.value;setMatrix(n)}}>
+                                                        <option value="NB">Nhận biết</option>
+                                                        <option value="TH">Thông hiểu</option>
+                                                        <option value="VD">Vận dụng</option>
+                                                        <option value="VDC">Vận dụng cao</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-2"><input type="number" className="w-12 text-center border rounded" value={row.count} onChange={e=>{const n=[...matrix];n[idx].count=e.target.value;setMatrix(n)}}/></td>
+                                                <td className="p-2">
+                                                    <select 
+                                                        className={`font-bold rounded px-2 py-1 text-xs ${row.type==='TL' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}
+                                                        value={row.type} 
+                                                        onChange={e=>{const n=[...matrix];n[idx].type=e.target.value;setMatrix(n)}}
+                                                    >
+                                                        <option value="TN">Trắc nghiệm</option>
+                                                        <option value="TL">Tự luận</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-2 text-center">
+                                                    {row.status === 'pending' && (
+                                                        <button onClick={()=>generateRow(row.id)} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-semibold border border-blue-200">
+                                                            <i className="fas fa-magic mr-1"></i> Tạo
+                                                        </button>
+                                                    )}
+                                                    {row.status === 'generating' && <div className="loader loader-blue w-5 h-5"></div>}
+                                                    {row.status === 'done' && <span className="text-green-600 font-bold text-sm"><i className="fas fa-check"></i> Xong</span>}
+                                                    {row.status === 'error' && (
+                                                        <button onClick={()=>generateRow(row.id)} className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-semibold shadow">
+                                                            <i className="fas fa-sync-alt mr-1"></i> Thử lại
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button className="px-4 py-2 bg-gray-200 rounded font-semibold hover:bg-gray-300" onClick={()=>{setMatrix(matrix.map(r=>({...r, id: Date.now()+Math.random(), status:'pending'})))}}>Reset tất cả</button>
+                                <button className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 shadow-lg" onClick={finalize}>
+                                    Xem & Xuất đề <i className="fas fa-arrow-right ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Review */}
+                    {step === 3 && (
+                        <div className="h-[80vh] flex flex-col">
+                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded shadow-sm sticky top-0 z-10">
+                                <h2 className="text-xl font-bold text-gray-800">Xem trước đề thi</h2>
+                                <div className="space-x-2">
+                                    <button onClick={()=>setStep(2)} className="px-4 py-2 border rounded hover:bg-gray-50">Quay lại</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow">
+                                        <i className="fas fa-file-word mr-2"></i> Tải file Word
+                                    </button>
                                 </div>
-                                <div className="flex-1 overflow-auto space-y-6">
-                                    {questions.map((q, i) => (
-                                        <div key={i} className="border rounded-lg p-4 bg-white shadow-sm">
-                                            <div className="flex justify-between mb-2">
-                                                <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Câu {i+1} ({q.meta.type})</span>
-                                                <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button>
+                            </div>
+
+                            <div className="flex-1 overflow-auto space-y-4 pr-2">
+                                {questions.map((q, i) => (
+                                    <div key={i} className={`bg-white p-5 rounded-lg shadow-sm border question-card ${q.meta.type==='TL'?'type-tl':'type-tn'}`}>
+                                        <div className="flex justify-between mb-2">
+                                            <div className="flex gap-2 items-center">
+                                                <span className={`text-xs font-bold px-2 py-1 rounded text-white ${q.meta.type==='TL'?'bg-purple-600':'bg-blue-600'}`}>
+                                                    {q.meta.type === 'TL' ? 'TỰ LUẬN' : 'TRẮC NGHIỆM'}
+                                                </span>
+                                                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded border">{q.meta.topic} - {q.meta.level}</span>
                                             </div>
-                                            
-                                            {/* Question Editor */}
-                                            <textarea className="w-full border p-2 rounded mb-2 font-serif text-lg outline-none focus:border-blue-500" rows="2" value={q.q} onChange={e=>updateQuestion(i,'q',e.target.value)}></textarea>
-                                            <div className="bg-gray-50 p-2 rounded mb-2"><MathView text={q.q}/></div>
-
-                                            {/* Options */}
-                                            {q.meta.type !== 'Tự luận' && (
-                                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                                    {q.a.map((opt, k) => (
-                                                        <div key={k} className="flex gap-2 items-center">
-                                                            <b className="text-gray-500">{String.fromCharCode(65+k)}.</b>
-                                                            <input className="w-full border p-1 rounded font-serif" value={opt} onChange={e=>updateOpt(i,k,e.target.value)}/>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Answer */}
-                                            <div className="mt-2">
-                                                <label className="text-xs font-bold text-green-700">ĐÁP ÁN / HƯỚNG DẪN:</label>
-                                                <textarea className="w-full border border-green-200 bg-green-50 p-2 rounded text-sm font-mono" value={q.c} onChange={e=>updateQuestion(i,'c',e.target.value)}></textarea>
-                                            </div>
+                                            <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-gray-400 hover:text-red-500"><i className="fas fa-trash"></i></button>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
-                    </div>
+                                        {/* Nội dung câu hỏi */}
+                                        <div className="mb-4">
+                                            <div className="font-bold text-gray-800 mb-1">Câu {i+1}:</div>
+                                            <textarea 
+                                                className="w-full p-2 border rounded bg-gray-50 font-serif text-lg focus:bg-white focus:border-blue-500 outline-none transition-colors" 
+                                                rows={q.meta.type==='TL'?3:2}
+                                                value={q.q} 
+                                                onChange={e=>{const n=[...questions];n[i].q=e.target.value;setQuestions(n)}}
+                                            />
+                                            <div className="p-2 bg-gray-50 mt-1 rounded text-gray-700"><MathView text={q.q}/></div>
+                                        </div>
+
+                                        {/* Đáp án (Nếu là TN) */}
+                                        {q.meta.type === 'TN' && (
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                {q.a.map((opt, k) => (
+                                                    <div key={k} className="flex items-center gap-2">
+                                                        <span className="font-bold text-sm text-gray-500 w-6">{String.fromCharCode(65+k)}.</span>
+                                                        <input 
+                                                            className="flex-1 p-1 border-b border-gray-200 focus:border-blue-500 outline-none font-serif"
+                                                            value={opt}
+                                                            onChange={e=>{const n=[...questions];n[i].a[k]=e.target.value;setQuestions(n)}}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Hướng dẫn chấm / Đáp án đúng */}
+                                        <div className="mt-3 border-t pt-3">
+                                            <label className="text-xs font-bold text-green-700 uppercase mb-1 block">
+                                                {q.meta.type === 'TL' ? 'HƯỚNG DẪN CHẤM & BIỂU ĐIỂM' : 'ĐÁP ÁN ĐÚNG'}
+                                            </label>
+                                            <textarea 
+                                                className="w-full p-2 border border-green-200 bg-green-50 rounded font-mono text-sm"
+                                                rows={q.meta.type==='TL'?4:1}
+                                                value={q.c}
+                                                onChange={e=>{const n=[...questions];n[i].c=e.target.value;setQuestions(n)}}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
