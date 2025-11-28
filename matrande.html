@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Ra Đề Toán 9 Chuẩn (V2)</title>
+    <title>Tạo Đề Toán 9 Từ Ma Trận (Auto-Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -21,16 +21,22 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
-        body { font-family: 'Times New Roman', serif; background-color: #f8fafc; }
+        body { font-family: 'Times New Roman', serif; background-color: #f1f5f9; }
         .font-ui { font-family: system-ui, -apple-system, sans-serif; }
-        .loader { width: 20px; height: 20px; border: 3px solid #FFF; border-bottom-color: transparent; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        .loader { width: 18px; height: 18px; border: 2px solid #FFF; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         .loader-blue { border-color: #2563eb; border-bottom-color: transparent; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .question-card { transition: all 0.2s; border-left: 4px solid transparent; }
         .question-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .type-tl { border-left-color: #9333ea; } /* Tự luận màu tím */
-        .type-tn { border-left-color: #2563eb; } /* Trắc nghiệm màu xanh */
+        .type-tl { border-left-color: #9333ea; } /* Tự luận: Tím */
+        .type-tn { border-left-color: #2563eb; } /* Trắc nghiệm: Xanh */
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body>
@@ -39,27 +45,20 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- CẤU HÌNH ---
-        // Logic mới: Chia rõ đặc tả cho Tự luận và Trắc nghiệm
-        const SUBJECT_CONFIG = {
-            id: "Toan9", 
-            name: "Toán học 9",
-            prompts: {
-                TL: "Tự luận: Đề bài phải đặt câu hỏi rõ ràng (Ví dụ: 'Giải phương trình...', 'Cho tam giác...'). Đáp án phải là HƯỚNG DẪN CHẤM chi tiết từng bước, có thang điểm (0.25đ, 0.5đ). Không sinh các đáp án A,B,C,D.",
-                TN: "Trắc nghiệm: Đề bài ngắn gọn. Phải sinh 4 đáp án A, B, C, D trong đó có 1 đáp án đúng và 3 phương án nhiễu hợp lý."
-            }
-        };
-
+        // --- CẤU HÌNH HỆ THỐNG ---
         const AIAdapter = {
+            // Lấy Key trực tiếp từ localStorage do Dashboard quản lý
             getConfig: () => ({
-                geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]")
+                geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
+                hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]")
             }),
             
+            // Hàm gọi AI (Ưu tiên Gemini -> Fallback HF nếu cần thiết)
             call: async (payload) => {
                 const { geminiKeys } = AIAdapter.getConfig();
-                if(!geminiKeys.length) throw new Error("Vui lòng nhập API Key trước!");
+                if(!geminiKeys.length) throw new Error("MISSING_KEYS");
                 
-                // Retry logic with random keys
+                // Retry logic với random keys để tránh rate limit
                 let lastError;
                 for(let i=0; i<3; i++) {
                     try {
@@ -71,13 +70,17 @@
                         if(!res.ok) throw new Error(`API Error: ${res.status}`);
                         const data = await res.json();
                         return data.candidates[0].content.parts[0].text;
-                    } catch(e) { lastError = e; await new Promise(r => setTimeout(r, 1000)); }
+                    } catch(e) { 
+                        console.warn(`Retry ${i+1} failed:`, e);
+                        lastError = e; 
+                        await new Promise(r => setTimeout(r, 1000)); 
+                    }
                 }
                 throw lastError;
             }
         };
 
-        // --- UTILS ---
+        // --- MATH RENDERER ---
         const MathView = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
@@ -104,23 +107,26 @@
         const App = () => {
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
-            const [keys, setKeys] = useState("");
-            const [info, setInfo] = useState({ dept: "SỞ GD&ĐT ĐỒNG NAI", school: "TRƯỜNG THCS NGUYỄN CÔNG TRỨ", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
+            const [systemStatus, setSystemStatus] = useState({ ready: false, gemini: 0, hf: 0 });
+            
+            // Thông tin đề thi
+            const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
+            
+            // Dữ liệu chính
             const [matrix, setMatrix] = useState([]);
             const [questions, setQuestions] = useState([]);
 
+            // CHECK SYSTEM ON LOAD
             useEffect(() => {
-                const saved = localStorage.getItem('global_gemini_keys');
-                if(saved) setKeys(JSON.parse(saved).join('\n'));
+                const conf = AIAdapter.getConfig();
+                setSystemStatus({
+                    ready: conf.geminiKeys.length > 0,
+                    gemini: conf.geminiKeys.length,
+                    hf: conf.hfTokens.length
+                });
             }, []);
 
-            const saveKeys = () => {
-                const k = keys.split('\n').map(s=>s.trim()).filter(s=>s);
-                localStorage.setItem('global_gemini_keys', JSON.stringify(k));
-                alert(`Đã lưu ${k.length} API Keys!`);
-            };
-
-            // 1. UPLOAD & ANALYZE
+            // 1. UPLOAD & ANALYZE MATRIX
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -141,22 +147,22 @@
                         base64 = await new Promise(r => { reader.onload = ev => r(ev.target.result.split(',')[1]); reader.readAsDataURL(file); });
                     }
 
+                    // Prompt phân tích ảnh Ma trận
                     const prompt = `
-                        Phân tích ảnh Ma trận đề thi Toán 9. Hãy trích xuất thành JSON.
+                        Phân tích ảnh Ma trận đề thi Toán 9. Trích xuất thành JSON.
                         QUAN TRỌNG: Cần phân biệt rõ cột "Tự luận" (TL) và "Trắc nghiệm" (TN).
-                        Nếu đề bài có cột "TL" và các số liệu nằm ở đó, hãy đánh dấu type: "TL".
                         
                         Output JSON Format:
                         [
                             {
                                 "topic": "Tên chủ đề (VD: Phương trình bậc nhất, Hệ thức lượng...)",
                                 "level": "NB/TH/VD/VDC",
-                                "count": số_lượng_câu,
-                                "type": "TL" hoặc "TN" (Nếu không rõ thì mặc định TN),
-                                "desc": "Mô tả ngắn về yêu cầu cần đạt (nếu thấy)"
+                                "count": số_lượng_câu (số nguyên),
+                                "type": "TL" hoặc "TN" (Nếu không rõ, mặc định TN),
+                                "desc": "Mô tả ngắn"
                             }
                         ]
-                        Chỉ trả về JSON, không lời dẫn.
+                        Chỉ trả về JSON thuần.
                     `;
                     
                     const text = await AIAdapter.call({ contents: [{ parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}] }] });
@@ -165,51 +171,62 @@
                     
                     setMatrix(data.map((r, i) => ({...r, id: Date.now()+i, status: 'pending', qs: []})));
                     setStep(2);
-                } catch (err) { alert("Lỗi phân tích: " + err.message); } 
+                } catch (err) { 
+                    if(err.message === "MISSING_KEYS") alert("Lỗi: Chưa có API Key! Vui lòng quay lại Trang chủ (Dashboard) để nạp Key.");
+                    else alert("Lỗi phân tích: " + err.message); 
+                } 
                 finally { setLoading(false); }
             };
 
-            // 2. GENERATE ROW (CORE LOGIC)
+            // 2. GENERATE QUESTION (MATH 9 LOGIC)
             const generateRow = async (rowId) => {
                 setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'generating'} : r));
                 
                 const row = matrix.find(r => r.id === rowId);
-                const isEssay = row.type === 'TL'; // Logic tư duy: Tự luận vs Trắc nghiệm
+                const isEssay = row.type === 'TL'; 
                 
-                // Prompt được tinh chỉnh theo style Đinh Tiên Hoàng
+                // --- PROMPT CHUYÊN BIỆT CHO TOÁN 9 ---
+                // "Căn cứ vào môn để cho nó đúng" -> Logic Toán học chặt chẽ
                 const prompt = `
-                    Đóng vai giáo viên Toán lớp 9, soạn câu hỏi kiểm tra học kỳ 1.
+                    Bạn là Giáo viên Toán 9 chuyên nghiệp. Hãy soạn câu hỏi kiểm tra học kỳ.
                     
-                    YÊU CẦU:
+                    THÔNG TIN YÊU CẦU:
                     - Chủ đề: ${row.topic}
                     - Mức độ: ${row.level} (NB: Nhận biết, TH: Thông hiểu, VD: Vận dụng thấp, VDC: Vận dụng cao)
-                    - Loại câu hỏi: ${isEssay ? "TỰ LUẬN (Essay)" : "TRẮC NGHIỆM (Multiple Choice)"}
+                    - Loại: ${isEssay ? "TỰ LUẬN (Essay)" : "TRẮC NGHIỆM (Multiple Choice)"}
                     - Số lượng: ${row.count} câu.
                     
+                    ĐẶC TRƯNG MÔN TOÁN 9 (Bắt buộc tuân thủ):
+                    1. CÔNG THỨC: Bắt buộc dùng LaTeX đặt trong dấu $...$ (Ví dụ: $\\sqrt{x^2+1}$, $\\Delta = b^2 - 4ac$).
+                    2. HÌNH HỌC: Nếu là bài hình học, đề bài phải mô tả dựng hình rõ ràng (Ví dụ: "Cho đường tròn (O), điểm A nằm ngoài...").
+                    3. BÀI TOÁN THỰC TẾ: Nếu là mức độ Vận Dụng (VD/VDC), ưu tiên các bài toán thực tế (lãi suất, bóng tòa nhà, chuyển động...).
+                    
                     ${isEssay 
-                        ? `STYLE TỰ LUẬN (Theo mẫu đề thi chuẩn):
-                           - Đề bài phải chuẩn mực (VD: "Giải phương trình...", "Cho tam giác ABC vuông tại A...").
-                           - Tuyệt đối KHÔNG sinh đáp án A,B,C,D.
-                           - Phần đáp án trả về trường "c" phải là LỜI GIẢI CHI TIẾT và THANG ĐIỂM.` 
-                        : `STYLE TRẮC NGHIỆM:
-                           - Câu dẫn ngắn gọn.
-                           - Sinh 4 đáp án A,B,C,D.`
+                        ? `YÊU CẦU TỰ LUẬN:
+                           - Đề bài: Rõ ràng, gãy gọn.
+                           - Đáp án (Trường 'c'): Phải là LỜI GIẢI CHI TIẾT từng bước. Có biểu điểm chi tiết (Ví dụ: 0.25đ cho bước lập phương trình).
+                           - KHÔNG sinh đáp án A,B,C,D.` 
+                        : `YÊU CẦU TRẮC NGHIỆM:
+                           - Phương án nhiễu: Phải là các lỗi sai phổ biến của học sinh (sai dấu, nhầm công thức, quên điều kiện).
+                           - Sinh 4 đáp án A, B, C, D.`
                     }
 
-                    ĐỊNH DẠNG JSON TRẢ VỀ (Array):
+                    OUTPUT FORMAT (JSON Only):
                     [
                         {
-                            "q": "Nội dung câu hỏi (Dùng LaTeX $...$ cho công thức)",
-                            "a": ${isEssay ? "[]" : `["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"]`},
-                            "c": "${isEssay ? "Lời giải chi tiết..." : "Đáp án đúng (A/B/C/D)"}"
+                            "q": "Nội dung câu hỏi (LaTeX)",
+                            "a": ${isEssay ? "[]" : `["A. Nội dung", "B. Nội dung", "C. Nội dung", "D. Nội dung"]`},
+                            "c": "${isEssay ? "Lời giải chi tiết và thang điểm..." : "Đáp án đúng (A/B/C/D) kèm lời giải ngắn gọn"}"
                         }
                     ]
                 `;
 
                 try {
                     const text = await AIAdapter.call({ contents: [{ parts: [{text: prompt}] }] });
-                    const jsonStr = text.match(/\[[\s\S]*\]/)[0]; // Lọc lấy mảng JSON
-                    let generatedQs = JSON.parse(jsonStr);
+                    const jsonMatch = text.match(/\[[\s\S]*\]/);
+                    if(!jsonMatch) throw new Error("AI trả về sai định dạng");
+                    
+                    let generatedQs = JSON.parse(jsonMatch[0]);
                     
                     // Gắn metadata
                     generatedQs = generatedQs.map(q => ({
@@ -220,7 +237,6 @@
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', qs: generatedQs} : r));
                 } catch (e) {
                     console.error(e);
-                    // Quan trọng: Set status 'error' để hiện nút thử lại
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'error'} : r));
                 }
             };
@@ -232,18 +248,16 @@
                 setStep(3);
             };
 
-            // 3. EXPORT WORD (Improved Logic for TL)
+            // 3. EXPORT WORD (Chuẩn hóa cho Toán)
             const exportWord = () => {
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-                    <head><meta charset='utf-8'><title>De Thi</title>
+                    <head><meta charset='utf-8'><title>De Thi Toan 9</title>
                     <style>
                         body { font-family: 'Times New Roman'; font-size: 13pt; line-height: 1.3; }
                         table { border-collapse: collapse; width: 100%; }
                         .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
-                        .qs-content { margin-bottom: 10px; }
-                        .ans-grid { display: flex; flex-wrap: wrap; }
-                        .ans-item { width: 50%; margin-bottom: 5px; }
+                        .qs-content { margin-bottom: 10px; text-align: justify; }
                     </style>
                     </head><body>
                     <div class="header">
@@ -273,21 +287,20 @@
                 if(tl.length > 0) {
                     html += `<h3>II. PHẦN TỰ LUẬN (${tl.length} câu)</h3>`;
                     tl.forEach((q, i) => {
-                        // Logic tư duy: Tự luận thường đặt là Bài 1, Bài 2... hoặc Câu 1, Câu 2...
                         html += `<div class='qs-content'><b>Câu ${i+1} (${q.meta.level}):</b> ${q.q.replace(/\n/g, '<br/>')}</div>`;
-                        html += `<br/>`; // Khoảng trống cho HS làm bài
+                        html += `<br/><br/>`; 
                     });
                 }
 
                 // Đáp án
                 html += `<br clear=all style='mso-special-character:line-break;page-break-before:always'>`;
-                html += `<h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
+                html += `<h3 style='text-align:center'>HƯỚNG DẪN CHẤM & BIỂU ĐIỂM</h3>`;
                 
                 if(tn.length > 0) {
                     html += `<h4>A. TRẮC NGHIỆM</h4><table border="1" cellpadding="5"><tr>`;
                     tn.forEach((q, i) => html += `<td>${i+1}</td>`);
                     html += `</tr><tr>`;
-                    tn.forEach(q => html += `<td><b>${q.c}</b></td>`);
+                    tn.forEach(q => html += `<td><b>${q.c.charAt(0)}</b></td>`);
                     html += `</tr></table>`;
                 }
 
@@ -309,42 +322,63 @@
                     {/* Header */}
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-blue-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (PRO)</h1>
-                            <p className="text-gray-500 text-sm">Hỗ trợ đặc biệt: Ma trận Tự luận & Trắc nghiệm</p>
+                            <h1 className="text-2xl font-bold text-blue-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (AI)</h1>
+                            <p className="text-gray-500 text-sm">Chuyên biệt cho Toán 9: Hỗ trợ LaTeX, Tự luận & Trắc nghiệm</p>
                         </div>
-                        <button onClick={()=>setStep(1)} className="text-blue-600 hover:underline">Làm mới</button>
+                        <a href="index.html" className="text-gray-500 hover:text-blue-600 font-medium text-sm"><i className="fas fa-home"></i> Về Dashboard</a>
                     </div>
 
+                    {/* API Status Check */}
+                    {!systemStatus.ready ? (
+                        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0"><i className="fas fa-exclamation-triangle text-red-500"></i></div>
+                                <div className="ml-3">
+                                    <p className="text-sm text-red-700 font-bold">Chưa kết nối được với Hệ thống AI!</p>
+                                    <p className="text-sm text-red-600">Vui lòng quay lại trang <a href="index.html" className="underline font-bold">Dashboard (index.html)</a> để nạp API Key.</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                         <div className="bg-green-50 border border-green-200 px-4 py-2 rounded mb-6 flex justify-between items-center text-sm">
+                            <span className="text-green-700 font-semibold"><i className="fas fa-check-circle"></i> Hệ thống sẵn sàng</span>
+                            <div className="flex gap-4 text-gray-600">
+                                <span><i className="fas fa-key text-yellow-500"></i> Gemini Keys: <b>{systemStatus.gemini}</b></span>
+                                {systemStatus.hf > 0 && <span><i className="fas fa-robot text-purple-500"></i> HF Tokens: <b>{systemStatus.hf}</b></span>}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Step 1: Config & Upload */}
-                    {step === 1 && (
+                    {step === 1 && systemStatus.ready && (
                         <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-semibold mb-1">Đơn vị (Sở/Phòng)</label>
-                                    <input className="w-full border p-2 rounded" value={info.dept} onChange={e=>setInfo({...info, dept:e.target.value})}/>
+                                    <label className="block text-sm font-semibold mb-1 text-gray-700">Đơn vị (Sở/Phòng)</label>
+                                    <input className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" value={info.dept} onChange={e=>setInfo({...info, dept:e.target.value})}/>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold mb-1">Trường</label>
-                                    <input className="w-full border p-2 rounded" value={info.school} onChange={e=>setInfo({...info, school:e.target.value})}/>
+                                    <label className="block text-sm font-semibold mb-1 text-gray-700">Trường</label>
+                                    <input className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" value={info.school} onChange={e=>setInfo({...info, school:e.target.value})}/>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold mb-1">Tên kỳ thi</label>
-                                    <input className="w-full border p-2 rounded" value={info.title} onChange={e=>setInfo({...info, title:e.target.value})}/>
+                                    <label className="block text-sm font-semibold mb-1 text-gray-700">Tên kỳ thi</label>
+                                    <input className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" value={info.title} onChange={e=>setInfo({...info, title:e.target.value})}/>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold mb-1">API Keys (Mỗi dòng 1 key - Để tránh lỗi quota)</label>
-                                    <textarea className="w-full border p-2 rounded h-10 focus:h-24 transition-all" placeholder="Paste Gemini Keys here..." value={keys} onChange={e=>setKeys(e.target.value)} onBlur={saveKeys}/>
+                                    <label className="block text-sm font-semibold mb-1 text-gray-700">Thời gian (phút)</label>
+                                    <input className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" value={info.time} onChange={e=>setInfo({...info, time:e.target.value})}/>
                                 </div>
                             </div>
 
-                            <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative">
+                            <div className="border-2 border-dashed border-blue-300 rounded-lg p-10 text-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative group">
                                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} accept="image/*,.pdf"/>
                                 {loading ? <div className="loader loader-blue"></div> : (
-                                    <>
-                                        <i className="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-2"></i>
-                                        <p className="font-bold text-blue-700">Tải lên Ma trận đề (Ảnh hoặc PDF)</p>
-                                        <p className="text-sm text-gray-500">Hệ thống sẽ tự nhận diện Tự luận (TL) và Trắc nghiệm (TN)</p>
-                                    </>
+                                    <div className="group-hover:scale-105 transition-transform">
+                                        <i className="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-3"></i>
+                                        <p className="font-bold text-blue-800 text-lg">Tải lên Ma trận đề Toán (Ảnh hoặc PDF)</p>
+                                        <p className="text-sm text-gray-500 mt-1">Hệ thống sẽ tự nhận diện bài Tự luận & Trắc nghiệm</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -352,45 +386,45 @@
 
                     {/* Step 2: Matrix & Generation */}
                     {step === 2 && (
-                        <div className="space-y-4">
+                        <div className="space-y-4 animate-fade-in">
                             <div className="bg-yellow-50 p-4 rounded border border-yellow-200 text-sm text-yellow-800 flex items-start gap-2">
-                                <i className="fas fa-info-circle mt-1"></i>
+                                <i className="fas fa-lightbulb mt-1 text-yellow-600"></i>
                                 <div>
-                                    <strong>Lưu ý về tư duy ra đề:</strong>
+                                    <strong>Mẹo cho Toán 9:</strong>
                                     <ul className="list-disc ml-4 mt-1">
-                                        <li>Cột <b>Loại</b> quyết định cấu trúc câu hỏi. Hãy chỉnh sửa nếu AI nhận diện sai.</li>
-                                        <li>Nếu chọn <b>TL (Tự luận)</b>: AI sẽ không sinh đáp án nhiễu A,B,C,D mà sinh lời giải chi tiết.</li>
+                                        <li>Cột <b>Loại</b> rất quan trọng. <b>Tự luận (TL)</b> sẽ sinh lời giải chi tiết thay vì đáp án A,B,C,D.</li>
+                                        <li>Nếu AI chưa sinh ra câu hỏi đúng ý, bạn có thể sửa lại chủ đề rõ hơn (VD: "Giải hệ phương trình bậc nhất hai ẩn" thay vì "Hệ phương trình").</li>
                                     </ul>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded shadow overflow-hidden">
+                            <div className="bg-white rounded shadow overflow-hidden border">
                                 <table className="w-full text-left border-collapse">
-                                    <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
+                                    <thead className="bg-gray-100 text-gray-700 uppercase text-xs font-bold">
                                         <tr>
-                                            <th className="p-3 border-b">Chủ đề</th>
+                                            <th className="p-3 border-b">Chủ đề / Nội dung kiến thức</th>
                                             <th className="p-3 border-b">Mức độ</th>
-                                            <th className="p-3 border-b w-20">Số câu</th>
-                                            <th className="p-3 border-b w-32">Loại</th>
-                                            <th className="p-3 border-b w-32 text-center">Tác vụ</th>
+                                            <th className="p-3 border-b w-20 text-center">Số câu</th>
+                                            <th className="p-3 border-b w-32">Loại câu hỏi</th>
+                                            <th className="p-3 border-b w-32 text-center">Trạng thái</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-gray-100">
                                         {matrix.map((row, idx) => (
-                                            <tr key={row.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-2"><input className="w-full border-b border-transparent focus:border-blue-500 outline-none bg-transparent" value={row.topic} onChange={e=>{const n=[...matrix];n[idx].topic=e.target.value;setMatrix(n)}}/></td>
+                                            <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="p-2"><input className="w-full p-1 bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none" value={row.topic} onChange={e=>{const n=[...matrix];n[idx].topic=e.target.value;setMatrix(n)}}/></td>
                                                 <td className="p-2">
-                                                    <select className="bg-transparent outline-none" value={row.level} onChange={e=>{const n=[...matrix];n[idx].level=e.target.value;setMatrix(n)}}>
+                                                    <select className="bg-transparent outline-none text-sm" value={row.level} onChange={e=>{const n=[...matrix];n[idx].level=e.target.value;setMatrix(n)}}>
                                                         <option value="NB">Nhận biết</option>
                                                         <option value="TH">Thông hiểu</option>
                                                         <option value="VD">Vận dụng</option>
                                                         <option value="VDC">Vận dụng cao</option>
                                                     </select>
                                                 </td>
-                                                <td className="p-2"><input type="number" className="w-12 text-center border rounded" value={row.count} onChange={e=>{const n=[...matrix];n[idx].count=e.target.value;setMatrix(n)}}/></td>
+                                                <td className="p-2 text-center"><input type="number" className="w-12 text-center border rounded p-1" value={row.count} onChange={e=>{const n=[...matrix];n[idx].count=e.target.value;setMatrix(n)}}/></td>
                                                 <td className="p-2">
                                                     <select 
-                                                        className={`font-bold rounded px-2 py-1 text-xs ${row.type==='TL' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}
+                                                        className={`font-bold rounded px-2 py-1 text-xs cursor-pointer border ${row.type==='TL' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}
                                                         value={row.type} 
                                                         onChange={e=>{const n=[...matrix];n[idx].type=e.target.value;setMatrix(n)}}
                                                     >
@@ -400,15 +434,15 @@
                                                 </td>
                                                 <td className="p-2 text-center">
                                                     {row.status === 'pending' && (
-                                                        <button onClick={()=>generateRow(row.id)} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-semibold border border-blue-200">
-                                                            <i className="fas fa-magic mr-1"></i> Tạo
+                                                        <button onClick={()=>generateRow(row.id)} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-semibold border border-blue-200 transition-all hover:shadow-sm">
+                                                            <i className="fas fa-bolt mr-1"></i> Tạo
                                                         </button>
                                                     )}
-                                                    {row.status === 'generating' && <div className="loader loader-blue w-5 h-5"></div>}
-                                                    {row.status === 'done' && <span className="text-green-600 font-bold text-sm"><i className="fas fa-check"></i> Xong</span>}
+                                                    {row.status === 'generating' && <div className="loader loader-blue w-5 h-5 mx-auto"></div>}
+                                                    {row.status === 'done' && <span className="text-green-600 font-bold text-sm flex justify-center items-center"><i className="fas fa-check-circle mr-1"></i> Xong</span>}
                                                     {row.status === 'error' && (
-                                                        <button onClick={()=>generateRow(row.id)} className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-semibold shadow">
-                                                            <i className="fas fa-sync-alt mr-1"></i> Thử lại
+                                                        <button onClick={()=>generateRow(row.id)} className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-semibold shadow animate-pulse">
+                                                            <i className="fas fa-redo mr-1"></i> Thử lại
                                                         </button>
                                                     )}
                                                 </td>
@@ -418,10 +452,12 @@
                                 </table>
                             </div>
 
-                            <div className="flex justify-end gap-3 mt-4">
-                                <button className="px-4 py-2 bg-gray-200 rounded font-semibold hover:bg-gray-300" onClick={()=>{setMatrix(matrix.map(r=>({...r, id: Date.now()+Math.random(), status:'pending'})))}}>Reset tất cả</button>
-                                <button className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 shadow-lg" onClick={finalize}>
-                                    Xem & Xuất đề <i className="fas fa-arrow-right ml-2"></i>
+                            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                                <button className="text-gray-500 hover:text-gray-700 text-sm" onClick={()=>{if(confirm('Xóa toàn bộ dữ liệu hiện tại?')) setMatrix(matrix.map(r=>({...r, id: Date.now()+Math.random(), status:'pending', qs:[]})))}}>
+                                    <i className="fas fa-trash-alt"></i> Reset trạng thái
+                                </button>
+                                <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:shadow-lg transition-all transform hover:-translate-y-0.5" onClick={finalize}>
+                                    Xem trước & Xuất đề <i className="fas fa-arrow-right ml-2"></i>
                                 </button>
                             </div>
                         </div>
@@ -429,66 +465,74 @@
 
                     {/* Step 3: Review */}
                     {step === 3 && (
-                        <div className="h-[80vh] flex flex-col">
-                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded shadow-sm sticky top-0 z-10">
-                                <h2 className="text-xl font-bold text-gray-800">Xem trước đề thi</h2>
+                        <div className="h-[80vh] flex flex-col animate-fade-in">
+                            <div className="flex justify-between items-center mb-4 bg-white p-4 rounded shadow-sm sticky top-0 z-10 border-b border-gray-100">
+                                <h2 className="text-xl font-bold text-gray-800"><i className="fas fa-file-alt text-blue-500 mr-2"></i> Xem trước Đề thi</h2>
                                 <div className="space-x-2">
-                                    <button onClick={()=>setStep(2)} className="px-4 py-2 border rounded hover:bg-gray-50">Quay lại</button>
-                                    <button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow">
-                                        <i className="fas fa-file-word mr-2"></i> Tải file Word
+                                    <button onClick={()=>setStep(2)} className="px-4 py-2 border rounded hover:bg-gray-50 text-gray-600 font-medium">Quay lại chỉnh sửa</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow flex items-center gap-2">
+                                        <i className="fas fa-file-word"></i> Xuất File Word
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-auto space-y-4 pr-2">
+                            <div className="flex-1 overflow-auto space-y-6 pr-2 pb-10">
+                                {questions.length === 0 && <div className="text-center text-gray-400 py-10">Chưa có câu hỏi nào.</div>}
                                 {questions.map((q, i) => (
-                                    <div key={i} className={`bg-white p-5 rounded-lg shadow-sm border question-card ${q.meta.type==='TL'?'type-tl':'type-tn'}`}>
-                                        <div className="flex justify-between mb-2">
+                                    <div key={i} className={`bg-white p-6 rounded-lg shadow-sm border question-card ${q.meta.type==='TL'?'type-tl':'type-tn'}`}>
+                                        <div className="flex justify-between mb-3 border-b pb-2 border-gray-100">
                                             <div className="flex gap-2 items-center">
-                                                <span className={`text-xs font-bold px-2 py-1 rounded text-white ${q.meta.type==='TL'?'bg-purple-600':'bg-blue-600'}`}>
-                                                    {q.meta.type === 'TL' ? 'TỰ LUẬN' : 'TRẮC NGHIỆM'}
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider text-white ${q.meta.type==='TL'?'bg-purple-600':'bg-blue-600'}`}>
+                                                    {q.meta.type === 'TL' ? 'Tự Luận' : 'Trắc Nghiệm'}
                                                 </span>
-                                                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded border">{q.meta.topic} - {q.meta.level}</span>
+                                                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{q.meta.topic}</span>
+                                                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{q.meta.level}</span>
                                             </div>
-                                            <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-gray-400 hover:text-red-500"><i className="fas fa-trash"></i></button>
+                                            <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-gray-400 hover:text-red-500 transition-colors"><i className="fas fa-times"></i></button>
                                         </div>
 
-                                        {/* Nội dung câu hỏi */}
+                                        {/* Câu hỏi */}
                                         <div className="mb-4">
-                                            <div className="font-bold text-gray-800 mb-1">Câu {i+1}:</div>
+                                            <div className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                                <span className="bg-gray-200 text-gray-700 w-6 h-6 flex items-center justify-center rounded-full text-xs">{i+1}</span>
+                                                Nội dung câu hỏi:
+                                            </div>
                                             <textarea 
-                                                className="w-full p-2 border rounded bg-gray-50 font-serif text-lg focus:bg-white focus:border-blue-500 outline-none transition-colors" 
+                                                className="w-full p-3 border rounded bg-gray-50 font-serif text-lg focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner" 
                                                 rows={q.meta.type==='TL'?3:2}
                                                 value={q.q} 
                                                 onChange={e=>{const n=[...questions];n[i].q=e.target.value;setQuestions(n)}}
                                             />
-                                            <div className="p-2 bg-gray-50 mt-1 rounded text-gray-700"><MathView text={q.q}/></div>
+                                            <div className="p-3 bg-blue-50 mt-2 rounded border border-blue-100 text-gray-800"><MathView text={q.q}/></div>
                                         </div>
 
-                                        {/* Đáp án (Nếu là TN) */}
+                                        {/* Đáp án Trắc nghiệm */}
                                         {q.meta.type === 'TN' && (
-                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                                 {q.a.map((opt, k) => (
-                                                    <div key={k} className="flex items-center gap-2">
-                                                        <span className="font-bold text-sm text-gray-500 w-6">{String.fromCharCode(65+k)}.</span>
-                                                        <input 
-                                                            className="flex-1 p-1 border-b border-gray-200 focus:border-blue-500 outline-none font-serif"
-                                                            value={opt}
-                                                            onChange={e=>{const n=[...questions];n[i].a[k]=e.target.value;setQuestions(n)}}
-                                                        />
+                                                    <div key={k} className="flex items-start gap-2 group">
+                                                        <span className="font-bold text-sm text-gray-500 mt-2 group-hover:text-blue-600 transition-colors">{String.fromCharCode(65+k)}.</span>
+                                                        <div className="flex-1">
+                                                            <input 
+                                                                className="w-full p-2 border-b border-gray-200 focus:border-blue-500 outline-none font-serif hover:bg-gray-50 transition-colors bg-transparent"
+                                                                value={opt}
+                                                                onChange={e=>{const n=[...questions];n[i].a[k]=e.target.value;setQuestions(n)}}
+                                                            />
+                                                            <div className="text-xs text-gray-400 mt-1 pl-2"><MathView text={opt}/></div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
 
-                                        {/* Hướng dẫn chấm / Đáp án đúng */}
-                                        <div className="mt-3 border-t pt-3">
-                                            <label className="text-xs font-bold text-green-700 uppercase mb-1 block">
-                                                {q.meta.type === 'TL' ? 'HƯỚNG DẪN CHẤM & BIỂU ĐIỂM' : 'ĐÁP ÁN ĐÚNG'}
+                                        {/* Lời giải / Hướng dẫn chấm */}
+                                        <div className="mt-4 pt-4 border-t border-dashed border-gray-300">
+                                            <label className="text-xs font-bold text-green-700 uppercase mb-2 block flex items-center gap-1">
+                                                <i className="fas fa-check-double"></i> {q.meta.type === 'TL' ? 'Hướng dẫn chấm & Thang điểm' : 'Đáp án đúng & Lời giải nhanh'}
                                             </label>
                                             <textarea 
-                                                className="w-full p-2 border border-green-200 bg-green-50 rounded font-mono text-sm"
-                                                rows={q.meta.type==='TL'?4:1}
+                                                className="w-full p-3 border border-green-200 bg-green-50 rounded font-mono text-sm focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                                                rows={q.meta.type==='TL'?5:2}
                                                 value={q.c}
                                                 onChange={e=>{const n=[...questions];n[i].c=e.target.value;setQuestions(n)}}
                                             />
