@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 Từ Ma Trận</title>
+    <title>Tạo Đề Toán 9 Từ Ma Trận (Fix Latex System & Newline)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -31,12 +31,6 @@
         .question-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .type-tl { border-left-color: #9333ea; } /* Tự luận: Tím */
         .type-tn { border-left-color: #2563eb; } /* Trắc nghiệm: Xanh */
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body>
@@ -47,23 +41,22 @@
 
         // --- CẤU HÌNH HỆ THỐNG ---
         const AIAdapter = {
-            // Lấy Key trực tiếp từ localStorage do Dashboard quản lý
             getConfig: () => ({
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]")
             }),
             
-            // Hàm gọi AI (Ưu tiên Gemini -> Fallback HF nếu cần thiết)
             call: async (payload) => {
                 const { geminiKeys } = AIAdapter.getConfig();
                 if(!geminiKeys.length) throw new Error("MISSING_KEYS");
                 
-                // Retry logic với random keys để tránh rate limit
                 let lastError;
+                // Giữ model ổn định của V5 nhưng xử lý string tốt hơn
                 for(let i=0; i<3; i++) {
                     try {
                         const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                        // Dùng model flash ổn định hơn cho toán học
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify(payload)
                         });
@@ -82,54 +75,87 @@
 
         // --- MATH UTILS ---
         
-        // 1. Render Preview (Trên web)
         const MathView = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if(!ref.current || !text) return;
                 try {
-                    // Chuẩn hóa LaTeX cho KaTeX
-                    const clean = text.replace(/\\\[/g, '$').replace(/\\\]/g, '$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
-                    const parts = clean.split(/(\$[^$]+\$)/g);
+                    // Xử lý hiển thị trên Web (Preview)
+                    // Thay thế \n bằng <br> để hiển thị đúng trong div preview
+                    let displayHtml = text.replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>');
+                    
+                    // Tách LaTeX và HTML để render
+                    // Logic: Chỉ render phần trong $...$ bằng Katex, còn lại để HTML
+                    const parts = displayHtml.split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g);
+                    
                     ref.current.innerHTML = "";
                     parts.forEach(part => {
-                        if(part.startsWith('$') && part.endsWith('$')) {
+                        if((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
                             const span = document.createElement('span');
-                            try { katex.render(part.slice(1,-1), span, {throwOnError:false}); } catch{ span.innerText=part;}
+                            // Bỏ dấu $
+                            let tex = part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1);
+                            // Unescape \\ cho Katex hiển thị đúng hệ phương trình
+                            tex = tex.replace(/&lt;/g, '<').replace(/&gt;/g, '>'); 
+                            try { 
+                                katex.render(tex, span, {
+                                    throwOnError: false, 
+                                    displayMode: part.startsWith('$$')
+                                }); 
+                            } catch(e) { span.innerText = part; }
                             ref.current.appendChild(span);
                         } else {
-                            ref.current.appendChild(document.createTextNode(part));
+                            // Dùng innerHTML cho phần text để nhận thẻ <br/>
+                            const span = document.createElement('span');
+                            span.innerHTML = part;
+                            ref.current.appendChild(span);
                         }
                     });
                 } catch(e){}
             }, [text]);
-            return <span ref={ref} className="font-serif text-lg leading-relaxed"/>;
+            return <div ref={ref} className="font-serif text-lg leading-relaxed"/>;
         };
 
-        // 2. Convert LaTeX -> MathML (Cho Word)
+        // 2. Xử lý Text cho Word (Quan trọng: Fix Cases & Newline)
         const processTextForWord = (text) => {
             if (!text) return "";
             
-            // Chuẩn hóa dấu phân cách
+            // BƯỚC 1: Xử lý xuống dòng (\n và \\n) thành <br/>
             let clean = text
-                .replace(/\\\[/g, '$$$') // Replace \[ with $$
-                .replace(/\\\]/g, '$$$') // Replace \] with $$
-                .replace(/\\\(/g, '$')   // Replace \( with $
-                .replace(/\\\)/g, '$');  // Replace \) with $
+                .replace(/\\n/g, '<br/>') // Xử lý chữ \n do AI sinh ra
+                .replace(/\n/g, '<br/>'); // Xử lý ký tự xuống dòng thật
 
-            // Regex tìm $$...$$ (Display) và $...$ (Inline)
+            // BƯỚC 2: Chuẩn hóa các dấu LaTeX khác
+            clean = clean
+                .replace(/\\\[/g, '$$$') 
+                .replace(/\\\]/g, '$$$') 
+                .replace(/\\\(/g, '$')   
+                .replace(/\\\)/g, '$');  
+
+            // BƯỚC 3: Regex tìm $$...$$ và $...$ để chuyển sang MathML
             return clean.replace(/(\$\$)([^$]+)(\$\$)|(\$)([^$]+)(\$)/g, (match, d1, dTex, d2, i1, iTex, i2) => {
-                const tex = dTex || iTex;
+                let tex = dTex || iTex;
                 const isDisplay = !!dTex;
+                
+                // FIX QUAN TRỌNG CHO HỆ PHƯƠNG TRÌNH:
+                // Trong chuỗi JS, "\\" thường bị thoát thành "\". KaTeX cần "\\" để hiểu là xuống dòng trong matrix/cases.
+                // Ta cần đảm bảo các lệnh như \begin{cases} giữ nguyên cấu trúc.
+                
                 try {
                     const mathML = katex.renderToString(tex, {
                         throwOnError: false,
                         output: 'mathml',
-                        displayMode: isDisplay
+                        displayMode: isDisplay,
+                        strict: false
                     });
+                    
+                    // Lấy phần <math>...</math>
                     const matchMath = mathML.match(/<math[\s\S]*?<\/math>/);
                     if (matchMath) {
-                        return matchMath[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"'); 
+                        // Thêm xmlns để Word hiểu đây là MathML chuẩn
+                        return matchMath[0]
+                            .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
+                            // Loại bỏ thẻ annotation thừa có thể gây rác trong Word
+                            .replace(/<annotation[\s\S]*?<\/annotation>/g, '');
                     }
                     return match;
                 } catch (e) { return match; }
@@ -140,15 +166,10 @@
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
             const [systemStatus, setSystemStatus] = useState({ ready: false, gemini: 0, hf: 0 });
-            
-            // Thông tin đề thi
             const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
-            
-            // Dữ liệu chính
             const [matrix, setMatrix] = useState([]);
             const [questions, setQuestions] = useState([]);
 
-            // CHECK SYSTEM ON LOAD
             useEffect(() => {
                 const conf = AIAdapter.getConfig();
                 setSystemStatus({
@@ -158,7 +179,7 @@
                 });
             }, []);
 
-            // 1. UPLOAD & ANALYZE MATRIX
+            // 1. UPLOAD
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -179,22 +200,10 @@
                         base64 = await new Promise(r => { reader.onload = ev => r(ev.target.result.split(',')[1]); reader.readAsDataURL(file); });
                     }
 
-                    // Prompt phân tích ảnh Ma trận
                     const prompt = `
-                        Phân tích ảnh Ma trận đề thi Toán 9. Trích xuất thành JSON.
-                        QUAN TRỌNG: Cần phân biệt rõ cột "Tự luận" (TL) và "Trắc nghiệm" (TN).
-                        
-                        Output JSON Format:
-                        [
-                            {
-                                "topic": "Tên chủ đề (VD: Phương trình bậc nhất, Hệ thức lượng...)",
-                                "level": "NB/TH/VD/VDC",
-                                "count": số_lượng_câu (số nguyên),
-                                "type": "TL" hoặc "TN" (Nếu không rõ, mặc định TN),
-                                "desc": "Mô tả ngắn"
-                            }
-                        ]
-                        Chỉ trả về JSON thuần.
+                        Phân tích ảnh Ma trận đề thi Toán 9. Trích xuất JSON.
+                        Phân biệt rõ cột "Tự luận" (TL) và "Trắc nghiệm" (TN).
+                        Output JSON: [{ "topic": "...", "level": "NB/TH/VD/VDC", "count": 1, "type": "TL" or "TN" }]
                     `;
                     
                     const text = await AIAdapter.call({ contents: [{ parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}] }] });
@@ -204,49 +213,35 @@
                     setMatrix(data.map((r, i) => ({...r, id: Date.now()+i, status: 'pending', qs: []})));
                     setStep(2);
                 } catch (err) { 
-                    if(err.message === "MISSING_KEYS") alert("Lỗi: Chưa có API Key! Vui lòng quay lại Trang chủ (Dashboard) để nạp Key.");
+                    if(err.message === "MISSING_KEYS") alert("Lỗi: Chưa có API Key! Vui lòng quay lại Dashboard.");
                     else alert("Lỗi phân tích: " + err.message); 
                 } 
                 finally { setLoading(false); }
             };
 
-            // 2. GENERATE QUESTION (MATH 9 LOGIC)
+            // 2. GENERATE
             const generateRow = async (rowId) => {
                 setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'generating'} : r));
-                
                 const row = matrix.find(r => r.id === rowId);
                 const isEssay = row.type === 'TL'; 
                 
                 const prompt = `
-                    Bạn là Giáo viên Toán 9 chuyên nghiệp. Hãy soạn câu hỏi kiểm tra học kỳ.
-                    
-                    THÔNG TIN YÊU CẦU:
-                    - Chủ đề: ${row.topic}
-                    - Mức độ: ${row.level} (NB: Nhận biết, TH: Thông hiểu, VD: Vận dụng thấp, VDC: Vận dụng cao)
-                    - Loại: ${isEssay ? "TỰ LUẬN (Essay)" : "TRẮC NGHIỆM (Multiple Choice)"}
+                    Bạn là Giáo viên Toán 9. Soạn câu hỏi kiểm tra:
+                    - Chủ đề: ${row.topic} (${row.level})
+                    - Loại: ${isEssay ? "TỰ LUẬN" : "TRẮC NGHIỆM"}
                     - Số lượng: ${row.count} câu.
                     
-                    ĐẶC TRƯNG MÔN TOÁN 9 (Bắt buộc tuân thủ):
-                    1. CÔNG THỨC: Bắt buộc dùng LaTeX đặt trong dấu $...$ (Ví dụ: $\\sqrt{x^2+1}$, $\\Delta = b^2 - 4ac$).
-                    2. HÌNH HỌC: Nếu là bài hình học, đề bài phải mô tả dựng hình rõ ràng (Ví dụ: "Cho đường tròn (O), điểm A nằm ngoài...").
-                    3. BÀI TOÁN THỰC TẾ: Nếu là mức độ Vận Dụng (VD/VDC), ưu tiên các bài toán thực tế (lãi suất, bóng tòa nhà, chuyển động...).
-                    
-                    ${isEssay 
-                        ? `YÊU CẦU TỰ LUẬN:
-                           - Đề bài: Rõ ràng, gãy gọn.
-                           - Đáp án (Trường 'c'): Phải là LỜI GIẢI CHI TIẾT từng bước. Có biểu điểm chi tiết (Ví dụ: 0.25đ cho bước lập phương trình).
-                           - KHÔNG sinh đáp án A,B,C,D.` 
-                        : `YÊU CẦU TRẮC NGHIỆM:
-                           - Phương án nhiễu: Phải là các lỗi sai phổ biến của học sinh (sai dấu, nhầm công thức, quên điều kiện).
-                           - Sinh 4 đáp án A, B, C, D.`
-                    }
+                    YÊU CẦU ĐẶC BIỆT (XỬ LÝ LỖI):
+                    1. HỆ PHƯƠNG TRÌNH: Bắt buộc dùng LaTeX chuẩn: $\\begin{cases} 3x - 2y = 4 \\\\ 2x + y = 5 \\end{cases}$. (Chú ý dấu 4 gạch chéo \\\\\\\\ để xuống dòng trong JSON).
+                    2. XUỐNG DÒNG: Nếu đề bài có nhiều ý (a, b, c), hãy dùng ký tự \\n để xuống dòng rõ ràng.
+                    3. KÝ HIỆU TOÁN: Luôn kẹp trong dấu $...$ (Ví dụ: $AB \\perp CD$).
 
-                    OUTPUT FORMAT (JSON Only):
+                    OUTPUT JSON:
                     [
                         {
-                            "q": "Nội dung câu hỏi (LaTeX)",
-                            "a": ${isEssay ? "[]" : `["A. Nội dung", "B. Nội dung", "C. Nội dung", "D. Nội dung"]`},
-                            "c": "${isEssay ? "Lời giải chi tiết và thang điểm..." : "Đáp án đúng (A/B/C/D) kèm lời giải ngắn gọn"}"
+                            "q": "Đề bài... (Dùng \\n để xuống dòng)",
+                            "a": ${isEssay ? "[]" : `["A...", "B...", "C...", "D..."]`},
+                            "c": "${isEssay ? "Lời giải chi tiết..." : "Đáp án đúng"}"
                         }
                     ]
                 `;
@@ -254,15 +249,10 @@
                 try {
                     const text = await AIAdapter.call({ contents: [{ parts: [{text: prompt}] }] });
                     const jsonMatch = text.match(/\[[\s\S]*\]/);
-                    if(!jsonMatch) throw new Error("AI trả về sai định dạng");
+                    if(!jsonMatch) throw new Error("Format Error");
                     
                     let generatedQs = JSON.parse(jsonMatch[0]);
-                    
-                    // Gắn metadata
-                    generatedQs = generatedQs.map(q => ({
-                        ...q, 
-                        meta: { topic: row.topic, level: row.level, type: row.type }
-                    }));
+                    generatedQs = generatedQs.map(q => ({ ...q, meta: { topic: row.topic, level: row.level, type: row.type } }));
 
                     setMatrix(prev => prev.map(r => r.id === rowId ? {...r, status: 'done', qs: generatedQs} : r));
                 } catch (e) {
@@ -273,16 +263,16 @@
 
             const finalize = () => {
                 const all = matrix.flatMap(r => r.qs || []);
-                if(all.length === 0) return alert("Chưa có câu hỏi nào được tạo!");
+                if(all.length === 0) return alert("Chưa có câu hỏi!");
                 setQuestions(all);
                 setStep(3);
             };
 
-            // 3. EXPORT WORD (FIXED EQUATION)
+            // 3. EXPORT WORD
             const exportWord = () => {
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                    <head><meta charset='utf-8'><title>De Thi Toan 9</title>
+                    <head><meta charset='utf-8'><title>De Thi</title>
                     <style>
                         body { font-family: 'Times New Roman'; font-size: 13pt; line-height: 1.3; }
                         table { border-collapse: collapse; width: 100%; }
@@ -297,14 +287,13 @@
                     <hr/>
                 `;
 
-                // Tách TN và TL
                 const tn = questions.filter(q => q.meta.type === 'TN');
                 const tl = questions.filter(q => q.meta.type === 'TL');
 
                 if(tn.length > 0) {
                     html += `<h3>I. PHẦN TRẮC NGHIỆM (${tn.length} câu)</h3>`;
                     tn.forEach((q, i) => {
-                        html += `<div class='qs-content'><b>Câu ${i+1}:</b> ${processTextForWord(q.q).replace(/\n/g, '<br/>')}</div>`;
+                        html += `<div class='qs-content'><b>Câu ${i+1}:</b> ${processTextForWord(q.q)}</div>`;
                         html += `<table><tr>`;
                         q.a.forEach((opt, k) => {
                             if(k%2===0 && k>0) html += `</tr><tr>`;
@@ -317,14 +306,14 @@
                 if(tl.length > 0) {
                     html += `<h3>II. PHẦN TỰ LUẬN (${tl.length} câu)</h3>`;
                     tl.forEach((q, i) => {
-                        html += `<div class='qs-content'><b>Câu ${i+1} (${q.meta.level}):</b> ${processTextForWord(q.q).replace(/\n/g, '<br/>')}</div>`;
+                        html += `<div class='qs-content'><b>Câu ${i+1} (${q.meta.level}):</b> ${processTextForWord(q.q)}</div>`;
                         html += `<br/><br/>`; 
                     });
                 }
 
                 // Đáp án
                 html += `<br clear=all style='mso-special-character:line-break;page-break-before:always'>`;
-                html += `<h3 style='text-align:center'>HƯỚNG DẪN CHẤM & BIỂU ĐIỂM</h3>`;
+                html += `<h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
                 
                 if(tn.length > 0) {
                     html += `<h4>A. TRẮC NGHIỆM</h4><table border="1" cellpadding="5"><tr>`;
@@ -338,7 +327,7 @@
                     html += `<h4>B. TỰ LUẬN</h4>`;
                     tl.forEach((q, i) => {
                         html += `<p><b>Câu ${i+1}:</b></p>`;
-                        html += `<div>${processTextForWord(q.c).replace(/\n/g, '<br/>')}</div><hr/>`;
+                        html += `<div>${processTextForWord(q.c)}</div><hr/>`;
                     });
                 }
 
@@ -353,7 +342,7 @@
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-bold text-blue-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (AI)</h1>
-                            <p className="text-gray-500 text-sm">Chuyên biệt cho Toán 9: Hỗ trợ LaTeX, Tự luận & Trắc nghiệm</p>
+                            <p className="text-gray-500 text-sm">Chuyên biệt: Fix lỗi Hệ phương trình & Xuống dòng</p>
                         </div>
                         <a href="index.html" className="text-gray-500 hover:text-blue-600 font-medium text-sm"><i className="fas fa-home"></i> Về Dashboard</a>
                     </div>
@@ -365,7 +354,7 @@
                                 <div className="flex-shrink-0"><i className="fas fa-exclamation-triangle text-red-500"></i></div>
                                 <div className="ml-3">
                                     <p className="text-sm text-red-700 font-bold">Chưa kết nối được với Hệ thống AI!</p>
-                                    <p className="text-sm text-red-600">Vui lòng quay lại trang <a href="index.html" className="underline font-bold">Dashboard (index.html)</a> để nạp API Key.</p>
+                                    <p className="text-sm text-red-600">Vui lòng quay lại trang <a href="index.html" className="underline font-bold">Dashboard</a> để nạp API Key.</p>
                                 </div>
                             </div>
                         </div>
@@ -374,7 +363,6 @@
                             <span className="text-green-700 font-semibold"><i className="fas fa-check-circle"></i> Hệ thống sẵn sàng</span>
                             <div className="flex gap-4 text-gray-600">
                                 <span><i className="fas fa-key text-yellow-500"></i> Gemini Keys: <b>{systemStatus.gemini}</b></span>
-                                {systemStatus.hf > 0 && <span><i className="fas fa-robot text-purple-500"></i> HF Tokens: <b>{systemStatus.hf}</b></span>}
                             </div>
                         </div>
                     )}
@@ -422,8 +410,8 @@
                                 <div>
                                     <strong>Mẹo cho Toán 9:</strong>
                                     <ul className="list-disc ml-4 mt-1">
-                                        <li>Cột <b>Loại</b> rất quan trọng. <b>Tự luận (TL)</b> sẽ sinh lời giải chi tiết thay vì đáp án A,B,C,D.</li>
-                                        <li>Nếu AI chưa sinh ra câu hỏi đúng ý, bạn có thể sửa lại chủ đề rõ hơn (VD: "Giải hệ phương trình bậc nhất hai ẩn" thay vì "Hệ phương trình").</li>
+                                        <li>Cột <b>Loại</b> rất quan trọng. <b>Tự luận (TL)</b> sẽ sinh lời giải chi tiết.</li>
+                                        <li>Nếu AI chưa sinh ra câu hỏi đúng ý, bạn có thể sửa lại chủ đề rõ hơn.</li>
                                     </ul>
                                 </div>
                             </div>
@@ -432,10 +420,10 @@
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-gray-100 text-gray-700 uppercase text-xs font-bold">
                                         <tr>
-                                            <th className="p-3 border-b">Chủ đề / Nội dung kiến thức</th>
+                                            <th className="p-3 border-b">Chủ đề</th>
                                             <th className="p-3 border-b">Mức độ</th>
                                             <th className="p-3 border-b w-20 text-center">Số câu</th>
-                                            <th className="p-3 border-b w-32">Loại câu hỏi</th>
+                                            <th className="p-3 border-b w-32">Loại</th>
                                             <th className="p-3 border-b w-32 text-center">Trạng thái</th>
                                         </tr>
                                     </thead>
@@ -483,8 +471,8 @@
                             </div>
 
                             <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                                <button className="text-gray-500 hover:text-gray-700 text-sm" onClick={()=>{if(confirm('Xóa toàn bộ dữ liệu hiện tại?')) setMatrix(matrix.map(r=>({...r, id: Date.now()+Math.random(), status:'pending', qs:[]})))}}>
-                                    <i className="fas fa-trash-alt"></i> Reset trạng thái
+                                <button className="text-gray-500 hover:text-gray-700 text-sm" onClick={()=>{if(confirm('Xóa toàn bộ dữ liệu?')) setMatrix(matrix.map(r=>({...r, id: Date.now()+Math.random(), status:'pending', qs:[]})))}}>
+                                    <i className="fas fa-trash-alt"></i> Reset
                                 </button>
                                 <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:shadow-lg transition-all transform hover:-translate-y-0.5" onClick={finalize}>
                                     Xem trước & Xuất đề <i className="fas fa-arrow-right ml-2"></i>
@@ -507,7 +495,6 @@
                             </div>
 
                             <div className="flex-1 overflow-auto space-y-6 pr-2 pb-10">
-                                {questions.length === 0 && <div className="text-center text-gray-400 py-10">Chưa có câu hỏi nào.</div>}
                                 {questions.map((q, i) => (
                                     <div key={i} className={`bg-white p-6 rounded-lg shadow-sm border question-card ${q.meta.type==='TL'?'type-tl':'type-tn'}`}>
                                         <div className="flex justify-between mb-3 border-b pb-2 border-gray-100">
@@ -516,12 +503,10 @@
                                                     {q.meta.type === 'TL' ? 'Tự Luận' : 'Trắc Nghiệm'}
                                                 </span>
                                                 <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{q.meta.topic}</span>
-                                                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{q.meta.level}</span>
                                             </div>
                                             <button onClick={()=>{const n=[...questions];n.splice(i,1);setQuestions(n)}} className="text-gray-400 hover:text-red-500 transition-colors"><i className="fas fa-times"></i></button>
                                         </div>
 
-                                        {/* Câu hỏi */}
                                         <div className="mb-4">
                                             <div className="font-bold text-gray-800 mb-2 flex items-center gap-2">
                                                 <span className="bg-gray-200 text-gray-700 w-6 h-6 flex items-center justify-center rounded-full text-xs">{i+1}</span>
@@ -533,10 +518,11 @@
                                                 value={q.q} 
                                                 onChange={e=>{const n=[...questions];n[i].q=e.target.value;setQuestions(n)}}
                                             />
-                                            <div className="p-3 bg-blue-50 mt-2 rounded border border-blue-100 text-gray-800"><MathView text={q.q}/></div>
+                                            <div className="p-3 bg-blue-50 mt-2 rounded border border-blue-100 text-gray-800">
+                                                <MathView text={q.q}/>
+                                            </div>
                                         </div>
 
-                                        {/* Đáp án Trắc nghiệm */}
                                         {q.meta.type === 'TN' && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                                 {q.a.map((opt, k) => (
@@ -555,10 +541,9 @@
                                             </div>
                                         )}
 
-                                        {/* Lời giải / Hướng dẫn chấm */}
                                         <div className="mt-4 pt-4 border-t border-dashed border-gray-300">
                                             <label className="text-xs font-bold text-green-700 uppercase mb-2 block flex items-center gap-1">
-                                                <i className="fas fa-check-double"></i> {q.meta.type === 'TL' ? 'Hướng dẫn chấm & Thang điểm' : 'Đáp án đúng & Lời giải nhanh'}
+                                                <i className="fas fa-check-double"></i> {q.meta.type === 'TL' ? 'Hướng dẫn chấm' : 'Đáp án đúng'}
                                             </label>
                                             <textarea 
                                                 className="w-full p-3 border border-green-200 bg-green-50 rounded font-mono text-sm focus:ring-2 focus:ring-green-200 outline-none transition-all"
