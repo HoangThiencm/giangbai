@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V9.7 - Stable Context Aware)</title>
+    <title>Tạo Đề Toán 9 (V9.8 - Fix Hiển Thị Toán)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -34,7 +34,6 @@
         .status-done { background-color: #f0fdf4; border-left: 4px solid #22c55e; }
         .status-error { background-color: #fef2f2; border-left: 4px solid #ef4444; }
         .status-generating { background-color: #eff6ff; border-left: 4px solid #3b82f6; }
-        .status-pending { border-left: 4px solid #e5e7eb; }
     </style>
 </head>
 <body>
@@ -49,18 +48,15 @@
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
             }),
             
-            // Hàm gọi AI hỗ trợ đa ảnh (Dùng chung cho cả tạo Blueprint và tạo câu hỏi)
             callMultiImage: async (payloadParts) => {
                 const { geminiKeys } = AIAdapter.getConfig();
                 if(!geminiKeys.length) throw new Error("MISSING_KEYS");
                 
                 let lastError;
-                // Retry logic
                 for(let i=0; i<3; i++) {
                     try {
                         const key = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
-                        // Dùng model 1.5 Flash cho tốc độ và khả năng đọc ảnh tốt
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ contents: [{ parts: payloadParts }] })
                         });
@@ -80,42 +76,102 @@
             }
         };
 
-        // --- UTILS ---
-        const cleanContent = (text) => text?.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>') || "";
-
-        const processTextForWord = (text) => {
-            if (!text) return "";
-            let clean = cleanContent(text);
-            clean = clean.replace(/\\\[/g, '$$$').replace(/\\\]/g, '$$$').replace(/\\\(/g, '$').replace(/\\\)/g, '$');
-            return clean.replace(/(\$\$)([^$]+)(\$\$)|(\$)([^$]+)(\$)/g, (match, d1, dTex, d2, i1, iTex, i2) => {
-                let tex = (dTex || iTex).replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
-                try {
-                    const mathML = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: !!dTex, strict: false });
-                    const matchMath = mathML.match(/<math[\s\S]*?<\/math>/);
-                    return matchMath ? matchMath[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '') : match;
-                } catch (e) { return match; }
+        // --- UTILS (NEW & FIXED) ---
+        
+        // Hàm tách chuỗi thông minh: Tách LaTeX ra khỏi văn bản thường
+        // Trả về mảng các object: { type: 'text' | 'latex_inline' | 'latex_block', content: string }
+        const parseContent = (text) => {
+            if (!text) return [];
+            // Regex bắt $$...$$ hoặc $...$
+            const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+            const parts = text.split(regex);
+            
+            return parts.map(part => {
+                if (part.startsWith('$$') && part.endsWith('$$')) {
+                    return { type: 'latex_block', content: part.slice(2, -2) };
+                } else if (part.startsWith('$') && part.endsWith('$')) {
+                    return { type: 'latex_inline', content: part.slice(1, -1) };
+                } else {
+                    return { type: 'text', content: part };
+                }
             });
         };
 
+        // Hàm clean text chỉ áp dụng cho phần TEXT thường (không chạm vào LaTeX)
+        const formatTextPart = (text) => {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // Bold
+                .replace(/\\n/g, '<br/>')               // Newline encoded
+                .replace(/\n/g, '<br/>');               // Newline literal
+        };
+
+        // Hàm xử lý xuất Word (Logic tương tự: tách ra rồi mới xử lý)
+        const processTextForWord = (text) => {
+            if (!text) return "";
+            const parsed = parseContent(text);
+            
+            return parsed.map(p => {
+                if (p.type === 'text') {
+                    // Xử lý text thường cho Word
+                    return formatTextPart(p.content); 
+                } else {
+                    // Xử lý LaTeX sang MathML
+                    let tex = p.content;
+                    // Fix lỗi escape phổ biến
+                    tex = tex.replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
+                    
+                    try {
+                        const mathML = katex.renderToString(tex, { 
+                            throwOnError: false, 
+                            output: 'mathml', 
+                            displayMode: p.type === 'latex_block', 
+                            strict: false 
+                        });
+                        const matchMath = mathML.match(/<math[\s\S]*?<\/math>/);
+                        if (matchMath) {
+                            return matchMath[0]
+                                .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
+                                .replace(/<annotation[\s\S]*?<\/annotation>/g, '');
+                        }
+                        return tex; // Fallback
+                    } catch (e) { return tex; }
+                }
+            }).join('');
+        };
+
+        // Component hiển thị (Preview) - Đã fix lỗi render
         const MathView = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if(!ref.current || !text) return;
-                try {
-                    let htmlContent = cleanContent(text);
-                    const parts = htmlContent.split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g);
-                    ref.current.innerHTML = "";
-                    parts.forEach(part => {
-                        if((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
-                            const span = document.createElement('span');
-                            let tex = (part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1)).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
-                            try { katex.render(tex, span, { throwOnError: false, displayMode: part.startsWith('$$'), strict: false }); } catch(e) { span.innerText = part; }
-                            ref.current.appendChild(span);
-                        } else {
-                            const span = document.createElement('span'); span.innerHTML = part; ref.current.appendChild(span);
+                
+                const parsed = parseContent(text);
+                ref.current.innerHTML = ""; // Clear cũ
+
+                parsed.forEach(p => {
+                    if (p.type === 'text') {
+                        const span = document.createElement('span');
+                        span.innerHTML = formatTextPart(p.content);
+                        ref.current.appendChild(span);
+                    } else {
+                        const span = p.type === 'latex_block' ? document.createElement('div') : document.createElement('span');
+                        let tex = p.content;
+                        // Fix ký tự đặc biệt do HTML encode
+                        tex = tex.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+                                 .replace(/frac/g, '\\frac').replace(/\\\\frac/g, '\\frac');
+                        
+                        try {
+                            katex.render(tex, span, { 
+                                throwOnError: false, 
+                                displayMode: p.type === 'latex_block',
+                                strict: false
+                            });
+                        } catch(e) { 
+                            span.innerText = `$${tex}$`; // Fallback nếu lỗi
                         }
-                    });
-                } catch(e){}
+                        ref.current.appendChild(span);
+                    }
+                });
             }, [text]);
             return <div ref={ref} className="font-serif text-sm leading-relaxed text-gray-800"/>;
         };
@@ -128,7 +184,7 @@
             const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
             const [keysReady, setKeysReady] = useState(false);
             
-            const [images, setImages] = useState([]); // Lưu ảnh để dùng lại khi sinh từng câu
+            const [images, setImages] = useState([]);
             const [blueprint, setBlueprint] = useState(null);
 
             useEffect(() => {
@@ -140,7 +196,6 @@
             const updateQ = (sIdx, qIdx, field, val) => {
                 const n = {...blueprint}; n.sections[sIdx].questions[qIdx][field] = val; setBlueprint(n);
             };
-            
             const addQ = (sIdx) => {
                 const n = {...blueprint};
                 n.sections[sIdx].questions.push({ 
@@ -149,7 +204,6 @@
                 });
                 setBlueprint(n);
             };
-
             const removeQ = (sIdx, qIdx) => {
                 if(confirm("Xóa dòng này?")) {
                     const n = {...blueprint}; n.sections[sIdx].questions.splice(qIdx, 1); setBlueprint(n);
@@ -172,16 +226,10 @@
                         await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
                         imgs.push(cvs.toDataURL('image/jpeg').split(',')[1]);
                     }
-                    setImages(imgs); // Lưu lại ảnh để dùng cho bước sau
+                    setImages(imgs);
 
                     const prompt = `
                         Phân tích ảnh Ma trận đề thi Toán 9. Trích xuất JSON cấu trúc.
-                        QUAN TRỌNG:
-                        1. Quét TOÀN BỘ các dòng. Không bỏ sót.
-                        2. Cột "Nhóm" (Group): Nếu có "Bài 1", "Bài 2"... hãy trích xuất để gộp câu.
-                        3. Cột "Mã": C1, C2...
-                        4. Loại câu (Type): "TN" (Trắc nghiệm), "TL" (Tự luận), "TF" (Đúng/Sai).
-                        
                         OUTPUT JSON:
                         {
                             "exam_type": "TN+TL",
@@ -199,7 +247,6 @@
                     const res = await AIAdapter.callMultiImage([{text: prompt}, ...imgs.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))]);
                     const json = JSON.parse(res.match(/\{[\s\S]*\}/)[0]);
                     
-                    // Init status & content fields
                     json.sections.forEach(s => s.questions.forEach(q => {
                         q.status = 'pending'; q.q = ""; q.a = []; q.c = "";
                     }));
@@ -209,7 +256,7 @@
                 } catch(e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
             };
 
-            // 2. GENERATE SINGLE QUESTION (FIXED: Gửi kèm ảnh để AI không nói tào lao)
+            // 2. GENERATE SINGLE
             const generateSingle = async (sIdx, qIdx) => {
                 const qData = blueprint.sections[sIdx].questions[qIdx];
                 updateQ(sIdx, qIdx, 'status', 'generating');
@@ -217,48 +264,29 @@
                 try {
                     const prompt = `
                         Bạn là Giáo viên Toán 9. Hãy soạn nội dung cho câu hỏi này dựa trên ảnh Ma trận/Đặc tả đã cung cấp:
-                        
                         THÔNG TIN CÂU HỎI:
-                        - Mã: ${qData.code}
-                        - Chủ đề: ${qData.topic}
-                        - Mức độ: ${qData.level}
-                        - Loại: ${qData.type} (TN=Trắc nghiệm 4 đáp án, TL=Tự luận, TF=Đúng/Sai)
-                        - Đặc tả chi tiết: ${qData.spec}
-                        ${qData.group ? `- Thuộc nhóm bài: "${qData.group}" (Hãy soạn nội dung phù hợp ngữ cảnh nhóm này)` : ""}
+                        - Mã: ${qData.code} | Chủ đề: ${qData.topic} | Mức độ: ${qData.level} | Loại: ${qData.type}
+                        - Đặc tả: ${qData.spec}
+                        ${qData.group ? `- Nhóm: "${qData.group}"` : ""}
 
-                        YÊU CẦU ĐẦU RA (JSON):
+                        YÊU CẦU:
                         1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
-                        2. Nội dung:
-                           - Nếu TN: Câu hỏi + 4 đáp án A,B,C,D.
-                           - Nếu TF: Câu hỏi + 4 ý a,b,c,d để xét đúng sai.
-                           - Nếu TL: Câu hỏi tự luận chuẩn mực.
-                        3. Đáp án (Bắt buộc):
-                           - TN: Đáp án đúng (VD: "A").
-                           - TF: Đáp án từng ý (VD: "a-Đ, b-S, c-Đ, d-S").
-                           - TL: Lời giải chi tiết, có thang điểm.
+                        2. Nội dung: TN (4 đáp án), TF (4 ý a,b,c,d), TL (Tự luận).
+                        3. Đáp án: Có lời giải chi tiết.
 
                         JSON Output: { 
-                            "q": "Nội dung câu hỏi...", 
-                            "a": ["A...","B...","C...","D..."] (nếu TN/TF, ngược lại []), 
-                            "c": "Lời giải chi tiết / Đáp án" 
+                            "q": "Nội dung...", 
+                            "a": ["A...","B...","C...","D..."] (nếu TN/TF, còn lại []), 
+                            "c": "Đáp án/Lời giải" 
                         }
                     `;
                     
-                    // GỬI KÈM ẢNH ĐỂ AI CÓ NGỮ CẢNH CHÍNH XÁC
-                    const payloadParts = [{ text: prompt }, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))];
+                    const res = await AIAdapter.callMultiImage([{ text: prompt }, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))]);
+                    const json = JSON.parse(res.match(/\{[\s\S]*\}/)[0]);
                     
-                    const res = await AIAdapter.callMultiImage(payloadParts);
-                    const jsonMatch = res.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) throw new Error("AI không trả về JSON");
-                    const json = JSON.parse(jsonMatch[0]);
-                    
-                    if (!json.c) json.c = "AI chưa sinh đáp án.";
-
                     const newBp = {...blueprint};
                     const target = newBp.sections[sIdx].questions[qIdx];
-                    target.q = json.q;
-                    target.a = json.a || [];
-                    target.c = json.c;
+                    target.q = json.q; target.a = json.a || []; target.c = json.c || "Chưa có lời giải";
                     target.status = 'done';
                     setBlueprint(newBp);
                 } catch(e) {
@@ -268,12 +296,11 @@
             };
 
             const generateAll = async () => {
-                if(!confirm("Sinh toàn bộ các câu chưa có nội dung?")) return;
+                if(!confirm("Sinh toàn bộ?")) return;
                 for(let s=0; s<blueprint.sections.length; s++) {
                     for(let q=0; q<blueprint.sections[s].questions.length; q++) {
                         if(blueprint.sections[s].questions[q].status !== 'done') {
                             await generateSingle(s, q);
-                            // Delay nhẹ để tránh rate limit nếu dùng key free
                             await new Promise(r => setTimeout(r, 1500)); 
                         }
                     }
@@ -316,7 +343,7 @@
                     html += `<h4>${sec.name}</h4>`;
                     const isTN = sec.questions.some(q => q.type === 'TN' || q.type === 'TF');
                     if(isTN) {
-                        sec.questions.filter(q=>q.type==='TN' || q.type==='TF').forEach(q => {
+                        sec.questions.filter(q=>q.type==='TN'||q.type==='TF').forEach(q => {
                              html += `<p><b>${q.code}:</b> ${processTextForWord(q.c)}</p>`;
                         });
                     }
@@ -330,7 +357,7 @@
             return (
                 <div className="max-w-[95%] mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">HỆ THỐNG RA ĐỀ TOÁN 9 (V9.7)</h1><p className="text-gray-500 text-sm">V9.7: Stable + Context Aware (Gửi kèm ảnh khi sinh từng câu)</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">HỆ THỐNG RA ĐỀ TOÁN 9 (V9.8)</h1><p className="text-gray-500 text-sm">V9.8: Fix Lỗi Hiển Thị Toán (Tách biệt xử lý LaTeX & Text)</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 font-medium text-sm"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
