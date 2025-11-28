@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V9.3 - Fix Nhận Diện Mã & Nhóm)</title>
+    <title>Tạo Đề Toán 9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -144,12 +144,14 @@
 
             const addQuestion = (sectionIdx) => {
                 const newBp = {...blueprint};
+                // Tạo câu mới với mã tự tăng
+                const nextCode = `Câu ${newBp.sections[sectionIdx].questions.length + 1}`;
                 newBp.sections[sectionIdx].questions.push({
-                    code: `Câu ${newBp.sections[sectionIdx].questions.length + 1}`,
+                    code: nextCode,
                     group: "",
                     topic: "Chủ đề mới...",
                     level: "TH",
-                    type: "TN",
+                    type: "TN", // Mặc định TN
                     score: 0.25,
                     spec: "..."
                 });
@@ -184,31 +186,31 @@
                         images.push(cvs.toDataURL('image/jpeg').split(',')[1]);
                     }
 
-                    // --- PROMPT QUAN TRỌNG ĐÃ ĐƯỢC SỬA ---
                     const parts = [
                         { text: `
                             Bạn là chuyên gia khảo thí. Hãy phân tích cấu trúc đề thi từ các ảnh Ma trận/Đặc tả này.
                             
-                            NHIỆM VỤ: Trích xuất JSON cấu trúc đề thi.
+                            NHIỆM VỤ QUAN TRỌNG (FIX LỖI NHẬN DIỆN THIẾU):
+                            1. Quét TOÀN BỘ các dòng trong bảng. Đừng bỏ sót dòng nào.
+                            2. Nếu bảng có các dòng con (ví dụ C1a, C1b...), hãy tách riêng thành từng câu hỏi trong JSON.
+                            3. Phân biệt Loại câu hỏi (Type):
+                               - "TN": Trắc nghiệm 4 lựa chọn (A,B,C,D).
+                               - "TF": Trắc nghiệm Đúng/Sai (True/False).
+                               - "TL": Tự luận.
                             
-                            ĐẶC BIỆT CHÚ Ý CỘT "MÃ" VÀ "NHÓM":
-                            - Nếu thấy cột "Mã" (VD: C1, C1a, C2b...), hãy đưa vào trường "code".
-                            - Nếu thấy cột "Nhóm" (VD: Bài 1, Bài 2...), hãy đưa vào trường "group".
-                            - Đây là thông tin quan trọng để nhóm các câu hỏi tự luận.
-
                             OUTPUT JSON:
                             {
                                 "exam_type": "TN+TL" hoặc "TL",
                                 "sections": [
                                     {
-                                        "id": "I", "name": "PHẦN TRẮC NGHIỆM (hoặc TỰ LUẬN)", "score": 3.0,
+                                        "id": "I", "name": "PHẦN TRẮC NGHIỆM", "score": 3.0,
                                         "questions": [
                                             { 
-                                              "code": "C1a",       // Mã câu (QUAN TRỌNG)
-                                              "group": "Bài 1",    // Nhóm bài (QUAN TRỌNG)
+                                              "code": "C1a",       
+                                              "group": "Bài 1",    // Nhóm (QUAN TRỌNG ĐỂ GỘP CÂU)
                                               "topic": "...", 
                                               "level": "NB", 
-                                              "type": "TL",        // TN hoặc TL
+                                              "type": "TL",        // TN, TF, hoặc TL
                                               "score": 1.0, 
                                               "spec": "..." 
                                             }
@@ -222,8 +224,22 @@
 
                     const jsonText = await AIAdapter.callMultiImage(parts);
                     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-                    if(!jsonMatch) throw new Error("Lỗi JSON");
-                    setBlueprint(JSON.parse(jsonMatch[0]));
+                    
+                    if(!jsonMatch) {
+                        // FALLBACK: Nếu AI không trả về JSON, tạo JSON rỗng để người dùng tự nhập
+                        alert("AI không tìm thấy cấu trúc bảng rõ ràng. Hệ thống sẽ tạo bảng trắng để bạn nhập liệu.");
+                        setBlueprint({
+                            exam_type: "TL",
+                            sections: [{ id: "I", name: "PHẦN 1", score: 10, questions: [] }]
+                        });
+                    } else {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        // Kiểm tra nếu rỗng thì cảnh báo
+                        if (!parsed.sections || parsed.sections.length === 0 || parsed.sections[0].questions.length === 0) {
+                            alert("Cảnh báo: AI nhận diện được rất ít câu hỏi. Vui lòng kiểm tra và dùng nút 'Thêm câu hỏi' để bổ sung.");
+                        }
+                        setBlueprint(parsed);
+                    }
                     setStep(2);
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
             };
@@ -232,20 +248,22 @@
             const generateExamContent = async () => {
                 if(!blueprint) return;
                 setLoading(true);
-                setLoadingText("Đang biên soạn đề thi từ cấu trúc đã chỉnh sửa...");
+                setLoadingText("Đang biên soạn từng câu hỏi (Mất khoảng 30-60s)...");
 
                 try {
                     const prompt = `
                         Giáo viên Toán 9, soạn đề dựa trên cấu trúc JSON sau:
                         ${JSON.stringify(blueprint)}
 
-                        QUY TẮC:
-                        1. Toán học: Dùng LaTeX $...$. Hệ phương trình dùng \\begin{cases} ... \\\\ ... \\end{cases} (nhớ escape \\\\\\\\).
-                        2. Cấu trúc: 
-                           - Type "TN": Câu hỏi + 4 đáp án A,B,C,D.
-                           - Type "TL": Câu hỏi tự luận.
-                           - Nhóm "Bài 1": Các câu có cùng group nên có ngữ cảnh liên quan (nếu cần).
-                        3. Đáp án: Lời giải chi tiết cho TL, đáp án đúng cho TN.
+                        QUY TẮC SOẠN THẢO (STRICT):
+                        1. Sinh câu hỏi CHO TỪNG DÒNG trong blueprint. Không được bỏ sót/gộp bừa.
+                        2. Định dạng Type:
+                           - "TN": Sinh câu hỏi + 4 đáp án A,B,C,D.
+                           - "TF": Sinh câu hỏi dạng Đúng/Sai (thường có 4 ý nhỏ a,b,c,d để check Đ/S).
+                           - "TL": Sinh câu hỏi tự luận.
+                        3. Nhóm câu (Group): 
+                           - Nếu các câu có cùng "group" (VD: Bài 1), hãy đặt nội dung liên quan nhau hoặc là các ý nhỏ a,b,c của một bài toán lớn.
+                        4. Toán học: Dùng LaTeX $...$.
 
                         OUTPUT JSON:
                         {
@@ -280,32 +298,48 @@
                 examData.exam_content.forEach((sec, idx) => {
                     const bpSection = blueprint.sections[idx] || { name: `PHẦN ${sec.section_id}` };
                     html += `<div style='font-weight:bold;margin-top:15px;margin-bottom:10px'>${bpSection.name}</div>`;
+                    
+                    // Logic nhóm câu (Group)
+                    let currentGroup = null;
+                    
                     sec.questions.forEach(q => {
-                        const label = q.group_label ? `<b>${q.group_label}</b> (${q.id})` : `<b>Câu ${q.id}:</b>`;
-                        html += `<div style='margin-bottom:10px;text-align:justify'>${label} ${processTextForWord(q.q)}</div>`;
+                        // Nếu câu này thuộc một nhóm mới -> In tiêu đề nhóm
+                        if (q.group_label && q.group_label !== currentGroup) {
+                            html += `<p><b>${q.group_label}:</b></p>`;
+                            currentGroup = q.group_label;
+                        } else if (!q.group_label) {
+                            currentGroup = null; // Reset nếu không có nhóm
+                        }
+
+                        // Label câu: Nếu đang trong nhóm thì dùng a), b)... Nếu không thì dùng Câu 1, Câu 2...
+                        // Tuy nhiên, để an toàn, ta vẫn dùng label từ dữ liệu hoặc ID
+                        const label = currentGroup ? `<b>${q.id})</b>` : `<b>Câu ${q.id}:</b>`;
+                        
+                        html += `<div style='margin-bottom:10px;text-align:justify;margin-left:${currentGroup ? '20px' : '0'}'>${label} ${processTextForWord(q.q)}</div>`;
+                        
                         if(q.a && q.a.length > 0) {
-                            html += `<table><tr>`;
+                            // Trắc nghiệm
+                            html += `<table style='margin-left:${currentGroup ? '20px' : '0'}'><tr>`;
                             q.a.forEach((opt, k) => html += `<td width="50%"><b>${String.fromCharCode(65+k)}.</b> ${processTextForWord(opt)}</td>${k%2!==0?'</tr><tr>':''}`);
                             html += `</tr></table><br/>`;
-                        } else { html += `<br/>`; }
+                        } else { 
+                            html += `<br/>`; // Tự luận
+                        }
                     });
                 });
 
                 html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
+                
                 examData.exam_content.forEach((sec, idx) => {
                     const bpSection = blueprint.sections[idx];
                     html += `<h4>${bpSection.name}</h4>`;
-                    const isTNSection = sec.questions.some(q => q.a && q.a.length > 0);
-                    if(isTNSection) {
-                        html += `<table border="1" cellpadding="5" style="text-align:center"><tr>`;
-                        sec.questions.forEach(q => html += `<td>${q.id}</td>`);
-                        html += `</tr><tr>`;
-                        sec.questions.forEach(q => html += `<td><b>${processTextForWord(q.c)}</b></td>`);
-                        html += `</tr></table><br/>`;
-                    } else {
-                        sec.questions.forEach(q => { html += `<p><b>${q.group_label||'Câu'} ${q.id}:</b></p><div>${processTextForWord(q.c)}</div><hr/>`; });
-                    }
+                    
+                    sec.questions.forEach(q => {
+                        html += `<p><b>${q.group_label ? q.group_label + " - " : ""}Câu ${q.id}:</b></p>`;
+                        html += `<div>${processTextForWord(q.c)}</div><hr/>`; 
+                    });
                 });
+                
                 html += `</body></html>`;
                 saveAs(new Blob(['\ufeff', html], {type: 'application/msword'}), `De_Thi_Toan_9.doc`);
             };
@@ -313,7 +347,7 @@
             return (
                 <div className="max-w-7xl mx-auto p-6 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">HỆ THỐNG RA ĐỀ TOÁN 9 (V9.3)</h1><p className="text-gray-500 text-sm">V9.3: Fix Nhận Diện Mã/Nhóm + Full Edit + Format chuẩn</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">HỆ THỐNG RA ĐỀ TOÁN 9 (V9.4)</h1><p className="text-gray-500 text-sm">V9.4: Hỗ trợ Đúng/Sai + Nhóm Bài (a,b,c) + Fix lỗi nhận diện thiếu</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 font-medium text-sm"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
@@ -340,6 +374,15 @@
                                 <h2 className="text-xl font-bold text-gray-800">2. Chỉnh sửa Ma trận đề (Blueprint)</h2>
                                 <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm font-bold">{blueprint.exam_type}</span>
                             </div>
+                            
+                            <div className="bg-yellow-50 p-3 mb-4 rounded border border-yellow-200 text-sm flex gap-2">
+                                <i className="fas fa-info-circle mt-1 text-yellow-600"></i>
+                                <div>
+                                    <p><b>Mẹo:</b> Kiểm tra kỹ cột <b>Nhóm</b>. Các câu cùng nhóm (VD: "Bài 1") sẽ được gộp chung khi in đề.</p>
+                                    <p>Nếu thấy thiếu câu, hãy bấm <b>"Thêm câu hỏi"</b> ở cuối mỗi phần.</p>
+                                </div>
+                            </div>
+
                             <div className="overflow-auto max-h-[65vh] border rounded-lg mb-6 bg-slate-50">
                                 {blueprint.sections.map((sec, secIdx) => (
                                     <div key={secIdx} className="p-4 border-b last:border-0">
@@ -355,7 +398,7 @@
                                                 {sec.questions.map((q, qIdx) => (
                                                     <tr key={qIdx} className="hover:bg-gray-50">
                                                         <td className="p-2"><input className="w-full border rounded p-1 font-bold text-indigo-700" value={q.code} onChange={e=>updateQuestion(secIdx, qIdx, 'code', e.target.value)}/></td>
-                                                        <td className="p-2"><input className="w-full border rounded p-1 font-semibold" value={q.group||''} onChange={e=>updateQuestion(secIdx, qIdx, 'group', e.target.value)}/></td>
+                                                        <td className="p-2"><input className="w-full border rounded p-1 font-semibold bg-yellow-50" placeholder="VD: Bài 1" value={q.group||''} onChange={e=>updateQuestion(secIdx, qIdx, 'group', e.target.value)}/></td>
                                                         <td className="p-2"><textarea className="w-full border rounded p-1 h-16 resize-none" value={q.topic} onChange={e=>updateQuestion(secIdx, qIdx, 'topic', e.target.value)}/></td>
                                                         <td className="p-2"><textarea className="w-full border rounded p-1 h-16 resize-none text-xs" value={q.spec} onChange={e=>updateQuestion(secIdx, qIdx, 'spec', e.target.value)}/></td>
                                                         <td className="p-2">
@@ -364,8 +407,10 @@
                                                             </select>
                                                         </td>
                                                         <td className="p-2">
-                                                            <select className={`w-full border rounded p-1 font-bold ${q.type==='TL'?'text-purple-600 bg-purple-50':'text-blue-600 bg-blue-50'}`} value={q.type} onChange={e=>updateQuestion(secIdx, qIdx, 'type', e.target.value)}>
-                                                                <option value="TN">TN</option><option value="TL">TL</option>
+                                                            <select className={`w-full border rounded p-1 font-bold ${q.type==='TL'?'text-purple-600 bg-purple-50': (q.type==='TN'?'text-blue-600 bg-blue-50':'text-orange-600 bg-orange-50')}`} value={q.type} onChange={e=>updateQuestion(secIdx, qIdx, 'type', e.target.value)}>
+                                                                <option value="TN">TN (4)</option>
+                                                                <option value="TF">Đ/S</option>
+                                                                <option value="TL">Tự luận</option>
                                                             </select>
                                                         </td>
                                                         <td className="p-2"><input type="number" className="w-full border rounded p-1 text-center" value={q.score} onChange={e=>updateQuestion(secIdx, qIdx, 'score', e.target.value)}/></td>
@@ -401,7 +446,13 @@
                                         <div className="space-y-6">
                                             {sec.questions.map((q, qIdx) => (
                                                 <div key={qIdx} className="bg-slate-50 p-4 rounded-lg border hover:border-indigo-300 transition">
-                                                    <div className="mb-2"><span className="font-bold text-indigo-800 mr-2">{q.group_label ? q.group_label : `Câu ${q.id}`}:</span><div className="inline-block"><MathView text={q.q} /></div></div>
+                                                    {/* Hiển thị Nhóm nếu có */}
+                                                    {q.group_label && <div className="mb-2 text-indigo-700 font-bold border-b border-indigo-100 pb-1">{q.group_label}</div>}
+                                                    
+                                                    <div className="mb-2">
+                                                        <span className="font-bold text-indigo-800 mr-2">{q.group_label ? `(${q.id})` : `Câu ${q.id}:`}</span>
+                                                        <div className="inline-block"><MathView text={q.q} /></div>
+                                                    </div>
                                                     {q.a && q.a.length > 0 && <div className="grid grid-cols-2 gap-4 ml-4 mt-2">{q.a.map((opt, k) => <div key={k} className="flex gap-2"><span className="font-bold text-gray-600">{String.fromCharCode(65+k)}.</span><MathView text={opt} /></div>)}</div>}
                                                     <div className="mt-4 pt-3 border-t border-slate-200"><p className="text-xs font-bold text-green-700 uppercase mb-1">Hướng dẫn chấm:</p><div className="text-sm text-gray-700 font-mono bg-white p-2 rounded border"><MathView text={q.c} /></div></div>
                                                 </div>
