@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V17 - Final Word Layout)</title>
+    <title>Tạo Đề Toán 9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -31,7 +31,7 @@
         const { useState, useEffect, useRef } = React;
 
         // ==========================================
-        // 1. LOGIC XỬ LÝ TEXT (Pipeline V15 +)
+        // 1. LOGIC XỬ LÝ TEXT
         // ==========================================
         const normalizeRichText = (raw) => {
             if (!raw) return "";
@@ -47,8 +47,28 @@
                 else return { type: 'text', content: part };
             }).filter(token => token.content !== "");
         };
+        
         const renderToWeb = (tokens) => tokens.map(t => t.type==='math' ? (()=>{try{return katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'html'});}catch(e){return `<span class="text-red-500 text-xs">${t.content}</span>`;}})() : t.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\\\\/g,'<br/>').replace(/\\n/g,'<br/>').replace(/\n/g,'<br/>')).join('');
-        const renderToWord = (tokens) => tokens.map(t => t.type==='math' ? (()=>{try{const m=katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'mathml',strict:false}).match(/<math[\s\S]*?<\/math>/);if(m)return m[0].replace(/<math/g,'<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g,'');}catch(e){}return t.content.replace(/\$/g,'');})() : t.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\\\\/g,'<br/>').replace(/\\n/g,'<br/>').replace(/\n/g,'<br/>')).join('');
+        
+        // --- CẬP NHẬT: Xử lý \textbf và \textit cho Word ---
+        const renderToWord = (tokens) => tokens.map(t => 
+            t.type==='math' 
+            ? (()=>{
+                try{
+                    const m=katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'mathml',strict:false}).match(/<math[\s\S]*?<\/math>/);
+                    if(m) return m[0].replace(/<math/g,'<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g,'');
+                }catch(e){}
+                return t.content.replace(/\$/g,'');
+            })() 
+            : t.content
+                .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>') // Chuyển \textbf{} thành bold
+                .replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>') // Chuyển \textit{} thành italic
+                .replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>')   // Chuyển \emph{} thành italic
+                .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')
+                .replace(/\\\\/g,'<br/>')
+                .replace(/\\n/g,'<br/>')
+                .replace(/\n/g,'<br/>')
+        ).join('');
 
         const MathRender = ({ text }) => {
             const ref = useRef();
@@ -65,7 +85,6 @@
             return parseFloat(total.toFixed(2));
         };
 
-        // Hàm đoán kiểu đề
         const inferDefaultQuestionType = (bp, durationStr = "90") => {
             const allText = JSON.stringify(bp).toUpperCase();
             if (allText.includes("TRẮC NGHIỆM")) return "TN";
@@ -88,22 +107,18 @@
             return defaultType;
         };
 
-        // --- HÀM MỚI: Parse mã câu hỏi (C1.1 -> 1, 1) ---
         const parseQuestionCode = (code) => {
-            // Regex tìm C1.1, Câu 1.1, hoặc 1.1
             const match = code.match(/.*?(\d+)[.\-_](\d+)/); 
             if (match) return { main: match[1], sub: match[2] };
-            // Nếu chỉ là số (C1, Câu 1)
             const matchSingle = code.match(/.*?(\d+)/);
             if (matchSingle) return { main: matchSingle[1], sub: null };
-            return { main: code, sub: null }; // Fallback
+            return { main: code, sub: null };
         };
 
-        // Helper chuyển số thành chữ cái (1->a, 2->b)
-        const toChar = (num) => String.fromCharCode(96 + parseInt(num)); // 97 = 'a'
+        const toChar = (num) => String.fromCharCode(96 + parseInt(num)); 
 
         // ==========================================
-        // 2. AI ADAPTER
+        // 2. AI ADAPTER (Tối ưu tốc độ)
         // ==========================================
         const AIAdapter = {
             getConfig: () => ({ geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"), hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"), geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash', hfModel: 'Qwen/Qwen2.5-Math-7B-Instruct' }),
@@ -125,14 +140,31 @@
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
                 const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học. Trả về JSON thuần.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
-                for(let i=0; i<3; i++) {
+                
+                // CẬP NHẬT: Giảm retry xuống 2 và max_new_tokens xuống 1024
+                for(let i=0; i<2; i++) {
                     try {
-                        const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 2048, temperature: 0.5, return_full_text: false } }) });
-                        if(!res.ok) { if (res.status === 503) { await new Promise(r => setTimeout(r, 8000)); continue; } throw new Error(`HF Error ${res.status}`); }
+                        const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, { 
+                            method: 'POST', 
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ 
+                                inputs: formattedPrompt, 
+                                parameters: { 
+                                    max_new_tokens: 1024, // Tối ưu tốc độ
+                                    temperature: 0.5, 
+                                    return_full_text: false 
+                                } 
+                            }) 
+                        });
+                        
+                        if(!res.ok) { 
+                            if (res.status === 503) { await new Promise(r => setTimeout(r, 8000)); continue; } 
+                            throw new Error(`HF Error ${res.status}`); 
+                        }
                         const data = await res.json();
                         if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
                         throw new Error("HF invalid response");
-                    } catch(e) { await new Promise(r => setTimeout(r, 2000)); }
+                    } catch(e) { await new Promise(r => setTimeout(r, 1500)); }
                 }
                 throw new Error("HF API Failed");
             }
@@ -237,7 +269,7 @@
                     const finalBp = {...blueprint};
                     const target = finalBp.sections[sIdx].questions[qIdx];
                     target.q = json.q; target.a = json.a || []; target.c = json.c || ""; 
-                    target.correct_char = json.correct_char || ""; // Lưu đáp án đúng
+                    target.correct_char = json.correct_char || ""; 
                     target.status = 'done'; target.source = usedSource;
                     setBlueprint(finalBp);
                 } catch(e) { const errBp = {...blueprint}; errBp.sections[sIdx].questions[qIdx].status = 'error'; errBp.sections[sIdx].questions[qIdx].source = "ERR"; setBlueprint(errBp); }
@@ -257,11 +289,18 @@
 
             // --- EXPORT WORD (THIẾT KẾ ĐỀ THI HOÀN CHỈNH) ---
             const exportWord = () => {
+                // CẬP NHẬT CSS: Margin và Page Size
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
                     <head><meta charset='utf-8'><title>De Thi</title>
                     <style>
-                        body{font-family:'Times New Roman';font-size:13pt;line-height:1.3;margin:2cm 2.5cm} 
+                        @page {
+                            size: 21cm 29.7cm; /* A4 */
+                            /* Margin: Top Right Bottom Left */
+                            margin: 1.5cm 1.5cm 1.5cm 2.5cm; 
+                            mso-page-orientation: portrait;
+                        }
+                        body{font-family:'Times New Roman';font-size:13pt;line-height:1.3} 
                         table{width:100%;border-collapse:collapse} 
                         td{vertical-align:top;padding:4px} 
                         .question-block {margin-bottom: 8pt;}
@@ -284,7 +323,6 @@
                     let prevMainCode = null;
 
                     sec.questions.forEach(q => {
-                        // Logic Smart Grouping: Tách C1.1 -> Main 1, Sub 1
                         const { main, sub } = parseQuestionCode(q.code);
                         const isSubQuestion = sub !== null;
                         
@@ -293,23 +331,18 @@
 
                         if (isSubQuestion) {
                             if (main !== prevMainCode) {
-                                // Bắt đầu nhóm câu hỏi mới (VD: Câu 1:)
                                 labelHTML = `<b>Câu ${main}:</b><br/>`;
                                 prevMainCode = main;
                             }
-                            // In phần phụ (a, b, c...)
-                            const subLabel = isNaN(sub) ? sub : toChar(sub); // 1->a, 2->b
+                            const subLabel = isNaN(sub) ? sub : toChar(sub); 
                             labelHTML += `<b>${subLabel})</b> `;
                         } else {
-                            // Câu hỏi đơn lẻ (Câu 1, Câu 2...)
                             labelHTML = `<b>Câu ${main}:</b> `;
                             prevMainCode = main;
                         }
 
-                        // Ghép vào
                         html += `<div class="question-block" style='margin-left:${isSubQuestion?'20px':0}'>${labelHTML} ${contentHTML}</div>`;
 
-                        // Render đáp án trắc nghiệm (A,B,C,D)
                         if((q.type === 'TN' || q.type === 'TF') && q.a?.length) {
                             html += `<table style='margin-left:${isSubQuestion?'40px':'20px'};margin-bottom:10px'><tr>`;
                             q.a.forEach((opt, k) => { 
@@ -318,16 +351,14 @@
                             });
                             html += `</tr></table>`;
                         } else {
-                            html += `<br/>`; // Tự luận chừa dòng
+                            html += `<br/>`; 
                         }
                     });
                 });
 
-                // --- PHẦN ĐÁP ÁN & HƯỚNG DẪN CHẤM ---
                 html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
                 
                 blueprint.sections.forEach(sec => {
-                    // 1. Bảng đáp án trắc nghiệm (nếu có)
                     const tnQuestions = sec.questions.filter(q => q.type === 'TN');
                     if(tnQuestions.length > 0) {
                         html += `<h4>${sec.name} - Bảng đáp án</h4>`;
@@ -338,7 +369,6 @@
                         html += `</tr></table><br/>`;
                     }
 
-                    // 2. Chi tiết lời giải (Tất cả các câu)
                     html += `<h4>Lời giải chi tiết</h4>`;
                     sec.questions.forEach(q => { 
                         const tokensAns = tokenizeRichText(q.c);
@@ -354,7 +384,7 @@
             return (
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V17)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Auto Type + Smart Grouping</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V19)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Auto Type + Smart Grouping</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
