@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V14 - Strict Logic)</title>
+    <title>Tạo Đề Toán 9 (V15 - Standard Pipeline)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -27,16 +27,6 @@
         /* Loader */
         .loader { width: 18px; height: 18px; border: 2px solid #2563eb; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Status Colors */
-        .status-badge { font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
-        .status-pending { background: #e5e7eb; color: #6b7280; }
-        .status-generating { background: #dbeafe; color: #1e40af; }
-        .status-done { background: #dcfce7; color: #166534; }
-        .status-error { background: #fee2e2; color: #991b1b; }
-
-        /* Input styling */
-        input:focus, textarea:focus, select:focus { outline: 2px solid #3b82f6; outline-offset: -1px; }
     </style>
 </head>
 <body>
@@ -45,44 +35,120 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 1. LOGIC XỬ LÝ DỮ LIỆU (FIXED) ---
+        // ==========================================
+        // 1. CORE PIPELINE (Normalize -> Tokenize -> Render)
+        // ==========================================
 
-        // Hàm chuẩn hóa loại câu hỏi dựa trên Text và Tên Phần
-        const normalizeQuestionType = (rawType, sectionName = "") => {
-            const s = (rawType || "").toString().trim().toUpperCase();
-            const sec = (sectionName || "").toString().trim().toUpperCase();
-
-            // Ưu tiên 1: Tên phần chứa từ khóa rõ ràng
-            if (sec.includes("TỰ LUẬN") || sec.includes("TU LUAN")) return "TL";
-            if (sec.includes("ĐÚNG SAI") || sec.includes("DUNG SAI") || sec.includes("TRUE/FALSE")) return "TF";
-            if (sec.includes("TRẮC NGHIỆM") || sec.includes("TRAC NGHIEM")) return "TN";
-
-            // Ưu tiên 2: Loại câu hỏi từ AI
-            if (s.includes("TL") || s.includes("TỰ") || s.includes("TU")) return "TL";
-            if (s.includes("TF") || s.includes("ĐÚNG") || s.includes("SAI")) return "TF";
+        // BƯỚC 1: NORMALIZE (Chuẩn hóa đầu vào)
+        const normalizeRichText = (raw) => {
+            if (!raw) return "";
+            let text = raw;
             
-            // Mặc định an toàn
-            return "TN";
+            // 1. Quy hoạch delimiter về $...$ và $$...$$
+            text = text.replace(/`([^`]+)`/g, '$$$1$$');      // Code block -> inline math
+            text = text.replace(/\\\[(.*?)\\\]/gs, '$$$1$$'); // \[...\] -> display math
+            text = text.replace(/\\\((.*?)\\\)/gs, '$$$1$$'); // \(...\) -> inline math
+
+            // 2. Vá lỗi LaTeX phổ biến do AI sinh ra
+            text = text
+                .replace(/(^|[^\\])begin\{cases\}/g, '$1\\begin{cases}') // Thiếu \ trước begin{cases}
+                .replace(/(^|[^\\])end\{cases\}/g, '$1\\end{cases}')     // Thiếu \ trước end{cases}
+                .replace(/\\\\\\+/g, '\\\\')                             // Thừa quá nhiều backslash
+                .replace(/&lt;/g, '<').replace(/&gt;/g, '>');            // Lỗi HTML entity
+
+            return text;
         };
 
-        // Hàm tính tổng điểm
-        const calcExamTotals = (bp) => {
-            let questionTotal = 0;
-            bp.sections.forEach(sec => {
-                let secTotal = 0;
-                (sec.questions || []).forEach(q => {
-                    const s = parseFloat(q.score);
-                    if (!isNaN(s)) {
-                        secTotal += s;
-                        questionTotal += s;
+        // BƯỚC 2: TOKENIZE (Tách thành các hạt)
+        const tokenizeRichText = (raw) => {
+            const text = normalizeRichText(raw);
+            // Regex tách: $$...$$ (Display) HOẶC $...$ (Inline)
+            // Nhóm capture group (...) giúp giữ lại delimiter trong mảng kết quả của split
+            const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+            
+            return parts.map(part => {
+                if (part.startsWith('$$') && part.endsWith('$$')) {
+                    return { type: 'math', display: true, content: part.slice(2, -2).trim() };
+                } else if (part.startsWith('$') && part.endsWith('$')) {
+                    return { type: 'math', display: false, content: part.slice(1, -1).trim() };
+                } else {
+                    return { type: 'text', content: part };
+                }
+            }).filter(token => token.content !== ""); // Lọc token rỗng
+        };
+
+        // BƯỚC 3a: RENDER CHO WEB (Preview)
+        const renderToWeb = (tokens) => {
+            return tokens.map((t, i) => {
+                if (t.type === 'math') {
+                    // Render Math bằng KaTeX
+                    try {
+                        return katex.renderToString(t.content, {
+                            displayMode: t.display,
+                            throwOnError: false,
+                            output: 'html' // Web dùng HTML
+                        });
+                    } catch (e) {
+                        return `<span class="text-red-500 font-mono text-xs">${t.content}</span>`;
                     }
-                });
-                sec.score = parseFloat(secTotal.toFixed(2)); // Cập nhật lại điểm phần
-            });
-            return parseFloat(questionTotal.toFixed(2));
+                } else {
+                    // Render Text: Xử lý in đậm và xuống dòng
+                    return t.content
+                        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                        .replace(/\\\\/g, '<br/>') // Xử lý \\ thành xuống dòng trên web
+                        .replace(/\\n/g, '<br/>')
+                        .replace(/\n/g, '<br/>');
+                }
+            }).join('');
         };
 
-        // --- 2. HYBRID AI ENGINE ---
+        // BƯỚC 3b: RENDER CHO WORD (Export)
+        const renderToWord = (tokens) => {
+            return tokens.map(t => {
+                if (t.type === 'math') {
+                    // Render Math bằng MathML cho Word
+                    try {
+                        const mathML = katex.renderToString(t.content, {
+                            displayMode: t.display,
+                            throwOnError: false,
+                            output: 'mathml', // Word cần MathML
+                            strict: false
+                        });
+                        // Lọc lấy thẻ <math> sạch
+                        const match = mathML.match(/<math[\s\S]*?<\/math>/);
+                        if (match) {
+                            return match[0]
+                                .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
+                                .replace(/<annotation[\s\S]*?<\/annotation>/g, '');
+                        }
+                    } catch (e) {}
+                    return t.content; // Fallback text nếu lỗi
+                } else {
+                    // Render Text cho Word
+                    return t.content
+                        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                        .replace(/\\\\/g, '<br/>') // Word hiểu thẻ <br/> là xuống dòng mềm
+                        .replace(/\\n/g, '<br/>')
+                        .replace(/\n/g, '<br/>');
+                }
+            }).join('');
+        };
+
+        // Component hiển thị (Dùng chung Pipeline)
+        const MathRender = ({ text }) => {
+            const ref = useRef();
+            useEffect(() => {
+                if (!ref.current) return;
+                const tokens = tokenizeRichText(text || "");
+                const html = renderToWeb(tokens);
+                ref.current.innerHTML = html;
+            }, [text]);
+            return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>;
+        };
+
+        // ==========================================
+        // 2. AI ADAPTER (Hybrid: HF + Gemini Fallback)
+        // ==========================================
         const AIAdapter = {
             getConfig: () => ({
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
@@ -91,33 +157,29 @@
                 hfModel: 'Qwen/Qwen2.5-Math-7B-Instruct' 
             }),
             
-            // Hàm gọi Gemini (Cho Vision & Fallback)
             callGemini: async (payloadParts) => {
                 const { geminiKeys, geminiModel } = AIAdapter.getConfig();
                 if(!geminiKeys.length) throw new Error("Thiếu Gemini API Key!");
-                
                 const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
                 for(let i=0; i < Math.min(shuffledKeys.length, 3); i++) {
                     try {
-                        const key = shuffledKeys[i];
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`, {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${shuffledKeys[i]}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ contents: [{ parts: payloadParts }] })
                         });
                         if(!res.ok) throw new Error((await res.json()).error?.message);
-                        const data = await res.json();
-                        return data.candidates[0].content.parts[0].text;
+                        return (await res.json()).candidates[0].content.parts[0].text;
                     } catch(e) { await new Promise(r => setTimeout(r, 1000)); }
                 }
                 throw new Error("Gemini quá tải.");
             },
 
-            // Hàm gọi Hugging Face (Chuẩn Native Inference API)
             callHF: async (promptText) => {
                 const { hfTokens, hfModel } = AIAdapter.getConfig();
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
-
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
+                
+                // Prompt chuẩn Qwen ChatML
                 const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học chuyên nghiệp. Chỉ trả về JSON thuần.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
 
                 for(let i=0; i<3; i++) {
@@ -127,93 +189,49 @@
                             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 2048, temperature: 0.5, return_full_text: false } })
                         });
-
                         if(!res.ok) {
-                            if (res.status === 503) { await new Promise(r => setTimeout(r, 10000)); continue; }
+                            if (res.status === 503) { await new Promise(r => setTimeout(r, 8000)); continue; } // Cold start wait
                             throw new Error(`HF Error ${res.status}`);
                         }
-                        
                         const data = await res.json();
-                        if (Array.isArray(data) && data[0] && data[0].generated_text) return data[0].generated_text;
-                        else if (data.error) throw new Error(data.error);
-                        return JSON.stringify(data);
-
+                        if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
+                        throw new Error("HF invalid response");
                     } catch(e) { await new Promise(r => setTimeout(r, 2000)); }
                 }
-                throw new Error("Hugging Face API lỗi (Timeout/Overload).");
+                throw new Error("HF API Failed");
             }
         };
 
-        // --- 3. TEXT PROCESSING (FIXED WORD EXPORT) ---
-        
-        const normalizeLatexDelimiters = (text) => {
-            if (!text) return "";
-            return text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$$').replace(/\\\((.*?)\\\)/gs, '$$$1$$');
+        // ==========================================
+        // 3. UTILS LOGIC
+        // ==========================================
+        const normalizeQuestionType = (rawType, sectionName = "") => {
+            const s = (rawType || "").toString().trim().toUpperCase();
+            const sec = (sectionName || "").toString().trim().toUpperCase();
+            if (sec.includes("TỰ LUẬN") || sec.includes("TU LUAN")) return "TL";
+            if (sec.includes("ĐÚNG SAI") || sec.includes("DUNG SAI") || sec.includes("TRUE/FALSE")) return "TF";
+            if (sec.includes("TRẮC NGHIỆM") || sec.includes("TRAC NGHIEM")) return "TN";
+            if (s.includes("TL") || s.includes("TỰ")) return "TL";
+            if (s.includes("TF") || s.includes("ĐÚNG")) return "TF";
+            return "TN";
         };
 
-        const splitContent = (text) => text ? text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g) : [];
-
-        const sanitizeSystemEquation = (tex) => {
-            if (!tex) return tex;
-            tex = tex.replace(/(^|[^\\])begin\{cases\}/g, '$1\\begin{cases}').replace(/(^|[^\\])end\{cases\}/g, '$1\\end{cases}');
-            tex = tex.replace(/\\\\\\+/g, '\\\\');
-            return tex.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        };
-
-        const convertToWordHTML = (rawText) => {
-            if (!rawText) return "";
-            const text = normalizeLatexDelimiters(rawText);
-            const parts = splitContent(text);
-            return parts.map(part => {
-                if (part.startsWith('$') && part.endsWith('$')) {
-                    let tex = part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1);
-                    tex = sanitizeSystemEquation(tex).replace(/\\n/g, ' ');
-                    try {
-                        const mathML = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: part.startsWith('$$'), strict: false });
-                        const match = mathML.match(/<math[\s\S]*?<\/math>/);
-                        if (match) return match[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '');
-                    } catch (e) {}
-                    return part.replace(/\$/g, '');
-                }
-                // FIX: Xử lý dấu \\ trong văn bản thường thành <br/> để không bị lỗi hiển thị Word
-                return part
-                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-                    .replace(/\\\\/g, '<br/>')  // <--- FIX QUAN TRỌNG
-                    .replace(/\\n/g, '<br/>')
-                    .replace(/\n/g, '<br/>');
-            }).join('');
-        };
-
-        const MathRender = ({ text }) => {
-            const ref = useRef();
-            useEffect(() => {
-                if(!ref.current || !text) return;
-                ref.current.innerHTML = "";
-                const normalizedText = normalizeLatexDelimiters(text);
-                const parts = splitContent(normalizedText);
-                parts.forEach(part => {
-                    if((part.startsWith('$') && part.endsWith('$'))) {
-                        const span = document.createElement('span');
-                        let tex = part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1);
-                        tex = sanitizeSystemEquation(tex);
-                        try { katex.render(tex, span, { throwOnError: false, displayMode: part.startsWith('$$'), strict: false }); } catch(e) { span.innerText = part; }
-                        ref.current.appendChild(span);
-                    } else {
-                        const span = document.createElement('span');
-                        // FIX: Hiển thị đúng xuống dòng trên web preview
-                        span.innerHTML = part
-                            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-                            .replace(/\\\\/g, '<br/>') // <--- FIX QUAN TRỌNG
-                            .replace(/\\n/g, '<br/>')
-                            .replace(/\n/g, '<br/>');
-                        ref.current.appendChild(span);
-                    }
+        const calcExamTotals = (bp) => {
+            let total = 0;
+            bp.sections.forEach(sec => {
+                let secTotal = 0;
+                (sec.questions || []).forEach(q => {
+                    const s = parseFloat(q.score);
+                    if (!isNaN(s)) { secTotal += s; total += s; }
                 });
-            }, [text]);
-            return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>;
+                sec.score = parseFloat(secTotal.toFixed(2));
+            });
+            return parseFloat(total.toFixed(2));
         };
 
-        // --- 4. APP UI ---
+        // ==========================================
+        // 4. MAIN APP
+        // ==========================================
         const App = () => {
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
@@ -221,17 +239,13 @@
             const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
             const [images, setImages] = useState([]);
             const [blueprint, setBlueprint] = useState(null);
-            
             const [hfStatus, setHfStatus] = useState(false);
+            const [totalScoreWarning, setTotalScoreWarning] = useState(null);
 
-            useEffect(() => {
-                const cfg = AIAdapter.getConfig();
-                setHfStatus(cfg.hfTokens.length > 0);
-            }, []);
+            useEffect(() => { setHfStatus(AIAdapter.getConfig().hfTokens.length > 0); }, []);
+            const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
 
-            const hasGemini = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]").length > 0;
-
-            // BƯỚC 1: UPLOAD & PHÂN TÍCH (CÓ RETRY CHECK TỔNG ĐIỂM)
+            // UPLOAD & ANALYZE (Với cơ chế Retry an toàn)
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -249,76 +263,51 @@
                     }
                     setImages(imgs);
 
-                    // PROMPT ĐÃ ĐƯỢC TỐI ƯU ĐỂ CHECK ĐIỂM VÀ LOẠI CÂU HỎI
                     const prompt = `
                         Phân tích ảnh Ma trận đề thi môn Toán 9. Trích xuất cấu trúc JSON DUY NHẤT.
-
-                        YÊU CẦU QUAN TRỌNG:
-                        1. Đọc TOÀN BỘ bảng, cả phần trắc nghiệm, tự luận, đúng/sai.
-                        2. Với mỗi câu hỏi trích: "code", "group", "topic", "level", "type", "score", "spec".
-                        3. "type": "TN" (Trắc nghiệm), "TL" (Tự luận), "TF" (Đúng/Sai).
-                        4. QUY TẮC NHẬN DIỆN LOẠI CÂU:
-                           - Nếu tên phần chứa "TRẮC NGHIỆM" -> type="TN".
-                           - Nếu tên phần chứa "TỰ LUẬN" -> type="TL".
-                           - Nếu tên phần chứa "ĐÚNG SAI" -> type="TF".
-                        5. QUY TẮC ĐIỂM SỐ:
-                           - TỔNG ĐIỂM TOÀN BÀI PHẢI BẰNG 10.0.
-                           - Hãy cộng dồn điểm các câu, nếu thiếu hoặc thừa, hãy tự cân đối lại điểm của các câu (ưu tiên câu Vận dụng cao hoặc Tự luận) sao cho tổng đúng bằng 10.
-
-                        OUTPUT JSON:
-                        {
-                          "exam_type": "TN+TL",
-                          "sections": [
-                            { "id": "I", "name": "PHẦN I. TRẮC NGHIỆM", "score": 3.0, "questions": [ { "code": "C1", "group": "", "topic": "...", "level": "NB", "type": "TN", "score": 0.25, "spec": "..." } ] }
-                          ]
-                        }
+                        YÊU CẦU:
+                        1. Đọc TOÀN BỘ bảng. Trích: "code", "group", "topic", "level", "type", "score", "spec".
+                        2. "type": "TN" (Trắc nghiệm), "TL" (Tự luận), "TF" (Đúng/Sai).
+                        3. Tên phần chứa "TRẮC NGHIỆM" -> type="TN", "TỰ LUẬN" -> type="TL".
+                        OUTPUT JSON: { "exam_type": "TN+TL", "sections": [ { "id": "I", "name": "PHẦN TRẮC NGHIỆM", "questions": [ { "code": "C1", "group": "", "topic": "...", "level": "NB", "type": "TN", "score": 0.25, "spec": "..." } ] } ] }
                     `;
                     
                     let finalJson = null;
                     
-                    // RETRY LOOP: Thử tối đa 3 lần nếu tổng điểm != 10
+                    // RETRY LOOP (Max 3)
                     for (let attempt = 1; attempt <= 3; attempt++) {
-                        setLoading(true); 
-                        setLoadingMsg(`Đang phân tích Ma trận (Lần ${attempt})...`);
-                        
+                        setLoading(true); setLoadingMsg(`Đang phân tích Ma trận (Lần ${attempt})...`);
                         try {
                             const res = await AIAdapter.callGemini([{text: prompt}, ...imgs.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))]);
                             const jsonMatch = res.match(/\{[\s\S]*\}/);
                             if(!jsonMatch) continue;
-                            
                             const parsed = JSON.parse(jsonMatch[0]);
 
-                            // Post-processing: Chuẩn hóa Type & Tính tổng điểm
+                            // Chuẩn hóa
                             parsed.sections.forEach(sec => {
                                 sec.questions = sec.questions || [];
-                                sec.questions.forEach(q => {
-                                    q.type = normalizeQuestionType(q.type, sec.name); // FIX 2: Chuẩn hóa Type
-                                });
+                                sec.questions.forEach(q => q.type = normalizeQuestionType(q.type, sec.name));
                             });
 
-                            const totalScore = calcExamTotals(parsed);
-                            console.log(`Attempt ${attempt}: Total Score = ${totalScore}`);
+                            const total = calcExamTotals(parsed);
+                            console.log(`Attempt ${attempt}: Total = ${total}`);
+                            finalJson = parsed; // Luôn giữ kết quả mới nhất
 
-                            if (Math.abs(totalScore - 10.0) < 0.1) {
-                                finalJson = parsed;
-                                break; // OK, thoát vòng lặp
-                            } else {
-                                finalJson = parsed; // Lưu tạm, nếu hết 3 lần vẫn sai thì dùng cái này
-                            }
-                        } catch(err) {
-                            console.error(err);
-                        }
+                            if (Math.abs(total - 10.0) < 0.1) break; // Đúng 10 điểm -> Dừng ngay
+                        } catch(err) { console.error(err); }
                     }
 
-                    if (!finalJson) throw new Error("Không đọc được cấu trúc ma trận sau 3 lần thử.");
+                    if (!finalJson) throw new Error("Không đọc được cấu trúc ma trận.");
 
-                    // Kiểm tra cuối cùng
+                    // Check điểm lần cuối -> Cảnh báo nếu sai
                     const finalTotal = calcExamTotals(finalJson);
                     if (Math.abs(finalTotal - 10.0) >= 0.1) {
-                        alert(`⚠️ CẢNH BÁO: Tổng điểm nhận diện là ${finalTotal} (Chưa bằng 10). Vui lòng kiểm tra và sửa lại điểm số ở bước tiếp theo.`);
+                        setTotalScoreWarning(finalTotal);
+                        alert(`⚠️ CẢNH BÁO: Tổng điểm nhận diện là ${finalTotal} (Chưa bằng 10). Hệ thống giữ nguyên dữ liệu gốc để bạn chỉnh sửa.`);
+                    } else {
+                        setTotalScoreWarning(null);
                     }
 
-                    // Khởi tạo trạng thái
                     finalJson.sections.forEach(s => s.questions.forEach(q => {
                         q.status = 'pending'; q.q = ""; q.a = []; q.c = "";
                     }));
@@ -329,7 +318,7 @@
                 } catch(e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
             };
 
-            // BƯỚC 2: TẠO CÂU HỎI
+            // GENERATE QUESTION (Hybrid AI)
             const generateQuestion = async (sIdx, qIdx) => {
                 const qData = blueprint.sections[sIdx].questions[qIdx];
                 const newBp = {...blueprint};
@@ -338,26 +327,23 @@
 
                 const promptText = `
                     Đóng vai Giáo viên Toán 9. Soạn câu hỏi thi:
-                    - Chủ đề: ${qData.topic}
-                    - Mức độ: ${qData.level} | Loại: ${qData.type}
-                    - Đặc tả: ${qData.spec}
-                    ${qData.group ? `- Nhóm bài: ${qData.group}` : ""}
-
+                    - Chủ đề: ${qData.topic} | Mức độ: ${qData.level} | Loại: ${qData.type}
+                    - Đặc tả: ${qData.spec} ${qData.group ? `| Nhóm: ${qData.group}` : ""}
                     YÊU CẦU:
-                    1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases} (escape backslash).
-                    2. Output JSON: { "q": "Nội dung câu hỏi...", "a": ["A","B","C","D"], "c": "Lời giải..." }
+                    1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
+                    2. Output JSON: { "q": "Nội dung câu hỏi...", "a": ["A...","B...","C...","D..."], "c": "Lời giải..." }
                 `;
 
                 try {
                     let jsonStr = "";
                     let usedSource = "Gemini";
-                    const { hfTokens } = AIAdapter.getConfig();
-
-                    if (hfTokens.length > 0) {
+                    
+                    if (AIAdapter.getConfig().hfTokens.length > 0) {
                         try {
                             jsonStr = await AIAdapter.callHF(promptText);
                             usedSource = "Qwen2.5-Math";
                         } catch (hfErr) {
+                            console.warn("Fallback to Gemini");
                             const payload = [{text: promptText}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))];
                             jsonStr = await AIAdapter.callGemini(payload);
                             usedSource = "Gemini (Fallback)";
@@ -369,7 +355,7 @@
 
                     const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                     const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) throw new Error("Invalid JSON");
+                    if (!jsonMatch) throw new Error("Invalid JSON output");
                     const json = JSON.parse(jsonMatch[0]);
                     
                     const finalBp = {...blueprint};
@@ -384,6 +370,7 @@
                 } catch(e) {
                     const errBp = {...blueprint};
                     errBp.sections[sIdx].questions[qIdx].status = 'error';
+                    errBp.sections[sIdx].questions[qIdx].source = "ERR";
                     setBlueprint(errBp);
                 }
             };
@@ -404,9 +391,10 @@
             const updateData = (sIdx, qIdx, field, val) => {
                 const n = {...blueprint};
                 n.sections[sIdx].questions[qIdx][field] = val;
-                // Nếu sửa điểm số -> Tính lại tổng điểm hiển thị
                 if(field === 'score') {
-                    calcExamTotals(n);
+                    const newTotal = calcExamTotals(n);
+                    if(Math.abs(newTotal - 10) >= 0.1) setTotalScoreWarning(newTotal);
+                    else setTotalScoreWarning(null);
                 }
                 setBlueprint(n);
             };
@@ -419,18 +407,28 @@
                     <body>
                     <div style="text-align:center;font-weight:bold;margin-bottom:20px"><p>${info.dept.toUpperCase()}</p><p>${info.school.toUpperCase()}</p><p>${info.title.toUpperCase()}</p><p>MÔN: TOÁN 9 - Thời gian: ${info.time} phút</p></div><hr/>
                 `;
+                // Sử dụng renderToWord (Pipeline) để xuất nội dung sạch
                 blueprint.sections.forEach(sec => {
                     html += `<div style='font-weight:bold;margin-top:15px;margin-bottom:10px;text-transform:uppercase'>${sec.name}</div>`;
                     let currentGroup = null;
                     sec.questions.forEach(q => {
                         if(q.group && q.group !== currentGroup) { html += `<p style='font-weight:bold;margin-top:10px'>${q.group}:</p>`; currentGroup = q.group; } else if(!q.group) currentGroup = null;
+                        
+                        const tokensQ = tokenizeRichText(q.q);
+                        const htmlQ = renderToWord(tokensQ);
                         const label = currentGroup ? `<b>(${q.code})</b>` : `<b>Câu ${q.code}:</b>`;
-                        html += `<div class="question-row" style='margin-left:${currentGroup?'20px':0}'>${label} ${convertToWordHTML(q.q)}</div>`;
+                        
+                        html += `<div class="question-row" style='margin-left:${currentGroup?'20px':0}'>${label} ${htmlQ}</div>`;
+                        
                         if((q.type === 'TN' || q.type === 'TF') && q.a?.length) {
                             html += `<table style='margin-left:${currentGroup?'20px':0}'><tr>`;
-                            q.a.forEach((opt, k) => { const prefix = q.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); html += `<td width="50%"><b>${prefix}.</b> ${convertToWordHTML(opt)}</td>${k%2!==0?'</tr><tr>':''}`; });
+                            q.a.forEach((opt, k) => { 
+                                const prefix = q.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k);
+                                const tokensOpt = tokenizeRichText(opt);
+                                html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokensOpt)}</td>${k%2!==0?'</tr><tr>':''}`; 
+                            });
                             html += `</tr></table>`;
-                        } else html += `<br/>`;
+                        } else html += `<br/>`; // Tự luận chừa dòng
                     });
                 });
                 html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
@@ -444,7 +442,10 @@
                         tnQuestions.forEach(() => html += `<td></td>`);
                         html += `</tr></table><br/>`;
                     }
-                    sec.questions.filter(q => q.type !== 'TN').forEach(q => { html += `<p><b>${q.group ? q.group + " - " : ""}${q.code}:</b></p><div>${convertToWordHTML(q.c)}</div><hr/>`; });
+                    sec.questions.filter(q => q.type !== 'TN').forEach(q => { 
+                        const tokensAns = tokenizeRichText(q.c);
+                        html += `<p><b>${q.group ? q.group + " - " : ""}${q.code}:</b></p><div>${renderToWord(tokensAns)}</div><hr/>`; 
+                    });
                 });
                 html += `</body></html>`;
                 saveAs(new Blob(['\ufeff', html], {type: 'application/msword'}), `De_Thi_Toan_9.doc`);
@@ -454,8 +455,8 @@
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V14)</h1>
-                            <p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold"><i className="fas fa-robot"></i> Hybrid</span> : <span className="text-blue-600 font-bold"><i className="fas fa-bolt"></i> Gemini</span>}</p>
+                            <h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V15)</h1>
+                            <p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold"><i className="fas fa-robot"></i> Hybrid</span> : <span className="text-blue-600 font-bold"><i className="fas fa-bolt"></i> Gemini</span>} | Core: Standard Pipeline</p>
                         </div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
@@ -480,7 +481,10 @@
                     {step === 2 && blueprint && (
                         <div className="flex flex-col h-[85vh] bg-white rounded-xl shadow-sm border overflow-hidden">
                             <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                                <h2 className="font-bold text-gray-800 text-lg">Biên soạn Đề thi</h2>
+                                <div>
+                                    <h2 className="font-bold text-gray-800 text-lg">Biên soạn Đề thi</h2>
+                                    {totalScoreWarning && <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded animate-pulse">⚠️ Tổng điểm: {totalScoreWarning}/10 (Chưa chuẩn)</span>}
+                                </div>
                                 <div className="space-x-2">
                                     <button onClick={generateAll} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 text-sm"><i className="fas fa-bolt"></i> Sinh toàn bộ</button>
                                     <button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 text-sm"><i className="fas fa-file-word"></i> Xuất Word</button>
@@ -498,10 +502,10 @@
                                                     <td className="p-2"><select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e=>updateData(sIdx, qIdx, 'type', e.target.value)}><option value="TN">TN</option><option value="TF">Đ/S</option><option value="TL">TL</option></select><div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status==='done'?'text-green-600 bg-green-50': q.status==='error'?'text-red-600 bg-red-50':'text-gray-400 bg-gray-100'}`}>{q.status}</div><div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div></td>
                                                     <td className="p-2">
                                                         <div className="mb-2 grid grid-cols-2 gap-2"><input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.topic} onChange={e=>updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..."/><input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.spec} onChange={e=>updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Đặc tả..."/></div>
-                                                        <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100"><div className="text-xs font-bold text-indigo-600 mb-1">Câu hỏi:</div><textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e=>updateData(sIdx, qIdx, 'q', e.target.value)}/><div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q || "Review..."} /></div>
+                                                        <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100"><div className="text-xs font-bold text-indigo-600 mb-1">Câu hỏi:</div><textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e=>updateData(sIdx, qIdx, 'q', e.target.value)}/><div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
                                                             {(q.type === 'TN' || q.type === 'TF') && (<div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">{q.a?.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{q.type==='TN'?String.fromCharCode(65+k):String.fromCharCode(97+k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e=>{const na=[...q.a]; na[k]=e.target.value; updateData(sIdx, qIdx, 'a', na)}}/></div>))}</div>)}
                                                         </div>
-                                                        <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e=>updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..."/><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c}/></div></div>
+                                                        <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e=>updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..."/><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
                                                     </td>
                                                     <td className="p-2 text-center align-middle"><button onClick={()=>generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1 rounded text-xs font-bold shadow-sm">{q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <i className="fas fa-magic"></i>}</button><button onClick={()=>{if(confirm('Xóa?')){const n={...blueprint}; n.sections[sIdx].questions.splice(qIdx,1); setBlueprint(n)}}} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button></td>
                                                 </tr>
