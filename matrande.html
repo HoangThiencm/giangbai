@@ -51,8 +51,8 @@
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
                 geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
-                // Qwen 2.5 72B Instruct rất mạnh về Toán và Logic
-                hfModel: 'Qwen/Qwen2.5-72B-Instruct' 
+                // SỬ DỤNG MODEL QWEN 2.5 MATH CHUYÊN DỤNG
+                hfModel: 'Qwen/Qwen2.5-Math-72B-Instruct' 
             }),
             
             // Hàm gọi Gemini (Cho Vision & Fallback)
@@ -83,7 +83,7 @@
 
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
                 
-                // Retry logic cho HF
+                // Retry logic cho HF (Vì API Free hay bị 503 loading)
                 for(let i=0; i<3; i++) {
                     try {
                         const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}/v1/chat/completions`, {
@@ -102,10 +102,10 @@
 
                         if(!res.ok) {
                             const err = await res.text();
-                            // Nếu model đang load (503), đợi chút rồi thử lại
+                            // Nếu model đang load (503), đợi 5s rồi thử lại
                             if (res.status === 503) {
-                                console.warn("HF Model loading...", err);
-                                await new Promise(r => setTimeout(r, 5000)); // Đợi 5s model load
+                                console.warn("HF Model loading (Cold start)...", err);
+                                await new Promise(r => setTimeout(r, 5000)); 
                                 continue; 
                             }
                             throw new Error(err);
@@ -118,7 +118,7 @@
                         await new Promise(r => setTimeout(r, 1000));
                     }
                 }
-                throw new Error("Hugging Face API lỗi.");
+                throw new Error("Hugging Face API lỗi hoặc quá tải.");
             }
         };
 
@@ -260,10 +260,10 @@
 
                     // --- LOGIC CHUYỂN MẠCH THÔNG MINH ---
                     if (hfTokens.length > 0) {
-                        // CÓ HF TOKEN -> DÙNG QWEN MATH (Text Only)
-                        console.log("Using Hugging Face Qwen Math...");
+                        // CÓ HF TOKEN -> DÙNG QWEN MATH 72B (Chuyên Toán)
+                        console.log("Using Hugging Face Qwen Math 72B...");
                         jsonStr = await AIAdapter.callHF([
-                            { role: "system", content: "Bạn là trợ lý soạn đề thi Toán chuyên nghiệp. Chỉ trả về JSON." },
+                            { role: "system", content: "Bạn là trợ lý soạn đề thi Toán chuyên nghiệp. Trả về JSON." },
                             { role: "user", content: promptText }
                         ]);
                     } else {
@@ -282,7 +282,7 @@
                     target.c = json.c || "Chưa có lời giải";
                     target.status = 'done';
                     // Đánh dấu nguồn tạo để debug (Optional)
-                    target.source = hfTokens.length > 0 ? "HF" : "Gemini";
+                    target.source = hfTokens.length > 0 ? "HF-Math" : "Gemini";
                     setBlueprint(finalBp);
 
                 } catch(e) {
@@ -294,13 +294,13 @@
             };
 
             const generateAll = async () => {
-                if(!confirm(`Hệ thống sẽ dùng ${hfStatus ? "Hugging Face (Qwen Math)" : "Gemini"} để tạo nội dung. Tiếp tục?`)) return;
+                if(!confirm(`Hệ thống sẽ dùng ${hfStatus ? "Qwen 2.5 Math (HuggingFace)" : "Gemini"} để tạo nội dung. Tiếp tục?`)) return;
                 for(let s=0; s<blueprint.sections.length; s++) {
                     for(let q=0; q<blueprint.sections[s].questions.length; q++) {
                         if(blueprint.sections[s].questions[q].status !== 'done') {
                             await generateQuestion(s, q);
                             // Nếu dùng HF Free tier thì cần delay lâu hơn chút để tránh Rate Limit
-                            await new Promise(r => setTimeout(r, hfStatus ? 2000 : 1000));
+                            await new Promise(r => setTimeout(r, hfStatus ? 3000 : 1000));
                         }
                     }
                 }
