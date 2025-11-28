@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Từ Ma Trận và Bảng Đặc Tả</title>
+    <title>Tạo Đề Toán 9 (V13.2 - Fixed Qwen Engine)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -51,8 +51,8 @@
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
                 geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
-                // SỬ DỤNG MODEL QWEN 2.5 MATH CHUYÊN DỤNG
-                hfModel: 'Qwen/Qwen2.5-Math-72B-Instruct' 
+                // Dùng bản 7B Math Instruct: Nhẹ, nhanh, chuyên toán, ít bị lỗi timeout hơn bản 72B
+                hfModel: 'Qwen/Qwen2.5-Math-7B-Instruct' 
             }),
             
             // Hàm gọi Gemini (Cho Vision & Fallback)
@@ -76,49 +76,61 @@
                 throw new Error("Gemini quá tải.");
             },
 
-            // Hàm gọi Hugging Face (Cho Text Generation - Toán)
-            callHF: async (messages) => {
+            // Hàm gọi Hugging Face (Chuẩn Native Inference API)
+            callHF: async (promptText) => {
                 const { hfTokens, hfModel } = AIAdapter.getConfig();
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
 
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
                 
-                // Retry logic cho HF (Vì API Free hay bị 503 loading)
+                // Format prompt theo chuẩn Qwen ChatML để model hiểu rõ hơn
+                const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học chuyên nghiệp. Chỉ trả về JSON thuần.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
+
                 for(let i=0; i<3; i++) {
                     try {
-                        const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}/v1/chat/completions`, {
+                        // Dùng endpoint chuẩn của HF Inference API (không phải /v1/chat/completions)
+                        const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${token}`,
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                model: hfModel,
-                                messages: messages,
-                                max_tokens: 2048,
-                                temperature: 0.7
+                                inputs: formattedPrompt,
+                                parameters: {
+                                    max_new_tokens: 2048,
+                                    temperature: 0.5, // Giảm nhiệt độ để toán chính xác hơn
+                                    return_full_text: false
+                                }
                             })
                         });
 
                         if(!res.ok) {
-                            const err = await res.text();
-                            // Nếu model đang load (503), đợi 5s rồi thử lại
+                            const errText = await res.text();
+                            // Nếu model đang load (503), đợi 10s rồi thử lại
                             if (res.status === 503) {
-                                console.warn("HF Model loading (Cold start)...", err);
-                                await new Promise(r => setTimeout(r, 5000)); 
+                                console.warn("HF Model loading (Cold start)... Waiting 10s");
+                                await new Promise(r => setTimeout(r, 10000)); 
                                 continue; 
                             }
-                            throw new Error(err);
+                            throw new Error(`HF Error ${res.status}: ${errText}`);
                         }
                         
                         const data = await res.json();
-                        return data.choices[0].message.content;
+                        // HF Inference trả về mảng: [{ generated_text: "..." }]
+                        if (Array.isArray(data) && data[0] && data[0].generated_text) {
+                            return data[0].generated_text;
+                        } else if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        return JSON.stringify(data);
+
                     } catch(e) { 
                         console.warn(`HF try ${i+1} fail:`, e); 
-                        await new Promise(r => setTimeout(r, 1000));
+                        await new Promise(r => setTimeout(r, 2000));
                     }
                 }
-                throw new Error("Hugging Face API lỗi hoặc quá tải.");
+                throw new Error("Hugging Face API lỗi (Timeout/Overload).");
             }
         };
 
@@ -251,29 +263,40 @@
 
                     YÊU CẦU:
                     1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases} (escape backslash cẩn thận).
-                    2. Output JSON Strict: { "q": "Nội dung câu hỏi...", "a": ["A","B","C","D"], "c": "Lời giải chi tiết..." }
+                    2. Output JSON Strict (KHÔNG Markdown): { "q": "Nội dung câu hỏi...", "a": ["A","B","C","D"], "c": "Lời giải chi tiết..." }
                 `;
 
                 try {
                     let jsonStr = "";
+                    let usedSource = "Gemini";
                     const { hfTokens } = AIAdapter.getConfig();
 
-                    // --- LOGIC CHUYỂN MẠCH THÔNG MINH ---
+                    // --- LOGIC CHUYỂN MẠCH THÔNG MINH (CÓ FALLBACK) ---
                     if (hfTokens.length > 0) {
-                        // CÓ HF TOKEN -> DÙNG QWEN MATH 72B (Chuyên Toán)
-                        console.log("Using Hugging Face Qwen Math 72B...");
-                        jsonStr = await AIAdapter.callHF([
-                            { role: "system", content: "Bạn là trợ lý soạn đề thi Toán chuyên nghiệp. Trả về JSON." },
-                            { role: "user", content: promptText }
-                        ]);
+                        try {
+                            console.log("Attempting Hugging Face Qwen...");
+                            // Thử dùng HF (Truyền string prompt, không phải messages)
+                            jsonStr = await AIAdapter.callHF(promptText);
+                            usedSource = "Qwen2.5-Math";
+                        } catch (hfErr) {
+                            console.warn("HF Failed, Falling back to Gemini...", hfErr);
+                            // FALLBACK NGAY LẬP TỨC SANG GEMINI
+                            const payload = [{text: promptText}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))];
+                            jsonStr = await AIAdapter.callGemini(payload);
+                            usedSource = "Gemini (Fallback)";
+                        }
                     } else {
-                        // KHÔNG CÓ HF -> DÙNG GEMINI (Multimodal - Gửi kèm ảnh để tham chiếu)
-                        console.log("Using Gemini Flash...");
+                        // KHÔNG CÓ HF -> DÙNG GEMINI LUÔN
                         const payload = [{text: promptText}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))];
                         jsonStr = await AIAdapter.callGemini(payload);
                     }
 
-                    const json = JSON.parse(jsonStr.match(/\{[\s\S]*\}/)[0]);
+                    // Xử lý chuỗi JSON (Clean Markdown của Qwen nếu có)
+                    const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
+                    
+                    if (!jsonMatch) throw new Error("AI output invalid JSON: " + jsonStr.substring(0, 50) + "...");
+                    const json = JSON.parse(jsonMatch[0]);
                     
                     const finalBp = {...blueprint};
                     const target = finalBp.sections[sIdx].questions[qIdx];
@@ -281,26 +304,27 @@
                     target.a = json.a || [];
                     target.c = json.c || "Chưa có lời giải";
                     target.status = 'done';
-                    // Đánh dấu nguồn tạo để debug (Optional)
-                    target.source = hfTokens.length > 0 ? "HF-Math" : "Gemini";
+                    target.source = usedSource;
                     setBlueprint(finalBp);
 
                 } catch(e) {
-                    console.error(e);
+                    console.error("GEN ERROR:", e);
                     const errBp = {...blueprint};
                     errBp.sections[sIdx].questions[qIdx].status = 'error';
+                    // Lưu lỗi vào để debug
+                    errBp.sections[sIdx].questions[qIdx].source = "ERR: " + e.message.substring(0, 10);
                     setBlueprint(errBp);
                 }
             };
 
             const generateAll = async () => {
-                if(!confirm(`Hệ thống sẽ dùng ${hfStatus ? "Qwen 2.5 Math (HuggingFace)" : "Gemini"} để tạo nội dung. Tiếp tục?`)) return;
+                if(!confirm(`Hệ thống sẽ dùng ${hfStatus ? "Qwen 2.5 Math (Ưu tiên)" : "Gemini"} để tạo nội dung. Nếu lỗi sẽ tự chuyển kênh. Tiếp tục?`)) return;
                 for(let s=0; s<blueprint.sections.length; s++) {
                     for(let q=0; q<blueprint.sections[s].questions.length; q++) {
                         if(blueprint.sections[s].questions[q].status !== 'done') {
                             await generateQuestion(s, q);
-                            // Nếu dùng HF Free tier thì cần delay lâu hơn chút để tránh Rate Limit
-                            await new Promise(r => setTimeout(r, hfStatus ? 3000 : 1000));
+                            // Delay nhẹ để tránh rate limit
+                            await new Promise(r => setTimeout(r, 1500));
                         }
                     }
                 }
@@ -356,8 +380,8 @@
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V13)</h1>
-                            <p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold"><i className="fas fa-robot"></i> Hybrid (Gemini + Qwen Math)</span> : <span className="text-blue-600 font-bold"><i className="fas fa-bolt"></i> Gemini Only</span>}</p>
+                            <h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V13.2)</h1>
+                            <p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold"><i className="fas fa-robot"></i> Hybrid (Qwen Math 7B + Fallback)</span> : <span className="text-blue-600 font-bold"><i className="fas fa-bolt"></i> Gemini Only</span>}</p>
                         </div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
@@ -397,7 +421,7 @@
                                                 <tr key={qIdx} className="group hover:bg-gray-50 align-top">
                                                     <td className="p-2"><input className="w-full border rounded p-1 text-center font-bold mb-1" value={q.code} onChange={e=>updateData(sIdx, qIdx, 'code', e.target.value)}/><input className="w-full border rounded p-1 text-center text-xs" type="number" value={q.score} onChange={e=>updateData(sIdx, qIdx, 'score', e.target.value)}/></td>
                                                     <td className="p-2"><input className="w-full border rounded p-1 text-xs bg-yellow-50" placeholder="VD: Bài 1" value={q.group||''} onChange={e=>updateData(sIdx, qIdx, 'group', e.target.value)}/></td>
-                                                    <td className="p-2"><select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e=>updateData(sIdx, qIdx, 'type', e.target.value)}><option value="TN">TN</option><option value="TF">Đ/S</option><option value="TL">TL</option></select><div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status==='done'?'text-green-600 bg-green-50': q.status==='error'?'text-red-600 bg-red-50':'text-gray-400 bg-gray-100'}`}>{q.status}</div><div className="text-[9px] text-center text-gray-400">{q.source}</div></td>
+                                                    <td className="p-2"><select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e=>updateData(sIdx, qIdx, 'type', e.target.value)}><option value="TN">TN</option><option value="TF">Đ/S</option><option value="TL">TL</option></select><div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status==='done'?'text-green-600 bg-green-50': q.status==='error'?'text-red-600 bg-red-50':'text-gray-400 bg-gray-100'}`}>{q.status}</div><div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div></td>
                                                     <td className="p-2">
                                                         <div className="mb-2 grid grid-cols-2 gap-2"><input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.topic} onChange={e=>updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..."/><input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.spec} onChange={e=>updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Đặc tả..."/></div>
                                                         <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100"><div className="text-xs font-bold text-indigo-600 mb-1">Câu hỏi:</div><textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e=>updateData(sIdx, qIdx, 'q', e.target.value)}/><div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q || "Review..."} /></div>
