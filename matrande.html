@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V25 - Smart Grouping & Fix Blank Math)</title>
+    <title>Tạo Đề Toán 9 (V26 - Fix AI Models & Word Output)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -119,17 +119,11 @@
             return defaultType;
         };
 
-        // --- NÂNG CẤP PARSE CODE ĐỂ GOM NHÓM TỐT HƠN ---
         const parseQuestionCode = (code) => {
-            // Hỗ trợ: Câu 1, Câu 1a, 1.1, 1-a, 1a...
-            // Regex mới: Tìm số chính (main), sau đó tìm phần phụ (sub) là chữ hoặc số
             const match = code.match(/.*?(\d+)(?:[.\-_ ]?([a-zA-Z]+|[0-9]+))?/);
-            
             if (match) {
                 const main = match[1];
                 let sub = match[2];
-                // Nếu sub giống main (ví dụ 1.1 khi main là 1) thì giữ nguyên
-                // Nếu sub là 'a' thì giữ nguyên
                 return { main: main, sub: sub || null };
             }
             return { main: code, sub: null };
@@ -137,7 +131,6 @@
 
         const toChar = (val) => {
             if (!val) return 'a';
-            // Nếu là số thì chuyển sang chữ
             if (!isNaN(val)) return String.fromCharCode(96 + parseInt(val));
             return val.toLowerCase();
         };
@@ -150,18 +143,19 @@
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"), 
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"), 
                 geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
+                // CẬP NHẬT: Dùng full Qwen 2.5 (An toàn, không bị khóa, JSON chuẩn)
                 hfModels: {
-                    speed: 'HuggingFaceH4/SmolLM2-1.7B-Instruct',  
-                    balanced: 'meta-llama/Llama-3.2-3B-Instruct',  
+                    speed: 'Qwen/Qwen2.5-1.5B-Instruct',  // Thay SmolLM2
+                    balanced: 'Qwen/Qwen2.5-7B-Instruct',  // Thay Llama 3.2
                     expert: 'Qwen/Qwen2.5-Math-7B-Instruct'        
                 }
             }),
             
             selectModel: (qType, qLevel) => {
                 const { hfModels } = AIAdapter.getConfig();
-                if (qType === 'TN' || qType === 'TF') return { id: hfModels.speed, name: 'SmolLM2 (Speed)' };
-                if (qType === 'TL' && ['NB', 'TH'].includes(qLevel)) return { id: hfModels.balanced, name: 'Llama 3.2 (Balanced)' };
-                return { id: hfModels.expert, name: 'Qwen 2.5 (Expert)' };
+                if (qType === 'TN' || qType === 'TF') return { id: hfModels.speed, name: 'Qwen 1.5B (Speed)' };
+                if (qType === 'TL' && ['NB', 'TH'].includes(qLevel)) return { id: hfModels.balanced, name: 'Qwen 7B (Balanced)' };
+                return { id: hfModels.expert, name: 'Qwen Math (Expert)' };
             },
 
             callGemini: async (payloadParts) => {
@@ -183,14 +177,21 @@
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
                 const modelToUse = specificModel || hfModels.expert;
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
-                const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học. Trả về JSON thuần.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
+                
+                // Cải thiện prompt để model nhỏ cũng trả JSON đúng
+                const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học. CHỈ trả về JSON thuần, không markdown, không giải thích thêm.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
+                
                 for(let i=0; i<2; i++) {
                     try {
                         const res = await fetch(`https://api-inference.huggingface.co/models/${modelToUse}`, { 
                             method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
                             body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 1024, temperature: 0.5, return_full_text: false } }) 
                         });
-                        if(!res.ok) { if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } throw new Error(`HF Error ${res.status}`); }
+                        
+                        if(!res.ok) { 
+                            if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } 
+                            throw new Error(`HF Error ${res.status}`); 
+                        }
                         const data = await res.json();
                         if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
                         throw new Error("HF invalid response");
@@ -330,7 +331,7 @@
                 setBlueprint(n);
             };
 
-            // --- EXPORT WORD (V25 - IMPROVED) ---
+            // --- EXPORT WORD (V26 - IMPROVED) ---
             const exportWord = () => {
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
@@ -384,11 +385,9 @@
                             groupOrder.push(main);
                         }
                         
-                        // Nếu có sub (ví dụ a, b, 1, 2) thì đẩy vào subs
                         if (sub) {
                              groups[main].subs.push({ ...q, subLabel: toChar(sub) });
                         } else {
-                             // Nếu không có sub (Câu 1) -> Stem
                              groups[main].stem = q;
                         }
                     });
@@ -456,7 +455,7 @@
             return (
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V25)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping (Stem + a,b,c)</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V26)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping (Stem + a,b,c)</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
