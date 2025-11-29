@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V26 - Fix AI Models & Word Output)</title>
+    <title>Tạo Đề Toán 9 (V27 - Final Word MathML Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -58,19 +58,27 @@
         
         const renderToWeb = (tokens) => tokens.map(t => t.type==='math' ? (()=>{try{return katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'html'});}catch(e){return `<span class="text-red-500 text-xs">${t.content}</span>`;}})() : t.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\\\\/g,'<br/>').replace(/\\n/g,'<br/>').replace(/\n/g,'<br/>')).join('');
         
-        // --- Render Word dùng HTML + Force Style ---
+        // --- Render Word dùng MathML (Native Word Support) ---
         const renderToWord = (tokens) => tokens.map(t => 
             t.type === 'math'
                 ? (() => {
                     try {
-                        return katex.renderToString(t.content, {
+                        // FIX: Dùng MathML để Word hiển thị được mà không cần JS
+                        const m = katex.renderToString(t.content, {
                             displayMode: t.display,
                             throwOnError: false,
-                            output: 'html', 
-                        });
-                    } catch (e) {
-                        return `<span style="color:red;font-size:10pt">${t.content}</span>`;
-                    }
+                            output: 'mathml', 
+                        }).match(/<math[\s\S]*?<\/math>/);
+
+                        if (m) {
+                            return m[0]
+                                // Thêm namespace để Word nhận diện đây là MathML
+                                .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
+                                // Xóa annotation thừa
+                                .replace(/<annotation[\s\S]*?<\/annotation>/g, '');
+                        }
+                    } catch (e) {}
+                    return t.content.replace(/\$/g, '');
                 })()
                 : t.content
                     .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>')
@@ -143,10 +151,9 @@
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"), 
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"), 
                 geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
-                // CẬP NHẬT: Dùng full Qwen 2.5 (An toàn, không bị khóa, JSON chuẩn)
                 hfModels: {
-                    speed: 'Qwen/Qwen2.5-1.5B-Instruct',  // Thay SmolLM2
-                    balanced: 'Qwen/Qwen2.5-7B-Instruct',  // Thay Llama 3.2
+                    speed: 'Qwen/Qwen2.5-1.5B-Instruct',  
+                    balanced: 'Qwen/Qwen2.5-7B-Instruct',  
                     expert: 'Qwen/Qwen2.5-Math-7B-Instruct'        
                 }
             }),
@@ -177,21 +184,14 @@
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
                 const modelToUse = specificModel || hfModels.expert;
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
-                
-                // Cải thiện prompt để model nhỏ cũng trả JSON đúng
                 const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học. CHỈ trả về JSON thuần, không markdown, không giải thích thêm.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
-                
                 for(let i=0; i<2; i++) {
                     try {
                         const res = await fetch(`https://api-inference.huggingface.co/models/${modelToUse}`, { 
                             method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
                             body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 1024, temperature: 0.5, return_full_text: false } }) 
                         });
-                        
-                        if(!res.ok) { 
-                            if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } 
-                            throw new Error(`HF Error ${res.status}`); 
-                        }
+                        if(!res.ok) { if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } throw new Error(`HF Error ${res.status}`); }
                         const data = await res.json();
                         if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
                         throw new Error("HF invalid response");
@@ -331,22 +331,13 @@
                 setBlueprint(n);
             };
 
-            // --- EXPORT WORD (V26 - IMPROVED) ---
+            // --- EXPORT WORD (V27 - MATHML) ---
             const exportWord = () => {
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
-                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
                         <style>
-                            @font-face {
-                                font-family: 'KaTeX_Main';
-                                src: url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts/KaTeX_Main-Regular.woff') format('woff');
-                            }
-                            @font-face {
-                                font-family: 'KaTeX_Math';
-                                src: url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts/KaTeX_Math-Italic.woff') format('woff');
-                            }
                             @page {
                                 size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2.5cm; mso-page-orientation: portrait;
                             }
@@ -357,8 +348,6 @@
                             td { vertical-align: top; padding: 4px; } 
                             .question-block { margin-bottom: 10pt; text-align: justify; }
                             .ans-key-table td { border: 1px solid black; text-align: center; font-weight: bold; }
-                            .katex { font-size: 1.1em; color: black !important; } /* Force Black Color */
-                            .katex-display { margin: 8pt 0; }
                         </style>
                     </head>
                     <body>
@@ -455,7 +444,7 @@
             return (
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V26)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping (Stem + a,b,c)</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V27)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping (Stem + a,b,c)</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
