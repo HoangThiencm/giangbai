@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Toán 9 (V27 - Final Word MathML Fix)</title>
+    <title>Tạo Đề Toán 9 (V28 - OMML Math & Smart Grouping)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -35,7 +35,6 @@
         // ==========================================
         const normalizeRichText = (raw) => {
             if (!raw) return "";
-
             return raw
                 .replace(/`([^`]+)`/g, '$$$1$$')
                 .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
@@ -58,12 +57,11 @@
         
         const renderToWeb = (tokens) => tokens.map(t => t.type==='math' ? (()=>{try{return katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'html'});}catch(e){return `<span class="text-red-500 text-xs">${t.content}</span>`;}})() : t.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\\\\/g,'<br/>').replace(/\\n/g,'<br/>').replace(/\n/g,'<br/>')).join('');
         
-        // --- Render Word dùng MathML (Native Word Support) ---
+        // --- Render Word dùng MathML bọc trong OMML ---
         const renderToWord = (tokens) => tokens.map(t => 
             t.type === 'math'
                 ? (() => {
                     try {
-                        // FIX: Dùng MathML để Word hiển thị được mà không cần JS
                         const m = katex.renderToString(t.content, {
                             displayMode: t.display,
                             throwOnError: false,
@@ -71,11 +69,14 @@
                         }).match(/<math[\s\S]*?<\/math>/);
 
                         if (m) {
-                            return m[0]
-                                // Thêm namespace để Word nhận diện đây là MathML
-                                .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
-                                // Xóa annotation thừa
-                                .replace(/<annotation[\s\S]*?<\/annotation>/g, '');
+                            // Bọc MathML trong thẻ m:oMathPara (Office Math Paragraph) để Word nhận diện
+                            return `
+                                <m:oMathPara>
+                                    <m:oMath>
+                                        ${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}
+                                    </m:oMath>
+                                </m:oMathPara>
+                            `;
                         }
                     } catch (e) {}
                     return t.content.replace(/\$/g, '');
@@ -128,10 +129,16 @@
         };
 
         const parseQuestionCode = (code) => {
+            // Regex bắt: Số câu (Group 1) và Phần phụ (Group 2)
+            // VD: "Câu 1" -> main:1, sub:null
+            // VD: "1a" -> main:1, sub:a
+            // VD: "1.1" -> main:1, sub:1
             const match = code.match(/.*?(\d+)(?:[.\-_ ]?([a-zA-Z]+|[0-9]+))?/);
             if (match) {
                 const main = match[1];
                 let sub = match[2];
+                // Nếu sub trùng main (VD: code là '1' thì regex trên có thể bắt sub là '1', ta reset)
+                if (sub === main) sub = null;
                 return { main: main, sub: sub || null };
             }
             return { main: code, sub: null };
@@ -139,7 +146,7 @@
 
         const toChar = (val) => {
             if (!val) return 'a';
-            if (!isNaN(val)) return String.fromCharCode(96 + parseInt(val));
+            if (!isNaN(val)) return String.fromCharCode(96 + parseInt(val)); // 1->a, 2->b
             return val.toLowerCase();
         };
 
@@ -331,10 +338,12 @@
                 setBlueprint(n);
             };
 
-            // --- EXPORT WORD (V27 - MATHML) ---
+            // --- EXPORT WORD (V28 - OMML NAMESPACE + GROUPING) ---
             const exportWord = () => {
                 let html = `
-                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                          xmlns:w='urn:schemas-microsoft-com:office:word'
+                          xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
                         <style>
@@ -366,7 +375,7 @@
                     const groups = {}; 
                     const groupOrder = [];
 
-                    // --- GOM NHÓM (CẢI TIẾN) ---
+                    // --- GOM NHÓM LOGIC ---
                     sec.questions.forEach(q => {
                         const { main, sub } = parseQuestionCode(q.code);
                         if (!groups[main]) {
@@ -385,11 +394,14 @@
                     groupOrder.forEach(main => {
                         const g = groups[main];
                         html += `<div class='question-block'>`;
+                        
+                        // Tiêu đề câu: "Câu 1:"
                         html += `<p><b>Câu ${main}:</b></p>`;
 
-                        // 1. Render Stem (Câu dẫn)
+                        // 1. Render Stem (Câu dẫn) - Nếu có
                         if (g.stem) {
                              html += `<div>${renderToWord(tokenizeRichText(g.stem.q))}</div>`;
+                             // Đáp án TN cho câu dẫn
                              if ((g.stem.type === 'TN' || g.stem.type === 'TF') && g.stem.a?.length) {
                                 html += `<table style='margin-left:20px;margin-bottom:10px'><tr>`;
                                 g.stem.a.forEach((opt, k) => { 
@@ -400,24 +412,27 @@
                              }
                         }
 
-                        // 2. Render Subs (a, b, c) - Sắp xếp theo a,b,c
-                        g.subs.sort((a,b) => a.subLabel.localeCompare(b.subLabel));
-                        g.subs.forEach(sq => {
-                             html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
-                             if ((sq.type === 'TN' || sq.type === 'TF') && sq.a?.length) {
-                                html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
-                                sq.a.forEach((opt, k) => { 
-                                    const prefix = sq.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
-                                    html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
-                                });
-                                html += `</tr></table>`;
-                             }
-                        });
+                        // 2. Render Subs (a, b, c) - Nếu có
+                        if (g.subs.length > 0) {
+                            g.subs.sort((a,b) => a.subLabel.localeCompare(b.subLabel));
+                            g.subs.forEach(sq => {
+                                 html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                 if ((sq.type === 'TN' || sq.type === 'TF') && sq.a?.length) {
+                                    html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
+                                    sq.a.forEach((opt, k) => { 
+                                        const prefix = sq.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
+                                        html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
+                                    });
+                                    html += `</tr></table>`;
+                                 }
+                            });
+                        }
 
                         html += `</div>`;
                     });
                 });
 
+                // PHẦN ĐÁP ÁN
                 html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>ĐÁP ÁN & HƯỚNG DẪN CHẤM</h3>`;
                 blueprint.sections.forEach(sec => {
                     const tnQuestions = sec.questions.filter(q => q.type === 'TN');
@@ -444,7 +459,7 @@
             return (
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V27)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping (Stem + a,b,c)</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V28)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping + OMML Math</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
