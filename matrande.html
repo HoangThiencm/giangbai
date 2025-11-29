@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề từ Ma trận và Bảng Đặc tả</title>
+    <title>Tạo đề thi từ Ma trận và bảng Đặc tả)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -31,7 +31,7 @@
         const { useState, useEffect, useRef } = React;
 
         // ==========================================
-        // 1. LOGIC XỬ LÝ TEXT (V21 STANDARD)
+        // 1. LOGIC XỬ LÝ TEXT
         // ==========================================
         const normalizeRichText = (raw) => {
             if (!raw) return "";
@@ -60,12 +60,11 @@
         
         const renderToWeb = (tokens) => tokens.map(t => t.type==='math' ? (()=>{try{return katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'html'});}catch(e){return `<span class="text-red-500 text-xs">${t.content}</span>`;}})() : t.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\\\\/g,'<br/>').replace(/\\n/g,'<br/>').replace(/\n/g,'<br/>')).join('');
         
-        // --- CẬP NHẬT MỚI: Render Word dùng HTML (Giống Web) ---
+        // --- Render Word dùng HTML + CSS Inline ---
         const renderToWord = (tokens) => tokens.map(t => 
             t.type === 'math'
                 ? (() => {
                     try {
-                        // ⭐ QUAN TRỌNG: Dùng output 'html' để hiển thị đúng hệ phương trình
                         return katex.renderToString(t.content, {
                             displayMode: t.display,
                             throwOnError: false,
@@ -133,7 +132,7 @@
         const toChar = (num) => String.fromCharCode(96 + parseInt(num)); 
 
         // ==========================================
-        // 2. AI ADAPTER (AUTO SELECT MODEL)
+        // 2. AI ADAPTER
         // ==========================================
         const AIAdapter = {
             getConfig: () => ({ 
@@ -197,7 +196,7 @@
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
             const [loadingMsg, setLoadingMsg] = useState("");
-            const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
+            const [info, setInfo] = useState({ dept: "SỞ GD&ĐT ĐỒNG NAI", school: "TRƯỜNG .....", title: "KIỂM TRA....", time: "90" });
             const [images, setImages] = useState([]);
             const [blueprint, setBlueprint] = useState(null);
             const [hfStatus, setHfStatus] = useState(false);
@@ -320,18 +319,28 @@
                 setBlueprint(n);
             };
 
-            // --- EXPORT WORD (SGK STYLE) ---
+            // --- EXPORT WORD (V24 - FIX FONT & GROUPING) ---
             const exportWord = () => {
+                // 1. CSS & Font nhúng để hiển thị MathML/KaTeX trong Word
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
-                        <!-- Thêm CSS KaTeX để hiển thị đẹp -->
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
                         <style>
+                            /* --- NHÚNG FONT KATEX ĐỂ WORD HIỂN THỊ ĐƯỢC --- */
+                            @font-face {
+                                font-family: 'KaTeX_Main';
+                                src: url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts/KaTeX_Main-Regular.woff') format('woff');
+                            }
+                            @font-face {
+                                font-family: 'KaTeX_Math';
+                                src: url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts/KaTeX_Math-Italic.woff') format('woff');
+                            }
+                            /* ----------------------------------------------- */
+
                             @page {
                                 size: 21cm 29.7cm; /* A4 */
-                                /* Margin chuẩn SGK: Trái 2.5cm, còn lại 2cm */
                                 margin: 2cm 2cm 2cm 2.5cm; 
                                 mso-page-orientation: portrait;
                             }
@@ -339,17 +348,17 @@
                                 font-family: 'Times New Roman', serif;
                                 font-size: 13pt;
                                 line-height: 1.3;
-                                text-align: justify; /* Căn đều 2 bên giống sách */
+                                text-align: justify;
                             } 
                             table { width: 100%; border-collapse: collapse; } 
                             td { vertical-align: top; padding: 4px; } 
                             .question-block {
-                                margin-bottom: 10pt; /* Tăng khoảng cách giữa các câu */
+                                margin-bottom: 10pt;
                                 text-align: justify;
                             }
                             .ans-key-table td { border: 1px solid black; text-align: center; font-weight: bold; }
                             .katex-display { margin: 6pt 0; }
-                            .katex { font-size: 1.05em; } /* Tinh chỉnh font toán học chút cho rõ */
+                            .katex { font-size: 1.05em; }
                         </style>
                     </head>
                     <body>
@@ -364,42 +373,67 @@
 
                 blueprint.sections.forEach(sec => {
                     html += `<p style='font-weight:bold;margin-top:15px;text-transform:uppercase'>${sec.name}</p>`;
-                    let prevMainCode = null;
+                    
+                    // --- LOGIC GOM NHÓM CÂU HỎI (GROUPING) ---
+                    const groups = {}; 
+                    const groupOrder = [];
+
+                    // Bước 1: Duyệt qua danh sách câu hỏi phẳng để gom nhóm
                     sec.questions.forEach(q => {
                         const { main, sub } = parseQuestionCode(q.code);
-                        const isSubQuestion = sub !== null;
-                        let labelHTML = "";
-                        let contentHTML = renderToWord(tokenizeRichText(q.q));
-
-                        if (isSubQuestion) {
-                            if (main !== prevMainCode) {
-                                labelHTML = `<b>Câu ${main}:</b><br/>`;
-                                prevMainCode = main;
-                            }
-                            const subLabel = isNaN(sub) ? sub : toChar(sub); 
-                            labelHTML += `<b>${subLabel})</b> `;
+                        if (!groups[main]) {
+                            groups[main] = { main, stem: null, subs: [] };
+                            groupOrder.push(main);
+                        }
+                        if (sub) {
+                            // Nếu có sub (1.1, 1a) -> Đưa vào danh sách con
+                            groups[main].subs.push({ ...q, subLabel: isNaN(sub) ? sub : toChar(sub) });
                         } else {
-                            labelHTML = `<b>Câu ${main}:</b> `;
-                            prevMainCode = main;
+                            // Nếu không có sub (Câu 1) -> Là câu dẫn (stem)
+                            groups[main].stem = q;
+                        }
+                    });
+
+                    // Bước 2: Render từng nhóm
+                    groupOrder.forEach(main => {
+                        const g = groups[main];
+                        html += `<div class='question-block'>`;
+                        html += `<p><b>Câu ${main}:</b></p>`;
+
+                        // Render Câu dẫn (Stem) nếu có
+                        if (g.stem) {
+                             html += `<div>${renderToWord(tokenizeRichText(g.stem.q))}</div>`;
+                             // Render đáp án TN cho câu dẫn (nếu có)
+                             if ((g.stem.type === 'TN' || g.stem.type === 'TF') && g.stem.a?.length) {
+                                html += `<table style='margin-left:20px;margin-bottom:10px'><tr>`;
+                                g.stem.a.forEach((opt, k) => { 
+                                    const prefix = g.stem.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
+                                    html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
+                                });
+                                html += `</tr></table>`;
+                             }
                         }
 
-                        html += `<div class="question-block" style='margin-left:${isSubQuestion?'20px':0}'>${labelHTML} ${contentHTML}</div>`;
+                        // Render Các ý con (a, b, c...)
+                        g.subs.forEach(sq => {
+                             html += `<div style="margin-left: 0.5cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                             // Render đáp án TN cho ý con (nếu có)
+                             if ((sq.type === 'TN' || sq.type === 'TF') && sq.a?.length) {
+                                html += `<table style='margin-left:1cm;margin-bottom:10px'><tr>`;
+                                sq.a.forEach((opt, k) => { 
+                                    const prefix = sq.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
+                                    html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
+                                });
+                                html += `</tr></table>`;
+                             }
+                        });
 
-                        if((q.type === 'TN' || q.type === 'TF') && q.a?.length) {
-                            html += `<table style='margin-left:${isSubQuestion?'40px':'20px'};margin-bottom:10px'><tr>`;
-                            q.a.forEach((opt, k) => { 
-                                const prefix = q.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
-                                html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
-                            });
-                            html += `</tr></table>`;
-                        } else {
-                            html += `<br/>`; 
-                        }
+                        html += `</div>`;
                     });
                 });
 
+                // Phần Đáp Án & Lời Giải giữ nguyên logic cũ (chỉ fix render)
                 html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
-                
                 blueprint.sections.forEach(sec => {
                     const tnQuestions = sec.questions.filter(q => q.type === 'TN');
                     if(tnQuestions.length > 0) {
@@ -410,7 +444,6 @@
                         tnQuestions.forEach(q => html += `<td style="color:red">${q.correct_char || "?"}</td>`);
                         html += `</tr></table><br/>`;
                     }
-
                     html += `<h4>Lời giải chi tiết</h4>`;
                     sec.questions.forEach(q => { 
                         const tokensAns = tokenizeRichText(q.c);
