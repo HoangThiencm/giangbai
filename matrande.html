@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề từ Ma trận và Bảng đặc tả</title>
+    <title>Tạo Đề Toán 9 (V25 - Smart Grouping & Fix Blank Math)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -31,29 +31,18 @@
         const { useState, useEffect, useRef } = React;
 
         // ==========================================
-        // 1. LOGIC XỬ LÝ TEXT (ĐÃ FIX LỖI LATEX)
+        // 1. LOGIC XỬ LÝ TEXT
         // ==========================================
         const normalizeRichText = (raw) => {
             if (!raw) return "";
 
             return raw
-                // Tự động đổi `text` thành $text$ cho inline math
                 .replace(/`([^`]+)`/g, '$$$1$$')
-                
-                // Xử lý \[ \] → $$...$$
                 .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
-
-                // Xử lý \( \) → $...$
                 .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
-
-                // 🔥 Chuẩn hóa system of equations: Loại bỏ backslash dư thừa trước begin/end cases
                 .replace(/\\\\+(?=\\begin\{cases\})/g, '\\')
                 .replace(/\\\\+(?=\\end\{cases\})/g, '\\')
-
-                // 🔥 Chuẩn hóa row breaks bên trong hệ (nhiều \\ thành 2 \\)
                 .replace(/\\\\\s*\\\\/g, '\\\\')
-                
-                // Trả về kết quả sạch HTML entities
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>');
         };
@@ -69,24 +58,28 @@
         
         const renderToWeb = (tokens) => tokens.map(t => t.type==='math' ? (()=>{try{return katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'html'});}catch(e){return `<span class="text-red-500 text-xs">${t.content}</span>`;}})() : t.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\\\\/g,'<br/>').replace(/\\n/g,'<br/>').replace(/\n/g,'<br/>')).join('');
         
-        // --- Xử lý \textbf và \textit cho Word ---
+        // --- Render Word dùng HTML + Force Style ---
         const renderToWord = (tokens) => tokens.map(t => 
-            t.type==='math' 
-            ? (()=>{
-                try{
-                    const m=katex.renderToString(t.content,{displayMode:t.display,throwOnError:false,output:'mathml',strict:false}).match(/<math[\s\S]*?<\/math>/);
-                    if(m) return m[0].replace(/<math/g,'<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g,'');
-                }catch(e){}
-                return t.content.replace(/\$/g,'');
-            })() 
-            : t.content
-                .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>') // Chuyển \textbf{} thành bold
-                .replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>') // Chuyển \textit{} thành italic
-                .replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>')   // Chuyển \emph{} thành italic
-                .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')
-                .replace(/\\\\/g,'<br/>')
-                .replace(/\\n/g,'<br/>')
-                .replace(/\n/g,'<br/>')
+            t.type === 'math'
+                ? (() => {
+                    try {
+                        return katex.renderToString(t.content, {
+                            displayMode: t.display,
+                            throwOnError: false,
+                            output: 'html', 
+                        });
+                    } catch (e) {
+                        return `<span style="color:red;font-size:10pt">${t.content}</span>`;
+                    }
+                })()
+                : t.content
+                    .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>')
+                    .replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>')
+                    .replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>')
+                    .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')
+                    .replace(/\\\\/g,'<br/>')
+                    .replace(/\\n/g,'<br/>')
+                    .replace(/\n/g,'<br/>')
         ).join('');
 
         const MathRender = ({ text }) => {
@@ -126,45 +119,48 @@
             return defaultType;
         };
 
+        // --- NÂNG CẤP PARSE CODE ĐỂ GOM NHÓM TỐT HƠN ---
         const parseQuestionCode = (code) => {
-            const match = code.match(/.*?(\d+)[.\-_](\d+)/); 
-            if (match) return { main: match[1], sub: match[2] };
-            const matchSingle = code.match(/.*?(\d+)/);
-            if (matchSingle) return { main: matchSingle[1], sub: null };
+            // Hỗ trợ: Câu 1, Câu 1a, 1.1, 1-a, 1a...
+            // Regex mới: Tìm số chính (main), sau đó tìm phần phụ (sub) là chữ hoặc số
+            const match = code.match(/.*?(\d+)(?:[.\-_ ]?([a-zA-Z]+|[0-9]+))?/);
+            
+            if (match) {
+                const main = match[1];
+                let sub = match[2];
+                // Nếu sub giống main (ví dụ 1.1 khi main là 1) thì giữ nguyên
+                // Nếu sub là 'a' thì giữ nguyên
+                return { main: main, sub: sub || null };
+            }
             return { main: code, sub: null };
         };
 
-        const toChar = (num) => String.fromCharCode(96 + parseInt(num)); 
+        const toChar = (val) => {
+            if (!val) return 'a';
+            // Nếu là số thì chuyển sang chữ
+            if (!isNaN(val)) return String.fromCharCode(96 + parseInt(val));
+            return val.toLowerCase();
+        };
 
         // ==========================================
-        // 2. AI ADAPTER (TÍCH HỢP AUTO MODEL SELECTION)
+        // 2. AI ADAPTER
         // ==========================================
         const AIAdapter = {
             getConfig: () => ({ 
                 geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"), 
                 hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"), 
                 geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
-                // Các model HuggingFace chuyên dụng
                 hfModels: {
-                    speed: 'HuggingFaceH4/SmolLM2-1.7B-Instruct',  // Cho TN/TF
-                    balanced: 'meta-llama/Llama-3.2-3B-Instruct',  // Cho TL dễ
-                    expert: 'Qwen/Qwen2.5-Math-7B-Instruct'        // Cho TL khó
+                    speed: 'HuggingFaceH4/SmolLM2-1.7B-Instruct',  
+                    balanced: 'meta-llama/Llama-3.2-3B-Instruct',  
+                    expert: 'Qwen/Qwen2.5-Math-7B-Instruct'        
                 }
             }),
             
-            // Hàm chọn model tự động dựa trên loại câu hỏi và mức độ
             selectModel: (qType, qLevel) => {
                 const { hfModels } = AIAdapter.getConfig();
-                
-                // 1. Trắc nghiệm / Đúng sai -> Dùng model siêu nhẹ (SmolLM2) -> Siêu nhanh & JSON chuẩn
-                if (qType === 'TN' || qType === 'TF') 
-                    return { id: hfModels.speed, name: 'SmolLM2 (Speed)' };
-                
-                // 2. Tự luận mức độ thấp -> Dùng model cân bằng (Llama 3.2) -> Văn phong tốt
-                if (qType === 'TL' && ['NB', 'TH'].includes(qLevel)) 
-                    return { id: hfModels.balanced, name: 'Llama 3.2 (Balanced)' };
-                    
-                // 3. Tự luận mức độ cao hoặc mặc định -> Dùng chuyên gia toán (Qwen) -> Giải toán sâu
+                if (qType === 'TN' || qType === 'TF') return { id: hfModels.speed, name: 'SmolLM2 (Speed)' };
+                if (qType === 'TL' && ['NB', 'TH'].includes(qLevel)) return { id: hfModels.balanced, name: 'Llama 3.2 (Balanced)' };
                 return { id: hfModels.expert, name: 'Qwen 2.5 (Expert)' };
             },
 
@@ -185,32 +181,16 @@
             callHF: async (promptText, specificModel = null) => {
                 const { hfTokens, hfModels } = AIAdapter.getConfig();
                 if(!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
-                
-                // Sử dụng model được chỉ định hoặc mặc định là Qwen
                 const modelToUse = specificModel || hfModels.expert;
-                
                 const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
                 const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học. Trả về JSON thuần.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
-                
                 for(let i=0; i<2; i++) {
                     try {
                         const res = await fetch(`https://api-inference.huggingface.co/models/${modelToUse}`, { 
-                            method: 'POST', 
-                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
-                            body: JSON.stringify({ 
-                                inputs: formattedPrompt, 
-                                parameters: { 
-                                    max_new_tokens: 1024, 
-                                    temperature: 0.5, 
-                                    return_full_text: false 
-                                } 
-                            }) 
+                            method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 1024, temperature: 0.5, return_full_text: false } }) 
                         });
-                        
-                        if(!res.ok) { 
-                            if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } 
-                            throw new Error(`HF Error ${res.status}`); 
-                        }
+                        if(!res.ok) { if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } throw new Error(`HF Error ${res.status}`); }
                         const data = await res.json();
                         if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
                         throw new Error("HF invalid response");
@@ -227,7 +207,7 @@
             const [step, setStep] = useState(1);
             const [loading, setLoading] = useState(false);
             const [loadingMsg, setLoadingMsg] = useState("");
-            const [info, setInfo] = useState({ dept: "SỞ GD&ĐT ĐỒNG NAI", school: "TRƯỜNG THCS NGUYỄN CÔNG TRỨ", title: "KIỂM TRA....", time: "90" });
+            const [info, setInfo] = useState({ dept: "PHÒNG GD&ĐT...", school: "TRƯỜNG THCS...", title: "KIỂM TRA CUỐI KỲ I", time: "90" });
             const [images, setImages] = useState([]);
             const [blueprint, setBlueprint] = useState(null);
             const [hfStatus, setHfStatus] = useState(false);
@@ -294,13 +274,8 @@
             const generateQuestion = async (sIdx, qIdx) => {
                 const qData = blueprint.sections[sIdx].questions[qIdx];
                 const newBp = {...blueprint}; 
-                
-                // Chọn model tự động
                 const selectedModel = AIAdapter.selectModel(qData.type, qData.level);
-                
-                // Cập nhật trạng thái kèm tên model
                 newBp.sections[sIdx].questions[qIdx].status = 'generating'; 
-                // Có thể lưu tên model để hiển thị UI nếu muốn
                 setBlueprint(newBp);
 
                 const promptText = `
@@ -316,12 +291,10 @@
                     let jsonStr = "", usedSource = "Gemini";
                     if (AIAdapter.getConfig().hfTokens.length > 0) {
                         try { 
-                            // GỌI MODEL ĐÃ ĐƯỢC CHỌN
                             jsonStr = await AIAdapter.callHF(promptText, selectedModel.id); 
-                            usedSource = selectedModel.name; // Hiển thị tên model: SmolLM2, Llama, Qwen
+                            usedSource = selectedModel.name;
                         } 
                         catch (hfErr) { 
-                            // Fallback sang Gemini nếu HF lỗi
                             const payload = [{text: promptText}, ...images.map(d=>({inline_data: {mime_type: "image/jpeg", data: d}}))]; 
                             jsonStr = await AIAdapter.callGemini(payload); 
                             usedSource = "Gemini (Backup)"; 
@@ -357,25 +330,35 @@
                 setBlueprint(n);
             };
 
-            // --- EXPORT WORD (THIẾT KẾ ĐỀ THI HOÀN CHỈNH) ---
+            // --- EXPORT WORD (V25 - IMPROVED) ---
             const exportWord = () => {
-                // CẬP NHẬT CSS: Margin và Page Size
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-                    <head><meta charset='utf-8'><title>De Thi</title>
-                    <style>
-                        @page {
-                            size: 21cm 29.7cm; /* A4 */
-                            /* Margin: Top Right Bottom Left */
-                            margin: 1.5cm 1.5cm 1.5cm 2.5cm; 
-                            mso-page-orientation: portrait;
-                        }
-                        body{font-family:'Times New Roman';font-size:13pt;line-height:1.3} 
-                        table{width:100%;border-collapse:collapse} 
-                        td{vertical-align:top;padding:4px} 
-                        .question-block {margin-bottom: 8pt;}
-                        .ans-key-table td {border: 1px solid black; text-align: center; font-weight: bold;}
-                    </style>
+                    <head>
+                        <meta charset='utf-8'><title>De Thi</title>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+                        <style>
+                            @font-face {
+                                font-family: 'KaTeX_Main';
+                                src: url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts/KaTeX_Main-Regular.woff') format('woff');
+                            }
+                            @font-face {
+                                font-family: 'KaTeX_Math';
+                                src: url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts/KaTeX_Math-Italic.woff') format('woff');
+                            }
+                            @page {
+                                size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2.5cm; mso-page-orientation: portrait;
+                            }
+                            body {
+                                font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.3; text-align: justify; color: #000;
+                            } 
+                            table { width: 100%; border-collapse: collapse; } 
+                            td { vertical-align: top; padding: 4px; } 
+                            .question-block { margin-bottom: 10pt; text-align: justify; }
+                            .ans-key-table td { border: 1px solid black; text-align: center; font-weight: bold; }
+                            .katex { font-size: 1.1em; color: black !important; } /* Force Black Color */
+                            .katex-display { margin: 8pt 0; }
+                        </style>
                     </head>
                     <body>
                     <div style="text-align:center;font-weight:bold;margin-bottom:20px">
@@ -390,44 +373,64 @@
                 blueprint.sections.forEach(sec => {
                     html += `<p style='font-weight:bold;margin-top:15px;text-transform:uppercase'>${sec.name}</p>`;
                     
-                    let prevMainCode = null;
+                    const groups = {}; 
+                    const groupOrder = [];
 
+                    // --- GOM NHÓM (CẢI TIẾN) ---
                     sec.questions.forEach(q => {
                         const { main, sub } = parseQuestionCode(q.code);
-                        const isSubQuestion = sub !== null;
+                        if (!groups[main]) {
+                            groups[main] = { main, stem: null, subs: [] };
+                            groupOrder.push(main);
+                        }
                         
-                        let labelHTML = "";
-                        let contentHTML = renderToWord(tokenizeRichText(q.q));
-
-                        if (isSubQuestion) {
-                            if (main !== prevMainCode) {
-                                labelHTML = `<b>Câu ${main}:</b><br/>`;
-                                prevMainCode = main;
-                            }
-                            const subLabel = isNaN(sub) ? sub : toChar(sub); 
-                            labelHTML += `<b>${subLabel})</b> `;
+                        // Nếu có sub (ví dụ a, b, 1, 2) thì đẩy vào subs
+                        if (sub) {
+                             groups[main].subs.push({ ...q, subLabel: toChar(sub) });
                         } else {
-                            labelHTML = `<b>Câu ${main}:</b> `;
-                            prevMainCode = main;
+                             // Nếu không có sub (Câu 1) -> Stem
+                             groups[main].stem = q;
+                        }
+                    });
+
+                    // --- RENDER NHÓM ---
+                    groupOrder.forEach(main => {
+                        const g = groups[main];
+                        html += `<div class='question-block'>`;
+                        html += `<p><b>Câu ${main}:</b></p>`;
+
+                        // 1. Render Stem (Câu dẫn)
+                        if (g.stem) {
+                             html += `<div>${renderToWord(tokenizeRichText(g.stem.q))}</div>`;
+                             if ((g.stem.type === 'TN' || g.stem.type === 'TF') && g.stem.a?.length) {
+                                html += `<table style='margin-left:20px;margin-bottom:10px'><tr>`;
+                                g.stem.a.forEach((opt, k) => { 
+                                    const prefix = g.stem.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
+                                    html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
+                                });
+                                html += `</tr></table>`;
+                             }
                         }
 
-                        html += `<div class="question-block" style='margin-left:${isSubQuestion?'20px':0}'>${labelHTML} ${contentHTML}</div>`;
+                        // 2. Render Subs (a, b, c) - Sắp xếp theo a,b,c
+                        g.subs.sort((a,b) => a.subLabel.localeCompare(b.subLabel));
+                        g.subs.forEach(sq => {
+                             html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                             if ((sq.type === 'TN' || sq.type === 'TF') && sq.a?.length) {
+                                html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
+                                sq.a.forEach((opt, k) => { 
+                                    const prefix = sq.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
+                                    html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
+                                });
+                                html += `</tr></table>`;
+                             }
+                        });
 
-                        if((q.type === 'TN' || q.type === 'TF') && q.a?.length) {
-                            html += `<table style='margin-left:${isSubQuestion?'40px':'20px'};margin-bottom:10px'><tr>`;
-                            q.a.forEach((opt, k) => { 
-                                const prefix = q.type === 'TN' ? String.fromCharCode(65+k) : String.fromCharCode(97+k); 
-                                html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k%2!==0?'</tr><tr>':''}`; 
-                            });
-                            html += `</tr></table>`;
-                        } else {
-                            html += `<br/>`; 
-                        }
+                        html += `</div>`;
                     });
                 });
 
-                html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>HƯỚNG DẪN CHẤM</h3>`;
-                
+                html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>ĐÁP ÁN & HƯỚNG DẪN CHẤM</h3>`;
                 blueprint.sections.forEach(sec => {
                     const tnQuestions = sec.questions.filter(q => q.type === 'TN');
                     if(tnQuestions.length > 0) {
@@ -438,7 +441,6 @@
                         tnQuestions.forEach(q => html += `<td style="color:red">${q.correct_char || "?"}</td>`);
                         html += `</tr></table><br/>`;
                     }
-
                     html += `<h4>Lời giải chi tiết</h4>`;
                     sec.questions.forEach(q => { 
                         const tokensAns = tokenizeRichText(q.c);
@@ -454,7 +456,7 @@
             return (
                 <div className="max-w-7xl mx-auto p-4 font-ui">
                     <div className="flex justify-between items-end border-b pb-4 mb-6">
-                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V21)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Auto Type + Smart Grouping</p></div>
+                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ TOÁN 9 (V25)</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping (Stem + a,b,c)</p></div>
                         <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
                     </div>
 
