@@ -454,6 +454,15 @@
                 pointsPerQuestion: 1
             });
 
+            // SỬA: Thêm check auth ngay khi vào trang
+            useEffect(() => {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    alert("Bạn chưa đăng nhập! Hệ thống sẽ chuyển về trang đăng nhập.");
+                    window.location.href = 'login.html';
+                }
+            }, []);
+
             const LEVELS = ["Cơ bản", "Trung bình", "Nâng cao", "Hỗn hợp"];
 
             // --- CÁC HÀM QUẢN LÝ CHỦ ĐỀ ---
