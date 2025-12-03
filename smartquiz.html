@@ -54,7 +54,8 @@
 		}
     </style>
 </head>
-<body class="bg-slate-50 h-screen overflow-hidden font-sans">
+<!-- SỬA: Thay đổi class body để cho phép cuộn trang (min-h-screen thay vì h-screen overflow-hidden) -->
+<body class="bg-slate-50 min-h-screen font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -217,6 +218,12 @@
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
             const [showResults, setShowResults] = useState(false);
 
+            // SỬA: Khóa cuộn trang khi vào chế độ trình chiếu
+            useEffect(() => {
+                document.body.style.overflow = 'hidden';
+                return () => { document.body.style.overflow = 'auto'; };
+            }, []);
+
             const handleNext = useCallback(() => {
                 if (idx < shuffledQuestions.length - 1) {
                     setIdx(prev => prev + 1);
@@ -376,6 +383,12 @@
         const EssayPresentationMode = ({ essays, onExit }) => {
             const [idx, setIdx] = useState(0);
             const [showSolution, setShowSolution] = useState(false);
+
+            // SỬA: Khóa cuộn trang khi vào chế độ trình chiếu
+            useEffect(() => {
+                document.body.style.overflow = 'hidden';
+                return () => { document.body.style.overflow = 'auto'; };
+            }, []);
 
             const handleKeyDown = (e) => {
                 switch(e.key) {
