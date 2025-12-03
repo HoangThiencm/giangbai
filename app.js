@@ -1,4 +1,4 @@
-// js/app.js - Đã chỉnh sửa tích hợp hệ thống
+// js/app.js - Tích hợp hệ thống & Model Priority
 
 const defaultProps = {
     selectable: true, hasControls: true, hasBorders: true, originX: 'center', originY: 'center', strokeWidth: 2, padding: 5,
@@ -210,20 +210,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- API Key Management (UPDATED) ---
     function loadApiKeys() {
+        // Prioritize System Keys
         const systemKeys = localStorage.getItem('global_gemini_keys');
         if (systemKeys) {
             try {
-                apiKeysFromFile = JSON.parse(systemKeys);
-                if (apiKeysFromFile.length > 0) {
-                    allDOMElements.apiKeyFilename.textContent = `Đã tải ${apiKeysFromFile.length} khóa từ Hệ thống.`;
+                const keys = JSON.parse(systemKeys);
+                if (keys.length > 0) {
+                    apiKeysFromFile = keys;
+                    allDOMElements.apiKeyFilename.textContent = `Đã tải ${keys.length} khóa từ Hệ thống.`;
                     allDOMElements.apiKeyFilename.classList.remove('text-red-400');
                     allDOMElements.apiKeyFilename.classList.add('text-green-400');
-                    // Không cần return vì bên dưới vẫn có thể load thêm từ file nếu muốn
                 }
-            } catch (e) { console.error("Lỗi parse system keys", e); }
+            } catch (e) { console.error("Error parsing system keys", e); }
         } else {
-             const storedKeys = localStorage.getItem('geometryAiApiKeys');
-             if (storedKeys) {
+            // Fallback to local keys (from file upload)
+            const storedKeys = localStorage.getItem('geometryAiApiKeys');
+            if (storedKeys) {
                 apiKeysFromFile = JSON.parse(storedKeys);
                 if (apiKeysFromFile.length > 0) {
                     allDOMElements.apiKeyFilename.textContent = `Đã tải ${apiKeysFromFile.length} khóa (Local).`;
@@ -255,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function () {
     canvas.on('mouse:move', function(opt) { if (isPanning) { const vpt = this.viewportTransform; vpt[4] += opt.e.clientX - lastPanX; vpt[5] += opt.e.clientY - lastPanY; this.requestRenderAll(); lastPanX = opt.e.clientX; lastPanY = opt.e.clientY; } });
     canvas.on('mouse:up', function() { if (isPanning) { this.setViewportTransform(this.viewportTransform); isPanning = false; this.selection = true; } });
 
-    // === AI GENERATION LOGIC (UPDATED) ===
+    // === AI GENERATION LOGIC (UPDATED WITH PRIORITY & FALLBACK) ===
     async function handleGenerateClick(isRegenerating = false) {
         const userPrompt = allDOMElements.promptInput.value;
         const imageFile = activeImageFile;
@@ -263,9 +265,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (apiKeysFromFile.length === 0) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng cung cấp tệp API Key hoặc nạp key hệ thống.</span>'; return; }
 
         let keysToTry = [...apiKeysFromFile];
-        // USE DEFAULT SYSTEM MODEL (HIDDEN DROPDOWN)
-        const modelName = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
-
+        
+        // PRIORITY MODELS: 2.5 -> 2.0
+        const primaryModel = 'gemini-2.5-flash';
+        const fallbackModel = 'gemini-2.0-flash';
+        
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
         allDOMElements.analysisOutput.innerHTML = 'AI đang phân tích...';
@@ -283,15 +287,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const payload = { contents: [{ parts }] };
 
-        const tryNextKey = async () => {
-            if (keysToTry.length === 0) { allDOMElements.analysisOutput.innerHTML = `<span class="text-red-400">Đã thử tất cả API key nhưng đều thất bại.</span>`; allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; return; }
+        const tryNextKey = async (currentModel) => {
+            if (keysToTry.length === 0) { 
+                // If failed with primary, switch to fallback and reset keys
+                if (currentModel === primaryModel) {
+                    allDOMElements.analysisOutput.innerHTML += `<br><span class="text-yellow-400">Chuyển sang Gemini 2.0 Flash...</span>`;
+                    keysToTry = [...apiKeysFromFile]; // Reset keys
+                    await tryNextKey(fallbackModel);
+                    return;
+                }
+                allDOMElements.analysisOutput.innerHTML += `<br><span class="text-red-400">Đã thử tất cả API key và Model nhưng đều thất bại.</span>`; 
+                allDOMElements.loader.classList.add('hidden'); 
+                allDOMElements.generateBtn.disabled = false; 
+                allDOMElements.regenerateBtn.disabled = false; 
+                return; 
+            }
+            
             const currentKey = keysToTry.shift();
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?key=${currentKey}`;
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:streamGenerateContent?key=${currentKey}`;
 
             try {
                 const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.status === 429) { allDOMElements.analysisOutput.textContent = `Một key đã hết quota, đang thử key tiếp theo... (${keysToTry.length} còn lại)`; await tryNextKey(); return; }
-                if (!response.ok) { const errorBody = await response.json(); throw new Error(`Lỗi API ${response.status}: ${errorBody?.error?.message || 'Unknown error'}`); }
+                if (response.status === 429) { allDOMElements.analysisOutput.textContent = `Key hết quota, đang thử key tiếp theo...`; await tryNextKey(currentModel); return; }
+                if (!response.ok) { 
+                    const errorBody = await response.json(); 
+                    console.error("API Error", errorBody);
+                    // If 404 or similar, maybe model doesn't exist on this key tier, try next key
+                    throw new Error(`Lỗi API ${response.status}`); 
+                }
 
                 const reader = response.body.getReader(); const decoder = new TextDecoder();
                 let fullResponseText = ""; let codeExecuted = false;
@@ -305,9 +328,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (!codeExecuted && fullResponseText.includes('<javascript>') && fullResponseText.includes('</javascript>')) { executeAiCode(fullResponseText); codeExecuted = true; }
                 }
                 if (!codeExecuted) { executeAiCode(fullResponseText); }
-            } catch (error) { console.error(`Lỗi với key ...${currentKey.slice(-4)}:`, error); allDOMElements.analysisOutput.textContent = `Gặp lỗi, đang thử key tiếp theo... (${keysToTry.length} còn lại)`; await tryNextKey(); } finally { allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; }
+            } catch (error) { 
+                console.error(`Lỗi với key ...${currentKey.slice(-4)}:`, error); 
+                // Just try next key with SAME model first
+                await tryNextKey(currentModel); 
+            } finally { 
+                if (keysToTry.length === 0 && currentModel === fallbackModel) {
+                    allDOMElements.loader.classList.add('hidden'); 
+                    allDOMElements.generateBtn.disabled = false; 
+                    allDOMElements.regenerateBtn.disabled = false; 
+                }
+            }
         };
-        await tryNextKey();
+        
+        // Start with Primary Model
+        await tryNextKey(primaryModel);
     }
     
     function executeAiCode(fullText) {
@@ -319,8 +354,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 drawFunction(canvas, fabric, (...args) => addRightAngleSymbol(canvas, ...args), (...args) => addEqualityTick(canvas, ...args), (...args) => addAngleArc(canvas, ...args), (...args) => drawBarChart(canvas, ...args), (...args) => drawPieChart(canvas, ...args));
                 canvas.getObjects().forEach(obj => { if (!obj.source) obj.set({ source: 'ai_primitive' }); if (obj.type === 'line' || obj.type === 'polyline' || obj.type === 'path') { obj.set({ objectCaching: false }); } });
                 applyAiLockState(); sendPointsToFront();
-            } catch (e) { const errorHtml = `<br><br><strong class="text-red-400">Lỗi thực thi mã vẽ:</strong> ${e.message}`; if(!allDOMElements.analysisOutput.innerHTML.includes(errorHtml)){ allDOMElements.analysisOutput.innerHTML += errorHtml; } } finally { canvas.renderOnAddRemove = true; canvas.renderAll(); isAiDrawing = false; saveHistory(); }
-        } else { const warningHtml = `<br><br><strong class="text-yellow-400">Cảnh báo:</strong> Không tìm thấy mã JavaScript trong phản hồi của AI.`; if(!allDOMElements.analysisOutput.innerHTML.includes(warningHtml)){ allDOMElements.analysisOutput.innerHTML += warningHtml; } }
+            } catch (e) { const errorHtml = `<br><br><strong class="text-red-400">Lỗi thực thi mã vẽ:</strong> ${e.message}`; if(!allDOMElements.analysisOutput.innerHTML.includes(errorHtml)){ allDOMElements.analysisOutput.innerHTML += errorHtml; } } finally { canvas.renderOnAddRemove = true; canvas.renderAll(); isAiDrawing = false; saveHistory(); allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; }
+        } else { const warningHtml = `<br><br><strong class="text-yellow-400">Cảnh báo:</strong> Không tìm thấy mã JavaScript trong phản hồi của AI.`; if(!allDOMElements.analysisOutput.innerHTML.includes(warningHtml)){ allDOMElements.analysisOutput.innerHTML += warningHtml; } allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; }
     }
 
     function resetDrawingState() { if (activeToolCleanup) { activeToolCleanup(); activeToolCleanup = null; } canvas.isDrawingMode = false; canvas.selection = true; canvas.defaultCursor = 'default'; document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active')); document.querySelector('button[data-tool="select"]').classList.add('active'); }
