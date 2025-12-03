@@ -3,293 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống Giáo Viên AI - Dashboard</title>
+    <title>Hệ Thống Dạy Học AI Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .file-input-hidden { position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; }
-        .hover-card { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        .hover-card:hover { transform: translateY(-5px); box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08); }
-        /* Animation cho Accordion */
-        .accordion-content { transition: max-height 0.3s ease-out, opacity 0.3s ease-out; max-height: 0; opacity: 0; overflow: hidden; }
-        .accordion-content.active { max-height: 500px; opacity: 1; }
-    </style>
     <script>
-        const SystemConfig = {
-            checkAuth: () => { if (!localStorage.getItem('authToken')) { window.location.href = 'login.html'; return false; } return true; },
-            logout: () => { if(confirm("Đăng xuất?")) { localStorage.clear(); window.location.href = 'login.html'; } },
-            
-            // --- GETTERS ---
-            getApiKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
-            getHFTokens: () => JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
-
-            // --- ACTIONS ---
-            handleFile: (file, type) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const content = e.target.result.trim();
-                    const lines = content.split('\n').map(l=>l.trim());
-                    
-                    if (type === 'gemini') {
-                        const keys = lines.filter(l => l.length > 5 && !l.startsWith('hf_'));
-                        if(keys.length){ 
-                            localStorage.setItem('global_gemini_keys', JSON.stringify(keys)); 
-                            alert(`✅ Đã nạp ${keys.length} Gemini Keys!`); 
-                        } else alert("❌ Không tìm thấy Gemini Key hợp lệ.");
-                    } else if (type === 'hf') {
-                        const tokens = lines.filter(l => l.startsWith('hf_'));
-                        if(tokens.length){
-                            localStorage.setItem('hf_tokens', JSON.stringify(tokens));
-                            alert(`✅ Đã nạp ${tokens.length} Token Hugging Face!`);
-                        } else {
-                            alert("❌ Không tìm thấy token bắt đầu bằng 'hf_' trong file.");
-                        }
-                    }
-                    SystemConfig.renderConfig(); 
-                };
-                reader.readAsText(file);
-            },
-
-            saveHFToken: () => {
-                const token = document.getElementById('hfTokenInput').value.trim();
-                if(!token) return alert("Vui lòng nhập Token!");
-                if(!token.startsWith('hf_')) return alert("Token Hugging Face phải bắt đầu bằng 'hf_'");
-                
-                localStorage.setItem('hf_tokens', JSON.stringify([token]));
-                alert("✅ Đã lưu Token Hugging Face!");
-                SystemConfig.renderConfig();
-            },
-
-            clearHFToken: () => {
-                if(confirm("Xóa tất cả Token Hugging Face?")) {
-                    localStorage.removeItem('hf_tokens');
-                    SystemConfig.renderConfig();
-                }
-            },
-
-            // --- UI RENDERER ---
-            openModal: () => {
-                document.getElementById('configModal').classList.remove('hidden');
-                SystemConfig.renderConfig();
-            },
-
-            renderConfig: () => {
-                // 1. Render Gemini Status
-                const keys = SystemConfig.getApiKeys();
-                const geminiStatus = document.getElementById('geminiStatus');
-                if(keys.length > 0) {
-                    geminiStatus.innerHTML = `<div class="flex justify-between items-center bg-green-50 p-3 rounded border border-green-200">
-                        <span class="text-green-700 font-bold"><i class="fas fa-check-circle"></i> Đã nạp ${keys.length} API Keys</span>
-                        <span class="text-xs text-gray-500">Sẵn sàng</span>
-                    </div>`;
-                } else {
-                    geminiStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Chưa có API Key nào.</div>`;
-                }
-
-                // 2. Render HF Status
-                const hfTokens = SystemConfig.getHFTokens();
-                const hfContainer = document.getElementById('hfConfigContainer');
-                if(hfTokens.length > 0) {
-                    hfContainer.innerHTML = `
-                        <div class="flex justify-between items-center bg-purple-50 p-3 rounded border border-purple-200">
-                            <div>
-                                <span class="text-purple-700 font-bold block"><i class="fas fa-robot"></i> Hugging Face</span>
-                                <span class="text-xs text-gray-500">Đã nạp ${hfTokens.length} Tokens (Xoay vòng)</span>
-                            </div>
-                            <button onclick="SystemConfig.clearHFToken()" class="text-red-500 hover:text-red-700 text-sm underline">Xóa</button>
-                        </div>
-                    `;
-                } else {
-                    hfContainer.innerHTML = `
-                        <div class="flex items-center gap-2 mb-2">
-                            <label class="flex-1 cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-300 rounded px-4 py-2 text-sm font-medium transition text-center flex items-center justify-center gap-2">
-                                <i class="fas fa-file-upload"></i> Nạp file Tokens.txt
-                                <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'hf')" class="hidden"/>
-                            </label>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="hfTokenInput" placeholder="Hoặc dán 1 Token (hf_...)" class="flex-1 border p-2 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none">
-                            <button onclick="SystemConfig.saveHFToken()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700">Lưu</button>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1">Token HF giúp chạy model Qwen 2.5 miễn phí khi Gemini quá tải.</p>
-                    `;
-                }
-            },
-
-            toggleGuide: (id) => {
-                const el = document.getElementById(id);
-                const icon = document.getElementById(id + '-icon');
-                if (el.classList.contains('active')) {
-                    el.classList.remove('active');
-                    icon.style.transform = 'rotate(0deg)';
-                } else {
-                    el.classList.add('active');
-                    icon.style.transform = 'rotate(180deg)';
-                }
-            }
-        };
+        // Check Auth
+        if(!localStorage.getItem('authToken')) window.location.href = 'login.html';
+        
+        // Cấu hình Key hệ thống (Sử dụng tạm thời cho demo nếu chưa có admin panel)
+        // Nếu bạn đã có admin panel để set key thì có thể bỏ qua dòng này.
+        // localStorage.setItem('default_gemini_module', 'gemini-2.5-flash');
     </script>
 </head>
-<body class="bg-slate-50 font-sans min-h-screen text-slate-800">
-
-    <nav class="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-200">AI</div>
-                <div>
-                    <h1 class="font-bold text-lg text-slate-800">HỆ THỐNG TRỢ LÝ GIÁO VIÊN DẠY HỌC BẰNG AI</h1>
-                    <p class="text-xs text-slate-500 font-medium">Tác giả: Hoàng Tấn Thiên</p>
+<body class="bg-gray-100 font-sans">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                        <i class="fas fa-brain text-xl"></i>
+                    </div>
+                    <span class="font-bold text-xl text-gray-800">GiangBai AI</span>
                 </div>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="SystemConfig.openModal()" class="text-slate-600 hover:text-indigo-600 font-bold text-sm px-3 py-2 rounded-lg hover:bg-slate-100 transition flex items-center gap-2 border border-slate-200">
-                    <i class="fas fa-cogs"></i> Cấu hình
-                </button>
-                <button onclick="SystemConfig.logout()" class="text-red-500 hover:text-red-700 font-bold text-sm px-3 py-2 rounded-lg hover:bg-red-50 transition border border-red-100">
-                    <i class="fas fa-power-off"></i>
-                </button>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-500" id="userEmailDisplay">Giáo viên</span>
+                    <button onclick="localStorage.clear(); window.location.href='login.html'" class="text-red-500 hover:text-red-700 font-medium text-sm">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto p-8">
-        
-        <!-- HƯỚNG DẪN SỬ DỤNG (ACCORDION) -->
-        <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 mb-8 overflow-hidden">
-            <div class="p-4 bg-indigo-50 flex justify-between items-center cursor-pointer" onclick="SystemConfig.toggleGuide('guideContent')">
-                <h3 class="font-bold text-indigo-800 flex items-center gap-2">
-                    <i class="fas fa-book-open"></i> Hướng Dẫn Sử Dụng Nhanh
-                </h3>
-                <i id="guideContent-icon" class="fas fa-chevron-down text-indigo-500 transition-transform duration-300"></i>
-            </div>
-            <div id="guideContent" class="accordion-content bg-white p-6 pt-2">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600">
-                    <div>
-                        <h4 class="font-bold text-slate-800 mb-2">1. Cấu hình AI (Bắt buộc)</h4>
-                        <p class="mb-2">Để hệ thống hoạt động, bạn cần nạp API Key:</p>
-                        <ul class="list-disc pl-5 space-y-1">
-                            <li>Bấm nút <b>Cấu hình</b> ở góc trên bên phải.</li>
-                            <li><b>Gemini Keys:</b> Nạp file <code>.txt</code> chứa danh sách API Key của Google (mỗi dòng 1 key).</li>
-                            <li><b>Hugging Face Token:</b> Nhập token (bắt đầu bằng <code>hf_</code>) để sử dụng model Qwen 2.5 miễn phí khi Gemini quá tải.</li>
-                        </ul>
+    <main class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                Công Cụ Hỗ Trợ Giảng Dạy 4.0
+            </h1>
+            <p class="mt-3 max-w-2xl mx-auto text-xl text-gray-500 sm:mt-4">
+                Tích hợp trí tuệ nhân tạo vào mọi khâu chuẩn bị bài giảng
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- TOOL 1: Vẽ Hình AI (MỚI - Thay thế Chấm Thi) -->
+            <a href="vehinh.html" class="group block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-indigo-100 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-shapes text-2xl"></i>
                     </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 mb-2">2. Các tính năng chính</h4>
-                        <ul class="list-disc pl-5 space-y-1">
-                            <li><b>Tạo Đề Ma Trận:</b> Upload ảnh bảng ma trận -> AI tự động đọc -> Sinh đề thi chuẩn -> Xuất Word.</li>
-                            <li><b>Soạn Đề Thông Minh:</b> Nhập chủ đề bất kỳ -> AI soạn câu hỏi trắc nghiệm/tự luận.</li>
-                            <li><b>Trộn Đề Thi:</b> Upload file Word/PDF -> Xáo trộn câu hỏi thành nhiều mã đề.</li>
-                            <li><b>Thi Online:</b> Tổ chức thi trắc nghiệm trên điện thoại cho học sinh.</li>
-                        </ul>
-                    </div>
+                    <span class="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded-full">New</span>
                 </div>
-            </div>
-        </div>
-
-        <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i class="fas fa-pen-nib text-indigo-500"></i> Soạn Giảng & Đề Thi</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            
-            <!-- MA TRẬN ĐỀ THI -->
-            <a href="matrande.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer">
-                <div class="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-                    <i class="fas fa-table"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-pink-600 transition">Tạo Đề Từ Ma Trận</h3>
-                <p class="text-sm text-slate-500 mb-4">Quét Ma trận / Bảng đặc tả -> Sinh đề thi Trắc nghiệm & Tự luận -> Xuất Word chuẩn.</p>
-                <span class="text-pink-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử dụng ngay <i class="fas fa-arrow-right"></i></span>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Vẽ Hình Học AI</h3>
+                <p class="text-sm text-gray-500">Mô tả bằng lời hoặc vẽ tay, AI sẽ dựng hình học, đồ thị hàm số và biểu đồ chính xác vector.</p>
             </a>
 
-            <!-- SOẠN ĐỀ AI -->
-            <a href="smartquiz.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
-                <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-                    <i class="fas fa-magic"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition">Soạn Đề Thông Minh</h3>
-                <p class="text-sm text-slate-500 mb-4">Nhập chủ đề bất kỳ, AI sẽ soạn câu hỏi và tạo slide trình chiếu dạy học tức thì.</p>
-                <span class="text-indigo-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử dụng ngay <i class="fas fa-arrow-right"></i></span>
-            </a>
-
-            <!-- TRỘN ĐỀ -->
-            <a href="tronde.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
-                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-                    <i class="fas fa-random"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-emerald-600 transition">Trộn Đề Thi</h3>
-                <p class="text-sm text-slate-500 mb-4">Xáo trộn câu hỏi từ file Word/PDF. Hỗ trợ giữ định dạng công thức Toán học.</p>
-                <span class="text-emerald-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử dụng ngay <i class="fas fa-arrow-right"></i></span>
-            </a>
-        </div>
-
-        <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> Quản Lý Lớp Học</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            <a href="thitructuyen.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
-                <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-                    <i class="fas fa-globe"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition">Tổ Chức Thi Online</h3>
-                <p class="text-sm text-slate-500 mb-4">Tạo kỳ thi, cấp mã QR cho học sinh làm bài trên điện thoại. Chấm điểm tự động.</p>
-                <span class="text-blue-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Truy cập <i class="fas fa-arrow-right"></i></span>
-            </a>
-
-            <a href="gslides.html" class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer">
-                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-                    <i class="fas fa-desktop"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-amber-600 transition">Trình Chiếu Bài Giảng</h3>
-                <p class="text-sm text-slate-500 mb-4">Công cụ hỗ trợ trình chiếu Google Slides mượt mà, không quảng cáo.</p>
-                <span class="text-amber-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Truy cập <i class="fas fa-arrow-right"></i></span>
-            </a>
-
-            <div class="bg-slate-100 p-6 rounded-2xl border border-slate-200 opacity-75 cursor-not-allowed">
-                <div class="w-14 h-14 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center text-2xl mb-4">
-                    <i class="fas fa-camera"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-500 mb-1">Chấm Thi Camera (OMR)</h3>
-                <p class="text-sm text-slate-400 mb-4">Tính năng đang được nâng cấp để hỗ trợ AI nhận diện chữ viết tay.</p>
-                <span class="text-slate-400 font-bold text-sm bg-slate-200 px-2 py-1 rounded inline-flex items-center gap-1"><i class="fas fa-tools"></i> Đang bảo trì</span>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- CONFIG MODAL -->
-    <div id="configModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
-            <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
-                <h3 class="font-bold flex items-center gap-2"><i class="fas fa-sliders-h"></i> Cấu hình Hệ thống AI</h3>
-                <button onclick="document.getElementById('configModal').classList.add('hidden')" class="hover:text-red-400 transition"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            
-            <div class="p-6 space-y-6">
-                
-                <!-- 1. GEMINI CONFIG -->
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">Google Gemini (API Keys)</label>
-                    <div id="geminiStatus" class="mb-3"></div>
-                    <div class="flex items-center gap-2">
-                        <label class="flex-1 cursor-pointer bg-slate-100 hover:bg-indigo-50 text-slate-600 border border-slate-300 hover:border-indigo-300 rounded px-4 py-2 text-sm font-medium transition text-center flex items-center justify-center gap-2">
-                            <i class="fas fa-file-upload text-indigo-500"></i> Chọn file Keys.txt
-                            <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'gemini')" class="hidden"/>
-                        </label>
+            <!-- TOOL 2: Soạn Đề Thông Minh -->
+            <a href="smartquiz.html" class="group block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-blue-100 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-blue-100 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-magic text-2xl"></i>
                     </div>
                 </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Soạn Đề Thông Minh</h3>
+                <p class="text-sm text-gray-500">Tạo đề trắc nghiệm/tự luận từ chủ đề. Xuất Word, trình chiếu và dạy học ngay lập tức.</p>
+            </a>
 
-                <hr class="border-slate-200"/>
-
-                <!-- 2. HUGGING FACE CONFIG -->
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">Hugging Face (Tokens)</label>
-                    <div id="hfConfigContainer"></div>
+            <!-- TOOL 3: Trộn Đề & Tách Câu -->
+            <a href="tronde.html" class="group block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-purple-100 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-purple-100 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-random text-2xl"></i>
+                    </div>
                 </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Trộn Đề & Tách Câu</h3>
+                <p class="text-sm text-gray-500">Upload file Word/PDF. AI tự động nhận diện câu hỏi, đảo đề và xuất ra nhiều mã đề khác nhau.</p>
+            </a>
 
-                <div class="bg-yellow-50 p-3 rounded text-xs text-yellow-800 mt-4 border border-yellow-100 flex gap-2">
-                    <i class="fas fa-info-circle mt-0.5"></i>
-                    <span>Dữ liệu cấu hình được lưu cục bộ trên trình duyệt của bạn (Local Storage) để đảm bảo quyền riêng tư.</span>
+            <!-- TOOL 4: Ma Trận Đề -->
+            <a href="matrande.html" class="group block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-pink-100 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-pink-100 text-pink-600 rounded-xl group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-table text-2xl"></i>
+                    </div>
                 </div>
-            </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Ma Trận & Đặc Tả</h3>
+                <p class="text-sm text-gray-500">Phân tích file PDF ma trận đề thi. Tự động sinh câu hỏi theo mức độ nhận biết, thông hiểu...</p>
+            </a>
+
+            <!-- TOOL 5: Thi Trực Tuyến -->
+            <a href="thitructuyen.html" class="group block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-orange-100 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-orange-100 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-laptop-code text-2xl"></i>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Tổ Chức Thi Online</h3>
+                <p class="text-sm text-gray-500">Quản lý kỳ thi, chống gian lận, chấm điểm tự động và báo cáo thống kê chi tiết.</p>
+            </a>
+
+             <!-- TOOL 6: Google Slides -->
+             <a href="gslides.html" class="group block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-yellow-100 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-yellow-100 text-yellow-600 rounded-xl group-hover:bg-yellow-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-presentation-screen text-2xl"></i>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Trình Chiếu Slides</h3>
+                <p class="text-sm text-gray-500">Tích hợp Google Slides vào hệ thống để giảng dạy trực tiếp không cần chuyển tab.</p>
+            </a>
+
         </div>
-    </div>
 
+        <div class="mt-12 border-t pt-8 flex justify-center">
+            <a href="admin.html" class="text-gray-400 hover:text-indigo-600 text-sm font-medium flex items-center gap-2 transition">
+                <i class="fas fa-cog"></i> Quản trị hệ thống
+            </a>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('userEmailDisplay').textContent = localStorage.getItem('userEmail') || 'Giáo viên';
+    </script>
 </body>
 </html>
