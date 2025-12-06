@@ -54,7 +54,6 @@
 		}
     </style>
 </head>
-<!-- SỬA: Thay đổi class body để cho phép cuộn trang (min-h-screen thay vì h-screen overflow-hidden) -->
 <body class="bg-slate-50 min-h-screen font-sans">
     <div id="root"></div>
 
@@ -137,7 +136,7 @@
                         throwOnError: false,
                         output: 'mathml', 
                         displayMode: false
-                    });
+                    }).replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
                 } catch (e) {
                     return match;
                 }
@@ -154,20 +153,27 @@
                     .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
                     .replace(/\\\((.*?)\\\)/g, '$$$1$$');
 
-                ref.current.innerHTML = processed;
-                if (window.renderMathInElement) {
-                    try {
-                        window.renderMathInElement(ref.current, {
-                            delimiters: [
-                                {left: '$$', right: '$$', display: true},
-                                {left: '$', right: '$', display: false},
-                                {left: '\\(', right: '\\)', display: false},
-                                {left: '\\[', right: '\\]', display: true}
-                            ],
-                            throwOnError: false
-                        });
-                    } catch (e) { console.error(e); }
+                // Tự động thêm $ nếu có dấu \ và không có $
+                if (processed.includes('\\') && !processed.includes('$')) {
+                    processed = `$${processed}$`;
                 }
+                
+                const parts = processed.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                ref.current.innerHTML = "";
+                
+                parts.forEach(part => {
+                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part.startsWith("$") && part.endsWith("$")) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else {
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
+                });
             }, [text]);
             return <span ref={ref} />;
         };
@@ -209,7 +215,7 @@
         };
 
         // --- TRÌNH CHIẾU TRẮC NGHIỆM ---
-        const QuizPresentationMode = ({ questions, onExit, settings }) => {
+        const QuizPresentationMode = ({ questions, onExit, settings }) => { /* Giữ nguyên QuizPresentationMode */ 
             const [idx, setIdx] = useState(0);
             const [showAns, setShowAns] = useState(false);
             const [selectedOpt, setSelectedOpt] = useState(null);
@@ -217,28 +223,11 @@
             const [score, setScore] = useState(0);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
             const [showResults, setShowResults] = useState(false);
-
-            // SỬA: Khóa cuộn trang khi vào chế độ trình chiếu
+            const handleNext = useCallback(() => { if (idx < shuffledQuestions.length - 1) { setIdx(prev => prev + 1); } else { setShowResults(true); } }, [idx, shuffledQuestions.length]);
+            const handlePrev = useCallback(() => { if (idx > 0) { setIdx(prev => prev - 1); } }, [idx]);
+            
             useEffect(() => {
                 document.body.style.overflow = 'hidden';
-                return () => { document.body.style.overflow = 'auto'; };
-            }, []);
-
-            const handleNext = useCallback(() => {
-                if (idx < shuffledQuestions.length - 1) {
-                    setIdx(prev => prev + 1);
-                } else {
-                    setShowResults(true);
-                }
-            }, [idx, shuffledQuestions.length]);
-
-            const handlePrev = useCallback(() => {
-                if (idx > 0) {
-                    setIdx(prev => prev - 1);
-                }
-            }, [idx]);
-
-            useEffect(() => {
                 const shuffled = questions.map(q => {
                     if (!settings.shuffleOptions) return q;
                     const options = [...q.options];
@@ -249,6 +238,7 @@
                     return { ...q, options: newOptions, correctAnswerIndex: newCorrectIndex };
                 });
                 setShuffledQuestions(shuffled);
+                return () => { document.body.style.overflow = 'auto'; };
             }, [questions, settings.shuffleOptions]);
 
             useEffect(() => {
@@ -380,28 +370,23 @@
         };
 
         // --- TRÌNH CHIẾU TỰ LUẬN ---
-        const EssayPresentationMode = ({ essays, onExit }) => {
+        const EssayPresentationMode = ({ essays, onExit }) => { /* Giữ nguyên EssayPresentationMode */
             const [idx, setIdx] = useState(0);
             const [showSolution, setShowSolution] = useState(false);
-
-            // SỬA: Khóa cuộn trang khi vào chế độ trình chiếu
-            useEffect(() => {
-                document.body.style.overflow = 'hidden';
-                return () => { document.body.style.overflow = 'auto'; };
-            }, []);
-
             const handleKeyDown = (e) => {
                 switch(e.key) {
                     case "ArrowRight": if (idx < essays.length - 1) setIdx(prev => prev + 1); break;
                     case "ArrowLeft": if (idx > 0) setIdx(prev => prev - 1); break;
                     case " ": setShowSolution(prev => !prev); break;
+                    case "Enter": setShowSolution(prev => !prev); break;
                     case "Escape": onExit(); break;
                 }
             };
 
             useEffect(() => {
+                document.body.style.overflow = 'hidden';
                 window.addEventListener("keydown", handleKeyDown);
-                return () => window.removeEventListener("keydown", handleKeyDown);
+                return () => { document.body.style.overflow = 'auto'; window.removeEventListener("keydown", handleKeyDown); };
             }, [idx]);
 
             const essay = essays[idx];
@@ -421,7 +406,7 @@
                         {showSolution && (
                             <div className="bg-green-50 border border-green-200 text-slate-800 p-6 md:p-8 rounded-2xl shadow-lg">
                                 <h3 className="text-xl font-bold text-green-600 mb-4">Lời giải:</h3>
-                                <div className="text-lg leading-relaxed"><MathText text={essay.solution} /></div>
+                                <div className="text-lg leading-relaxed"><MathText text={essay.solution}/></div>
                             </div>
                         )}
                     </div>
@@ -433,11 +418,148 @@
             );
         };
 
+        // --- COMPONENT CHỈNH SỬA ---
+        const EditorComponent = ({ mode, data, onSave, onBack }) => {
+            const [editedData, setEditedData] = useState(data.map(item => ({
+                ...item,
+                // Ensure data is mutable copy for textareas/inputs
+                question: item.question,
+                options: item.options ? [...item.options] : undefined,
+                correctAnswerIndex: item.correctAnswerIndex !== undefined ? item.correctAnswerIndex : -1,
+                solution: item.solution
+            })));
+
+            const handleUpdate = (index, field, value) => {
+                setEditedData(prev => prev.map((item, i) => {
+                    if (i === index) {
+                        return { ...item, [field]: value };
+                    }
+                    return item;
+                }));
+            };
+
+            const handleUpdateOption = (qIndex, oIndex, value) => {
+                setEditedData(prev => prev.map((item, i) => {
+                    if (i === qIndex) {
+                        const newOptions = [...item.options];
+                        newOptions[oIndex] = value;
+                        return { ...item, options: newOptions };
+                    }
+                    return item;
+                }));
+            };
+            
+            const handleAddQuestion = () => {
+                if (mode === 'quiz') {
+                    setEditedData(prev => [
+                        ...prev, 
+                        { question: "Câu hỏi mới...", options: ["A", "B", "C", "D"], correctAnswerIndex: 0 }
+                    ]);
+                } else {
+                    setEditedData(prev => [
+                        ...prev, 
+                        { question: "Bài tập mới...", solution: "Lời giải mới..." }
+                    ]);
+                }
+            };
+            
+            const handleDeleteQuestion = (index) => {
+                if(confirm(`Bạn có chắc chắn muốn xóa ${mode === 'quiz' ? 'Câu' : 'Bài'} ${index + 1}?`)) {
+                    setEditedData(prev => prev.filter((_, i) => i !== index));
+                }
+            };
+            
+            const handleFinalSave = () => {
+                // Simple validation for quiz mode
+                if (mode === 'quiz') {
+                    const missingAns = editedData.filter(q => q.correctAnswerIndex === -1);
+                    if (missingAns.length > 0) {
+                        alert(`Vui lòng chọn đáp án đúng cho ${missingAns.length} câu hỏi!`);
+                        return;
+                    }
+                }
+                onSave(editedData);
+            };
+
+
+            return (
+                <div className="max-w-4xl mx-auto p-4 md:p-8 font-sans fade-in">
+                    <div className="sticky top-2 z-30 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-red-100 mb-6 flex justify-between items-center gap-4">
+                        <h2 className="text-xl font-bold text-red-700 flex items-center gap-2">
+                            <i className="fas fa-pencil-alt"></i> CHỈNH SỬA {mode === 'quiz' ? 'TRẮC NGHIỆM' : 'TỰ LUẬN'}
+                        </h2>
+                        <div className="flex gap-2">
+                             <button onClick={handleAddQuestion} className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold hover:bg-indigo-600 transition"><i className="fas fa-plus"></i> Thêm</button>
+                             <button onClick={onBack} className="px-4 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition">Hủy</button>
+                             <button onClick={handleFinalSave} className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition"><i className="fas fa-save"></i> LƯU THAY ĐỔI</button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-8 pb-20">
+                        {editedData.map((item, i) => (
+                            <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 relative">
+                                <div className="absolute top-4 right-4 flex gap-2">
+                                    <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">#{i + 1}</span>
+                                    <button onClick={() => handleDeleteQuestion(i)} className="text-gray-400 hover:text-red-600" title="Xóa câu hỏi"><i className="fas fa-trash-alt"></i></button>
+                                </div>
+                                
+                                {/* QUESTION TEXTAREA */}
+                                <div className="mb-4 pr-16">
+                                    <label className="block text-sm font-bold text-indigo-700 mb-1">{mode === 'quiz' ? 'Câu hỏi' : 'Đề bài'}:</label>
+                                    <textarea 
+                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-base resize-y min-h-[80px]" 
+                                        value={item.question} 
+                                        onChange={(e) => handleUpdate(i, 'question', e.target.value)}
+                                    ></textarea>
+                                    <div className="mt-2 bg-gray-50 p-2 rounded border border-gray-200 text-sm"><MathText text={item.question}/></div>
+                                </div>
+                                
+                                {mode === 'quiz' ? (
+                                    /* QUIZ OPTIONS */
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {item.options.map((opt, oIdx) => (
+                                            <div key={oIdx} className={`flex items-center gap-3 p-3 border rounded-xl transition ${item.correctAnswerIndex === oIdx ? 'bg-green-100 border-green-500' : 'bg-white border-gray-200'}`}>
+                                                <input 
+                                                    type="radio" 
+                                                    name={`q-${i}`} 
+                                                    checked={item.correctAnswerIndex === oIdx} 
+                                                    onChange={() => handleUpdate(i, 'correctAnswerIndex', oIdx)} 
+                                                    className="w-5 h-5 cursor-pointer accent-green-600 flex-shrink-0"
+                                                />
+                                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${item.correctAnswerIndex === oIdx ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                                                    {String.fromCharCode(65 + oIdx)}
+                                                </span>
+                                                <input 
+                                                    className="w-full bg-transparent outline-none text-base" 
+                                                    value={opt} 
+                                                    onChange={(e) => handleUpdateOption(i, oIdx, e.target.value)}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    /* ESSAY SOLUTION */
+                                    <div className="mt-4 bg-green-50 border border-green-200 rounded p-3">
+                                        <label className="block text-sm font-bold text-green-700 mb-1">Lời giải:</label>
+                                        <textarea 
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-200 outline-none text-base resize-y min-h-[120px]" 
+                                            value={item.solution} 
+                                            onChange={(e) => handleUpdate(i, 'solution', e.target.value)}
+                                        ></textarea>
+                                        <div className="mt-2 bg-white p-2 rounded border border-gray-200 text-sm"><MathText text={item.solution}/></div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+        
         // --- APP CHÍNH ---
         const App = () => {
             const [step, setStep] = useState(1);
             const [mode, setMode] = useState("quiz"); 
-            // THAY ĐỔI: Sử dụng mảng topics thay vì state đơn lẻ
             const [topics, setTopics] = useState([
                 { id: Date.now(), name: '', count: 5, level: 'Trung bình' }
             ]);
@@ -453,6 +575,9 @@
                 autoNext: false,
                 pointsPerQuestion: 1
             });
+            
+            // [NEW] Ẩn hiện màn hình chỉnh sửa
+            const [isEditing, setIsEditing] = useState(false); 
 
             // SỬA: Thêm check auth ngay khi vào trang
             useEffect(() => {
@@ -489,14 +614,12 @@
             };
 
             const generateContent = async () => {
-                // Validate tất cả chủ đề
                 const emptyTopics = topics.filter(t => !t.name.trim());
                 if (emptyTopics.length > 0) return alert("Vui lòng nhập tên cho tất cả các chủ đề!");
                 
                 setLoading(true);
                 setRetryCount(0);
                 
-                // Xây dựng prompt chi tiết từ danh sách chủ đề
                 const structurePrompt = topics.map((t, idx) => 
                     `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} ${mode === "quiz" ? "câu" : "bài"}, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`
                 ).join('\n');
@@ -552,12 +675,13 @@
                     </style>
                 </head><body>`;
                 
-                const totalQ = mode === "quiz" ? questions.length : essays.length;
+                const dataToExport = mode === "quiz" ? questions : essays;
+                const totalQ = dataToExport.length;
                 let bodyContent = `<h1>${mode === "quiz" ? "ĐỀ THI TRẮC NGHIỆM" : "BÀI TẬP TỰ LUẬN"} TỔNG HỢP</h1>`;
                 bodyContent += `<p style="text-align:center; margin-bottom: 30px;"><i>Tổng số câu: ${totalQ}</i></p>`;
                 
                 if (mode === "quiz") {
-                    questions.forEach((q, i) => {
+                    dataToExport.forEach((q, i) => {
                         const qText = convertToMathML(q.question);
                         const optA = convertToMathML(cleanOptionText(q.options[0]));
                         const optB = convertToMathML(cleanOptionText(q.options[1]));
@@ -588,7 +712,7 @@
                     }
                     bodyContent += `</div>`;
                 } else {
-                    essays.forEach((essay, i) => {
+                    dataToExport.forEach((essay, i) => {
                         const questionText = convertToMathML(essay.question);
                         const solutionText = convertToMathML(essay.solution);
                         bodyContent += `<div class="essay-block"><b>Bài ${i+1}:</b> ${questionText}<div class="solution"><b>Lời giải:</b> ${solutionText}</div></div>`;
@@ -602,12 +726,38 @@
             const startPresentation = () => {
                 if (mode === "quiz" && questions.length === 0) return alert("Chưa có câu hỏi nào!");
                 if (mode === "essay" && essays.length === 0) return alert("Chưa có bài tập nào!");
+                setStep(4); // Đổi step 3 thành 4 để EditorComponent dùng step 3
+            };
+            
+            // Xử lý khi nhấn nút Sửa
+            const startEditing = () => {
+                setIsEditing(true);
                 setStep(3);
             };
+            
+            // Xử lý khi lưu từ EditorComponent
+            const handleEditorSave = (newContent) => {
+                if (mode === 'quiz') {
+                    setQuestions(newContent);
+                } else {
+                    setEssays(newContent);
+                }
+                setIsEditing(false);
+                setStep(2); // Quay lại màn hình xem lại
+            };
 
-            if(step === 3) {
+            if(step === 4) { // Trình chiếu
                 if (mode === "quiz") return <QuizPresentationMode questions={questions} onExit={() => setStep(2)} settings={presentationSettings}/>;
                 else return <EssayPresentationMode essays={essays} onExit={() => setStep(2)}/>;
+            }
+
+            if(step === 3) { // Chỉnh sửa
+                return <EditorComponent 
+                            mode={mode} 
+                            data={mode === 'quiz' ? questions : essays} 
+                            onSave={handleEditorSave} 
+                            onBack={() => setStep(2)} 
+                        />;
             }
 
             return (
@@ -722,6 +872,7 @@
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
                                     <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-sm transition"><i className="fas fa-redo"></i> Tạo lại</button>
+                                    <button onClick={startEditing} className="px-4 py-2 bg-red-100 text-red-600 border border-red-200 rounded-lg hover:bg-red-200 font-bold text-sm transition"><i className="fas fa-pencil-alt"></i> Sửa</button>
                                     {mode === "quiz" && (
                                         <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 font-bold text-sm transition"><i className="fas fa-cog"></i> Cài đặt</button>
                                     )}
