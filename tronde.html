@@ -43,18 +43,26 @@
 
         const cleanOptionText = (text) => text ? text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim() : "";
 
-        // --- CẬP NHẬT HÀM FORMAT MATH CHO WORD ---
+        // --- HÀM FORMAT MATH CHO WORD (CẢI TIẾN) ---
         const formatMathForWord = (text) => {
             if (!text) return "";
             let content = text;
-            if (!content.includes('$') && content.includes('\\')) { content = `$${content}$`; }
+            
+            // Fix trường hợp AI trả về \[ ... \] thay vì $...$
+            content = content.replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/\\\((.*?)\\\)/gs, '$$$1$$');
+
+            // Heuristic: Nếu thấy \frac, \sqrt mà ko có $, tự động bọc lại
+            if (!content.includes('$') && (content.includes('\\frac') || content.includes('\\sqrt') || content.includes('\\int'))) {
+                 // Cẩn thận: chỉ bọc nếu chưa được bọc
+                 content = `$${content}$`; 
+            }
+
             return content.replace(/\$([^$]+)\$/g, (match, tex) => {
                 try {
                     // Output mathml để Word hiểu
                     let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
                     
                     // QUAN TRỌNG: Bóc tách thẻ <math> khỏi thẻ <span> bao bọc của Katex
-                    // Word cần thấy thẻ <math> trực tiếp để render thành Equation
                     const mathTagMatch = mathml.match(/<math[\s\S]*?<\/math>/);
                     if (mathTagMatch) {
                         mathml = mathTagMatch[0];
@@ -71,7 +79,9 @@
             useEffect(() => {
                 if (!text) return;
                 let processed = text;
-                if (!text.includes('$') && (text.includes('\\{') || text.includes('\\['))) processed = `$${text}$`;
+                // Chuẩn hóa LaTeX
+                processed = processed.replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/\\\((.*?)\\\)/gs, '$$$1$$');
+                
                 const parts = processed.split(/(\$[^$]+\$)/g);
                 ref.current.innerHTML = "";
                 parts.forEach(part => {
@@ -85,7 +95,6 @@
             return <span ref={ref} />;
         };
 
-        // --- COMPONENT QUESTION ITEM ---
         const QuestionItem = ({ q, index, onUpdate, onToggleAnswer, onDelete }) => {
             const [isEditing, setIsEditing] = useState(false);
             const [localQ, setLocalQ] = useState(q.question);
@@ -186,7 +195,6 @@
             return <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2">Nạp Đáp Án</h3><div className="bg-indigo-50 p-2 text-sm mb-2">Dán ảnh bảng đáp án (Ctrl+V) vào đây:</div>{status && <div className="text-sm font-bold text-green-600">{status}</div>}<textarea value={text} onChange={e=>setText(e.target.value)} onPaste={handlePaste} className="w-full h-32 border p-2 rounded" placeholder="1A 2B..."></textarea><div className="flex justify-end gap-2 mt-4"><button onClick={onClose} className="bg-gray-200 px-4 py-2 rounded">Hủy</button><button onClick={()=>{onApply(text); onClose()}} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold">Lưu</button></div></div></div>;
         };
 
-        // --- CẬP NHẬT HEADER HTML KHI XUẤT FILE ---
         const createDocContent = (code, questions) => {
             let body = `<h2 style='text-align:center; font-size:16pt; margin-bottom:20pt'>MÃ ĐỀ: ${code}</h2>`;
             questions.forEach(q => {
@@ -255,7 +263,9 @@
                         const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
                         await page.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
                         const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        const prompt = `Đọc đề. QUY TẮC: 1. Bỏ A. B. C. ở đầu options. 2. Tìm đáp án đúng (tô đỏ/gạch chân). 3. Nếu có Bảng đáp án -> dùng nó. Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":-1}]`;
+                        // Cập nhật Prompt cho AI Vision Mix phía client
+                        const prompt = `Đọc đề. QUY TẮC LATEX: Mọi công thức toán, số mũ, phân số, biến x,y,z BẮT BUỘC phải dùng LaTeX đặt trong dấu $ (ví dụ $x^2$, $\\frac{1}{2}$). KHÔNG dùng ký tự Unicode cho toán học. 
+                        Output JSON strict: [{"question":"...","options":["..."],"correctAnswerIndex":-1}]`;
                         
                         let pageSuccess = false;
                         for(let retry = 0; retry < apiKeys.length; retry++) {
