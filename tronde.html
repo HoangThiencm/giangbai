@@ -1,312 +1,59 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công Cụ Trộn Đề Thi Pro</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+import os
+import shutil
+import subprocess
+import time
+from fastapi import APIRouter, File, UploadFile
+from fastapi.responses import FileResponse
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+router = APIRouter()
 
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; }
-        .katex { font-size: 1.1em; color: #1e3a8a; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 50; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-        .modal-content { background: white; padding: 2rem; border-radius: 1rem; width: 90%; max-width: 600px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+# --- HÀM CHUYỂN ĐỔI DOCX -> PDF (Dùng LibreOffice) ---
+def convert_to_pdf(docx_path, output_dir):
+    try:
+        # LibreOffice convert command
+        subprocess.run([
+            "libreoffice", "--headless", "--convert-to", "pdf",
+            "--outdir", output_dir, docx_path
+        ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         
-        // === CẤU HÌNH ===
-        const HF_SERVER_URL = "https://hoangthiencm-giangbai.hf.space"; // Dùng để convert Docx -> PDF
+        filename = os.path.basename(docx_path)
+        pdf_name = os.path.splitext(filename)[0] + ".pdf"
+        return os.path.join(output_dir, pdf_name)
+    except Exception as e:
+        print(f"Lỗi LibreOffice: {e}")
+        return None
+
+# --- API MỚI: CHỈ CHUYỂN ĐỔI, KHÔNG GỌI AI ---
+@router.post("/convert-only")
+async def convert_only(file: UploadFile = File(...)):
+    print(f"--- Đang xử lý chuyển đổi file: {file.filename} ---")
+    
+    os.makedirs("uploads", exist_ok=True)
+    temp_filename = f"uploads/{int(time.time())}_{file.filename}"
+    
+    try:
+        # 1. Lưu file tạm
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        pdf_path = None
         
-        // --- QUAN TRỌNG: DÁN LINK CLOUDFLARE WORKER CỦA BẠN VÀO ĐÂY ---
-        // Ví dụ: const CF_WORKER_URL = "https://exam-mixer.your-name.workers.dev";
-        const CF_WORKER_URL = "https://gentle-fog-f0e2giangbai.hoangthiencm.workers.dev"; // <--- THAY LINK Ở ĐÂY SAU KHI DEPLOY WORKER
+        # 2. Xử lý
+        if file.filename.lower().endswith((".docx", ".doc")):
+            # Nếu là Word -> Convert sang PDF
+            pdf_path = convert_to_pdf(temp_filename, "uploads")
+        elif file.filename.lower().endswith(".pdf"):
+            # Nếu là PDF -> Dùng luôn
+            pdf_path = temp_filename
+        else:
+            return {"error": "Chỉ hỗ trợ file .docx, .doc hoặc .pdf"}
 
-        const MODEL_NAME = "gemini-2.5-flash";
-
-        // --- HELPER: LÀM SẠCH NỘI DUNG OPTION (XÓA A. B.) ---
-        const cleanOptionText = (text) => {
-            if (!text) return "";
-            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
-        };
-
-        // --- HELPER: FORMAT TEXT CHO WORD ---
-        const formatMathForWord = (text) => {
-            if (!text) return "";
-            let content = text;
-            if (!content.includes('$') && content.includes('\\')) { content = `$${content}$`; }
+        if not pdf_path or not os.path.exists(pdf_path):
+            return {"error": "Lỗi Server: Không thể chuyển đổi file."}
             
-            return content.replace(/\$([^$]+)\$/g, (match, tex) => {
-                try {
-                    let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
-                    return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
-                } catch (e) { return match; }
-            });
-        };
+        # 3. Trả về file PDF cho Client tự xử lý AI
+        # Trình duyệt sẽ nhận file này và gọi Gemini API bằng IP của người dùng -> Không bị chặn
+        return FileResponse(pdf_path, media_type='application/pdf', filename="converted_exam.pdf")
 
-        // --- HELPER: RENDER MATH TRÊN WEB ---
-        const MathText = ({ text }) => {
-            const ref = useRef();
-            useEffect(() => {
-                if (!text) return;
-                let processed = text;
-                if (!text.includes('$') && (text.includes('\\{') || text.includes('\\['))) {
-                    processed = `$${text}$`;
-                }
-                const parts = processed.split(/(\$[^$]+\$)/g);
-                ref.current.innerHTML = "";
-                parts.forEach(part => {
-                    if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false }); } catch { span.innerText = part; }
-                        ref.current.appendChild(span);
-                    } else { ref.current.appendChild(document.createTextNode(part)); }
-                });
-            }, [text]);
-            return <span ref={ref} />;
-        };
-
-        // --- MODAL: NẠP ĐÁP ÁN THÔNG MINH ---
-        const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
-            if (!isOpen) return null;
-            const [text, setText] = useState("");
-            const [status, setStatus] = useState("");
-            const handlePaste = async (e) => { const items = e.clipboardData.items; for (let item of items) { if (item.type.indexOf("image") !== -1) { e.preventDefault(); if (apiKeys.length === 0) return alert("Cần có API Key!"); await processImage(item.getAsFile()); return; } } };
-            const processImage = async (blob) => {
-                setStatus("🤖 AI đang quét ảnh tìm đáp án...");
-                try {
-                    const reader = new FileReader(); reader.readAsDataURL(blob);
-                    reader.onloadend = async () => {
-                        const base64 = reader.result.split(',')[1];
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKeys[0]}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{parts: [{text: "Trích xuất đáp án (1A 2B...)"}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}] }) });
-                        const data = await res.json();
-                        if (data.candidates) { setText(prev => prev + (prev ? "\n" : "") + data.candidates[0].content.parts[0].text.trim()); setStatus("✅ Xong!"); } else setStatus("⚠️ Không tìm thấy.");
-                    };
-                } catch (e) { setStatus("❌ Lỗi AI: " + e.message); }
-            };
-            return ( <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e=>e.stopPropagation()}><h3 className="text-xl font-bold mb-4">Nạp Đáp Án</h3><textarea value={text} onChange={e=>setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded" placeholder="Dán ảnh bảng đáp án hoặc nhập 1A 2B..."></textarea><div className="flex justify-end gap-3 mt-4"><button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Hủy</button><button onClick={()=>{onApply(text);onClose()}} className="px-6 py-2 bg-blue-600 text-white rounded font-bold">Cập Nhật</button></div></div></div> );
-        };
-
-        // --- APP MAIN ---
-        const App = () => {
-            const [tab, setTab] = useState(null); 
-            const [apiKeys, setApiKeys] = useState([]);
-            const [status, setStatus] = useState("");
-            const [loading, setLoading] = useState(false);
-            const [questions, setQuestions] = useState([]);
-            const [numVariants, setNumVariants] = useState(4);
-            const [showModal, setShowModal] = useState(false);
-            const fileRef = useRef();
-
-            useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); }, []);
-
-            const handleApplyAnswers = (text) => { /* Logic map đáp án */
-                const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
-                const regex = /(\d+)\s*([A-D])/g; let match, newMap = {};
-                while ((match = regex.exec(raw)) !== null) newMap[parseInt(match[1])] = match[2].charCodeAt(0) - 65;
-                setQuestions(questions.map(q => newMap[q.number] !== undefined ? { ...q, correctAnswerIndex: newMap[q.number] } : q));
-                alert("Đã cập nhật!");
-            };
-            const toggleAnswer = (i, idx) => { const newQs = [...questions]; newQs[i].correctAnswerIndex = idx; setQuestions(newQs); };
-
-            // ===============================================
-            // 1. TRỘN SERVER (HYBRID: HF CONVERT -> CLOUDFLARE AI)
-            // ===============================================
-            const handleServerMix = async (file) => {
-                if(!apiKeys.length) return alert("Vui lòng nạp API Key trước!");
-                if(CF_WORKER_URL.includes("YOUR_WORKER_URL")) return alert("Bạn chưa cấu hình link Cloudflare Worker trong code!");
-
-                setLoading(true); 
-                
-                try {
-                    let pdfBlob = file;
-
-                    // GIAI ĐOẠN 1: Nếu là DOCX -> Gửi lên HF để convert
-                    if (file.name.endsWith(".docx") || file.name.endsWith(".doc")) {
-                        setStatus("📡 Đang gửi file lên Server để chuyển đổi (Word -> PDF)...");
-                        const fd = new FormData(); fd.append("file", file);
-                        const res = await fetch(`${HF_SERVER_URL}/convert-only`, { method: "POST", body: fd });
-                        if (!res.ok) throw new Error("Lỗi chuyển đổi file trên Server");
-                        pdfBlob = await res.blob();
-                    }
-
-                    // GIAI ĐOẠN 2: Gửi PDF sang Cloudflare Worker để AI xử lý
-                    setStatus("🚀 Đang gửi sang Cloudflare AI để đọc đề (Không bị chặn IP)...");
-                    
-                    const aiFd = new FormData();
-                    aiFd.append("file", pdfBlob, "exam.pdf");
-                    
-                    const workerRes = await fetch(`${CF_WORKER_URL}/mix`, {
-                        method: "POST",
-                        headers: { "x-gemini-api-key": apiKeys[0] }, // Dùng key đầu tiên
-                        body: aiFd
-                    });
-
-                    if(!workerRes.ok) {
-                        const errText = await workerRes.text();
-                        throw new Error("Lỗi Worker: " + errText);
-                    }
-
-                    const data = await workerRes.json();
-                    
-                    // Map dữ liệu trả về từ Worker
-                    const mapped = data.map((q, i) => ({
-                        id: i, number: i+1, 
-                        question: q.question, 
-                        options: q.options.map(o => cleanOptionText(o)),
-                        correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1 
-                    }));
-                    
-                    setQuestions(mapped);
-                    setStatus(`✅ Thành công! Đã đọc ${mapped.length} câu.`);
-
-                } catch(e) { 
-                    setStatus("❌ Lỗi: " + e.message); 
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            // 2. AI VISION MIX (Frontend Only - Dự phòng)
-            const handleAIMix = async (file) => { /* Giữ nguyên code cũ */
-                if(!apiKeys.length) return alert("Cần API Key!"); setLoading(true); 
-                try {
-                    const buffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument(buffer).promise;
-                    let allQuestions = [];
-                    for(let i=1; i<=pdf.numPages; i++) {
-                        setStatus(`🔍 Đang đọc trang ${i}/${pdf.numPages}...`);
-                        const page = await pdf.getPage(i); const vp = page.getViewport({scale: 2});
-                        const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
-                        await page.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
-                        const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKeys[i%apiKeys.length]}`, {
-                            method: 'POST', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ contents: [{parts: [{text: "Trích xuất câu hỏi JSON"}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
-                        });
-                        const data = await res.json();
-                        if(data.candidates) {
-                            try { allQuestions.push(...JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim())); } catch(e){}
-                        }
-                    }
-                    setQuestions(allQuestions.map((q, i) => ({ id: i, number: i+1, question: q.question, options: q.options.map(o => cleanOptionText(o)), correctAnswerIndex: q.correctAnswerIndex ?? -1 })));
-                    setStatus(`Hoàn tất!`);
-                } catch(e) { setStatus("Lỗi AI: " + e.message); } setLoading(false);
-            };
-
-            // 3. TEXT MIX
-            const handleSimpleMix = async (file) => { /* Giữ nguyên code cũ */
-                setLoading(true); setStatus("Đang tách text...");
-                try {
-                    const zip = new JSZip(); await zip.loadAsync(file);
-                    const docXml = await zip.file("word/document.xml").async("string");
-                    const parser = new DOMParser(); const xml = parser.parseFromString(docXml, "text/xml");
-                    let text = ""; xml.querySelectorAll("w\\:t").forEach(n => text += n.textContent + "\n");
-                    const raw = text.split(/Câu\s+\d+[:\.]/g).filter(t=>t.length>10);
-                    setQuestions(raw.map((t,i)=>({ id:i, number:i+1, question: t.substring(0,100)+"...", options:["A", "B", "C", "D"], correctAnswerIndex:-1 })));
-                    setStatus(`Tách được ${raw.length} câu.`);
-                } catch(e) { setStatus("Lỗi: " + e.message); } setLoading(false);
-            };
-
-            const handleFileChange = (e) => {
-                const f = e.target.files[0]; if(!f) return;
-                if(tab==='server') handleServerMix(f); 
-                else if(tab==='ai') handleAIMix(f);
-                else handleSimpleMix(f);
-            };
-
-            const downloadZip = () => { /* Giữ nguyên code cũ */
-                if(!questions.length) return alert("Chưa có dữ liệu!");
-                const zip = new JSZip(); const codes = Array.from({length: numVariants}, (_, i) => 101 + i); let excelData = [];
-                codes.forEach(code => {
-                    const shuffled = [...questions].sort(()=>Math.random()-0.5);
-                    const variant = shuffled.map((q,i) => {
-                        const opts = q.options.map((txt,idx)=>({txt, isC: idx===q.correctAnswerIndex})).sort(()=>Math.random()-0.5);
-                        const newC = opts.findIndex(o=>o.isC);
-                        return { number: i+1, question: q.question, options: opts.map(o=>o.txt), correctAnswerLetter: String.fromCharCode(65+newC) };
-                    });
-                    zip.file(`De_${code}.doc`, createDocContent(code, variant));
-                    let row = {"Mã Đề": code}; variant.forEach(q => row[`Câu ${q.number}`] = q.correctAnswerLetter); excelData.push(row);
-                });
-                const ws = XLSX.utils.json_to_sheet(excelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "DapAn");
-                zip.file("Bang_Dap_An.xlsx", XLSX.write(wb, {bookType:'xlsx', type:'array'}));
-                zip.generateAsync({type:"blob"}).then(c => saveAs(c, "Bo_De_Tron.zip"));
-            };
-
-            if(!tab) return (
-                <div className="max-w-5xl mx-auto p-8">
-                    <button onClick={()=>window.location.href='index.html'} className="mb-8 text-gray-500 hover:text-indigo-600 font-bold flex items-center gap-2"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
-                    <h1 className="text-3xl font-bold text-center text-indigo-900 mb-10">CHỌN CHẾ ĐỘ TRỘN ĐỀ</h1>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div onClick={()=>setTab('server')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-blue-600 text-center group">
-                            <i className="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Server Mix (Hybrid)</h3>
-                            <p className="text-gray-500 text-sm">Mạnh nhất: Cloudflare AI + HF Convert (Word/PDF)</p>
-                        </div>
-                        <div onClick={()=>setTab('ai')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-red-600 text-center group">
-                            <i className="fas fa-eye text-5xl text-red-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">AI Vision Mix</h3>
-                            <p className="text-gray-500 text-sm">Chạy trên trình duyệt (Chỉ PDF/Ảnh)</p>
-                        </div>
-                        <div onClick={()=>setTab('simple')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-green-600 text-center group">
-                            <i className="fas fa-font text-5xl text-green-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Text Offline</h3>
-                            <p className="text-gray-500 text-sm">Cực nhanh, không cần mạng</p>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            return (
-                <div className="max-w-6xl mx-auto p-6">
-                    <AnswerModal isOpen={showModal} onClose={()=>setShowModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
-                    <div className="flex justify-between items-center mb-6">
-                        <button onClick={()=>setTab(null)} className="text-gray-500 font-bold hover:text-indigo-600 flex items-center gap-2"><i className="fas fa-arrow-left"></i> Chọn lại chế độ</button>
-                        <h2 className="text-xl font-bold text-indigo-800">{tab==='server'?"SERVER MIX (Cloudflare AI)":tab==='ai'?"AI VISION MIX":"TEXT MIX (Offline)"}</h2>
-                    </div>
-                    <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 mb-8 text-center border-2 border-dashed border-indigo-200 hover:bg-indigo-50 cursor-pointer transition" onClick={()=>fileRef.current.click()}>
-                        {loading ? <div className="loader"></div> : <div><i className="fas fa-file-upload text-5xl text-indigo-400 mb-3"></i><p className="font-bold text-lg text-indigo-700">Nhấn để chọn file đề thi</p>{status && <p className="mt-2 text-blue-600 font-bold animate-pulse">{status}</p>}</div>}
-                        <input ref={fileRef} type="file" accept={tab==='simple'?".docx":".docx,.doc,.pdf"} className="hidden" onChange={handleFileChange} />
-                    </div>
-                    {questions.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg fade-in">
-                            <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-4">
-                                <h3 className="font-bold text-xl text-gray-800">Kết quả: {questions.length} câu</h3>
-                                <div className="flex items-center gap-3">
-                                    <button onClick={()=>setShowModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-orange-600 flex items-center gap-2"><i className="fas fa-magic"></i> Nạp Đáp Án</button>
-                                    <div className="flex items-center bg-gray-100 rounded px-3 py-1 border"><span className="text-sm font-bold mr-2">Số đề:</span><input type="number" min="1" max="10" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-12 text-center font-bold outline-none"/></div>
-                                    <button onClick={downloadZip} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-green-700 flex items-center gap-2"><i className="fas fa-download"></i> Tải Về</button>
-                                </div>
-                            </div>
-                            <div className="grid gap-4 max-h-[600px] overflow-y-auto p-2">{questions.map((q,i)=>(<div key={i} className={`p-4 rounded border ${q.correctAnswerIndex===-1?'bg-red-50 border-red-200':'bg-gray-50 border-gray-200'}`}><div className="flex justify-between mb-2"><span className="font-bold text-indigo-700">Câu {q.number}</span>{q.correctAnswerIndex===-1 && <span className="text-xs font-bold text-red-500 bg-red-100 px-2 rounded">Chưa có đáp án</span>}</div><div className="mb-3"><MathText text={q.question}/></div><div className="grid grid-cols-2 gap-2 text-sm">{q.options.map((o, idx)=>(<div key={idx} onClick={()=>toggleAnswer(i,idx)} className={`p-2 border rounded cursor-pointer flex justify-between items-center ${idx===q.correctAnswerIndex?'bg-green-100 border-green-500 text-green-900 font-bold':'bg-white hover:bg-gray-100'}`}><span>{String.fromCharCode(65+idx)}. <MathText text={o}/></span>{idx===q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600"></i>}</div>))}</div></div>))}</div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
-    </script>
-</body>
-</html>
+    except Exception as e:
+        return {"error": f"Lỗi xử lý: {str(e)}"}
