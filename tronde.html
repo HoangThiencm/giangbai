@@ -38,27 +38,50 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         const MODEL_NAME = "gemini-2.5-flash";
+        
+        // --- HELPER: CLEAN TEXT (FIX LỖI LẶP CÂU HỎI) ---
+        const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
+        const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
+        const cleanQuestionText = (text) => { 
+            if (!text) return ""; 
+            // Regex loại bỏ triệt để tiền tố câu hỏi (Câu 1. Câu 1: **Câu 1**)
+            return normalizeText(text).replace(/^(\**\s*(Câu|Bài|Question)\s*\d+[\.\:\)]\s*\**\s*)+/gi, '').trim(); 
+        };
 
-        // === PROMPT CHUẨN CHO VIỆC ĐỌC ĐỀ ===
+        // --- HELPER: FORMAT MATH CHO WORD (FIX LỖI MẤT CÔNG THỨC) ---
+        const formatMathForWord = (text) => {
+            if (!text) return "";
+            let content = normalizeText(text);
+            
+            // Tự động thêm $ nếu thiếu
+            if (!content.includes('$') && (content.includes('\\frac') || content.includes('\\sqrt') || content.includes('^'))) {
+                content = content.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
+            }
+
+            // Chuyển LaTeX sang MathML
+            return content.replace(/\$([^$]+)\$/g, (match, tex) => {
+                try {
+                    let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
+                    return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
+                } catch (e) { return match; }
+            });
+        };
+
         const SYSTEM_PROMPT = `
         Bạn là một trợ lý soạn đề thi chuyên nghiệp. Nhiệm vụ: Trích xuất câu hỏi trắc nghiệm từ file PDF.
         Output JSON strict (Array): [{"question":"...","options":["...","...","...","..."],"correctAnswerIndex":-1}]
         `;
 
-        // === COMPONENT HIỂN THỊ MATH/TEXT ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text) return;
-                // Xử lý hiển thị ảnh Base64 hoặc URL trong nội dung câu hỏi
+                let processed = normalizeText(text);
                 const imgRegex = /<img src="([^"]+)"/g;
-                let processed = text.replace(imgRegex, (match, src) => `<br/><img src="${src}" class="img-preview"/><br/>`);
-                
-                // Tự động thêm $ nếu thiếu
+                processed = processed.replace(imgRegex, (match, src) => `<br/><img src="${src}" class="img-preview"/><br/>`);
                 if (!processed.includes('$') && (processed.includes('\\frac') || processed.includes('\\sqrt'))) {
                     processed = processed.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
                 }
-
                 const parts = processed.split(/(\$[^$]+\$|<br\/>|<img[^>]+>)/g);
                 ref.current.innerHTML = "";
                 parts.forEach(part => {
@@ -67,94 +90,58 @@
                         try { katex.render(part.slice(1, -1), span, { throwOnError: false }); } catch { span.innerText = part; }
                         ref.current.appendChild(span);
                     } else if (part.startsWith("<img") || part === "<br/>") {
-                        const span = document.createElement("span");
-                        span.innerHTML = part;
-                        ref.current.appendChild(span);
-                    } else { 
-                        ref.current.appendChild(document.createTextNode(part)); 
-                    }
+                        const span = document.createElement("span"); span.innerHTML = part; ref.current.appendChild(span);
+                    } else { ref.current.appendChild(document.createTextNode(part)); }
                 });
             }, [text]);
             return <span ref={ref} />;
         };
 
-        // === MODAL NẠP ĐÁP ÁN (ĐÃ KHÔI PHỤC) ===
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
             const [status, setStatus] = useState("");
-            
             const handlePaste = async (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
                     if (item.type.indexOf("image") !== -1) {
                         e.preventDefault();
-                        if (apiKeys.length === 0) return alert("Cần có API Key để đọc ảnh!");
-                        await processImage(item.getAsFile());
-                        return;
+                        if (apiKeys.length === 0) return alert("Cần có API Key!");
+                        await processImage(item.getAsFile()); return;
                     }
                 }
             };
-
             const processImage = async (blob) => {
                 setStatus("🤖 AI đang quét bảng đáp án...");
                 try {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
+                    const reader = new FileReader(); reader.readAsDataURL(blob);
                     reader.onloadend = async () => {
                         const base64 = reader.result.split(',')[1];
-                        const prompt = `Bạn là trợ lý chấm thi. Nhìn vào ảnh và trích xuất đáp án đúng.
-                        Chỉ trả về chuỗi dạng: 1A 2B 3C... hoặc 1.A 2.B...
-                        Bỏ qua các lời giải thích.`;
-                        
-                        // Dùng key ngẫu nhiên để tránh rate limit
                         const currentKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
-                        
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentKey}`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}] })
+                            body: JSON.stringify({ contents: [{parts: [{text: "Trích xuất đáp án (1A 2B...)"}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}] })
                         });
                         const data = await res.json();
-                        if (data.candidates) {
-                            const result = data.candidates[0].content.parts[0].text;
-                            setText(prev => prev + (prev ? "\n" : "") + result.trim());
-                            setStatus("✅ Đã nhận diện xong!");
-                        } else setStatus("⚠️ Không tìm thấy đáp án.");
+                        if (data.candidates) { setText(prev => prev + (prev ? "\n" : "") + data.candidates[0].content.parts[0].text.trim()); setStatus("✅ Xong!"); } else setStatus("⚠️ Không tìm thấy.");
                     };
-                } catch (e) { setStatus("❌ Lỗi AI: " + e.message); }
+                } catch (e) { setStatus("❌ Lỗi: " + e.message); }
             };
-
             return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-indigo-800"><i className="fas fa-magic mr-2"></i> Nạp Đáp Án</h3>
-                            <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
-                        </div>
-                        <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3">
-                            <b>Cách dùng:</b> Chụp ảnh bảng đáp án rồi bấm <b>Ctrl + V</b> vào ô dưới. Hoặc gõ trực tiếp (Ví dụ: 1A 2B 3C...).
-                        </div>
-                        {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
-                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Dán ảnh bảng đáp án tại đây..."></textarea>
-                        <div className="flex justify-end gap-3 mt-4">
-                            <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
-                            <button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow">Cập Nhật</button>
-                        </div>
-                    </div>
-                </div>
+                <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-xl font-bold text-indigo-800 mb-4">Nạp Đáp Án</h3>
+                    <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3"><b>Cách dùng:</b> Dán ảnh bảng đáp án (Ctrl+V) hoặc nhập 1A 2B...</div>
+                    {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
+                    <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded outline-none" placeholder="Dán ảnh hoặc nhập..."></textarea>
+                    <div className="flex justify-end gap-3 mt-4"><button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Hủy</button><button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold">Cập Nhật</button></div>
+                </div></div>
             );
         };
 
-        // === COMPONENT SỬA CÂU HỎI ===
         const QuestionEditor = ({ q, index, onUpdate }) => {
             const [isEditing, setIsEditing] = useState(false);
             const [localQ, setLocalQ] = useState(q);
-
             useEffect(() => { setLocalQ(q); }, [q]);
-
-            const handleSave = () => { onUpdate(index, localQ); setIsEditing(false); };
-            
-            // Xử lý dán ảnh vào câu hỏi
             const handlePaste = (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -162,63 +149,13 @@
                         e.preventDefault();
                         const blob = item.getAsFile();
                         const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const imgTag = `<img src="${event.target.result}" />`;
-                            setLocalQ({...localQ, question: localQ.question + "\n" + imgTag});
-                        };
+                        reader.onload = (event) => setLocalQ({...localQ, question: localQ.question + "\n" + `<img src="${event.target.result}" />`});
                         reader.readAsDataURL(blob);
                     }
                 }
             };
-
-            const triggerPaste = () => { alert("Hãy nhấn Ctrl+V để dán ảnh vào ô nội dung câu hỏi!"); };
-
-            if (isEditing) {
-                return (
-                    <div className="bg-white p-6 rounded-lg shadow-md border-2 border-indigo-400 mb-6 relative">
-                         <div className="flex justify-between items-center mb-3">
-                            <span className="font-bold text-indigo-700 text-lg">Câu {index + 1} (Đang sửa):</span>
-                            <div className="flex gap-2">
-                                <button onClick={triggerPaste} className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm font-bold hover:bg-purple-200"><i className="fas fa-image"></i> Dán ảnh (Ctrl+V)</button>
-                                <button onClick={handleSave} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-indigo-700"><i className="fas fa-check"></i> Xong</button>
-                            </div>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung</label>
-                            <textarea className="w-full p-3 border rounded focus:ring-2 focus:ring-indigo-200 outline-none font-medium bg-indigo-50 min-h-[100px]" value={localQ.question} onChange={(e) => setLocalQ({...localQ, question: e.target.value})} onPaste={handlePaste} placeholder="Nhập nội dung câu hỏi..."/>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {localQ.options.map((opt, idx) => (
-                                <div key={idx} className={`flex items-center gap-2 p-2 border rounded ${localQ.correctAnswerIndex === idx ? 'border-green-500 bg-green-50' : ''}`}>
-                                    <input type="radio" name={`q-${index}-edit`} checked={localQ.correctAnswerIndex === idx} onChange={() => setLocalQ({...localQ, correctAnswerIndex: idx})} className="w-4 h-4 cursor-pointer accent-green-600" />
-                                    <input className="w-full bg-transparent outline-none border-b border-gray-300 focus:border-indigo-500" value={opt} onChange={(e) => { const newOpts = [...localQ.options]; newOpts[idx] = e.target.value; setLocalQ({...localQ, options: newOpts}); }}/>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="bg-white p-6 rounded border border-gray-200 mb-4 hover:shadow-md transition relative group">
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition">
-                        <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border px-3 py-1 rounded text-sm font-bold hover:text-indigo-600"><i className="fas fa-pencil-alt"></i> Sửa</button>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                        <span className="font-bold text-indigo-700">Câu {q.number}</span>
-                        {q.correctAnswerIndex===-1 && <span className="text-xs font-bold text-red-500 bg-red-100 px-2 rounded">Chưa có đáp án</span>}
-                    </div>
-                    <div className="mb-3 text-gray-800"><MathText text={q.question}/></div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                        {q.options.map((o, idx) => (
-                            <div key={idx} className={`p-2 border rounded flex justify-between items-center ${idx===q.correctAnswerIndex?'bg-green-100 border-green-500 text-green-900 font-bold':'bg-white'}`}>
-                                <span>{String.fromCharCode(65+idx)}. <MathText text={o}/></span>
-                                {idx===q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600"></i>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
+            if (isEditing) return (<div className="bg-white p-6 rounded-lg shadow border-2 border-indigo-400 mb-6"><div className="flex justify-between mb-3"><span className="font-bold text-indigo-700">Câu {index+1}</span><button onClick={()=>{onUpdate(index, localQ); setIsEditing(false)}} className="bg-indigo-600 text-white px-3 py-1 rounded">Lưu</button></div><textarea className="w-full p-2 border rounded mb-4" value={localQ.question} onChange={e=>setLocalQ({...localQ, question: e.target.value})} onPaste={handlePaste} placeholder="Dán ảnh (Ctrl+V)..."/><div className="grid grid-cols-2 gap-2">{localQ.options.map((o,i)=>(<div key={i} className="flex gap-2"><input type="radio" checked={localQ.correctAnswerIndex===i} onChange={()=>setLocalQ({...localQ, correctAnswerIndex:i})}/><input className="border-b w-full" value={o} onChange={e=>{const n=[...localQ.options]; n[i]=e.target.value; setLocalQ({...localQ, options:n})}}/></div>))}</div></div>);
+            return (<div className="bg-white p-6 rounded border mb-4 hover:shadow group relative"><button onClick={()=>setIsEditing(true)} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 bg-gray-100 px-3 py-1 rounded text-sm">Sửa</button><div className="flex justify-between mb-2"><span className="font-bold text-indigo-700">Câu {q.number}</span>{q.correctAnswerIndex===-1&&<span className="text-red-500 text-xs bg-red-100 px-2 rounded">Chưa có đáp án</span>}</div><div className="mb-3"><MathText text={cleanQuestionText(q.question)}/></div><div className="grid grid-cols-2 gap-2 text-sm">{q.options.map((o,i)=>(<div key={i} className={`p-2 border rounded flex justify-between ${i===q.correctAnswerIndex?'bg-green-100 border-green-500':''}`}><span>{String.fromCharCode(65+i)}. <MathText text={cleanOptionText(o)}/></span></div>))}</div></div>);
         };
 
         const App = () => {
@@ -230,44 +167,16 @@
             const [showAnsModal, setShowAnsModal] = useState(false);
             const fileRef = useRef();
             
-            // --- TỰ ĐỘNG LẤY KEY TỪ INDEX (LocalStorage) ---
-            useEffect(() => {
-                const k = localStorage.getItem('global_gemini_keys');
-                if(k) {
-                    const parsed = JSON.parse(k);
-                    setApiKeys(parsed);
-                }
-            }, []);
+            useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); }, []);
 
-            // --- XỬ LÝ NẠP ĐÁP ÁN ---
             const handleApplyAnswers = (text) => {
                 const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
-                // Regex tìm số câu và đáp án (VD: 1 A, 1A, 1.A)
                 const regex = /(\d+)\s*[\.\:\-]?\s*([A-D])/g;
-                let match, newMap = {};
-                let count = 0;
-                
-                while ((match = regex.exec(raw)) !== null) {
-                    const qNum = parseInt(match[1]);
-                    const ansChar = match[2];
-                    newMap[qNum] = ansChar.charCodeAt(0) - 65; // A->0, B->1...
-                    count++;
-                }
-                
-                if (count === 0) return alert("Không tìm thấy đáp án hợp lệ (VD: 1A 2B...)");
-
-                // Cập nhật vào danh sách câu hỏi
-                const newQs = questions.map((q, i) => {
-                    // Ưu tiên map theo số câu (q.number), nếu không thì theo index
-                    const targetAns = newMap[q.number] !== undefined ? newMap[q.number] : newMap[i + 1];
-                    if (targetAns !== undefined) {
-                        return { ...q, correctAnswerIndex: targetAns };
-                    }
-                    return q;
-                });
-                
-                setQuestions(newQs);
-                alert(`Đã cập nhật đáp án cho ${count} câu!`);
+                let match, newMap = {}, count = 0;
+                while ((match = regex.exec(raw)) !== null) { newMap[parseInt(match[1])] = match[2].charCodeAt(0) - 65; count++; }
+                if (count === 0) return alert("Không tìm thấy đáp án!");
+                setQuestions(questions.map((q, i) => { const ans = newMap[q.number] !== undefined ? newMap[q.number] : newMap[i+1]; return ans !== undefined ? { ...q, correctAnswerIndex: ans } : q; }));
+                alert(`Đã cập nhật ${count} câu!`);
             };
 
             const processPageWithAI = async (page, pageNum, key) => {
@@ -276,56 +185,33 @@
                 cvs.width = vp.width; cvs.height = vp.height;
                 await page.render({canvasContext: cvs.getContext('2d'), viewport: vp}).promise;
                 const img = cvs.toDataURL('image/jpeg', 0.8).split(',')[1];
-
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${key}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{parts: [{text: SYSTEM_PROMPT}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
-                });
-                
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${key}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{parts: [{text: SYSTEM_PROMPT}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] }) });
                 const data = await res.json();
                 if(data.candidates) {
                     let txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                    const jsonStart = txt.indexOf('[');
-                    const jsonEnd = txt.lastIndexOf(']');
-                    if (jsonStart !== -1 && jsonEnd !== -1) {
-                        txt = txt.substring(jsonStart, jsonEnd + 1);
-                        return JSON.parse(txt);
-                    }
+                    const s = txt.indexOf('['), e = txt.lastIndexOf(']');
+                    if (s!==-1 && e!==-1) return JSON.parse(txt.substring(s, e+1));
                 }
                 return [];
             };
 
             const handleAIMix = async (e) => {
                 const file = e.target.files[0];
-                if(!file) return;
-                if(!apiKeys.length) return alert("Hệ thống chưa có API Key. Vui lòng quay lại trang chủ (index.html) để nạp Key!");
-                
-                setLoading(true); setStatus("🚀 Đang khởi động AI Vision Multi-thread...");
+                if(!file || !apiKeys.length) return alert("Cần file và API Key!");
+                setLoading(true); setStatus("🚀 Đang xử lý đa luồng...");
                 try {
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
-                    
                     const pagePromises = [];
                     for(let i = 1; i <= pdf.numPages; i++) {
-                        const key = apiKeys[(i - 1) % apiKeys.length];
-                        setStatus(`⚡ Đang xử lý song song ${i}/${pdf.numPages} trang...`);
+                        const key = apiKeys[(i-1)%apiKeys.length];
+                        setStatus(`⚡ Đang đọc trang ${i}/${pdf.numPages}...`);
                         pagePromises.push(pdf.getPage(i).then(page => processPageWithAI(page, i, key)).catch(err => []));
                     }
-
                     const results = await Promise.all(pagePromises);
-                    let allQuestions = results.flat();
-
-                    const finalMapped = allQuestions.map((q, i) => ({
-                        id: i, 
-                        number: i+1, 
-                        question: q.question,
-                        options: q.options.map(o => o.replace(/^[A-D][\.\)\:]\s*/, '').trim()),
-                        correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1
-                    }));
-
-                    setQuestions(finalMapped);
-                    setStatus(`✅ Hoàn tất! Đã đọc ${finalMapped.length} câu hỏi.`);
-                } catch(e) { setStatus("❌ Lỗi AI: " + e.message); }
+                    const allQs = results.flat().map((q, i) => ({ id: i, number: i+1, question: q.question, options: q.options.map(o => o.replace(/^[A-D][\.\)\:]\s*/, '').trim()), correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1 }));
+                    setQuestions(allQs); setStatus(`✅ Đã đọc ${allQs.length} câu.`);
+                } catch(e) { setStatus("❌ Lỗi: " + e.message); }
                 setLoading(false);
             };
 
@@ -334,7 +220,6 @@
                 const zip = new JSZip();
                 const codes = Array.from({length: numVariants}, (_, i) => 101 + i);
                 let excelData = [];
-
                 codes.forEach(code => {
                     const shuffled = [...questions].sort(()=>Math.random()-0.5);
                     const variant = shuffled.map((q,i) => {
@@ -343,16 +228,15 @@
                         return { number: i+1, question: q.question, options: opts.map(o=>o.txt), correctAnswerLetter: String.fromCharCode(65+newC) };
                     });
                     
+                    // SỬ DỤNG MATHML ĐỂ WORD HIỂN THỊ CÔNG THỨC
                     let body = `<h2 style='text-align:center'>MÃ ĐỀ: ${code}</h2>`;
                     variant.forEach(q => {
-                        body += `<p><b>Câu ${q.number}:</b> ${q.question.replace(/\n/g, '<br/>')}</p>`;
-                        q.options.forEach((o, idx) => body += `<p>${String.fromCharCode(65+idx)}. ${o}</p>`);
+                        body += `<p><b>Câu ${q.number}:</b> ${formatMathForWord(cleanQuestionText(q.question))}</p>`;
+                        q.options.forEach((o, idx) => body += `<p style="margin-left: 20px;">${String.fromCharCode(65+idx)}. ${formatMathForWord(cleanOptionText(o))}</p>`);
                     });
-                    zip.file(`De_${code}.doc`, `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'></head><body>${body}</body></html>`);
-                    
+                    zip.file(`De_${code}.doc`, `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>${body}</body></html>`);
                     let row = {"Mã Đề": code}; variant.forEach(q => row[`Câu ${q.number}`] = q.correctAnswerLetter); excelData.push(row);
                 });
-
                 const ws = XLSX.utils.json_to_sheet(excelData);
                 const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "DapAn");
                 zip.file("Bang_Dap_An.xlsx", XLSX.write(wb, {bookType:'xlsx', type:'array'}));
@@ -362,58 +246,17 @@
             return (
                 <div className="max-w-4xl mx-auto p-6 min-h-screen">
                     <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
-                    
-                    <div className="flex justify-between items-center mb-6">
-                        <button onClick={()=>window.location.href='index.html'} className="text-gray-500 hover:text-indigo-600 font-bold flex items-center gap-2"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
-                        <div className={`text-sm font-bold px-3 py-1 rounded-full border ${apiKeys.length ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                            {apiKeys.length ? `✅ Đã nạp ${apiKeys.length} API Keys từ Hệ thống` : '❌ Chưa có API Key'}
-                        </div>
-                    </div>
-
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-indigo-800 mb-2"><i className="fas fa-eye"></i> TRỘN ĐỀ THI BẰNG AI</h1>
-                        <p className="text-gray-600">Công nghệ nhận diện đa luồng - Tự động xoay vòng Key</p>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-xl shadow-lg mb-6 border border-indigo-100">
-                        <div className="border-2 border-dashed border-indigo-400 p-8 rounded-xl text-center cursor-pointer hover:bg-indigo-50 transition" onClick={()=>fileRef.current.click()}>
-                            {loading ? <div className="loader"></div> : <i className="fas fa-cloud-upload-alt text-5xl text-indigo-500 mb-3"></i>}
-                            <p className="font-bold text-lg text-indigo-700">{loading ? "Đang xử lý đa luồng..." : "Chọn file PDF đề thi gốc"}</p>
-                            <p className="text-sm text-gray-500 mt-1">Hỗ trợ PDF 2-6 trang. Tự động chia việc cho các API Key.</p>
-                            {status && <p className="mt-3 font-bold text-blue-600 animate-pulse">{status}</p>}
-                        </div>
+                    <div className="flex justify-between items-center mb-6"><button onClick={()=>window.location.href='index.html'} className="text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Trang Chủ</button><div className={`text-sm font-bold px-3 py-1 rounded-full border ${apiKeys.length ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{apiKeys.length ? `✅ ${apiKeys.length} Keys` : '❌ Chưa có Key'}</div></div>
+                    <div className="text-center mb-8"><h1 className="text-3xl font-bold text-indigo-800 mb-2"><i className="fas fa-eye"></i> AI VISION EXAM MIXER</h1></div>
+                    <div className="bg-white p-6 rounded-xl shadow border-2 border-dashed border-indigo-200 mb-6 text-center cursor-pointer hover:bg-indigo-50" onClick={()=>fileRef.current.click()}>
+                        {loading ? <div className="loader"></div> : <i className="fas fa-cloud-upload-alt text-5xl text-indigo-500 mb-3"></i>}
+                        <p className="font-bold text-lg text-indigo-700">{loading ? status : "Chọn file PDF đề thi gốc"}</p>
                         <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={handleAIMix} />
                     </div>
-
-                    {questions.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg fade-in">
-                            <div className="flex justify-between items-center mb-6 border-b pb-4">
-                                <h3 className="font-bold text-xl text-gray-800">Kết quả: {questions.length} câu</h3>
-                                <div className="flex gap-2">
-                                    <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold shadow hover:bg-orange-600 flex items-center gap-2 animate-pulse">
-                                        <i className="fas fa-magic"></i> Nạp Đáp Án
-                                    </button>
-                                    <div className="flex items-center bg-gray-100 rounded px-2 border">
-                                        <span className="text-sm font-bold mr-2">Số mã đề:</span>
-                                        <input type="number" min="1" max="20" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-10 font-bold outline-none"/>
-                                    </div>
-                                    <button onClick={downloadZip} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-download"></i> Tải Về</button>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                {questions.map((q, i) => (
-                                    <QuestionEditor 
-                                        key={q.id} q={q} index={i} 
-                                        onUpdate={(idx, newQ) => { const newQs = [...questions]; newQs[idx] = newQ; setQuestions(newQs); }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {questions.length > 0 && (<div className="bg-white p-6 rounded-xl shadow fade-in"><div className="flex justify-between items-center mb-6 border-b pb-4"><h3 className="font-bold text-xl">Kết quả: {questions.length} câu</h3><div className="flex gap-2"><button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold">Nạp Đáp Án</button><div className="flex items-center bg-gray-100 rounded px-2"><span className="text-sm font-bold mr-2">Số mã:</span><input type="number" min="1" max="20" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-10 font-bold"/></div><button onClick={downloadZip} className="bg-green-600 text-white px-4 py-2 rounded font-bold">Tải Về</button></div></div><div className="space-y-4">{questions.map((q, i) => (<QuestionEditor key={q.id} q={q} index={i} onUpdate={(idx, newQ) => { const newQs = [...questions]; newQs[idx] = newQ; setQuestions(newQs); }} />))}</div></div>)}
                 </div>
             );
         };
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
