@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Quản Lý Thi Trực Tuyến - Hybrid Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
+    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
+    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
+    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
     
     <!-- KaTeX -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
+    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
 
     <!-- FONT TIMES NEW ROMAN -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="[https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap](https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap)" rel="stylesheet">
 
     <style>
         :root { --font-main: 'Times New Roman', 'Noto Serif', serif; }
@@ -45,8 +45,8 @@
         const { useState, useEffect, useRef } = React;
         
         // --- CHÍNH XÁC URL TỪ TRONDE.HTML ---
-        const HF_SERVER_URL = "https://hoangthiencm-giangbai.hf.space";
-        const CF_WORKER_URL = "https://gentle-fog-f0e2giangbai.hoangthiencm.workers.dev";
+        const HF_SERVER_URL = "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)";
+        const CF_WORKER_URL = "[https://gentle-fog-f0e2giangbai.hoangthiencm.workers.dev](https://gentle-fog-f0e2giangbai.hoangthiencm.workers.dev)";
         
         const API_BASE = HF_SERVER_URL; // Alias cho các API backend cũ (save/load exam)
         const MODEL_NAME = "gemini-2.5-flash";
@@ -311,8 +311,27 @@
                         throw new Error("Lỗi Worker: " + errText);
                     }
 
-                    // Bước 3: Nhận JSON câu hỏi
-                    const data = await workerRes.json();
+                    // Bước 3: Nhận JSON câu hỏi (FIX LỖI JSON DO LATEX)
+                    // Thay vì gọi .json(), ta gọi .text() và tự xử lý các ký tự escape lỗi
+                    const rawText = await workerRes.text();
+                    
+                    // 1. Xóa Markdown (```json ... ```) nếu có
+                    let cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+                    // 2. Fix lỗi "Bad escaped character" (ví dụ \s, \D, \l trong LaTeX không được escape)
+                    // Regex này tìm dấu \ mà KHÔNG theo sau bởi các ký tự escape hợp lệ của JSON (" \ / b f n r t u)
+                    cleanText = cleanText.replace(/\\(?![/u"bfnrt\\])/g, '\\\\');
+
+                    let data;
+                    try {
+                        data = JSON.parse(cleanText);
+                    } catch (e) {
+                         console.error("JSON Parse Error:", e);
+                         console.log("Raw Text:", rawText);
+                         console.log("Cleaned Text:", cleanText);
+                         throw new Error("Dữ liệu AI trả về bị lỗi định dạng JSON. Vui lòng thử lại.");
+                    }
+
                     if (!Array.isArray(data)) throw new Error("Dữ liệu AI trả về không đúng định dạng mảng.");
 
                     // Map dữ liệu về format của ExamBuilder
@@ -321,7 +340,7 @@
                         question: normalizeText(q.question),
                         options: q.options.map(o => cleanOptionText(o)),
                         correct_index: q.correctAnswerIndex ?? -1,
-                        images: [] // Placeholder ảnh (Worker bản hiện tại chưa trả về ảnh nhúng, nhưng user có thể paste thêm)
+                        images: [] 
                     }));
 
                     setParsedQuestions(mappedQs);
@@ -356,7 +375,7 @@
                         <button onClick={onBack} className="text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-indigo-700 mb-6">{initialData ? "Cập Nhật Đề Thi" : "Tạo Đề Thi Mới"}</h2>
+                    <h2 className="text-2xl font-bold text-indigo-700 mb-6">{initialData ? "Cập Nhật Đề Thi" : "Tạo Đề Thi Mới (Hybrid Mode)"}</h2>
                     <div className="grid grid-cols-2 gap-4 mb-4"><input className="border p-3 rounded" placeholder="Tên Kỳ Thi" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} /><input className="border p-3 rounded" placeholder="Trường" value={form.school} onChange={e=>setForm({...form, school: e.target.value})} /></div>
                     <div className="grid grid-cols-3 gap-4 mb-4"><div><label className="text-xs font-bold">Thời lượng (phút)</label><input type="number" className="border p-3 rounded w-full" value={form.duration} onChange={e=>setForm({...form, duration: e.target.value})} /></div><div><label className="text-xs font-bold">Bắt đầu</label><input type="datetime-local" className="border p-3 rounded w-full" value={form.startTime || ""} onChange={e=>setForm({...form, startTime: e.target.value})} /></div><div><label className="text-xs font-bold">Kết thúc</label><input type="datetime-local" className="border p-3 rounded w-full" value={form.endTime || ""} onChange={e=>setForm({...form, endTime: e.target.value})} /></div></div>
                     <div className="mb-6 border-2 border-dashed border-indigo-200 p-6 text-center rounded hover:bg-indigo-50 cursor-pointer transition" onClick={()=>fileRef.current.click()}><input ref={fileRef} type="file" accept=".docx,.pdf,.png,.jpg" className="hidden" onChange={handleFileSelect}/>{fileName ? <p className="text-green-600 font-bold">{fileName}</p> : <><i className="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i><p>Chọn file đề thi (Word/PDF/Ảnh)</p></>}</div>
