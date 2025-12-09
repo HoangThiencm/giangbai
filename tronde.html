@@ -39,28 +39,13 @@
         const { useState, useEffect, useRef } = React;
         const MODEL_NAME = "gemini-2.5-flash";
 
-        // === PROMPT CHUẨN ===
+        // === PROMPT CHUẨN CHO VIỆC ĐỌC ĐỀ ===
         const SYSTEM_PROMPT = `
         Bạn là một trợ lý soạn đề thi chuyên nghiệp. Nhiệm vụ: Trích xuất câu hỏi trắc nghiệm từ file PDF.
-
-        1. CÔNG THỨC TOÁN/LÝ/HÓA:
-            - BẮT BUỘC giữ nguyên định dạng LaTeX và bọc trong dấu $.
-            - Ví dụ: Phân số $\\frac{a}{b}$, Căn $\\sqrt{x}$, Mũ $x^2$, Vectơ $\\vec{a}$.
-            - KHÔNG tự ý thay đổi ký hiệu toán học thành văn bản thường.
-
-        2. XỬ LÝ HÌNH ẢNH & BẢNG BIỂU (RẤT QUAN TRỌNG):
-            - Vì bạn chỉ trả về văn bản, nên nếu câu hỏi có HÌNH VẼ MINH HỌA, bạn phải MÔ TẢ NỘI DUNG HÌNH ĐÓ thật chi tiết trong ngoặc vuông.
-            - Ví dụ: "Cho hình vẽ bên. [Hình vẽ: Tam giác ABC vuông tại A, đường cao AH, cạnh AB=3cm...]"
-            - Nếu có BẢNG SỐ LIỆU: Hãy chuyển nó thành định dạng Markdown Table hoặc liệt kê dạng văn bản.
-
-        3. ĐÁP ÁN ĐÚNG:
-            - Tìm dấu hiệu: Tô đỏ, gạch chân, khoanh tròn, dấu tích.
-            - Nếu có Bảng đáp án ở cuối đề, hãy ưu tiên dùng nó.
-            - Nếu không tìm thấy, để correctAnswerIndex = -1.
-
         Output JSON strict (Array): [{"question":"...","options":["...","...","...","..."],"correctAnswerIndex":-1}]
         `;
 
+        // === COMPONENT HIỂN THỊ MATH/TEXT ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
@@ -93,7 +78,75 @@
             return <span ref={ref} />;
         };
 
-        const QuestionEditor = ({ q, index, onUpdate, onImagePaste }) => {
+        // === MODAL NẠP ĐÁP ÁN (ĐÃ KHÔI PHỤC) ===
+        const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
+            if (!isOpen) return null;
+            const [text, setText] = useState("");
+            const [status, setStatus] = useState("");
+            
+            const handlePaste = async (e) => {
+                const items = e.clipboardData.items;
+                for (let item of items) {
+                    if (item.type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        if (apiKeys.length === 0) return alert("Cần có API Key để đọc ảnh!");
+                        await processImage(item.getAsFile());
+                        return;
+                    }
+                }
+            };
+
+            const processImage = async (blob) => {
+                setStatus("🤖 AI đang quét bảng đáp án...");
+                try {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = async () => {
+                        const base64 = reader.result.split(',')[1];
+                        const prompt = `Bạn là trợ lý chấm thi. Nhìn vào ảnh và trích xuất đáp án đúng.
+                        Chỉ trả về chuỗi dạng: 1A 2B 3C... hoặc 1.A 2.B...
+                        Bỏ qua các lời giải thích.`;
+                        
+                        // Dùng key ngẫu nhiên để tránh rate limit
+                        const currentKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+                        
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentKey}`, {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}] })
+                        });
+                        const data = await res.json();
+                        if (data.candidates) {
+                            const result = data.candidates[0].content.parts[0].text;
+                            setText(prev => prev + (prev ? "\n" : "") + result.trim());
+                            setStatus("✅ Đã nhận diện xong!");
+                        } else setStatus("⚠️ Không tìm thấy đáp án.");
+                    };
+                } catch (e) { setStatus("❌ Lỗi AI: " + e.message); }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-indigo-800"><i className="fas fa-magic mr-2"></i> Nạp Đáp Án</h3>
+                            <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
+                        </div>
+                        <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3">
+                            <b>Cách dùng:</b> Chụp ảnh bảng đáp án rồi bấm <b>Ctrl + V</b> vào ô dưới. Hoặc gõ trực tiếp (Ví dụ: 1A 2B 3C...).
+                        </div>
+                        {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
+                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Dán ảnh bảng đáp án tại đây..."></textarea>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
+                            <button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow">Cập Nhật</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // === COMPONENT SỬA CÂU HỎI ===
+        const QuestionEditor = ({ q, index, onUpdate }) => {
             const [isEditing, setIsEditing] = useState(false);
             const [localQ, setLocalQ] = useState(q);
 
@@ -101,6 +154,7 @@
 
             const handleSave = () => { onUpdate(index, localQ); setIsEditing(false); };
             
+            // Xử lý dán ảnh vào câu hỏi
             const handlePaste = (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -110,7 +164,6 @@
                         const reader = new FileReader();
                         reader.onload = (event) => {
                             const imgTag = `<img src="${event.target.result}" />`;
-                            // Chèn vào vị trí con trỏ hoặc cuối dòng
                             setLocalQ({...localQ, question: localQ.question + "\n" + imgTag});
                         };
                         reader.readAsDataURL(blob);
@@ -118,9 +171,7 @@
                 }
             };
 
-            const triggerPaste = () => {
-                alert("Hãy nhấn Ctrl+V để dán ảnh vào ô nội dung câu hỏi!");
-            };
+            const triggerPaste = () => { alert("Hãy nhấn Ctrl+V để dán ảnh vào ô nội dung câu hỏi!"); };
 
             if (isEditing) {
                 return (
@@ -133,23 +184,14 @@
                             </div>
                         </div>
                         <div className="mb-4">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung (Có thể dùng LaTeX)</label>
-                            <textarea 
-                                className="w-full p-3 border rounded focus:ring-2 focus:ring-indigo-200 outline-none font-medium bg-indigo-50 min-h-[100px]" 
-                                value={localQ.question} 
-                                onChange={(e) => setLocalQ({...localQ, question: e.target.value})} 
-                                onPaste={handlePaste}
-                                placeholder="Nhập nội dung câu hỏi..."
-                            />
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung</label>
+                            <textarea className="w-full p-3 border rounded focus:ring-2 focus:ring-indigo-200 outline-none font-medium bg-indigo-50 min-h-[100px]" value={localQ.question} onChange={(e) => setLocalQ({...localQ, question: e.target.value})} onPaste={handlePaste} placeholder="Nhập nội dung câu hỏi..."/>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {localQ.options.map((opt, idx) => (
                                 <div key={idx} className={`flex items-center gap-2 p-2 border rounded ${localQ.correctAnswerIndex === idx ? 'border-green-500 bg-green-50' : ''}`}>
                                     <input type="radio" name={`q-${index}-edit`} checked={localQ.correctAnswerIndex === idx} onChange={() => setLocalQ({...localQ, correctAnswerIndex: idx})} className="w-4 h-4 cursor-pointer accent-green-600" />
-                                    <input className="w-full bg-transparent outline-none border-b border-gray-300 focus:border-indigo-500" value={opt} onChange={(e) => {
-                                        const newOpts = [...localQ.options]; newOpts[idx] = e.target.value;
-                                        setLocalQ({...localQ, options: newOpts});
-                                    }}/>
+                                    <input className="w-full bg-transparent outline-none border-b border-gray-300 focus:border-indigo-500" value={opt} onChange={(e) => { const newOpts = [...localQ.options]; newOpts[idx] = e.target.value; setLocalQ({...localQ, options: newOpts}); }}/>
                                 </div>
                             ))}
                         </div>
@@ -185,24 +227,47 @@
             const [status, setStatus] = useState("");
             const [loading, setLoading] = useState(false);
             const [numVariants, setNumVariants] = useState(4);
+            const [showAnsModal, setShowAnsModal] = useState(false);
             const fileRef = useRef();
-            const [inputKeys, setInputKeys] = useState("");
-
+            
+            // --- TỰ ĐỘNG LẤY KEY TỪ INDEX (LocalStorage) ---
             useEffect(() => {
                 const k = localStorage.getItem('global_gemini_keys');
                 if(k) {
                     const parsed = JSON.parse(k);
                     setApiKeys(parsed);
-                    setInputKeys(parsed.join('\n'));
                 }
             }, []);
 
-            const saveKeys = () => {
-                const keys = inputKeys.split('\n').map(k => k.trim()).filter(k => k);
-                if(keys.length === 0) return alert("Vui lòng nhập ít nhất 1 Key!");
-                localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
-                setApiKeys(keys);
-                alert(`Đã lưu ${keys.length} API Key!`);
+            // --- XỬ LÝ NẠP ĐÁP ÁN ---
+            const handleApplyAnswers = (text) => {
+                const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
+                // Regex tìm số câu và đáp án (VD: 1 A, 1A, 1.A)
+                const regex = /(\d+)\s*[\.\:\-]?\s*([A-D])/g;
+                let match, newMap = {};
+                let count = 0;
+                
+                while ((match = regex.exec(raw)) !== null) {
+                    const qNum = parseInt(match[1]);
+                    const ansChar = match[2];
+                    newMap[qNum] = ansChar.charCodeAt(0) - 65; // A->0, B->1...
+                    count++;
+                }
+                
+                if (count === 0) return alert("Không tìm thấy đáp án hợp lệ (VD: 1A 2B...)");
+
+                // Cập nhật vào danh sách câu hỏi
+                const newQs = questions.map((q, i) => {
+                    // Ưu tiên map theo số câu (q.number), nếu không thì theo index
+                    const targetAns = newMap[q.number] !== undefined ? newMap[q.number] : newMap[i + 1];
+                    if (targetAns !== undefined) {
+                        return { ...q, correctAnswerIndex: targetAns };
+                    }
+                    return q;
+                });
+                
+                setQuestions(newQs);
+                alert(`Đã cập nhật đáp án cho ${count} câu!`);
             };
 
             const processPageWithAI = async (page, pageNum, key) => {
@@ -220,7 +285,6 @@
                 const data = await res.json();
                 if(data.candidates) {
                     let txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                    // Tìm mảng JSON đầu tiên
                     const jsonStart = txt.indexOf('[');
                     const jsonEnd = txt.lastIndexOf(']');
                     if (jsonStart !== -1 && jsonEnd !== -1) {
@@ -233,7 +297,8 @@
 
             const handleAIMix = async (e) => {
                 const file = e.target.files[0];
-                if(!file || !apiKeys.length) return alert("Cần chọn file và nhập API Key!");
+                if(!file) return;
+                if(!apiKeys.length) return alert("Hệ thống chưa có API Key. Vui lòng quay lại trang chủ (index.html) để nạp Key!");
                 
                 setLoading(true); setStatus("🚀 Đang khởi động AI Vision Multi-thread...");
                 try {
@@ -241,27 +306,20 @@
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     
                     const pagePromises = [];
-                    // Tạo mảng promise xử lý song song
                     for(let i = 1; i <= pdf.numPages; i++) {
-                        // Round-robin key rotation
                         const key = apiKeys[(i - 1) % apiKeys.length];
                         setStatus(`⚡ Đang xử lý song song ${i}/${pdf.numPages} trang...`);
-                        
-                        pagePromises.push(
-                            pdf.getPage(i).then(page => processPageWithAI(page, i, key))
-                                .catch(err => { console.error(`Lỗi trang ${i}:`, err); return []; })
-                        );
+                        pagePromises.push(pdf.getPage(i).then(page => processPageWithAI(page, i, key)).catch(err => []));
                     }
 
                     const results = await Promise.all(pagePromises);
                     let allQuestions = results.flat();
 
-                    // Map lại ID
                     const finalMapped = allQuestions.map((q, i) => ({
                         id: i, 
                         number: i+1, 
                         question: q.question,
-                        options: q.options.map(o => o.replace(/^[A-D][\.\)\:]\s*/, '').trim()), // Clean option text
+                        options: q.options.map(o => o.replace(/^[A-D][\.\)\:]\s*/, '').trim()),
                         correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1
                     }));
 
@@ -285,7 +343,6 @@
                         return { number: i+1, question: q.question, options: opts.map(o=>o.txt), correctAnswerLetter: String.fromCharCode(65+newC) };
                     });
                     
-                    // Tạo nội dung HTML Word đơn giản
                     let body = `<h2 style='text-align:center'>MÃ ĐỀ: ${code}</h2>`;
                     variant.forEach(q => {
                         body += `<p><b>Câu ${q.number}:</b> ${q.question.replace(/\n/g, '<br/>')}</p>`;
@@ -304,18 +361,21 @@
 
             return (
                 <div className="max-w-4xl mx-auto p-6 min-h-screen">
+                    <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
+                    
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={()=>window.location.href='index.html'} className="text-gray-500 hover:text-indigo-600 font-bold flex items-center gap-2"><i className="fas fa-arrow-left"></i> Về Trang Chủ</button>
+                        <div className={`text-sm font-bold px-3 py-1 rounded-full border ${apiKeys.length ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                            {apiKeys.length ? `✅ Đã nạp ${apiKeys.length} API Keys từ Hệ thống` : '❌ Chưa có API Key'}
+                        </div>
+                    </div>
+
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-indigo-800 mb-2"><i className="fas fa-eye"></i> AI VISION EXAM MIXER</h1>
                         <p className="text-gray-600">Công nghệ nhận diện đa luồng - Tự động xoay vòng Key</p>
                     </div>
 
                     <div className="bg-white p-6 rounded-xl shadow-lg mb-6 border border-indigo-100">
-                        <div className="mb-4">
-                            <label className="font-bold text-sm text-gray-700 block mb-1">API Keys (Mỗi dòng 1 key để chạy đa luồng):</label>
-                            <textarea value={inputKeys} onChange={e=>setInputKeys(e.target.value)} className="w-full border p-2 rounded h-20 text-xs font-mono" placeholder="Dán danh sách API Key vào đây..."></textarea>
-                            <button onClick={saveKeys} className="mt-2 bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-black">Lưu Keys</button>
-                        </div>
-                        
                         <div className="border-2 border-dashed border-indigo-400 p-8 rounded-xl text-center cursor-pointer hover:bg-indigo-50 transition" onClick={()=>fileRef.current.click()}>
                             {loading ? <div className="loader"></div> : <i className="fas fa-cloud-upload-alt text-5xl text-indigo-500 mb-3"></i>}
                             <p className="font-bold text-lg text-indigo-700">{loading ? "Đang xử lý đa luồng..." : "Chọn file PDF đề thi gốc"}</p>
@@ -330,6 +390,9 @@
                             <div className="flex justify-between items-center mb-6 border-b pb-4">
                                 <h3 className="font-bold text-xl text-gray-800">Kết quả: {questions.length} câu</h3>
                                 <div className="flex gap-2">
+                                    <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold shadow hover:bg-orange-600 flex items-center gap-2 animate-pulse">
+                                        <i className="fas fa-magic"></i> Nạp Đáp Án
+                                    </button>
                                     <div className="flex items-center bg-gray-100 rounded px-2 border">
                                         <span className="text-sm font-bold mr-2">Số mã đề:</span>
                                         <input type="number" min="1" max="20" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-10 font-bold outline-none"/>
@@ -340,12 +403,8 @@
                             <div className="space-y-4">
                                 {questions.map((q, i) => (
                                     <QuestionEditor 
-                                        key={q.id} 
-                                        q={q} 
-                                        index={i} 
-                                        onUpdate={(idx, newQ) => {
-                                            const newQs = [...questions]; newQs[idx] = newQ; setQuestions(newQs);
-                                        }}
+                                        key={q.id} q={q} index={i} 
+                                        onUpdate={(idx, newQ) => { const newQs = [...questions]; newQs[idx] = newQ; setQuestions(newQs); }}
                                     />
                                 ))}
                             </div>
