@@ -211,9 +211,35 @@
         const TeacherDashboard = ({ onViewDetail, onCreateNew, onEditExam }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
-            useEffect(() => { if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data)).catch(console.error); }, []);
+            
+            const fetchExams = () => {
+                if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data)).catch(console.error);
+            };
+
+            useEffect(() => { fetchExams(); }, []);
             
             const handleDelete = async (id) => { if(confirm("Xóa?")) try { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); alert("Xóa xong"); setExams(exams.filter(e=>e.id!==id)); } catch(e){alert("Lỗi");} };
+
+            // === CHỨC NĂNG NHÂN BẢN KỲ THI ===
+            const handleDuplicate = async (id) => {
+                if(!confirm("Bạn muốn nhân bản kỳ thi này?")) return;
+                try {
+                    await axios.post(`${API_BASE}/api/exam/duplicate/${id}`);
+                    alert("Đã nhân bản thành công!");
+                    fetchExams(); // Tải lại danh sách
+                } catch(e) { alert("Lỗi: " + e.message); }
+            };
+
+            // === CHỨC NĂNG ĐỔI TÊN KỲ THI ===
+            const handleRename = async (id, oldTitle) => {
+                const newTitle = prompt("Nhập tên mới:", oldTitle);
+                if(!newTitle || newTitle === oldTitle) return;
+                try {
+                    await axios.put(`${API_BASE}/api/exam/rename/${id}`, { new_title: newTitle });
+                    alert("Đã đổi tên!");
+                    setExams(exams.map(e => e.id === id ? {...e, title: newTitle} : e));
+                } catch(e) { alert("Lỗi: " + e.message); }
+            };
 
             return (
                 <div className="max-w-6xl mx-auto p-6 fade-in">
@@ -226,7 +252,11 @@
                         <table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4">Thời Gian</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>
                             {exams.map((ex) => (<tr key={ex.id} className="border-b hover:bg-indigo-50/30"><td className="p-4"><div className="font-bold text-lg text-indigo-900">{ex.title}</div><div className="text-xs text-gray-500">{ex.school}</div></td><td className="p-4 text-sm text-gray-600">{formatDate(ex.start_time)} - {formatDate(ex.end_time)}</td><td className="p-4 text-right"><div className="flex justify-end gap-2">
                                 <button onClick={()=>setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded" title="Lấy mã QR"><i className="fas fa-qrcode"></i></button>
-                                <button onClick={()=>onEditExam(ex.id)} className="bg-yellow-100 text-yellow-700 p-2 rounded" title="Sửa đề thi"><i className="fas fa-edit"></i></button>
+                                {/* NÚT NHÂN BẢN */}
+                                <button onClick={()=>handleDuplicate(ex.id)} className="bg-purple-100 text-purple-600 p-2 rounded" title="Nhân bản"><i className="fas fa-copy"></i></button>
+                                {/* NÚT ĐỔI TÊN */}
+                                <button onClick={()=>handleRename(ex.id, ex.title)} className="bg-orange-100 text-orange-600 p-2 rounded" title="Đổi tên"><i className="fas fa-i-cursor"></i></button>
+                                <button onClick={()=>onEditExam(ex.id)} className="bg-yellow-100 text-yellow-700 p-2 rounded" title="Sửa nội dung"><i className="fas fa-edit"></i></button>
                                 <button onClick={()=>onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded" title="Xem kết quả"><i className="fas fa-chart-bar"></i></button>
                                 <button onClick={()=>handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded" title="Xóa"><i className="fas fa-trash"></i></button>
                             </div></td></tr>))}
