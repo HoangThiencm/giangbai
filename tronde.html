@@ -54,7 +54,7 @@
             let content = normalizeText(text);
             
             // Tự động thêm $ nếu thiếu
-            if (!content.includes('$') && (content.includes('\\frac') || content.includes('\\sqrt') || content.includes('^'))) {
+            if (!content.includes('$') && (content.includes('\\frac') || content.includes('\\sqrt') || content.includes('^') || content.includes('\\in'))) {
                 content = content.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
             }
 
@@ -67,9 +67,19 @@
             });
         };
 
+        // --- PROMPT ĐƯỢC NÂNG CẤP ĐỂ NHẬN DIỆN CÔNG THỨC CHUẨN ---
         const SYSTEM_PROMPT = `
-        Bạn là một trợ lý soạn đề thi chuyên nghiệp. Nhiệm vụ: Trích xuất câu hỏi trắc nghiệm từ file PDF.
-        Output JSON strict (Array): [{"question":"...","options":["...","...","...","..."],"correctAnswerIndex":-1}]
+        Bạn là chuyên gia số hóa đề thi. Nhiệm vụ: Trích xuất câu hỏi từ hình ảnh.
+
+        QUY TẮC TUYỆT ĐỐI VỀ TOÁN HỌC (LATEX):
+        1. BẮT BUỘC dùng LaTeX cho mọi công thức, ký hiệu toán học.
+           - Tập hợp: $A = \\{ x \\in \\mathbb{N}^* \\mid x \\le 7 \\}$ (Dùng \\mathbb{N}, \\in, \\mid hoặc /).
+           - Phân số/Căn/Mũ: $\\frac{a}{b}$, $\\sqrt{x^2 + 1}$.
+           - Góc/Độ: $90^\\circ$, $\\widehat{ABC}$.
+        2. KHÔNG được viết kiểu văn bản thường (VD: "x thuộc N sao" là SAI -> Phải là $x \\in \\mathbb{N}^*$).
+        
+        CẤU TRÚC JSON TRẢ VỀ:
+        Output JSON strict (Array): [{"question":"Nội dung câu hỏi...","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswerIndex":-1}]
         `;
 
         const MathText = ({ text }) => {
@@ -79,9 +89,15 @@
                 let processed = normalizeText(text);
                 const imgRegex = /<img src="([^"]+)"/g;
                 processed = processed.replace(imgRegex, (match, src) => `<br/><img src="${src}" class="img-preview"/><br/>`);
-                if (!processed.includes('$') && (processed.includes('\\frac') || processed.includes('\\sqrt'))) {
-                    processed = processed.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
+                
+                // Tự động detect và thêm $ cho các ký hiệu toán học phổ biến nếu thiếu
+                if (!processed.includes('$') && (processed.includes('\\frac') || processed.includes('\\sqrt') || processed.includes('\\in') || processed.includes('\\mathbb'))) {
+                    // Cố gắng bọc các đoạn có vẻ là LaTeX
+                    processed = processed.replace(/(\\[a-zA-Z]+(\{[^}]*\})?)/g, '$$$1$$');
+                    // Fix lỗi double $$ do replace quá tay
+                    processed = processed.replace(/\$\$\$/g, '$');
                 }
+                
                 const parts = processed.split(/(\$[^$]+\$|<br\/>|<img[^>]+>)/g);
                 ref.current.innerHTML = "";
                 parts.forEach(part => {
@@ -101,6 +117,7 @@
             if (!isOpen) return null;
             const [text, setText] = useState("");
             const [status, setStatus] = useState("");
+            
             const handlePaste = async (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -111,6 +128,7 @@
                     }
                 }
             };
+            
             const processImage = async (blob) => {
                 setStatus("🤖 AI đang quét bảng đáp án...");
                 try {
@@ -127,12 +145,19 @@
                     };
                 } catch (e) { setStatus("❌ Lỗi: " + e.message); }
             };
+            
             return (
                 <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e => e.stopPropagation()}>
                     <h3 className="text-xl font-bold text-indigo-800 mb-4">Nạp Đáp Án</h3>
-                    <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3"><b>Cách dùng:</b> Dán ảnh bảng đáp án (Ctrl+V) hoặc nhập 1A 2B...</div>
+                    <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3">
+                        <b>Cách dùng:</b> 
+                        <ul className="list-disc pl-5 mt-1">
+                            <li>Cách 1: Chụp ảnh bảng đáp án -> Dán (Ctrl+V) vào ô dưới.</li>
+                            <li>Cách 2: Nhập tay (Ví dụ: 1A 2B 3C...).</li>
+                        </ul>
+                    </div>
                     {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
-                    <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded outline-none" placeholder="Dán ảnh hoặc nhập..."></textarea>
+                    <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded outline-none font-mono" placeholder="Dán ảnh hoặc nhập text (1.A 2.B)..."></textarea>
                     <div className="flex justify-end gap-3 mt-4"><button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Hủy</button><button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold">Cập Nhật</button></div>
                 </div></div>
             );
@@ -174,9 +199,17 @@
                 const regex = /(\d+)\s*[\.\:\-]?\s*([A-D])/g;
                 let match, newMap = {}, count = 0;
                 while ((match = regex.exec(raw)) !== null) { newMap[parseInt(match[1])] = match[2].charCodeAt(0) - 65; count++; }
-                if (count === 0) return alert("Không tìm thấy đáp án!");
-                setQuestions(questions.map((q, i) => { const ans = newMap[q.number] !== undefined ? newMap[q.number] : newMap[i+1]; return ans !== undefined ? { ...q, correctAnswerIndex: ans } : q; }));
-                alert(`Đã cập nhật ${count} câu!`);
+                if (count === 0) return alert("Không tìm thấy đáp án hợp lệ trong văn bản!");
+                
+                let updatedCount = 0;
+                const newQs = questions.map((q, i) => {
+                    // Ưu tiên map theo số thứ tự câu (q.number), fallback theo index
+                    const ans = newMap[q.number] !== undefined ? newMap[q.number] : newMap[i+1];
+                    if (ans !== undefined) { updatedCount++; return { ...q, correctAnswerIndex: ans }; }
+                    return q;
+                });
+                setQuestions(newQs);
+                alert(`Đã cập nhật đáp án cho ${updatedCount} câu!`);
             };
 
             const processPageWithAI = async (page, pageNum, key) => {
@@ -215,6 +248,14 @@
                 setLoading(false);
             };
 
+            const validateAndDownload = () => {
+                const missing = questions.filter(q => q.correctAnswerIndex === -1).length;
+                if (missing > 0) {
+                    if(!confirm(`Cảnh báo: Còn ${missing} câu hỏi chưa có đáp án.\nBạn có muốn tiếp tục tải về không?`)) return;
+                }
+                downloadZip();
+            };
+
             const downloadZip = () => {
                 if(!questions.length) return alert("Chưa có dữ liệu!");
                 const zip = new JSZip();
@@ -228,7 +269,6 @@
                         return { number: i+1, question: q.question, options: opts.map(o=>o.txt), correctAnswerLetter: String.fromCharCode(65+newC) };
                     });
                     
-                    // SỬ DỤNG MATHML ĐỂ WORD HIỂN THỊ CÔNG THỨC
                     let body = `<h2 style='text-align:center'>MÃ ĐỀ: ${code}</h2>`;
                     variant.forEach(q => {
                         body += `<p><b>Câu ${q.number}:</b> ${formatMathForWord(cleanQuestionText(q.question))}</p>`;
@@ -246,14 +286,39 @@
             return (
                 <div className="max-w-4xl mx-auto p-6 min-h-screen">
                     <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
-                    <div className="flex justify-between items-center mb-6"><button onClick={()=>window.location.href='index.html'} className="text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Trang Chủ</button><div className={`text-sm font-bold px-3 py-1 rounded-full border ${apiKeys.length ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{apiKeys.length ? `✅ ${apiKeys.length} Keys` : '❌ Chưa có Key'}</div></div>
+                    
+                    {/* Header với nút HOME */}
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={()=>window.location.href='index.html'} className="bg-white border hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded shadow flex items-center gap-2">
+                            <i className="fas fa-home text-indigo-600 text-lg"></i> Trang Chủ
+                        </button>
+                        <div className={`text-sm font-bold px-3 py-1 rounded-full border ${apiKeys.length ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{apiKeys.length ? `✅ ${apiKeys.length} Keys` : '❌ Chưa có Key'}</div>
+                    </div>
+
                     <div className="text-center mb-8"><h1 className="text-3xl font-bold text-indigo-800 mb-2"><i className="fas fa-eye"></i> AI VISION EXAM MIXER</h1></div>
                     <div className="bg-white p-6 rounded-xl shadow border-2 border-dashed border-indigo-200 mb-6 text-center cursor-pointer hover:bg-indigo-50" onClick={()=>fileRef.current.click()}>
                         {loading ? <div className="loader"></div> : <i className="fas fa-cloud-upload-alt text-5xl text-indigo-500 mb-3"></i>}
                         <p className="font-bold text-lg text-indigo-700">{loading ? status : "Chọn file PDF đề thi gốc"}</p>
                         <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={handleAIMix} />
                     </div>
-                    {questions.length > 0 && (<div className="bg-white p-6 rounded-xl shadow fade-in"><div className="flex justify-between items-center mb-6 border-b pb-4"><h3 className="font-bold text-xl">Kết quả: {questions.length} câu</h3><div className="flex gap-2"><button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold">Nạp Đáp Án</button><div className="flex items-center bg-gray-100 rounded px-2"><span className="text-sm font-bold mr-2">Số mã:</span><input type="number" min="1" max="20" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-10 font-bold"/></div><button onClick={downloadZip} className="bg-green-600 text-white px-4 py-2 rounded font-bold">Tải Về</button></div></div><div className="space-y-4">{questions.map((q, i) => (<QuestionEditor key={q.id} q={q} index={i} onUpdate={(idx, newQ) => { const newQs = [...questions]; newQs[idx] = newQ; setQuestions(newQs); }} />))}</div></div>)}
+                    
+                    {questions.length > 0 && (
+                        <div className="bg-white p-6 rounded-xl shadow fade-in">
+                            <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-3">
+                                <h3 className="font-bold text-xl">Kết quả: {questions.length} câu</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold shadow hover:bg-orange-600 flex items-center gap-2">
+                                        <i className="fas fa-magic"></i> Nạp Đáp Án
+                                    </button>
+                                    <div className="flex items-center bg-gray-100 rounded px-2"><span className="text-sm font-bold mr-2">Số mã:</span><input type="number" min="1" max="20" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="bg-transparent w-10 font-bold text-center"/></div>
+                                    <button onClick={validateAndDownload} className="bg-green-600 text-white px-4 py-2 rounded font-bold shadow hover:bg-green-700 flex items-center gap-2">
+                                        <i className="fas fa-download"></i> Tải & Trộn
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-4">{questions.map((q, i) => (<QuestionEditor key={q.id} q={q} index={i} onUpdate={(idx, newQ) => { const newQs = [...questions]; newQs[idx] = newQ; setQuestions(newQs); }} />))}</div>
+                        </div>
+                    )}
                 </div>
             );
         };
