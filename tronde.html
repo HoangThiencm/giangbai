@@ -197,48 +197,31 @@
                 const newQs = [...questions]; newQs[i].correctAnswerIndex = idx; setQuestions(newQs);
             };
 
-            // 1. TRỘN SERVER (HYBRID MODE: Server Convert -> Client AI)
+            // 1. TRỘN SERVER (Mode 1)
             const handleServerMix = async (file) => {
-                setLoading(true); 
-                setStatus("📡 Đang gửi file lên Server để chuẩn hóa (Word -> PDF)...");
-                
+                setLoading(true); setStatus("Đang gửi file lên Server...");
                 try {
-                    // BƯỚC 1: Gửi file lên Server để convert sang PDF 
-                    // (Server làm việc này rất tốt, nhưng Server gọi AI thì bị chặn)
-                    const fd = new FormData(); 
-                    fd.append("file", file);
+                    const fd = new FormData(); fd.append("file", file);
+                    const headers = {}; if(apiKeys.length) headers["x-gemini-api-key"] = apiKeys.join(",");
                     
-                    // Gọi API mới /convert-only
-                    const res = await fetch(`${SERVER_URL}/convert-only`, { method: "POST", body: fd });
+                    const res = await fetch(`${SERVER_URL}/convert-and-quiz`, { method: "POST", headers, body: fd });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error);
                     
-                    if (!res.ok) {
-                        const errData = await res.json();
-                        throw new Error(errData.error || "Lỗi chuyển đổi file trên Server");
-                    }
-
-                    // Nhận về file PDF (Blob)
-                    const pdfBlob = await res.blob();
-                    
-                    // Tạo File object từ Blob để tái sử dụng hàm AI Vision
-                    const pdfFile = new File([pdfBlob], "converted_exam.pdf", { type: "application/pdf" });
-
-                    // BƯỚC 2: Chuyển giao cho AI Vision Mix (Chạy trên trình duyệt)
-                    // Lúc này request AI đi từ máy tính của bạn -> Google, nên KHÔNG bị chặn.
-                    // Vẫn giữ được khả năng nhận diện Latex/Công thức cực tốt của Vision.
-                    setStatus("✅ Server đã xử lý xong. Đang kích hoạt AI đọc đề...");
-                    
-                    // Gọi hàm AI Mix với file PDF đã được Server chuẩn hóa
-                    await handleAIMix(pdfFile);
-
-                } catch(e) { 
-                    setStatus("❌ Lỗi: " + e.message); 
-                    setLoading(false);
-                }
+                    const mapped = data.map((q, i) => ({
+                        id: i, number: i+1, question: q.question, 
+                        // SỬ DỤNG HÀM cleanOptionText ĐỂ XÓA "A. A"
+                        options: q.options.map(o => cleanOptionText(o)),
+                        correctAnswerIndex: q.correctAnswer ? q.options.findIndex(o => o.includes(q.correctAnswer)) : -1 
+                    }));
+                    setQuestions(mapped); setStatus(`Đã nhận diện ${mapped.length} câu.`);
+                } catch(e) { setStatus("Lỗi: " + e.message); }
+                setLoading(false);
             };
 
             // 2. AI VISION MIX (Mode 2 - Đã nâng cấp vòng lặp đọc hết PDF)
             const handleAIMix = async (file) => {
-                if(!apiKeys.length) return alert("Cần API Key để chạy AI!");
+                if(!apiKeys.length) return alert("Cần API Key!");
                 setLoading(true); 
                 
                 try {
@@ -246,9 +229,9 @@
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     let allQuestions = [];
                     
-                    // VÒNG LẶP ĐỌC TẤT CẢ CÁC TRANG
+                    // VÒNG LẶP ĐỌC TẤT CẢ CÁC TRANG (Thay vì chỉ trang 1)
                     for(let i = 1; i <= pdf.numPages; i++) {
-                        setStatus(`🔍 Đang đọc trang ${i}/${pdf.numPages} (Tìm đáp án tô đỏ/gạch chân)...`);
+                        setStatus(`Đang đọc trang ${i}/${pdf.numPages} (Tìm đáp án tô đỏ/gạch chân)...`);
                         
                         const page = await pdf.getPage(i); 
                         const vp = page.getViewport({scale: 2});
@@ -274,12 +257,8 @@
                         const data = await res.json();
                         if(data.candidates) {
                             const txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                            try {
-                                const pageQs = JSON.parse(txt);
-                                allQuestions = [...allQuestions, ...pageQs];
-                            } catch(err) {
-                                console.log("Lỗi parse trang " + i);
-                            }
+                            const pageQs = JSON.parse(txt);
+                            allQuestions = [...allQuestions, ...pageQs];
                         }
                     }
 
@@ -300,7 +279,7 @@
 
             // 3. TEXT MIX (Mode 3)
             const handleSimpleMix = async (file) => {
-                setLoading(true); setStatus("Đang tách text (Offline)...");
+                setLoading(true); setStatus("Đang tách text...");
                 try {
                     const zip = new JSZip(); await zip.loadAsync(file);
                     const docXml = await zip.file("word/document.xml").async("string");
@@ -355,18 +334,18 @@
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div onClick={()=>setTab('server')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-blue-600 text-center group">
                             <i className="fas fa-cloud-upload-alt text-5xl text-blue-500 mb-4 group-hover:scale-110 transition"></i>
-                            <h3 className="text-xl font-bold mb-2">Server Mix (Hybrid)</h3>
-                            <p className="text-gray-500 text-sm">Hỗ trợ Word (.docx) & PDF. Giữ định dạng Công thức.</p>
+                            <h3 className="text-xl font-bold mb-2">Server Mix</h3>
+                            <p className="text-gray-500 text-sm">Word/PDF chuẩn (Có công thức)</p>
                         </div>
                         <div onClick={()=>setTab('ai')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-red-600 text-center group">
                             <i className="fas fa-eye text-5xl text-red-500 mb-4 group-hover:scale-110 transition"></i>
                             <h3 className="text-xl font-bold mb-2">AI Vision Mix</h3>
-                            <p className="text-gray-500 text-sm">Chỉ PDF/Ảnh. Tự tìm đáp án tô đỏ.</p>
+                            <p className="text-gray-500 text-sm">PDF Scan/Ảnh (Tự tìm đáp án)</p>
                         </div>
                         <div onClick={()=>setTab('simple')} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition cursor-pointer border-t-4 border-green-600 text-center group">
                             <i className="fas fa-font text-5xl text-green-500 mb-4 group-hover:scale-110 transition"></i>
                             <h3 className="text-xl font-bold mb-2">Text Offline</h3>
-                            <p className="text-gray-500 text-sm">Cực nhanh, không cần mạng. Chỉ lấy văn bản thô.</p>
+                            <p className="text-gray-500 text-sm">Nhanh, không cần mạng</p>
                         </div>
                     </div>
                 </div>
@@ -379,7 +358,7 @@
                     <div className="flex justify-between items-center mb-6">
                         <button onClick={()=>setTab(null)} className="text-gray-500 font-bold hover:text-indigo-600 flex items-center gap-2"><i className="fas fa-arrow-left"></i> Chọn lại chế độ</button>
                         <h2 className="text-xl font-bold text-indigo-800">
-                            {tab==='server'?"SERVER MIX (Hybrid Mode)":tab==='ai'?"AI VISION MIX":"TEXT MIX (Offline)"}
+                            {tab==='server'?"SERVER MIX (Word/PDF)":tab==='ai'?"AI VISION MIX":"TEXT MIX (Offline)"}
                         </h2>
                     </div>
 
@@ -387,11 +366,11 @@
                         {loading ? <div className="loader"></div> : (
                             <div>
                                 <i className="fas fa-file-upload text-5xl text-indigo-400 mb-3"></i>
-                                <p className="font-bold text-lg text-indigo-700">Nhấn để chọn file đề thi ({tab==='simple' ? '.docx' : '.docx, .doc, .pdf'})</p>
-                                {status && <p className="mt-2 text-blue-600 font-bold animate-pulse">{status}</p>}
+                                <p className="font-bold text-lg text-indigo-700">Nhấn để chọn file đề thi ({tab==='ai' ? '.pdf' : '.docx, .doc, .pdf'})</p>
+                                {status && <p className="mt-2 text-blue-600 font-bold">{status}</p>}
                             </div>
                         )}
-                        <input ref={fileRef} type="file" accept={tab==='simple'?".docx":".docx,.doc,.pdf"} className="hidden" onChange={handleFileChange} />
+                        <input ref={fileRef} type="file" accept={tab==='ai'?".pdf":".docx,.doc,.pdf"} className="hidden" onChange={handleFileChange} />
                     </div>
 
                     {questions.length > 0 && (
