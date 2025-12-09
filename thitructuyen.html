@@ -10,14 +10,12 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    
-    <!-- PDF.js cho Client-side AI Vision -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
-
-    <!-- Thư viện xuất file (Word/Zip) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
     <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -50,39 +48,42 @@
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
         const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
         
-        // --- HELPER: CLEAN TEXT (FIX LỖI LẶP CÂU HỎI) ---
+        // --- HELPER: CLEAN TEXT ---
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
         const cleanQuestionText = (text) => { 
             if (!text) return ""; 
-            // Regex mạnh hơn: Xóa lặp lại (Câu 1. Câu 1:), xử lý in đậm (**Câu 1**)
+            // Regex loại bỏ triệt để tiền tố câu hỏi (Câu 1. Câu 1: **Câu 1**)
             return normalizeText(text).replace(/^(\**\s*(Câu|Bài|Question)\s*\d+[\.\:\)]\s*\**\s*)+/gi, '').trim(); 
         };
 
-        // --- HELPER: FORMAT MATH CHO WORD (FIX LỖI MẤT CÔNG THỨC) ---
+        // --- HELPER: FORMAT MATH FOR WORD ---
         const formatMathForWord = (text) => {
             if (!text) return "";
             let content = normalizeText(text);
-            
-            // Tự động thêm $ nếu thiếu cho các lệnh phổ biến
             if (!content.includes('$') && (content.includes('\\frac') || content.includes('\\sqrt') || content.includes('^'))) {
                 content = content.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
             }
-
-            // Chuyển LaTeX $...$ sang MathML
             return content.replace(/\$([^$]+)\$/g, (match, tex) => {
                 try {
-                    // Render MathML
                     let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
-                    // Loại bỏ thẻ annotation thừa để Word đọc sạch hơn
                     return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
                 } catch (e) { return match; }
             });
         };
 
-        // === PROMPT CHUẨN ===
+        // === PROMPT CHUẨN (ĐÃ CẬP NHẬT ĐỂ NHẬN DIỆN TOÁN CHUẨN XÁC) ===
         const SYSTEM_PROMPT = `
-        Bạn là một trợ lý soạn đề thi chuyên nghiệp. Nhiệm vụ: Trích xuất câu hỏi trắc nghiệm từ file PDF.
-        Output JSON strict (Array): [{"question":"...","options":["...","...","...","..."],"correctAnswerIndex":-1}]
+        Bạn là chuyên gia số hóa đề thi. Nhiệm vụ: Trích xuất câu hỏi từ hình ảnh.
+
+        QUY TẮC TUYỆT ĐỐI VỀ TOÁN HỌC (LATEX):
+        1. BẮT BUỘC dùng LaTeX cho mọi công thức, ký hiệu toán học.
+           - Tập hợp: $A = \\{ x \\in \\mathbb{N}^* \\mid x \\le 7 \\}$ (Dùng \\mathbb{N}, \\in, \\mid hoặc /).
+           - Phân số/Căn/Mũ: $\\frac{a}{b}$, $\\sqrt{x^2 + 1}$.
+           - Góc/Độ: $90^\\circ$, $\\widehat{ABC}$.
+        2. KHÔNG được viết kiểu văn bản thường (VD: "x thuộc N sao" là SAI -> Phải là $x \\in \\mathbb{N}^*$).
+        
+        CẤU TRÚC JSON TRẢ VỀ:
+        Output JSON strict (Array): [{"question":"Nội dung câu hỏi...","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswerIndex":-1}]
         `;
 
         const MathText = ({ text }) => {
@@ -94,10 +95,12 @@
                 // Xử lý ảnh base64/url
                 processed = processed.replace(/<img src="([^"]+)"/g, (match, src) => `<br/><img src="${src}" class="img-preview"/><br/>`);
                 
-                // Chuẩn hóa LaTeX
-                processed = processed.replace(/\\([{}])/g, '$1').replace(/\\\((.*?)\\\)/gs, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$');
-                if (!processed.includes('$') && (processed.includes('\\frac') || processed.includes('\\sqrt'))) {
-                    processed = processed.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
+                // Tự động detect và thêm $ cho các ký hiệu toán học phổ biến nếu thiếu
+                if (!processed.includes('$') && (processed.includes('\\frac') || processed.includes('\\sqrt') || processed.includes('\\in') || processed.includes('\\mathbb'))) {
+                    // Cố gắng bọc các đoạn có vẻ là LaTeX
+                    processed = processed.replace(/(\\[a-zA-Z]+(\{[^}]*\})?)/g, '$$$1$$');
+                    // Fix lỗi double $$ do replace quá tay
+                    processed = processed.replace(/\$\$\$/g, '$');
                 }
 
                 const parts = processed.split(/(\$[^$]+\$|<br\/>|<img[^>]+>)/g); 
@@ -118,6 +121,51 @@
             return <span ref={ref} className="math-content text-xl leading-relaxed" />;
         };
 
+        // --- MODAL NẠP ĐÁP ÁN (ĐƯỢC BỔ SUNG VÀO) ---
+        const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
+            if (!isOpen) return null;
+            const [text, setText] = useState("");
+            const [status, setStatus] = useState("");
+            
+            const handlePaste = async (e) => {
+                const items = e.clipboardData.items;
+                for (let item of items) {
+                    if (item.type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        if (apiKeys.length === 0) return alert("Cần có API Key!");
+                        await processImage(item.getAsFile()); return;
+                    }
+                }
+            };
+
+            const processImage = async (blob) => {
+                setStatus("🤖 AI đang quét bảng đáp án...");
+                try {
+                    const reader = new FileReader(); reader.readAsDataURL(blob);
+                    reader.onloadend = async () => {
+                        const base64 = reader.result.split(',')[1];
+                        const currentKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentKey}`, {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ contents: [{parts: [{text: "Trích xuất đáp án (1A 2B...). Chỉ trả về chuỗi 1A 2B 3C..."}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}] })
+                        });
+                        const data = await res.json();
+                        if (data.candidates) { setText(prev => prev + (prev ? "\n" : "") + data.candidates[0].content.parts[0].text.trim()); setStatus("✅ Xong!"); } else setStatus("⚠️ Không tìm thấy.");
+                    };
+                } catch (e) { setStatus("❌ Lỗi: " + e.message); }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-xl font-bold text-indigo-800 mb-4">Nạp Đáp Án</h3>
+                    <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3"><b>Cách dùng:</b> Dán ảnh bảng đáp án (Ctrl+V) hoặc nhập text (Ví dụ: 1A 2B 3C...).</div>
+                    {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
+                    <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded outline-none" placeholder="Dán ảnh hoặc nhập..."></textarea>
+                    <div className="flex justify-end gap-3 mt-4"><button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Hủy</button><button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold">Cập Nhật</button></div>
+                </div></div>
+            );
+        };
+
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
             const handleQChange = (val) => onUpdate('question', val);
@@ -129,22 +177,17 @@
                         e.preventDefault();
                         const blob = item.getAsFile();
                         const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const imgTag = `<img src="${event.target.result}" />`;
-                            handleQChange(q.question + "\n" + imgTag);
-                        };
+                        reader.onload = (event) => handleQChange(q.question + "\n" + `<img src="${event.target.result}" />`);
                         reader.readAsDataURL(blob);
                     }
                 }
             };
 
-            const triggerPaste = () => alert("Nhấn Ctrl+V vào ô nội dung để dán ảnh!");
-
             if (isEditing) {
                 return (
                     <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-400 mb-6 relative">
                         <div className="absolute top-4 right-4 z-10 flex gap-2">
-                             <button onClick={triggerPaste} className="bg-purple-100 text-purple-700 px-3 py-1.5 rounded text-sm font-bold hover:bg-purple-200"><i className="fas fa-image"></i> Dán ảnh</button>
+                             <button onClick={() => alert("Nhấn Ctrl+V vào ô nội dung để dán ảnh!")} className="bg-purple-100 text-purple-700 px-3 py-1.5 rounded text-sm font-bold hover:bg-purple-200"><i className="fas fa-image"></i> Dán ảnh</button>
                              <button onClick={() => setIsEditing(false)} className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-blue-700"><i className="fas fa-check"></i> Xong</button>
                         </div>
                         <div className="mb-3"><span className="font-bold text-blue-700 text-lg">Câu {index + 1} (Đang sửa):</span></div>
@@ -161,44 +204,59 @@
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition duration-200"><button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm"><i className="fas fa-pencil-alt"></i> Sửa</button></div>
                     <div className="flex gap-3 mb-4 pr-16 items-start"><span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg font-bold whitespace-nowrap text-lg mt-1">Câu {index + 1}</span><div className="font-medium text-gray-900 text-xl leading-relaxed w-full"><MathText text={cleanQuestionText(q.question)} /></div></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-4">{q.options.map((opt, idx) => (<div key={idx} className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${q.correct_index === idx ? 'bg-green-50 border-green-500 ring-1 ring-green-400' : 'bg-white border-gray-200 hover:border-indigo-200'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 mt-0.5 ${q.correct_index === idx ? 'bg-green-600 text-white shadow' : 'bg-gray-100 text-gray-500 border border-gray-300'}`}>{String.fromCharCode(65+idx)}</div><div className={`text-xl ${q.correct_index === idx ? 'font-bold text-green-900' : 'text-gray-800'}`}><MathText text={cleanOptionText(opt)} /></div>{q.correct_index === idx && <i className="fas fa-check-circle text-green-600 ml-auto mt-1 text-xl"></i>}</div>))}</div>
+                    {q.correct_index === -1 && <div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng!</div>}
                 </div>
             );
         };
 
-        const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions }) => {
+        const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions, apiKeys }) => {
+            const [showAnsModal, setShowAnsModal] = useState(false);
+
             const handleApplyAnswers = (text) => { 
                 const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
                 const regex = /(\d+)\s*([A-D])/g; let match, newMap = {};
-                while ((match = regex.exec(raw)) !== null) newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
+                let count = 0;
+                while ((match = regex.exec(raw)) !== null) {
+                    newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65;
+                    count++;
+                }
                 const newQs = questions.map((q, i) => { if (newMap[i] !== undefined) return { ...q, correct_index: newMap[i] }; return q; });
-                onUpdateQuestions(newQs); alert(`Đã cập nhật ${Object.keys(newMap).length} câu!`);
+                onUpdateQuestions(newQs); alert(`Đã cập nhật đáp án cho ${count} câu!`);
             };
 
             const handleExportWord = () => {
                 let body = `<h2 style='text-align:center'>ĐỀ THI TRẮC NGHIỆM</h2>`;
                 questions.forEach((q, i) => {
-                    // Dùng formatMathForWord để chuyển LaTeX -> MathML
                     body += `<p><b>Câu ${i+1}:</b> ${formatMathForWord(cleanQuestionText(q.question))}</p>`;
                     q.options.forEach((o, idx) => {
                         body += `<p style="margin-left: 20px;">${String.fromCharCode(65+idx)}. ${formatMathForWord(cleanOptionText(o))}</p>`;
                     });
                 });
-                
                 const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Exam</title></head><body>`;
                 const footer = `</body></html>`;
-                const sourceHTML = header + body + footer;
-                
-                const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
-                saveAs(blob, 'De_Thi_Review.doc');
+                const blob = new Blob(['\ufeff', header + body + footer], { type: 'application/msword' });
+                saveAs(blob, 'De_Thi.doc');
+            };
+
+            // VALIDATE TRƯỚC KHI TỔ CHỨC THI
+            const handleOrganize = () => {
+                const missing = questions.filter(q => q.correct_index === -1).length;
+                if (missing > 0) {
+                    alert(`⚠️ KHÔNG THỂ TỔ CHỨC THI!\n\nCòn ${missing} câu hỏi chưa có đáp án đúng.\nVui lòng chọn đáp án hoặc dùng chức năng "Nạp Đáp Án" để bổ sung.`);
+                    return;
+                }
+                onSave();
             };
 
             return (
                 <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+                    <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
                     <div className="bg-white p-4 shadow-md z-20 border-b border-indigo-200 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-3"><button onClick={onBack} className="text-gray-500 hover:text-gray-800"><i className="fas fa-arrow-left text-xl"></i></button><h2 className="text-2xl font-bold text-indigo-800">Duyệt & Chỉnh Sửa</h2><span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">{questions.length} câu</span></div>
                         <div className="flex gap-2">
+                            <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold hover:bg-orange-600 shadow flex items-center gap-2"><i className="fas fa-magic"></i> Nạp Đáp Án</button>
                             <button onClick={handleExportWord} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word</button>
-                            <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
+                            <button onClick={handleOrganize} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
@@ -237,7 +295,7 @@
 
             useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); if (initialData) { setForm({ title: initialData.info.title, school: initialData.info.school, subject: initialData.info.subject, grade: initialData.info.grade, duration: initialData.info.duration_mins, startTime: initialData.info.start_time, endTime: initialData.info.end_time }); setParsedQuestions(initialData.questions); setStep("review"); } }, [initialData]);
 
-            // === HÀM XỬ LÝ CLIENT-SIDE AI VISION (Tương tự tronde.html) ===
+            // === HÀM XỬ LÝ CLIENT-SIDE AI VISION ===
             const processPageWithAI = async (page, pageNum, key) => {
                 const vp = page.getViewport({scale: 2});
                 const cvs = document.createElement('canvas');
@@ -291,11 +349,11 @@
                         title: form.title, school: form.school, subject: form.subject, grade: form.grade, duration: form.duration, start_time: form.startTime, end_time: form.endTime, api_keys: apiKeys, teacher_email: userEmail, questions: parsedQuestions 
                     };
                     await axios.post(`${API_BASE}/api/exam/save`, payload);
-                    alert("✅ Lưu thành công!"); onBack();
+                    alert("✅ Lưu & Tổ chức thành công!"); onBack();
                 } catch (e) { alert("Lỗi lưu: " + e.message); } finally { setLoading(false); }
             };
 
-            if (step === "review") return <ReviewExam questions={parsedQuestions} onUpdateQuestions={setParsedQuestions} onSave={handleSave} onBack={()=>setStep("upload")} />;
+            if (step === "review") return <ReviewExam questions={parsedQuestions} onUpdateQuestions={setParsedQuestions} onSave={handleSave} onBack={()=>setStep("upload")} apiKeys={apiKeys} />;
             
             return (
                 <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg fade-in">
@@ -325,7 +383,10 @@
                 <div className="max-w-6xl mx-auto p-6 fade-in">
                     <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow border border-indigo-100">
                         <div><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500">{userEmail}</p></div>
-                        <div className="flex gap-2"><button onClick={()=>window.location.href='tronde.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Trộn Đề Tool</button><button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button></div>
+                        <div className="flex gap-2">
+                            <button onClick={()=>window.location.href='index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600 flex items-center gap-2"><i className="fas fa-home"></i> Home</button>
+                            <button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button>
+                        </div>
                     </div>
                     <div className="bg-white rounded-xl shadow overflow-hidden">
                         <table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4">Thời Gian</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>
