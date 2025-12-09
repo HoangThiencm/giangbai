@@ -15,6 +15,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
+    <!-- Thư viện xuất file (Word/Zip) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -45,8 +49,35 @@
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
         const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
+        
+        // --- HELPER: CLEAN TEXT (FIX LỖI LẶP CÂU HỎI) ---
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
-        const cleanQuestionText = (text) => { if (!text) return ""; return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); };
+        const cleanQuestionText = (text) => { 
+            if (!text) return ""; 
+            // Regex mạnh hơn: Xóa lặp lại (Câu 1. Câu 1:), xử lý in đậm (**Câu 1**)
+            return normalizeText(text).replace(/^(\**\s*(Câu|Bài|Question)\s*\d+[\.\:\)]\s*\**\s*)+/gi, '').trim(); 
+        };
+
+        // --- HELPER: FORMAT MATH CHO WORD (FIX LỖI MẤT CÔNG THỨC) ---
+        const formatMathForWord = (text) => {
+            if (!text) return "";
+            let content = normalizeText(text);
+            
+            // Tự động thêm $ nếu thiếu cho các lệnh phổ biến
+            if (!content.includes('$') && (content.includes('\\frac') || content.includes('\\sqrt') || content.includes('^'))) {
+                content = content.replace(/(\\frac\{.*?\}(\{.*?\})?|\\sqrt\{.*?\})/g, '$$$1$$');
+            }
+
+            // Chuyển LaTeX $...$ sang MathML
+            return content.replace(/\$([^$]+)\$/g, (match, tex) => {
+                try {
+                    // Render MathML
+                    let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
+                    // Loại bỏ thẻ annotation thừa để Word đọc sạch hơn
+                    return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
+                } catch (e) { return match; }
+            });
+        };
 
         // === PROMPT CHUẨN ===
         const SYSTEM_PROMPT = `
@@ -130,7 +161,6 @@
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition duration-200"><button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 flex items-center gap-1 shadow-sm"><i className="fas fa-pencil-alt"></i> Sửa</button></div>
                     <div className="flex gap-3 mb-4 pr-16 items-start"><span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg font-bold whitespace-nowrap text-lg mt-1">Câu {index + 1}</span><div className="font-medium text-gray-900 text-xl leading-relaxed w-full"><MathText text={cleanQuestionText(q.question)} /></div></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-4">{q.options.map((opt, idx) => (<div key={idx} className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${q.correct_index === idx ? 'bg-green-50 border-green-500 ring-1 ring-green-400' : 'bg-white border-gray-200 hover:border-indigo-200'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 mt-0.5 ${q.correct_index === idx ? 'bg-green-600 text-white shadow' : 'bg-gray-100 text-gray-500 border border-gray-300'}`}>{String.fromCharCode(65+idx)}</div><div className={`text-xl ${q.correct_index === idx ? 'font-bold text-green-900' : 'text-gray-800'}`}><MathText text={cleanOptionText(opt)} /></div>{q.correct_index === idx && <i className="fas fa-check-circle text-green-600 ml-auto mt-1 text-xl"></i>}</div>))}</div>
-                    {q.correct_index === -1 && <div className="mt-4 text-red-600 text-sm font-bold bg-red-50 px-3 py-2 rounded border border-red-200 inline-block"><i className="fas fa-exclamation-triangle mr-1"></i> Chưa chọn đáp án đúng!</div>}
                 </div>
             );
         };
@@ -144,11 +174,32 @@
                 onUpdateQuestions(newQs); alert(`Đã cập nhật ${Object.keys(newMap).length} câu!`);
             };
 
+            const handleExportWord = () => {
+                let body = `<h2 style='text-align:center'>ĐỀ THI TRẮC NGHIỆM</h2>`;
+                questions.forEach((q, i) => {
+                    // Dùng formatMathForWord để chuyển LaTeX -> MathML
+                    body += `<p><b>Câu ${i+1}:</b> ${formatMathForWord(cleanQuestionText(q.question))}</p>`;
+                    q.options.forEach((o, idx) => {
+                        body += `<p style="margin-left: 20px;">${String.fromCharCode(65+idx)}. ${formatMathForWord(cleanOptionText(o))}</p>`;
+                    });
+                });
+                
+                const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Exam</title></head><body>`;
+                const footer = `</body></html>`;
+                const sourceHTML = header + body + footer;
+                
+                const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+                saveAs(blob, 'De_Thi_Review.doc');
+            };
+
             return (
                 <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
                     <div className="bg-white p-4 shadow-md z-20 border-b border-indigo-200 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-3"><button onClick={onBack} className="text-gray-500 hover:text-gray-800"><i className="fas fa-arrow-left text-xl"></i></button><h2 className="text-2xl font-bold text-indigo-800">Duyệt & Chỉnh Sửa</h2><span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">{questions.length} câu</span></div>
-                        <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
+                        <div className="flex gap-2">
+                            <button onClick={handleExportWord} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow flex items-center gap-2"><i className="fas fa-file-word"></i> Xuất Word</button>
+                            <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-check"></i> LƯU & TỔ CHỨC</button>
+                        </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
                         <div className="max-w-4xl mx-auto">{questions.map((q, i) => (<QuestionItem key={i} q={q} index={i} onUpdate={(field, val, optIdx) => { 
