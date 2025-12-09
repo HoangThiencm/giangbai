@@ -121,7 +121,7 @@
             return <span ref={ref} className="math-content text-xl leading-relaxed" />;
         };
 
-        // --- MODAL NẠP ĐÁP ÁN (ĐƯỢC BỔ SUNG VÀO) ---
+        // --- MODAL NẠP ĐÁP ÁN ---
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
@@ -295,7 +295,7 @@
 
             useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); if (initialData) { setForm({ title: initialData.info.title, school: initialData.info.school, subject: initialData.info.subject, grade: initialData.info.grade, duration: initialData.info.duration_mins, startTime: initialData.info.start_time, endTime: initialData.info.end_time }); setParsedQuestions(initialData.questions); setStep("review"); } }, [initialData]);
 
-            // === HÀM XỬ LÝ CLIENT-SIDE AI VISION ===
+            // === HÀM XỬ LÝ CLIENT-SIDE AI VISION CÓ RETRY ===
             const processPageWithAI = async (page, pageNum, key) => {
                 const vp = page.getViewport({scale: 2});
                 const cvs = document.createElement('canvas');
@@ -306,6 +306,7 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ contents: [{parts: [{text: SYSTEM_PROMPT}, {inline_data: {mime_type: "image/jpeg", data: img}}]}] })
                 });
+                if(!res.ok) throw new Error("API Error");
                 const data = await res.json();
                 if(data.candidates) {
                     let txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
@@ -315,30 +316,57 @@
                 return [];
             };
 
+            // === HÀM RETRY THÔNG MINH ===
+            const processPageWithRetry = async (page, pageNum) => {
+                let attempts = 0;
+                const maxAttempts = 3;
+                while (attempts < maxAttempts) {
+                    try {
+                        const key = apiKeys[(pageNum + attempts) % apiKeys.length]; // Đổi key mỗi lần retry
+                        const result = await processPageWithAI(page, pageNum, key);
+                        if(result.length > 0) return result; // Nếu có kết quả thì trả về ngay
+                        attempts++; // Nếu rỗng (AI không đọc được) thì thử lại
+                    } catch (e) {
+                        attempts++;
+                        console.warn(`Trang ${pageNum} lỗi (Lần ${attempts}):`, e);
+                        await new Promise(r => setTimeout(r, 2000)); // Đợi 2s trước khi thử lại
+                    }
+                }
+                console.error(`Thất bại trang ${pageNum} sau ${maxAttempts} lần thử.`);
+                return []; // Trả về rỗng nếu hết cách
+            };
+
             const handleParseClientSide = async () => {
                 if (!apiKeys.length) return alert("Hệ thống chưa có API Key! Vui lòng vào trang chủ để nạp.");
                 if (!form.title) return alert("Nhập tên kỳ thi!");
                 const file = fileRef.current.files[0];
                 if (!file) return alert("Chưa chọn file đề thi!");
 
-                setLoading(true); setStatus("🚀 Đang khởi động AI Vision đa luồng...");
+                setLoading(true); setStatus("🚀 Đang khởi động AI Vision đa luồng (Smart Retry)...");
                 try {
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     const pagePromises = [];
+                    
+                    // Xử lý từng trang với cơ chế Retry
                     for(let i = 1; i <= pdf.numPages; i++) {
-                        const key = apiKeys[(i - 1) % apiKeys.length];
                         setStatus(`⚡ Đang đọc trang ${i}/${pdf.numPages}...`);
-                        pagePromises.push(pdf.getPage(i).then(page => processPageWithAI(page, i, key)).catch(err => []));
+                        pagePromises.push(
+                            pdf.getPage(i).then(page => processPageWithRetry(page, i)).catch(err => [])
+                        );
                     }
+                    
                     const results = await Promise.all(pagePromises);
                     const allQs = results.flat().map((q, i) => ({
                         question: q.question,
                         options: q.options.map(o => o.replace(/^[A-D][\.\)\:]\s*/, '').trim()),
                         correct_index: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1
                     }));
+                    
+                    if(allQs.length === 0) throw new Error("Không đọc được câu hỏi nào. Vui lòng kiểm tra file PDF.");
+                    
                     setParsedQuestions(allQs); setStep("review");
-                } catch (e) { alert("Lỗi AI: " + e.message); } finally { setLoading(false); }
+                } catch (e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
             };
 
             const handleSave = async () => {
