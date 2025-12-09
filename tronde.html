@@ -43,13 +43,24 @@
 
         const cleanOptionText = (text) => text ? text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim() : "";
 
+        // --- CẬP NHẬT HÀM FORMAT MATH CHO WORD ---
         const formatMathForWord = (text) => {
             if (!text) return "";
             let content = text;
             if (!content.includes('$') && content.includes('\\')) { content = `$${content}$`; }
             return content.replace(/\$([^$]+)\$/g, (match, tex) => {
                 try {
+                    // Output mathml để Word hiểu
                     let mathml = katex.renderToString(tex, { throwOnError: false, output: 'mathml', displayMode: false });
+                    
+                    // QUAN TRỌNG: Bóc tách thẻ <math> khỏi thẻ <span> bao bọc của Katex
+                    // Word cần thấy thẻ <math> trực tiếp để render thành Equation
+                    const mathTagMatch = mathml.match(/<math[\s\S]*?<\/math>/);
+                    if (mathTagMatch) {
+                        mathml = mathTagMatch[0];
+                    }
+
+                    // Xóa các annotation thừa
                     return mathml.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
                 } catch (e) { return match; }
             });
@@ -74,7 +85,7 @@
             return <span ref={ref} />;
         };
 
-        // --- COMPONENT QUESTION ITEM (Đã thêm nút Xóa) ---
+        // --- COMPONENT QUESTION ITEM ---
         const QuestionItem = ({ q, index, onUpdate, onToggleAnswer, onDelete }) => {
             const [isEditing, setIsEditing] = useState(false);
             const [localQ, setLocalQ] = useState(q.question);
@@ -147,11 +158,9 @@
             return (
                 <div className="p-4 rounded border mb-4 bg-gray-50 border-gray-200 hover:shadow-md transition relative group">
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-2">
-                        {/* NÚT SỬA */}
                         <button onClick={()=>setIsEditing(true)} className="bg-white text-blue-600 border border-blue-200 px-3 py-1 rounded text-sm hover:bg-blue-50 shadow-sm font-bold">
                             <i className="fas fa-pencil-alt"></i> Sửa
                         </button>
-                        {/* NÚT XÓA */}
                         <button onClick={()=>onDelete(index)} className="bg-white text-red-600 border border-red-200 px-3 py-1 rounded text-sm hover:bg-red-50 shadow-sm font-bold">
                             <i className="fas fa-trash"></i>
                         </button>
@@ -177,6 +186,7 @@
             return <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2">Nạp Đáp Án</h3><div className="bg-indigo-50 p-2 text-sm mb-2">Dán ảnh bảng đáp án (Ctrl+V) vào đây:</div>{status && <div className="text-sm font-bold text-green-600">{status}</div>}<textarea value={text} onChange={e=>setText(e.target.value)} onPaste={handlePaste} className="w-full h-32 border p-2 rounded" placeholder="1A 2B..."></textarea><div className="flex justify-end gap-2 mt-4"><button onClick={onClose} className="bg-gray-200 px-4 py-2 rounded">Hủy</button><button onClick={()=>{onApply(text); onClose()}} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold">Lưu</button></div></div></div>;
         };
 
+        // --- CẬP NHẬT HEADER HTML KHI XUẤT FILE ---
         const createDocContent = (code, questions) => {
             let body = `<h2 style='text-align:center; font-size:16pt; margin-bottom:20pt'>MÃ ĐỀ: ${code}</h2>`;
             questions.forEach(q => {
@@ -188,7 +198,8 @@
                 else if (maxLen < 45) { body += `<table style='width:100%; border:none; margin-bottom:12pt'><tr><td style='width:50%'><b>A.</b> ${formatMathForWord(opts[0])}</td><td style='width:50%'><b>B.</b> ${formatMathForWord(opts[1])}</td></tr><tr><td style='width:50%'><b>C.</b> ${formatMathForWord(opts[2])}</td><td style='width:50%'><b>D.</b> ${formatMathForWord(opts[3])}</td></tr></table>`; } 
                 else { body += opts.map((o,i) => `<p><b>${String.fromCharCode(65+i)}.</b> ${formatMathForWord(o)}</p>`).join(''); }
             });
-            return `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${code}</title><style>body{font-family:'Times New Roman';font-size:12pt}</style></head><body>${body}</body></html>`;
+            // Thêm xmlns:m và xmlns:math để Word nhận diện công thức
+            return `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${code}</title><style>body{font-family:'Times New Roman';font-size:12pt}</style></head><body>${body}</body></html>`;
         };
 
         const App = () => {
@@ -206,12 +217,11 @@
             const handleUpdateQuestion = (index, updatedQ) => { const newQs = [...questions]; newQs[index] = updatedQ; setQuestions(newQs); };
             const toggleAnswer = (index, optIdx) => { const newQs = [...questions]; newQs[index].correctAnswerIndex = optIdx; setQuestions(newQs); };
             
-            // --- CHỨC NĂNG XÓA CÂU HỎI VÀ ĐÁNH LẠI SỐ THỨ TỰ ---
             const handleDeleteQuestion = (index) => {
                 if(!confirm("Bạn chắc chắn muốn xóa câu này?")) return;
                 const newQs = questions
-                    .filter((_, i) => i !== index) // Loại bỏ câu hỏi
-                    .map((q, i) => ({ ...q, id: i, number: i + 1 })); // Đánh lại số thứ tự từ 1
+                    .filter((_, i) => i !== index)
+                    .map((q, i) => ({ ...q, id: i, number: i + 1 }));
                 setQuestions(newQs);
             };
 
@@ -274,7 +284,7 @@
                 setLoading(false);
             };
 
-            const handleSimpleMix = async (file) => { /* Giữ nguyên */
+            const handleSimpleMix = async (file) => {
                 setLoading(true); setStatus("Đang tách text...");
                 try {
                     const zip = new JSZip(); await zip.loadAsync(file);
