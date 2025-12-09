@@ -133,10 +133,13 @@
 
             // ===============================================
             // 1. TRỘN SERVER (HYBRID: HF CONVERT -> CLOUDFLARE AI)
-            // ===============================================
             const handleServerMix = async (file) => {
                 if(!apiKeys.length) return alert("Vui lòng nạp API Key trước!");
-                if(CF_WORKER_URL.includes("YOUR_WORKER_URL")) return alert("Bạn chưa cấu hình link Cloudflare Worker trong code!");
+                
+                // KIỂM TRA LINK WORKER
+                if(CF_WORKER_URL.includes("YOUR_WORKER_URL")) {
+                    return alert("Lỗi cấu hình: Bạn chưa thay link Cloudflare Worker vào biến CF_WORKER_URL trong code!");
+                }
 
                 setLoading(true); 
                 
@@ -147,17 +150,30 @@
                     if (file.name.endsWith(".docx") || file.name.endsWith(".doc")) {
                         setStatus("📡 Đang gửi file lên Server để chuyển đổi (Word -> PDF)...");
                         const fd = new FormData(); fd.append("file", file);
+                        
+                        // Gọi API convert của Server Python
                         const res = await fetch(`${HF_SERVER_URL}/convert-only`, { method: "POST", body: fd });
-                        if (!res.ok) throw new Error("Lỗi chuyển đổi file trên Server");
+                        
+                        if (!res.ok) {
+                            // Cố gắng đọc lỗi JSON trả về
+                            let errMessage = "Lỗi chuyển đổi file trên Server";
+                            try {
+                                const errData = await res.json();
+                                if(errData.error) errMessage = errData.error;
+                            } catch(e) {}
+                            throw new Error(errMessage);
+                        }
                         pdfBlob = await res.blob();
                     }
 
                     // GIAI ĐOẠN 2: Gửi PDF sang Cloudflare Worker để AI xử lý
+                    // ĐÂY LÀ PHẦN QUAN TRỌNG ĐÃ ĐƯỢC SỬA:
                     setStatus("🚀 Đang gửi sang Cloudflare AI để đọc đề (Không bị chặn IP)...");
                     
                     const aiFd = new FormData();
                     aiFd.append("file", pdfBlob, "exam.pdf");
                     
+                    // Gọi thẳng vào Worker, KHÔNG dùng handleAIMix
                     const workerRes = await fetch(`${CF_WORKER_URL}/mix`, {
                         method: "POST",
                         headers: { "x-gemini-api-key": apiKeys[0] }, // Dùng key đầu tiên
@@ -166,14 +182,26 @@
 
                     if(!workerRes.ok) {
                         const errText = await workerRes.text();
-                        throw new Error("Lỗi Worker: " + errText);
+                        // Parse lỗi JSON từ worker nếu có
+                        try {
+                            const errJson = JSON.parse(errText);
+                            throw new Error(errJson.error || errText);
+                        } catch(e) {
+                            throw new Error("Lỗi Worker: " + errText);
+                        }
                     }
 
                     const data = await workerRes.json();
                     
-                    // Map dữ liệu trả về từ Worker
+                    // Kiểm tra dữ liệu trả về
+                    if (!Array.isArray(data)) {
+                        throw new Error("AI trả về dữ liệu không đúng định dạng (cần mảng JSON).");
+                    }
+
+                    // Map dữ liệu trả về từ Worker vào State
                     const mapped = data.map((q, i) => ({
-                        id: i, number: i+1, 
+                        id: i, 
+                        number: i+1, 
                         question: q.question, 
                         options: q.options.map(o => cleanOptionText(o)),
                         correctAnswerIndex: q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : -1 
@@ -184,6 +212,7 @@
 
                 } catch(e) { 
                     setStatus("❌ Lỗi: " + e.message); 
+                    console.error(e);
                 } finally {
                     setLoading(false);
                 }
