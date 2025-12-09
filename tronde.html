@@ -167,16 +167,20 @@
                     }
 
                     // GIAI ĐOẠN 2: Gửi PDF sang Cloudflare Worker để AI xử lý
-                    // ĐÂY LÀ PHẦN QUAN TRỌNG ĐÃ ĐƯỢC SỬA:
                     setStatus("🚀 Đang gửi sang Cloudflare AI để đọc đề (Không bị chặn IP)...");
                     
                     const aiFd = new FormData();
                     aiFd.append("file", pdfBlob, "exam.pdf");
                     
-                    // Gọi thẳng vào Worker, KHÔNG dùng handleAIMix
+                    // Gửi TOÀN BỘ danh sách key (để Worker tự xoay vòng)
+                    // Chuyển mảng key thành chuỗi JSON
+                    const keysJson = JSON.stringify(apiKeys);
+
                     const workerRes = await fetch(`${CF_WORKER_URL}/mix`, {
                         method: "POST",
-                        headers: { "x-gemini-api-key": apiKeys[0] }, // Dùng key đầu tiên
+                        headers: { 
+                            "x-gemini-api-keys": keysJson // Header mới: danh sách key
+                        }, 
                         body: aiFd
                     });
 
