@@ -3,293 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công Cụ Trộn Đề Thi Pro</title>
+    <title>Trộn Đề Thi AI Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- PDF.js cho chế độ AI -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .gradient-text { background: linear-gradient(to right, #2563eb, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: bold; }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .latex-content { font-size: 1.1em; }
+        .question-card { transition: all 0.2s; }
+        .question-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const App = () => {
-            const [mode, setMode] = useState('xml'); // xml, ai
-            const [file, setFile] = useState(null);
-            const [status, setStatus] = useState("");
-            const [isLoading, setIsLoading] = useState(false);
-            const [apiKeys, setApiKeys] = useState([]);
-            const [numVariants, setNumVariants] = useState(4);
-            
-            // --- CẤU HÌNH SERVER (ĐÃ ẨN) ---
-            // Đây là nơi bạn đặt link server của bạn
-            const SERVER_URL = "https://hoangthiencm-giangbai.hf.space";
+        // --- MATH RENDERER COMPONENT ---
+        const MathText = ({ text }) => {
+            const ref = useRef();
+            useEffect(() => {
+                if (ref.current && text) {
+                    // Normalize text
+                    let clean = text.replace(/\n/g, '<br/>');
+                    // Render KaTeX
+                    ref.current.innerHTML = clean;
+                    renderMathInElement(ref.current, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "\\[", right: "\\]", display: true}
+                        ],
+                        throwOnError: false
+                    });
+                }
+            }, [text]);
+            return <div ref={ref} className="latex-content text-gray-800"></div>;
+        };
 
-            // AI Mode State
-            const [aiQuestions, setAiQuestions] = useState([]);
-            const [manualAnswers, setManualAnswers] = useState("");
+        const App = () => {
+            const [step, setStep] = useState(1); // 1: Upload, 2: Editor
+            const [loading, setLoading] = useState(false);
+            const [loadingMsg, setLoadingMsg] = useState("");
+            const [questions, setQuestions] = useState([]);
+            const [examInfo, setExamInfo] = useState({ title: "KIỂM TRA 1 TIẾT", school: "TRƯỜNG THPT...", time: "45" });
+            const [numVariants, setNumVariants] = useState(4);
+            const [apiKeys, setApiKeys] = useState([]);
+
+            // API URL
+            const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
 
             useEffect(() => {
-                const keys = localStorage.getItem('global_gemini_keys');
-                if (keys) setApiKeys(JSON.parse(keys));
+                const storedKeys = localStorage.getItem('global_gemini_keys');
+                if (storedKeys) setApiKeys(JSON.parse(storedKeys));
+                else alert("Chưa có API Key! Vui lòng vào trang chủ nạp Key.");
             }, []);
 
-            // === 1. LOGIC TRỘN XML (SERVER) ===
-            const handleXMLShuffle = async () => {
-                if (!file) return alert("Vui lòng chọn file Word (.docx)!");
-                if (!file.name.endsWith('.docx')) return alert("Chế độ này chỉ hỗ trợ file .docx");
+            // --- STEP 1: UPLOAD & PARSE ---
+            const handleFileUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
                 
-                setIsLoading(true);
-                setStatus("Đang kết nối Server để xử lý...");
+                setLoading(true);
+                setLoadingMsg("AI đang đọc đề thi... Vui lòng đợi...");
+                
+                const fd = new FormData();
+                fd.append("file", file);
+                fd.append("api_keys_json", JSON.stringify(apiKeys));
 
                 try {
-                    const formData = new FormData();
-                    formData.append("file", file);
-                    formData.append("num_variants", numVariants);
-
-                    // Xử lý endpoint
-                    const baseUrl = SERVER_URL.replace(/\/$/, ""); 
-                    const endpoint = `${baseUrl}/shuffle-word-xml`;
-                    
-                    console.log("Calling endpoint:", endpoint);
-
-                    const response = await fetch(endpoint, {
-                        method: "POST",
-                        body: formData
-                    }).catch(err => {
-                        throw new Error("Không thể kết nối đến Server! Vui lòng kiểm tra đường dẫn hoặc CORS.");
-                    });
-
-                    if (!response.ok) {
-                        const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.indexOf("application/json") !== -1) {
-                            const errData = await response.json();
-                            throw new Error(errData.error || `Lỗi Server (${response.status})`);
-                        } else {
-                            // Xử lý khi Server trả về HTML lỗi (ví dụ 404, 502)
-                            throw new Error(`Lỗi kết nối Server (${response.status}). Có thể đường dẫn API sai hoặc Server chưa chạy đúng file app.py.`);
-                        }
+                    const res = await fetch(`${API_BASE}/api/tronde/parse-ai`, { method: "POST", body: fd });
+                    const data = await res.json();
+                    if (data.status === "success") {
+                        // Thêm trường images rỗng và id cho mỗi câu
+                        const processed = data.data.map((q, i) => ({ ...q, id: Date.now() + i, images: [] }));
+                        setQuestions(processed);
+                        setStep(2);
+                    } else {
+                        alert("Lỗi: " + (data.error || "Không đọc được file"));
                     }
-
-                    // Tải file Zip về
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `Bo_De_Tron_${new Date().getTime()}.zip`;
-                    document.body.appendChild(a);
-                    a.click();
-                    setStatus("✅ Đã xong! File giữ nguyên định dạng MathType/Ảnh.");
-                } catch (e) {
-                    console.error(e);
-                    setStatus("❌ " + e.message);
+                } catch (err) {
+                    alert("Lỗi kết nối Server: " + err.message);
                 } finally {
-                    setIsLoading(false);
+                    setLoading(false);
                 }
             };
 
-            // === 2. LOGIC TRỘN AI (CLIENT SIDE DIRECT CALL) ===
-            const handleDirectAICall = async () => {
-                if (!file) return alert("Chọn file PDF/Ảnh đề thi!");
-                if (apiKeys.length === 0) return alert("Vui lòng nhập API Key trong phần cấu hình!");
+            // --- STEP 2: EDITOR FUNCTIONS ---
+            
+            // Cập nhật nội dung câu hỏi/đáp án
+            const updateQuestion = (idx, field, val, optIdx = null) => {
+                const newQs = [...questions];
+                if (field === 'a' && optIdx !== null) {
+                    newQs[idx].a[optIdx] = val;
+                } else {
+                    newQs[idx][field] = val;
+                }
+                setQuestions(newQs);
+            };
 
-                setIsLoading(true);
-                setStatus("Đang đọc file bằng AI (Client Side)...");
-                setAiQuestions([]);
+            // Xử lý dán ảnh vào câu hỏi
+            const handlePasteImage = (e, qIdx) => {
+                const items = e.clipboardData.items;
+                for (let item of items) {
+                    if (item.type.startsWith("image/")) {
+                        e.preventDefault();
+                        const blob = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                            const newQs = [...questions];
+                            newQs[qIdx].images.push(evt.target.result); // Base64
+                            setQuestions(newQs);
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                }
+            };
 
+            // Xóa câu hỏi
+            const deleteQuestion = (idx) => {
+                if (confirm("Xóa câu này?")) {
+                    setQuestions(questions.filter((_, i) => i !== idx));
+                }
+            };
+
+            // Xóa ảnh trong câu hỏi
+            const removeImage = (qIdx, imgIdx) => {
+                const newQs = [...questions];
+                newQs[qIdx].images.splice(imgIdx, 1);
+                setQuestions(newQs);
+            };
+
+            // Xử lý nạp đáp án từ ảnh (Key Scanner)
+            const handleKeyImageUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setLoading(true); setLoadingMsg("Đang quét ảnh đáp án...");
+                const fd = new FormData();
+                fd.append("file", file);
+                fd.append("api_keys_json", JSON.stringify(apiKeys));
+                
                 try {
-                    const buffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument(buffer).promise;
-                    
-                    let extractedQs = [];
-
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        setStatus(`Đang quét trang ${i}/${pdf.numPages} với Gemini...`);
-                        const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({ scale: 1.5 });
-                        const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        const ctx = canvas.getContext('2d');
-                        await page.render({ canvasContext: ctx, viewport }).promise;
-                        
-                        const base64Img = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        
-                        const key = apiKeys[i % apiKeys.length]; 
-                        const prompt = `Bạn là trợ lý chấm thi. Hãy nhìn vào ảnh đề thi này.
-                        Nhiệm vụ: Trích xuất câu hỏi và đáp án đúng.
-                        QUAN TRỌNG: Tìm các đáp án được KHOANH TRÒN, GẠCH CHÂN, hoặc TÔ ĐỎ. Đó là đáp án đúng.
-                        
-                        Trả về JSON thuần (không Markdown) dạng mảng:
-                        [
-                          { "q": "Nội dung câu hỏi...", "opts": ["A...", "B...", "C...", "D..."], "correct": "A" }
-                        ]
-                        Nếu không tìm thấy dấu hiệu đáp án đúng, để correct là null.`;
-
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{
-                                    parts: [
-                                        { text: prompt },
-                                        { inline_data: { mime_type: "image/jpeg", data: base64Img } }
-                                    ]
-                                }]
-                            })
+                    const res = await fetch(`${API_BASE}/api/tronde/parse-key-image`, { method: "POST", body: fd });
+                    const result = await res.json();
+                    if (result.status === "success") {
+                        const keyData = result.data; // {"1": "A", "2": "B"}
+                        const newQs = [...questions];
+                        Object.keys(keyData).forEach(k => {
+                            const idx = parseInt(k) - 1;
+                            if (newQs[idx]) newQs[idx].correct = keyData[k];
                         });
-
-                        const data = await res.json();
-                        if(data.error) throw new Error(data.error.message);
-                        
-                        if(data.candidates && data.candidates[0].content) {
-                            const raw = data.candidates[0].content.parts[0].text;
-                            const jsonStr = raw.replace(/```json|```/g, '').trim();
-                            try {
-                                const parsed = JSON.parse(jsonStr);
-                                if(Array.isArray(parsed)) extractedQs = [...extractedQs, ...parsed];
-                            } catch (e) { console.error("Parse JSON lỗi", e); }
-                        }
+                        setQuestions(newQs);
+                        alert("Đã cập nhật đáp án!");
                     }
+                } catch (e) { alert("Lỗi: " + e.message); }
+                finally { setLoading(false); }
+            };
 
-                    setAiQuestions(extractedQs);
-                    setStatus(`✅ Đã đọc được ${extractedQs.length} câu hỏi!`);
-
-                } catch (e) {
-                    setStatus("❌ Lỗi AI: " + e.message);
-                } finally {
-                    setIsLoading(false);
+            // Xử lý nhập đáp án thủ công (1A 2B...)
+            const handleManualKeyInput = () => {
+                const input = prompt("Nhập chuỗi đáp án (VD: 1A 2B 3C...):");
+                if (!input) return;
+                const tokens = input.toUpperCase().match(/\d+[A-D]/g); // Tìm mẫu 1A, 2B
+                if (tokens) {
+                    const newQs = [...questions];
+                    tokens.forEach(t => {
+                        const num = parseInt(t);
+                        const ans = t.slice(-1);
+                        if (newQs[num - 1]) newQs[num - 1].correct = ans;
+                    });
+                    setQuestions(newQs);
                 }
             };
 
-            const applyManualAnswers = () => {
-                const map = {};
-                manualAnswers.toUpperCase().split(/\s+/).forEach(token => {
-                    const match = token.match(/(\d+)([A-D])/);
-                    if(match) map[match[1]] = match[2];
-                });
-                const updated = aiQuestions.map((q, idx) => ({
-                    ...q,
-                    correct: map[idx + 1] || q.correct 
-                }));
-                setAiQuestions(updated);
-                alert("Đã cập nhật đáp án!");
+            // --- STEP 3: EXPORT ---
+            const handleExport = async () => {
+                setLoading(true); setLoadingMsg("Đang trộn và tạo file...");
+                const payload = {
+                    questions: questions,
+                    num_variants: parseInt(numVariants),
+                    exam_info: examInfo
+                };
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/tronde/export`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `De_Thi_AI_Tron.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                    } else {
+                        alert("Lỗi xuất file!");
+                    }
+                } catch (e) { alert("Lỗi: " + e.message); }
+                finally { setLoading(false); }
             };
 
             return (
-                <div className="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-xl mt-10 min-h-[600px]">
-                    <h1 className="text-3xl font-bold text-center mb-6 gradient-text uppercase">
-                        <i className="fa-solid fa-shuffle mr-2"></i> Trộn Đề Thi Pro
-                    </h1>
-
-                    {/* TABS */}
-                    <div className="flex border-b mb-6">
-                        <button onClick={()=>setMode('xml')} className={`flex-1 py-3 ${mode==='xml'?'tab-active bg-blue-50':''}`}>
-                            <i className="fa-solid fa-file-word mr-2"></i> Trộn Giữ Định Dạng (Word XML)
-                        </button>
-                        <button onClick={()=>setMode('ai')} className={`flex-1 py-3 ${mode==='ai'?'tab-active bg-purple-50':''}`}>
-                            <i className="fa-solid fa-robot mr-2"></i> Trộn Bằng AI (Client-Side)
-                        </button>
-                    </div>
-
-                    {/* CONFIG AREA - ĐÃ ẨN SERVER URL INPUT */}
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex gap-4 items-center">
-                            <div className="flex-1">
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Chọn file đề gốc:</label>
-                                <input type="file" onChange={e => setFile(e.target.files[0])} 
-                                    accept={mode === 'xml' ? ".docx" : ".pdf,.png,.jpg"}
-                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                            </div>
-                            <div className="w-32">
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Số mã đề:</label>
-                                <input type="number" value={numVariants} onChange={e=>setNumVariants(e.target.value)} className="w-full p-2 border rounded" min="1" max="10"/>
-                            </div>
+                <div className="max-w-6xl mx-auto p-4 pb-20">
+                    {loading && (
+                        <div className="loading-overlay">
+                            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <div className="text-xl font-bold text-blue-800 animate-pulse">{loadingMsg}</div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* MAIN ACTION AREA */}
-                    <div className="text-center">
-                        {isLoading && <div className="mb-4 text-blue-600 font-bold"><span className="loader mr-2"></span> {status}</div>}
-                        {!isLoading && status && <div className={`mb-4 font-bold ${status.includes("❌") ? "text-red-600" : "text-green-600"}`}>{status}</div>}
-                        
-                        {mode === 'xml' && (
-                            <div className="space-y-4">
-                                <div className="bg-yellow-50 p-3 text-sm text-yellow-800 rounded text-left mb-4 border border-yellow-200">
-                                    <div className="font-bold mb-1"><i className="fa-solid fa-triangle-exclamation"></i> Chế độ Word XML:</div>
-                                    <ul className="list-disc pl-5 mt-1 space-y-1">
-                                        <li>Yêu cầu: Server Backend đang chạy ổn định.</li>
-                                        <li>File Word (.docx) có đáp án <b>Tô Đỏ</b> hoặc <u>Gạch Chân</u>.</li>
-                                        <li>Giữ nguyên 100% MathType, Hình ảnh.</li>
-                                    </ul>
-                                </div>
-                                <button onClick={handleXMLShuffle} className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition transform hover:scale-105">
-                                    <i className="fa-solid fa-gears mr-2"></i> Phân Tích & Trộn (Server XML)
+                    <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => window.location.href='index.html'} className="text-gray-500 hover:text-blue-600"><i className="fas fa-home text-xl"></i></button>
+                            <h1 className="text-2xl font-bold text-indigo-700">TRỘN ĐỀ THI AI 2025</h1>
+                        </div>
+                        {step === 2 && (
+                            <div className="flex gap-2">
+                                <button onClick={() => document.getElementById('key-upload').click()} className="bg-purple-100 text-purple-700 px-3 py-2 rounded font-bold text-sm hover:bg-purple-200">
+                                    <i className="fas fa-camera mr-1"></i> Scan Đáp Án
+                                </button>
+                                <input type="file" id="key-upload" className="hidden" accept="image/*" onChange={handleKeyImageUpload}/>
+                                
+                                <button onClick={handleManualKeyInput} className="bg-blue-100 text-blue-700 px-3 py-2 rounded font-bold text-sm hover:bg-blue-200">
+                                    <i className="fas fa-keyboard mr-1"></i> Nhập Đáp Án
+                                </button>
+                                
+                                <input type="number" className="border w-16 p-2 rounded text-center" value={numVariants} onChange={e=>setNumVariants(e.target.value)} min="1" max="10"/>
+                                <span className="self-center font-bold text-sm">Mã đề</span>
+                                
+                                <button onClick={handleExport} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow-lg flex items-center gap-2">
+                                    <i className="fas fa-file-export"></i> XUẤT ĐỀ
                                 </button>
                             </div>
                         )}
+                    </div>
 
-                        {mode === 'ai' && (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-start gap-4">
-                                    <div className="flex-1 text-left">
-                                        <label className="font-bold text-sm block mb-1">Nhập đáp án thủ công (nếu AI sót):</label>
-                                        <textarea 
-                                            value={manualAnswers}
-                                            onChange={e => setManualAnswers(e.target.value)}
-                                            placeholder="Ví dụ: 1A 2B 3C..." 
-                                            className="w-full p-2 border rounded h-24 text-sm font-mono"
-                                        ></textarea>
-                                        <button onClick={applyManualAnswers} className="mt-2 text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Cập nhật đáp án</button>
+                    {step === 1 && (
+                        <div className="bg-white p-12 rounded-xl shadow-lg text-center border-2 border-dashed border-indigo-200 hover:border-indigo-400 transition cursor-pointer" 
+                             onClick={() => document.getElementById('file-upload').click()}>
+                            <i className="fas fa-cloud-upload-alt text-6xl text-indigo-300 mb-4"></i>
+                            <h2 className="text-2xl font-bold text-gray-700">Tải lên đề thi gốc</h2>
+                            <p className="text-gray-500 mt-2">Hỗ trợ file PDF (Tốt nhất) hoặc Ảnh chụp đề thi</p>
+                            <input type="file" id="file-upload" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.docx" onChange={handleFileUpload}/>
+                        </div>
+                    )}
+
+                    {step === 2 && (
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Thông tin chung */}
+                            <div className="bg-white p-4 rounded-lg shadow-sm flex gap-4">
+                                <input className="border p-2 rounded flex-1" placeholder="Tên Trường" value={examInfo.school} onChange={e=>setExamInfo({...examInfo, school: e.target.value})}/>
+                                <input className="border p-2 rounded flex-1" placeholder="Tên Kỳ Thi" value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title: e.target.value})}/>
+                                <input className="border p-2 rounded w-24" placeholder="Phút" value={examInfo.time} onChange={e=>setExamInfo({...examInfo, time: e.target.value})}/>
+                            </div>
+
+                            {/* Danh sách câu hỏi */}
+                            {questions.map((q, idx) => (
+                                <div key={q.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 question-card relative group">
+                                    {/* Toolbar câu hỏi */}
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-2">
+                                        <button onClick={() => deleteQuestion(idx)} className="bg-red-100 text-red-600 w-8 h-8 rounded-full hover:bg-red-200" title="Xóa câu hỏi"><i className="fas fa-trash"></i></button>
                                     </div>
-                                    <div className="flex-1">
-                                         <button onClick={handleDirectAICall} className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 shadow-lg mb-2">
-                                            <i className="fa-solid fa-wand-magic-sparkles mr-2"></i> Quét Đề Bằng AI
-                                        </button>
-                                        <p className="text-xs text-gray-500 text-left">* Chạy trực tiếp trên trình duyệt. Không cần Server Python.</p>
+
+                                    <div className="flex gap-4">
+                                        <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                                            {idx + 1}
+                                        </div>
+                                        
+                                        <div className="flex-1 space-y-4">
+                                            {/* Nội dung câu hỏi (Editable) */}
+                                            <div className="relative">
+                                                <textarea 
+                                                    className="w-full p-3 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 ring-indigo-200 outline-none text-base"
+                                                    rows={3}
+                                                    value={q.q}
+                                                    onChange={(e) => updateQuestion(idx, 'q', e.target.value)}
+                                                    onPaste={(e) => handlePasteImage(e, idx)}
+                                                    placeholder="Nội dung câu hỏi (Dán ảnh vào đây nếu cần)..."
+                                                ></textarea>
+                                                <div className="text-xs text-gray-400 mt-1"><i className="fas fa-info-circle"></i> Ctrl+V để dán ảnh (biểu đồ, hình vẽ) vào câu hỏi này.</div>
+                                            </div>
+
+                                            {/* Preview LaTeX & Images */}
+                                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                <div className="font-bold text-xs text-blue-500 mb-1">XEM TRƯỚC:</div>
+                                                <MathText text={q.q} />
+                                                
+                                                {/* Image Container */}
+                                                {q.images && q.images.length > 0 && (
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        {q.images.map((img, imgIdx) => (
+                                                            <div key={imgIdx} className="relative group/img">
+                                                                <img src={img} className="h-24 rounded border bg-white object-contain"/>
+                                                                <button onClick={()=>removeImage(idx, imgIdx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover/img:opacity-100"><i className="fas fa-times"></i></button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Options */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {q.a.map((opt, optIdx) => (
+                                                    <div key={optIdx} className={`flex items-center gap-2 p-2 border rounded-lg transition ${q.correct === ["A","B","C","D"][optIdx] ? 'bg-green-50 border-green-500 ring-1 ring-green-400' : 'bg-white'}`}>
+                                                        <div 
+                                                            className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer font-bold shrink-0 ${q.correct === ["A","B","C","D"][optIdx] ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                                                            onClick={() => updateQuestion(idx, 'correct', ["A","B","C","D"][optIdx])}
+                                                        >
+                                                            {["A","B","C","D"][optIdx]}
+                                                        </div>
+                                                        <input 
+                                                            className="flex-1 bg-transparent outline-none border-b border-transparent focus:border-gray-300 px-1"
+                                                            value={opt}
+                                                            onChange={(e) => updateQuestion(idx, 'a', e.target.value, optIdx)}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-
-                                {aiQuestions.length > 0 && (
-                                    <div className="mt-6 text-left border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-gray-50">
-                                        <h3 className="font-bold mb-2">Kết quả nhận diện ({aiQuestions.length} câu):</h3>
-                                        {aiQuestions.map((q, i) => (
-                                            <div key={i} className="mb-3 p-3 bg-white border rounded shadow-sm">
-                                                <div className="font-bold text-blue-800">Câu {i+1}: {q.q}</div>
-                                                <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
-                                                    {q.opts.map((opt, oi) => (
-                                                        <div key={oi} className={`${(q.correct && (opt.startsWith(q.correct) || String.fromCharCode(65+oi) === q.correct)) ? 'text-green-600 font-bold bg-green-50 p-1 rounded' : 'p-1'}`}>
-                                                            {opt}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                            ))}
+                            
+                            <button onClick={() => setQuestions([...questions, {id: Date.now(), q: "Câu hỏi mới...", a:["","","",""], correct:null, images:[]}])} className="py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-indigo-400 hover:text-indigo-600 font-bold transition">
+                                <i className="fas fa-plus-circle mr-2"></i> Thêm câu hỏi thủ công
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        render(<App />);
     </script>
 </body>
 </html>
