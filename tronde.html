@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công Cụ Trộn Đề Thi 2025</title>
+    <title>Công Cụ Trộn Đề Thi Pro (Fixed)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -27,19 +27,18 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // URL Backend Python (Bạn cần chạy tronde.py ở port 8000 hoặc deploy)
-        // Nếu chạy local, dùng http://localhost:8000
-        // Nếu dùng Codespace/Huggingface, thay URL vào đây.
-        const SERVER_URL = ""; 
-
         const App = () => {
-            const [mode, setMode] = useState('xml'); // xml, ai, text
+            const [mode, setMode] = useState('xml'); // xml, ai
             const [file, setFile] = useState(null);
             const [status, setStatus] = useState("");
             const [isLoading, setIsLoading] = useState(false);
             const [apiKeys, setApiKeys] = useState([]);
             const [numVariants, setNumVariants] = useState(4);
             
+            // --- CẤU HÌNH SERVER ---
+            const DEFAULT_SERVER = "https://hoangthiencm-giangbai.hf.space";
+            const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
+
             // AI Mode State
             const [aiQuestions, setAiQuestions] = useState([]);
             const [manualAnswers, setManualAnswers] = useState("");
@@ -47,7 +46,15 @@
             useEffect(() => {
                 const keys = localStorage.getItem('global_gemini_keys');
                 if (keys) setApiKeys(JSON.parse(keys));
+                
+                const savedUrl = localStorage.getItem('tronde_server_url');
+                if (savedUrl) setServerUrl(savedUrl);
             }, []);
+
+            const saveServerUrl = (url) => {
+                setServerUrl(url);
+                localStorage.setItem('tronde_server_url', url);
+            };
 
             // === 1. LOGIC TRỘN XML (SERVER) ===
             const handleXMLShuffle = async () => {
@@ -55,25 +62,34 @@
                 if (!file.name.endsWith('.docx')) return alert("Chế độ này chỉ hỗ trợ file .docx");
                 
                 setIsLoading(true);
-                setStatus("Đang gửi file lên Server để cắt lớp XML...");
+                setStatus("Đang kết nối Server để xử lý...");
 
                 try {
                     const formData = new FormData();
                     formData.append("file", file);
                     formData.append("num_variants", numVariants);
 
-                    // Gọi đến endpoint Python mới
-                    // Lưu ý: Nếu server_url rỗng (chạy cùng host), dùng đường dẫn tương đối
-                    const endpoint = SERVER_URL ? `${SERVER_URL}/shuffle-word-xml` : `/shuffle-word-xml`;
+                    // Xử lý endpoint
+                    const baseUrl = serverUrl.replace(/\/$/, ""); 
+                    const endpoint = `${baseUrl}/shuffle-word-xml`;
                     
+                    console.log("Calling endpoint:", endpoint);
+
                     const response = await fetch(endpoint, {
                         method: "POST",
                         body: formData
+                    }).catch(err => {
+                        throw new Error("Không thể kết nối đến Server! Vui lòng kiểm tra đường dẫn hoặc CORS.");
                     });
 
                     if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error || "Lỗi server");
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            const errData = await response.json();
+                            throw new Error(errData.error || `Lỗi Server (${response.status})`);
+                        } else {
+                            throw new Error(`Server trả về lỗi ${response.status}. Có thể Endpoint chưa được deploy hoặc sai đường dẫn.`);
+                        }
                     }
 
                     // Tải file Zip về
@@ -81,7 +97,7 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = "Bo_De_XML_Nguyen_Mau.zip";
+                    a.download = `Bo_De_Tron_${new Date().getTime()}.zip`;
                     document.body.appendChild(a);
                     a.click();
                     setStatus("✅ Đã xong! File giữ nguyên định dạng MathType/Ảnh.");
@@ -102,11 +118,9 @@
                 setAiQuestions([]);
 
                 try {
-                    // Chuyển file thành Base64 hình ảnh (giả sử input là PDF)
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     
-                    let allText = "";
                     let extractedQs = [];
 
                     for (let i = 1; i <= pdf.numPages; i++) {
@@ -121,11 +135,16 @@
                         
                         const base64Img = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
                         
-                        // GỌI TRỰC TIẾP API GOOGLE (Không qua server trung gian)
-                        const key = apiKeys[i % apiKeys.length]; // Xoay vòng key
-                        const prompt = `Trích xuất câu hỏi trắc nghiệm từ hình ảnh này.
-                        Nếu có đáp án được khoanh tròn/tô đỏ/gạch chân, hãy ghi vào trường correctAnswer.
-                        Output JSON Array: [{ "q": "Nội dung câu hỏi", "opts": ["A...", "B...", "C...", "D..."], "correct": "A" }]`;
+                        const key = apiKeys[i % apiKeys.length]; 
+                        const prompt = `Bạn là trợ lý chấm thi. Hãy nhìn vào ảnh đề thi này.
+                        Nhiệm vụ: Trích xuất câu hỏi và đáp án đúng.
+                        QUAN TRỌNG: Tìm các đáp án được KHOANH TRÒN, GẠCH CHÂN, hoặc TÔ ĐỎ. Đó là đáp án đúng.
+                        
+                        Trả về JSON thuần (không Markdown) dạng mảng:
+                        [
+                          { "q": "Nội dung câu hỏi...", "opts": ["A...", "B...", "C...", "D..."], "correct": "A" }
+                        ]
+                        Nếu không tìm thấy dấu hiệu đáp án đúng, để correct là null.`;
 
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
                             method: 'POST',
@@ -141,12 +160,14 @@
                         });
 
                         const data = await res.json();
+                        if(data.error) throw new Error(data.error.message);
+                        
                         if(data.candidates && data.candidates[0].content) {
                             const raw = data.candidates[0].content.parts[0].text;
                             const jsonStr = raw.replace(/```json|```/g, '').trim();
                             try {
                                 const parsed = JSON.parse(jsonStr);
-                                extractedQs = [...extractedQs, ...parsed];
+                                if(Array.isArray(parsed)) extractedQs = [...extractedQs, ...parsed];
                             } catch (e) { console.error("Parse JSON lỗi", e); }
                         }
                     }
@@ -161,18 +182,15 @@
                 }
             };
 
-            // Hàm áp dụng đáp án thủ công
             const applyManualAnswers = () => {
-                // Format: 1A 2B 3C
                 const map = {};
                 manualAnswers.toUpperCase().split(/\s+/).forEach(token => {
                     const match = token.match(/(\d+)([A-D])/);
                     if(match) map[match[1]] = match[2];
                 });
-
                 const updated = aiQuestions.map((q, idx) => ({
                     ...q,
-                    correct: map[idx + 1] || q.correct // Ưu tiên thủ công, sau đó đến AI detected
+                    correct: map[idx + 1] || q.correct 
                 }));
                 setAiQuestions(updated);
                 alert("Đã cập nhật đáp án!");
@@ -196,6 +214,20 @@
 
                     {/* CONFIG AREA */}
                     <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        {mode === 'xml' && (
+                            <div className="mb-4">
+                                <label className="block text-sm font-bold text-blue-600 mb-1">Server URL (Hugging Face Space):</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={serverUrl} 
+                                        onChange={e => saveServerUrl(e.target.value)}
+                                        className="flex-1 p-2 border border-blue-200 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex gap-4 items-center">
                             <div className="flex-1">
                                 <label className="block text-sm font-bold text-gray-700 mb-1">Chọn file đề gốc:</label>
@@ -212,17 +244,17 @@
 
                     {/* MAIN ACTION AREA */}
                     <div className="text-center">
-                        {isLoading && <div className="mb-4 text-blue-600 font-bold"><span className="loader mr-2"></span>{status}</div>}
-                        {!isLoading && status && <div className="mb-4 text-green-600 font-bold">{status}</div>}
+                        {isLoading && <div className="mb-4 text-blue-600 font-bold"><span className="loader mr-2"></span> {status}</div>}
+                        {!isLoading && status && <div className={`mb-4 font-bold ${status.includes("❌") ? "text-red-600" : "text-green-600"}`}>{status}</div>}
                         
                         {mode === 'xml' && (
                             <div className="space-y-4">
-                                <div className="bg-yellow-50 p-3 text-sm text-yellow-800 rounded text-left mb-4">
-                                    <i className="fa-solid fa-info-circle"></i> <b>Lưu ý:</b> Chế độ này cắt ghép trực tiếp XML của Word.
-                                    <ul className="list-disc pl-5 mt-1">
-                                        <li>Giữ nguyên 100% MathType, Hình ảnh, Bảng.</li>
-                                        <li>Yêu cầu file Word không bị lỗi cấu trúc XML.</li>
-                                        <li>Đáp án đúng cần được <b>Tô Đỏ</b> hoặc <u>Gạch Chân</u> để máy nhận diện.</li>
+                                <div className="bg-yellow-50 p-3 text-sm text-yellow-800 rounded text-left mb-4 border border-yellow-200">
+                                    <div className="font-bold mb-1"><i className="fa-solid fa-triangle-exclamation"></i> Chế độ Word XML:</div>
+                                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                                        <li>Yêu cầu: Server Backend đang chạy ổn định.</li>
+                                        <li>File Word (.docx) có đáp án <b>Tô Đỏ</b> hoặc <u>Gạch Chân</u>.</li>
+                                        <li>Giữ nguyên 100% MathType, Hình ảnh.</li>
                                     </ul>
                                 </div>
                                 <button onClick={handleXMLShuffle} className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition transform hover:scale-105">
@@ -248,11 +280,10 @@
                                          <button onClick={handleDirectAICall} className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 shadow-lg mb-2">
                                             <i className="fa-solid fa-wand-magic-sparkles mr-2"></i> Quét Đề Bằng AI
                                         </button>
-                                        <p className="text-xs text-gray-500 text-left">* Gọi trực tiếp từ trình duyệt của bạn đến Google Gemini. Không sợ bị chặn IP server.</p>
+                                        <p className="text-xs text-gray-500 text-left">* Chạy trực tiếp trên trình duyệt. Không cần Server Python.</p>
                                     </div>
                                 </div>
 
-                                {/* PREVIEW KẾT QUẢ AI */}
                                 {aiQuestions.length > 0 && (
                                     <div className="mt-6 text-left border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-gray-50">
                                         <h3 className="font-bold mb-2">Kết quả nhận diện ({aiQuestions.length} câu):</h3>
@@ -261,7 +292,7 @@
                                                 <div className="font-bold text-blue-800">Câu {i+1}: {q.q}</div>
                                                 <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
                                                     {q.opts.map((opt, oi) => (
-                                                        <div key={oi} className={`${opt.startsWith(q.correct) || String.fromCharCode(65+oi) === q.correct ? 'text-green-600 font-bold' : ''}`}>
+                                                        <div key={oi} className={`${(q.correct && (opt.startsWith(q.correct) || String.fromCharCode(65+oi) === q.correct)) ? 'text-green-600 font-bold bg-green-50 p-1 rounded' : 'p-1'}`}>
                                                             {opt}
                                                         </div>
                                                     ))}
