@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công Cụ Trộn Đề Thi Pro (Fixed)</title>
+    <title>Công Cụ Trộn Đề Thi Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -35,9 +35,9 @@
             const [apiKeys, setApiKeys] = useState([]);
             const [numVariants, setNumVariants] = useState(4);
             
-            // --- CẤU HÌNH SERVER ---
-            const DEFAULT_SERVER = "https://hoangthiencm-giangbai.hf.space";
-            const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
+            // --- CẤU HÌNH SERVER (ĐÃ ẨN) ---
+            // Đây là nơi bạn đặt link server của bạn
+            const SERVER_URL = "https://hoangthiencm-giangbai.hf.space";
 
             // AI Mode State
             const [aiQuestions, setAiQuestions] = useState([]);
@@ -46,15 +46,7 @@
             useEffect(() => {
                 const keys = localStorage.getItem('global_gemini_keys');
                 if (keys) setApiKeys(JSON.parse(keys));
-                
-                const savedUrl = localStorage.getItem('tronde_server_url');
-                if (savedUrl) setServerUrl(savedUrl);
             }, []);
-
-            const saveServerUrl = (url) => {
-                setServerUrl(url);
-                localStorage.setItem('tronde_server_url', url);
-            };
 
             // === 1. LOGIC TRỘN XML (SERVER) ===
             const handleXMLShuffle = async () => {
@@ -70,7 +62,7 @@
                     formData.append("num_variants", numVariants);
 
                     // Xử lý endpoint
-                    const baseUrl = serverUrl.replace(/\/$/, ""); 
+                    const baseUrl = SERVER_URL.replace(/\/$/, ""); 
                     const endpoint = `${baseUrl}/shuffle-word-xml`;
                     
                     console.log("Calling endpoint:", endpoint);
@@ -88,7 +80,8 @@
                             const errData = await response.json();
                             throw new Error(errData.error || `Lỗi Server (${response.status})`);
                         } else {
-                            throw new Error(`Server trả về lỗi ${response.status}. Có thể Endpoint chưa được deploy hoặc sai đường dẫn.`);
+                            // Xử lý khi Server trả về HTML lỗi (ví dụ 404, 502)
+                            throw new Error(`Lỗi kết nối Server (${response.status}). Có thể đường dẫn API sai hoặc Server chưa chạy đúng file app.py.`);
                         }
                     }
 
@@ -102,7 +95,8 @@
                     a.click();
                     setStatus("✅ Đã xong! File giữ nguyên định dạng MathType/Ảnh.");
                 } catch (e) {
-                    setStatus("❌ Lỗi: " + e.message);
+                    console.error(e);
+                    setStatus("❌ " + e.message);
                 } finally {
                     setIsLoading(false);
                 }
@@ -212,22 +206,8 @@
                         </button>
                     </div>
 
-                    {/* CONFIG AREA */}
+                    {/* CONFIG AREA - ĐÃ ẨN SERVER URL INPUT */}
                     <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        {mode === 'xml' && (
-                            <div className="mb-4">
-                                <label className="block text-sm font-bold text-blue-600 mb-1">Server URL (Hugging Face Space):</label>
-                                <div className="flex gap-2">
-                                    <input 
-                                        type="text" 
-                                        value={serverUrl} 
-                                        onChange={e => saveServerUrl(e.target.value)}
-                                        className="flex-1 p-2 border border-blue-200 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
                         <div className="flex gap-4 items-center">
                             <div className="flex-1">
                                 <label className="block text-sm font-bold text-gray-700 mb-1">Chọn file đề gốc:</label>
