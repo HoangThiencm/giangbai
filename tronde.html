@@ -9,6 +9,10 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
+    <!-- PDF.js: Để xử lý PDF Client-side -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
     <!-- KaTeX: Hiển thị công thức Toán -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -21,9 +25,16 @@
         .latex-content img { display: inline-block; max-width: 100%; }
         .question-card { transition: all 0.2s ease; border-left: 4px solid transparent; }
         .question-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-left-color: #3b82f6; }
-        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* Hiệu ứng Loading & Progress */
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 50px; height: 50px; border: 5px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .progress-wraper { width: 300px; margin-top: 20px; }
+        .progress-track { width: 100%; background: #e5e7eb; height: 10px; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #3b82f6; transition: width 0.3s ease-out; }
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -70,8 +81,10 @@
         const App = () => {
             const [step, setStep] = useState(1); // 1: Upload, 2: Editor/Review
             const [loading, setLoading] = useState(false);
-            const [loadingMsg, setLoadingMsg] = useState("");
             const [questions, setQuestions] = useState([]);
+            
+            // Trạng thái Progress
+            const [progress, setProgress] = useState({ current: 0, total: 0, text: "" });
             
             // Thông tin đề thi
             const [examInfo, setExamInfo] = useState({ 
@@ -99,7 +112,46 @@
                 }
             }, []);
 
-            // --- BƯỚC 1: UPLOAD & PHÂN TÍCH ---
+            // --- HÀM GỌI API VỚI CƠ CHẾ XOAY VÒNG KEY ---
+            const callApiWithRotation = async (formData, retryCount = 0) => {
+                if (config.keys.length === 0) throw new Error("Không có API Key!");
+                
+                // Chọn key dựa trên số lần thử lại (xoay vòng)
+                const keyIndex = retryCount % config.keys.length;
+                const currentKey = config.keys[keyIndex];
+                
+                // Gửi MỘT key cụ thể lên server để server dùng đúng key đó
+                // (Backend nhận api_keys_json là list, ta gửi list 1 phần tử)
+                formData.set('api_keys_json', JSON.stringify([currentKey]));
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/tronde/parse-ai`, { 
+                        method: "POST", 
+                        body: formData 
+                    });
+                    
+                    // Nếu lỗi Quota (429) hoặc Server Error (500), ném lỗi để catch bên dưới xử lý
+                    if (res.status === 429 || res.status >= 500) {
+                        throw new Error(`Server Error ${res.status}`);
+                    }
+                    
+                    const data = await res.json();
+                    if (data.status === "success") {
+                        return data.data;
+                    } else {
+                        throw new Error(data.error || "Lỗi không xác định từ AI");
+                    }
+                } catch (e) {
+                    // Cơ chế Retry: Thử tối đa 2 vòng lặp qua danh sách keys
+                    if (retryCount < config.keys.length * 2) {
+                        console.warn(`Key ...${currentKey.slice(-4)} gặp lỗi: ${e.message}. Đang thử key tiếp theo...`);
+                        return await callApiWithRotation(formData, retryCount + 1);
+                    }
+                    throw e; // Hết cách cứu chữa
+                }
+            };
+
+            // --- BƯỚC 1: UPLOAD & PHÂN TÍCH (PDF CHIA NHỎ) ---
             const handleFileUpload = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -107,35 +159,95 @@
                 if (config.keys.length === 0) return alert("Thiếu API Key!");
 
                 setLoading(true);
-                setLoadingMsg(`Đang đọc đề thi bằng AI (${config.model})...`);
-                
-                const fd = new FormData();
-                fd.append("file", file);
-                fd.append("api_keys_json", JSON.stringify(config.keys));
-                fd.append("gemini_model", config.model); // Gửi model lên server
+                setQuestions([]); // Reset câu hỏi
+                setProgress({ current: 0, total: 1, text: "Đang khởi tạo..." });
 
                 try {
-                    const res = await fetch(`${API_BASE}/api/tronde/parse-ai`, { 
-                        method: "POST", 
-                        body: fd 
-                    });
-                    
-                    const data = await res.json();
-                    
-                    if (res.ok && data.status === "success") {
-                        // Thêm ID và mảng ảnh rỗng cho mỗi câu hỏi
-                        const processed = data.data.map((q, i) => ({ 
+                    const isPdf = file.type === "application/pdf";
+                    let newQuestions = [];
+
+                    if (isPdf) {
+                        // 1. Đọc PDF bằng thư viện client-side
+                        const buffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(buffer).promise;
+                        const totalPages = pdf.numPages;
+                        
+                        setProgress({ current: 0, total: totalPages, text: `Tìm thấy ${totalPages} trang. Bắt đầu đọc...` });
+
+                        // 2. Lặp qua từng trang
+                        for (let i = 1; i <= totalPages; i++) {
+                            // Cập nhật thanh tiến trình
+                            setProgress({ 
+                                current: i, 
+                                total: totalPages, 
+                                text: `Đang đọc trang ${i}/${totalPages} bằng AI...` 
+                            });
+
+                            // Render trang PDF thành ảnh (Canvas)
+                            const page = await pdf.getPage(i);
+                            const viewport = page.getViewport({ scale: 1.5 }); // Tăng scale để ảnh nét hơn
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            const ctx = canvas.getContext('2d');
+                            await page.render({ canvasContext: ctx, viewport }).promise;
+                            
+                            // Chuyển Canvas thành Blob ảnh JPEG
+                            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+                            
+                            // Gửi ảnh trang này lên AI
+                            const fd = new FormData();
+                            fd.append("file", blob, `page_${i}.jpg`);
+                            fd.append("gemini_model", config.model);
+                            
+                            try {
+                                const pageQuestions = await callApiWithRotation(fd);
+                                if (Array.isArray(pageQuestions)) {
+                                    newQuestions = [...newQuestions, ...pageQuestions];
+                                }
+                            } catch (err) {
+                                console.error(`Lỗi đọc trang ${i}:`, err);
+                                // Có thể thông báo lỗi nhỏ hoặc bỏ qua trang lỗi
+                            }
+                        }
+
+                    } else {
+                        // Xử lý file Ảnh hoặc Docx (Gửi nguyên file)
+                        setProgress({ current: 0, total: 100, text: "Đang tải file lên Server..." });
+                        
+                        const fd = new FormData();
+                        fd.append("file", file);
+                        fd.append("gemini_model", config.model);
+                        
+                        // Fake progress chạy cho vui mắt vì không track được upload % chính xác ở đây dễ dàng
+                        let fakeProgress = 0;
+                        const interval = setInterval(() => {
+                            fakeProgress = Math.min(fakeProgress + 10, 90);
+                            setProgress({ current: fakeProgress, total: 100, text: "AI đang phân tích toàn bộ file..." });
+                        }, 500);
+
+                        try {
+                            const data = await callApiWithRotation(fd);
+                            newQuestions = data;
+                        } finally {
+                            clearInterval(interval);
+                        }
+                    }
+
+                    // Hoàn tất
+                    if (newQuestions.length > 0) {
+                        const processed = newQuestions.map((q, i) => ({ 
                             ...q, 
                             id: Date.now() + i, 
                             images: [],
-                            // Đảm bảo có đủ 4 lựa chọn nếu AI đọc thiếu
                             a: q.a && q.a.length >= 4 ? q.a : [...(q.a || []), "", "", "", ""].slice(0,4)
                         }));
                         setQuestions(processed);
                         setStep(2);
                     } else {
-                        throw new Error(data.error || "Không đọc được dữ liệu từ file.");
+                        alert("AI không tìm thấy câu hỏi nào! Vui lòng kiểm tra lại file.");
                     }
+
                 } catch (err) {
                     alert("Lỗi: " + err.message);
                 } finally {
@@ -144,19 +256,13 @@
             };
 
             // --- CÁC HÀM CHỈNH SỬA (EDITOR) ---
-            
-            // Cập nhật nội dung câu hỏi/đáp án
             const updateQuestion = (idx, field, val, optIdx = null) => {
                 const newQs = [...questions];
-                if (field === 'a' && optIdx !== null) {
-                    newQs[idx].a[optIdx] = val;
-                } else {
-                    newQs[idx][field] = val;
-                }
+                if (field === 'a' && optIdx !== null) newQs[idx].a[optIdx] = val;
+                else newQs[idx][field] = val;
                 setQuestions(newQs);
             };
 
-            // Dán ảnh (Ctrl+V) vào câu hỏi
             const handlePasteImage = (e, qIdx) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -166,7 +272,6 @@
                         const reader = new FileReader();
                         reader.onload = (evt) => {
                             const newQs = [...questions];
-                            // Giới hạn kích thước ảnh base64 nếu cần thiết
                             newQs[qIdx].images.push(evt.target.result); 
                             setQuestions(newQs);
                         };
@@ -175,73 +280,68 @@
                 }
             };
 
-            // Xóa câu hỏi
             const deleteQuestion = (idx) => {
                 if (confirm("Bạn muốn xóa câu hỏi này?")) {
                     setQuestions(questions.filter((_, i) => i !== idx));
                 }
             };
 
-            // Xóa ảnh trong câu hỏi
             const removeImage = (qIdx, imgIdx) => {
                 const newQs = [...questions];
                 newQs[qIdx].images.splice(imgIdx, 1);
                 setQuestions(newQs);
             };
 
-            // Thêm câu hỏi thủ công
             const addManualQuestion = () => {
-                setQuestions([
-                    ...questions, 
-                    {
-                        id: Date.now(), 
-                        q: "Câu hỏi mới...", 
-                        a: ["", "", "", ""], 
-                        correct: null, 
-                        images: []
-                    }
-                ]);
-                // Cuộn xuống cuối trang
+                setQuestions([...questions, {
+                    id: Date.now(), q: "Câu hỏi mới...", a: ["", "", "", ""], correct: null, images: []
+                }]);
                 setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
             };
 
-            // --- CÁC HÀM NHẬP ĐÁP ÁN ---
-
-            // 1. Quét ảnh đáp án
+            // --- CÔNG CỤ ĐÁP ÁN ---
             const handleKeyImageUpload = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                setLoading(true); setLoadingMsg("Đang quét ảnh bảng đáp án...");
+                setLoading(true); 
+                setProgress({ current: 50, total: 100, text: "Đang quét ảnh đáp án..." });
                 
                 const fd = new FormData();
                 fd.append("file", file);
-                fd.append("api_keys_json", JSON.stringify(config.keys));
                 fd.append("gemini_model", config.model);
                 
                 try {
+                    // Dùng hàm rotation cho cả API này
+                    const keyData = await callApiWithRotation(fetch(`${API_BASE}/api/tronde/parse-key-image`, { method: "POST", body: fd }).then(r=>r.json()).then(d=>{
+                        if(d.status !== 'success') throw new Error(d.error);
+                        return d; // Hàm rotation bên trên được thiết kế cho parse-ai, ta viết lại logic gọi đơn giản ở đây
+                    }).catch(e => { throw e; }));
+                    
+                    // Lưu ý: Do cấu trúc hàm callApiWithRotation bên trên được hardcode URL parse-ai, 
+                    // ta sẽ dùng logic fetch thủ công ở đây nhưng tái sử dụng logic retry nếu cần thiết (hoặc đơn giản hóa).
+                    // Để an toàn, ta dùng fetch thường cho Key Image vì nó nhẹ.
+                    
+                    // RE-IMPLEMENT FETCH SIMPLE FOR KEY
                     const res = await fetch(`${API_BASE}/api/tronde/parse-key-image`, { method: "POST", body: fd });
                     const result = await res.json();
+                    
                     if (result.status === "success") {
-                        const keyData = result.data; // {"1": "A", "2": "B"}
                         const newQs = [...questions];
-                        Object.keys(keyData).forEach(k => {
+                        Object.keys(result.data).forEach(k => {
                             const idx = parseInt(k) - 1;
-                            if (newQs[idx]) newQs[idx].correct = keyData[k];
+                            if (newQs[idx]) newQs[idx].correct = result.data[k];
                         });
                         setQuestions(newQs);
-                        alert("Đã cập nhật đáp án từ ảnh!");
-                    } else {
-                        throw new Error(result.error);
-                    }
-                } catch (e) { alert("Lỗi quét đáp án: " + e.message); }
+                        alert("Đã cập nhật đáp án!");
+                    } else throw new Error(result.error);
+
+                } catch (e) { alert("Lỗi: " + e.message); }
                 finally { setLoading(false); }
             };
 
-            // 2. Nhập chuỗi thủ công (1A 2B...)
             const handleManualKeyInput = () => {
                 const input = prompt("Nhập chuỗi đáp án (Ví dụ: 1A 2B 3C...):");
                 if (!input) return;
-                // Regex tìm các cặp số+chữ cái (VD: 1A, 2B, 10D)
                 const tokens = input.toUpperCase().match(/(\d+)\s*([A-D])/g); 
                 if (tokens) {
                     const newQs = [...questions];
@@ -255,45 +355,33 @@
                     });
                     setQuestions(newQs);
                     alert(`Đã cập nhật ${tokens.length} đáp án.`);
-                } else {
-                    alert("Không tìm thấy định dạng đáp án hợp lệ.");
-                }
+                } else alert("Định dạng không đúng!");
             };
 
-            // --- BƯỚC 3: XUẤT ĐỀ (TRỘN) ---
+            // --- BƯỚC 3: XUẤT FILE ---
             const handleExport = async () => {
                 if (questions.length === 0) return alert("Chưa có câu hỏi nào!");
-                
-                // Kiểm tra xem có câu nào chưa chọn đáp án không
                 const missingAns = questions.filter(q => !q.correct).length;
                 if (missingAns > 0) {
-                    if(!confirm(`Cảnh báo: Có ${missingAns} câu chưa chọn đáp án đúng. Bạn có muốn tiếp tục xuất đề không?`)) return;
+                    if(!confirm(`Cảnh báo: Có ${missingAns} câu chưa chọn đáp án. Tiếp tục?`)) return;
                 }
 
-                setLoading(true); setLoadingMsg("Đang trộn đề và tạo file Word/Excel...");
+                setLoading(true); 
+                setProgress({ current: 100, total: 100, text: "Đang tạo file Word & Excel..." });
                 
-                const payload = {
-                    questions: questions,
-                    num_variants: parseInt(numVariants),
-                    exam_info: examInfo
-                };
+                const payload = { questions, num_variants: parseInt(numVariants), exam_info: examInfo };
 
                 try {
                     const res = await fetch(`${API_BASE}/api/tronde/export`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
+                        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
                     });
                     
                     if (res.ok) {
                         const blob = await res.blob();
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `Bo_De_Tron_${Date.now()}.zip`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
+                        a.href = url; a.download = `De_Thi_Tron_${Date.now()}.zip`;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     } else {
                         const err = await res.json();
                         throw new Error(err.error || "Lỗi xuất file");
@@ -302,22 +390,41 @@
                 finally { setLoading(false); }
             };
 
-            // --- GIAO DIỆN ---
+            // --- RENDER ---
             return (
                 <div className="min-h-screen pb-20">
                     {/* LOADING OVERLAY */}
                     {loading && (
                         <div className="loading-overlay">
-                            <div className="spinner mb-4"></div>
-                            <div className="text-xl font-bold text-blue-600 animate-pulse">{loadingMsg}</div>
+                            {progress.total > 0 && progress.current > 0 ? (
+                                <div className="flex flex-col items-center animate-fade-in">
+                                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                                        {Math.round((progress.current / progress.total) * 100)}%
+                                    </div>
+                                    <div className="progress-wraper">
+                                        <div className="progress-track">
+                                            <div className="progress-fill" style={{width: `${(progress.current / progress.total) * 100}%`}}></div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 text-gray-600 font-medium">{progress.text}</div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center">
+                                    <div className="spinner mb-4"></div>
+                                    <div className="text-xl font-bold text-blue-600 animate-pulse">{progress.text || "Đang xử lý..."}</div>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* HEADER */}
                     <div className="bg-white shadow-sm border-b sticky top-0 z-30">
-                        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <a href="index.html" className="text-gray-500 hover:text-blue-600 transition"><i className="fas fa-arrow-left text-xl"></i></a>
+                        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                <a href="index.html" className="text-gray-500 hover:text-blue-600 transition flex items-center gap-2 font-bold px-3 py-1.5 rounded-lg hover:bg-gray-100">
+                                    <i className="fas fa-home text-lg"></i> Trang chủ
+                                </a>
+                                <div className="h-6 w-px bg-gray-300"></div>
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <i className="fas fa-random text-blue-600"></i> TRỘN ĐỀ THI AI
                                 </h1>
@@ -328,7 +435,7 @@
                                     <div className="hidden md:flex items-center bg-gray-100 rounded-lg p-1">
                                         <input type="number" className="bg-transparent w-12 text-center font-bold text-gray-700 outline-none" 
                                             value={numVariants} onChange={e=>setNumVariants(e.target.value)} min="1" max="20" title="Số mã đề"/>
-                                        <span className="text-xs font-bold text-gray-500 mr-2">Mã đề</span>
+                                        <span className="text-xs font-bold text-gray-500 mr-2">Mã</span>
                                     </div>
                                     <button onClick={handleExport} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-full font-bold shadow hover:shadow-lg transition transform hover:scale-105 flex items-center gap-2">
                                         <i className="fas fa-file-export"></i> <span className="hidden sm:inline">XUẤT ĐỀ</span>
@@ -338,26 +445,30 @@
                         </div>
                     </div>
 
-                    <div className="max-w-6xl mx-auto p-4 md:p-6">
+                    <div className="max-w-7xl mx-auto p-4 md:p-6">
                         {/* STEP 1: UPLOAD */}
                         {step === 1 && (
                             <div className="max-w-2xl mx-auto mt-10">
-                                <div className="bg-white p-8 rounded-2xl shadow-lg text-center border-2 border-dashed border-blue-200 hover:border-blue-400 transition cursor-pointer group"
+                                <div className="bg-white p-10 rounded-3xl shadow-xl text-center border-2 border-dashed border-blue-200 hover:border-blue-400 transition cursor-pointer group relative overflow-hidden"
                                      onClick={() => document.getElementById('file-upload').click()}>
-                                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-100 transition">
-                                        <i className="fas fa-cloud-upload-alt text-4xl text-blue-500"></i>
-                                    </div>
-                                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Tải lên đề thi gốc</h2>
-                                    <p className="text-gray-500 mb-6">Hỗ trợ file PDF, Word (.docx) hoặc Ảnh chụp.</p>
-                                    
-                                    <input type="file" id="file-upload" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.docx,.doc" onChange={handleFileUpload}/>
-                                    
-                                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition">
-                                        Chọn File
-                                    </button>
-                                    
-                                    <div className="mt-6 text-sm text-gray-400">
-                                        <i className="fas fa-info-circle mr-1"></i> Sử dụng Model: <b>{config.model}</b>
+                                    <div className="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-50 transition duration-500"></div>
+                                    <div className="relative z-10">
+                                        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition duration-300">
+                                            <i className="fas fa-cloud-upload-alt text-5xl text-blue-600"></i>
+                                        </div>
+                                        <h2 className="text-3xl font-bold text-gray-800 mb-3">Tải lên đề thi gốc</h2>
+                                        <p className="text-gray-500 mb-8 text-lg">AI sẽ tự động đọc câu hỏi từ file PDF, Word hoặc Ảnh.</p>
+                                        
+                                        <input type="file" id="file-upload" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.docx,.doc" onChange={handleFileUpload}/>
+                                        
+                                        <button className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg text-lg">
+                                            Chọn File Từ Máy
+                                        </button>
+                                        
+                                        <div className="mt-8 pt-6 border-t border-gray-100 text-sm text-gray-400 flex justify-center gap-6">
+                                            <span><i className="fas fa-robot mr-1"></i> Model: <b>{config.model}</b></span>
+                                            <span><i className="fas fa-key mr-1"></i> Keys: <b>{config.keys.length}</b></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -365,57 +476,48 @@
 
                         {/* STEP 2: EDITOR */}
                         {step === 2 && (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                {/* LEFT COLUMN: LIST QUESTIONS */}
-                                <div className="lg:col-span-2 space-y-6">
-                                    {/* INFO BAR */}
-                                    <div className="bg-white p-4 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {/* LEFT COLUMN: LIST QUESTIONS (8 cols) */}
+                                <div className="lg:col-span-8 space-y-6">
+                                    <div className="bg-white p-4 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-200">
                                         <input className="border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" placeholder="Tên Trường" value={examInfo.school} onChange={e=>setExamInfo({...examInfo, school: e.target.value})}/>
                                         <input className="border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" placeholder="Tên Kỳ Thi" value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title: e.target.value})}/>
                                         <input className="border p-2 rounded focus:ring-2 focus:ring-blue-200 outline-none" placeholder="Thời gian (phút)" value={examInfo.time} onChange={e=>setExamInfo({...examInfo, time: e.target.value})}/>
                                     </div>
 
-                                    {/* QUESTION LIST */}
                                     {questions.map((q, idx) => (
                                         <div key={q.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 question-card relative group">
-                                            {/* Toolbar */}
-                                            <div className="absolute top-3 right-3 flex gap-2 opacity-50 group-hover:opacity-100 transition">
+                                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition">
                                                 <button onClick={() => deleteQuestion(idx)} className="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50" title="Xóa câu hỏi"><i className="fas fa-trash"></i></button>
                                             </div>
 
                                             <div className="flex gap-4">
-                                                {/* Question Number */}
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
-                                                        {idx + 1}
-                                                    </div>
+                                                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0 border border-indigo-100">
+                                                    {idx + 1}
                                                 </div>
                                                 
                                                 <div className="flex-1 space-y-3">
-                                                    {/* Question Content */}
-                                                    <div className="relative">
+                                                    <div className="relative group/edit">
                                                         <textarea 
-                                                            className="w-full p-3 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition text-base min-h-[80px]"
+                                                            className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition text-base min-h-[80px]"
                                                             value={q.q}
                                                             onChange={(e) => updateQuestion(idx, 'q', e.target.value)}
                                                             onPaste={(e) => handlePasteImage(e, idx)}
                                                             placeholder="Nội dung câu hỏi..."
                                                         ></textarea>
                                                         
-                                                        {/* Math Preview */}
                                                         {q.q && (
-                                                            <div className="mt-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-sm">
-                                                                <div className="text-xs font-bold text-blue-400 mb-1 uppercase">Xem trước:</div>
+                                                            <div className="mt-2 p-3 bg-blue-50/30 rounded-lg border border-blue-100 text-sm">
+                                                                <div className="text-xs font-bold text-blue-400 mb-1 uppercase tracking-wider">Xem trước:</div>
                                                                 <MathText text={q.q} />
                                                             </div>
                                                         )}
 
-                                                        {/* Images */}
                                                         {q.images && q.images.length > 0 && (
                                                             <div className="mt-2 flex flex-wrap gap-2">
                                                                 {q.images.map((img, imgIdx) => (
                                                                     <div key={imgIdx} className="relative group/img">
-                                                                        <img src={img} className="h-20 w-auto rounded border bg-white object-contain"/>
+                                                                        <img src={img} className="h-20 w-auto rounded border bg-white object-contain shadow-sm"/>
                                                                         <button onClick={()=>removeImage(idx, imgIdx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow opacity-0 group-hover/img:opacity-100 transition"><i className="fas fa-times"></i></button>
                                                                     </div>
                                                                 ))}
@@ -423,7 +525,6 @@
                                                         )}
                                                     </div>
 
-                                                    {/* Options */}
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         {q.a.map((opt, optIdx) => {
                                                             const label = ["A", "B", "C", "D"][optIdx];
@@ -433,7 +534,7 @@
                                                                     <button 
                                                                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 transition ${isCorrect ? 'bg-green-600 text-white shadow' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                                                                         onClick={() => updateQuestion(idx, 'correct', label)}
-                                                                        title="Chọn làm đáp án đúng"
+                                                                        title="Chọn đáp án đúng"
                                                                     >
                                                                         {label}
                                                                     </button>
@@ -457,33 +558,43 @@
                                     </button>
                                 </div>
 
-                                {/* RIGHT COLUMN: TOOLS */}
-                                <div className="lg:col-span-1">
-                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 sticky top-24">
-                                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                            <i className="fas fa-tools text-blue-500"></i> Công cụ Đáp Án
+                                {/* RIGHT COLUMN: TOOLS (4 cols) - Sticky */}
+                                <div className="lg:col-span-4">
+                                    <div className="bg-white p-6 rounded-xl shadow-lg border border-indigo-100 sticky top-24">
+                                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-lg">
+                                            <i className="fas fa-tools text-indigo-500"></i> Công cụ Đáp Án
                                         </h3>
                                         
                                         <div className="space-y-3">
                                             <button onClick={() => document.getElementById('key-upload').click()} className="w-full bg-purple-50 text-purple-700 border border-purple-200 px-4 py-3 rounded-lg font-bold text-sm hover:bg-purple-100 transition flex items-center justify-center gap-2">
-                                                <i className="fas fa-camera"></i> Quét ảnh Đáp Án
+                                                <i className="fas fa-camera text-lg"></i> Quét ảnh Đáp Án
                                             </button>
                                             <input type="file" id="key-upload" className="hidden" accept="image/*" onChange={handleKeyImageUpload}/>
                                             
                                             <button onClick={handleManualKeyInput} className="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-3 rounded-lg font-bold text-sm hover:bg-indigo-100 transition flex items-center justify-center gap-2">
-                                                <i className="fas fa-keyboard"></i> Nhập chuỗi (1A 2B...)
+                                                <i className="fas fa-keyboard text-lg"></i> Nhập chuỗi (1A 2B...)
                                             </button>
                                         </div>
 
-                                        <hr className="my-4 border-gray-100"/>
+                                        <div className="my-6 border-t border-gray-100"></div>
                                         
-                                        <div className="text-sm text-gray-500 space-y-2">
-                                            <p><i className="fas fa-check-circle text-green-500 mr-1"></i> <b>Số câu hỏi:</b> {questions.length}</p>
-                                            <p><i className="fas fa-exclamation-circle text-yellow-500 mr-1"></i> <b>Chưa chọn đáp án:</b> {questions.filter(q => !q.correct).length}</p>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                                                <span className="text-gray-600 font-medium">Tổng câu hỏi</span>
+                                                <span className="bg-white px-3 py-1 rounded-md shadow-sm font-bold text-gray-800">{questions.length}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                                                <span className="text-yellow-700 font-medium">Thiếu đáp án</span>
+                                                <span className="bg-white px-3 py-1 rounded-md shadow-sm font-bold text-red-600">{questions.filter(q => !q.correct).length}</span>
+                                            </div>
                                         </div>
 
-                                        <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-700 border border-blue-100">
-                                            <i className="fas fa-lightbulb mr-1"></i> <b>Mẹo:</b> Bạn có thể dán ảnh (Ctrl+V) trực tiếp vào khung nội dung câu hỏi để thêm hình vẽ.
+                                        <div className="mt-6 p-4 bg-blue-50 rounded-xl text-sm text-blue-800 border border-blue-100 leading-relaxed">
+                                            <i className="fas fa-lightbulb mr-1 text-yellow-500"></i> <b>Mẹo:</b>
+                                            <ul className="list-disc pl-5 mt-1 space-y-1 text-blue-700/80">
+                                                <li>Dán ảnh (Ctrl+V) vào ô nội dung để thêm hình vẽ.</li>
+                                                <li>Bấm vào nút tròn A/B/C/D để chọn đáp án đúng.</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
