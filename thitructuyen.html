@@ -53,23 +53,38 @@
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
         const cleanQuestionText = (text) => { if (!text) return ""; return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); };
 
-        // === COMPONENT HIỂN THỊ CÔNG THỨC ===
+        // === COMPONENT HIỂN THỊ CÔNG THỨC (CẬP NHẬT: XỬ LÝ LATEX TỔNG QUÁT) ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 
                 // --- XỬ LÝ TEXT TRƯỚC KHI RENDER ---
-                // 1. Loại bỏ các lệnh format LaTeX văn bản thường gặp mà KaTeX không hỗ trợ inline tốt
-                // Thay \textit{...} bằng ... (hoặc có thể convert sang tag <i> nếu muốn)
-                let processed = normalizeText(text)
-                    .replace(/\\textit\{([^}]+)\}/g, '$1') // Bỏ \textit, giữ nội dung
-                    .replace(/\\textbf\{([^}]+)\}/g, '$1') // Bỏ \textbf, giữ nội dung
-                    .replace(/\\text\{([^}]+)\}/g, '$1');  // Bỏ \text
+                // 1. Loại bỏ TỔNG QUÁT các lệnh LaTeX văn bản dạng \command{content}
+                // Regex tìm kiếm: \[tên lệnh]{nội dung}
+                let processed = normalizeText(text);
                 
+                // Lặp để xử lý trường hợp lồng nhau đơn giản hoặc nhiều lệnh trên 1 dòng
+                // Ví dụ: \textbf{Không \textit{đúng}} -> Không \textit{đúng} -> Không đúng
+                // Loại bỏ lệnh LaTeX nhưng giữ nội dung bên trong {}
+                // Regex giải thích: 
+                // \\([a-zA-Z]+) : Tìm dấu \ theo sau là chữ cái (tên lệnh)
+                // \{ : Dấu mở ngoặc nhọn
+                // ([^}]*) : Nội dung bên trong (không chứa dấu đóng ngoặc nhọn - hạn chế nesting sâu nhưng an toàn cho regex đơn giản)
+                // \} : Dấu đóng ngoặc nhọn
+                
+                // Cách tiếp cận an toàn hơn: Chỉ xóa command wrapper cho text thường
+                // Chúng ta chạy replace nhiều lần để đảm bảo sạch
+                for(let i=0; i<3; i++) {
+                     processed = processed.replace(/\\(textbf|textit|text|underline|emph|uppercase|lowercase)\{([^}]*)\}/g, '$2');
+                }
+                
+                // Backup: Nếu vẫn còn sót các lệnh dạng \abc{...} mà không phải toán học đặc biệt
+                // (Cẩn thận không xóa các lệnh toán học như \sqrt, \frac nếu nó lọt ra ngoài dấu $)
+
                 // 2. Chuẩn hóa công thức toán
                 processed = processed
-                    .replace(/\\([{}])/g, '$1')
+                    .replace(/\\([{}])/g, '$1') // Unescape \{ \}
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
                     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
                     .replace(/`([^`]+)`/g, '$$$1$$');
@@ -88,9 +103,8 @@
                         } catch { span.textContent = part; }
                         ref.current.appendChild(span);
                     } else {
-                        // Xử lý text thường (có thể chứa html entity)
+                        // Xử lý text thường
                         const textNode = document.createElement("span");
-                        // Thay thế xuống dòng thành <br/>
                         textNode.innerHTML = part.replace(/\n/g, '<br/>');
                         ref.current.appendChild(textNode);
                     }
@@ -112,7 +126,6 @@
             
             const processAnswers = () => {
                 const map = {};
-                // Tìm tất cả các cặp số + chữ (VD: 1A, 2.B, 3-C...)
                 const regex = /(\d+)[\.\:\-\s]*([A-Da-d])/g;
                 let match;
                 while ((match = regex.exec(text)) !== null) {
@@ -137,10 +150,11 @@
             );
         };
 
-        // === COMPONENT CÂU HỎI (HỖ TRỢ SỬA ẢNH) ===
+        // === COMPONENT CÂU HỎI (CẬP NHẬT: THÊM/XÓA LỰA CHỌN) ===
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
             
+            // Hàm xử lý paste ảnh (giữ nguyên)
             const handlePaste = (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -155,7 +169,7 @@
                 }
             };
 
-            const handleFileSelect = (e) => {
+            const handleFileSelect = (e) => { /* Giữ nguyên */
                 const file = e.target.files[0];
                 if(file) {
                     const reader = new FileReader();
@@ -163,6 +177,21 @@
                     reader.readAsDataURL(file);
                 }
             }
+
+            // Xử lý thêm option
+            const handleAddOption = () => {
+                const newOptions = [...q.options, ""];
+                onUpdate('options_full', newOptions); // Gửi toàn bộ mảng mới
+            };
+
+            // Xử lý xóa option
+            const handleDeleteOption = (optIdx) => {
+                const newOptions = q.options.filter((_, i) => i !== optIdx);
+                onUpdate('options_full', newOptions);
+                // Nếu xóa đúng đáp án đang chọn thì reset correct_index
+                if (q.correct_index === optIdx) onOptionChange(-1);
+                else if (q.correct_index > optIdx) onOptionChange(q.correct_index - 1);
+            };
 
             if (isEditing) {
                 return (
@@ -174,7 +203,6 @@
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung</label>
                             <textarea className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-200 outline-none font-medium bg-blue-50 text-lg mb-2" value={q.question} onChange={(e) => onUpdate('question', e.target.value)} rows={3} />
                             
-                            {/* Khu vực xử lý ảnh */}
                             <div className="border-2 border-dashed border-gray-300 p-2 rounded bg-gray-50 flex items-center gap-4" onPaste={handlePaste}>
                                 <div className="flex-1 text-sm text-gray-500">
                                     <i className="fas fa-image mr-2"></i> Dán ảnh (Ctrl+V) hoặc:
@@ -187,13 +215,16 @@
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
                             {q.options.map((opt, idx) => (
-                                <div key={idx} className={`flex items-center gap-2 p-3 rounded border ${q.correct_index === idx ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
+                                <div key={idx} className={`flex items-center gap-2 p-2 rounded border ${q.correct_index === idx ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
                                     <input type="radio" name={`q-${index}`} checked={q.correct_index === idx} onChange={() => onOptionChange(idx)} className="w-5 h-5 cursor-pointer accent-green-600" />
+                                    <div className="w-8 font-bold text-gray-500 text-center">{String.fromCharCode(65+idx)}</div>
                                     <div className="flex-1"><input className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-1 text-lg" value={opt} onChange={(e) => onUpdate('options', e.target.value, idx)} placeholder={`Đáp án ${String.fromCharCode(65+idx)}`}/></div>
+                                    <button onClick={() => handleDeleteOption(idx)} className="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center rounded hover:bg-red-50" title="Xóa lựa chọn này"><i className="fas fa-trash-alt"></i></button>
                                 </div>
                             ))}
+                            <button onClick={handleAddOption} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 font-bold rounded hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition"><i className="fas fa-plus mr-1"></i> Thêm lựa chọn</button>
                         </div>
                     </div>
                 );
@@ -225,17 +256,22 @@
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions }) => {
             const [showAnsModal, setShowAnsModal] = useState(false);
             
+            // Cập nhật logic update để hỗ trợ options_full
             const handleQuestionUpdate = (idx, field, value, optIdx = null) => { 
                 const newQs = [...questions]; 
-                if (field === 'options') newQs[idx].options[optIdx] = value;
-                else newQs[idx][field] = value; 
+                if (field === 'options_full') {
+                     newQs[idx].options = value; // Cập nhật toàn bộ mảng options
+                } else if (field === 'options') {
+                     newQs[idx].options[optIdx] = value;
+                } else {
+                     newQs[idx][field] = value; 
+                }
                 onUpdateQuestions(newQs); 
             };
             const handleCorrectChange = (qIdx, optIdx) => { const newQs = [...questions]; newQs[qIdx].correct_index = optIdx; onUpdateQuestions(newQs); };
             
             const handleApplyAnswers = (map) => {
                 const newQs = questions.map(q => {
-                    // Extract số câu từ text (VD: "Câu 1: ...")
                     const match = q.question.match(/(\d+)/);
                     if (match) {
                         const qNum = parseInt(match[1]);
