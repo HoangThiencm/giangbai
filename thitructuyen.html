@@ -392,6 +392,7 @@
             const [apiKeys, setApiKeys] = useState([]);
             const [parsedQuestions, setParsedQuestions] = useState([]);
             const [loading, setLoading] = useState(false);
+            const [loadingMsg, setLoadingMsg] = useState("");
             const [fileName, setFileName] = useState(""); // [NEW] State lưu tên file
             const fileRef = useRef();
 
@@ -418,12 +419,32 @@
 
             const handleParse = async () => {
                 if (!apiKeys.length) return alert("Thiếu API Key!"); if (!form.title) return alert("Nhập thông tin!"); if (!fileRef.current.files[0]) return alert("Thiếu file!");
-                setLoading(true); const fd = new FormData(); fd.append("file", fileRef.current.files[0]); fd.append("api_keys_json", JSON.stringify(apiKeys));
-                try { const res = await axios.post(`${API_BASE}/api/exam/parse`, fd); setParsedQuestions(res.data.questions); setStep("review"); } catch (e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
+                
+                setLoading(true); 
+                setLoadingMsg("Đang tải file và phân tích... (File lớn có thể mất vài phút)");
+                
+                const fd = new FormData(); 
+                fd.append("file", fileRef.current.files[0]); 
+                fd.append("api_keys_json", JSON.stringify(apiKeys));
+                
+                try { 
+                    // TĂNG TIMEOUT LÊN 5 PHÚT (300000ms)
+                    const res = await axios.post(`${API_BASE}/api/exam/parse`, fd, { timeout: 300000 }); 
+                    setParsedQuestions(res.data.questions); 
+                    setStep("review"); 
+                } catch (e) { 
+                    let msg = e.message;
+                    if (e.code === 'ECONNABORTED') msg = "Hết thời gian chờ (Timeout). File quá nặng hoặc mạng chậm.";
+                    else if (e.response && e.response.data && e.response.data.detail) msg = e.response.data.detail;
+                    alert("Lỗi: " + msg); 
+                } finally { 
+                    setLoading(false); 
+                }
             };
 
             const handleSave = async () => {
                 setLoading(true);
+                setLoadingMsg("Đang lưu đề thi...");
                 try {
                     const payload = { 
                         id: initialData ? initialData.info.id : null,
@@ -462,7 +483,7 @@
 
                     <div className="flex gap-4">
                         {initialData && <button onClick={()=>setStep("review")} className="flex-1 bg-gray-500 text-white py-3 rounded font-bold hover:bg-gray-600">Giữ nguyên câu hỏi cũ</button>}
-                        <button onClick={handleParse} disabled={loading || !apiKeys.length} className="flex-1 bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2">{loading ? "Đang xử lý..." : (initialData ? "Phân tích lại từ File mới" : "Tiếp tục: Duyệt Đề")}</button>
+                        <button onClick={handleParse} disabled={loading || !apiKeys.length} className="flex-1 bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-2">{loading ? loadingMsg || "Đang xử lý..." : (initialData ? "Phân tích lại từ File mới" : "Tiếp tục: Duyệt Đề")}</button>
                     </div>
                 </div>
             );
@@ -565,3 +586,24 @@
     </script>
 </body>
 </html>
+```
+
+### Giải thích các thay đổi:
+
+1.  **Backend (`thtracnghiem.py`)**:
+    * **Thư viện `pypdf`**: Đã thêm vào và import `PdfReader`, `PdfWriter` để xử lý file PDF.
+    * **Hàm `split_pdf_pages`**: Hàm này nhận đường dẫn file PDF và kích thước chia nhỏ (mặc định 2 trang). Nó tạo ra các file con tạm thời.
+    * **`smart_exam_processing`**:
+        * Nhận diện file PDF.
+        * Gọi `split_pdf_pages`.
+        * Lặp qua danh sách file con, gửi từng file vào hàm `vision_mode`.
+        * Hàm `vision_mode` giờ đây được gọi nhiều lần cho một "lần xử lý" của người dùng.
+        * Kết quả từ các lần gọi `vision_mode` được nối (append) vào một danh sách `all_questions` duy nhất.
+        * Thêm `time.sleep(2)` giữa các lần gọi để "nghỉ" một chút, giảm nguy cơ bị Google chặn do gửi request quá nhanh (Rate Limit).
+        * Cuối cùng, dọn dẹp (xóa) các file PDF con đã tạo ra để tiết kiệm dung lượng ổ cứng.
+
+2.  **Frontend (`thitructuyen.html`)**:
+    * **`axios.post(..., { timeout: 300000 })`**: Đặt thời gian chờ tối đa cho request lên 5 phút (300 giây). Mặc định nhiều trình duyệt hoặc thư viện là thấp hơn, gây ra lỗi timeout phía client dù server vẫn đang chạy.
+    * **Cập nhật `setLoadingMsg`**: Thông báo rõ ràng cho người dùng là "File lớn có thể mất vài phút" để họ kiên nhẫn chờ đợi thay vì refresh trang hoặc nghĩ là lỗi.
+
+Với giải pháp này, file PDF 4 trang (hoặc nhiều hơn) sẽ được chia thành 2 file nhỏ (mỗi file 2 trang). AI sẽ xử lý từng file nhỏ này rất nhanh và chính xác hơn, đồng thời giảm thiểu rủi ro vượt quá giới hạn token đầu ra của AI hoặc giới hạn thời gian xử lý của Server.
