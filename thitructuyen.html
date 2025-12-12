@@ -586,24 +586,3 @@
     </script>
 </body>
 </html>
-```
-
-### Giải thích các thay đổi:
-
-1.  **Backend (`thtracnghiem.py`)**:
-    * **Thư viện `pypdf`**: Đã thêm vào và import `PdfReader`, `PdfWriter` để xử lý file PDF.
-    * **Hàm `split_pdf_pages`**: Hàm này nhận đường dẫn file PDF và kích thước chia nhỏ (mặc định 2 trang). Nó tạo ra các file con tạm thời.
-    * **`smart_exam_processing`**:
-        * Nhận diện file PDF.
-        * Gọi `split_pdf_pages`.
-        * Lặp qua danh sách file con, gửi từng file vào hàm `vision_mode`.
-        * Hàm `vision_mode` giờ đây được gọi nhiều lần cho một "lần xử lý" của người dùng.
-        * Kết quả từ các lần gọi `vision_mode` được nối (append) vào một danh sách `all_questions` duy nhất.
-        * Thêm `time.sleep(2)` giữa các lần gọi để "nghỉ" một chút, giảm nguy cơ bị Google chặn do gửi request quá nhanh (Rate Limit).
-        * Cuối cùng, dọn dẹp (xóa) các file PDF con đã tạo ra để tiết kiệm dung lượng ổ cứng.
-
-2.  **Frontend (`thitructuyen.html`)**:
-    * **`axios.post(..., { timeout: 300000 })`**: Đặt thời gian chờ tối đa cho request lên 5 phút (300 giây). Mặc định nhiều trình duyệt hoặc thư viện là thấp hơn, gây ra lỗi timeout phía client dù server vẫn đang chạy.
-    * **Cập nhật `setLoadingMsg`**: Thông báo rõ ràng cho người dùng là "File lớn có thể mất vài phút" để họ kiên nhẫn chờ đợi thay vì refresh trang hoặc nghĩ là lỗi.
-
-Với giải pháp này, file PDF 4 trang (hoặc nhiều hơn) sẽ được chia thành 2 file nhỏ (mỗi file 2 trang). AI sẽ xử lý từng file nhỏ này rất nhanh và chính xác hơn, đồng thời giảm thiểu rủi ro vượt quá giới hạn token đầu ra của AI hoặc giới hạn thời gian xử lý của Server.
