@@ -52,15 +52,15 @@
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
         const cleanQuestionText = (text) => { if (!text) return ""; return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); };
 
-        // === COMPONENT HIỂN THỊ CÔNG THỨC (CẬP NHẬT: FIX LỖI LATEX) ===
+        // === COMPONENT HIỂN THỊ CÔNG THỨC (FIX LỖI MẤT {} TRONG LATEX) ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 
-                // 1. Loại bỏ các lệnh LaTeX định dạng văn bản để tránh lỗi hiển thị
+                // 1. Loại bỏ các lệnh LaTeX định dạng văn bản thường để tránh lỗi hiển thị (giữ nội dung)
                 let processed = normalizeText(text);
-                // Xóa wrapper \textbf{}, \textit{}... nhưng giữ nội dung
+                // Xóa wrapper \textbf{}, \textit{}...
                 for(let i=0; i<3; i++) {
                      processed = processed.replace(/\\(textbf|textit|text|underline|emph|uppercase|lowercase)\{([^}]*)\}/g, '$2');
                 }
@@ -326,7 +326,7 @@
                 }
             }, [initialData]);
 
-            // === CẬP NHẬT: THUẬT TOÁN CẮT ẢNH AN TOÀN ===
+            // === HÀM CẮT ẢNH & AUTO RESIZE ===
             const cropImageFromCanvas = (canvas, bbox) => {
                 if (!bbox || bbox.length !== 4) return null;
                 const [ymin, xmin, ymax, xmax] = bbox;
@@ -348,11 +348,23 @@
                 const tempCtx = tempCanvas.getContext('2d');
                 
                 tempCtx.drawImage(canvas, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
-                return tempCanvas.toDataURL('image/jpeg', 0.9);
+                
+                // Resize ảnh nếu quá lớn (max width 800px) để tối ưu hiển thị
+                const MAX_WIDTH = 800;
+                if (sWidth > MAX_WIDTH) {
+                    const scale = MAX_WIDTH / sWidth;
+                    const resizeCanvas = document.createElement('canvas');
+                    resizeCanvas.width = MAX_WIDTH;
+                    resizeCanvas.height = sHeight * scale;
+                    const resizeCtx = resizeCanvas.getContext('2d');
+                    resizeCtx.drawImage(tempCanvas, 0, 0, resizeCanvas.width, resizeCanvas.height);
+                    return resizeCanvas.toDataURL('image/jpeg', 0.85);
+                }
+
+                return tempCanvas.toDataURL('image/jpeg', 0.85);
             };
 
             const callGeminiVision = async (base64Img, key, pageIndex) => {
-                // === CẬP NHẬT: PROMPT NGHIÊM NGẶT HƠN VÀ FIX LỖI JSON ===
                 const prompt = `
                 Bạn là hệ thống OCR chuyên nghiệp. Trích xuất dữ liệu từ trang ${pageIndex} dưới dạng JSON THUẦN TÚY.
                 
@@ -383,13 +395,10 @@
                 
                 let text = data.candidates[0].content.parts[0].text;
                 
-                // === CẬP NHẬT: TÌM KIẾM JSON ARRAY LỚN NHẤT ===
-                // Sử dụng regex để tìm đoạn [...] nằm ngoài cùng
                 const matches = text.match(/\[[\s\S]*\]/);
                 if (matches && matches.length > 0) {
-                    text = matches[0]; // Lấy đoạn JSON match đầu tiên (thường là cả mảng lớn)
+                    text = matches[0]; 
                 } else {
-                     // Fallback cũ nếu regex không bắt được
                     const start = text.indexOf('[');
                     const end = text.lastIndexOf(']');
                     if (start !== -1 && end !== -1) {
@@ -432,6 +441,37 @@
                     return { page: pageNumber, questions: [], error: e.message };
                 }
             };
+            
+            // === HÀM GHÉP CÂU HỎI BỊ NGẮT TRANG (SMART MERGE) ===
+            const mergeSplitQuestions = (questions) => {
+                if (!questions || questions.length === 0) return [];
+                const merged = [];
+                let prev = null;
+
+                for (const q of questions) {
+                    // Kiểm tra xem 'q' có phải là phần tiếp theo của 'prev' không
+                    // Điều kiện: 'prev' tồn tại VÀ 'prev' KHÔNG có đáp án
+                    // VÀ 'q' KHÔNG bắt đầu bằng mẫu số thứ tự rõ ràng (vd: Câu 1, Bài 2)
+                    
+                    const isNewNumbering = /^(Câu|Bài|Question|Số)\s*\d+/i.test(q.question);
+                    const prevIsIncomplete = prev && (!prev.options || prev.options.length === 0);
+                    
+                    if (prevIsIncomplete && !isNewNumbering) {
+                        // Thực hiện ghép nối
+                        prev.question += " " + q.question;
+                        prev.options = q.options; // Lấy đáp án từ phần sau (nếu có)
+                        prev.correct_index = q.correct_index;
+                        
+                        // Ghép ảnh: ưu tiên ảnh từ phần sau (thường là hình vẽ nằm cùng đáp án)
+                        if (!prev.image && q.image) prev.image = q.image;
+                    } else {
+                        if (prev) merged.push(prev);
+                        prev = q;
+                    }
+                }
+                if (prev) merged.push(prev);
+                return merged;
+            };
 
             const handleClientParse = async () => {
                 if (!apiKeys.length) return alert("Chưa nạp API Key!");
@@ -466,18 +506,21 @@
 
                     allResults.sort((a, b) => a.page - b.page);
 
-                    let finalQuestions = [];
+                    let rawQuestions = [];
                     let errorCount = 0;
                     allResults.forEach(res => {
                         if (res.error) errorCount++;
                         if (res.questions && res.questions.length > 0) {
-                            finalQuestions = [...finalQuestions, ...res.questions];
+                            rawQuestions = [...rawQuestions, ...res.questions];
                         }
                     });
 
-                    if(finalQuestions.length === 0) {
+                    if(rawQuestions.length === 0) {
                         throw new Error(`Không tìm thấy câu hỏi nào! (Lỗi ${errorCount}/${totalPages} trang).`);
                     }
+                    
+                    // Chạy thuật toán ghép câu hỏi
+                    const finalQuestions = mergeSplitQuestions(rawQuestions);
                     
                     setParsedQuestions(finalQuestions);
                     setStep("review");
