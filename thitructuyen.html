@@ -52,7 +52,8 @@
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = normalizeText(text).replace(/\\([{}])/g, '$1').replace(/\\\((.*?)\\\)/gs, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/`([^`]+)`/g, '$$$1$$');
+                // Đã xóa .replace(/\\([{}])/g, '$1') để giữ nguyên \{ \} cho LaTeX hiển thị ngoặc nhọn
+                let processed = normalizeText(text).replace(/\\\((.*?)\\\)/gs, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/`([^`]+)`/g, '$$$1$$');
                 const parts = processed.split(/(\$[^$]+\$)/g); ref.current.innerHTML = "";
                 parts.forEach(part => { if (!part) return; if (part.startsWith("$") && part.endsWith("$")) { const span = document.createElement("span"); try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; } ref.current.appendChild(span); } else { ref.current.appendChild(document.createTextNode(part)); } });
             }, [text]);
