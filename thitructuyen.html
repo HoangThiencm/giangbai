@@ -381,29 +381,32 @@
             const callGeminiVision = async (base64Img, key, pageIndex) => {
                 // Prompt cực kỳ chi tiết để xử lý các vấn đề: thiếu câu hỏi, format lạ
                 const prompt = `
-                Bạn là trợ lý soạn đề thi chuyên nghiệp. Hãy đọc trang ${pageIndex} này.
+                Bạn là một hệ thống OCR chuyên nghiệp dành cho đề thi Việt Nam. Nhiệm vụ của bạn là trích xuất dữ liệu CHÍNH XÁC TUYỆT ĐỐI từ hình ảnh trang ${pageIndex}.
                 
-                NHIỆM VỤ 1: TRÍCH XUẤT **TẤT CẢ** CÂU HỎI
-                - Phải lấy đầy đủ mọi câu hỏi có trên trang, KHÔNG ĐƯỢC BỎ SÓT hay tóm tắt.
-                - Chấp nhận cả các câu không có từ khóa "Câu" rõ ràng nếu chúng có cấu trúc câu hỏi.
-                - BẮT BUỘC: Mọi công thức toán học, biểu thức, số mũ, phân số... PHẢI đặt trong dấu LaTeX $...$. Ví dụ: $x^2$, $\\frac{1}{2}$.
-                - VỚI CÁC LỆNH ĐỊNH DẠNG VĂN BẢN LATEX (ví dụ: \\textit{abc}, \\textbf{xyz}): Hãy chuyển chúng thành Markdown thường (ví dụ: _abc_, **xyz**) hoặc để nguyên văn bản, KHÔNG dùng lệnh LaTeX cho văn bản thông thường.
+                QUY TẮC BẤT KHẢ XÂM PHẠM:
+                1. KHÔNG ĐƯỢC BỎ SÓT: Phải trích xuất 100% các câu hỏi xuất hiện trên trang. Dù là câu hỏi tự luận hay trắc nghiệm, dù có số hiệu "Câu x" hay không.
+                2. NGUYÊN VĂN: Không được tóm tắt, viết lại hay sửa đổi nội dung câu hỏi. Giữ nguyên văn.
+                3. ĐÁP ÁN (QUAN TRỌNG):
+                   - Các đáp án thường nằm ngang (A. ... B. ... C. ... D. ...). Bạn PHẢI tách riêng từng đáp án.
+                   - Nếu đáp án không có ký tự A, B, C, D đầu dòng nhưng được trình bày tách biệt, hãy tự gán nhãn cho chúng.
+                   - Nếu chỉ tìm thấy 1 hoặc 2 đáp án, hãy kiểm tra kỹ xem các đáp án khác có nằm cùng dòng không.
+                4. CÔNG THỨC TOÁN:
+                   - Bắt buộc dùng LaTeX $...$ cho công thức toán (ví dụ: $x^2$, $\\frac{a}{b}$).
+                   - KHÔNG dùng LaTeX cho văn bản thường (không dùng \\text{}, \\textit{}, \\textbf{}). Hãy dùng Markdown (*nghiêng*, **đậm**) cho văn bản.
                 
-                NHIỆM VỤ 2: TÌM ĐÁP ÁN ĐÚNG
-                - Tìm các dấu hiệu: Đáp án bị gạch chân, tô đỏ, in đậm, có dấu tích (v), hoặc bảng đáp án ở cuối trang.
-                - Trả về index (0=A, 1=B, 2=C, 3=D). Nếu không rõ thì để -1.
+                NHIỆM VỤ CỤ THỂ:
+                - Trích xuất nội dung câu hỏi (question).
+                - Trích xuất mảng các lựa chọn (options). Đảm bảo mảng này thường có 4 phần tử. Nếu thấy ít hơn, hãy rà soát kỹ lại ảnh.
+                - Xác định đáp án đúng (correct_index) dựa trên dấu hiệu: gạch chân, khoanh tròn, tô màu, dấu tích. Nếu không có, trả về -1.
+                - Xác định khung hình vẽ minh họa (bbox) nếu có: [ymin, xmin, ymax, xmax] (0-1).
                 
-                NHIỆM VỤ 3: CẮT HÌNH VẼ (AUTO-CROP)
-                - Nếu câu hỏi có hình vẽ, đồ thị, bảng biểu đi kèm -> Hãy xác định tọa độ khung hình (bounding box) của nó.
-                - Tọa độ bbox dạng [ymin, xmin, ymax, xmax] theo tỉ lệ 0-1 so với toàn trang.
-                
-                OUTPUT JSON STRICT (Mảng các object):
+                OUTPUT JSON STRICT (Mảng các object, không thêm markdown, không thêm lời dẫn):
                 [
                   {
-                    "question": "Nội dung câu hỏi...",
-                    "options": ["Nội dung A", "Nội dung B", "Nội dung C", "Nội dung D"],
-                    "correct_index": 0,
-                    "bbox": [0.1, 0.2, 0.3, 0.4] (hoặc null nếu không có hình)
+                    "question": "Câu 1: ...",
+                    "options": ["...", "...", "...", "..."],
+                    "correct_index": -1,
+                    "bbox": null
                   }
                 ]
                 `;
