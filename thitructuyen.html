@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lý Thi Trực Tuyến</title>
+    <title>Quản Lý Thi Trực Tuyến Pro (Client-Side AI)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -58,8 +58,17 @@
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
-                // Fix lỗi latex phổ biến trước khi render
+                
+                // --- XỬ LÝ TEXT TRƯỚC KHI RENDER ---
+                // 1. Loại bỏ các lệnh format LaTeX văn bản thường gặp mà KaTeX không hỗ trợ inline tốt
+                // Thay \textit{...} bằng ... (hoặc có thể convert sang tag <i> nếu muốn)
                 let processed = normalizeText(text)
+                    .replace(/\\textit\{([^}]+)\}/g, '$1') // Bỏ \textit, giữ nội dung
+                    .replace(/\\textbf\{([^}]+)\}/g, '$1') // Bỏ \textbf, giữ nội dung
+                    .replace(/\\text\{([^}]+)\}/g, '$1');  // Bỏ \text
+                
+                // 2. Chuẩn hóa công thức toán
+                processed = processed
                     .replace(/\\([{}])/g, '$1')
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
                     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
@@ -74,12 +83,14 @@
                     if (part.startsWith("$") && part.endsWith("$")) {
                         const span = document.createElement("span");
                         try { 
+                            // Render công thức toán bằng KaTeX
                             katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); 
                         } catch { span.textContent = part; }
                         ref.current.appendChild(span);
                     } else {
-                        // Xử lý xuống dòng cho text thường
+                        // Xử lý text thường (có thể chứa html entity)
                         const textNode = document.createElement("span");
+                        // Thay thế xuống dòng thành <br/>
                         textNode.innerHTML = part.replace(/\n/g, '<br/>');
                         ref.current.appendChild(textNode);
                     }
@@ -332,14 +343,15 @@
             };
 
             const callGeminiVision = async (base64Img, key, pageIndex) => {
-                // Prompt cực kỳ chi tiết để xử lý 4 yêu cầu của bạn
+                // Prompt cực kỳ chi tiết để xử lý các vấn đề: thiếu câu hỏi, format lạ
                 const prompt = `
                 Bạn là trợ lý soạn đề thi chuyên nghiệp. Hãy đọc trang ${pageIndex} này.
                 
-                NHIỆM VỤ 1: TRÍCH XUẤT CÂU HỎI
-                - Trích xuất toàn bộ câu hỏi trắc nghiệm.
+                NHIỆM VỤ 1: TRÍCH XUẤT **TẤT CẢ** CÂU HỎI
+                - Phải lấy đầy đủ mọi câu hỏi có trên trang, KHÔNG ĐƯỢC BỎ SÓT hay tóm tắt.
+                - Chấp nhận cả các câu không có từ khóa "Câu" rõ ràng nếu chúng có cấu trúc câu hỏi.
                 - BẮT BUỘC: Mọi công thức toán học, biểu thức, số mũ, phân số... PHẢI đặt trong dấu LaTeX $...$. Ví dụ: $x^2$, $\\frac{1}{2}$.
-                - Không dùng dấu \` cho công thức.
+                - VỚI CÁC LỆNH ĐỊNH DẠNG VĂN BẢN LATEX (ví dụ: \\textit{abc}, \\textbf{xyz}): Hãy chuyển chúng thành Markdown thường (ví dụ: _abc_, **xyz**) hoặc để nguyên văn bản, KHÔNG dùng lệnh LaTeX cho văn bản thông thường.
                 
                 NHIỆM VỤ 2: TÌM ĐÁP ÁN ĐÚNG
                 - Tìm các dấu hiệu: Đáp án bị gạch chân, tô đỏ, in đậm, có dấu tích (v), hoặc bảng đáp án ở cuối trang.
@@ -349,7 +361,7 @@
                 - Nếu câu hỏi có hình vẽ, đồ thị, bảng biểu đi kèm -> Hãy xác định tọa độ khung hình (bounding box) của nó.
                 - Tọa độ bbox dạng [ymin, xmin, ymax, xmax] theo tỉ lệ 0-1 so với toàn trang.
                 
-                OUTPUT JSON STRICT:
+                OUTPUT JSON STRICT (Mảng các object):
                 [
                   {
                     "question": "Nội dung câu hỏi...",
@@ -378,6 +390,37 @@
                 return JSON.parse(text);
             };
 
+            const processPage = async (pageNumber, pdf, apiKeys) => {
+                try {
+                    // Render PDF với độ phân giải cao để cắt ảnh đẹp
+                    const page = await pdf.getPage(pageNumber);
+                    const viewport = page.getViewport({scale: 2.0});
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width; canvas.height = viewport.height;
+                    await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+                    
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                    // Chọn key xoay vòng
+                    const key = apiKeys[(pageNumber - 1) % apiKeys.length];
+                    
+                    const rawQs = await callGeminiVision(base64, key, pageNumber);
+                    
+                    // Xử lý hậu kỳ: Cắt ảnh từ bbox
+                    const processedQs = rawQs.map(q => {
+                        let imgData = null;
+                        if (q.bbox && Array.isArray(q.bbox) && q.bbox.length === 4) {
+                            imgData = cropImageFromCanvas(canvas, q.bbox);
+                        }
+                        return { ...q, image: imgData };
+                    });
+                    
+                    return { page: pageNumber, questions: processedQs, error: null };
+                } catch (e) {
+                    console.warn(`Lỗi trang ${pageNumber}:`, e);
+                    return { page: pageNumber, questions: [], error: e.message };
+                }
+            };
+
             const handleClientParse = async () => {
                 if (!apiKeys.length) return alert("Chưa nạp API Key!");
                 const file = fileRef.current.files[0];
@@ -388,39 +431,48 @@
                 try {
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
-                    let allQs = [];
+                    
+                    // --- XỬ LÝ ĐA LUỒNG (BATCH PROCESSING) ---
+                    // Chia nhỏ các trang thành các nhóm (Batch) để tránh rate limit của API
+                    const BATCH_SIZE = 3; // Xử lý 3 trang cùng lúc
+                    let allResults = [];
+                    const totalPages = pdf.numPages;
 
-                    for(let i=1; i<=pdf.numPages; i++) {
-                        setProgress(`Đang AI phân tích & cắt hình trang ${i}/${pdf.numPages}...`);
-                        
-                        // Render PDF với độ phân giải cao để cắt ảnh đẹp
-                        const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({scale: 2.0});
-                        const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width; canvas.height = viewport.height;
-                        await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-                        
-                        const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        const key = apiKeys[i % apiKeys.length];
-                        
-                        try {
-                            const rawQs = await callGeminiVision(base64, key, i);
-                            
-                            // Xử lý hậu kỳ: Cắt ảnh từ bbox
-                            const processedQs = rawQs.map(q => {
-                                let imgData = null;
-                                if (q.bbox && Array.isArray(q.bbox) && q.bbox.length === 4) {
-                                    imgData = cropImageFromCanvas(canvas, q.bbox);
-                                }
-                                return { ...q, image: imgData };
-                            });
+                    const pageNumbers = [];
+                    for(let i=1; i<=totalPages; i++) pageNumbers.push(i);
 
-                            allQs = [...allQs, ...processedQs];
-                        } catch(e) { console.warn(`Lỗi trang ${i}:`, e); }
+                    for (let i = 0; i < pageNumbers.length; i += BATCH_SIZE) {
+                        const batch = pageNumbers.slice(i, i + BATCH_SIZE);
+                        const batchStart = batch[0];
+                        const batchEnd = batch[batch.length - 1];
+                        
+                        setProgress(`Đang xử lý trang ${batchStart} - ${batchEnd} / ${totalPages}...`);
+                        
+                        // Gửi request song song cho batch này
+                        const batchPromises = batch.map(pageNum => processPage(pageNum, pdf, apiKeys));
+                        const batchResults = await Promise.all(batchPromises);
+                        
+                        allResults = [...allResults, ...batchResults];
                     }
 
-                    if(allQs.length === 0) throw new Error("Không tìm thấy câu hỏi nào! Hãy thử file khác.");
-                    setParsedQuestions(allQs);
+                    // Sắp xếp lại kết quả theo đúng thứ tự trang (mặc dù batch tuần tự nhưng an toàn hơn)
+                    allResults.sort((a, b) => a.page - b.page);
+
+                    // Gộp tất cả câu hỏi
+                    let finalQuestions = [];
+                    let errorCount = 0;
+                    allResults.forEach(res => {
+                        if (res.error) errorCount++;
+                        if (res.questions && res.questions.length > 0) {
+                            finalQuestions = [...finalQuestions, ...res.questions];
+                        }
+                    });
+
+                    if(finalQuestions.length === 0) {
+                        throw new Error(`Không tìm thấy câu hỏi nào! (Lỗi ${errorCount}/${totalPages} trang).`);
+                    }
+                    
+                    setParsedQuestions(finalQuestions);
                     setStep("review");
 
                 } catch (e) {
@@ -477,7 +529,7 @@
                     <div className="flex gap-4">
                         {initialData && <button onClick={()=>setStep("review")} className="flex-1 bg-gray-500 text-white py-3 rounded font-bold">Giữ nguyên câu hỏi cũ</button>}
                         <button onClick={handleClientParse} disabled={loading || !apiKeys.length} className="flex-1 bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700 disabled:opacity-50">
-                            {loading ? "Đang xử lý..." : "PHÂN TÍCH & CẮT HÌNH TỰ ĐỘNG"}
+                            {loading ? "Đang xử lý..." : "PHÂN TÍCH & CẮT HÌNH TỰ ĐỘNG (Đa luồng)"}
                         </button>
                     </div>
                     {!apiKeys.length && <p className="text-red-500 text-xs mt-2 text-center">⚠️ Bạn cần nạp API Key ở trang chủ trước khi dùng.</p>}
