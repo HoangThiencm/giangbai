@@ -313,15 +313,16 @@
             };
 
             const callGeminiVision = async (base64Img, key, pageIndex) => {
-                // Prompt nâng cấp để nhận diện đáp án gạch chân/tô đỏ
                 const prompt = `
                 Bạn là hệ thống OCR chuyên nghiệp. Ảnh đầu vào là nội dung của 2 trang liên tiếp.
                 Nhiệm vụ: Trích xuất dữ liệu câu hỏi từ 2 trang này dưới dạng JSON THUẦN TÚY.
                 
-                QUY TẮC NHẬN DIỆN ĐÁP ÁN ĐÚNG (ƯU TIÊN THỊ GIÁC):
-                - Hãy quan sát kỹ: Có đáp án nào được TÔ ĐỎ, GẠCH CHÂN, KHOANH TRÒN, hoặc có dấu tích (✓, x) bên cạnh không?
-                - Nếu có, hãy trả về 'correct_index' tương ứng (0=A, 1=B, 2=C, 3=D).
-                - Nếu không có dấu hiệu, trả về -1.
+                QUY TẮC NHẬN DIỆN ĐÁP ÁN ĐÚNG (CỰC KỲ QUAN TRỌNG):
+                - Quan sát màu sắc và định dạng văn bản:
+                  1. MÀU ĐỎ: Nếu một đáp án (hoặc ký tự A,B,C,D) có màu đỏ hoặc khác biệt màu sắc so với văn bản xung quanh -> Đó là đáp án đúng.
+                  2. GẠCH CHÂN: Nếu đáp án có đường gạch chân -> Đó là đáp án đúng.
+                  3. KHOANH TRÒN/DẤU TÍCH: Nếu có dấu khoanh tròn hoặc dấu tích -> Đó là đáp án đúng.
+                - Trả về 'correct_index' (0-3). Nếu không chắc chắn, để -1.
                 
                 QUY TẮC CỐT LÕI KHÁC:
                 1. GHÉP NỐI: Nếu câu hỏi vắt từ trang trên xuống trang dưới, hãy tự động ghép thành 1 câu.
@@ -349,18 +350,52 @@
                 if(data.error) throw new Error(data.error.message);
                 
                 let text = data.candidates[0].content.parts[0].text;
-                const matches = text.match(/\[[\s\S]*\]/);
-                if (matches && matches.length > 0) text = matches[0]; 
-                else {
-                    const start = text.indexOf('['); const end = text.lastIndexOf(']');
-                    if (start !== -1 && end !== -1) text = text.substring(start, end + 1);
+                console.log("Raw AI response:", text);
+
+                // --- FIX: TÌM TẤT CẢ KHỐI JSON VÀ LẤY KHỐI DÀI NHẤT ---
+                const jsonRegex = /\[[\s\S]*?\]/g;
+                const matches = text.match(jsonRegex);
+                let bestData = null;
+                let maxLen = 0;
+
+                if (matches) {
+                    for (const m of matches) {
+                        try {
+                            const parsed = JSON.parse(m);
+                            if (Array.isArray(parsed) && parsed.length > maxLen) {
+                                bestData = parsed;
+                                maxLen = parsed.length;
+                            }
+                        } catch (e) {}
+                    }
                 }
-                return JSON.parse(text);
+
+                // Fallback nếu không tìm thấy mảng JSON hợp lệ
+                if (!bestData) {
+                     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                     const start = cleanText.indexOf('[');
+                     const end = cleanText.lastIndexOf(']');
+                     if (start !== -1 && end !== -1) {
+                         try { bestData = JSON.parse(cleanText.substring(start, end + 1)); } catch(e) {}
+                     }
+                }
+
+                if (!bestData || bestData.length === 0) {
+                    // Nếu vẫn rỗng, có thể AI trả về object đơn lẻ thay vì mảng?
+                    // Thử check object
+                    if (text.trim().startsWith('{')) {
+                         try { const obj = JSON.parse(text); bestData = [obj]; } catch(e) {}
+                    }
+                }
+
+                if (!bestData) throw new Error("Không tìm thấy dữ liệu câu hỏi hợp lệ từ AI.");
+                return bestData;
             };
 
-            // === HELPER: Ghép trang & Render ===
+            // === HELPER: Ghép trang & Render (GIẢM SCALE XUỐNG 1.5) ===
             const renderPageToCanvas = async (page) => {
-                const viewport = page.getViewport({scale: 2.0});
+                // GIẢM SCALE TỪ 2.0 -> 1.5 ĐỂ TRÁNH ẢNH QUÁ LỚN KHI GHÉP
+                const viewport = page.getViewport({scale: 1.5});
                 const canvas = document.createElement('canvas');
                 canvas.width = viewport.width; canvas.height = viewport.height;
                 await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
