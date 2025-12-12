@@ -32,24 +32,30 @@
         <!-- HƯỚNG DẪN (ACCORDION) -->
         <div class="border-b border-gray-100">
             <button type="button" onclick="toggleGuide()" class="w-full p-4 flex justify-between items-center bg-yellow-50 text-yellow-800 font-bold hover:bg-yellow-100 transition">
-                <span><i class="fas fa-book mr-2"></i> Hướng dẫn soạn thảo (Bắt buộc đọc)</span>
+                <span><i class="fas fa-book mr-2"></i> Hướng dẫn soạn thảo (Quan trọng)</span>
                 <i id="guideIcon" class="fas fa-chevron-down transition-transform"></i>
             </button>
-            <div id="guideContent" class="accordion-content bg-yellow-50 px-6 pb-6 text-sm text-gray-700">
-                <ul class="list-disc pl-5 space-y-2 mt-2">
-                    <li><b>Câu hỏi:</b> Bắt buộc bắt đầu bằng chữ <code>"Câu"</code> hoặc <code>"Question"</code> (Ví dụ: <i>Câu 1:, Câu 2., Question 1</i>).</li>
-                    <li><b>Đáp án:</b> Bắt đầu bằng <code>A.</code>, <code>B.</code>, <code>C.</code>, <code>D.</code>. Nếu cần cố định đáp án, thêm dấu <code>#</code> phía trước (VD: <i>#A. Tất cả đều đúng</i>).</li>
-                    <li><b>Đáp án đúng:</b> Phải được <span class="text-red-600 font-bold">TÔ ĐỎ</span> (Font color = Red) hoặc gạch chân.</li>
-                    <li><b>Hình ảnh:</b> Cần để chế độ <i>Inline With Text</i> để không bị nhảy lung tung khi trộn.</li>
-                    <li><b>Nhóm câu hỏi (Tùy chọn):</b> Thêm các thẻ sau vào dòng trên của nhóm:
-                        <ul class="list-none pl-4 mt-1 font-mono text-xs text-indigo-700">
-                            <li>&lt;g0&gt;: Không trộn (Dùng cho bài đọc hiểu tiếng Anh)</li>
-                            <li>&lt;g1&gt;: Chỉ hoán vị thứ tự câu hỏi</li>
-                            <li>&lt;g2&gt;: Chỉ hoán vị các đáp án</li>
-                            <li>&lt;g3&gt;: Hoán vị cả câu hỏi và đáp án (Mặc định)</li>
-                        </ul>
-                    </li>
-                </ul>
+            <div id="guideContent" class="accordion-content bg-yellow-50 px-6 pb-6 text-sm text-gray-700 leading-relaxed">
+                <div class="border-b border-yellow-200 pb-3 mb-3">
+                    <p class="font-bold text-indigo-700 mb-1">1. Quy tắc cơ bản:</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><b>Câu hỏi:</b> Bắt đầu bằng <code>"Câu"</code> hoặc <code>"Question"</code> (VD: <i>Câu 1:, Câu 2.</i>).</li>
+                        <li><b>Đáp án:</b> Bắt đầu bằng <code>A.</code>, <code>B.</code>, <code>C.</code>, <code>D.</code>.</li>
+                        <li><b>Đáp án đúng:</b> Phải được <span class="text-red-600 font-bold">TÔ ĐỎ</span> (Font color = Red) hoặc gạch chân.</li>
+                        <li><b>Cố định đáp án:</b> Thêm dấu <code>#</code> trước đáp án (VD: <i>#A. Cả A và B đều đúng</i>) để giữ vị trí cuối cùng.</li>
+                        <li><b>Hình ảnh:</b> Nên để chế độ <i>Inline With Text</i>.</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-bold text-indigo-700 mb-1">2. Chia nhóm & Chế độ trộn (Nâng cao):</p>
+                    <p class="mb-2">Thêm các thẻ sau vào dòng trên cùng của một nhóm câu hỏi:</p>
+                    <ul class="list-none space-y-2 font-mono text-xs bg-white p-3 rounded border border-yellow-200">
+                        <li><span class="font-bold text-red-600">&lt;g0&gt;</span> : Không trộn (Giữ nguyên thứ tự câu & đáp án. VD: Bài đọc hiểu)</li>
+                        <li><span class="font-bold text-blue-600">&lt;g1&gt;</span> : Chỉ hoán vị thứ tự CÂU HỎI (Đáp án giữ nguyên)</li>
+                        <li><span class="font-bold text-green-600">&lt;g2&gt;</span> : Chỉ hoán vị các ĐÁP ÁN (Thứ tự câu giữ nguyên)</li>
+                        <li><span class="font-bold text-purple-600">&lt;g3&gt;</span> : Hoán vị cả CÂU HỎI và ĐÁP ÁN (Mặc định)</li>
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -84,7 +90,7 @@
                     <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between cursor-pointer" onclick="document.getElementById('shuffleOptions').click()">
                         <div>
                             <label class="font-bold text-gray-700 block cursor-pointer">Đảo cả đáp án</label>
-                            <span class="text-xs text-gray-500">Xáo trộn A, B, C, D trong từng câu</span>
+                            <span class="text-xs text-gray-500">(Áp dụng nếu không dùng thẻ &lt;g&gt;)</span>
                         </div>
                         <input type="checkbox" id="shuffleOptions" name="shuffle_options" class="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
                     </div>
@@ -122,7 +128,7 @@
         });
 
         function resetFile(e) {
-            e.stopPropagation(); // Ngăn click lan ra ngoài dropZone
+            e.stopPropagation(); 
             e.preventDefault();
             fileInput.value = "";
             uploadPlaceholder.classList.remove('hidden');
