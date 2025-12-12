@@ -58,11 +58,9 @@
             useEffect(() => {
                 if (!text || !ref.current) return;
                 let processed = normalizeText(text);
-                // Xóa wrapper LaTeX văn bản nhưng giữ nội dung
                 for(let i=0; i<3; i++) {
                      processed = processed.replace(/\\(textbf|textit|text|underline|emph|uppercase|lowercase)\{([^}]*)\}/g, '$2');
                 }
-                // Chuẩn hóa toán học (không unescape {})
                 processed = processed
                     .replace(/\\\\/g, '\\') 
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
@@ -287,7 +285,6 @@
                 }
             }, [initialData]);
 
-            // === HÀM CẮT ẢNH & AUTO RESIZE ===
             const cropImageFromCanvas = (canvas, bbox) => {
                 if (!bbox || bbox.length !== 4) return null;
                 const [ymin, xmin, ymax, xmax] = bbox;
@@ -312,90 +309,78 @@
                 return tempCanvas.toDataURL('image/jpeg', 0.85);
             };
 
-            const callGeminiVision = async (base64Img, key, pageIndex) => {
+            const callGeminiVision = async (img1, img2, key, pageLabel) => {
                 const prompt = `
-                Bạn là hệ thống OCR chuyên nghiệp. Ảnh đầu vào là nội dung của 2 trang liên tiếp.
-                Nhiệm vụ: Trích xuất dữ liệu câu hỏi từ 2 trang này dưới dạng JSON THUẦN TÚY.
-                
-                QUY TẮC NHẬN DIỆN ĐÁP ÁN ĐÚNG (CỰC KỲ QUAN TRỌNG):
-                - Quan sát màu sắc và định dạng văn bản:
-                  1. MÀU ĐỎ: Nếu một đáp án (hoặc ký tự A,B,C,D) có màu đỏ hoặc khác biệt màu sắc so với văn bản xung quanh -> Đó là đáp án đúng.
-                  2. GẠCH CHÂN: Nếu đáp án có đường gạch chân -> Đó là đáp án đúng.
-                  3. KHOANH TRÒN/DẤU TÍCH: Nếu có dấu khoanh tròn hoặc dấu tích -> Đó là đáp án đúng.
-                - Trả về 'correct_index' (0-3). Nếu không chắc chắn, để -1.
-                
-                QUY TẮC CỐT LÕI KHÁC:
-                1. GHÉP NỐI: Nếu câu hỏi vắt từ trang trên xuống trang dưới, hãy tự động ghép thành 1 câu.
-                2. LẤY HẾT: Trích xuất tất cả câu hỏi, kể cả câu không có số hiệu.
-                3. ĐÁP ÁN NGANG: Tách riêng các đáp án (A. ... B. ...) thành mảng 'options'.
-                4. TOÁN HỌC: Dùng LaTeX $...$. KHÔNG dùng LaTeX cho văn bản thường (như \\textbf).
-                
-                OUTPUT JSON FORMAT:
+                Bạn là OCR chuyên đọc đề thi. Đây là HAI TRANG LIÊN TIẾP của đề thi.
+
+                QUY TẮC:
+                - Hãy xem ảnh 1 & ảnh 2 như LIỀN NHAU THEO THỨ TỰ.
+                - Nếu câu hỏi nằm ở trang 1 và đáp án nằm trang 2 -> GHÉP thành 1 câu.
+                - Nếu phần còn lại của câu hỏi nằm trang 2 -> GHÉP tiếp vào câu trước.
+                - NHẬN DIỆN ĐÁP ÁN ĐÚNG:
+                    + tô đỏ
+                    + gạch chân
+                    + khoanh tròn
+                    + dấu ✓ hoặc dấu ×
+                - Trích xuất JSON THUẦN như sau:
                 [
                   {
-                    "question": "Nội dung câu hỏi đầy đủ...",
-                    "options": ["A. Nội dung...", "B. Nội dung...", "C. ...", "D. ..."],
-                    "correct_index": 0, // Ví dụ: 0 nếu A đỏ/gạch chân
-                    "bbox": [ymin, xmin, ymax, xmax] (tỉ lệ 0-1 so với toàn bộ ảnh ghép, ví dụ [0.1, 0.2, 0.5, 0.8], null nếu không có hình)
+                    "question": "...",
+                    "options": ["A ...", "B ...", "C ...", "D ..."],
+                    "correct_index": -1,
+                    "bbox": null
                   }
                 ]
+                KHÔNG GIẢI THÍCH.
                 `;
-                
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${key}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64Img}}]}] })
-                });
-                
+
+                // Xây dựng parts cho payload (gửi 2 ảnh riêng biệt)
+                const parts = [
+                    { text: prompt },
+                    { inline_data: { mime_type: "image/jpeg", data: img1 } }
+                ];
+                if (img2) {
+                    parts.push({ inline_data: { mime_type: "image/jpeg", data: img2 } });
+                }
+
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${key}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ contents: [{ parts: parts }] })
+                    }
+                );
+
                 const data = await res.json();
-                if(data.error) throw new Error(data.error.message);
+                if (data.error) throw new Error(data.error.message);
+
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
                 
-                let text = data.candidates[0].content.parts[0].text;
-                console.log("Raw AI response:", text);
+                // Tìm kiếm tất cả các khối JSON và lấy khối lớn nhất
+                const matches = text.match(/\[[\s\S]*?\]/g);
+                if (!matches) throw new Error("Không tìm thấy JSON trong phản hồi AI.");
 
-                // --- FIX: TÌM TẤT CẢ KHỐI JSON VÀ LẤY KHỐI DÀI NHẤT ---
-                const jsonRegex = /\[[\s\S]*?\]/g;
-                const matches = text.match(jsonRegex);
-                let bestData = null;
-                let maxLen = 0;
+                let best = null;
+                let max = 0;
 
-                if (matches) {
-                    for (const m of matches) {
-                        try {
-                            const parsed = JSON.parse(m);
-                            if (Array.isArray(parsed) && parsed.length > maxLen) {
-                                bestData = parsed;
-                                maxLen = parsed.length;
-                            }
-                        } catch (e) {}
-                    }
+                for (const block of matches) {
+                    try {
+                        const arr = JSON.parse(block);
+                        if (Array.isArray(arr) && arr.length >= max) {
+                            best = arr;
+                            max = arr.length;
+                        }
+                    } catch (e) {}
                 }
 
-                // Fallback nếu không tìm thấy mảng JSON hợp lệ
-                if (!bestData) {
-                     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                     const start = cleanText.indexOf('[');
-                     const end = cleanText.lastIndexOf(']');
-                     if (start !== -1 && end !== -1) {
-                         try { bestData = JSON.parse(cleanText.substring(start, end + 1)); } catch(e) {}
-                     }
-                }
+                if (!best) throw new Error("Không parse được JSON.");
 
-                if (!bestData || bestData.length === 0) {
-                    // Nếu vẫn rỗng, có thể AI trả về object đơn lẻ thay vì mảng?
-                    // Thử check object
-                    if (text.trim().startsWith('{')) {
-                         try { const obj = JSON.parse(text); bestData = [obj]; } catch(e) {}
-                    }
-                }
-
-                if (!bestData) throw new Error("Không tìm thấy dữ liệu câu hỏi hợp lệ từ AI.");
-                return bestData;
+                return best;
             };
 
-            // === HELPER: Ghép trang & Render (GIẢM SCALE XUỐNG 1.5) ===
             const renderPageToCanvas = async (page) => {
-                // GIẢM SCALE TỪ 2.0 -> 1.5 ĐỂ TRÁNH ẢNH QUÁ LỚN KHI GHÉP
-                const viewport = page.getViewport({scale: 1.5});
+                const viewport = page.getViewport({scale: 1.5}); // Scale 1.5 để cân bằng chất lượng/dung lượng
                 const canvas = document.createElement('canvas');
                 canvas.width = viewport.width; canvas.height = viewport.height;
                 await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
@@ -417,20 +402,26 @@
                 try {
                     const page1 = await pdf.getPage(pageNum1);
                     const canvas1 = await renderPageToCanvas(page1);
+                    const base64_1 = canvas1.toDataURL('image/jpeg', 0.8).split(',')[1];
+                    
+                    let base64_2 = null;
                     let canvas2 = null;
                     if (pageNum2) {
                         const page2 = await pdf.getPage(pageNum2);
                         canvas2 = await renderPageToCanvas(page2);
+                        base64_2 = canvas2.toDataURL('image/jpeg', 0.8).split(',')[1];
                     }
                     
-                    const mergedCanvas = mergeCanvases(canvas1, canvas2);
-                    const base64 = mergedCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                    const key = apiKeys[(pageNum1 - 1) % apiKeys.length];
                     const label = pageNum2 ? `${pageNum1} & ${pageNum2}` : `${pageNum1}`;
+                    const rawQs = await callGeminiVision(base64_1, base64_2, apiKeys[(pageNum1 - 1) % apiKeys.length], label);
                     
-                    const rawQs = await callGeminiVision(base64, key, label);
+                    // Lưu ý: Khi gửi 2 ảnh riêng, bbox trả về có thể không map chính xác lên mergedCanvas
+                    // Nhưng ta vẫn giữ mergedCanvas để crop nếu AI trả về bbox hợp lý (hoặc null)
+                    const mergedCanvas = mergeCanvases(canvas1, canvas2);
+                    
                     const processedQs = rawQs.map(q => {
                         let imgData = null;
+                        // Chỉ crop nếu bbox tồn tại và hợp lệ (tạm thời chấp nhận rủi ro bbox lệch nếu AI trả về)
                         if (q.bbox && Array.isArray(q.bbox) && q.bbox.length === 4) {
                             imgData = cropImageFromCanvas(mergedCanvas, q.bbox);
                         }
