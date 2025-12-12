@@ -47,16 +47,57 @@
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
         const cleanQuestionText = (text) => { if (!text) return ""; return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); };
 
-        // === COMPONENT HIỂN THỊ CÔNG THỨC ===
+        // === COMPONENT HIỂN THỊ CÔNG THỨC (ĐÃ SỬA LỖI LATEX) ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = normalizeText(text).replace(/\\([{}])/g, '$1').replace(/\\\((.*?)\\\)/gs, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/`([^`]+)`/g, '$$$1$$');
-                const parts = processed.split(/(\$[^$]+\$)/g); ref.current.innerHTML = "";
-                parts.forEach(part => { if (!part) return; if (part.startsWith("$") && part.endsWith("$")) { const span = document.createElement("span"); try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; } ref.current.appendChild(span); } else { ref.current.appendChild(document.createTextNode(part)); } });
+                
+                let processed = normalizeText(text);
+
+                // 1. Chuyển đổi các định dạng delimiter khác về $...$
+                processed = processed
+                    .replace(/\\\((.*?)\\\)/gs, '$$$1$$') // \(...\) -> $...$
+                    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') // \[...\] -> $...$
+                    .replace(/`([^`]+)`/g, '$$$1$$');     // `...` -> $...$
+
+                // 2. [QUAN TRỌNG] Tự động phát hiện và bọc công thức toán nếu thiếu dấu $
+                // Kiểm tra xem chuỗi có chứa lệnh LaTeX (\frac, \in...) hoặc ký hiệu toán (=, >, <) không
+                const hasLatexCmd = /\\[a-zA-Z]+/.test(processed); 
+                const hasMathOps = /[=><+\-≈≠≤≥±×÷∈∉⊂⊃∪∩∅∀∃∫∑√∞]/.test(processed);
+                const hasDollar = processed.includes('$');
+
+                // Nếu có yếu tố toán học mà KHÔNG có dấu $, và độ dài hợp lý, thì tự động bọc lại
+                if (!hasDollar && (hasLatexCmd || (hasMathOps && processed.length < 300))) {
+                    processed = `$${processed}$`;
+                }
+
+                // 3. Render
+                const parts = processed.split(/(\$[^$]+\$)/g); 
+                ref.current.innerHTML = "";
+                
+                parts.forEach(part => { 
+                    if (!part) return; 
+                    if (part.startsWith("$") && part.endsWith("$")) { 
+                        const span = document.createElement("span"); 
+                        try { 
+                            // Lấy nội dung bên trong $...$
+                            const mathContent = part.slice(1, -1);
+                            katex.render(mathContent, span, { 
+                                throwOnError: false, 
+                                displayMode: false,
+                                output: 'html' 
+                            }); 
+                        } catch (e) { 
+                            span.textContent = part; 
+                        } 
+                        ref.current.appendChild(span); 
+                    } else { 
+                        ref.current.appendChild(document.createTextNode(part)); 
+                    } 
+                });
             }, [text]);
-            return <span ref={ref} className="math-content text-xl leading-relaxed inline-block" />;
+            return <span ref={ref} className="math-content text-xl leading-relaxed inline-block mx-1" />;
         };
 
         const QRModal = ({ link, onClose }) => {
