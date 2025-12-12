@@ -65,6 +65,68 @@
             return <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để vào thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Đóng</button></div></div>;
         };
 
+        // === COMPONENT MODAL NẠP ĐÁP ÁN (NEW) ===
+        const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
+            if (!isOpen) return null;
+            const [text, setText] = useState("");
+            const [status, setStatus] = useState("");
+            
+            const handlePaste = async (e) => {
+                const items = e.clipboardData.items;
+                for (let item of items) {
+                    if (item.type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        if (!apiKeys || apiKeys.length === 0) return alert("Cần có API Key để đọc ảnh!");
+                        await processImage(item.getAsFile());
+                        return;
+                    }
+                }
+            };
+
+            const processImage = async (blob) => {
+                setStatus("🤖 AI đang quét ảnh tìm đáp án...");
+                try {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = async () => {
+                        const base64 = reader.result.split(',')[1];
+                        const prompt = `Bạn là trợ lý chấm thi. Nhìn vào ảnh và trích xuất đáp án đúng (Ưu tiên: Bảng kẻ ô, Tô đỏ, Gạch chân). Chỉ trả về chuỗi: 1A 2B 3C...`;
+                        const currentKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`, {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ contents: [{parts: [{text: prompt}, {inline_data: {mime_type: "image/jpeg", data: base64}}]}] })
+                        });
+                        const data = await res.json();
+                        if (data.candidates) {
+                            const result = data.candidates[0].content.parts[0].text;
+                            setText(prev => prev + (prev ? "\n" : "") + result.trim());
+                            setStatus("✅ Đã nhận diện xong!");
+                        } else setStatus("⚠️ Không tìm thấy đáp án.");
+                    };
+                } catch (e) { setStatus("❌ Lỗi AI: " + e.message); }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-indigo-800"><i className="fas fa-magic mr-2"></i> Nạp Đáp Án Nhanh</h3>
+                            <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
+                        </div>
+                        <div className="bg-indigo-50 p-3 rounded text-sm text-indigo-800 mb-3">
+                            <b>Cách dùng:</b> Chụp ảnh bảng đáp án rồi bấm <b>Ctrl + V</b> vào ô dưới. Hoặc nhập tay "1A 2B 3C..."
+                        </div>
+                        {status && <div className="mb-2 text-sm font-bold text-green-600 animate-pulse">{status}</div>}
+                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border p-3 rounded font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Dán ảnh (Ctrl+V) hoặc nhập: 1.A 2.B..."></textarea>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
+                            <button onClick={() => { onApply(text); onClose(); }} className="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow">Cập Nhật</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // === COMPONENT CÂU HỎI (HỖ TRỢ ẢNH) ===
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
@@ -184,11 +246,35 @@
             };
             const handleCorrectChange = (qIdx, optIdx) => { const newQs = [...questions]; newQs[qIdx].correct_index = optIdx; onUpdateQuestions(newQs); };
 
+            // === HÀM XỬ LÝ NẠP ĐÁP ÁN TỪ MODAL ===
+            const handleApplyAnswers = (text) => {
+                const raw = text.toUpperCase().replace(/[^0-9A-D]/g, ' ');
+                const regex = /(\d+)\s*([A-D])/g;
+                let match, newMap = {};
+                while ((match = regex.exec(raw)) !== null) {
+                    newMap[parseInt(match[1]) - 1] = match[2].charCodeAt(0) - 65; // Question index is 0-based
+                }
+                
+                let count = 0;
+                const newQs = questions.map((q, i) => {
+                    if (newMap[i] !== undefined) {
+                        count++;
+                        return { ...q, correct_index: newMap[i] };
+                    }
+                    return q;
+                });
+                onUpdateQuestions(newQs);
+                alert(`Đã cập nhật đáp án cho ${count} câu thành công!`);
+            };
+
             return (
                 <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+                    <AnswerModal isOpen={showAnsModal} onClose={()=>setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
+
                     <div className="bg-white p-4 shadow-md z-20 border-b border-indigo-200 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-3"><button onClick={onBack} className="text-gray-500 hover:text-gray-800"><i className="fas fa-arrow-left text-xl"></i></button><h2 className="text-2xl font-bold text-indigo-800">Duyệt & Chỉnh Sửa Đề</h2><span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">{questions.length} câu</span></div>
                         <div className="flex gap-2">
+                             <button onClick={()=>setShowAnsModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-orange-600"><i className="fas fa-magic"></i> Nạp Đáp Án (AI)</button>
                             {fileUrl && <button onClick={() => setShowComparison(!showComparison)} className={`px-4 py-2 rounded font-bold shadow-sm flex items-center gap-2 border ${showComparison ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border-blue-200'}`}><i className={`fas ${showComparison ? 'fa-columns' : 'fa-eye'}`}></i> {showComparison ? "Tắt Đối chiếu" : "Đối chiếu"}</button>}
                             <button onClick={onSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-save"></i> LƯU & TỔ CHỨC THI</button>
                         </div>
