@@ -293,6 +293,7 @@
             const [loading, setLoading] = useState(false);
             const [progress, setProgress] = useState("");
             const [apiKeys, setApiKeys] = useState([]);
+            const [fileName, setFileName] = useState(""); // Thêm state lưu tên file
             const fileRef = useRef();
 
             useEffect(() => { 
@@ -366,7 +367,13 @@
                 const data = await res.json();
                 if(data.error) throw new Error(data.error.message);
                 
-                const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                let text = data.candidates[0].content.parts[0].text;
+                // Cải thiện trích xuất JSON
+                const start = text.indexOf('[');
+                const end = text.lastIndexOf(']');
+                if (start !== -1 && end !== -1) {
+                    text = text.substring(start, end + 1);
+                }
                 return JSON.parse(text);
             };
 
@@ -450,8 +457,13 @@
                     </div>
                     
                     <div className="mb-6 border-2 border-dashed border-indigo-200 p-6 text-center rounded hover:bg-indigo-50 cursor-pointer transition" onClick={()=>fileRef.current.click()}>
-                        <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={(e)=>{if(e.target.files.length) alert("Đã chọn file. Bấm nút dưới để bắt đầu.")}}/>
-                        <i className="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i><p>Chọn file PDF đề thi</p>
+                        <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={(e)=>{
+                            if(e.target.files.length) {
+                                setFileName(e.target.files[0].name);
+                            }
+                        }}/>
+                        <i className="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i>
+                        <p className="font-bold text-gray-600">{fileName || "Chọn file PDF đề thi"}</p>
                     </div>
 
                     {loading && (
