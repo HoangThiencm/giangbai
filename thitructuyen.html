@@ -44,7 +44,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
-        // Ưu tiên lấy từ localStorage nếu có, nếu không thì dùng gemini-2.5-flash
         const MODEL_NAME = localStorage.getItem('global_gemini_model') || "gemini-2.5-flash"; 
         const userEmail = localStorage.getItem('userEmail');
         
@@ -53,43 +52,28 @@
         const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
         const cleanQuestionText = (text) => { if (!text) return ""; return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); };
 
-        // === COMPONENT HIỂN THỊ CÔNG THỨC (CẬP NHẬT: XỬ LÝ LATEX TỔNG QUÁT) ===
+        // === COMPONENT HIỂN THỊ CÔNG THỨC (CẬP NHẬT: FIX LỖI LATEX) ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 
-                // --- XỬ LÝ TEXT TRƯỚC KHI RENDER ---
-                // 1. Loại bỏ TỔNG QUÁT các lệnh LaTeX văn bản dạng \command{content}
-                // Regex tìm kiếm: \[tên lệnh]{nội dung}
+                // 1. Loại bỏ các lệnh LaTeX định dạng văn bản để tránh lỗi hiển thị
                 let processed = normalizeText(text);
-                
-                // Lặp để xử lý trường hợp lồng nhau đơn giản hoặc nhiều lệnh trên 1 dòng
-                // Ví dụ: \textbf{Không \textit{đúng}} -> Không \textit{đúng} -> Không đúng
-                // Loại bỏ lệnh LaTeX nhưng giữ nội dung bên trong {}
-                // Regex giải thích: 
-                // \\([a-zA-Z]+) : Tìm dấu \ theo sau là chữ cái (tên lệnh)
-                // \{ : Dấu mở ngoặc nhọn
-                // ([^}]*) : Nội dung bên trong (không chứa dấu đóng ngoặc nhọn - hạn chế nesting sâu nhưng an toàn cho regex đơn giản)
-                // \} : Dấu đóng ngoặc nhọn
-                
-                // Cách tiếp cận an toàn hơn: Chỉ xóa command wrapper cho text thường
-                // Chúng ta chạy replace nhiều lần để đảm bảo sạch
+                // Xóa wrapper \textbf{}, \textit{}... nhưng giữ nội dung
                 for(let i=0; i<3; i++) {
                      processed = processed.replace(/\\(textbf|textit|text|underline|emph|uppercase|lowercase)\{([^}]*)\}/g, '$2');
                 }
-                
-                // Backup: Nếu vẫn còn sót các lệnh dạng \abc{...} mà không phải toán học đặc biệt
-                // (Cẩn thận không xóa các lệnh toán học như \sqrt, \frac nếu nó lọt ra ngoài dấu $)
 
                 // 2. Chuẩn hóa công thức toán
                 processed = processed
-                    .replace(/\\([{}])/g, '$1') // Unescape \{ \}
+                    // QUAN TRỌNG: KHÔNG ĐƯỢC unescape dấu {} bằng replace(/\\([{}])/g, '$1') vì sẽ làm hỏng công thức
+                    // Chỉ unescape dấu gạch chéo kép nếu cần
+                    .replace(/\\\\/g, '\\') 
                     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
                     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
                     .replace(/`([^`]+)`/g, '$$$1$$');
                 
-                // Đảm bảo $ không bị lồng
                 const parts = processed.split(/(\$[^$]+\$)/g); 
                 ref.current.innerHTML = "";
                 
@@ -98,12 +82,10 @@
                     if (part.startsWith("$") && part.endsWith("$")) {
                         const span = document.createElement("span");
                         try { 
-                            // Render công thức toán bằng KaTeX
                             katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); 
                         } catch { span.textContent = part; }
                         ref.current.appendChild(span);
                     } else {
-                        // Xử lý text thường
                         const textNode = document.createElement("span");
                         textNode.innerHTML = part.replace(/\n/g, '<br/>');
                         ref.current.appendChild(textNode);
@@ -119,7 +101,6 @@
             return <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để vào thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Đóng</button></div></div>;
         };
 
-        // === MODAL NẠP ĐÁP ÁN THỦ CÔNG ===
         const AnswerModal = ({ isOpen, onClose, onApply }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
@@ -150,11 +131,9 @@
             );
         };
 
-        // === COMPONENT CÂU HỎI (CẬP NHẬT: THÊM/XÓA LỰA CHỌN) ===
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
             
-            // Hàm xử lý paste ảnh (giữ nguyên)
             const handlePaste = (e) => {
                 const items = e.clipboardData.items;
                 for (let item of items) {
@@ -169,7 +148,7 @@
                 }
             };
 
-            const handleFileSelect = (e) => { /* Giữ nguyên */
+            const handleFileSelect = (e) => {
                 const file = e.target.files[0];
                 if(file) {
                     const reader = new FileReader();
@@ -178,17 +157,14 @@
                 }
             }
 
-            // Xử lý thêm option
             const handleAddOption = () => {
                 const newOptions = [...q.options, ""];
-                onUpdate('options_full', newOptions); // Gửi toàn bộ mảng mới
+                onUpdate('options_full', newOptions);
             };
 
-            // Xử lý xóa option
             const handleDeleteOption = (optIdx) => {
                 const newOptions = q.options.filter((_, i) => i !== optIdx);
                 onUpdate('options_full', newOptions);
-                // Nếu xóa đúng đáp án đang chọn thì reset correct_index
                 if (q.correct_index === optIdx) onOptionChange(-1);
                 else if (q.correct_index > optIdx) onOptionChange(q.correct_index - 1);
             };
@@ -198,11 +174,9 @@
                     <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-400 mb-6 relative animate-pulse-border">
                         <div className="absolute top-4 right-4 z-10"><button onClick={() => setIsEditing(false)} className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-blue-700 shadow flex items-center gap-1"><i className="fas fa-check"></i> Xong</button></div>
                         <div className="mb-3"><span className="font-bold text-blue-700 text-lg">Câu {index + 1} (Đang sửa):</span></div>
-                        
                         <div className="mb-4">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung</label>
                             <textarea className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-200 outline-none font-medium bg-blue-50 text-lg mb-2" value={q.question} onChange={(e) => onUpdate('question', e.target.value)} rows={3} />
-                            
                             <div className="border-2 border-dashed border-gray-300 p-2 rounded bg-gray-50 flex items-center gap-4" onPaste={handlePaste}>
                                 <div className="flex-1 text-sm text-gray-500">
                                     <i className="fas fa-image mr-2"></i> Dán ảnh (Ctrl+V) hoặc:
@@ -214,7 +188,6 @@
                                 </div>}
                             </div>
                         </div>
-
                         <div className="space-y-3">
                             {q.options.map((opt, idx) => (
                                 <div key={idx} className={`flex items-center gap-2 p-2 rounded border ${q.correct_index === idx ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
@@ -256,11 +229,10 @@
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions }) => {
             const [showAnsModal, setShowAnsModal] = useState(false);
             
-            // Cập nhật logic update để hỗ trợ options_full
             const handleQuestionUpdate = (idx, field, value, optIdx = null) => { 
                 const newQs = [...questions]; 
                 if (field === 'options_full') {
-                     newQs[idx].options = value; // Cập nhật toàn bộ mảng options
+                     newQs[idx].options = value; 
                 } else if (field === 'options') {
                      newQs[idx].options[optIdx] = value;
                 } else {
@@ -341,7 +313,7 @@
             const [loading, setLoading] = useState(false);
             const [progress, setProgress] = useState("");
             const [apiKeys, setApiKeys] = useState([]);
-            const [fileName, setFileName] = useState(""); // Thêm state lưu tên file
+            const [fileName, setFileName] = useState("");
             const fileRef = useRef();
 
             useEffect(() => { 
@@ -354,20 +326,21 @@
                 }
             }, [initialData]);
 
-            // --- HÀM CẮT ẢNH TỪ CANVAS ---
+            // === CẬP NHẬT: THUẬT TOÁN CẮT ẢNH AN TOÀN ===
             const cropImageFromCanvas = (canvas, bbox) => {
                 if (!bbox || bbox.length !== 4) return null;
                 const [ymin, xmin, ymax, xmax] = bbox;
-                const ctx = canvas.getContext('2d');
+                
+                // Map toạ độ 0-1 sang pixel
                 const w = canvas.width;
                 const h = canvas.height;
-                
                 const sx = xmin * w;
                 const sy = ymin * h;
                 const sWidth = (xmax - xmin) * w;
                 const sHeight = (ymax - ymin) * h;
 
-                if (sWidth <= 0 || sHeight <= 0) return null;
+                // Kiểm tra biên để tránh lỗi width/height âm hoặc = 0
+                if (sx < 0 || sy < 0 || sWidth <= 0 || sHeight <= 0) return null;
 
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = sWidth;
@@ -379,34 +352,23 @@
             };
 
             const callGeminiVision = async (base64Img, key, pageIndex) => {
-                // Prompt cực kỳ chi tiết để xử lý các vấn đề: thiếu câu hỏi, format lạ
+                // === CẬP NHẬT: PROMPT NGHIÊM NGẶT HƠN VÀ FIX LỖI JSON ===
                 const prompt = `
-                Bạn là một hệ thống OCR chuyên nghiệp dành cho đề thi Việt Nam. Nhiệm vụ của bạn là trích xuất dữ liệu CHÍNH XÁC TUYỆT ĐỐI từ hình ảnh trang ${pageIndex}.
+                Bạn là hệ thống OCR chuyên nghiệp. Trích xuất dữ liệu từ trang ${pageIndex} dưới dạng JSON THUẦN TÚY.
                 
-                QUY TẮC BẤT KHẢ XÂM PHẠM:
-                1. KHÔNG ĐƯỢC BỎ SÓT: Phải trích xuất 100% các câu hỏi xuất hiện trên trang. Dù là câu hỏi tự luận hay trắc nghiệm, dù có số hiệu "Câu x" hay không.
-                2. NGUYÊN VĂN: Không được tóm tắt, viết lại hay sửa đổi nội dung câu hỏi. Giữ nguyên văn.
-                3. ĐÁP ÁN (QUAN TRỌNG):
-                   - Các đáp án thường nằm ngang (A. ... B. ... C. ... D. ...). Bạn PHẢI tách riêng từng đáp án.
-                   - Nếu đáp án không có ký tự A, B, C, D đầu dòng nhưng được trình bày tách biệt, hãy tự gán nhãn cho chúng.
-                   - Nếu chỉ tìm thấy 1 hoặc 2 đáp án, hãy kiểm tra kỹ xem các đáp án khác có nằm cùng dòng không.
-                4. CÔNG THỨC TOÁN:
-                   - Bắt buộc dùng LaTeX $...$ cho công thức toán (ví dụ: $x^2$, $\\frac{a}{b}$).
-                   - KHÔNG dùng LaTeX cho văn bản thường (không dùng \\text{}, \\textit{}, \\textbf{}). Hãy dùng Markdown (*nghiêng*, **đậm**) cho văn bản.
+                QUY TẮC CỐT LÕI:
+                1. TUYỆT ĐỐI KHÔNG thêm lời dẫn như "Đây là kết quả...", "JSON:". Chỉ trả về chuỗi JSON bắt đầu bằng [ và kết thúc bằng ].
+                2. LẤY HẾT: Trích xuất tất cả câu hỏi, không bỏ sót. Nếu câu hỏi không có số hiệu (ví dụ câu tự luận), vẫn phải lấy.
+                3. ĐÁP ÁN NGANG: Phải tách riêng các đáp án (A. ... B. ...) thành các phần tử riêng biệt trong mảng 'options'.
+                4. TOÁN HỌC: Công thức toán PHẢI dùng LaTeX $...$. KHÔNG dùng LaTeX cho văn bản thường (như \\textbf, \\textit - hãy dùng Markdown *nghiêng*, **đậm**).
                 
-                NHIỆM VỤ CỤ THỂ:
-                - Trích xuất nội dung câu hỏi (question).
-                - Trích xuất mảng các lựa chọn (options). Đảm bảo mảng này thường có 4 phần tử. Nếu thấy ít hơn, hãy rà soát kỹ lại ảnh.
-                - Xác định đáp án đúng (correct_index) dựa trên dấu hiệu: gạch chân, khoanh tròn, tô màu, dấu tích. Nếu không có, trả về -1.
-                - Xác định khung hình vẽ minh họa (bbox) nếu có: [ymin, xmin, ymax, xmax] (0-1).
-                
-                OUTPUT JSON STRICT (Mảng các object, không thêm markdown, không thêm lời dẫn):
+                OUTPUT JSON FORMAT:
                 [
                   {
-                    "question": "Câu 1: ...",
-                    "options": ["...", "...", "...", "..."],
+                    "question": "Nội dung câu hỏi đầy đủ...",
+                    "options": ["A. Nội dung...", "B. Nội dung...", "C. ...", "D. ..."],
                     "correct_index": -1,
-                    "bbox": null
+                    "bbox": [ymin, xmin, ymax, xmax] (tỉ lệ 0-1, ví dụ [0.1, 0.2, 0.5, 0.8] cho hình vẽ, null nếu không có hình)
                   }
                 ]
                 `;
@@ -420,18 +382,31 @@
                 if(data.error) throw new Error(data.error.message);
                 
                 let text = data.candidates[0].content.parts[0].text;
-                // Cải thiện trích xuất JSON
-                const start = text.indexOf('[');
-                const end = text.lastIndexOf(']');
-                if (start !== -1 && end !== -1) {
-                    text = text.substring(start, end + 1);
+                
+                // === CẬP NHẬT: TÌM KIẾM JSON ARRAY LỚN NHẤT ===
+                // Sử dụng regex để tìm đoạn [...] nằm ngoài cùng
+                const matches = text.match(/\[[\s\S]*\]/);
+                if (matches && matches.length > 0) {
+                    text = matches[0]; // Lấy đoạn JSON match đầu tiên (thường là cả mảng lớn)
+                } else {
+                     // Fallback cũ nếu regex không bắt được
+                    const start = text.indexOf('[');
+                    const end = text.lastIndexOf(']');
+                    if (start !== -1 && end !== -1) {
+                        text = text.substring(start, end + 1);
+                    }
                 }
-                return JSON.parse(text);
+
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error("Lỗi parse JSON:", text);
+                    throw new Error("AI trả về định dạng sai trên trang " + pageIndex);
+                }
             };
 
             const processPage = async (pageNumber, pdf, apiKeys) => {
                 try {
-                    // Render PDF với độ phân giải cao để cắt ảnh đẹp
                     const page = await pdf.getPage(pageNumber);
                     const viewport = page.getViewport({scale: 2.0});
                     const canvas = document.createElement('canvas');
@@ -439,12 +414,10 @@
                     await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
                     
                     const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                    // Chọn key xoay vòng
                     const key = apiKeys[(pageNumber - 1) % apiKeys.length];
                     
                     const rawQs = await callGeminiVision(base64, key, pageNumber);
                     
-                    // Xử lý hậu kỳ: Cắt ảnh từ bbox
                     const processedQs = rawQs.map(q => {
                         let imgData = null;
                         if (q.bbox && Array.isArray(q.bbox) && q.bbox.length === 4) {
@@ -471,9 +444,7 @@
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     
-                    // --- XỬ LÝ ĐA LUỒNG (BATCH PROCESSING) ---
-                    // Chia nhỏ các trang thành các nhóm (Batch) để tránh rate limit của API
-                    const BATCH_SIZE = 3; // Xử lý 3 trang cùng lúc
+                    const BATCH_SIZE = 3;
                     let allResults = [];
                     const totalPages = pdf.numPages;
 
@@ -487,17 +458,14 @@
                         
                         setProgress(`Đang xử lý trang ${batchStart} - ${batchEnd} / ${totalPages}...`);
                         
-                        // Gửi request song song cho batch này
                         const batchPromises = batch.map(pageNum => processPage(pageNum, pdf, apiKeys));
                         const batchResults = await Promise.all(batchPromises);
                         
                         allResults = [...allResults, ...batchResults];
                     }
 
-                    // Sắp xếp lại kết quả theo đúng thứ tự trang (mặc dù batch tuần tự nhưng an toàn hơn)
                     allResults.sort((a, b) => a.page - b.page);
 
-                    // Gộp tất cả câu hỏi
                     let finalQuestions = [];
                     let errorCount = 0;
                     allResults.forEach(res => {
