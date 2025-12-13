@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
-    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
-    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
-    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
         .segment-card { transition: all 0.2s; border: 1px solid #e5e7eb; }
@@ -32,7 +32,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
-        const API_BASE = "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
+        const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
         const userEmail = localStorage.getItem('userEmail');
         
         // --- COMPONENTS ---
@@ -69,7 +69,7 @@
                     const loadedSegments = initialData.questions.map((q, i) => ({
                         id: `existing_${i}`,
                         raw_text: q.question, // Giả lập raw text từ câu hỏi đã lưu
-                        crop_image: "[https://via.placeholder.com/300x100?text=No+Image+Available](https://via.placeholder.com/300x100?text=No+Image+Available)", 
+                        crop_image: "https://via.placeholder.com/300x100?text=No+Image+Available", 
                         status: 'done',
                         data: { 
                             question: q.question, 
@@ -364,18 +364,6 @@
                             </div>
                         ))}
                     </div>
-                </div>
-            );
-        };
-
-        const ResultDetail = ({ examId, onBack }) => {
-            const [results, setResults] = useState([]);
-            useEffect(() => { axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); }, [examId]);
-            const exportExcel = () => { if(!results.length) return; const ws = XLSX.utils.json_to_sheet(results); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KQ"); XLSX.writeFile(wb, "KetQua.xlsx"); };
-            return (
-                <div className="max-w-6xl mx-auto p-6">
-                    <div className="flex justify-between mb-6"><button onClick={onBack} className="text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700"><i className="fas fa-file-excel mr-2"></i> Xuất Excel</button></div>
-                    <div className="bg-white rounded-xl shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">SBD</th><th className="p-4">Tên</th><th className="p-4">Lớp</th><th className="p-4">Điểm</th><th className="p-4">Nhận xét</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-4">{r.sbd}</td><td className="p-4 font-bold text-indigo-900">{r.student_name}</td><td className="p-4">{r.student_class}</td><td className="p-4 font-bold text-red-600">{r.score}</td><td className="p-4 text-sm text-gray-600 italic">{r.ai_feedback}</td></tr>))}</tbody></table></div>
                 </div>
             );
         };
