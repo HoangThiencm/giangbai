@@ -54,52 +54,32 @@
         const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
         const userEmail = localStorage.getItem('userEmail');
         
-        // --- TEXT UTILS & MATH NORMALIZER ---
+        // --- UTILS ---
         const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
         
-        // --- 🎯 MathNormalizer v2 (MẠNH HƠN) ---
         const normalizeLatex = (text) => {
             if (!text) return "";
             let t = text.trim();
-
-            // RULE 1: Convert \(...\), \[...\] -> $...$
             t = t.replace(/\\\((.*?)\\\)/gs, '$$$1$$');
             t = t.replace(/\\\[(.*?)\\\]/gs, '$$$1$$');
-
-            // RULE 2: Add missing $ for common commands
             const hasCmd = /(\\frac|\\sqrt|\\sum|\\int|[_^])/.test(t);
             const hasSymbol = /[=><+\-≈≠≤≥±×÷∈∉⊂⊃∪∩∅∀∃∫∑√∞]/.test(t);
-            
-            // Chỉ thêm nếu có lệnh LaTeX/Ký hiệu toán mà CHƯA CÓ $ nào
             if ((hasCmd || hasSymbol) && !t.includes('$') && t.length < 300) {
                 t = `$${t}$`;
             }
-
-            // RULE 3: Fix spaces around $ (Tách chữ và công thức)
             t = t.replace(/([a-zA-Z0-9\u00C0-\u1EF9])(\$)/g, '$1 $2');
             t = t.replace(/(\$)([a-zA-Z0-9\u00C0-\u1EF9])/g, '$1 $2');
-
-            // RULE 4: Fix \frac a b -> \frac{a}{b}
             t = t.replace(/\\frac\s+([^\s])\s+([^\s])/g, '\\frac{$1}{$2}');
-
-            // RULE 5: Fix bracket escapes \{ -> { (KaTeX handle { better)
             t = t.replace(/\\\{/g, '{').replace(/\\\}/g, '}');
-
-            // RULE 6: Exponent correction (x^10 -> x^{10})
             t = t.replace(/\^(\d{2,})/g, '^{$1}');
-
-            // RULE 7: Remove noise
             t = t.replace(/`/g, '');
-
             return t;
         };
 
         const cleanOptionText = (text) => {
             if (!text) return "";
-            // Xóa A. B. C. thay bằng khoảng trắng
             let t = text.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ' '); 
-            // Chạy qua bộ chuẩn hóa
             return normalizeLatex(t);
         };
 
@@ -112,8 +92,7 @@
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = normalizeLatex(text); // Apply Normalizer here too
-
+                let processed = normalizeLatex(text); 
                 const parts = processed.split(/(\$[^$]+\$)/g); 
                 ref.current.innerHTML = "";
                 parts.forEach(part => { 
@@ -225,7 +204,6 @@
                 setPageData(prev => ({...prev, [activePage]: {...prev[activePage], questions: newQs}}));
             };
 
-            // NEW: Upload ảnh vào câu hỏi
             const handleImageUpload = (qIdx, e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -246,7 +224,6 @@
                 if (allQuestions.length === 0) return alert("Chưa có câu hỏi nào!");
                 if (!examInfo.title) return alert("Vui lòng nhập tên kỳ thi!");
 
-                // CHECK: Phải có đáp án
                 const missingAns = allQuestions.filter(q => q.correct_index === -1);
                 if(missingAns.length > 0) {
                     return alert(`⚠️ Còn ${missingAns.length} câu chưa chọn đáp án đúng! Vui lòng kiểm tra lại.`);
@@ -323,7 +300,23 @@
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50">
-                                    {currentQuestions.length === 0 && <div className="text-center text-gray-400 mt-10"><i className="fas fa-robot text-4xl mb-3"></i><p>Chưa có dữ liệu. Bấm "Phân Tích Trang".</p></div>}
+                                    {currentQuestions.length === 0 && (
+                                        <div className="text-center text-gray-400 mt-10">
+                                            {status === 'done' ? (
+                                                <div className="flex flex-col items-center">
+                                                    <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-3 text-2xl"><i className="fas fa-search-minus"></i></div>
+                                                    <p className="font-bold text-gray-600">Đã quét xong nhưng không thấy câu hỏi!</p>
+                                                    <p className="text-sm mt-1 max-w-xs text-gray-500">Có thể do trang này không có câu hỏi trắc nghiệm hoặc AI chưa đọc được.</p>
+                                                    <button onClick={handleAnalyzePage} className="mt-4 bg-white border border-gray-300 text-gray-600 px-4 py-2 rounded hover:bg-gray-50 font-bold text-sm shadow-sm transition flex items-center"><i className="fas fa-redo mr-2"></i> Thử lại</button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <i className="fas fa-robot text-4xl mb-3"></i>
+                                                    <p>Chưa có dữ liệu. Bấm "Phân Tích Trang".</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                     {currentQuestions.map((q, idx) => (
                                         <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 group">
                                             <div className="flex justify-between items-start mb-2">
