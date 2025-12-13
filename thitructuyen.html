@@ -43,11 +43,33 @@
         const MODEL_NAME = "gemini-2.5-flash";
         const userEmail = localStorage.getItem('userEmail');
         const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
+        
+        // --- TEXT PROCESSING HELPERS ---
         const normalizeText = (text) => text ? text.normalize('NFC').trim() : "";
-        const cleanOptionText = (text) => normalizeText(text?.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ''));
-        const cleanQuestionText = (text) => { if (!text) return ""; return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); };
+        
+        const cleanQuestionText = (text) => { 
+            if (!text) return ""; 
+            return normalizeText(text).replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '').trim(); 
+        };
 
-        // === COMPONENT HIỂN THỊ CÔNG THỨC (ĐÃ SỬA LỖI LATEX) ===
+        // [MODIFIED] Hàm xử lý Option Text: Xóa A. B. C. và tách dính chữ/toán
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            
+            // 1. Xóa prefix A. B. C. D. nhưng THAY BẰNG KHOẢNG TRẮNG để tránh dính
+            let t = text.replace(/^([A-Da-d]+)([\.\)\:\-])\s*/, ' '); 
+             
+            // 2. Xử lý dính chữ và công thức toán ($)
+            // Thêm khoảng trắng trước $ nếu ký tự trước đó là chữ/số
+            t = t.replace(/([a-zA-Z0-9\u00C0-\u1EF9])(\$)/g, '$1 $2');
+            
+            // Thêm khoảng trắng sau $ nếu ký tự sau đó là chữ/số
+            t = t.replace(/(\$)([a-zA-Z0-9\u00C0-\u1EF9])/g, '$1 $2');
+             
+            return normalizeText(t);
+        };
+
+        // === COMPONENT HIỂN THỊ CÔNG THỨC ===
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
@@ -61,13 +83,11 @@
                     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$') // \[...\] -> $...$
                     .replace(/`([^`]+)`/g, '$$$1$$');     // `...` -> $...$
 
-                // 2. [QUAN TRỌNG] Tự động phát hiện và bọc công thức toán nếu thiếu dấu $
-                // Kiểm tra xem chuỗi có chứa lệnh LaTeX (\frac, \in...) hoặc ký hiệu toán (=, >, <) không
+                // 2. Tự động bọc $ nếu thiếu (cho các lệnh LaTeX phổ biến)
                 const hasLatexCmd = /\\[a-zA-Z]+/.test(processed); 
                 const hasMathOps = /[=><+\-≈≠≤≥±×÷∈∉⊂⊃∪∩∅∀∃∫∑√∞]/.test(processed);
                 const hasDollar = processed.includes('$');
 
-                // Nếu có yếu tố toán học mà KHÔNG có dấu $, và độ dài hợp lý, thì tự động bọc lại
                 if (!hasDollar && (hasLatexCmd || (hasMathOps && processed.length < 300))) {
                     processed = `$${processed}$`;
                 }
@@ -81,7 +101,6 @@
                     if (part.startsWith("$") && part.endsWith("$")) { 
                         const span = document.createElement("span"); 
                         try { 
-                            // Lấy nội dung bên trong $...$
                             const mathContent = part.slice(1, -1);
                             katex.render(mathContent, span, { 
                                 throwOnError: false, 
@@ -106,7 +125,6 @@
             return <div className="modal-overlay" onClick={onClose}><div className="modal-content" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để vào thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Đóng</button></div></div>;
         };
 
-        // === MODAL NẠP ĐÁP ÁN (NEW) ===
         const AnswerModal = ({ isOpen, onClose, onApply, apiKeys }) => {
             if (!isOpen) return null;
             const [text, setText] = useState("");
@@ -134,7 +152,6 @@
                     reader.onloadend = async () => {
                         const base64 = reader.result.split(',')[1];
                         const prompt = "Bạn là trợ lý chấm thi. Nhìn vào ảnh và trích xuất đáp án đúng (Ưu tiên: Bảng kẻ ô, Tô đỏ, Gạch chân). Chỉ trả về chuỗi text dạng: 1A 2B 3C 4D... (Không giải thích)";
-                        // Random key để tránh rate limit
                         const currentKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
                         
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`, {
@@ -165,7 +182,6 @@
                             <h3 className="text-xl font-bold text-indigo-800"><i className="fas fa-magic mr-2"></i> Nạp Đáp Án Nhanh</h3>
                             <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
                         </div>
-                        
                         <div className="bg-blue-50 p-3 rounded text-sm text-blue-800 mb-3 border border-blue-200">
                             <p className="font-bold"><i className="fas fa-info-circle"></i> Hướng dẫn:</p>
                             <ul className="list-disc pl-5 mt-1">
@@ -173,34 +189,17 @@
                                 <li><b>Cách 2 (AI):</b> Chụp ảnh bảng đáp án rồi <b>Ctrl + V</b> vào ô bên dưới.</li>
                             </ul>
                         </div>
-
                         {status && <div className={`mb-3 text-sm font-bold px-3 py-2 rounded ${status.includes('✅') ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} animate-pulse`}>{status}</div>}
-                        
-                        <textarea 
-                            value={text} 
-                            onChange={e => setText(e.target.value)} 
-                            onPaste={handlePaste} 
-                            className="w-full h-40 border-2 border-indigo-100 p-3 rounded-lg font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-none" 
-                            placeholder="Dán ảnh (Ctrl+V) hoặc nhập text tại đây..."
-                            disabled={isProcessing}
-                        ></textarea>
-                        
+                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste} className="w-full h-40 border-2 border-indigo-100 p-3 rounded-lg font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Dán ảnh (Ctrl+V) hoặc nhập text tại đây..." disabled={isProcessing}></textarea>
                         <div className="flex justify-end gap-3 mt-4">
                             <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition">Hủy</button>
-                            <button 
-                                onClick={() => { onApply(text); onClose(); }} 
-                                disabled={!text || isProcessing}
-                                className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
-                            >
-                                {isProcessing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>} Áp Dụng
-                            </button>
+                            <button onClick={() => { onApply(text); onClose(); }} disabled={!text || isProcessing} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2">{isProcessing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>} Áp Dụng</button>
                         </div>
                     </div>
                 </div>
             );
         };
 
-        // === COMPONENT CÂU HỎI (HỖ TRỢ ẢNH) ===
         const QuestionItem = ({ q, index, onUpdate, onOptionChange }) => {
             const [isEditing, setIsEditing] = useState(false);
             
@@ -291,7 +290,7 @@
         const ReviewExam = ({ questions, onSave, onBack, onUpdateQuestions, apiKeys, originalFile }) => {
             const [showComparison, setShowComparison] = useState(false);
             const [fileUrl, setFileUrl] = useState(null);
-            const [showAnsModal, setShowAnsModal] = useState(false); // [NEW] State cho modal nạp đáp án
+            const [showAnsModal, setShowAnsModal] = useState(false);
             
             useEffect(() => {
                 if (originalFile && !originalFile.name.endsWith('.docx') && !originalFile.name.endsWith('.doc')) {
@@ -307,21 +306,16 @@
             };
             const handleCorrectChange = (qIdx, optIdx) => { const newQs = [...questions]; newQs[qIdx].correct_index = optIdx; onUpdateQuestions(newQs); };
 
-            // [NEW] Xử lý áp dụng đáp án từ Modal
             const handleApplyAnswers = (rawText) => {
-                // Tách số câu và đáp án (VD: "1.A" -> {1: 0}, "2B" -> {2: 1})
                 const map = {};
-                // Regex tìm số theo sau là ký tự A-D
                 const regex = /(\d+)[\.\s:\-\)]*([A-Da-d])/g;
                 let match;
                 while ((match = regex.exec(rawText)) !== null) {
                     const qNum = parseInt(match[1]);
                     const char = match[2].toUpperCase();
-                    map[qNum] = char.charCodeAt(0) - 65; // A->0, B->1...
+                    map[qNum] = char.charCodeAt(0) - 65;
                 }
-
                 if (Object.keys(map).length === 0) return alert("Không tìm thấy định dạng đáp án hợp lệ trong văn bản!");
-
                 const newQs = questions.map((q, idx) => {
                     const qNum = idx + 1;
                     if (map[qNum] !== undefined) {
@@ -329,13 +323,11 @@
                     }
                     return q;
                 });
-                
                 onUpdateQuestions(newQs);
                 alert(`Đã cập nhật đáp án cho ${Object.keys(map).length} câu hỏi!`);
             };
 
             const validateAndSave = () => {
-                // [NEW] Kiểm tra xem có câu nào chưa chọn đáp án không
                 const missingAnswers = questions.filter(q => q.correct_index === -1);
                 if (missingAnswers.length > 0) {
                     const confirmSave = confirm(`⚠️ CẢNH BÁO: Có ${missingAnswers.length} câu hỏi chưa được chọn đáp án đúng!\n\nNếu tiếp tục, những câu này sẽ không chấm điểm được. Bạn có chắc chắn muốn lưu không?`);
@@ -346,14 +338,7 @@
 
             return (
                 <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
-                    {/* [NEW] Modal Nạp Đáp Án */}
-                    <AnswerModal 
-                        isOpen={showAnsModal} 
-                        onClose={() => setShowAnsModal(false)} 
-                        onApply={handleApplyAnswers} 
-                        apiKeys={apiKeys} 
-                    />
-
+                    <AnswerModal isOpen={showAnsModal} onClose={() => setShowAnsModal(false)} onApply={handleApplyAnswers} apiKeys={apiKeys} />
                     <div className="bg-white p-4 shadow-md z-20 border-b border-indigo-200 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-3">
                             <button onClick={onBack} className="text-gray-500 hover:text-gray-800"><i className="fas fa-arrow-left text-xl"></i></button>
@@ -361,16 +346,9 @@
                             <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">{questions.length} câu</span>
                         </div>
                         <div className="flex gap-2">
-                            {/* [NEW] Nút Nạp Đáp Án */}
-                            <button onClick={() => setShowAnsModal(true)} className="bg-yellow-500 text-white px-4 py-2 rounded font-bold hover:bg-yellow-600 shadow flex items-center gap-2 animate-pulse">
-                                <i className="fas fa-magic"></i> Nạp Đáp Án
-                            </button>
-
+                            <button onClick={() => setShowAnsModal(true)} className="bg-yellow-500 text-white px-4 py-2 rounded font-bold hover:bg-yellow-600 shadow flex items-center gap-2 animate-pulse"><i className="fas fa-magic"></i> Nạp Đáp Án</button>
                             {fileUrl && <button onClick={() => setShowComparison(!showComparison)} className={`px-4 py-2 rounded font-bold shadow-sm flex items-center gap-2 border ${showComparison ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border-blue-200'}`}><i className={`fas ${showComparison ? 'fa-columns' : 'fa-eye'}`}></i> {showComparison ? "Tắt Đối chiếu" : "Đối chiếu"}</button>}
-                            
-                            <button onClick={validateAndSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2">
-                                <i className="fas fa-save"></i> LƯU & TỔ CHỨC THI
-                            </button>
+                            <button onClick={validateAndSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow flex items-center gap-2"><i className="fas fa-save"></i> LƯU & TỔ CHỨC THI</button>
                         </div>
                     </div>
                     <div className="flex-1 flex overflow-hidden relative">
@@ -423,7 +401,6 @@
 
         const CreateExam = ({ onBack, initialData = null }) => {
             const [step, setStep] = useState("upload");
-            // Hardcode Sheet ID mặc định (Đã ẩn)
             const DEFAULT_SHEET_ID = "1rWYqCzjKZ0wDCpo0RyAeECN3e7dfg9VE04ezfuA6lvM";
             
             const [form, setForm] = useState({ 
@@ -434,7 +411,7 @@
             const [parsedQuestions, setParsedQuestions] = useState([]);
             const [loading, setLoading] = useState(false);
             const [loadingMsg, setLoadingMsg] = useState("");
-            const [fileName, setFileName] = useState(""); // [NEW] State lưu tên file
+            const [fileName, setFileName] = useState("");
             const fileRef = useRef();
 
             useEffect(() => { const k = localStorage.getItem('global_gemini_keys'); if(k) setApiKeys(JSON.parse(k)); }, []);
@@ -451,7 +428,6 @@
                 }
             }, [initialData]);
 
-            // [NEW] Handle File Selection
             const handleFileChange = (e) => {
                 if (e.target.files.length > 0) {
                     setFileName(e.target.files[0].name);
@@ -460,16 +436,12 @@
 
             const handleParse = async () => {
                 if (!apiKeys.length) return alert("Thiếu API Key!"); if (!form.title) return alert("Nhập thông tin!"); if (!fileRef.current.files[0]) return alert("Thiếu file!");
-                
                 setLoading(true); 
                 setLoadingMsg("Đang tải file và phân tích... (File lớn có thể mất vài phút)");
-                
                 const fd = new FormData(); 
                 fd.append("file", fileRef.current.files[0]); 
                 fd.append("api_keys_json", JSON.stringify(apiKeys));
-                
                 try { 
-                    // TĂNG TIMEOUT LÊN 5 PHÚT (300000ms)
                     const res = await axios.post(`${API_BASE}/api/exam/parse`, fd, { timeout: 300000 }); 
                     setParsedQuestions(res.data.questions); 
                     setStep("review"); 
@@ -507,7 +479,6 @@
                     <h2 className="text-2xl font-bold text-indigo-700 mb-6">{initialData ? "Cập Nhật Thông Tin & Đề Thi" : "Tạo Đề Thi Mới"}</h2>
                     
                     <div className="grid grid-cols-2 gap-4 mb-4"><input className="border p-3 rounded" placeholder="Tên Kỳ Thi" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} /><input className="border p-3 rounded" placeholder="Trường" value={form.school} onChange={e=>setForm({...form, school: e.target.value})} /></div>
-                    
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div><label className="text-xs font-bold">Thời lượng (phút)</label><input type="number" className="border p-3 rounded w-full" value={form.duration} onChange={e=>setForm({...form, duration: e.target.value})} /></div>
                         <div><label className="text-xs font-bold">Bắt đầu</label><input type="datetime-local" className="border p-3 rounded w-full" value={form.startTime || ""} onChange={e=>setForm({...form, startTime: e.target.value})} /></div>
@@ -515,7 +486,6 @@
                     </div>
                     
                     <div className="mb-6 border-2 border-dashed border-indigo-200 p-6 text-center rounded hover:bg-indigo-50 cursor-pointer transition relative" onClick={()=>fileRef.current.click()}>
-                        {/* [NEW] Hiển thị tên file */}
                         <input ref={fileRef} type="file" accept=".docx,.pdf,.png,.jpg" className="hidden" onChange={handleFileChange}/>
                         <i className="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i>
                         <p>{initialData ? "Chọn file khác nếu muốn thay đề (Không bắt buộc)" : "Chọn file đề thi (Word/PDF)"}</p>
