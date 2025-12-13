@@ -44,6 +44,7 @@
             useEffect(() => {
                 if (!text || !ref.current) return;
                 try {
+                    // Thay thế công thức toán (nếu có dấu $...$)
                     const html = text.replace(/\$([^$]+)\$/g, (m, c) => katex.renderToString(c, { throwOnError: false, displayMode: false }));
                     ref.current.innerHTML = html.replace(/\n/g, '<br>');
                 } catch(e) { ref.current.textContent = text; }
@@ -55,6 +56,60 @@
             const qrRef = useRef();
             useEffect(() => { if(qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
             return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}><div className="bg-white p-6 rounded-lg shadow-xl text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để vào thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
+        };
+
+        // --- RESULT DETAIL (Thêm vào để sửa lỗi trắng trang) ---
+        const ResultDetail = ({ examId, onBack }) => {
+            const [results, setResults] = useState([]);
+            useEffect(() => {
+                axios.get(`${API_BASE}/api/exam/results/${examId}`)
+                    .then(res => setResults(res.data))
+                    .catch(err => alert("Lỗi tải kết quả: " + err.message));
+            }, [examId]);
+
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    <button onClick={onBack} className="mb-4 text-gray-600 hover:text-indigo-600 flex items-center gap-2 font-bold">
+                        <i className="fas fa-arrow-left"></i> Quay lại
+                    </button>
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-bold text-lg text-gray-800">Kết quả thi</h3>
+                            <button onClick={()=>{
+                                const ws = XLSX.utils.json_to_sheet(results);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, "KetQua");
+                                XLSX.writeFile(wb, "KetQuaThi.xlsx");
+                            }} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold">
+                                <i className="fas fa-file-excel mr-1"></i> Xuất Excel
+                            </button>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-indigo-50 border-b">
+                                <tr>
+                                    <th className="p-3">Tên HS</th>
+                                    <th className="p-3">SBD</th>
+                                    <th className="p-3">Lớp</th>
+                                    <th className="p-3">Điểm</th>
+                                    <th className="p-3">Số câu đúng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {results.map((r, i) => (
+                                    <tr key={i} className="border-b hover:bg-gray-50">
+                                        <td className="p-3 font-bold text-gray-700">{r.student_name}</td>
+                                        <td className="p-3 text-gray-600">{r.sbd}</td>
+                                        <td className="p-3 text-gray-600">{r.student_class}</td>
+                                        <td className="p-3 font-bold text-indigo-600">{r.score}</td>
+                                        <td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td>
+                                    </tr>
+                                ))}
+                                {results.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-gray-400 italic">Chưa có bài nộp nào</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
         };
 
         // --- NEW EXAM CREATOR (PIPELINE 2.0: FULL PAGE VISION) ---
@@ -88,7 +143,8 @@
                     if (res.data.status === 'ok') {
                         setPages(res.data.pages);
                         setStep(2); // Chuyển sang màn hình xử lý trang
-                        processAllPages(res.data.pages); // Tự động chạy AI luôn
+                        // Tự động chạy AI luôn cho tiện
+                        processAllPages(res.data.pages); 
                     } else alert("Lỗi xử lý: " + res.data.message);
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoadingMsg(""); }
             };
@@ -101,7 +157,7 @@
                 setProcessing(true);
                 let allQuestions = [];
 
-                // Chạy tuần tự từng trang để tránh quá tải rate limit và dễ theo dõi
+                // Chạy tuần tự từng trang để dễ theo dõi
                 for (let i = 0; i < pageList.length; i++) {
                     const page = pageList[i];
                     // Update UI status
@@ -124,7 +180,7 @@
                     }
                 }
                 
-                // Map ID cho câu hỏi để dễ quản lý
+                // Map ID cho câu hỏi
                 const finalQs = allQuestions.map((q, idx) => ({...q, id: idx}));
                 setQuestions(finalQs);
                 if(finalQs.length > 0) setActiveQId(0);
