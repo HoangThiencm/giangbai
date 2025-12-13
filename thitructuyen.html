@@ -4,15 +4,6 @@
     <meta charset="UTF-8">
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- Error Handler -->
-    <script>
-        window.onerror = function(msg, url, line) {
-            console.error("Lỗi JS:", msg, line);
-            return false;
-        };
-    </script>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -20,13 +11,9 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    
-    <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
         .crop-canvas-container { position: relative; cursor: crosshair; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -49,56 +36,60 @@
         const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
         const userEmail = localStorage.getItem('userEmail');
         
-        // --- UTILS ---
-        const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleString('vi-VN') : "";
-        const normalizeLatex = (text) => {
-            if (!text) return "";
-            return text.replace(/\$([^$]+)\$/g, (m, c) => m) // Giữ nguyên $...$
-                       .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
-                       .replace(/\\\[(.*?)\\\]/gs, '$$$1$$');
-        };
-
+        // --- MATH COMPONENT ---
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 try {
-                    // Render Katex
-                    const html = text.replace(/\$([^$]+)\$/g, (m, c) => {
-                        return katex.renderToString(c, { throwOnError: false, displayMode: false });
-                    });
+                    const html = text.replace(/\$([^$]+)\$/g, (m, c) => katex.renderToString(c, { throwOnError: false, displayMode: false }));
                     ref.current.innerHTML = html.replace(/\n/g, '<br>');
                 } catch(e) { ref.current.textContent = text; }
             }, [text]);
             return <div ref={ref} className="math-preview leading-relaxed inline-block"></div>;
         };
 
-        // --- COMPONENT: QR MODAL ---
         const QRModal = ({ link, onClose }) => {
             const qrRef = useRef();
             useEffect(() => { if(qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
             return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}><div className="bg-white p-6 rounded-lg shadow-xl text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để vào thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
         };
 
-        // ==========================================
-        // 1. HYBRID EXAM CREATOR (GIAO DIỆN MỚI)
-        // ==========================================
-        const HybridExamCreator = ({ onBack }) => {
-            const [step, setStep] = useState(1);
+        // --- CREATOR (EDIT/CREATE) ---
+        const HybridExamCreator = ({ onBack, initialData }) => {
+            const [step, setStep] = useState(initialData ? 2 : 1);
             const [pages, setPages] = useState([]);
             const [fullImage, setFullImage] = useState(null);
             const [segments, setSegments] = useState([]);
             const [activeSegId, setActiveSegId] = useState(null);
             const [loadingMsg, setLoadingMsg] = useState("");
+            const [examInfo, setExamInfo] = useState(initialData ? initialData.info : { title: "", school: "", duration: 45 });
             
-            // Exam Info
-            const [examInfo, setExamInfo] = useState({ title: "", school: "", duration: 45 });
-
-            // Crop State
+            // Canvas state
             const canvasRef = useRef(null);
             const [isDrawing, setIsDrawing] = useState(false);
             const [cropStart, setCropStart] = useState({x:0, y:0});
             const [cropRect, setCropRect] = useState(null);
+
+            // Load Initial Data (Mode Edit)
+            useEffect(() => {
+                if (initialData && initialData.questions) {
+                    // Convert old questions to segment format
+                    const loadedSegments = initialData.questions.map((q, i) => ({
+                        id: `existing_${i}`,
+                        label: `Câu ${i + 1}`,
+                        image: q.image || "https://via.placeholder.com/150?text=No+Image", // Placeholder nếu ko có ảnh
+                        status: 'done',
+                        data: { 
+                            question: q.question, 
+                            options: q.options || ["","","",""], 
+                            correct_index: q.correct_index 
+                        }
+                    }));
+                    setSegments(loadedSegments);
+                    if(loadedSegments.length > 0) setActiveSegId(loadedSegments[0].id);
+                }
+            }, [initialData]);
 
             const getApiKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); } catch { return []; } };
 
@@ -124,14 +115,12 @@
                     const res = await axios.post(`${API_BASE}/api/exam/segment_page`, fd);
                     if (res.data.status === 'ok') {
                         setFullImage(res.data.full_image);
-                        // Merge câu hỏi mới vào danh sách cũ
                         const newSegs = res.data.segments.map(s => ({ ...s, data: { question: "", options: ["","","",""], correct_index: -1 } }));
                         setSegments(prev => [...prev, ...newSegs]);
                     }
-                } catch(e) { console.error(e); alert("Lỗi phân tích trang. Có thể thử vẽ tay."); } finally { setLoadingMsg(""); }
+                } catch(e) { console.error(e); } finally { setLoadingMsg(""); }
             };
 
-            // Canvas Crop Logic
             const handleMouseDown = (e) => { if(!fullImage) return; const rect = canvasRef.current.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top; setIsDrawing(true); setCropStart({x, y}); setCropRect({x, y, w:0, h:0}); };
             const handleMouseMove = (e) => { if(!isDrawing) return; const rect = canvasRef.current.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top; setCropRect({ x: Math.min(x, cropStart.x), y: Math.min(y, cropStart.y), w: Math.abs(x - cropStart.x), h: Math.abs(y - cropStart.y) }); };
             const handleMouseUp = () => { setIsDrawing(false); };
@@ -169,13 +158,6 @@
                 } catch(e) { setSegments(prev => prev.map(s => s.id === segId ? {...s, status: 'error'} : s)); }
             };
 
-            const processAllPending = async () => {
-                const pendings = segments.filter(s => s.status === 'pending');
-                if(pendings.length === 0) return alert("Không có câu nào cần đọc.");
-                if(!confirm(`Xử lý ${pendings.length} câu?`)) return;
-                for(let seg of pendings) await processSegment(seg.id, seg.image);
-            };
-
             const updateActiveData = (field, value, optIdx=null) => {
                 setSegments(prev => prev.map(s => {
                     if(s.id === activeSegId) {
@@ -190,14 +172,13 @@
                 if(!examInfo.title) return alert("Vui lòng nhập Tên đề thi!");
                 const finalQuestions = segments.map(s => s.data);
                 if(finalQuestions.length === 0) return alert("Chưa có câu hỏi nào!");
-                
                 try {
                     await axios.post(`${API_BASE}/api/exam/save`, {
+                        id: initialData ? initialData.info.id : null, // ID nếu đang sửa
                         title: examInfo.title, school: examInfo.school, duration: examInfo.duration,
                         questions: finalQuestions, teacher_email: userEmail, api_keys: getApiKeys()
                     });
-                    alert("✅ Đã lưu đề thi thành công!");
-                    onBack(); // Quay lại Dashboard
+                    alert("✅ Đã lưu đề thi thành công!"); onBack();
                 } catch(e) { alert("Lỗi lưu: " + e.message); }
             };
 
@@ -206,9 +187,8 @@
             if(step === 1) return (
                 <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
                     <div className="bg-white p-10 rounded-2xl shadow-xl text-center max-w-lg w-full">
-                        <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6"><i className="fas fa-magic"></i></div>
-                        <h1 className="text-3xl font-bold text-indigo-700 mb-2">Tạo Đề Thông Minh</h1>
-                        <p className="text-gray-500 mb-6">Sử dụng AI & OCR Hybrid để nhận diện chính xác 99%</p>
+                        <h1 className="text-3xl font-bold text-indigo-700 mb-2">Soạn Đề Thông Minh</h1>
+                        <p className="text-gray-500 mb-6">Hybrid OCR: Cắt thủ công + AI nhận diện</p>
                         {loadingMsg ? <div className="text-indigo-600 font-bold animate-pulse">{loadingMsg}</div> : (
                             <label className="block w-full border-2 border-dashed border-indigo-300 bg-indigo-50 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 transition">
                                 <input type="file" className="hidden" accept=".pdf,.png,.jpg" onChange={handleUpload}/>
@@ -216,7 +196,7 @@
                                 <div className="font-bold text-indigo-700">Tải lên đề thi (PDF/Ảnh)</div>
                             </label>
                         )}
-                        <button onClick={onBack} className="mt-6 text-gray-400 hover:text-gray-600 underline">Quay lại Dashboard</button>
+                        <button onClick={onBack} className="mt-6 text-gray-400 hover:text-gray-600 underline">Quay lại</button>
                     </div>
                 </div>
             );
@@ -226,30 +206,30 @@
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-gray-50">
                         <div className="flex items-center gap-4">
                             <button onClick={onBack} className="text-gray-500 hover:text-gray-800"><i className="fas fa-arrow-left"></i></button>
-                            <input className="font-bold text-lg bg-transparent border-b border-dashed border-gray-400 outline-none w-64" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
-                            <input className="text-sm bg-transparent border-b border-dashed border-gray-400 outline-none w-32" placeholder="Trường..." value={examInfo.school} onChange={e=>setExamInfo({...examInfo, school:e.target.value})}/>
-                            <div className="flex items-center gap-1 text-sm text-gray-600"><i className="fas fa-clock"></i><input type="number" className="w-12 bg-transparent border-b border-dashed border-gray-400 text-center outline-none" value={examInfo.duration} onChange={e=>setExamInfo({...examInfo, duration:e.target.value})}/> phút</div>
+                            <input className="font-bold text-lg bg-transparent border-b border-dashed outline-none w-64" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
+                            <input className="text-sm bg-transparent border-b border-dashed outline-none w-32" placeholder="Trường..." value={examInfo.school} onChange={e=>setExamInfo({...examInfo, school:e.target.value})}/>
+                            <div className="flex items-center gap-1 text-sm text-gray-600"><i className="fas fa-clock"></i><input type="number" className="w-12 bg-transparent border-b border-dashed text-center outline-none" value={examInfo.duration} onChange={e=>setExamInfo({...examInfo, duration:e.target.value})}/> phút</div>
                         </div>
                         <div className="flex gap-2">
                             {pages.length > 1 && <select className="border rounded p-1 text-sm" onChange={(e)=>loadAndSegmentPage(e.target.value)}>{pages.map((p,i) => <option key={i} value={p}>Trang {i+1}</option>)}</select>}
-                            <button onClick={processAllPending} className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm font-bold shadow"><i className="fas fa-bolt"></i> AI Đọc ({segments.filter(s=>s.status==='pending').length})</button>
-                            <button onClick={handleSaveExam} className="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700 text-sm font-bold shadow"><i className="fas fa-save"></i> Hoàn Tất</button>
+                            <button onClick={handleSaveExam} className="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700 text-sm font-bold shadow"><i className="fas fa-save"></i> Lưu Đề</button>
                         </div>
                     </div>
                     <div className="flex-1 flex overflow-hidden">
                         <div className="w-[40%] bg-gray-800 relative overflow-auto flex items-center justify-center p-4">
-                            <div className="relative shadow-2xl bg-white">
-                                <canvas ref={canvasRef} className="crop-canvas-container max-w-full" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}/>
-                                {cropRect && cropRect.w > 10 && <button onClick={executeManualCrop} className="absolute bg-red-600 text-white px-3 py-1 rounded shadow-lg font-bold text-xs hover:scale-105 transition border-2 border-white" style={{top: cropRect.y+cropRect.h+10, left: cropRect.x}}><i className="fas fa-crop-alt"></i> Cắt & Đọc</button>}
-                            </div>
-                            <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded text-xs pointer-events-none"><i className="fas fa-mouse-pointer"></i> Kéo chuột để cắt thủ công câu hỏi bị sót</div>
+                            {fullImage ? (
+                                <div className="relative shadow-2xl bg-white">
+                                    <canvas ref={canvasRef} className="crop-canvas-container max-w-full" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}/>
+                                    {cropRect && cropRect.w > 10 && <button onClick={executeManualCrop} className="absolute bg-red-600 text-white px-3 py-1 rounded shadow-lg font-bold text-xs hover:scale-105 transition" style={{top: cropRect.y+cropRect.h+10, left: cropRect.x}}>Cắt & Đọc</button>}
+                                </div>
+                            ) : <div className="text-gray-400 text-sm">Chưa có ảnh để crop. Vui lòng upload PDF.</div>}
                         </div>
                         <div className="w-[20%] bg-white border-r overflow-y-auto p-2 space-y-2">
                             {segments.map((seg, idx) => (
                                 <div key={seg.id} onClick={() => setActiveSegId(seg.id)} className={`question-card p-2 rounded cursor-pointer transition flex gap-2 items-start ${activeSegId === seg.id ? 'active' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
                                     <img src={seg.image} className="w-16 h-16 object-contain rounded bg-gray-100 border" />
                                     <div className="flex-1 min-w-0"><div className="font-bold text-xs truncate mb-1 text-gray-700">{seg.label || `Câu ${idx+1}`}</div>
-                                        <div className="flex items-center gap-1">{seg.status === 'pending' && <span className="text-[10px] bg-gray-200 px-1 rounded">Chờ</span>}{seg.status === 'loading' && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded animate-pulse">Đọc...</span>}{seg.status === 'done' && <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">Xong</span>}{seg.status === 'error' && <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded">Lỗi</span>}</div>
+                                        <div className="flex items-center gap-1">{seg.status === 'pending' && <span className="text-[10px] bg-gray-200 px-1 rounded">Chờ</span>}{seg.status === 'loading' && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded animate-pulse">Đọc...</span>}{seg.status === 'done' && <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">Xong</span>}</div>
                                     </div>
                                 </div>
                             ))}
@@ -259,7 +239,7 @@
                                 <div className="flex-1 flex flex-col h-full">
                                     <div className="h-40 bg-gray-200 flex items-center justify-center border-b p-2 shrink-0"><img src={activeSeg.image} className="h-full object-contain shadow-sm bg-white" /></div>
                                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                        <div><div className="flex justify-between mb-1"><label className="font-bold text-gray-700 text-sm">Câu hỏi</label><button onClick={()=>processSegment(activeSeg.id, activeSeg.image)} className="text-xs text-blue-600 hover:underline"><i className="fas fa-sync"></i> Đọc lại AI</button></div>
+                                        <div><div className="flex justify-between mb-1"><label className="font-bold text-gray-700 text-sm">Câu hỏi</label><button onClick={()=>processSegment(activeSeg.id, activeSeg.image)} className="text-xs text-blue-600 hover:underline">Đọc lại AI</button></div>
                                             <div className="grid grid-cols-1 gap-2"><textarea className="w-full h-24 p-3 border rounded text-sm font-mono focus:ring-2 outline-none" value={activeSeg.data.question} onChange={e=>updateActiveData('question', e.target.value)}/><div className="w-full bg-white border rounded p-3 min-h-[50px]"><MathText text={activeSeg.data.question} /></div></div>
                                         </div>
                                         <div><label className="font-bold text-gray-700 text-sm mb-2 block">Đáp án</label>
@@ -274,69 +254,63 @@
             );
         };
 
-        // ==========================================
-        // 2. TEACHER DASHBOARD (QUẢN LÝ THI - GIỮ NGUYÊN)
-        // ==========================================
-        const TeacherDashboard = ({ onViewDetail, onCreateNew }) => {
+        // --- DASHBOARD ---
+        const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
             
             useEffect(() => { if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data)).catch(console.error); }, []);
-            const handleDelete = async (id) => { if(confirm("Xóa đề này?")) try { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e=>e.id!==id)); } catch(e){alert("Lỗi xóa");} };
+            const handleDelete = async (id) => { if(confirm("Xóa?")) try { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e=>e.id!==id)); } catch(e){alert("Lỗi");} };
+            const handleDuplicate = async (id) => { if(confirm("Nhân bản đề này?")) try { await axios.post(`${API_BASE}/api/exam/duplicate/${id}`); alert("Đã nhân bản!"); window.location.reload(); } catch(e){alert("Lỗi");} };
+            const handleRename = async (id, old) => { const n=prompt("Tên mới:", old); if(n) try { await axios.put(`${API_BASE}/api/exam/rename/${id}`, {new_title: n}); window.location.reload(); } catch(e){} };
 
             return (
                 <div className="max-w-6xl mx-auto p-6 fade-in">
                     {qrLink && <QRModal link={qrLink} onClose={()=>setQrLink(null)} />}
                     <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow border border-indigo-100">
                         <div className="flex items-center gap-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-2xl"><i className="fas fa-user-tie"></i></div><div><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500">{userEmail}</p></div></div>
-                        <div className="flex gap-2"><button onClick={()=>window.location.href='index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Home</button><button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow flex items-center gap-2"><i className="fas fa-plus"></i> Tạo Đề Mới</button></div>
+                        <div className="flex gap-2"><button onClick={()=>window.location.href='index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Home</button><button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button></div>
                     </div>
                     <div className="bg-white rounded-xl shadow overflow-hidden">
                         <table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4">Thời Gian</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>
                             {exams.map((ex) => (<tr key={ex.id} className="border-b hover:bg-indigo-50/30"><td className="p-4"><div className="font-bold text-lg text-indigo-900">{ex.title}</div><div className="text-xs text-gray-500">{ex.school}</div></td><td className="p-4 text-sm text-gray-600">{ex.duration_mins} phút</td><td className="p-4 text-right"><div className="flex justify-end gap-2">
-                                <button onClick={()=>setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded hover:bg-blue-200" title="Lấy mã QR"><i className="fas fa-qrcode"></i></button>
-                                <button onClick={()=>onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded hover:bg-green-200" title="Xem kết quả"><i className="fas fa-chart-bar"></i></button>
-                                <button onClick={()=>handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded hover:bg-red-200" title="Xóa"><i className="fas fa-trash"></i></button>
+                                <button onClick={()=>setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded" title="QR Code"><i className="fas fa-qrcode"></i></button>
+                                <button onClick={()=>onEdit(ex.id)} className="bg-yellow-100 text-yellow-600 p-2 rounded" title="Sửa đề"><i className="fas fa-edit"></i></button>
+                                <button onClick={()=>handleDuplicate(ex.id)} className="bg-purple-100 text-purple-600 p-2 rounded" title="Nhân bản"><i className="fas fa-copy"></i></button>
+                                <button onClick={()=>handleRename(ex.id, ex.title)} className="bg-gray-100 text-gray-600 p-2 rounded" title="Đổi tên"><i className="fas fa-i-cursor"></i></button>
+                                <button onClick={()=>onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded" title="Kết quả"><i className="fas fa-chart-bar"></i></button>
+                                <button onClick={()=>handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded" title="Xóa"><i className="fas fa-trash"></i></button>
                             </div></td></tr>))}
                         </tbody></table>
-                        {exams.length === 0 && <div className="p-8 text-center text-gray-500">Chưa có đề thi nào. Bấm "Tạo Đề Mới" để bắt đầu.</div>}
                     </div>
                 </div>
             );
         };
 
-        // ==========================================
-        // 3. STUDENT VIEW & RESULT (GIỮ NGUYÊN)
-        // ==========================================
+        // --- STUDENT & RESULTS ---
         const StudentView = ({ examId }) => { 
             const [step, setStep] = useState("info");
             const [info, setInfo] = useState({ name: "", class: "", sbd: "" });
             const [exam, setExam] = useState(null);
             const [answers, setAnswers] = useState({});
             const [timeLeft, setTimeLeft] = useState(0);
-            const [warnings, setWarnings] = useState(0);
-            const [isLocked, setIsLocked] = useState(false);
-            const isSubmittingRef = useRef(false);
-
-            useEffect(() => { if (step !== "exam") return; const handleVisibilityChange = () => { if (!isSubmittingRef.current && document.hidden) { setWarnings(p => { const n = p+1; if(n>=3) handleSubmit(true); else setIsLocked(true); return n; }); } }; const preventCopy = (e) => e.preventDefault(); document.addEventListener("visibilitychange", handleVisibilityChange); document.addEventListener("contextmenu", preventCopy); return () => { document.removeEventListener("visibilitychange", handleVisibilityChange); document.removeEventListener("contextmenu", preventCopy); }; }, [step]);
             
-            useEffect(() => { axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => { setExam(res.data); setStep("info"); setTimeLeft(res.data.info.duration_mins*60); }).catch(()=>alert("Lỗi tải đề!")); }, [examId]);
+            useEffect(() => { axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => { setExam(res.data); setTimeLeft(res.data.info.duration_mins*60); }).catch(()=>alert("Lỗi tải đề!")); }, [examId]);
             useEffect(() => { if(step==="exam") { const t = setInterval(()=>setTimeLeft(v=>{if(v<=1){handleSubmit(true);return 0;}return v-1;}),1000); return ()=>clearInterval(t); } }, [step]);
             
             const handleStart = () => { if(!info.name || !info.sbd) return alert("Nhập tên & SBD!"); document.documentElement.requestFullscreen().catch(()=>{}); setStep("exam"); };
             const handleSubmit = async (auto=false) => { 
-                if(!auto) { isSubmittingRef.current = true; if(!confirm("Nộp bài?")) { isSubmittingRef.current = false; return; } }
+                if(!auto && !confirm("Nộp bài?")) return;
                 try { const res = await axios.post(`${API_BASE}/api/exam/submit`, { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: answers }); setExam(res.data); setStep("result"); document.exitFullscreen().catch(()=>{}); } catch(e) { alert("Lỗi nộp!"); }
             };
 
-            if(!exam) return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+            if(!exam) return <div className="flex justify-center h-screen items-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
             if(step==="info") return <div className="max-w-md mx-auto mt-20 bg-white p-8 rounded-xl shadow-lg text-center"><h2 className="text-2xl font-bold mb-4 text-indigo-800">{exam.info.title}</h2><p className="mb-6 text-gray-500">Thời gian: {exam.info.duration_mins} phút</p><input className="border p-3 w-full mb-3 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-3 w-full mb-3 rounded" placeholder="Lớp" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-3 w-full mb-6 rounded" placeholder="SBD" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={handleStart} className="bg-indigo-600 text-white w-full py-3 rounded font-bold shadow hover:bg-indigo-700">VÀO THI</button></div>;
-            if(step==="result") return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="bg-white p-10 rounded-xl shadow-lg text-center max-w-2xl"><i className="fas fa-check-circle text-6xl text-green-500 mb-4"></i><h2 className="text-3xl font-bold text-gray-800 mb-2">Hoàn Thành!</h2><p className="text-xl text-indigo-600 font-bold">Điểm số: {exam.score}</p><p className="text-gray-500 mt-4">Cảm ơn bạn đã tham gia kỳ thi.</p></div></div>;
+            if(step==="result") return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="bg-white p-10 rounded-xl shadow-lg text-center max-w-2xl"><h2 className="text-3xl font-bold text-gray-800 mb-2">Hoàn Thành!</h2><p className="text-xl text-indigo-600 font-bold mb-4">Điểm số: {exam.score}</p><div className="bg-gray-50 p-4 rounded text-left text-sm text-gray-700 italic border-l-4 border-indigo-500">💡 Nhận xét AI: {exam.feedback}</div></div></div>;
 
             return (
                 <div className="exam-lockdown">
-                    {isLocked && <div className="lockdown-warning"><h1 className="text-4xl font-bold mb-4">⚠️ CẢNH BÁO</h1><p className="text-xl mb-6">Đừng rời khỏi màn hình! ({warnings}/3)</p><button onClick={()=>{document.documentElement.requestFullscreen(); setIsLocked(false);}} className="bg-white text-red-600 px-8 py-3 rounded-full font-bold">QUAY LẠI LÀM BÀI</button></div>}
-                    <div className="max-w-4xl mx-auto pb-20 select-none relative z-10">
+                    <div className="max-w-4xl mx-auto pb-20">
                         <div className="sticky top-0 bg-white/95 backdrop-blur shadow p-4 rounded-b-xl flex justify-between items-center z-20 mb-6 border-t-4 border-indigo-600"><div><div className="font-bold text-gray-800">{info.name}</div><div className="text-xs text-gray-500">{info.sbd}</div></div><div className="font-mono text-2xl font-bold text-red-600">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div><button onClick={()=>handleSubmit(false)} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700">Nộp Bài</button></div>
                         {exam.questions.map((q, i) => (
                             <div key={i} className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
@@ -356,33 +330,37 @@
             return (
                 <div className="max-w-6xl mx-auto p-6 fade-in">
                     <div className="flex justify-between mb-6"><button onClick={onBack} className="text-gray-500 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button><button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700"><i className="fas fa-file-excel mr-2"></i> Xuất Excel</button></div>
-                    <div className="bg-white rounded-xl shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">SBD</th><th className="p-4">Tên</th><th className="p-4">Lớp</th><th className="p-4">Điểm</th><th className="p-4">Chi tiết</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-4">{r.sbd}</td><td className="p-4 font-bold text-indigo-900">{r.student_name}</td><td className="p-4">{r.student_class}</td><td className="p-4 font-bold text-red-600">{r.score}</td><td className="p-4 text-sm text-gray-500">{r.correct_count}/{r.total_questions} đúng</td></tr>))}</tbody></table></div>
+                    <div className="bg-white rounded-xl shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">SBD</th><th className="p-4">Tên</th><th className="p-4">Lớp</th><th className="p-4">Điểm</th><th className="p-4">Nhận xét AI</th></tr></thead><tbody>{results.map((r,i)=>(<tr key={i} className="border-b hover:bg-gray-50"><td className="p-4">{r.sbd}</td><td className="p-4 font-bold text-indigo-900">{r.student_name}</td><td className="p-4">{r.student_class}</td><td className="p-4 font-bold text-red-600">{r.score}</td><td className="p-4 text-sm text-gray-600 italic">{r.ai_feedback}</td></tr>))}</tbody></table></div>
                 </div>
             );
         };
 
-        // ==========================================
-        // 4. MAIN APP ROUTER
-        // ==========================================
         const App = () => {
-            const [view, setView] = useState("dashboard"); // dashboard, create, detail
+            const [view, setView] = useState("dashboard"); 
             const [selectedId, setSelectedId] = useState(null);
-            const [isStudentMode, setIsStudentMode] = useState(false);
-            const [needsLogin, setNeedsLogin] = useState(false);
+            const [isStudent, setIsStudent] = useState(false);
+            const [editingData, setEditingData] = useState(null);
 
             useEffect(() => { 
                 const p = new URLSearchParams(window.location.search); 
-                if(p.get("mode") === "student") { setSelectedId(p.get("examId")); setIsStudentMode(true); } 
-                else if(!userEmail) setNeedsLogin(true);
+                if(p.get("mode") === "student") { setSelectedId(p.get("examId")); setIsStudent(true); } 
+                else if(!userEmail) window.location.href='login.html'; 
             }, []);
 
-            if (needsLogin) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2>Yêu cầu đăng nhập</h2><button onClick={()=>window.location.href='login.html'} className="bg-blue-600 text-white px-4 py-2 rounded mt-4">Đăng Nhập</button></div></div>;
-            if(isStudentMode) return <StudentView examId={selectedId} />;
+            const handleEdit = async (id) => {
+                try {
+                    const res = await axios.get(`${API_BASE}/api/exam/get/${id}`);
+                    setEditingData(res.data);
+                    setView("create");
+                } catch(e) { alert("Lỗi tải đề: " + e.message); }
+            };
+
+            if(isStudent) return <StudentView examId={selectedId} />;
 
             return (
                 <div>
-                    {view==="dashboard" && <TeacherDashboard onCreateNew={()=>setView("create")} onViewDetail={(id)=>{setSelectedId(id); setView("detail")}} />}
-                    {view==="create" && <HybridExamCreator onBack={()=>setView("dashboard")} />}
+                    {view==="dashboard" && <TeacherDashboard onCreateNew={()=>{setEditingData(null); setView("create");}} onEdit={handleEdit} onViewDetail={(id)=>{setSelectedId(id); setView("detail")}} />}
+                    {view==="create" && <HybridExamCreator initialData={editingData} onBack={()=>setView("dashboard")} />}
                     {view==="detail" && <ResultDetail examId={selectedId} onBack={()=>setView("dashboard")} />}
                 </div>
             );
