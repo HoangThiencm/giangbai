@@ -6,18 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- FIX: Xóa định dạng markdown [url](url) thừa trong src/href -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
+    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
+    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
+    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
+    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
@@ -58,7 +58,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
+        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
         
         // --- COMPONENTS ---
         
@@ -296,11 +296,13 @@
                 const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                 
                 try {
+                    // [CHANGE] Thêm timeout 60s để tránh treo
                     const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { 
                         image_data: page.image_data, 
                         api_keys: keys,
                         model: model 
-                    });
+                    }, { timeout: 60000 });
+                    
                     if(res.data.status === 'ok') {
                         const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() }));
                         setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
@@ -308,7 +310,8 @@
                     }
                 } catch(e) { 
                     setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'error'} : p));
-                    alert(e.message); 
+                    if (e.code === 'ECONNABORTED') alert("Hết thời gian chờ (Timeout)! Mạng chậm hoặc Server bận. Vui lòng thử lại.");
+                    else alert(e.message); 
                 }
             };
 
