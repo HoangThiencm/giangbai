@@ -46,9 +46,12 @@
 
         /* ERROR BOX */
         #react-error { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
-
-        /* Anti-Cheat Warning Overlay */
-        .cheat-overlay { position: fixed; inset: 0; background: red; z-index: 9999; display: flex; flex-col; align-items: center; justify-content: center; color: white; text-align: center; }
+        
+        /* Custom scrollbar for better look */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
 <body>
@@ -71,36 +74,41 @@
         
         // --- COMPONENTS ---
         
-        // [UPDATE] Helper: Làm sạch text đáp án
+        // [UPDATE] Helper: Làm sạch text đáp án, xóa ký tự đầu (A., B.) và xuống dòng
         const cleanOptionText = (text) => {
             if (!text) return "";
+            // Xóa A. B. và cả xuống dòng (\n)
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
         };
 
-        // [NEW] Helper: Làm sạch tiêu đề câu hỏi (Xóa "Câu 1:", "Bài 1." ở đầu)
-        const cleanQuestionContent = (text) => {
-            if (!text) return "";
-            // Regex tìm "Câu/Bài/Question" + số + dấu câu ở đầu chuỗi
-            return text.replace(/^(Câu|Bài|Question)\s*\d+[\s\.\:\)]+/gi, '').trim();
-        };
-
+        // [UPDATE] MathText: Hiển thị công thức toán thông minh
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 const el = ref.current;
+                
+                // Tách chuỗi dựa trên dấu $ (inline math)
                 const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
                 el.innerHTML = '';
+                
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
+                        // Display Math
                         const span = document.createElement('span');
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch(e) { span.innerText = part; }
+                        try {
+                            katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true });
+                        } catch(e) { span.innerText = part; }
                         el.appendChild(span);
                     } else if (part.startsWith('$') && part.endsWith('$')) {
+                        // Inline Math
                         const span = document.createElement('span');
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch(e) { span.innerText = part; }
+                        try {
+                            katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
+                        } catch(e) { span.innerText = part; }
                         el.appendChild(span);
                     } else {
+                        // Text thường
                         el.appendChild(document.createTextNode(part));
                     }
                 });
@@ -108,12 +116,14 @@
             return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
         };
 
+        // 2. QR Modal
         const QRModal = ({ link, onClose }) => {
             const qrRef = useRef();
             useEffect(() => { if(qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
             return <div className="modal-overlay" onClick={onClose}><div className="modal-box text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
         };
 
+        // Modal xem ảnh phóng to
         const ImageModal = ({ src, onClose }) => {
             if (!src) return null;
             return (
@@ -124,35 +134,79 @@
             );
         };
 
+        // [UPDATE] 3. Answer Import Modal (Nạp đáp án)
         const AnswerImportModal = ({ onClose, onImport }) => {
             const [mode, setMode] = useState("manual");
             const [textInput, setTextInput] = useState("");
             const [loading, setLoading] = useState(false);
             const [preview, setPreview] = useState(null); 
-            const [aiResult, setAiResult] = useState(null); 
+            const [aiResult, setAiResult] = useState(null); // Kết quả AI đọc được
             const fileInputRef = useRef();
 
+            // Xử lý gửi ảnh lên AI (Dùng chung cho Upload và Paste)
             const processImage = async (dataUrl) => {
-                setLoading(true); setPreview(dataUrl); 
+                setLoading(true);
+                setPreview(dataUrl); 
                 try {
                     const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
                     const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
-                    const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { image_data: dataUrl, api_keys: keys, model: model });
-                    if (res.data.status === 'ok') setAiResult(res.data.data);
-                    else alert("Lỗi đọc đáp án: " + res.data.message);
-                } catch(err) { alert("Lỗi kết nối: " + err.message); } finally { setLoading(false); }
+                    const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { 
+                        image_data: dataUrl, 
+                        api_keys: keys,
+                        model: model 
+                    });
+                    if (res.data.status === 'ok') { 
+                        // Thay vì đóng ngay, hiển thị kết quả để user kiểm tra
+                        setAiResult(res.data.data);
+                    } else {
+                        alert("Lỗi đọc đáp án: " + res.data.message);
+                    }
+                } catch(err) { 
+                    alert("Lỗi kết nối: " + err.message); 
+                } finally {
+                    setLoading(false);
+                }
             };
 
-            const handleImageImport = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (ev) => processImage(ev.target.result); reader.readAsDataURL(file); };
-            const handlePaste = (e) => { const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf("image") !== -1) { e.preventDefault(); const file = items[i].getAsFile(); const reader = new FileReader(); reader.onload = (ev) => processImage(ev.target.result); reader.readAsDataURL(file); return; } } };
+            const handleImageImport = (e) => {
+                const file = e.target.files[0]; 
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => processImage(ev.target.result);
+                reader.readAsDataURL(file);
+            };
+
+            const handlePaste = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (ev) => processImage(ev.target.result);
+                        reader.readAsDataURL(file);
+                        return; 
+                    }
+                }
+            };
 
             const handleManualImport = () => {
                 const parts = textInput.toUpperCase().match(/(\d+)[\.\-\:\s]*([A-D])/g);
                 if (!parts) return alert("Sai định dạng! VD: 1A 2B 3C");
-                const results = parts.map(p => { const m = p.match(/(\d+)[\.\-\:\s]*([A-D])/); return { index: parseInt(m[1]), answer: m[2] }; });
+                const results = parts.map(p => {
+                    const m = p.match(/(\d+)[\.\-\:\s]*([A-D])/);
+                    return { index: parseInt(m[1]), answer: m[2] };
+                });
                 onImport(results); onClose();
             };
             
+            const confirmAiResult = () => {
+                if(aiResult) {
+                    onImport(aiResult);
+                    onClose();
+                }
+            };
+
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal-box" onClick={e=>e.stopPropagation()}>
@@ -160,12 +214,77 @@
                         <div className="flex gap-2 mb-4 border-b"><button onClick={()=>setMode("manual")} className={`px-4 py-2 border-b-2 ${mode==="manual"?"border-indigo-600 font-bold":"border-transparent text-gray-500"}`}>Nhập tay</button><button onClick={()=>setMode("image")} className={`px-4 py-2 border-b-2 ${mode==="image"?"border-indigo-600 font-bold":"border-transparent text-gray-500"}`}>Từ ảnh chụp</button></div>
                         
                         {mode === "manual" ? (
-                            <div><textarea value={textInput} onChange={e=>setTextInput(e.target.value)} className="w-full border p-2 rounded h-32 mb-4 font-mono text-sm" placeholder="VD: 1.A 2.B 3.C ..."></textarea><button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">Lưu</button></div>
+                            <div>
+                                <textarea value={textInput} onChange={e=>setTextInput(e.target.value)} className="w-full border p-2 rounded h-32 mb-4 font-mono text-sm" placeholder="VD: 1.A 2.B 3.C ..."></textarea>
+                                <button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">Lưu</button>
+                            </div>
                         ) : (
                             <div className="space-y-4">
-                                <div className="relative border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-indigo-50 transition cursor-pointer min-h-[150px] flex flex-col justify-center items-center p-4 focus-within:ring-2 focus-within:ring-indigo-300 outline-none group" onPaste={handlePaste} tabIndex="0" onClick={(e) => { if (!loading && !preview && !e.target.closest('.delete-btn')) { fileInputRef.current.click(); } e.currentTarget.focus(); }}>
-                                    {loading ? (<div className="flex flex-col items-center"><div className="loader border-indigo-600 mb-2"></div><p className="text-sm text-indigo-600 font-bold">Đang đọc ảnh...</p></div>) : preview ? (<div className="relative w-full"><img src={preview} className="max-h-60 mx-auto rounded shadow object-contain" /><div className="delete-btn absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-red-600 shadow-md z-10" onClick={(e) => { e.stopPropagation(); setPreview(null); setAiResult(null); fileInputRef.current.value = ""; }}><i className="fas fa-times"></i></div></div>) : (<div className="text-center"><div className="mb-3 w-16 h-16 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform"><i className="fas fa-paste text-2xl"></i></div><p className="text-gray-700 font-bold text-lg">Nhấn vào đây rồi nhấn Ctrl+V</p><p className="text-sm text-gray-500 mt-1">Hoặc click để chọn file ảnh từ máy</p></div>)}<input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleImageImport}/></div>
-                                {aiResult && (<div className="border rounded-lg p-4 bg-green-50 animate-fade-in-up border-green-200"><div className="flex justify-between items-center mb-3"><p className="font-bold text-green-800 flex items-center gap-2"><i className="fas fa-check-circle"></i> Kết quả nhận diện ({aiResult.length} câu):</p></div><div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-white rounded border border-green-100 shadow-inner">{aiResult.map((r, i) => (<span key={i} className="bg-gray-50 border px-3 py-1.5 rounded text-sm font-mono flex items-center gap-1.5 shadow-sm"><span className="font-bold text-gray-700">{r.index}.</span><span className="text-blue-600 font-extrabold">{r.answer}</span></span>))}</div><button onClick={()=>{onImport(aiResult);onClose();}} className="w-full mt-4 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 shadow-md transition transform active:scale-[0.98] flex items-center justify-center gap-2"><i className="fas fa-save"></i> Xác nhận & Nạp Đáp Án</button></div>)}
+                                {/* [UPDATE] Khu vực dán ảnh / chọn file với textarea giả lập */}
+                                <div 
+                                    className="relative border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-indigo-50 transition cursor-pointer min-h-[150px] flex flex-col justify-center items-center p-4 focus-within:ring-2 focus-within:ring-indigo-300 outline-none group"
+                                    onPaste={handlePaste}
+                                    tabIndex="0" // Để div nhận được sự kiện paste
+                                    onClick={(e) => {
+                                        // Chỉ click input file nếu không click vào nút xóa
+                                        if (!loading && !preview && !e.target.closest('.delete-btn')) {
+                                            fileInputRef.current.click();
+                                        }
+                                        e.currentTarget.focus();
+                                    }}
+                                >
+                                    {loading ? (
+                                        <div className="flex flex-col items-center">
+                                            <div className="loader border-indigo-600 mb-2"></div>
+                                            <p className="text-sm text-indigo-600 font-bold">Đang đọc ảnh...</p>
+                                        </div>
+                                    ) : preview ? (
+                                        <div className="relative w-full">
+                                            <img src={preview} className="max-h-60 mx-auto rounded shadow object-contain" />
+                                            <div 
+                                                className="delete-btn absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-red-600 shadow-md z-10"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPreview(null);
+                                                    setAiResult(null);
+                                                    fileInputRef.current.value = ""; // Reset file input
+                                                }}
+                                                title="Xóa ảnh"
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <div className="mb-3 w-16 h-16 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                                                <i className="fas fa-paste text-2xl"></i>
+                                            </div>
+                                            <p className="text-gray-700 font-bold text-lg">Nhấn vào đây rồi nhấn Ctrl+V</p>
+                                            <p className="text-sm text-gray-500 mt-1">Hoặc click để chọn file ảnh từ máy</p>
+                                        </div>
+                                    )}
+                                    <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleImageImport}/>
+                                </div>
+                                
+                                {/* Kết quả AI */}
+                                {aiResult && (
+                                    <div className="border rounded-lg p-4 bg-green-50 animate-fade-in-up border-green-200">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <p className="font-bold text-green-800 flex items-center gap-2"><i className="fas fa-check-circle"></i> Kết quả nhận diện ({aiResult.length} câu):</p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-white rounded border border-green-100 shadow-inner">
+                                            {aiResult.map((r, i) => (
+                                                <span key={i} className="bg-gray-50 border px-3 py-1.5 rounded text-sm font-mono flex items-center gap-1.5 shadow-sm">
+                                                    <span className="font-bold text-gray-700">{r.index}.</span>
+                                                    <span className="text-blue-600 font-extrabold">{r.answer}</span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <button onClick={confirmAiResult} className="w-full mt-4 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 shadow-md transition transform active:scale-[0.98] flex items-center justify-center gap-2">
+                                            <i className="fas fa-save"></i> Xác nhận & Nạp Đáp Án
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -173,18 +292,93 @@
             );
         };
 
+        // 4. Question Editor (Cột 2)
         const QuestionEditor = ({ q, idx, updateQuestion, deleteQuestion }) => {
             const [isEditing, setIsEditing] = useState(false);
-            const handlePasteImage = (e) => { const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf("image") !== -1) { e.preventDefault(); const file = items[i].getAsFile(); const reader = new FileReader(); reader.onload = function(ev) { updateQuestion(q.id, 'question_image', ev.target.result); }; reader.readAsDataURL(file); return; } } };
+
+            const handlePasteImage = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function(ev) {
+                            updateQuestion(q.id, 'question_image', ev.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+                }
+            };
+
             return (
                 <div className={`border rounded-lg p-3 shadow-sm transition relative bg-white group hover:border-indigo-400 ${isEditing ? 'ring-2 ring-indigo-100' : ''}`}>
-                    <div className="flex justify-between mb-2"><span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Câu {idx+1}</span><div className="flex gap-2"><button onClick={()=>setIsEditing(!isEditing)} className="text-indigo-500 hover:text-indigo-700 text-xs font-bold"><i className={`fas ${isEditing?'fa-check':'fa-pencil-alt'}`}></i> {isEditing?'Xong':'Sửa'}</button><button onClick={()=>deleteQuestion(q.id)} className="text-red-400 hover:text-red-600 text-xs"><i className="fas fa-trash"></i></button></div></div>
-                    {!isEditing && (<div>{q.question_image && <img src={q.question_image} className="h-20 rounded border mb-2 object-contain"/>}<div className="mb-2 text-sm"><MathText text={q.question}/></div><div className="flex flex-wrap gap-2">{q.options.map((o, k) => (<span key={k} className={`px-2 py-0.5 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>{String.fromCharCode(65+k)}. {cleanOptionText(o)}</span>))}</div></div>)}
-                    {isEditing && (<div className="space-y-3 animation-fade-in"><div className="flex items-center gap-2 bg-gray-50 p-2 rounded">{q.question_image ? (<div className="relative"><img src={q.question_image} className="h-16 rounded border"/><button onClick={()=>updateQuestion(q.id, 'question_image', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><i className="fas fa-times"></i></button></div>) : (<label className="text-xs text-blue-600 cursor-pointer flex items-center gap-1 hover:underline"><i className="fas fa-image"></i> Chèn ảnh bảng/biểu<input type="file" accept="image/*" className="hidden" onChange={(e)=>{const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=(ev)=>updateQuestion(q.id,'question_image',ev.target.result); r.readAsDataURL(f); }}}/></label>)}</div><textarea className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" value={q.question} onChange={e=>updateQuestion(q.id, 'question', e.target.value)} onPaste={handlePasteImage} placeholder="Nhập LaTeX..."></textarea><div className="grid grid-cols-2 gap-2">{q.options.map((opt, oIdx) => (<div key={oIdx} className={`flex items-center border rounded px-1 py-1 ${q.correct_index===oIdx?'border-green-500 bg-green-50':''}`}><div onClick={()=>updateQuestion(q.id, 'correct_index', oIdx)} className={`w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer mr-1 ${q.correct_index===oIdx?'bg-green-500 text-white':'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>{String.fromCharCode(65+oIdx)}</div><input className="w-full text-xs bg-transparent outline-none" value={opt} onChange={e=>updateQuestion(q.id, 'options', e.target.value, oIdx)}/></div>))}</div></div>)}
+                    <div className="flex justify-between mb-2">
+                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Câu {idx+1}</span>
+                        <div className="flex gap-2">
+                            <button onClick={()=>setIsEditing(!isEditing)} className="text-indigo-500 hover:text-indigo-700 text-xs font-bold"><i className={`fas ${isEditing?'fa-check':'fa-pencil-alt'}`}></i> {isEditing?'Xong':'Sửa'}</button>
+                            <button onClick={()=>deleteQuestion(q.id)} className="text-red-400 hover:text-red-600 text-xs"><i className="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+
+                    {!isEditing && (
+                        <div>
+                            {/* Chỉnh lại thứ tự: Text trên, Ảnh dưới */}
+                            <div className="mb-2 text-sm"><MathText text={q.question}/></div>
+                            {q.question_image && <img src={q.question_image} className="max-h-40 rounded border mb-2 object-contain block"/>}
+                            
+                            <div className="flex flex-wrap gap-2">
+                                {q.options.map((o, k) => (
+                                    <span key={k} className={`px-2 py-0.5 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                        {String.fromCharCode(65+k)}. {cleanOptionText(o)}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {isEditing && (
+                        <div className="space-y-3 animation-fade-in">
+                            <textarea 
+                                className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" 
+                                value={q.question} 
+                                onChange={e=>updateQuestion(q.id, 'question', e.target.value)}
+                                onPaste={handlePasteImage}
+                                placeholder="Nhập LaTeX hoặc dán ảnh (Ctrl+V) vào đây..."
+                            ></textarea>
+
+                            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                                {q.question_image ? (
+                                    <div className="relative">
+                                        <img src={q.question_image} className="h-16 rounded border"/>
+                                        <button onClick={()=>updateQuestion(q.id, 'question_image', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><i className="fas fa-times"></i></button>
+                                    </div>
+                                ) : (
+                                    <label className="text-xs text-blue-600 cursor-pointer flex items-center gap-1 hover:underline">
+                                        <i className="fas fa-image"></i> Dán (Ctrl+V) hoặc Chọn ảnh
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e)=>{
+                                            const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=(ev)=>updateQuestion(q.id,'question_image',ev.target.result); r.readAsDataURL(f); }
+                                        }}/>
+                                    </label>
+                                )}
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                                {q.options.map((opt, oIdx) => (
+                                    <div key={oIdx} className={`flex items-center border rounded px-1 py-1 ${q.correct_index===oIdx?'border-green-500 bg-green-50':''}`}>
+                                        <div onClick={()=>updateQuestion(q.id, 'correct_index', oIdx)} className={`w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer mr-1 ${q.correct_index===oIdx?'bg-green-500 text-white':'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>{String.fromCharCode(65+oIdx)}</div>
+                                        <input className="w-full text-xs bg-transparent outline-none" value={opt} onChange={e=>updateQuestion(q.id, 'options', e.target.value, oIdx)}/>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
 
+        // --- MAIN CREATOR: HYBRID EXAM ---
         const HybridExamCreator = ({ onBack, initialData }) => {
             const [step, setStep] = useState(initialData ? 2 : 1);
             const [pages, setPages] = useState([]);
@@ -205,21 +399,21 @@
                 }
             }, [initialData]);
 
-            // [UPDATE] Logic thống kê số câu có đáp án
+            // [FIX] Sửa logic merge câu hỏi để tránh lặp và sắp xếp đúng
             const allQuestions = useMemo(() => {
                 let merged = [];
+                // Sắp xếp các trang theo index trước khi merge
                 const sortedPages = [...pages].sort((a,b) => a.page_index - b.page_index);
+                
                 sortedPages.forEach(p => { 
-                    if (pageQuestions[p.id]) merged.push(...pageQuestions[p.id].map(q => ({...q, _sourcePage: p.page_index}))); 
+                    if (pageQuestions[p.id]) {
+                        // Thêm thuộc tính page_id để debug nếu cần
+                        const qs = pageQuestions[p.id].map(q => ({...q, _sourcePage: p.page_index}));
+                        merged.push(...qs); 
+                    }
                 });
                 return merged;
             }, [pages, pageQuestions]);
-            
-            const stats = useMemo(() => {
-                const total = allQuestions.length;
-                const hasAnswer = allQuestions.filter(q => q.correct_index !== undefined && q.correct_index !== -1).length;
-                return { total, hasAnswer, isReady: total > 0 && total === hasAnswer };
-            }, [allQuestions]);
 
             const getApiKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); } catch { return []; } };
 
@@ -229,39 +423,98 @@
                 const fd = new FormData(); fd.append("file", file);
                 try {
                     const res = await axios.post(`${API_BASE}/api/exam/process_paper`, fd);
-                    if (res.data.status === 'ok') { setPages(res.data.pages); if(res.data.pages.length) setActivePageId(res.data.pages[0].id); setStep(2); } 
-                    else alert(res.data.message);
+                    if (res.data.status === 'ok') {
+                        setPages(res.data.pages);
+                        if(res.data.pages.length) setActivePageId(res.data.pages[0].id);
+                        setStep(2);
+                    } else alert(res.data.message);
                 } catch (err) { alert(err.message); } finally { setLoadingMsg(""); }
             };
 
             const runAIForPage = async (page) => {
-                const keys = getApiKeys(); if(!keys.length) return alert("Thiếu API Key!");
+                const keys = getApiKeys();
+                if(!keys.length) return alert("Thiếu API Key! Vui lòng vào Cấu hình ở trang chủ để nạp.");
                 setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p));
+                
                 setActivePageId(page.id);
+                
+                const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                
                 try {
-                    const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
-                    const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { image_data: page.image_data, api_keys: keys, model: model }, { timeout: 60000 });
+                    const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { 
+                        image_data: page.image_data, 
+                        api_keys: keys,
+                        model: model 
+                    }, { timeout: 60000 });
+                    
                     if(res.data.status === 'ok') {
                         const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() }));
                         setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
                         setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'done', q_count: newQs.length} : p));
                     }
-                } catch(e) { setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'error'} : p)); alert(e.message); }
+                } catch(e) { 
+                    setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'error'} : p));
+                    if (e.code === 'ECONNABORTED') alert("Hết thời gian chờ (Timeout)! Mạng chậm hoặc Server bận. Vui lòng thử lại.");
+                    else alert(e.message); 
+                }
             };
 
             const updateQuestion = (qId, field, value, optIdx=null) => {
                 if(!activePageId) return;
-                setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].map(q => { if(q.id === qId) { const n = {...q}; if(field === 'options') n.options[optIdx] = value; else n[field] = value; return n; } return q; }) }));
+                setPageQuestions(prev => ({
+                    ...prev,
+                    [activePageId]: prev[activePageId].map(q => {
+                        if(q.id === qId) {
+                            const newData = {...q};
+                            if(field === 'options') newData.options[optIdx] = value; else newData[field] = value;
+                            return newData;
+                        } return q;
+                    })
+                }));
             };
 
-            const deleteQuestion = (qId) => { if(confirm("Xóa câu này?")) setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].filter(q => q.id !== qId) })); };
-            const addQuestion = () => { if(!activePageId) return alert("Chọn trang trước!"); setPageQuestions(prev => ({ ...prev, [activePageId]: [...(prev[activePageId] || []), { id: Date.now(), question: "Câu hỏi mới...", options: ["", "", "", ""], correct_index: -1, question_image: null }] })); };
+            const deleteQuestion = (qId) => {
+                if(confirm("Xóa câu này?")) {
+                    setPageQuestions(prev => ({
+                        ...prev,
+                        [activePageId]: prev[activePageId].filter(q => q.id !== qId)
+                    }));
+                }
+            };
+
+            const addQuestion = () => {
+                if(!activePageId) return alert("Vui lòng chọn trang PDF bên trái trước!");
+                const newQ = {
+                    id: Date.now(),
+                    question: "Câu hỏi mới...",
+                    options: ["", "", "", ""],
+                    correct_index: 0,
+                    question_image: null
+                };
+                setPageQuestions(prev => ({
+                    ...prev,
+                    [activePageId]: [...(prev[activePageId] || []), newQ]
+                }));
+            };
 
             const handleBulkAnswer = (importedData) => {
                 const map = {"A":0,"B":1,"C":2,"D":3};
                 const newPageQs = {...pageQuestions};
+                
+                // [FIX] Cập nhật đáp án theo thứ tự toàn cục
                 let globalIdx = 0;
-                pages.forEach(p => { if (newPageQs[p.id]) newPageQs[p.id] = newPageQs[p.id].map(q => { globalIdx++; const f = importedData.find(d => d.index === globalIdx); if (f && map[f.answer] !== undefined) return { ...q, correct_index: map[f.answer] }; return q; }); });
+                // Duyệt qua các trang ĐÃ CÓ DỮ LIỆU
+                pages.forEach(p => {
+                    if (newPageQs[p.id]) {
+                        newPageQs[p.id] = newPageQs[p.id].map(q => {
+                            globalIdx++;
+                            const found = importedData.find(d => d.index === globalIdx);
+                            if (found && map[found.answer] !== undefined) return { ...q, correct_index: map[found.answer] };
+                            return q;
+                        });
+                    }
+                });
+                
                 setPageQuestions(newPageQs);
                 alert(`Đã cập nhật đáp án cho ${importedData.length} câu!`);
             };
@@ -269,10 +522,16 @@
             const handleSave = async () => {
                 if(!examInfo.title) return alert("Nhập tên đề!");
                 if(!allQuestions.length) return alert("Đề trống!");
-                // if(!stats.isReady) return alert(`Chưa nhập đủ đáp án! (${stats.hasAnswer}/${stats.total})`); // Optional validation
+                const payload = {
+                    id: initialData ? initialData.info.id : null,
+                    ...examInfo, 
+                    start_time: examInfo.start_time ? new Date(examInfo.start_time).toISOString() : null,
+                    end_time: examInfo.end_time ? new Date(examInfo.end_time).toISOString() : null,
+                    questions: allQuestions, teacher_email: userEmail, api_keys: getApiKeys()
+                };
                 
                 try {
-                    await axios.post(`${API_BASE}/api/exam/save`, { id: initialData ? initialData.info.id : null, ...examInfo, start_time: examInfo.start_time ? new Date(examInfo.start_time).toISOString() : null, end_time: examInfo.end_time ? new Date(examInfo.end_time).toISOString() : null, questions: allQuestions, teacher_email: userEmail, api_keys: getApiKeys() });
+                    await axios.post(`${API_BASE}/api/exam/save`, payload);
                     alert("Đã lưu!"); onBack();
                 } catch(e) { alert("Lỗi lưu: " + e.message); }
             };
@@ -281,15 +540,23 @@
                 <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
                     <div className="bg-white p-10 rounded-2xl shadow-xl text-center max-w-lg w-full">
                         <h1 className="text-3xl font-bold text-indigo-700 mb-2">Tạo Đề Mới</h1>
+                        {/* [UPDATE] Thêm hướng dẫn quan trọng */}
                         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded text-left text-sm mb-4 text-gray-700">
                             <p className="font-bold text-yellow-800 mb-1"><i className="fas fa-exclamation-triangle"></i> HƯỚNG DẪN QUAN TRỌNG:</p>
                             <ul className="list-disc pl-5 space-y-1">
-                                <li><b>Định dạng file:</b> Nên sử dụng file PDF để AI nhận diện tốt nhất.</li>
-                                <li><b>Bố cục:</b> Câu hỏi và các lựa chọn nên nằm cùng trên 1 trang. Nếu bị ngắt sang trang sau, hãy sửa thủ công.</li>
+                                <li><b>Định dạng file:</b> Nên sử dụng file PDF.</li>
+                                <li><b>Bố cục:</b> Câu hỏi và các lựa chọn nên nằm cùng trên 1 trang. Nếu bị ngắt sang trang sau, AI có thể đọc thiếu. Hãy chỉnh sửa file gốc trước khi upload hoặc sửa tay sau khi nhận diện.</li>
                                 <li><b>Kiểm tra kỹ:</b> Nếu thấy nội dung "Mồ côi" hoặc lỗi, hãy kiểm tra và chỉnh sửa. AI chỉ hỗ trợ, Giáo viên là người quyết định.</li>
                             </ul>
                         </div>
-                        {loadingMsg ? <div className="text-indigo-600 font-bold animate-pulse">{loadingMsg}</div> : (<label className="block w-full border-2 border-dashed border-indigo-300 bg-indigo-50 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 transition"><input type="file" className="hidden" accept=".pdf" onChange={handleUpload}/><i className="fas fa-file-pdf text-4xl text-indigo-500 mb-2"></i><div className="font-bold text-indigo-700">Chọn file PDF</div></label>)}
+
+                        <p className="text-gray-500 mb-6">Upload PDF để bắt đầu</p>
+                        {loadingMsg ? <div className="text-indigo-600 font-bold animate-pulse">{loadingMsg}</div> : (
+                            <label className="block w-full border-2 border-dashed border-indigo-300 bg-indigo-50 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 transition">
+                                <input type="file" className="hidden" accept=".pdf" onChange={handleUpload}/>
+                                <i className="fas fa-file-pdf text-4xl text-indigo-500 mb-2"></i><div className="font-bold text-indigo-700">Chọn file PDF</div>
+                            </label>
+                        )}
                         <button onClick={onBack} className="mt-6 text-gray-400 underline">Quay lại</button>
                     </div>
                 </div>
@@ -299,142 +566,237 @@
                 <div className="flex h-screen flex-col bg-white">
                     {showAnswerModal && <AnswerImportModal onClose={()=>setShowAnswerModal(false)} onImport={handleBulkAnswer}/>}
                     <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />
+                    
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
                         <div className="flex items-center gap-4">
                             <button onClick={onBack} className="text-gray-500 hover:text-black"><i className="fas fa-arrow-left"></i></button>
                             <input className="font-bold text-lg border-b border-dashed outline-none w-64" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
-                            <div className="text-sm bg-gray-100 px-3 py-1 rounded">
-                                <span className={stats.isReady ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
-                                    Đáp án: {stats.hasAnswer}/{stats.total}
-                                </span>
+                            <div className="flex items-center gap-2 text-xs">
+                                <input type="number" className="w-12 border rounded px-1" value={examInfo.duration} onChange={e=>setExamInfo({...examInfo, duration:e.target.value})}/> phút
+                                <span className="text-gray-400">|</span>
+                                <input type="datetime-local" className="border rounded px-1" value={examInfo.start_time||""} onChange={e=>setExamInfo({...examInfo, start_time:e.target.value})} title="Bắt đầu"/>
+                                <span>➜</span>
+                                <input type="datetime-local" className="border rounded px-1" value={examInfo.end_time||""} onChange={e=>setExamInfo({...examInfo, end_time:e.target.value})} title="Kết thúc"/>
                             </div>
                         </div>
                         <div className="flex gap-2">
                             <button onClick={()=>setShowAnswerModal(true)} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-sm font-bold"><i className="fas fa-key"></i> Nạp Đáp Án</button>
-                            <button onClick={handleSave} disabled={!allQuestions.length} className={`text-white px-4 py-1.5 rounded text-sm font-bold shadow ${stats.isReady ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}><i className="fas fa-save"></i> Lưu Đề</button>
+                            <button onClick={handleSave} className="bg-green-600 text-white px-4 py-1.5 rounded text-sm font-bold shadow hover:bg-green-700"><i className="fas fa-save"></i> Lưu Đề</button>
                         </div>
                     </div>
+
                     <div className="layout-grid bg-slate-50">
-                        <div className="col-panel"><div className="col-header"><span>TRANG PDF ({pages.length})</span></div><div className="p-2 space-y-2">{pages.map(p => (<div key={p.id} onClick={()=>setActivePageId(p.id)} className={`page-thumb ${activePageId===p.id?'active':''}`}><div className="flex justify-between items-center mb-1"><span className="text-xs font-bold text-gray-500">Trang {p.page_index}</span>{p.status==='done' && <i className="fas fa-check-circle text-green-500"></i>}</div>{p.image_data ? <img src={p.image_data} onClick={(e)=>{e.stopPropagation();setPreviewImage(p.image_data)}} className="cursor-zoom-in"/> : <div className="h-32 bg-gray-100"></div>}<div className="mt-2"><button onClick={(e)=>{e.stopPropagation(); runAIForPage(p)}} className="w-full py-1 text-xs rounded font-bold bg-indigo-600 text-white hover:bg-indigo-700">Nhận diện AI</button></div></div>))}</div></div>
-                        <div className="col-panel bg-white border-r"><div className="col-header"><span>CHI TIẾT</span></div><div className="col-content space-y-4">{activePageId && pageQuestions[activePageId] ? (<div>{pageQuestions[activePageId].map((q, idx)=><QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion}/>)}<button onClick={addQuestion} className="w-full py-2 border-2 border-dashed text-indigo-600 rounded mt-4">Thêm câu hỏi</button></div>) : <div className="text-center text-gray-400 mt-10">Chọn trang bên trái để sửa</div>}</div></div>
-                        <div className="col-panel bg-gray-50"><div className="col-header"><span>TỔNG HỢP ({allQuestions.length} câu)</span></div><div className="col-content space-y-3">{allQuestions.map((q, i) => (<div key={i} className="bg-white p-3 rounded border text-sm shadow-sm"><div className="font-bold text-gray-700 mb-1">Câu {i+1}</div>{q.question_image && <img src={q.question_image} className="h-16 rounded border mb-2"/>}<div className="mb-2"><MathText text={cleanQuestionContent(q.question)}/></div><div className="flex flex-col gap-1">{q.options.map((o, k)=>(<span key={k} className={`px-2 py-1 rounded border ${q.correct_index===k?'bg-green-100 border-green-300 font-bold':'bg-gray-50 border-gray-200'}`}>{String.fromCharCode(65+k)}. <MathText text={cleanOptionText(o)}/></span>))}</div></div>))}</div></div>
+                        {/* COL 1: PAGES */}
+                        <div className="col-panel">
+                            <div className="col-header"><span>TRANG PDF ({pages.length})</span></div>
+                            <div className="p-2 space-y-2">
+                                {pages.map(p => (
+                                    <div key={p.id} onClick={()=>setActivePageId(p.id)} className={`page-thumb ${activePageId===p.id?'active':''}`}>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-bold text-gray-500">Trang {p.page_index}</span>
+                                            {p.status==='done' ? <i className="fas fa-check-circle text-green-500"></i> : p.status==='processing' ? <div className="loader w-3 h-3 border-blue-500"></div> : ''}
+                                        </div>
+                                        {/* Bấm vào ảnh để phóng to */}
+                                        {p.image_data ? (
+                                            <img 
+                                                src={p.image_data} 
+                                                onClick={(e) => { e.stopPropagation(); setPreviewImage(p.image_data); }}
+                                                className="cursor-zoom-in hover:opacity-90 transition"
+                                                title="Bấm để phóng to"
+                                            />
+                                        ) : <div className="h-32 bg-gray-100 flex items-center justify-center text-xs">No Image</div>}
+                                        
+                                        <div className="flex gap-1 mt-2">
+                                             {p.status === 'done' ? (
+                                                <>
+                                                    <div className="flex-1 py-1 text-xs rounded font-bold bg-gray-100 text-gray-600 text-center">
+                                                        Đã lấy {pageQuestions[p.id]?.length || 0} câu
+                                                    </div>
+                                                    <button 
+                                                        onClick={(e)=>{e.stopPropagation(); if(confirm("Nhận diện lại trang này? Dữ liệu cũ của trang sẽ bị mất.")) runAIForPage(p)}} 
+                                                        className="px-2 py-1 text-xs rounded font-bold bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                                                        title="Nhận diện lại"
+                                                    >
+                                                        <i className="fas fa-sync-alt"></i>
+                                                    </button>
+                                                </>
+                                             ) : (
+                                                <button 
+                                                    onClick={(e)=>{e.stopPropagation(); runAIForPage(p)}} 
+                                                    disabled={p.status === 'processing'}
+                                                    className={`w-full py-1 text-xs rounded font-bold ${p.status==='processing' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                                                >
+                                                    {p.status==='processing' ? 'Đang đọc...' : 'Nhận diện AI'}
+                                                </button>
+                                             )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* COL 2: EDITOR */}
+                        <div className="col-panel bg-white border-r">
+                            <div className="col-header"><span>CHI TIẾT (Trang {pages.find(p=>p.id===activePageId)?.page_index})</span></div>
+                            <div className="col-content space-y-4">
+                                {!activePageId ? <div className="text-center text-gray-400 mt-10">Chọn trang bên trái</div> :
+                                 (!pageQuestions[activePageId]?.length && pages.find(p=>p.id===activePageId)?.status !== 'done') ? <div className="text-center text-gray-400 mt-10">Chưa có câu hỏi. Bấm Nhận diện AI.</div> :
+                                 (
+                                    <>
+                                        {pageQuestions[activePageId]?.map((q, idx) => (
+                                            <QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />
+                                        ))}
+                                        {/* Nút thêm câu hỏi thủ công */}
+                                        <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-bold flex items-center justify-center gap-2 transition">
+                                            <i className="fas fa-plus-circle"></i> Thêm câu hỏi thủ công
+                                        </button>
+                                    </>
+                                 )
+                                }
+                            </div>
+                        </div>
+
+                        {/* COL 3: PREVIEW */}
+                        <div className="col-panel bg-gray-50">
+                            <div className="col-header"><span>TỔNG HỢP ({allQuestions.length} câu)</span></div>
+                            <div className="col-content space-y-3">
+                                {allQuestions.length === 0 ? <div className="text-center text-gray-400 mt-10">Đề thi trống</div> :
+                                 allQuestions.map((q, i) => (
+                                    <div key={i} className="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm">
+                                        <div className="font-bold text-gray-700 mb-1">Câu {i+1}</div>
+                                        <div className="mb-2"><MathText text={q.question} /></div>
+                                        {q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded"/>}
+                                        
+                                        <div className="flex flex-col gap-2">
+                                            {q.options.map((o, k) => (
+                                                <span key={k} className={`px-2 py-1 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                                    {String.fromCharCode(65+k)}. <MathText text={cleanOptionText(o)} />
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
         };
 
         const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
-            const [exams, setExams] = useState([]); const [qrLink, setQrLink] = useState(null); const userEmail = localStorage.getItem('userEmail');
-            useEffect(() => { if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data||[])); }, []);
-            const handleDelete = async (id) => { if(confirm("Xóa?")) { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e=>e.id!==id)); } };
-            return (<div className="max-w-6xl mx-auto p-6">{qrLink && <QRModal link={qrLink} onClose={()=>setQrLink(null)} />}<div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow border border-indigo-100"><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold shadow">Tạo Đề Mới</button></div><div className="bg-white rounded-xl shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>{exams.map((ex) => (<tr key={ex.id} className="border-b hover:bg-indigo-50/30"><td className="p-4 font-bold">{ex.title}</td><td className="p-4 text-right flex justify-end gap-2"><button onClick={()=>setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded"><i className="fas fa-qrcode"></i></button><button onClick={()=>onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded"><i className="fas fa-chart-bar"></i></button><button onClick={()=>handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded"><i className="fas fa-trash"></i></button></td></tr>))}</tbody></table></div></div>);
+            const [exams, setExams] = useState([]);
+            const [qrLink, setQrLink] = useState(null);
+            const userEmail = localStorage.getItem('userEmail');
+
+            useEffect(() => { 
+                if(userEmail) {
+                    axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data||[])); 
+                }
+            }, []);
+            
+            const handleDelete = async (id) => { if(confirm("Xóa đề này?")) { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e=>e.id!==id)); } };
+            const handleDuplicate = async (id) => { await axios.post(`${API_BASE}/api/exam/duplicate/${id}`); window.location.reload(); };
+            
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    {qrLink && <QRModal link={qrLink} onClose={()=>setQrLink(null)} />}
+                    <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow border border-indigo-100">
+                        <div className="flex items-center gap-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-2xl"><i className="fas fa-user-tie"></i></div><div><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500">{userEmail}</p></div></div>
+                        <div className="flex gap-2"><button onClick={()=>window.location.href='index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Home</button><button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button></div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4">Thời Gian</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>
+                            {exams.map((ex) => (<tr key={ex.id} className="border-b hover:bg-indigo-50/30"><td className="p-4"><div className="font-bold text-lg text-indigo-900">{ex.title}</div><div className="text-xs text-gray-500">{ex.school}</div></td><td className="p-4 text-sm text-gray-600">{ex.duration_mins} phút<br/><span className="text-xs text-gray-400">{ex.start_time ? new Date(ex.start_time).toLocaleDateString() : 'Tự do'}</span></td><td className="p-4 text-right"><div className="flex justify-end gap-2">
+                                <button onClick={()=>setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded" title="QR Code"><i className="fas fa-qrcode"></i></button>
+                                <button onClick={()=>onEdit(ex.id)} className="bg-yellow-100 text-yellow-600 p-2 rounded" title="Sửa đề"><i className="fas fa-edit"></i></button>
+                                <button onClick={()=>handleDuplicate(ex.id)} className="bg-purple-100 text-purple-600 p-2 rounded" title="Nhân bản"><i className="fas fa-copy"></i></button>
+                                <button onClick={()=>onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded" title="Kết quả"><i className="fas fa-chart-bar"></i></button>
+                                <button onClick={()=>handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded" title="Xóa"><i className="fas fa-trash"></i></button>
+                            </div></td></tr>))}
+                        </tbody></table>
+                    </div>
+                </div>
+            );
         };
 
         const StudentView = ({ examId }) => { 
-            const [step, setStep] = useState("loading"); const [exam, setExam] = useState(null); const [questions, setQuestions] = useState([]); const [answers, setAnswers] = useState({}); const [timeLeft, setTimeLeft] = useState(0); const [warnings, setWarnings] = useState(0); const [info, setInfo] = useState({});
+            const [step, setStep] = useState("loading");
+            const [info, setInfo] = useState({});
+            const [exam, setExam] = useState(null);
+            const [answers, setAnswers] = useState({});
+            const [timeLeft, setTimeLeft] = useState(0);
+            const [error, setError] = useState(null);
+            // [UPDATE] Biến đếm cảnh báo gian lận
+            const [warnings, setWarnings] = useState(0);
             
             useEffect(() => { 
                 axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => {
-                    if (res.data.info.status === "open") {
-                        setExam(res.data); setTimeLeft(res.data.info.duration_mins*60); setStep("info"); 
-                        // [UPDATE] Xáo trộn câu hỏi ngay khi tải đề
-                        const rawQuestions = res.data.questions;
-                        const shuffled = rawQuestions.map(q => {
-                            // Xóa prefix "Câu 1:" trong nội dung để tránh lặp
-                            const cleanQ = {...q, question: cleanQuestionContent(q.question)};
-                            // Xáo trộn options nếu cần (ở đây giữ nguyên options, chỉ shuffle câu hỏi)
-                            return cleanQ;
-                        }).sort(() => Math.random() - 0.5);
-                        setQuestions(shuffled);
-                    } else { alert("Đề chưa mở hoặc đã hết hạn!"); }
-                });
+                    const data = res.data;
+                    if (data.info.status === "not_started") { setError(`Chưa đến giờ thi! Mở lúc: ${new Date(data.info.start_time).toLocaleString()}`); setStep("locked"); }
+                    else if (data.info.status === "expired") { setError("Đã hết giờ làm bài."); setStep("locked"); }
+                    else { setExam(data); setTimeLeft(data.info.duration_mins*60); setStep("info"); }
+                }).catch(()=> { setError("Không tìm thấy đề thi!"); setStep("locked"); }); 
             }, [examId]);
 
-            // [UPDATE] Anti-Cheat Logic
-            useEffect(() => {
-                if(step === "exam") {
-                    // Yêu cầu Fullscreen
-                    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
-
-                    const handleVisibility = () => {
+            // [UPDATE] Logic đếm ngược và Anti-Cheat
+            useEffect(() => { 
+                if(step === "exam") { 
+                    const t = setInterval(()=>setTimeLeft(v=>{ if(v<=1){ handleSubmit(true); return 0; } return v-1; }), 1000); 
+                    
+                    // Anti-Cheat: Phát hiện rời tab
+                    const handleVisibilityChange = () => {
                         if (document.hidden) {
-                            setWarnings(w => {
-                                const nw = w + 1;
-                                alert(`CẢNH BÁO ${nw}/3: Bạn đã rời khỏi màn hình thi!`);
-                                if (nw >= 3) handleSubmit(true);
-                                return nw;
+                            setWarnings(prev => {
+                                const newCount = prev + 1;
+                                if (newCount >= 3) {
+                                    alert("Bạn đã vi phạm quy chế thi quá 3 lần (rời khỏi màn hình). Hệ thống sẽ tự động nộp bài!");
+                                    handleSubmit(true);
+                                } else {
+                                    alert(`CẢNH BÁO: Bạn đã rời khỏi màn hình thi! (${newCount}/3 lần). Nếu vi phạm 3 lần sẽ bị thu bài.`);
+                                }
+                                return newCount;
                             });
                         }
                     };
+                    document.addEventListener("visibilitychange", handleVisibilityChange);
                     
-                    const handleBlur = () => {
-                         // Blur cũng tính là mất tập trung
-                         setWarnings(w => {
-                            const nw = w + 1;
-                            if (nw >= 3) handleSubmit(true);
-                            return nw;
-                         });
-                    }
-
-                    // Chặn phím PrintScreen (chỉ chặn được sự kiện, không chặn được OS screenshot hoàn toàn)
-                    const handleKeyUp = (e) => {
-                        if (e.key === 'PrintScreen') {
-                            alert("CẢNH BÁO: Không được chụp màn hình!");
-                            navigator.clipboard.writeText("CHEAT_ATTEMPT_DETECTED"); // Xóa clipboard
-                        }
-                    };
-
-                    document.addEventListener("visibilitychange", handleVisibility);
-                    window.addEventListener("blur", handleBlur);
-                    window.addEventListener("keyup", handleKeyUp);
-                    
-                    const t = setInterval(()=>setTimeLeft(v=>{ if(v<=1){ handleSubmit(true); return 0; } return v-1; }), 1000);
-                    return () => { 
-                        clearInterval(t); 
-                        document.removeEventListener("visibilitychange", handleVisibility);
-                        window.removeEventListener("blur", handleBlur);
-                        window.removeEventListener("keyup", handleKeyUp);
-                    };
-                }
+                    return () => {
+                        clearInterval(t);
+                        document.removeEventListener("visibilitychange", handleVisibilityChange);
+                    } 
+                } 
             }, [step]);
 
             const handleSubmit = async (auto=false) => { 
                 if(!auto && !confirm("Nộp bài?")) return;
                 try { 
-                    await axios.post(`${API_BASE}/api/exam/submit`, { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: answers }); 
-                    setStep("result"); 
+                    const res = await axios.post(`${API_BASE}/api/exam/submit`, { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: answers }); 
+                    setExam(res.data); setStep("result"); 
                     if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
-                } catch(e) { alert("Lỗi nộp bài!"); }
+                } catch(e) { alert(e.response?.data?.detail || "Lỗi nộp bài!"); }
             };
 
-            if(step==="loading") return <div className="flex h-screen items-center justify-center"><div className="loader border-indigo-600"></div></div>;
-            if(step==="info") return <div className="max-w-md mx-auto mt-20 bg-white p-8 rounded text-center shadow-lg"><h2 className="text-2xl font-bold">{exam.info.title}</h2><p>Thời gian: {exam.info.duration_mins} phút</p><input className="border p-2 w-full my-2" placeholder="Họ Tên" onChange={e=>setInfo({...info, name:e.target.value})}/><button onClick={()=>setStep("exam")} className="bg-indigo-600 text-white w-full py-2 rounded font-bold mt-4">VÀO THI</button></div>;
-            if(step==="result") return <div className="flex h-screen items-center justify-center bg-green-50"><div className="text-center"><h2 className="text-3xl font-bold text-green-700">Đã Nộp Bài!</h2><p>Giáo viên sẽ báo điểm sau.</p></div></div>;
+            if(step === "locked") return <div className="flex justify-center h-screen items-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Đóng Cửa</h2><p>{error}</p></div></div>;
+            if(step === "loading") return <div className="flex justify-center h-screen items-center"><div className="loader border-indigo-600"></div></div>;
+            if(step==="info") return <div className="max-w-md mx-auto mt-20 bg-white p-8 rounded-xl shadow-lg text-center"><h2 className="text-2xl font-bold mb-4 text-indigo-800">{exam.info.title}</h2><p className="mb-6 text-gray-500">Thời gian: {exam.info.duration_mins} phút</p><input className="border p-3 w-full mb-3 rounded" placeholder="Họ và Tên" onChange={e=>setInfo({...info, name: e.target.value})}/><input className="border p-3 w-full mb-3 rounded" placeholder="Lớp" onChange={e=>setInfo({...info, class: e.target.value})}/><input className="border p-3 w-full mb-6 rounded" placeholder="SBD" onChange={e=>setInfo({...info, sbd: e.target.value})}/><button onClick={()=>{ if(!info.name) return alert("Nhập tên!"); if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); setStep("exam"); }} className="bg-indigo-600 text-white w-full py-3 rounded font-bold shadow hover:bg-indigo-700">VÀO THI</button></div>;
+            if(step==="result") return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="bg-white p-10 rounded-xl shadow-lg text-center max-w-2xl"><h2 className="text-3xl font-bold text-gray-800 mb-2">Hoàn Thành!</h2><p className="text-xl text-indigo-600 font-bold mb-4">Điểm số: {exam.score}</p><div className="bg-gray-50 p-4 rounded text-left text-sm text-gray-700 italic border-l-4 border-indigo-500">💡 {exam.feedback}</div></div></div>;
 
             return (
                 <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto">
-                    {warnings > 0 && <div className="cheat-overlay" style={{display: 'none'}}>CẢNH BÁO GIAN LẬN</div>}
                     <div className="max-w-4xl mx-auto pb-20">
-                        <div className="sticky top-0 bg-white shadow p-4 z-20 flex justify-between">
-                            <div><b>{info.name}</b></div>
-                            <div className="text-red-600 font-mono text-xl">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
-                            <button onClick={()=>handleSubmit(false)} className="bg-indigo-600 text-white px-3 py-1 rounded">Nộp Bài</button>
-                        </div>
-                        <div className="p-4 space-y-6">
-                            {questions.map((q, i) => (
-                                <div key={i} className="bg-gray-50 p-4 rounded border">
-                                    <div className="font-bold mb-2">Câu {i+1}: <MathText text={q.question}/></div>
-                                    {q.question_image && <img src={q.question_image} className="h-40 object-contain mb-2"/>}
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {q.options.map((o, k) => (
-                                            <div key={k} onClick={()=>setAnswers({...answers, [i]: k})} className={`p-2 border rounded cursor-pointer ${answers[i]===k?'bg-blue-100 border-blue-500':''}`}>
-                                                <b>{String.fromCharCode(65+k)}.</b> <MathText text={cleanOptionText(o)}/>
-                                            </div>
-                                        ))}
+                        <div className="sticky top-0 bg-white/95 backdrop-blur shadow p-4 rounded-b-xl flex justify-between items-center z-20 mb-6 border-t-4 border-indigo-600"><div><div className="font-bold text-gray-800">{info.name}</div><div className="text-xs text-gray-500">{info.sbd}</div></div><div className="font-mono text-2xl font-bold text-red-600">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div><button onClick={()=>handleSubmit(false)} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700">Nộp Bài</button></div>
+                        {exam.questions.map((q, i) => (
+                            <div key={i} className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
+                                <div className="flex gap-3 mb-4">
+                                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm flex-shrink-0">Câu {i+1}</span>
+                                    <div className="flex-1">
+                                        {q.question_image && <img src={q.question_image} className="max-h-80 rounded border mb-3 block"/>}
+                                        <div className="text-lg font-medium text-gray-800"><MathText text={q.question}/></div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 rounded-lg border cursor-pointer flex gap-3 items-center ${answers[i]===idx?'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-200':'border-gray-200 hover:bg-gray-50'}`}><div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${answers[i]===idx?'bg-indigo-600 text-white':'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div><div className="text-gray-700"><MathText text={o}/></div></div>))}</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
@@ -443,15 +805,50 @@
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             useEffect(() => { axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); }, [examId]);
-            return (<div className="max-w-6xl mx-auto p-6"><button onClick={onBack} className="mb-4 text-gray-600 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button><div className="bg-white rounded-xl shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-indigo-50 border-b"><tr><th className="p-3">Tên HS</th><th className="p-3">Điểm</th><th className="p-3">Chi tiết</th></tr></thead><tbody>{results.map((r, i) => (<tr key={i} className="border-b"><td className="p-3">{r.student_name}</td><td className="p-3 font-bold text-indigo-600">{r.score}</td><td className="p-3 text-sm">{r.correct_count}/{r.total_questions}</td></tr>))}</tbody></table></div></div>);
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    <button onClick={onBack} className="mb-4 text-gray-600 hover:text-indigo-600 flex items-center gap-2 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button>
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 className="font-bold text-lg text-gray-800">Kết quả thi</h3><button onClick={()=>{ const ws = XLSX.utils.json_to_sheet(results); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KetQua"); XLSX.writeFile(wb, "KetQuaThi.xlsx"); }} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold"><i className="fas fa-file-excel mr-1"></i> Xuất Excel</button></div>
+                        <table className="w-full text-left"><thead className="bg-indigo-50 border-b"><tr><th className="p-3">Tên HS</th><th className="p-3">SBD</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Số câu đúng</th></tr></thead><tbody>{results.map((r, i) => (<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3 font-bold text-gray-700">{r.student_name}</td><td className="p-3 text-gray-600">{r.sbd}</td><td className="p-3 text-gray-600">{r.student_class}</td><td className="p-3 font-bold text-indigo-600">{r.score}</td><td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td></tr>))}</tbody></table>
+                    </div>
+                </div>
+            );
         };
 
         const App = () => {
-            const [view, setView] = useState("dashboard"); const [selectedId, setSelectedId] = useState(null); const [isStudent, setIsStudent] = useState(false); const userEmail = localStorage.getItem('userEmail');
-            useEffect(() => { const p = new URLSearchParams(window.location.search); if(p.get("mode") === "student") { setSelectedId(p.get("examId")); setIsStudent(true); } }, []);
+            const [view, setView] = useState("dashboard"); 
+            const [selectedId, setSelectedId] = useState(null);
+            const [isStudent, setIsStudent] = useState(false);
+            const [editingData, setEditingData] = useState(null);
+            const userEmail = localStorage.getItem('userEmail');
+
+            useEffect(() => { 
+                const p = new URLSearchParams(window.location.search); 
+                if(p.get("mode") === "student") { setSelectedId(p.get("examId")); setIsStudent(true); } 
+            }, []);
+
+            const handleEdit = async (id) => { try { const res = await axios.get(`${API_BASE}/api/exam/get/${id}`); setEditingData(res.data); setView("create"); } catch(e) { alert("Lỗi tải đề: " + e.message); } };
+
             if(isStudent) return <StudentView examId={selectedId} />;
-            if (!userEmail) return <div className="flex h-screen items-center justify-center"><a href="login.html" className="text-blue-600 font-bold">Vui lòng đăng nhập</a></div>;
-            return (<div>{view==="dashboard" && <TeacherDashboard onCreateNew={()=>setView("create")} onViewDetail={(id)=>{setSelectedId(id); setView("detail")}} />}{view==="create" && <HybridExamCreator onBack={()=>setView("dashboard")} />}{view==="detail" && <ResultDetail examId={selectedId} onBack={()=>setView("dashboard")} />}</div>);
+            
+            // FIX LỖI TRẮNG TRANG: Kiểm tra kỹ userEmail trước khi render
+            if (!userEmail) {
+                return (
+                    <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
+                        <div className="text-xl font-bold text-gray-700">Phiên đăng nhập hết hạn</div>
+                        <a href="login.html" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">Đăng nhập ngay</a>
+                    </div>
+                );
+            }
+
+            return (
+                <div>
+                    {view==="dashboard" && <TeacherDashboard onCreateNew={()=>{setEditingData(null); setView("create");}} onEdit={handleEdit} onViewDetail={(id)=>{setSelectedId(id); setView("detail")}} />}
+                    {view==="create" && <HybridExamCreator initialData={editingData} onBack={()=>setView("dashboard")} />}
+                    {view==="detail" && <ResultDetail examId={selectedId} onBack={()=>setView("dashboard")} />}
+                </div>
+            );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
