@@ -49,9 +49,19 @@
             -moz-user-select: none; -ms-user-select: none; user-select: none;
         }
         
+        /* Violation Overlay */
+        .violation-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; text-align: center;
+        }
+        
         /* Error Box */
         #react-error { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
         
+        /* Chống in ấn */
+        @media print { html { display: none; } }
+
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
@@ -70,11 +80,22 @@
             return false;
         };
         
+        // Chặn phím tắt cấp hệ thống trình duyệt
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.key === 'u') || (e.ctrlKey && e.key === 'p') || e.key === 'PrintScreen') {
+            // F12, PrintScreen, Ctrl+U (Source), Ctrl+P (Print), Ctrl+Shift+I (DevTools)
+            if (e.key === 'F12' || e.key === 'PrintScreen' || 
+                (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S')) ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
                 e.preventDefault();
-                alert("Thao tác này bị cấm trong giờ thi!");
+                e.stopPropagation();
+                alert("CẢNH BÁO: Thao tác này bị cấm trong giờ thi!");
             }
+        });
+        
+        // Xóa clipboard khi cố copy
+        document.addEventListener('copy', function(e) {
+            e.preventDefault();
+            alert("Cấm sao chép!");
         });
     </script>
 
@@ -205,13 +226,36 @@
             useEffect(() => { if (initialData && initialData.questions) { const fakeId = "imported"; setPages([{ id: fakeId, page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }]); setPageQuestions({ [fakeId]: initialData.questions.map((q,i)=>({...q, id: Date.now()+i})) }); setActivePageId(fakeId); } }, [initialData]);
             const allQuestions = useMemo(() => { let merged = []; const sortedPages = [...pages].sort((a,b) => a.page_index - b.page_index); sortedPages.forEach(p => { if (pageQuestions[p.id]) merged.push(...pageQuestions[p.id]); }); return merged; }, [pages, pageQuestions]);
             const getApiKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); } catch { return []; } };
+            
+            // [NEW] Tính toán số câu có đáp án để hiển thị
+            const counts = useMemo(() => {
+                const total = allQuestions.length;
+                const hasAns = allQuestions.filter(q => q.correct_index !== null && q.correct_index !== undefined && parseInt(q.correct_index) >= 0).length;
+                return { total, hasAns };
+            }, [allQuestions]);
+
             const handleUpload = async (e) => { const file = e.target.files[0]; if (!file) return; setLoadingMsg("Đang xử lý PDF..."); const fd = new FormData(); fd.append("file", file); try { const res = await axios.post(`${API_BASE}/api/exam/process_paper`, fd); if (res.data.status === 'ok') { setPages(res.data.pages); if(res.data.pages.length) setActivePageId(res.data.pages[0].id); setStep(2); } else alert(res.data.message); } catch (err) { alert(err.message); } finally { setLoadingMsg(""); } };
             const runAIForPage = async (page) => { const keys = getApiKeys(); if(!keys.length) return alert("Thiếu API Key!"); setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p)); setActivePageId(page.id); const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash'; try { const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { image_data: page.image_data, api_keys: keys, model: model }, { timeout: 60000 }); if(res.data.status === 'ok') { const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() })); setPageQuestions(prev => ({ ...prev, [page.id]: newQs })); setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'done', q_count: newQs.length} : p)); } } catch(e) { setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'error'} : p)); alert(e.message); } };
             const updateQuestion = (qId, field, value, optIdx=null) => { if(!activePageId) return; setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].map(q => { if(q.id === qId) { const newData = {...q}; if(field === 'options') newData.options[optIdx] = value; else newData[field] = value; return newData; } return q; }) })); };
             const deleteQuestion = (qId) => { if(confirm("Xóa câu này?")) setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].filter(q => q.id !== qId) })); };
             const addQuestion = () => { if(!activePageId) return alert("Chọn trang trước!"); const newQ = { id: Date.now(), question: "Câu hỏi mới...", options: ["", "", "", ""], correct_index: 0, question_image: null }; setPageQuestions(prev => ({ ...prev, [activePageId]: [...(prev[activePageId] || []), newQ] })); };
-            const handleBulkAnswer = (importedData) => { const map = {"A":0,"B":1,"C":2,"D":3}; const newPageQs = {...pageQuestions}; let globalIdx = 0; pages.forEach(p => { if (newPageQs[p.id]) { newPageQs[p.id] = newPageQs[p.id].map(q => { globalIdx++; const found = importedData.find(d => d.index === globalIdx); if (found && map[found.answer] !== undefined) return { ...q, correct_index: map[found.answer] }; return q; }); } }); setPageQuestions(newPageQs); alert(`Đã cập nhật ${importedData.length} câu!`); };
-            const handleSave = async () => { if(!examInfo.title) return alert("Nhập tên đề!"); if(!allQuestions.length) return alert("Đề trống!"); const payload = { id: initialData ? initialData.info.id : null, ...examInfo, start_time: examInfo.start_time ? new Date(examInfo.start_time).toISOString() : null, end_time: examInfo.end_time ? new Date(examInfo.end_time).toISOString() : null, questions: allQuestions, teacher_email: userEmail, api_keys: getApiKeys() }; try { await axios.post(`${API_BASE}/api/exam/save`, payload); alert("Đã lưu!"); onBack(); } catch(e) { alert("Lỗi lưu: " + e.message); } };
+            const handleBulkAnswer = (importedData) => { const map = {"A":0,"B":1,"C":2,"D":3}; const newPageQs = {...pageQuestions}; let globalIdx = 0; pages.forEach(p => { if (newPageQs[p.id]) { newPageQs[p.id] = newPageQs[p.id].map(q => { globalIdx++; const found = importedData.find(d => d.index === globalIdx); if (found && map[found.answer] !== undefined) return { ...q, correct_index: map[found.answer] }; return q; }); } }); setPageQuestions(newPageQs); alert(`Đã cập nhật ${importedData.length} câu.`); };
+            
+            const handleSave = async () => {
+                if(!examInfo.title) return alert("Vui lòng nhập tên đề thi!");
+                if(!allQuestions.length) return alert("Đề thi đang trống! Vui lòng tải lên PDF và nhận diện câu hỏi.");
+                
+                // Kiểm tra lại số lượng đáp án trước khi lưu
+                const questionsWithAnswer = allQuestions.filter(q => q.correct_index !== null && q.correct_index !== undefined && parseInt(q.correct_index) >= 0).length;
+                const totalQuestions = allQuestions.length;
+                
+                if (questionsWithAnswer < totalQuestions) {
+                    return alert(`CHƯA HOÀN THÀNH:\n\n- Tổng số câu hỏi: ${totalQuestions}\n- Số câu đã có đáp án: ${questionsWithAnswer}\n\nVui lòng chọn đáp án đúng cho ${totalQuestions - questionsWithAnswer} câu còn thiếu trước khi lưu!`);
+                }
+
+                const payload = { id: initialData ? initialData.info.id : null, ...examInfo, start_time: examInfo.start_time ? new Date(examInfo.start_time).toISOString() : null, end_time: examInfo.end_time ? new Date(examInfo.end_time).toISOString() : null, questions: allQuestions, teacher_email: userEmail, api_keys: getApiKeys() }; 
+                try { await axios.post(`${API_BASE}/api/exam/save`, payload); alert("Đã lưu thành công!"); onBack(); } catch(e) { alert("Lỗi lưu: " + e.message); } 
+            };
             
             if(step === 1) return (<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4"><div className="bg-white p-10 rounded-2xl shadow-xl text-center max-w-lg w-full"><h1 className="text-3xl font-bold text-indigo-700 mb-2">Tạo Đề Mới</h1><div className="bg-yellow-50 border border-yellow-200 p-4 rounded text-left text-sm mb-4 text-gray-700"><p className="font-bold text-yellow-800 mb-1">HƯỚNG DẪN:</p><ul className="list-disc pl-5 space-y-1"><li>Sử dụng PDF.</li><li>Câu hỏi và đáp án nên nằm cùng 1 trang.</li></ul></div><p className="text-gray-500 mb-6">Upload PDF để bắt đầu</p>{loadingMsg ? <div className="text-indigo-600 font-bold animate-pulse">{loadingMsg}</div> : (<label className="block w-full border-2 border-dashed border-indigo-300 bg-indigo-50 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 transition"><input type="file" className="hidden" accept=".pdf" onChange={handleUpload}/><i className="fas fa-file-pdf text-4xl text-indigo-500 mb-2"></i><div className="font-bold text-indigo-700">Chọn file PDF</div></label>)}<button onClick={onBack} className="mt-6 text-gray-400 underline">Quay lại</button></div></div>);
             
@@ -222,13 +266,18 @@
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
                         <div className="flex items-center gap-4">
                             <button onClick={onBack} className="text-gray-500 hover:text-black"><i className="fas fa-arrow-left"></i></button>
-                            <input className="font-bold text-lg border-b border-dashed outline-none w-64" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
+                            <input className="font-bold text-lg border-b border-dashed outline-none w-48" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
                             <div className="flex items-center gap-2 text-xs">
                                 <input type="number" className="w-12 border rounded px-1" value={examInfo.duration} onChange={e=>setExamInfo({...examInfo, duration:e.target.value})}/> phút 
                                 <span className="text-gray-400">|</span> 
                                 <input type="datetime-local" className="border rounded px-1" value={examInfo.start_time||""} onChange={e=>setExamInfo({...examInfo, start_time:e.target.value})}/> 
                                 ➜ 
                                 <input type="datetime-local" className="border rounded px-1" value={examInfo.end_time||""} onChange={e=>setExamInfo({...examInfo, end_time:e.target.value})}/>
+                            </div>
+                            
+                            {/* [NEW] Hiển thị tiến độ đáp án */}
+                            <div className="text-xs font-bold bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                                Đã có đáp án: <span className={counts.hasAns < counts.total ? "text-red-600 animate-pulse" : "text-green-600"}>{counts.hasAns}/{counts.total}</span>
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -239,7 +288,25 @@
                     <div className="layout-grid bg-slate-50">
                         <div className="col-panel"><div className="col-header"><span>TRANG PDF ({pages.length})</span></div><div className="p-2 space-y-2">{pages.map(p => (<div key={p.id} onClick={()=>setActivePageId(p.id)} className={`page-thumb ${activePageId===p.id?'active':''}`}><div className="flex justify-between items-center mb-1"><span className="text-xs font-bold text-gray-500">Trang {p.page_index}</span>{p.status==='done' ? <i className="fas fa-check-circle text-green-500"></i> : p.status==='processing' ? <div className="loader w-3 h-3 border-blue-500"></div> : ''}</div>{p.image_data ? (<img src={p.image_data} onClick={(e) => { e.stopPropagation(); setPreviewImage(p.image_data); }} className="cursor-zoom-in hover:opacity-90 transition"/>) : <div className="h-32 bg-gray-100 flex items-center justify-center text-xs">No Image</div>}<div className="flex gap-1 mt-2">{p.status === 'done' ? (<><div className="flex-1 py-1 text-xs rounded font-bold bg-gray-100 text-gray-600 text-center">Đã lấy {pageQuestions[p.id]?.length || 0} câu</div><button onClick={(e)=>{e.stopPropagation(); if(confirm("Nhận diện lại?")) runAIForPage(p)}} className="px-2 py-1 text-xs rounded font-bold bg-indigo-100 text-indigo-600 hover:bg-indigo-200"><i className="fas fa-sync-alt"></i></button></>) : (<button onClick={(e)=>{e.stopPropagation(); runAIForPage(p)}} disabled={p.status === 'processing'} className={`w-full py-1 text-xs rounded font-bold ${p.status==='processing' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>{p.status==='processing' ? 'Đang đọc...' : 'Nhận diện AI'}</button>)}</div></div>))}</div></div>
                         <div className="col-panel bg-white border-r"><div className="col-header"><span>CHI TIẾT (Trang {pages.find(p=>p.id===activePageId)?.page_index})</span></div><div className="col-content space-y-4">{!activePageId ? <div className="text-center text-gray-400 mt-10">Chọn trang bên trái</div> : (!pageQuestions[activePageId]?.length && pages.find(p=>p.id===activePageId)?.status !== 'done') ? <div className="text-center text-gray-400 mt-10">Chưa có câu hỏi. Bấm Nhận diện AI.</div> : (<>{pageQuestions[activePageId]?.map((q, idx) => (<QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />))}<button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-bold flex items-center justify-center gap-2"><i className="fas fa-plus-circle"></i> Thêm câu hỏi thủ công</button></>)}</div></div>
-                        <div className="col-panel bg-gray-50"><div className="col-header"><span>TỔNG HỢP ({allQuestions.length} câu)</span></div><div className="col-content space-y-3">{allQuestions.length === 0 ? <div className="text-center text-gray-400 mt-10">Đề thi trống</div> : allQuestions.map((q, i) => (<div key={i} className="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm"><div className="font-bold text-gray-700 mb-1">Câu {i+1}</div><div className="mb-2"><MathText text={q.question} /></div>{q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded"/>}<div className="flex flex-col gap-2">{q.options.map((o, k) => (<span key={k} className={`px-2 py-1 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>{String.fromCharCode(65+k)}. <MathText text={cleanOptionText(o)} /></span>))}</div></div>))}</div></div>
+                        <div className="col-panel bg-gray-50">
+                            <div className="col-header"><span>TỔNG HỢP ({allQuestions.length} câu)</span></div>
+                            <div className="col-content space-y-3">
+                                {allQuestions.length === 0 ? <div className="text-center text-gray-400 mt-10">Đề thi trống</div> : allQuestions.map((q, i) => (
+                                    <div key={i} className="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm">
+                                        <div className="font-bold text-gray-700 mb-1">Câu {i+1}</div>
+                                        <div className="mb-2"><MathText text={q.question} /></div>
+                                        {q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded"/>}
+                                        <div className="flex flex-col gap-2">
+                                            {q.options.map((o, k) => (
+                                                <span key={k} className={`px-2 py-1 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                                    {String.fromCharCode(65+k)}. <MathText text={cleanOptionText(o)} />
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
@@ -274,6 +341,7 @@
             const [timeLeft, setTimeLeft] = useState(0);
             const [error, setError] = useState(null);
             const [violationCount, setViolationCount] = useState(0);
+            const [isLockedOut, setIsLockedOut] = useState(false);
             
             useEffect(() => { 
                 axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => {
@@ -284,7 +352,6 @@
                 }).catch(()=> { setError("Không tìm thấy đề thi!"); setStep("locked"); }); 
             }, [examId]);
 
-            // Trộn đề
             useEffect(() => {
                 if (step === 'exam' && exam && exam.questions) {
                     const mappedQuestions = exam.questions.map((q, originalIdx) => {
@@ -296,35 +363,104 @@
                 }
             }, [step, exam]);
 
-            // Anti-Cheat & Timer
             useEffect(() => {
-                if(step === "exam") {
-                    const t = setInterval(()=>setTimeLeft(v=>{ if(v<=1){ handleSubmit(true); return 0; } return v-1; }), 1000); 
-                    const handleViolation = () => { if (document.hidden) { setViolationCount(p => { const n = p + 1; if (n >= 3) { alert("BẠN ĐÃ VI PHẠM QUÁ 3 LẦN. HỆ THỐNG SẼ TỰ ĐỘNG NỘP BÀI!"); handleSubmit(true); } else { alert(`CẢNH BÁO GIAN LẬN: Rời màn hình! (${n}/3 lần).`); } return n; }); } };
-                    const handleFullscreenChange = () => { if (!document.fullscreenElement) { setViolationCount(p => { const n = p + 1; alert(`CẢNH BÁO: Không được thoát toàn màn hình! (${n}/3 lần).`); if (n >= 3) handleSubmit(true); return n; }); } };
-                    document.addEventListener("visibilitychange", handleViolation);
-                    document.addEventListener("fullscreenchange", handleFullscreenChange);
-                    return () => { clearInterval(t); document.removeEventListener("visibilitychange", handleViolation); document.removeEventListener("fullscreenchange", handleFullscreenChange); } 
-                } 
+                if (step === "exam") {
+                    const timer = setInterval(() => setTimeLeft(v => { 
+                        if (v <= 1) { handleSubmit(true); return 0; } 
+                        return v - 1; 
+                    }), 1000);
+
+                    const handleViolation = () => {
+                        setViolationCount(prev => {
+                            const newCount = prev + 1;
+                            if (newCount >= 3) {
+                                alert("Vi phạm quy chế (thoát màn hình) quá 3 lần. Hệ thống tự động thu bài!");
+                                handleSubmit(true);
+                            } else {
+                                setIsLockedOut(true); // Khóa màn hình
+                            }
+                            return newCount;
+                        });
+                    };
+
+                    const checkFullscreen = () => {
+                        if (!document.fullscreenElement) {
+                            handleViolation();
+                        }
+                    };
+
+                    const checkVisibility = () => {
+                        if (document.hidden) {
+                            handleViolation();
+                        }
+                    };
+
+                    document.addEventListener("fullscreenchange", checkFullscreen);
+                    document.addEventListener("visibilitychange", checkVisibility);
+                    window.addEventListener("blur", checkVisibility);
+
+                    return () => {
+                        clearInterval(timer);
+                        document.removeEventListener("fullscreenchange", checkFullscreen);
+                        document.removeEventListener("visibilitychange", checkVisibility);
+                        window.removeEventListener("blur", checkVisibility);
+                    };
+                }
             }, [step]);
 
-            const enterFullscreen = () => { const elem = document.documentElement; if (elem.requestFullscreen) elem.requestFullscreen().catch(()=>{}); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); else if (elem.msRequestFullscreen) elem.msRequestFullscreen(); };
-            const startExam = () => { if(!info.name || !info.sbd) return alert("Vui lòng nhập Họ tên và SBD!"); enterFullscreen(); setStep("exam"); };
-
-            const handleSubmit = async (auto=false) => { 
-                const answeredCount = Object.keys(answers).length;
-                const totalCount = exam.questions.length;
-                if (!auto) {
-                    if (answeredCount < totalCount) { alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết!`); return; }
-                    if (!confirm("Bạn chắc chắn muốn nộp bài?")) return;
-                }
-                try { const res = await axios.post(`${API_BASE}/api/exam/submit`, { exam_id: examId, student_name: info.name, sbd: info.sbd, student_class: info.class, answers: answers }); setExam(res.data); setStep("result"); if(document.exitFullscreen) document.exitFullscreen().catch(()=>{}); } catch(e) { alert(e.response?.data?.detail || "Lỗi nộp bài!"); }
+            const enterFullscreen = () => {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
+                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
             };
 
-            const handleSelectAnswer = (originalQIdx, originalOptIdx) => { setAnswers(prev => ({...prev, [originalQIdx]: originalOptIdx})); };
+            const startExam = () => {
+                if(!info.name || !info.sbd) return alert("Vui lòng nhập Họ tên và SBD!");
+                enterFullscreen();
+                setStep("exam");
+            };
+
+            const unlockExam = () => {
+                enterFullscreen();
+                setIsLockedOut(false);
+            };
+
+            const handleSubmit = async (auto = false) => {
+                const answeredCount = Object.keys(answers).length;
+                const totalCount = exam.questions.length;
+                
+                if (!auto) {
+                    if (answeredCount < totalCount) {
+                        alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                        return;
+                    }
+                    if (!confirm("Bạn chắc chắn muốn nộp bài?")) return;
+                }
+
+                try {
+                    const res = await axios.post(`${API_BASE}/api/exam/submit`, {
+                        exam_id: examId,
+                        student_name: info.name,
+                        sbd: info.sbd,
+                        student_class: info.class,
+                        answers: answers
+                    });
+                    setExam(res.data);
+                    setStep("result");
+                    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                } catch (e) {
+                    alert(e.response?.data?.detail || "Lỗi nộp bài!");
+                }
+            };
+
+            const handleSelectAnswer = (originalQIdx, originalOptIdx) => {
+                setAnswers(prev => ({...prev, [originalQIdx]: originalOptIdx}));
+            };
 
             if(step === "locked") return <div className="flex justify-center h-screen items-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Đóng Cửa</h2><p>{error}</p></div></div>;
             if(step === "loading") return <div className="flex justify-center h-screen items-center"><div className="loader border-indigo-600"></div></div>;
+            
             if(step === "info") return (
                 <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
                     <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg text-center">
@@ -336,11 +472,12 @@
                             <div><label className="text-xs font-bold text-gray-700">Số Báo Danh (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="SBD123456" onChange={e=>setInfo({...info, sbd: e.target.value})}/></div>
                             <div><label className="text-xs font-bold text-gray-700">Lớp</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="12A1" onChange={e=>setInfo({...info, class: e.target.value})}/></div>
                         </div>
-                        <div className="mt-6 bg-yellow-50 text-yellow-800 p-3 rounded text-xs text-left border border-yellow-200"><strong><i className="fas fa-exclamation-triangle"></i> Lưu ý:</strong><br/>- Hệ thống sẽ tự động bật <b>Toàn màn hình</b>.<br/>- Tuyệt đối không thoát màn hình hoặc chuyển tab.<br/>- Vi phạm <b>3 lần</b> sẽ bị thu bài.</div>
+                        <div className="mt-6 bg-yellow-50 text-yellow-800 p-3 rounded text-xs text-left border border-yellow-200"><strong><i className="fas fa-exclamation-triangle"></i> CẢNH BÁO QUAN TRỌNG:</strong><br/>- Hệ thống bật chế độ <b>TOÀN MÀN HÌNH</b>.<br/>- <b>TUYỆT ĐỐI KHÔNG</b> thoát màn hình hoặc chuyển tab.<br/>- Nếu vi phạm <b>3 lần</b> sẽ bị <b>THU BÀI</b> ngay lập tức.</div>
                         <button onClick={startExam} className="mt-6 bg-indigo-600 text-white w-full py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">VÀO THI NGAY</button>
                     </div>
                 </div>
             );
+
             if(step === "result") return (
                 <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
                     <div className="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-lg w-full border border-green-100">
@@ -354,7 +491,17 @@
 
             return (
                 <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
-                    <div className="max-w-4xl mx-auto pb-20">
+                    {/* Anti-Cheat Overlay */}
+                    {isLockedOut && (
+                        <div className="violation-overlay">
+                            <div className="text-6xl text-red-500 mb-4"><i className="fas fa-exclamation-triangle"></i></div>
+                            <h2 className="text-2xl font-bold mb-2 text-red-500">CẢNH BÁO VI PHẠM!</h2>
+                            <p className="mb-6 max-w-md">Bạn đã rời khỏi màn hình thi. Đây là hành động vi phạm quy chế.<br/>Bạn còn <b>{3 - violationCount}</b> lần vi phạm trước khi bị thu bài.</p>
+                            <button onClick={unlockExam} className="bg-white text-red-600 px-6 py-3 rounded-full font-bold shadow-lg hover:bg-gray-100 transition">Quay lại làm bài</button>
+                        </div>
+                    )}
+
+                    <div className={`max-w-4xl mx-auto pb-20 ${isLockedOut ? 'blur-sm pointer-events-none' : ''}`}>
                         <div className="sticky top-0 bg-white/95 backdrop-blur shadow-md px-4 py-3 rounded-b-xl flex justify-between items-center z-30 border-t-4 border-indigo-600">
                             <div><div className="font-bold text-gray-800 text-sm truncate w-32">{info.name}</div><div className="text-xs text-gray-500 font-mono">{info.sbd}</div></div>
                             <div className="hidden md:block bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-600">Đã làm: <span className="text-indigo-600">{Object.keys(answers).length}</span>/{shuffledQuestions.length}</div>
