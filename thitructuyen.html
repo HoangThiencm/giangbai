@@ -134,27 +134,55 @@
             const [mode, setMode] = useState("manual");
             const [textInput, setTextInput] = useState("");
             const [loading, setLoading] = useState(false);
+            const [preview, setPreview] = useState(null); // Preview ảnh
             const fileInputRef = useRef();
 
-            const handleImageImport = async (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    setLoading(true);
-                    try {
-                        const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
-                        const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
-                        const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { 
-                            image_data: ev.target.result, 
-                            api_keys: keys,
-                            model: model 
-                        });
-                        if (res.data.status === 'ok') { onImport(res.data.data); onClose(); } 
-                        else alert("Lỗi đọc đáp án: " + res.data.message);
-                    } catch(err) { alert("Lỗi kết nối: " + err.message); }
+            // Xử lý gửi ảnh lên AI (Dùng chung cho Upload và Paste)
+            const processImage = async (dataUrl) => {
+                setLoading(true);
+                setPreview(dataUrl); // Hiển thị preview
+                try {
+                    const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
+                    const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                    const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { 
+                        image_data: dataUrl, 
+                        api_keys: keys,
+                        model: model 
+                    });
+                    if (res.data.status === 'ok') { 
+                        onImport(res.data.data); 
+                        onClose(); 
+                    } else {
+                        alert("Lỗi đọc đáp án: " + res.data.message);
+                    }
+                } catch(err) { 
+                    alert("Lỗi kết nối: " + err.message); 
+                } finally {
                     setLoading(false);
-                };
+                }
+            };
+
+            const handleImageImport = (e) => {
+                const file = e.target.files[0]; 
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => processImage(ev.target.result);
                 reader.readAsDataURL(file);
+            };
+
+            // [NEW] Xử lý sự kiện Paste
+            const handlePaste = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (ev) => processImage(ev.target.result);
+                        reader.readAsDataURL(file);
+                        return; // Chỉ lấy ảnh đầu tiên
+                    }
+                }
             };
 
             const handleManualImport = () => {
@@ -172,7 +200,40 @@
                     <div className="modal-box" onClick={e=>e.stopPropagation()}>
                         <div className="flex justify-between mb-4"><h3 className="font-bold text-lg">Nạp Đáp Án</h3><button onClick={onClose}><i className="fas fa-times"></i></button></div>
                         <div className="flex gap-2 mb-4 border-b"><button onClick={()=>setMode("manual")} className={`px-4 py-2 border-b-2 ${mode==="manual"?"border-indigo-600 font-bold":"border-transparent text-gray-500"}`}>Nhập tay</button><button onClick={()=>setMode("image")} className={`px-4 py-2 border-b-2 ${mode==="image"?"border-indigo-600 font-bold":"border-transparent text-gray-500"}`}>Từ ảnh chụp</button></div>
-                        {mode === "manual" ? (<div><textarea value={textInput} onChange={e=>setTextInput(e.target.value)} className="w-full border p-2 rounded h-32 mb-4 font-mono text-sm" placeholder="VD: 1.A 2.B 3.C ..."></textarea><button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">Lưu</button></div>) : (<div className="text-center py-6 border-2 border-dashed rounded-lg bg-gray-50 hover:bg-indigo-50 cursor-pointer" onClick={()=>fileInputRef.current.click()}>{loading ? <div className="loader border-indigo-600"></div> : <><i className="fas fa-camera text-4xl text-gray-400 mb-2"></i><p className="text-gray-600 font-bold">Chọn ảnh đáp án</p></>}<input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleImageImport}/></div>)}
+                        
+                        {mode === "manual" ? (
+                            <div>
+                                <textarea value={textInput} onChange={e=>setTextInput(e.target.value)} className="w-full border p-2 rounded h-32 mb-4 font-mono text-sm" placeholder="VD: 1.A 2.B 3.C ..."></textarea>
+                                <button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">Lưu</button>
+                            </div>
+                        ) : (
+                            // [NEW] Khu vực dán ảnh / chọn file
+                            <div 
+                                className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-indigo-50 transition cursor-pointer relative"
+                                onPaste={handlePaste}
+                                tabIndex="0" // Để div nhận được sự kiện paste
+                                onClick={() => fileInputRef.current.click()}
+                            >
+                                {loading ? (
+                                    <div className="flex flex-col items-center">
+                                        <div className="loader border-indigo-600 mb-2"></div>
+                                        <p className="text-sm text-indigo-600 font-bold">Đang đọc ảnh...</p>
+                                    </div>
+                                ) : preview ? (
+                                    <div className="relative">
+                                        <img src={preview} className="max-h-40 mx-auto rounded shadow" />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition text-white font-bold opacity-0 hover:opacity-100">Chọn ảnh khác</div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                                        <p className="text-gray-600 font-bold">Chọn ảnh đáp án</p>
+                                        <p className="text-xs text-gray-400 mt-1">hoặc nhấn Ctrl+V để dán ảnh</p>
+                                    </>
+                                )}
+                                <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleImageImport}/>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
