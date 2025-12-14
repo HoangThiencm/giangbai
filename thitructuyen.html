@@ -56,24 +56,26 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        // FIX: Xóa định dạng markdown trong chuỗi URL
         const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
         
         // --- COMPONENTS ---
         
-        // MathText Component thông minh: Tách biệt Text và Math để tránh lỗi "dính chữ"
+        // Helper: Làm sạch text đáp án (Xóa A., B., C. ở đầu nếu có)
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            return text.replace(/^[A-Da-d][\.\)\:]\s*/, '');
+        };
+
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 const el = ref.current;
-                // Regex: Tách chuỗi bởi dấu $...$
                 const parts = text.split(/(\$[^$]+\$)/g);
                 el.innerHTML = '';
                 
                 parts.forEach(part => {
                     if (part.startsWith('$') && part.endsWith('$')) {
-                        // Render Math
                         const span = document.createElement('span');
                         try {
                             katex.render(part.slice(1, -1), span, { throwOnError: false });
@@ -82,7 +84,6 @@
                         }
                         el.appendChild(span);
                     } else {
-                        // Render Text (giữ nguyên khoảng trắng)
                         el.appendChild(document.createTextNode(part));
                     }
                 });
@@ -109,7 +110,6 @@
                     setLoading(true);
                     try {
                         const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
-                        // Truyền model ưu tiên
                         const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                         const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { 
                             image_data: ev.target.result, 
@@ -148,19 +148,18 @@
         const QuestionEditor = ({ q, idx, updateQuestion, deleteQuestion }) => {
             const [isEditing, setIsEditing] = useState(false);
 
-            // Hàm xử lý Paste ảnh trực tiếp
             const handlePasteImage = (e) => {
                 const items = e.clipboardData.items;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf("image") !== -1) {
-                        e.preventDefault(); // Ngăn paste mặc định
+                        e.preventDefault();
                         const file = items[i].getAsFile();
                         const reader = new FileReader();
                         reader.onload = function(ev) {
                             updateQuestion(q.id, 'question_image', ev.target.result);
                         };
                         reader.readAsDataURL(file);
-                        return; // Chỉ lấy 1 ảnh đầu tiên
+                        return;
                     }
                 }
             };
@@ -177,12 +176,14 @@
 
                     {!isEditing && (
                         <div>
-                            {q.question_image && <img src={q.question_image} className="h-20 rounded border mb-2 object-contain"/>}
+                            {/* [FIX] Đưa chữ lên trước, ảnh xuống dưới */}
                             <div className="mb-2 text-sm"><MathText text={q.question}/></div>
+                            {q.question_image && <img src={q.question_image} className="max-h-40 rounded border mb-2 object-contain block"/>}
+                            
                             <div className="flex flex-wrap gap-2">
                                 {q.options.map((o, k) => (
                                     <span key={k} className={`px-2 py-0.5 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>
-                                        {String.fromCharCode(65+k)}. {o}
+                                        {String.fromCharCode(65+k)}. {cleanOptionText(o)}
                                     </span>
                                 ))}
                             </div>
@@ -191,6 +192,14 @@
 
                     {isEditing && (
                         <div className="space-y-3 animation-fade-in">
+                            <textarea 
+                                className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" 
+                                value={q.question} 
+                                onChange={e=>updateQuestion(q.id, 'question', e.target.value)}
+                                onPaste={handlePasteImage}
+                                placeholder="Nhập LaTeX hoặc dán ảnh (Ctrl+V) vào đây..."
+                            ></textarea>
+
                             <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
                                 {q.question_image ? (
                                     <div className="relative">
@@ -206,14 +215,6 @@
                                     </label>
                                 )}
                             </div>
-
-                            <textarea 
-                                className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" 
-                                value={q.question} 
-                                onChange={e=>updateQuestion(q.id, 'question', e.target.value)}
-                                onPaste={handlePasteImage} // Gắn sự kiện Paste
-                                placeholder="Nhập LaTeX hoặc dán ảnh (Ctrl+V) vào đây..."
-                            ></textarea>
                             
                             <div className="grid grid-cols-2 gap-2">
                                 {q.options.map((opt, oIdx) => (
@@ -276,7 +277,6 @@
                 setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p));
                 setActivePageId(page.id);
                 
-                // Lấy module model từ cấu hình index
                 const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                 
                 try {
@@ -432,12 +432,15 @@
                                  allQuestions.map((q, i) => (
                                     <div key={i} className="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm">
                                         <div className="font-bold text-gray-700 mb-1">Câu {i+1}</div>
-                                        {q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded"/>}
+                                        {/* [FIX] Đưa chữ lên trước, ảnh xuống dưới ở phần xem trước */}
                                         <div className="mb-2"><MathText text={q.question} /></div>
+                                        {q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded"/>}
+                                        
                                         <div className="flex flex-wrap gap-2">
                                             {q.options.map((o, k) => (
                                                 <span key={k} className={`px-2 py-1 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>
-                                                    {String.fromCharCode(65+k)}. <MathText text={o} />
+                                                    {/* Clean text options */}
+                                                    {String.fromCharCode(65+k)}. <MathText text={cleanOptionText(o)} />
                                                 </span>
                                             ))}
                                         </div>
@@ -525,13 +528,22 @@
                         {exam.questions.map((q, i) => (
                             <div key={i} className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
                                 <div className="flex gap-3 mb-4">
-                                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm">Câu {i+1}</span>
+                                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm flex-shrink-0">Câu {i+1}</span>
                                     <div className="flex-1">
-                                        {q.question_image && <img src={q.question_image} className="max-h-60 rounded border mb-3 block"/>}
-                                        <div className="text-lg font-medium text-gray-800"><MathText text={q.question}/></div>
+                                        {/* [FIX] Đưa chữ lên trước, ảnh xuống dưới trong màn hình thi */}
+                                        <div className="text-lg font-medium text-gray-800 mb-3"><MathText text={q.question}/></div>
+                                        {q.question_image && <img src={q.question_image} className="max-h-80 rounded border mb-4 block object-contain"/>}
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 rounded-lg border cursor-pointer flex gap-3 items-center ${answers[i]===idx?'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-200':'border-gray-200 hover:bg-gray-50'}`}><div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${answers[i]===idx?'bg-indigo-600 text-white':'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div><div className="text-gray-700"><MathText text={o}/></div></div>))}</div>
+                                {/* [FIX] Chuyển layout đáp án sang 1 cột (flex-col) và clean text */}
+                                <div className="flex flex-col gap-3 pl-2">
+                                    {q.options.map((o, idx) => (
+                                        <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 rounded-lg border cursor-pointer flex gap-3 items-center ${answers[i]===idx?'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-200':'border-gray-200 hover:bg-gray-50'}`}>
+                                            <div className={`w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${answers[i]===idx?'bg-indigo-600 text-white':'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div>
+                                            <div className="text-gray-700"><MathText text={cleanOptionText(o)}/></div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ))}
                     </div>
