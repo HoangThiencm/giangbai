@@ -5,18 +5,19 @@
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
-    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
+    <!-- FIX: Xóa định dạng markdown [url](url) thừa trong src/href -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
-    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
@@ -55,12 +56,12 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        // [CHANGE 1] Cho phép đọc cấu hình backend từ localStorage nếu có
-        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
+        // FIX: Xóa định dạng markdown trong chuỗi URL
+        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
         
         // --- COMPONENTS ---
         
-        // [CHANGE 3] MathText Component thông minh: Tách biệt Text và Math để tránh lỗi "dính chữ"
+        // MathText Component thông minh: Tách biệt Text và Math để tránh lỗi "dính chữ"
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
@@ -108,7 +109,7 @@
                     setLoading(true);
                     try {
                         const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
-                        // [CHANGE 1] Truyền model ưu tiên
+                        // Truyền model ưu tiên
                         const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                         const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { 
                             image_data: ev.target.result, 
@@ -147,7 +148,7 @@
         const QuestionEditor = ({ q, idx, updateQuestion, deleteQuestion }) => {
             const [isEditing, setIsEditing] = useState(false);
 
-            // [CHANGE 3] Hàm xử lý Paste ảnh trực tiếp
+            // Hàm xử lý Paste ảnh trực tiếp
             const handlePasteImage = (e) => {
                 const items = e.clipboardData.items;
                 for (let i = 0; i < items.length; i++) {
@@ -210,7 +211,7 @@
                                 className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" 
                                 value={q.question} 
                                 onChange={e=>updateQuestion(q.id, 'question', e.target.value)}
-                                onPaste={handlePasteImage} // [CHANGE 3] Gắn sự kiện Paste
+                                onPaste={handlePasteImage} // Gắn sự kiện Paste
                                 placeholder="Nhập LaTeX hoặc dán ảnh (Ctrl+V) vào đây..."
                             ></textarea>
                             
@@ -275,7 +276,7 @@
                 setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p));
                 setActivePageId(page.id);
                 
-                // [CHANGE 1] Lấy module model từ cấu hình index
+                // Lấy module model từ cấu hình index
                 const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                 
                 try {
