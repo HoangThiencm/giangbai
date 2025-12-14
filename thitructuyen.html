@@ -5,19 +5,18 @@
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- FIX: Đường dẫn CDN sạch sẽ, không có markdown thừa -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
+    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
+    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
+    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
+    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
@@ -25,13 +24,11 @@
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 3 COLUMN LAYOUT */
         .layout-grid { display: grid; grid-template-columns: 260px 420px 1fr; height: calc(100vh - 64px); }
         .col-panel { overflow-y: auto; border-right: 1px solid #ddd; background: white; display: flex; flex-direction: column; }
         .col-header { padding: 12px; font-weight: bold; background: #f8fafc; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; font-size: 0.9rem; color: #475569; display: flex; justify-content: space-between; align-items: center; }
         .col-content { padding: 12px; flex: 1; overflow-y: auto; }
 
-        /* ITEMS */
         .page-thumb { cursor: pointer; padding: 10px; border-bottom: 1px solid #f1f1f1; transition: background 0.2s; border-left: 4px solid transparent; }
         .page-thumb:hover { background: #f8fafc; }
         .page-thumb.active { background: #eef2ff; border-left-color: #4f46e5; }
@@ -40,7 +37,6 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
         .modal-box { background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 24px; shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
         
-        /* ERROR BOX */
         #react-error { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
     </style>
 </head>
@@ -49,7 +45,6 @@
     <div id="react-error"></div>
 
     <script>
-        // Global Error Handler để bắt lỗi JS và hiển thị lên màn hình thay vì trắng trang
         window.onerror = function(msg, url, line, col, error) {
             const el = document.getElementById('react-error');
             el.style.display = 'block';
@@ -60,40 +55,46 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
+        // [CHANGE 1] Cho phép đọc cấu hình backend từ localStorage nếu có
+        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
         
         // --- COMPONENTS ---
         
-        // 1. MathText: Hiển thị công thức toán an toàn
+        // [CHANGE 3] MathText Component thông minh: Tách biệt Text và Math để tránh lỗi "dính chữ"
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
-                try {
-                    // Xử lý sơ bộ text để KaTeX hiểu
-                    let cleanText = text.replace(/\$|\`/g, ''); 
-                    // Render HTML
-                    const html = katex.renderToString(cleanText, { 
-                        throwOnError: false, 
-                        displayMode: false, 
-                        output: 'html' 
-                    });
-                    ref.current.innerHTML = html;
-                } catch(e) { 
-                    ref.current.textContent = text; 
-                }
+                const el = ref.current;
+                // Regex: Tách chuỗi bởi dấu $...$
+                const parts = text.split(/(\$[^$]+\$)/g);
+                el.innerHTML = '';
+                
+                parts.forEach(part => {
+                    if (part.startsWith('$') && part.endsWith('$')) {
+                        // Render Math
+                        const span = document.createElement('span');
+                        try {
+                            katex.render(part.slice(1, -1), span, { throwOnError: false });
+                        } catch(e) {
+                            span.innerText = part;
+                        }
+                        el.appendChild(span);
+                    } else {
+                        // Render Text (giữ nguyên khoảng trắng)
+                        el.appendChild(document.createTextNode(part));
+                    }
+                });
             }, [text]);
             return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
         };
 
-        // 2. QR Modal
         const QRModal = ({ link, onClose }) => {
             const qrRef = useRef();
             useEffect(() => { if(qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
             return <div className="modal-overlay" onClick={onClose}><div className="modal-box text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
         };
 
-        // 3. Answer Import Modal (Nạp đáp án)
         const AnswerImportModal = ({ onClose, onImport }) => {
             const [mode, setMode] = useState("manual");
             const [textInput, setTextInput] = useState("");
@@ -107,7 +108,13 @@
                     setLoading(true);
                     try {
                         const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
-                        const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { image_data: ev.target.result, api_keys: keys });
+                        // [CHANGE 1] Truyền model ưu tiên
+                        const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                        const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { 
+                            image_data: ev.target.result, 
+                            api_keys: keys,
+                            model: model 
+                        });
                         if (res.data.status === 'ok') { onImport(res.data.data); onClose(); } 
                         else alert("Lỗi đọc đáp án: " + res.data.message);
                     } catch(err) { alert("Lỗi kết nối: " + err.message); }
@@ -117,7 +124,6 @@
             };
 
             const handleManualImport = () => {
-                // Parse format: 1A 2B 3C
                 const parts = textInput.toUpperCase().match(/(\d+)[\.\-\:\s]*([A-D])/g);
                 if (!parts) return alert("Sai định dạng! VD: 1A 2B 3C");
                 const results = parts.map(p => {
@@ -138,9 +144,25 @@
             );
         };
 
-        // 4. Question Editor (Cột 2)
         const QuestionEditor = ({ q, idx, updateQuestion, deleteQuestion }) => {
             const [isEditing, setIsEditing] = useState(false);
+
+            // [CHANGE 3] Hàm xử lý Paste ảnh trực tiếp
+            const handlePasteImage = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault(); // Ngăn paste mặc định
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function(ev) {
+                            updateQuestion(q.id, 'question_image', ev.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                        return; // Chỉ lấy 1 ảnh đầu tiên
+                    }
+                }
+            };
 
             return (
                 <div className={`border rounded-lg p-3 shadow-sm transition relative bg-white group hover:border-indigo-400 ${isEditing ? 'ring-2 ring-indigo-100' : ''}`}>
@@ -152,7 +174,6 @@
                         </div>
                     </div>
 
-                    {/* VIEW MODE (Render đẹp) */}
                     {!isEditing && (
                         <div>
                             {q.question_image && <img src={q.question_image} className="h-20 rounded border mb-2 object-contain"/>}
@@ -167,7 +188,6 @@
                         </div>
                     )}
 
-                    {/* EDIT MODE (Textarea + Image Upload) */}
                     {isEditing && (
                         <div className="space-y-3 animation-fade-in">
                             <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
@@ -178,7 +198,7 @@
                                     </div>
                                 ) : (
                                     <label className="text-xs text-blue-600 cursor-pointer flex items-center gap-1 hover:underline">
-                                        <i className="fas fa-image"></i> Chèn ảnh bảng/biểu
+                                        <i className="fas fa-image"></i> Dán (Ctrl+V) hoặc Chọn ảnh
                                         <input type="file" accept="image/*" className="hidden" onChange={(e)=>{
                                             const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=(ev)=>updateQuestion(q.id,'question_image',ev.target.result); r.readAsDataURL(f); }
                                         }}/>
@@ -186,7 +206,13 @@
                                 )}
                             </div>
 
-                            <textarea className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" value={q.question} onChange={e=>updateQuestion(q.id, 'question', e.target.value)} placeholder="Nhập LaTeX..."></textarea>
+                            <textarea 
+                                className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" 
+                                value={q.question} 
+                                onChange={e=>updateQuestion(q.id, 'question', e.target.value)}
+                                onPaste={handlePasteImage} // [CHANGE 3] Gắn sự kiện Paste
+                                placeholder="Nhập LaTeX hoặc dán ảnh (Ctrl+V) vào đây..."
+                            ></textarea>
                             
                             <div className="grid grid-cols-2 gap-2">
                                 {q.options.map((opt, oIdx) => (
@@ -202,14 +228,12 @@
             );
         };
 
-        // --- MAIN CREATOR: HYBRID EXAM ---
         const HybridExamCreator = ({ onBack, initialData }) => {
             const [step, setStep] = useState(initialData ? 2 : 1);
             const [pages, setPages] = useState([]);
             const [pageQuestions, setPageQuestions] = useState({});
             const [activePageId, setActivePageId] = useState(null);
             const [loadingMsg, setLoadingMsg] = useState("");
-            // Time management fields added
             const [examInfo, setExamInfo] = useState(initialData ? initialData.info : { title: "", school: "", duration: 45, start_time: "", end_time: "" });
             const [showAnswerModal, setShowAnswerModal] = useState(false);
             const userEmail = localStorage.getItem('userEmail');
@@ -223,7 +247,6 @@
                 }
             }, [initialData]);
 
-            // Merge for Col 3
             const allQuestions = useMemo(() => {
                 let merged = [];
                 pages.forEach(p => { if (pageQuestions[p.id]) merged.push(...pageQuestions[p.id]); });
@@ -248,11 +271,19 @@
 
             const runAIForPage = async (page) => {
                 const keys = getApiKeys();
-                if(!keys.length) return alert("Thiếu API Key!");
+                if(!keys.length) return alert("Thiếu API Key! Vui lòng vào Cấu hình ở trang chủ để nạp.");
                 setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p));
                 setActivePageId(page.id);
+                
+                // [CHANGE 1] Lấy module model từ cấu hình index
+                const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                
                 try {
-                    const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { image_data: page.image_data, api_keys: keys });
+                    const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { 
+                        image_data: page.image_data, 
+                        api_keys: keys,
+                        model: model 
+                    });
                     if(res.data.status === 'ok') {
                         const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() }));
                         setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
@@ -308,7 +339,6 @@
             const handleSave = async () => {
                 if(!examInfo.title) return alert("Nhập tên đề!");
                 if(!allQuestions.length) return alert("Đề trống!");
-                // Format datetime to ISO string for backend
                 const payload = {
                     id: initialData ? initialData.info.id : null,
                     ...examInfo, 
@@ -419,7 +449,6 @@
             );
         };
 
-        // --- DASHBOARD ---
         const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
@@ -539,7 +568,6 @@
 
             if(isStudent) return <StudentView examId={selectedId} />;
             
-            // FIX LỖI TRẮNG TRANG: Kiểm tra kỹ userEmail trước khi render
             if (!userEmail) {
                 return (
                     <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
