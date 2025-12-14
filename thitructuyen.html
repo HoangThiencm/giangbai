@@ -4,16 +4,21 @@
     <meta charset="UTF-8">
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
-    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
-    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
-    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    
+    <!-- FIX: Đường dẫn CDN sạch sẽ, không có markdown thừa -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
         .math-render { font-family: 'Times New Roman', serif; font-size: 1.1em; }
@@ -21,61 +26,74 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         /* 3 COLUMN LAYOUT */
-        .layout-grid { display: grid; grid-template-columns: 240px 450px 1fr; height: calc(100vh - 64px); }
+        .layout-grid { display: grid; grid-template-columns: 260px 420px 1fr; height: calc(100vh - 64px); }
         .col-panel { overflow-y: auto; border-right: 1px solid #ddd; background: white; display: flex; flex-direction: column; }
-        .col-header { padding: 10px; font-weight: bold; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 10; font-size: 0.85rem; color: #475569; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; }
+        .col-header { padding: 12px; font-weight: bold; background: #f8fafc; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; font-size: 0.9rem; color: #475569; display: flex; justify-content: space-between; align-items: center; }
         .col-content { padding: 12px; flex: 1; overflow-y: auto; }
 
-        /* PAGE THUMBNAILS */
+        /* ITEMS */
         .page-thumb { cursor: pointer; padding: 10px; border-bottom: 1px solid #f1f1f1; transition: background 0.2s; border-left: 4px solid transparent; }
         .page-thumb:hover { background: #f8fafc; }
         .page-thumb.active { background: #eef2ff; border-left-color: #4f46e5; }
         .page-thumb img { width: 100%; border: 1px solid #ddd; border-radius: 4px; display: block; margin-bottom: 8px; }
         
-        /* MODAL */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
         .modal-box { background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 24px; shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        
+        /* ERROR BOX */
+        #react-error { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <div id="error-log" style="display:none; padding: 20px; color: red; background: #fff; position: fixed; top: 0; left: 0; z-index: 9999;"></div>
+    <div id="react-error"></div>
 
     <script>
-        window.onerror = function(msg, url, line) {
-            const el = document.getElementById('error-log');
+        // Global Error Handler để bắt lỗi JS và hiển thị lên màn hình thay vì trắng trang
+        window.onerror = function(msg, url, line, col, error) {
+            const el = document.getElementById('react-error');
             el.style.display = 'block';
-            el.innerHTML = `<strong>Lỗi JS:</strong> ${msg}<br>Line: ${line}`;
+            el.innerHTML = `<strong>Lỗi Hệ Thống:</strong> ${msg}<br><small>${url}:${line}</small><br><pre>${error?.stack}</pre>`;
+            return false;
         };
     </script>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
-        const userEmail = localStorage.getItem('userEmail');
+        const API_BASE = "https://hoangthiencm-giangbai.hf.space"; 
         
-        // --- UTILS ---
+        // --- COMPONENTS ---
+        
+        // 1. MathText: Hiển thị công thức toán an toàn
         const MathText = ({ text }) => {
             const ref = useRef();
             useEffect(() => {
                 if (!text || !ref.current) return;
                 try {
-                    // Remove $ ` markers for display
-                    const cleanText = text.replace(/\$|\`/g, ''); 
-                    const html = katex.renderToString(cleanText, { throwOnError: false, displayMode: false, output: 'html' });
+                    // Xử lý sơ bộ text để KaTeX hiểu
+                    let cleanText = text.replace(/\$|\`/g, ''); 
+                    // Render HTML
+                    const html = katex.renderToString(cleanText, { 
+                        throwOnError: false, 
+                        displayMode: false, 
+                        output: 'html' 
+                    });
                     ref.current.innerHTML = html;
-                } catch(e) { ref.current.textContent = text; }
+                } catch(e) { 
+                    ref.current.textContent = text; 
+                }
             }, [text]);
             return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
         };
 
+        // 2. QR Modal
         const QRModal = ({ link, onClose }) => {
             const qrRef = useRef();
             useEffect(() => { if(qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
             return <div className="modal-overlay" onClick={onClose}><div className="modal-box text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
         };
 
-        // --- ANSWER IMPORT MODAL ---
+        // 3. Answer Import Modal (Nạp đáp án)
         const AnswerImportModal = ({ onClose, onImport }) => {
             const [mode, setMode] = useState("manual");
             const [textInput, setTextInput] = useState("");
@@ -99,6 +117,7 @@
             };
 
             const handleManualImport = () => {
+                // Parse format: 1A 2B 3C
                 const parts = textInput.toUpperCase().match(/(\d+)[\.\-\:\s]*([A-D])/g);
                 if (!parts) return alert("Sai định dạng! VD: 1A 2B 3C");
                 const results = parts.map(p => {
@@ -119,7 +138,7 @@
             );
         };
 
-        // --- EDITOR: QUESTION ITEM (COL 2) ---
+        // 4. Question Editor (Cột 2)
         const QuestionEditor = ({ q, idx, updateQuestion, deleteQuestion }) => {
             const [isEditing, setIsEditing] = useState(false);
 
@@ -133,7 +152,7 @@
                         </div>
                     </div>
 
-                    {/* VIEW MODE */}
+                    {/* VIEW MODE (Render đẹp) */}
                     {!isEditing && (
                         <div>
                             {q.question_image && <img src={q.question_image} className="h-20 rounded border mb-2 object-contain"/>}
@@ -148,10 +167,9 @@
                         </div>
                     )}
 
-                    {/* EDIT MODE */}
+                    {/* EDIT MODE (Textarea + Image Upload) */}
                     {isEditing && (
                         <div className="space-y-3 animation-fade-in">
-                            {/* Image Input */}
                             <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
                                 {q.question_image ? (
                                     <div className="relative">
@@ -160,7 +178,7 @@
                                     </div>
                                 ) : (
                                     <label className="text-xs text-blue-600 cursor-pointer flex items-center gap-1 hover:underline">
-                                        <i className="fas fa-image"></i> Chèn ảnh
+                                        <i className="fas fa-image"></i> Chèn ảnh bảng/biểu
                                         <input type="file" accept="image/*" className="hidden" onChange={(e)=>{
                                             const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=(ev)=>updateQuestion(q.id,'question_image',ev.target.result); r.readAsDataURL(f); }
                                         }}/>
@@ -168,10 +186,8 @@
                                 )}
                             </div>
 
-                            {/* Latex Input */}
-                            <textarea className="w-full text-sm border rounded p-2 font-mono h-20 focus:ring-1 focus:ring-indigo-500" value={q.question} onChange={e=>updateQuestion(q.id, 'question', e.target.value)} placeholder="Nhập LaTeX..."></textarea>
+                            <textarea className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" value={q.question} onChange={e=>updateQuestion(q.id, 'question', e.target.value)} placeholder="Nhập LaTeX..."></textarea>
                             
-                            {/* Options */}
                             <div className="grid grid-cols-2 gap-2">
                                 {q.options.map((opt, oIdx) => (
                                     <div key={oIdx} className={`flex items-center border rounded px-1 py-1 ${q.correct_index===oIdx?'border-green-500 bg-green-50':''}`}>
@@ -186,7 +202,7 @@
             );
         };
 
-        // --- MAIN CREATOR COMPONENT ---
+        // --- MAIN CREATOR: HYBRID EXAM ---
         const HybridExamCreator = ({ onBack, initialData }) => {
             const [step, setStep] = useState(initialData ? 2 : 1);
             const [pages, setPages] = useState([]);
@@ -196,6 +212,7 @@
             // Time management fields added
             const [examInfo, setExamInfo] = useState(initialData ? initialData.info : { title: "", school: "", duration: 45, start_time: "", end_time: "" });
             const [showAnswerModal, setShowAnswerModal] = useState(false);
+            const userEmail = localStorage.getItem('userEmail');
 
             useEffect(() => {
                 if (initialData && initialData.questions) {
@@ -206,7 +223,7 @@
                 }
             }, [initialData]);
 
-            // Safe Merge for Column 3
+            // Merge for Col 3
             const allQuestions = useMemo(() => {
                 let merged = [];
                 pages.forEach(p => { if (pageQuestions[p.id]) merged.push(...pageQuestions[p.id]); });
@@ -371,13 +388,7 @@
                                 {!activePageId ? <div className="text-center text-gray-400 mt-10">Chọn trang bên trái</div> :
                                  !pageQuestions[activePageId]?.length ? <div className="text-center text-gray-400 mt-10">Chưa có câu hỏi. Bấm Nhận diện AI.</div> :
                                  pageQuestions[activePageId].map((q, idx) => (
-                                    <QuestionEditor 
-                                        key={q.id} 
-                                        q={q} 
-                                        idx={idx} 
-                                        updateQuestion={updateQuestion} 
-                                        deleteQuestion={deleteQuestion} 
-                                    />
+                                    <QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />
                                 ))}
                             </div>
                         </div>
@@ -412,7 +423,13 @@
         const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
             const [exams, setExams] = useState([]);
             const [qrLink, setQrLink] = useState(null);
-            useEffect(() => { if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data||[])); }, []);
+            const userEmail = localStorage.getItem('userEmail');
+
+            useEffect(() => { 
+                if(userEmail) {
+                    axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data||[])); 
+                }
+            }, []);
             
             const handleDelete = async (id) => { if(confirm("Xóa đề này?")) { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e=>e.id!==id)); } };
             const handleDuplicate = async (id) => { await axios.post(`${API_BASE}/api/exam/duplicate/${id}`); window.location.reload(); };
@@ -477,7 +494,13 @@
                         <div className="sticky top-0 bg-white/95 backdrop-blur shadow p-4 rounded-b-xl flex justify-between items-center z-20 mb-6 border-t-4 border-indigo-600"><div><div className="font-bold text-gray-800">{info.name}</div><div className="text-xs text-gray-500">{info.sbd}</div></div><div className="font-mono text-2xl font-bold text-red-600">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div><button onClick={()=>handleSubmit(false)} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700">Nộp Bài</button></div>
                         {exam.questions.map((q, i) => (
                             <div key={i} className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
-                                <div className="flex gap-3 mb-4"><span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm">Câu {i+1}</span><div className="flex-1">{q.question_image && <img src={q.question_image} className="max-h-60 rounded border mb-3 block"/><div className="text-lg font-medium text-gray-800"><MathText text={q.question}/></div>}</div></div>
+                                <div className="flex gap-3 mb-4">
+                                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm">Câu {i+1}</span>
+                                    <div className="flex-1">
+                                        {q.question_image && <img src={q.question_image} className="max-h-60 rounded border mb-3 block"/>}
+                                        <div className="text-lg font-medium text-gray-800"><MathText text={q.question}/></div>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 rounded-lg border cursor-pointer flex gap-3 items-center ${answers[i]===idx?'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-200':'border-gray-200 hover:bg-gray-50'}`}><div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${answers[i]===idx?'bg-indigo-600 text-white':'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div><div className="text-gray-700"><MathText text={o}/></div></div>))}</div>
                             </div>
                         ))}
@@ -505,7 +528,7 @@
             const [selectedId, setSelectedId] = useState(null);
             const [isStudent, setIsStudent] = useState(false);
             const [editingData, setEditingData] = useState(null);
-            const hasAuth = !!userEmail;
+            const userEmail = localStorage.getItem('userEmail');
 
             useEffect(() => { 
                 const p = new URLSearchParams(window.location.search); 
@@ -515,7 +538,16 @@
             const handleEdit = async (id) => { try { const res = await axios.get(`${API_BASE}/api/exam/get/${id}`); setEditingData(res.data); setView("create"); } catch(e) { alert("Lỗi tải đề: " + e.message); } };
 
             if(isStudent) return <StudentView examId={selectedId} />;
-            if (!hasAuth && !isStudent) return (<div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4"><div className="text-xl font-bold text-gray-700">Phiên đăng nhập hết hạn</div><a href="login.html" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">Đăng nhập ngay</a></div>);
+            
+            // FIX LỖI TRẮNG TRANG: Kiểm tra kỹ userEmail trước khi render
+            if (!userEmail) {
+                return (
+                    <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
+                        <div className="text-xl font-bold text-gray-700">Phiên đăng nhập hết hạn</div>
+                        <a href="login.html" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">Đăng nhập ngay</a>
+                    </div>
+                );
+            }
 
             return (
                 <div>
