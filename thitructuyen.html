@@ -5,19 +5,19 @@
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- FIX: Xóa định dạng markdown [url](url) thừa trong src/href -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
-    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
+    <!-- FIX: Đã sửa lại đường dẫn CDN chuẩn -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
-    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
@@ -58,7 +58,8 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
+        // FIX: Sửa lại đường dẫn API base sạch sẽ
+        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
         
         // --- COMPONENTS ---
         
@@ -99,7 +100,7 @@
             return <div className="modal-overlay" onClick={onClose}><div className="modal-box text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
         };
 
-        // [CHANGE] Modal xem ảnh phóng to
+        // Modal xem ảnh phóng to
         const ImageModal = ({ src, onClose }) => {
             if (!src) return null;
             return (
@@ -189,7 +190,6 @@
 
                     {!isEditing && (
                         <div>
-                            {/* [FIX] Đưa chữ lên trước, ảnh xuống dưới */}
                             <div className="mb-2 text-sm"><MathText text={q.question}/></div>
                             {q.question_image && <img src={q.question_image} className="max-h-40 rounded border mb-2 object-contain block"/>}
                             
@@ -251,7 +251,7 @@
             const [loadingMsg, setLoadingMsg] = useState("");
             const [examInfo, setExamInfo] = useState(initialData ? initialData.info : { title: "", school: "", duration: 45, start_time: "", end_time: "" });
             const [showAnswerModal, setShowAnswerModal] = useState(false);
-            const [previewImage, setPreviewImage] = useState(null); // [CHANGE] State cho ảnh phóng to
+            const [previewImage, setPreviewImage] = useState(null);
             const userEmail = localStorage.getItem('userEmail');
 
             useEffect(() => {
@@ -333,7 +333,6 @@
                 }
             };
 
-            // [NEW] Thêm câu hỏi thủ công
             const addQuestion = () => {
                 if(!activePageId) return alert("Vui lòng chọn trang PDF bên trái trước!");
                 const newQ = {
@@ -403,7 +402,6 @@
             return (
                 <div className="flex h-screen flex-col bg-white">
                     {showAnswerModal && <AnswerImportModal onClose={()=>setShowAnswerModal(false)} onImport={handleBulkAnswer}/>}
-                    {/* [CHANGE] Render modal phóng to ảnh */}
                     <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />
                     
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
@@ -435,7 +433,6 @@
                                             <span className="text-xs font-bold text-gray-500">Trang {p.page_index}</span>
                                             {p.status==='done' ? <i className="fas fa-check-circle text-green-500"></i> : p.status==='processing' ? <div className="loader w-3 h-3 border-blue-500"></div> : ''}
                                         </div>
-                                        {/* [CHANGE] Bấm vào ảnh để phóng to */}
                                         {p.image_data ? (
                                             <img 
                                                 src={p.image_data} 
@@ -445,7 +442,6 @@
                                             />
                                         ) : <div className="h-32 bg-gray-100 flex items-center justify-center text-xs">No Image</div>}
                                         
-                                        {/* [CHANGE] Nút hành động cho trang: Nhận diện & Thử lại */}
                                         <div className="flex gap-1 mt-2">
                                              {p.status === 'done' ? (
                                                 <>
@@ -486,7 +482,6 @@
                                         {pageQuestions[activePageId]?.map((q, idx) => (
                                             <QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />
                                         ))}
-                                        {/* [CHANGE] Nút thêm câu hỏi thủ công */}
                                         <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-bold flex items-center justify-center gap-2 transition">
                                             <i className="fas fa-plus-circle"></i> Thêm câu hỏi thủ công
                                         </button>
@@ -504,14 +499,12 @@
                                  allQuestions.map((q, i) => (
                                     <div key={i} className="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm">
                                         <div className="font-bold text-gray-700 mb-1">Câu {i+1}</div>
-                                        {/* [FIX] Đưa chữ lên trước, ảnh xuống dưới ở phần xem trước */}
                                         <div className="mb-2"><MathText text={q.question} /></div>
                                         {q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded"/>}
                                         
                                         <div className="flex flex-wrap gap-2">
                                             {q.options.map((o, k) => (
                                                 <span key={k} className={`px-2 py-1 rounded text-xs border ${q.correct_index===k?'bg-green-100 border-green-300 text-green-800 font-bold':'bg-gray-50 border-gray-200 text-gray-500'}`}>
-                                                    {/* Clean text options */}
                                                     {String.fromCharCode(65+k)}. <MathText text={cleanOptionText(o)} />
                                                 </span>
                                             ))}
