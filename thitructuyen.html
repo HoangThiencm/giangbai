@@ -71,7 +71,8 @@
         // [UPDATE] Helper: Làm sạch text đáp án, xóa ký tự đầu (A., B.)
         const cleanOptionText = (text) => {
             if (!text) return "";
-            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+            // Xóa A. B. và cả xuống dòng (\n)
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
         };
 
         // [UPDATE] MathText: Hiển thị công thức toán thông minh
