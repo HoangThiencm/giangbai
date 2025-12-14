@@ -6,18 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- FIX: Xóa định dạng markdown [url](url) thừa trong src/href -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
-    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
-    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
@@ -58,7 +58,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
+        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
         
         // --- COMPONENTS ---
         
@@ -600,22 +600,13 @@
                         {exam.questions.map((q, i) => (
                             <div key={i} className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
                                 <div className="flex gap-3 mb-4">
-                                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm flex-shrink-0">Câu {i+1}</span>
+                                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded font-bold h-fit text-sm">Câu {i+1}</span>
                                     <div className="flex-1">
-                                        {/* [FIX] Đưa chữ lên trước, ảnh xuống dưới trong màn hình thi */}
-                                        <div className="text-lg font-medium text-gray-800 mb-3"><MathText text={q.question}/></div>
-                                        {q.question_image && <img src={q.question_image} className="max-h-80 rounded border mb-4 block object-contain"/>}
+                                        {q.question_image && <img src={q.question_image} className="max-h-60 rounded border mb-3 block"/>}
+                                        <div className="text-lg font-medium text-gray-800"><MathText text={q.question}/></div>
                                     </div>
                                 </div>
-                                {/* [FIX] Chuyển layout đáp án sang 1 cột (flex-col) và clean text */}
-                                <div className="flex flex-col gap-3 pl-2">
-                                    {q.options.map((o, idx) => (
-                                        <div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 rounded-lg border cursor-pointer flex gap-3 items-center ${answers[i]===idx?'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-200':'border-gray-200 hover:bg-gray-50'}`}>
-                                            <div className={`w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${answers[i]===idx?'bg-indigo-600 text-white':'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div>
-                                            <div className="text-gray-700"><MathText text={cleanOptionText(o)}/></div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">{q.options.map((o, idx) => (<div key={idx} onClick={()=>setAnswers({...answers, [i]: idx})} className={`p-3 rounded-lg border cursor-pointer flex gap-3 items-center ${answers[i]===idx?'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-200':'border-gray-200 hover:bg-gray-50'}`}><div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${answers[i]===idx?'bg-indigo-600 text-white':'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+idx)}</div><div className="text-gray-700"><MathText text={o}/></div></div>))}</div>
                             </div>
                         ))}
                     </div>
@@ -653,6 +644,7 @@
 
             if(isStudent) return <StudentView examId={selectedId} />;
             
+            // FIX LỖI TRẮNG TRANG: Kiểm tra kỹ userEmail trước khi render
             if (!userEmail) {
                 return (
                     <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
