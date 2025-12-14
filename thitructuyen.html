@@ -6,18 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- FIX: Xóa định dạng markdown [url](url) thừa trong src/href -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script crossorigin src="[https://unpkg.com/react@18/umd/react.development.js](https://unpkg.com/react@18/umd/react.development.js)"></script>
+    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.development.js](https://unpkg.com/react-dom@18/umd/react-dom.development.js)"></script>
+    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js](https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
+    <script src="[https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js](https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css)">
+    <script src="[https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js](https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js)"></script>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
@@ -35,9 +35,11 @@
         .page-thumb.active { background: #eef2ff; border-left-color: #4f46e5; }
         .page-thumb img { width: 100%; border: 1px solid #ddd; border-radius: 4px; display: block; margin-bottom: 8px; }
         
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; }
         .modal-box { background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 24px; shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-        
+        .modal-image-full { max-width: 95vw; max-height: 95vh; object-fit: contain; background: black; border-radius: 4px; }
+        .close-btn-full { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; cursor: pointer; z-index: 101; background: rgba(0,0,0,0.5); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+
         #react-error { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
     </style>
 </head>
@@ -56,7 +58,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
+        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
         
         // --- COMPONENTS ---
         
@@ -95,6 +97,17 @@
             const qrRef = useRef();
             useEffect(() => { if(qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
             return <div className="modal-overlay" onClick={onClose}><div className="modal-box text-center" onClick={e=>e.stopPropagation()}><h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3><div ref={qrRef} className="flex justify-center my-4"></div><input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/><button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button></div></div>;
+        };
+
+        // [CHANGE] Modal xem ảnh phóng to
+        const ImageModal = ({ src, onClose }) => {
+            if (!src) return null;
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="close-btn-full" onClick={onClose}>&times;</div>
+                    <img src={src} className="modal-image-full" onClick={(e) => e.stopPropagation()} />
+                </div>
+            );
         };
 
         const AnswerImportModal = ({ onClose, onImport }) => {
@@ -238,6 +251,7 @@
             const [loadingMsg, setLoadingMsg] = useState("");
             const [examInfo, setExamInfo] = useState(initialData ? initialData.info : { title: "", school: "", duration: 45, start_time: "", end_time: "" });
             const [showAnswerModal, setShowAnswerModal] = useState(false);
+            const [previewImage, setPreviewImage] = useState(null); // [CHANGE] State cho ảnh phóng to
             const userEmail = localStorage.getItem('userEmail');
 
             useEffect(() => {
@@ -389,6 +403,8 @@
             return (
                 <div className="flex h-screen flex-col bg-white">
                     {showAnswerModal && <AnswerImportModal onClose={()=>setShowAnswerModal(false)} onImport={handleBulkAnswer}/>}
+                    {/* [CHANGE] Render modal phóng to ảnh */}
+                    <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />
                     
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
                         <div className="flex items-center gap-4">
@@ -419,7 +435,15 @@
                                             <span className="text-xs font-bold text-gray-500">Trang {p.page_index}</span>
                                             {p.status==='done' ? <i className="fas fa-check-circle text-green-500"></i> : p.status==='processing' ? <div className="loader w-3 h-3 border-blue-500"></div> : ''}
                                         </div>
-                                        {p.image_data ? <img src={p.image_data} /> : <div className="h-32 bg-gray-100 flex items-center justify-center text-xs">No Image</div>}
+                                        {/* [CHANGE] Bấm vào ảnh để phóng to */}
+                                        {p.image_data ? (
+                                            <img 
+                                                src={p.image_data} 
+                                                onClick={(e) => { e.stopPropagation(); setPreviewImage(p.image_data); }}
+                                                className="cursor-zoom-in hover:opacity-90 transition"
+                                                title="Bấm để phóng to"
+                                            />
+                                        ) : <div className="h-32 bg-gray-100 flex items-center justify-center text-xs">No Image</div>}
                                         
                                         {/* [CHANGE] Nút hành động cho trang: Nhận diện & Thử lại */}
                                         <div className="flex gap-1 mt-2">
