@@ -66,6 +66,10 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Text styling helpers */
+        .tex-bold { font-weight: bold; }
+        .tex-italic { font-style: italic; }
     </style>
 </head>
 <body class="noselect" oncontextmenu="return false;">
@@ -110,27 +114,68 @@
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
         };
 
+        // Improved MathText to handle basic TeX formatting in text mode
         const MathText = ({ text }) => {
             const ref = useRef();
+            
+            // Hàm xử lý định dạng văn bản cơ bản giả lập LaTeX text mode
+            const formatTextMode = (str) => {
+                if (!str) return '';
+                // Xử lý \textbf{...} -> <b>...</b>
+                let formatted = str.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
+                // Xử lý \textit{...} -> <i>...</i>
+                formatted = formatted.replace(/\\textit\{([^\}]+)\}/g, '<span class="tex-italic">$1</span>');
+                // Xử lý xuống dòng
+                formatted = formatted.replace(/\n/g, '<br/>');
+                return formatted;
+            };
+
             useEffect(() => {
                 if (!text || !ref.current) return;
                 const el = ref.current;
-                const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                
+                // Reset content
                 el.innerHTML = '';
+                
+                // Tách chuỗi thành các phần: $$Display$$, $Inline$, và Text
+                // Sử dụng regex với capture group để giữ lại dấu phân cách
+                const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
+                        // Display Math
                         const span = document.createElement('span');
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch(e) { span.innerText = part; }
+                        const content = part.slice(2, -2);
+                        try { 
+                            katex.render(content, span, { throwOnError: false, displayMode: true }); 
+                        } catch(e) { 
+                            span.innerText = content; 
+                        }
                         el.appendChild(span);
                     } else if (part.startsWith('$') && part.endsWith('$')) {
+                        // Inline Math
                         const span = document.createElement('span');
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch(e) { span.innerText = part; }
+                        const content = part.slice(1, -1);
+                        try { 
+                            katex.render(content, span, { throwOnError: false, displayMode: false }); 
+                        } catch(e) { 
+                            span.innerText = content; 
+                        }
                         el.appendChild(span);
                     } else {
-                        el.appendChild(document.createTextNode(part));
+                        // Text Mode - Xử lý format đặc biệt
+                        if (part.trim().length > 0) {
+                            const span = document.createElement('span');
+                            span.innerHTML = formatTextMode(part);
+                            el.appendChild(span);
+                        } else if (part.length > 0) {
+                             // Giữ khoảng trắng
+                             el.appendChild(document.createTextNode(part));
+                        }
                     }
                 });
             }, [text]);
+            
             return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
         };
 
