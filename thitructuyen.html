@@ -105,7 +105,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
+        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
         
         // --- HELPER COMPONENTS ---
         
@@ -114,18 +114,13 @@
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
         };
 
-        // Improved MathText to handle basic TeX formatting in text mode
         const MathText = ({ text }) => {
             const ref = useRef();
             
-            // Hàm xử lý định dạng văn bản cơ bản giả lập LaTeX text mode
             const formatTextMode = (str) => {
                 if (!str) return '';
-                // Xử lý \textbf{...} -> <b>...</b>
                 let formatted = str.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
-                // Xử lý \textit{...} -> <i>...</i>
                 formatted = formatted.replace(/\\textit\{([^\}]+)\}/g, '<span class="tex-italic">$1</span>');
-                // Xử lý xuống dòng
                 formatted = formatted.replace(/\n/g, '<br/>');
                 return formatted;
             };
@@ -133,49 +128,30 @@
             useEffect(() => {
                 if (!text || !ref.current) return;
                 const el = ref.current;
-                
-                // Reset content
                 el.innerHTML = '';
-                
-                // Tách chuỗi thành các phần: $$Display$$, $Inline$, và Text
-                // Sử dụng regex với capture group để giữ lại dấu phân cách
                 const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
-                
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
-                        // Display Math
                         const span = document.createElement('span');
                         const content = part.slice(2, -2);
-                        try { 
-                            katex.render(content, span, { throwOnError: false, displayMode: true }); 
-                        } catch(e) { 
-                            span.innerText = content; 
-                        }
+                        try { katex.render(content, span, { throwOnError: false, displayMode: true }); } catch(e) { span.innerText = content; }
                         el.appendChild(span);
                     } else if (part.startsWith('$') && part.endsWith('$')) {
-                        // Inline Math
                         const span = document.createElement('span');
                         const content = part.slice(1, -1);
-                        try { 
-                            katex.render(content, span, { throwOnError: false, displayMode: false }); 
-                        } catch(e) { 
-                            span.innerText = content; 
-                        }
+                        try { katex.render(content, span, { throwOnError: false, displayMode: false }); } catch(e) { span.innerText = content; }
                         el.appendChild(span);
                     } else {
-                        // Text Mode - Xử lý format đặc biệt
                         if (part.trim().length > 0) {
                             const span = document.createElement('span');
                             span.innerHTML = formatTextMode(part);
                             el.appendChild(span);
                         } else if (part.length > 0) {
-                             // Giữ khoảng trắng
                              el.appendChild(document.createTextNode(part));
                         }
                     }
                 });
             }, [text]);
-            
             return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
         };
 
@@ -190,9 +166,25 @@
             return <div className="modal-overlay" onClick={onClose}><div className="close-btn-full" onClick={onClose}>&times;</div><img src={src} className="modal-image-full" onClick={(e) => e.stopPropagation()} /></div>;
         };
 
+        // --- CẬP NHẬT: AnswerImportModal để lấy key/model từ localStorage ---
         const AnswerImportModal = ({ onClose, onImport }) => { 
             const [mode, setMode] = useState("manual"); const [textInput, setTextInput] = useState(""); const [loading, setLoading] = useState(false); const [preview, setPreview] = useState(null); const [aiResult, setAiResult] = useState(null); const fileInputRef = useRef();
-            const processImage = async (dataUrl) => { setLoading(true); setPreview(dataUrl); try { const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash'; const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { image_data: dataUrl, api_keys: keys, model: model }); if (res.data.status === 'ok') setAiResult(res.data.data); else alert("Lỗi: " + res.data.message); } catch(err) { alert("Lỗi: " + err.message); } finally { setLoading(false); } };
+            
+            const processImage = async (dataUrl) => { 
+                setLoading(true); setPreview(dataUrl); 
+                try { 
+                    // Lấy key và model từ localStorage (do index.html nạp)
+                    const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); 
+                    const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash'; 
+                    
+                    if(!keys.length) throw new Error("Chưa nạp API Key! Vui lòng vào trang chủ nạp key.");
+
+                    const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { image_data: dataUrl, api_keys: keys, model: model }); 
+                    if (res.data.status === 'ok') setAiResult(res.data.data); 
+                    else alert("Lỗi: " + res.data.message); 
+                } catch(err) { alert("Lỗi: " + err.message); } finally { setLoading(false); } 
+            };
+            
             const handleManualImport = () => { const parts = textInput.toUpperCase().match(/(\d+)[\.\-\:\s]*([A-D])/g); if (!parts) return alert("Sai định dạng! VD: 1A 2B"); const results = parts.map(p => { const m = p.match(/(\d+)[\.\-\:\s]*([A-D])/); return { index: parseInt(m[1]), answer: m[2] }; }); onImport(results); onClose(); };
             const handlePaste = (e) => { const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf("image") !== -1) { e.preventDefault(); const file = items[i].getAsFile(); const reader = new FileReader(); reader.onload = (ev) => processImage(ev.target.result); reader.readAsDataURL(file); return; } } };
             return (
@@ -270,9 +262,10 @@
             const [step, setStep] = useState(initialData ? 2 : 1); const [pages, setPages] = useState([]); const [pageQuestions, setPageQuestions] = useState({}); const [activePageId, setActivePageId] = useState(null); const [loadingMsg, setLoadingMsg] = useState(""); const [examInfo, setExamInfo] = useState(initialData ? initialData.info : { title: "", school: "", duration: 45, start_time: "", end_time: "" }); const [showAnswerModal, setShowAnswerModal] = useState(false); const [previewImage, setPreviewImage] = useState(null); const userEmail = localStorage.getItem('userEmail');
             useEffect(() => { if (initialData && initialData.questions) { const fakeId = "imported"; setPages([{ id: fakeId, page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }]); setPageQuestions({ [fakeId]: initialData.questions.map((q,i)=>({...q, id: Date.now()+i})) }); setActivePageId(fakeId); } }, [initialData]);
             const allQuestions = useMemo(() => { let merged = []; const sortedPages = [...pages].sort((a,b) => a.page_index - b.page_index); sortedPages.forEach(p => { if (pageQuestions[p.id]) merged.push(...pageQuestions[p.id]); }); return merged; }, [pages, pageQuestions]);
+            
+            // --- CẬP NHẬT: Lấy API Key từ localStorage ---
             const getApiKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); } catch { return []; } };
             
-            // [NEW] Tính toán số câu có đáp án để hiển thị
             const counts = useMemo(() => {
                 const total = allQuestions.length;
                 const hasAns = allQuestions.filter(q => q.correct_index !== null && q.correct_index !== undefined && parseInt(q.correct_index) >= 0).length;
@@ -280,7 +273,35 @@
             }, [allQuestions]);
 
             const handleUpload = async (e) => { const file = e.target.files[0]; if (!file) return; setLoadingMsg("Đang xử lý PDF..."); const fd = new FormData(); fd.append("file", file); try { const res = await axios.post(`${API_BASE}/api/exam/process_paper`, fd); if (res.data.status === 'ok') { setPages(res.data.pages); if(res.data.pages.length) setActivePageId(res.data.pages[0].id); setStep(2); } else alert(res.data.message); } catch (err) { alert(err.message); } finally { setLoadingMsg(""); } };
-            const runAIForPage = async (page) => { const keys = getApiKeys(); if(!keys.length) return alert("Thiếu API Key!"); setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p)); setActivePageId(page.id); const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash'; try { const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { image_data: page.image_data, api_keys: keys, model: model }, { timeout: 60000 }); if(res.data.status === 'ok') { const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() })); setPageQuestions(prev => ({ ...prev, [page.id]: newQs })); setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'done', q_count: newQs.length} : p)); } } catch(e) { setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'error'} : p)); alert(e.message); } };
+            
+            // --- CẬP NHẬT: Hàm gọi AI xử lý ảnh, gửi kèm key và model ---
+            const runAIForPage = async (page) => { 
+                const keys = getApiKeys(); 
+                if(!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ nạp Key."); 
+                
+                setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'processing'} : p)); 
+                setActivePageId(page.id); 
+                
+                const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash'; 
+                
+                try { 
+                    const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, { 
+                        image_data: page.image_data, 
+                        api_keys: keys, 
+                        model: model 
+                    }, { timeout: 60000 }); 
+                    
+                    if(res.data.status === 'ok') { 
+                        const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() })); 
+                        setPageQuestions(prev => ({ ...prev, [page.id]: newQs })); 
+                        setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'done', q_count: newQs.length} : p)); 
+                    } 
+                } catch(e) { 
+                    setPages(prev => prev.map(p => p.id === page.id ? {...p, status: 'error'} : p)); 
+                    alert(e.message); 
+                } 
+            };
+            
             const updateQuestion = (qId, field, value, optIdx=null) => { if(!activePageId) return; setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].map(q => { if(q.id === qId) { const newData = {...q}; if(field === 'options') newData.options[optIdx] = value; else newData[field] = value; return newData; } return q; }) })); };
             const deleteQuestion = (qId) => { if(confirm("Xóa câu này?")) setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].filter(q => q.id !== qId) })); };
             const addQuestion = () => { if(!activePageId) return alert("Chọn trang trước!"); const newQ = { id: Date.now(), question: "Câu hỏi mới...", options: ["", "", "", ""], correct_index: 0, question_image: null }; setPageQuestions(prev => ({ ...prev, [activePageId]: [...(prev[activePageId] || []), newQ] })); };
@@ -290,7 +311,6 @@
                 if(!examInfo.title) return alert("Vui lòng nhập tên đề thi!");
                 if(!allQuestions.length) return alert("Đề thi đang trống! Vui lòng tải lên PDF và nhận diện câu hỏi.");
                 
-                // Kiểm tra lại số lượng đáp án trước khi lưu
                 const questionsWithAnswer = allQuestions.filter(q => q.correct_index !== null && q.correct_index !== undefined && parseInt(q.correct_index) >= 0).length;
                 const totalQuestions = allQuestions.length;
                 
@@ -320,7 +340,6 @@
                                 <input type="datetime-local" className="border rounded px-1" value={examInfo.end_time||""} onChange={e=>setExamInfo({...examInfo, end_time:e.target.value})}/>
                             </div>
                             
-                            {/* [NEW] Hiển thị tiến độ đáp án */}
                             <div className="text-xs font-bold bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
                                 Đã có đáp án: <span className={counts.hasAns < counts.total ? "text-red-600 animate-pulse" : "text-green-600"}>{counts.hasAns}/{counts.total}</span>
                             </div>
