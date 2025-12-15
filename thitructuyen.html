@@ -77,6 +77,13 @@
         .drag-handle { cursor: grab; padding: 4px 8px; color: #9ca3af; transition: color 0.2s; }
         .drag-handle:active { cursor: grabbing; }
         .drag-handle:hover { color: #4f46e5; }
+
+        /* Guide Modal Styles */
+        .guide-step { margin-bottom: 1.5rem; padding-left: 1rem; border-left: 3px solid #e5e7eb; transition: all 0.2s; }
+        .guide-step:hover { border-left-color: #4f46e5; }
+        .guide-step h4 { font-weight: bold; color: #374151; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+        .guide-step p, .guide-step ul { font-size: 0.9rem; color: #6b7280; }
+        .guide-step ul { list-style-type: disc; padding-left: 1.2rem; margin-top: 0.25rem; }
     </style>
 </head>
 <body class="noselect" oncontextmenu="return false;">
@@ -178,6 +185,66 @@
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="close-btn-full" onClick={onClose}>&times;</div>
                     <img src={src} className="modal-image-full" onClick={(e) => e.stopPropagation()} />
+                </div>
+            );
+        };
+
+        // --- NEW: Guide Modal ---
+        const GuideModal = ({ onClose }) => {
+            return (
+                <div className="modal-overlay" onClick={onClose} style={{zIndex: 2000}}>
+                    <div className="modal-box w-full max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden" onClick={e=>e.stopPropagation()}>
+                        <div className="p-4 border-b flex justify-between items-center bg-indigo-600 text-white rounded-t-lg">
+                            <h3 className="font-bold text-xl"><i className="fas fa-graduation-cap"></i> Hướng Dẫn Sử Dụng</h3>
+                            <button onClick={onClose} className="hover:bg-indigo-700 w-8 h-8 rounded-full flex items-center justify-center transition"><i className="fas fa-times"></i></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-file-upload text-blue-500"></i> 1. Tạo & Nhận Diện Đề</h4>
+                                        <p>Tải lên file PDF đề thi. Hệ thống tự động tách trang. Nhấn <b>"Nhận diện AI"</b> để trích xuất câu hỏi tự động.</p>
+                                    </div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-crop-alt text-orange-500"></i> 2. Xử Lý Sót Câu (Quan Trọng)</h4>
+                                        <p>Nếu AI bỏ sót câu hỏi (do ảnh mờ, công thức phức tạp):</p>
+                                        <ul>
+                                            <li>Nhấn nút <b>"Thủ công"</b> ở trang tương ứng.</li>
+                                            <li>Kéo chuột khoanh vùng câu hỏi bị thiếu.</li>
+                                            <li>Nhấn <b>"Quét & Gộp"</b>. Câu hỏi mới sẽ được thêm vào cuối trang.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-sort text-purple-500"></i> 3. Sắp Xếp Câu Hỏi</h4>
+                                        <p>Nếu thứ tự câu bị đảo lộn: Kéo biểu tượng <b>"☰"</b> để sắp xếp lại đúng vị trí mong muốn.</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-edit text-green-500"></i> 4. Chỉnh Sửa & Đáp Án</h4>
+                                        <p>Nhấn <b>"Sửa"</b> để chỉnh nội dung hoặc chọn đáp án đúng. Hệ thống yêu cầu phải chọn đủ đáp án đúng trước khi lưu.</p>
+                                    </div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-save text-indigo-500"></i> 5. Lưu & Tổ Chức Thi</h4>
+                                        <p>Nhấn <b>"Lưu Đề"</b>. Sau đó chia sẻ <b>Mã QR</b> cho học sinh để làm bài trên điện thoại/máy tính.</p>
+                                    </div>
+                                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800">
+                                        <strong><i className="fas fa-shield-alt"></i> Chống Gian Lận:</strong>
+                                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                                            <li>Chặn copy/paste nội dung.</li>
+                                            <li>Tự động thu bài nếu học sinh thoát màn hình quá 3 lần.</li>
+                                            <li>Chế độ toàn màn hình bắt buộc.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div className="p-4 border-t bg-gray-50 text-right">
+                            <button onClick={onClose} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition">Đã Hiểu</button>
+                        </div>
+                    </div>
                 </div>
             );
         };
@@ -405,6 +472,9 @@
             const [previewImage, setPreviewImage] = useState(null); 
             const [cropPage, setCropPage] = useState(null);
             
+            // New state for guide modal
+            const [showGuide, setShowGuide] = useState(false);
+            
             const userEmail = localStorage.getItem('userEmail');
             
             // Sync page question counts cleanly
@@ -573,6 +643,7 @@
                     {/* Modals */}
                     {showAnswerModal && <AnswerImportModal onClose={()=>setShowAnswerModal(false)} onImport={handleBulkAnswer}/>}
                     {cropPage && <ManualCropModal page={cropPage} onClose={() => setCropPage(null)} onMerge={handleManualMerge} />}
+                    {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
                     <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />
                     
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
@@ -592,6 +663,7 @@
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            <button onClick={()=>setShowGuide(true)} className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded text-sm font-bold"><i className="fas fa-question-circle"></i> Hướng Dẫn</button>
                             <button onClick={()=>setShowAnswerModal(true)} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-sm font-bold"><i className="fas fa-key"></i> Nạp Đáp Án</button>
                             <button onClick={handleSave} className="bg-green-600 text-white px-4 py-1.5 rounded text-sm font-bold shadow hover:bg-green-700"><i className="fas fa-save"></i> Lưu Đề</button>
                         </div>
@@ -659,7 +731,7 @@
         };
 
         const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
-            const [exams, setExams] = useState([]); const [qrLink, setQrLink] = useState(null); const userEmail = localStorage.getItem('userEmail');
+            const [exams, setExams] = useState([]); const [qrLink, setQrLink] = useState(null); const [showGuide, setShowGuide] = useState(false); const userEmail = localStorage.getItem('userEmail');
             useEffect(() => { if(userEmail) axios.get(`${API_BASE}/api/exam/my-exams?email=${userEmail}`).then(res => setExams(res.data||[])); }, []);
             const handleDelete = async (id) => { if(confirm("Xóa đề này?")) { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e=>e.id!==id)); } };
             const handleDuplicate = async (id) => { await axios.post(`${API_BASE}/api/exam/duplicate/${id}`); window.location.reload(); };
@@ -667,9 +739,14 @@
             return (
                 <div className="max-w-6xl mx-auto p-6">
                     {qrLink && <QRModal link={qrLink} onClose={()=>setQrLink(null)} />}
+                    {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
                     <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow border border-indigo-100">
                         <div className="flex items-center gap-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-2xl"><i className="fas fa-user-tie"></i></div><div><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500">{userEmail}</p></div></div>
-                        <div className="flex gap-2"><button onClick={()=>window.location.href='index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Home</button><button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button></div>
+                        <div className="flex gap-2">
+                            <button onClick={()=>window.location.href='index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Home</button>
+                            <button onClick={()=>setShowGuide(true)} className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded font-bold hover:bg-yellow-200"><i className="fas fa-question-circle"></i> Hướng Dẫn</button>
+                            <button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button>
+                        </div>
                     </div>
                     <div className="bg-white rounded-xl shadow overflow-hidden">
                         <table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4">Thời Gian</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>{exams.map((ex) => (<tr key={ex.id} className="border-b hover:bg-indigo-50/30"><td className="p-4"><div className="font-bold text-lg text-indigo-900">{ex.title}</div><div className="text-xs text-gray-500">{ex.school}</div></td><td className="p-4 text-sm text-gray-600">{ex.duration_mins} phút<br/><span className="text-xs text-gray-400">{ex.start_time ? new Date(ex.start_time).toLocaleDateString() : 'Tự do'}</span></td><td className="p-4 text-right"><div className="flex justify-end gap-2"><button onClick={()=>setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded" title="QR Code"><i className="fas fa-qrcode"></i></button><button onClick={()=>onEdit(ex.id)} className="bg-yellow-100 text-yellow-600 p-2 rounded" title="Sửa đề"><i className="fas fa-edit"></i></button><button onClick={()=>handleDuplicate(ex.id)} className="bg-purple-100 text-purple-600 p-2 rounded" title="Nhân bản"><i className="fas fa-copy"></i></button><button onClick={()=>onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded" title="Kết quả"><i className="fas fa-chart-bar"></i></button><button onClick={()=>handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded" title="Xóa"><i className="fas fa-trash"></i></button></div></td></tr>))}</tbody></table>
@@ -837,6 +914,7 @@
 
             return (
                 <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
+                    {/* Anti-Cheat Overlay */}
                     {isLockedOut && (
                         <div className="violation-overlay">
                             <div className="text-6xl text-red-500 mb-4"><i className="fas fa-exclamation-triangle"></i></div>
@@ -859,6 +937,7 @@
                                     <div className="flex gap-4 mb-4">
                                         <div className="flex flex-col items-center gap-1"><span className="bg-indigo-100 text-indigo-700 w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm shadow-sm">{i+1}</span>{answers[q.originalIdx] !== undefined && <i className="fas fa-check-circle text-green-500 text-xs"></i>}</div>
                                         <div className="flex-1">
+                                            {/* Corrected logic for showing image */}
                                             {q.question_image && <img src={q.question_image} className="max-h-60 rounded-lg border mb-3 block object-contain bg-gray-50"/>}
                                             <div className="text-gray-800 text-base leading-relaxed font-medium"><MathText text={q.question}/></div>
                                         </div>
