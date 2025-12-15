@@ -155,7 +155,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space"; 
+        const API_BASE = localStorage.getItem("omr_backend_url") || "[https://hoangthiencm-giangbai.hf.space](https://hoangthiencm-giangbai.hf.space)"; 
         
         // --- HELPER COMPONENTS ---
         
@@ -164,7 +164,14 @@
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
         };
 
-        const MathText = ({ text }) => {
+        // NEW: Clean question prefix like "Câu 1:", "Bài 2."
+        const cleanQuestionPrefix = (text) => {
+            if (!text) return "";
+            // Regex to remove "Câu/Bài/Question" followed by number and separator at the start
+            return text.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '');
+        };
+
+        const MathText = ({ text, cleanPrefix = false }) => {
             const ref = useRef();
             
             const formatTextMode = (str) => {
@@ -175,11 +182,15 @@
                 return formatted;
             };
 
+            const processedText = useMemo(() => {
+                return cleanPrefix ? cleanQuestionPrefix(text) : text;
+            }, [text, cleanPrefix]);
+
             useEffect(() => {
-                if (!text || !ref.current) return;
+                if (!processedText || !ref.current) return;
                 const el = ref.current;
                 el.innerHTML = '';
-                const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                const parts = processedText.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
                         const span = document.createElement('span');
@@ -201,7 +212,7 @@
                         }
                     }
                 });
-            }, [text]);
+            }, [processedText]);
             return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
         };
 
@@ -213,30 +224,15 @@
                     <div className="modal-box text-center" onClick={e=>e.stopPropagation()}>
                         <h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3>
                         <div ref={qrRef} className="flex justify-center my-4"></div>
-						<div className="mb-3 text-left">
-							<label className="text-xs text-gray-500 font-bold block mb-1">
-								Đường dẫn (Copy để gửi Zalo):
-							</label>
-
-							<div className="flex items-center gap-2">
-								<input 
-									value={link} 
-									readOnly 
-									className="qr-link flex-1 border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
-									onClick={(e) => e.target.select()}
-								/>
-
-								<button
-									onClick={() => { 
-										navigator.clipboard.writeText(link); 
-										alert("Đã copy link!"); 
-									}}
-									className="px-3 py-2 rounded bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow"
-								>
-									Copy
-								</button>
-							</div>
-						</div>
+                        <div className="mb-3 text-left">
+                            <label className="text-xs text-gray-500 font-bold block mb-1">Đường dẫn (Copy để gửi Zalo):</label>
+                            <input 
+                                value={link} 
+                                readOnly 
+                                className="qr-link w-full border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
+                                onClick={(e) => e.target.select()}
+                            />
+                        </div>
                         <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button>
                     </div>
                 </div>
@@ -881,6 +877,8 @@
             const [error, setError] = useState(null);
             const [violationCount, setViolationCount] = useState(0);
             const [isLockedOut, setIsLockedOut] = useState(false);
+            // Ref để lưu trữ hàm cleanup event listener
+            const cleanupListenersRef = useRef(null);
             
             useEffect(() => { 
                 axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => {
@@ -938,11 +936,16 @@
                     document.addEventListener("visibilitychange", checkVisibility);
                     window.addEventListener("blur", checkVisibility);
 
-                    return () => {
-                        clearInterval(timer);
+                    // Lưu hàm cleanup để gọi thủ công khi nộp bài
+                    cleanupListenersRef.current = () => {
                         document.removeEventListener("fullscreenchange", checkFullscreen);
                         document.removeEventListener("visibilitychange", checkVisibility);
                         window.removeEventListener("blur", checkVisibility);
+                    };
+
+                    return () => {
+                        clearInterval(timer);
+                        if(cleanupListenersRef.current) cleanupListenersRef.current();
                     };
                 }
             }, [step]);
@@ -977,7 +980,16 @@
                     if (!confirm("Bạn chắc chắn muốn nộp bài?")) return;
                 }
 
+                // QUAN TRỌNG: Hủy đăng ký sự kiện trước khi thoát fullscreen để tránh tính vi phạm oan
+                if(cleanupListenersRef.current) {
+                    cleanupListenersRef.current();
+                    cleanupListenersRef.current = null;
+                }
+
                 try {
+                    // Thoát fullscreen trước khi gửi request (tránh giao diện bị kẹt)
+                    if (document.exitFullscreen) await document.exitFullscreen().catch(() => {});
+
                     const res = await axios.post(`${API_BASE}/api/exam/submit`, {
                         exam_id: examId,
                         student_name: info.name,
@@ -987,7 +999,6 @@
                     });
                     setExam(res.data);
                     setStep("result");
-                    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
                 } catch (e) {
                     alert(e.response?.data?.detail || "Lỗi nộp bài!");
                 }
@@ -1023,7 +1034,10 @@
                         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-4xl shadow-inner"><i className="fas fa-check"></i></div>
                         <h2 className="text-3xl font-bold text-gray-800 mb-2">Hoàn Thành!</h2><p className="text-gray-500 mb-6">Bạn đã nộp bài thành công.</p>
                         <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6"><p className="text-sm text-gray-500 uppercase tracking-wide font-bold mb-2">Kết quả</p><p className="text-5xl font-extrabold text-indigo-600 mb-2">{exam.score}</p><p className="text-sm font-bold text-gray-400">Điểm số</p></div>
-                        <div className="bg-blue-50 p-4 rounded text-left text-sm text-blue-800 italic border-l-4 border-blue-500">💡 {exam.feedback}</div>
+                        <div className="bg-blue-50 p-4 rounded text-left text-sm text-blue-800 italic border-l-4 border-blue-500">
+                            <strong><i className="fas fa-robot"></i> Nhận xét từ AI:</strong><br/>
+                            {exam.feedback || exam.ai_feedback}
+                        </div>
                     </div>
                 </div>
             );
@@ -1055,7 +1069,7 @@
                                         <div className="flex-1">
                                             {/* Corrected logic for showing image */}
                                             {q.question_image && <img src={q.question_image} className="max-h-60 rounded-lg border mb-3 block object-contain bg-gray-50"/>}
-                                            <div className="text-gray-800 text-base leading-relaxed font-medium"><MathText text={q.question}/></div>
+                                            <div className="text-gray-800 text-base leading-relaxed font-medium"><MathText text={q.question} cleanPrefix={true}/></div>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-12">
