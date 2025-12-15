@@ -213,15 +213,30 @@
                     <div className="modal-box text-center" onClick={e=>e.stopPropagation()}>
                         <h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3>
                         <div ref={qrRef} className="flex justify-center my-4"></div>
-                        <div className="mb-3 text-left">
-                            <label className="text-xs text-gray-500 font-bold block mb-1">Đường dẫn (Copy để gửi Zalo):</label>
-                            <input 
-                                value={link} 
-                                readOnly 
-                                className="qr-link w-full border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
-                                onClick={(e) => e.target.select()}
-                            />
-                        </div>
+						<div className="mb-3 text-left">
+							<label className="text-xs text-gray-500 font-bold block mb-1">
+								Đường dẫn (Copy để gửi Zalo):
+							</label>
+
+							<div className="flex items-center gap-2">
+								<input 
+									value={link} 
+									readOnly 
+									className="qr-link flex-1 border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
+									onClick={(e) => e.target.select()}
+								/>
+
+								<button
+									onClick={() => { 
+										navigator.clipboard.writeText(link); 
+										alert("Đã copy link!"); 
+									}}
+									className="px-3 py-2 rounded bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow"
+								>
+									Copy
+								</button>
+							</div>
+						</div>
                         <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button>
                     </div>
                 </div>
