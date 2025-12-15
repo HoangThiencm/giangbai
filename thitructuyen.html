@@ -18,6 +18,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
+    <!-- SortableJS for Drag & Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     
@@ -69,6 +72,11 @@
         /* Text styling helpers */
         .tex-bold { font-weight: bold; }
         .tex-italic { font-style: italic; }
+        
+        /* Drag Handle */
+        .drag-handle { cursor: grab; padding: 4px 8px; color: #9ca3af; transition: color 0.2s; }
+        .drag-handle:active { cursor: grabbing; }
+        .drag-handle:hover { color: #4f46e5; }
     </style>
 </head>
 <body class="noselect" oncontextmenu="return false;">
@@ -334,7 +342,12 @@
             return (
                 <div className={`border rounded-lg p-3 shadow-sm transition relative bg-white group hover:border-indigo-400 ${isEditing ? 'ring-2 ring-indigo-100' : ''}`}>
                     <div className="flex justify-between mb-2">
-                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Câu {idx+1}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="drag-handle" title="Kéo thả để sắp xếp">
+                                <i className="fas fa-grip-vertical"></i>
+                            </span>
+                            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Câu {idx+1}</span>
+                        </div>
                         <div className="flex gap-2">
                             <button onClick={()=>setIsEditing(!isEditing)} className="text-indigo-500 hover:text-indigo-700 text-xs font-bold"><i className={`fas ${isEditing?'fa-check':'fa-pencil-alt'}`}></i> {isEditing?'Xong':'Sửa'}</button>
                             <button onClick={()=>deleteQuestion(q.id)} className="text-red-400 hover:text-red-600 text-xs"><i className="fas fa-trash"></i></button>
@@ -404,6 +417,29 @@
                     return p;
                 }));
             }, [pageQuestions]);
+
+            // --- SORTABLEJS INTEGRATION ---
+            useEffect(() => {
+                if (!activePageId) return;
+                const el = document.getElementById("question-sortable");
+                if (el) {
+                    const sortable = new Sortable(el, {
+                        animation: 150,
+                        handle: ".drag-handle",
+                        ghostClass: "bg-blue-50",
+                        onEnd: (evt) => {
+                            if (evt.oldIndex === evt.newIndex) return;
+                            setPageQuestions(prev => {
+                                const newList = [...(prev[activePageId] || [])];
+                                const [moved] = newList.splice(evt.oldIndex, 1);
+                                newList.splice(evt.newIndex, 0, moved);
+                                return { ...prev, [activePageId]: newList };
+                            });
+                        }
+                    });
+                    return () => sortable.destroy();
+                }
+            }, [activePageId, pageQuestions[activePageId]?.length]); // Re-init only when page or length changes
 
             useEffect(() => { 
                 if (initialData && initialData.questions) { 
@@ -592,7 +628,12 @@
                             </div>
                         </div>
                         
-                        <div className="col-panel bg-white border-r"><div className="col-header"><span>CHI TIẾT (Trang {pages.find(p=>p.id===activePageId)?.page_index})</span></div><div className="col-content space-y-4">{!activePageId ? <div className="text-center text-gray-400 mt-10">Chọn trang bên trái</div> : (!pageQuestions[activePageId]?.length && pages.find(p=>p.id===activePageId)?.status !== 'done') ? <div className="text-center text-gray-400 mt-10">Chưa có câu hỏi. Bấm Nhận diện AI.</div> : (<>{pageQuestions[activePageId]?.map((q, idx) => (<QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />))}<button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-bold flex items-center justify-center gap-2"><i className="fas fa-plus-circle"></i> Thêm câu hỏi thủ công</button></>)}</div></div>
+                        <div className="col-panel bg-white border-r"><div className="col-header"><span>CHI TIẾT (Trang {pages.find(p=>p.id===activePageId)?.page_index})</span></div><div className="col-content space-y-4">{!activePageId ? <div className="text-center text-gray-400 mt-10">Chọn trang bên trái</div> : (!pageQuestions[activePageId]?.length && pages.find(p=>p.id===activePageId)?.status !== 'done') ? <div className="text-center text-gray-400 mt-10">Chưa có câu hỏi. Bấm Nhận diện AI.</div> : (<>
+                            <div id="question-sortable" className="space-y-4">
+                                {pageQuestions[activePageId]?.map((q, idx) => (<QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />))}
+                            </div>
+                            <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-bold flex items-center justify-center gap-2"><i className="fas fa-plus-circle"></i> Thêm câu hỏi thủ công</button>
+                        </>)}</div></div>
                         <div className="col-panel bg-gray-50">
                             <div className="col-header"><span>TỔNG HỢP ({allQuestions.length} câu)</span></div>
                             <div className="col-content space-y-3">
