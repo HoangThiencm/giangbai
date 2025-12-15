@@ -46,7 +46,7 @@
         .page-thumb img { width: 100%; border: 1px solid #ddd; border-radius: 4px; display: block; margin-bottom: 8px; }
         
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .modal-box { background: white; border-radius: 12px; width: 90%; max-width: 600px; padding: 24px; shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .modal-box { background: white; border-radius: 12px; width: 90%; max-width: 600px; padding: 24px; shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto; }
         .modal-image-full { max-width: 95vw; max-height: 95vh; object-fit: contain; background: black; border-radius: 4px; }
         .close-btn-full { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; cursor: pointer; z-index: 101; background: rgba(0,0,0,0.5); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 
@@ -56,6 +56,13 @@
             -moz-user-select: none; -ms-user-select: none; user-select: none;
         }
         
+        /* Allow Select Override for Teachers */
+        .allow-select, .qr-link {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text !important;
+        }
+
         /* Violation Overlay */
         .violation-overlay {
             position: fixed; inset: 0; background: #000; z-index: 9999;
@@ -100,16 +107,50 @@
         
         // Chặn phím tắt
         document.addEventListener('keydown', function(e) {
+            // Cho phép các phím chức năng nếu đang ở trong input .allow-select (để giáo viên paste/copy)
+            if (e.target.classList.contains('allow-select') || e.target.classList.contains('qr-link') || e.target.tagName === 'TEXTAREA') {
+                return; 
+            }
+
             if (e.key === 'F12' || e.key === 'PrintScreen' || 
                 (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S')) ||
                 (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
                 e.preventDefault();
                 e.stopPropagation();
-                alert("CẢNH BÁO: Thao tác này bị cấm trong giờ thi!");
+                // alert("CẢNH BÁO: Thao tác này bị cấm trong giờ thi!");
             }
         });
         
-        document.addEventListener('copy', function(e) { e.preventDefault(); });
+        // Xử lý sự kiện Copy (Cho phép nếu là .qr-link hoặc .allow-select)
+        document.addEventListener('copy', function(e) { 
+            if (document.activeElement.classList.contains("qr-link") || document.activeElement.classList.contains("allow-select")) {
+                return true; // CHO PHÉP COPY
+            }
+            e.preventDefault(); 
+        });
+
+        // Xử lý sự kiện Paste toàn cục cho Modal Nạp Đáp Án
+        document.addEventListener("paste", function (e) {
+            const modal = document.querySelector(".answer-import-modal-active");
+            if (!modal) return; // Chỉ xử lý khi modal đang mở
+
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf("image") !== -1) {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        // Gọi hàm xử lý được expose từ React Component
+                        if (window.handleGlobalAnswerImagePaste) {
+                            window.handleGlobalAnswerImagePaste(ev.target.result);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    break;
+                }
+            }
+        });
     </script>
 
     <script type="text/babel">
@@ -172,7 +213,15 @@
                     <div className="modal-box text-center" onClick={e=>e.stopPropagation()}>
                         <h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3>
                         <div ref={qrRef} className="flex justify-center my-4"></div>
-                        <input value={link} readOnly className="w-full border p-2 rounded text-sm bg-gray-50 mb-3"/>
+                        <div className="mb-3 text-left">
+                            <label className="text-xs text-gray-500 font-bold block mb-1">Đường dẫn (Copy để gửi Zalo):</label>
+                            <input 
+                                value={link} 
+                                readOnly 
+                                className="qr-link w-full border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
+                                onClick={(e) => e.target.select()}
+                            />
+                        </div>
                         <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button>
                     </div>
                 </div>
@@ -327,9 +376,18 @@
             const [preview, setPreview] = useState(null); 
             const [aiResult, setAiResult] = useState(null); 
             const fileInputRef = useRef();
+
+            // Expose function để Global Script gọi khi Paste
+            useEffect(() => {
+                window.handleGlobalAnswerImagePaste = (dataUrl) => {
+                    setMode("image"); // Chuyển sang tab Image
+                    processImage(dataUrl);
+                };
+                return () => delete window.handleGlobalAnswerImagePaste;
+            }, []);
             
             const processImage = async (dataUrl) => { 
-                setLoading(true); setPreview(dataUrl); 
+                setLoading(true); setPreview(dataUrl); setAiResult(null);
                 try { 
                     const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); 
                     const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash'; 
@@ -365,27 +423,70 @@
             };
 
             return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal-box" onClick={e=>e.stopPropagation()}>
-                        <div className="flex justify-between mb-4"><h3 className="font-bold text-lg">Nạp Đáp Án</h3><button onClick={onClose}><i className="fas fa-times"></i></button></div>
-                        <div className="flex gap-2 mb-4 border-b">
-                            <button onClick={()=>setMode("manual")} className={`px-4 py-2 border-b-2 ${mode==="manual"?"border-indigo-600 font-bold":"border-transparent text-gray-500"}`}>Nhập tay</button>
-                            <button onClick={()=>setMode("image")} className={`px-4 py-2 border-b-2 ${mode==="image"?"border-indigo-600 font-bold":"border-transparent text-gray-500"}`}>Từ ảnh</button>
+                // Thêm class answer-import-modal-active để global script nhận diện
+                <div className="modal-overlay answer-import-modal-active" onClick={onClose}>
+                    <div className="modal-box w-[95%] max-w-4xl max-h-[90vh] flex flex-col" onClick={e=>e.stopPropagation()}>
+                        <div className="flex justify-between mb-4 border-b pb-2">
+                            <h3 className="font-bold text-lg"><i className="fas fa-magic"></i> Nạp Đáp Án Nhanh</h3>
+                            <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
                         </div>
-                        {mode === "manual" ? (
-                            <div>
-                                <textarea value={textInput} onChange={e=>setTextInput(e.target.value)} className="w-full border p-2 rounded h-32 mb-4 font-mono text-sm" placeholder="VD: 1.A 2.B 3.C ..."></textarea>
-                                <button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">Lưu</button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="relative border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-4 text-center cursor-pointer" onPaste={handlePaste} tabIndex="0" onClick={(e)=>{if(!loading&&!preview&&!e.target.closest('.delete-btn')) fileInputRef.current.click()}}>
-                                    {loading ? "Đang đọc..." : preview ? <div className="relative"><img src={preview} className="max-h-60 mx-auto"/><div className="delete-btn absolute top-0 right-0 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center" onClick={(e)=>{e.stopPropagation();setPreview(null);setAiResult(null);fileInputRef.current.value=""}}>×</div></div> : "Chọn ảnh hoặc Dán (Ctrl+V)"}
-                                    <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={(e)=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>processImage(ev.target.result);r.readAsDataURL(f)}}}/>
+                        <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg shrink-0">
+                            <button onClick={()=>setMode("manual")} className={`flex-1 px-4 py-2 rounded-md font-bold text-sm transition ${mode==="manual"?"bg-white shadow text-indigo-600":"text-gray-500 hover:bg-gray-200"}`}>Nhập tay</button>
+                            <button onClick={()=>setMode("image")} className={`flex-1 px-4 py-2 rounded-md font-bold text-sm transition ${mode==="image"?"bg-white shadow text-indigo-600":"text-gray-500 hover:bg-gray-200"}`}>Từ ảnh</button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                            {mode === "manual" ? (
+                                <div className="h-full flex flex-col">
+                                    <textarea value={textInput} onChange={e=>setTextInput(e.target.value)} className="w-full border p-4 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 font-mono text-base flex-1 allow-select" placeholder="Ví dụ: 1.A 2.B 3.C 4D 5A ..."></textarea>
+                                    <button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 mt-4 shadow"><i className="fas fa-save"></i> Lưu Đáp Án</button>
                                 </div>
-                                {aiResult && <button onClick={()=>{onImport(aiResult);onClose()}} className="w-full bg-green-600 text-white py-2 rounded font-bold">Xác nhận ({aiResult.length} câu)</button>}
-                            </div>
-                        )}
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="relative border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl bg-indigo-50/50 p-6 text-center cursor-pointer transition" onPaste={handlePaste} tabIndex="0" onClick={(e)=>{if(!loading&&!preview&&!e.target.closest('.delete-btn')) fileInputRef.current.click()}}>
+                                        {loading ? (
+                                            <div className="py-10"><div className="loader w-8 h-8 border-indigo-500 mb-2"></div><p className="text-indigo-600 font-bold">AI đang đọc đáp án...</p></div>
+                                        ) : preview ? (
+                                            <div className="relative">
+                                                <img src={preview} className="max-h-60 mx-auto rounded shadow-sm border"/>
+                                                <div className="delete-btn absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow cursor-pointer hover:bg-red-600" onClick={(e)=>{e.stopPropagation();setPreview(null);setAiResult(null);fileInputRef.current.value=""}}>&times;</div>
+                                            </div>
+                                        ) : (
+                                            <div className="py-10">
+                                                <i className="fas fa-cloud-upload-alt text-4xl text-indigo-300 mb-2"></i>
+                                                <p className="font-bold text-indigo-800">Chọn ảnh bảng đáp án</p>
+                                                <p className="text-sm text-indigo-500">hoặc nhấn <kbd className="bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-sm text-xs font-mono">Ctrl + V</kbd> để dán</p>
+                                            </div>
+                                        )}
+                                        <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={(e)=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>processImage(ev.target.result);r.readAsDataURL(f)}}}/>
+                                    </div>
+                                    
+                                    {aiResult && (
+                                        <div className="border rounded-xl overflow-hidden shadow-sm">
+                                            <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
+                                                <span className="font-bold text-gray-700 text-sm">Kết quả nhận diện ({aiResult.length} câu)</span>
+                                                <span className="text-xs text-gray-500">Vui lòng kiểm tra kỹ trước khi xác nhận</span>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto bg-white p-2">
+                                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                                                    {aiResult.map((r, idx) => (
+                                                        <div key={idx} className="flex items-center gap-1 bg-gray-50 border rounded px-2 py-1 text-sm allow-select">
+                                                            <span className="font-bold text-gray-500">{r.index}:</span>
+                                                            <span className="font-bold text-indigo-700">{r.answer}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="p-2 bg-gray-50 border-t">
+                                                <button onClick={()=>{onImport(aiResult);onClose()}} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 shadow-sm flex items-center justify-center gap-2">
+                                                    <i className="fas fa-check-circle"></i> Xác nhận nhập {aiResult.length} câu
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
@@ -435,7 +536,7 @@
                     )}
                     {isEditing && (
                         <div className="space-y-3 animation-fade-in">
-                            <textarea className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500" value={q.question} onChange={e=>updateQuestion(q.id, 'question', e.target.value)} onPaste={handlePasteImage} placeholder="Nhập LaTeX hoặc dán ảnh..."></textarea>
+                            <textarea className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500 allow-select" value={q.question} onChange={e=>updateQuestion(q.id, 'question', e.target.value)} onPaste={handlePasteImage} placeholder="Nhập LaTeX hoặc dán ảnh..."></textarea>
                             <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
                                 {q.question_image ? (
                                     <div className="relative"><img src={q.question_image} className="h-16 rounded border"/><button onClick={()=>updateQuestion(q.id, 'question_image', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button></div>
@@ -450,7 +551,7 @@
                                 {q.options.map((opt, oIdx) => (
                                     <div key={oIdx} className={`flex items-center border rounded px-1 py-1 ${q.correct_index===oIdx?'border-green-500 bg-green-50':''}`}>
                                         <div onClick={()=>updateQuestion(q.id, 'correct_index', oIdx)} className={`w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer mr-1 ${q.correct_index===oIdx?'bg-green-500 text-white':'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>{String.fromCharCode(65+oIdx)}</div>
-                                        <input className="w-full text-xs bg-transparent outline-none" value={opt} onChange={e=>updateQuestion(q.id, 'options', e.target.value, oIdx)}/>
+                                        <input className="w-full text-xs bg-transparent outline-none allow-select" value={opt} onChange={e=>updateQuestion(q.id, 'options', e.target.value, oIdx)}/>
                                     </div>
                                 ))}
                             </div>
@@ -649,13 +750,13 @@
                     <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
                         <div className="flex items-center gap-4">
                             <button onClick={onBack} className="text-gray-500 hover:text-black"><i className="fas fa-arrow-left"></i></button>
-                            <input className="font-bold text-lg border-b border-dashed outline-none w-48" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
+                            <input className="font-bold text-lg border-b border-dashed outline-none w-48 allow-select" placeholder="Tên đề thi..." value={examInfo.title} onChange={e=>setExamInfo({...examInfo, title:e.target.value})}/>
                             <div className="flex items-center gap-2 text-xs">
-                                <input type="number" className="w-12 border rounded px-1" value={examInfo.duration} onChange={e=>setExamInfo({...examInfo, duration:e.target.value})}/> phút 
+                                <input type="number" className="w-12 border rounded px-1 allow-select" value={examInfo.duration} onChange={e=>setExamInfo({...examInfo, duration:e.target.value})}/> phút 
                                 <span className="text-gray-400">|</span> 
-                                <input type="datetime-local" className="border rounded px-1" value={examInfo.start_time||""} onChange={e=>setExamInfo({...examInfo, start_time:e.target.value})}/> 
+                                <input type="datetime-local" className="border rounded px-1 allow-select" value={examInfo.start_time||""} onChange={e=>setExamInfo({...examInfo, start_time:e.target.value})}/> 
                                 ➜ 
-                                <input type="datetime-local" className="border rounded px-1" value={examInfo.end_time||""} onChange={e=>setExamInfo({...examInfo, end_time:e.target.value})}/>
+                                <input type="datetime-local" className="border rounded px-1 allow-select" value={examInfo.end_time||""} onChange={e=>setExamInfo({...examInfo, end_time:e.target.value})}/>
                             </div>
                             
                             <div className="text-xs font-bold bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
@@ -891,9 +992,9 @@
                         <h2 className="text-2xl font-bold mb-2 text-gray-800">{exam.info.title}</h2>
                         <div className="flex justify-center gap-4 text-sm text-gray-500 mb-6"><span><i className="fas fa-clock"></i> {exam.info.duration_mins} phút</span><span><i className="fas fa-question-circle"></i> {exam.questions.length} câu</span></div>
                         <div className="space-y-3 text-left">
-                            <div><label className="text-xs font-bold text-gray-700">Họ và Tên (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Nguyễn Văn A" onChange={e=>setInfo({...info, name: e.target.value})}/></div>
-                            <div><label className="text-xs font-bold text-gray-700">Số Báo Danh (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="SBD123456" onChange={e=>setInfo({...info, sbd: e.target.value})}/></div>
-                            <div><label className="text-xs font-bold text-gray-700">Lớp</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="12A1" onChange={e=>setInfo({...info, class: e.target.value})}/></div>
+                            <div><label className="text-xs font-bold text-gray-700">Họ và Tên (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="Nguyễn Văn A" onChange={e=>setInfo({...info, name: e.target.value})}/></div>
+                            <div><label className="text-xs font-bold text-gray-700">Số Báo Danh (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="SBD123456" onChange={e=>setInfo({...info, sbd: e.target.value})}/></div>
+                            <div><label className="text-xs font-bold text-gray-700">Lớp</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="12A1" onChange={e=>setInfo({...info, class: e.target.value})}/></div>
                         </div>
                         <div className="mt-6 bg-yellow-50 text-yellow-800 p-3 rounded text-xs text-left border border-yellow-200"><strong><i className="fas fa-exclamation-triangle"></i> CẢNH BÁO QUAN TRỌNG:</strong><br/>- Hệ thống bật chế độ <b>TOÀN MÀN HÌNH</b>.<br/>- <b>TUYỆT ĐỐI KHÔNG</b> thoát màn hình hoặc chuyển tab.<br/>- Nếu vi phạm <b>3 lần</b> sẽ bị <b>THU BÀI</b> ngay lập tức.</div>
                         <button onClick={startExam} className="mt-6 bg-indigo-600 text-white w-full py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">VÀO THI NGAY</button>
