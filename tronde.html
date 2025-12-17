@@ -96,6 +96,29 @@
                     </div>
                 </div>
 
+                <!-- Thông tin đề thi -->
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                    <h3 class="font-bold text-indigo-800 mb-3"><i class="fas fa-info-circle mr-2"></i>Thông tin đề thi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Trường:</label>
+                            <input type="text" id="schoolName" name="school_name" placeholder="Nhập tên trường" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Lớp:</label>
+                            <input type="text" id="className" name="class_name" placeholder="Nhập tên lớp" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Môn:</label>
+                            <input type="text" id="subjectName" name="subject_name" placeholder="Nhập tên môn học" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Thời gian kiểm tra:</label>
+                            <input type="text" id="examTime" name="exam_time" placeholder="VD: 45 phút" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Submit Button -->
                 <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     <span><i class="fas fa-cogs"></i> Bắt đầu Trộn & Tải Về</span>
@@ -154,6 +177,10 @@
             formData.append('file', fileInput.files[0]);
             formData.append('num_variants', document.getElementById('numVariants').value);
             formData.append('shuffle_options', document.getElementById('shuffleOptions').checked);
+            formData.append('school_name', document.getElementById('schoolName').value);
+            formData.append('class_name', document.getElementById('className').value);
+            formData.append('subject_name', document.getElementById('subjectName').value);
+            formData.append('exam_time', document.getElementById('examTime').value);
 
             try {
                 const response = await fetch(API_URL, { method: 'POST', body: formData });
