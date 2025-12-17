@@ -1,708 +1,219 @@
-import os
-import zipfile
-import shutil
-import re
-import random
-import time
-from lxml import etree
-from fastapi import APIRouter, File, UploadFile, Form
-from fastapi.responses import FileResponse
-import pandas as pd
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trộn Đề Thi Word Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Accordion Style */
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content.active { max-height: 1000px; }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4">
 
-router = APIRouter()
+    <!-- HEADER -->
+    <div class="w-full max-w-2xl bg-indigo-600 rounded-t-2xl p-6 text-white flex justify-between items-center shadow-lg">
+        <div>
+            <h1 class="text-2xl font-bold"><i class="fas fa-random mr-2"></i> Trộn Đề Word 100%</h1>
+            <p class="text-indigo-200 text-sm mt-1">Giữ nguyên MathType, Hình ảnh - Hỗ trợ Smart Mix</p>
+        </div>
+        <a href="index.html" class="text-white hover:text-indigo-200"><i class="fas fa-home text-xl"></i></a>
+    </div>
 
-NS = {
-    'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-}
-
-# MÀU ĐỎ HỖ TRỢ - Danh sách đầy đủ các mã màu đỏ trong Word
-RED_CODES = [
-    "ff0000", "FF0000",  # Đỏ thuần
-    "c00000", "C00000",  # Đỏ đậm
-    "e81123", "E81123",  # Đỏ Microsoft
-    "a31515", "A31515",  # Đỏ đậm khác
-    "dc143c", "DC143C",  # Crimson
-    "b22222", "B22222",  # Firebrick
-    "cd5c5c", "CD5C5C",  # Indian Red
-    "f08080", "F08080",  # Light Coral
-    "ff6347", "FF6347",  # Tomato
-    "ff4500", "FF4500",  # Orange Red
-    "8b0000", "8B0000",  # Dark Red
-    "red", "RED",        # Tên màu
-]
-HIGHLIGHT_REDS = ["red", "darkred", "RED", "DARKRED", "lightred", "LIGHTRED"]
-
-
-def get_text_from_element(element):
-    texts = element.xpath('.//w:t', namespaces=NS)
-    return "".join([t.text for t in texts if t.text])
-
-
-# ------------------------------
-# 1️⃣ HÀM KIỂM TRA TÔ ĐỎ
-# ------------------------------
-def is_red_text(el):
-    """
-    Tìm màu đỏ trong element - chỉ kiểm tra trong phạm vi hẹp để tránh false positive.
-    Chỉ kiểm tra trong chính element và các run trực tiếp của nó.
-    """
-    # Chỉ tìm trong các run trực tiếp của element (không tìm quá xa)
-    color_nodes = []
-    
-    # 1. Tìm trong các run (w:r) trực tiếp của element
-    runs = el.xpath('./w:r', namespaces=NS)  # Chỉ direct children
-    if not runs:
-        # Nếu không có run trực tiếp, tìm trong tất cả runs của element
-        runs = el.xpath('.//w:r', namespaces=NS)
-    
-    for run in runs:
-        # Chỉ kiểm tra run properties trực tiếp của run
-        run_colors = run.xpath('./w:rPr/w:color', namespaces=NS)
-        color_nodes.extend(run_colors)
-    
-    # 2. Nếu element chính là run (w:r), kiểm tra run properties của nó
-    if el.tag.endswith('}r'):
-        rpr_colors = el.xpath('./w:rPr/w:color', namespaces=NS)
-        color_nodes.extend(rpr_colors)
-    
-    # 3. Kiểm tra parent trực tiếp (thường là paragraph chứa run)
-    parent = el.getparent()
-    if parent is not None:
-        # Chỉ kiểm tra các run trực tiếp trong parent
-        parent_runs = parent.xpath('./w:r', namespaces=NS)
-        for run in parent_runs:
-            # Chỉ kiểm tra nếu run này chứa element hiện tại
-            if el in run.iter():
-                run_colors = run.xpath('./w:rPr/w:color', namespaces=NS)
-                color_nodes.extend(run_colors)
-    
-    # Loại bỏ trùng lặp
-    seen = set()
-    unique_colors = []
-    for c in color_nodes:
-        c_id = id(c)
-        if c_id not in seen:
-            seen.add(c_id)
-            unique_colors.append(c)
-    
-    # Kiểm tra giá trị màu - chỉ chấp nhận màu đỏ rõ ràng
-    for c in unique_colors:
-        val = c.get(f"{{{NS['w']}}}val")
-        if val:
-            val_lower = val.lower().strip()
-            # Chỉ chấp nhận mã màu đỏ chuẩn (không dùng RGB detection lỏng)
-            if val_lower in ['ff0000', 'c00000', 'e81123', 'a31515', 'dc143c', 'b22222', '8b0000']:
-                return True
-            # Chấp nhận tên màu "red"
-            if val_lower == 'red':
-                return True
-            # Kiểm tra RGB nhưng với tiêu chuẩn chặt chẽ hơn
-            if len(val_lower) == 6 and all(ch in '0123456789abcdef' for ch in val_lower):
-                try:
-                    r_val = int(val_lower[0:2], 16)
-                    g_val = int(val_lower[2:4], 16)
-                    b_val = int(val_lower[4:6], 16)
-                    # Chỉ chấp nhận nếu đỏ rất rõ ràng: đỏ > 220 và xanh lá + xanh dương < 100
-                    if r_val > 220 and (g_val + b_val) < 100:
-                        return True
-                except:
-                    pass
-    
-    return False
-
-
-# ------------------------------
-# 2️⃣ HÀM KIỂM TRA HIGHLIGHT ĐỎ
-# ------------------------------
-def is_red_highlight(el):
-    highlights = el.xpath('.//w:highlight', namespaces=NS)
-    for h in highlights:
-        val = h.get(f"{{{NS['w']}}}val")
-        if val and val.lower() in HIGHLIGHT_REDS:
-            return True
-    return False
-
-
-# ------------------------------
-# 3️⃣ HÀM KIỂM TRA GẠCH CHÂN
-# ------------------------------
-def is_underlined(el):
-    underlines = el.xpath('.//w:u', namespaces=NS)
-    for u in underlines:
-        val = u.get(f"{{{NS['w']}}}val")
-        if val and val.lower() != "none":
-            return True
-    return False
-
-
-# ------------------------------
-# 4️⃣ HÀM KIỂM TRA ĐÁP ÁN ĐÚNG
-# ------------------------------
-def check_is_correct_answer(el):
-    """
-    Kiểm tra xem element có phải là đáp án đúng không.
-    Chỉ chấp nhận các dấu hiệu rõ ràng: màu đỏ thuần, highlight đỏ, hoặc gạch chân.
-    """
-    # 1. Kiểm tra highlight đỏ (ưu tiên cao nhất vì rõ ràng)
-    if is_red_highlight(el): 
-        return True
-    
-    # 2. Kiểm tra màu đỏ trong text (chỉ màu đỏ rõ ràng)
-    if is_red_text(el): 
-        return True
-    
-    # 3. Kiểm tra gạch chân (chỉ nếu không có màu đỏ)
-    if is_underlined(el): 
-        return True
-    
-    return False
-
-
-def extract_answer_char(text):
-    match = re.match(r'^\s*#?([A-D])[\.\)]', text.strip())
-    return match.group(1) if match else None
-
-
-def is_fixed_option(text):
-    return text.strip().startswith('#')
-
-
-def parse_group_tag(text):
-    match = re.search(r'[#]?<(g[0-3])>', text)
-    return match.group(1) if match else None
-
-
-# -------------------------------------------------
-# 4️⃣.5️⃣ HÀM TẠO HEADER PARAGRAPH
-# -------------------------------------------------
-def create_header_paragraph(text, is_bold=False):
-    """Tạo một paragraph với text trong Word XML"""
-    p = etree.Element(f"{{{NS['w']}}}p")
-    r = etree.SubElement(p, f"{{{NS['w']}}}r")
-    if is_bold:
-        rpr = etree.SubElement(r, f"{{{NS['w']}}}rPr")
-        etree.SubElement(rpr, f"{{{NS['w']}}}b")
-    t = etree.SubElement(r, f"{{{NS['w']}}}t")
-    t.text = text
-    return p
-
-
-# -------------------------------------------------
-# 5️⃣ ĐỌC BẢNG ĐÁP ÁN LOẠI 1 (2 dòng)
-# -------------------------------------------------
-def parse_table_two_rows(tbl):
-    answer_map = {}
-    rows = tbl.xpath('.//w:tr', namespaces=NS)
-
-    if len(rows) == 2:
-        q_cells = rows[0].xpath('.//w:tc', namespaces=NS)
-        a_cells = rows[1].xpath('.//w:tc', namespaces=NS)
-
-        for i in range(1, min(len(q_cells), len(a_cells))):
-            q_text = get_text_from_element(q_cells[i])
-            a_text = get_text_from_element(a_cells[i])
-
-            q = re.findall(r'\d+', q_text)
-            a = re.findall(r'[A-D]', a_text.upper())
-
-            if q and a:
-                answer_map[int(q[0])] = a[0]
-
-    return answer_map
-
-
-# -------------------------------------------------
-# 6️⃣ ĐỌC BẢNG ĐÁP ÁN LOẠI 2 (1 dòng)
-# -------------------------------------------------
-def parse_table_one_row(tbl):
-    answer_map = {}
-    rows = tbl.xpath('.//w:tr', namespaces=NS)
-
-    if len(rows) == 1:
-        cells = rows[0].xpath('.//w:tc', namespaces=NS)
-        for c in cells:
-            t = get_text_from_element(c)
-            pairs = re.findall(r'(\d+)\s*[\.\-]?\s*([A-D])', t.upper())
-            for q, a in pairs:
-                answer_map[int(q)] = a
-
-    return answer_map
-
-
-# -------------------------------------------------
-# 7️⃣ ĐỌC DANH SÁCH LOẠI 3 (1.A 2.B ...)
-# -------------------------------------------------
-def parse_answer_lines(body):
-    answer_map = {}
-    paras = body.xpath('.//w:p', namespaces=NS)
-
-    for p in paras:
-        t = get_text_from_element(p)
-        pairs = re.findall(r'(\d+)\s*[\.\-]?\s*([A-D])', t.upper())
-        for q, a in pairs:
-            answer_map[int(q)] = a
-
-    return answer_map
-
-
-# -------------------------------------------------
-# 8️⃣ HÀM ĐỌC BẢNG ĐÁP ÁN TỔNG HỢP
-# -------------------------------------------------
-def read_answer_key(body):
-    answer_map = {}
-
-    tables = body.xpath('.//w:tbl', namespaces=NS)
-    for tbl in tables:
-        answer_map.update(parse_table_two_rows(tbl))
-        answer_map.update(parse_table_one_row(tbl))
-
-    # Dạng dòng rời
-    answer_map.update(parse_answer_lines(body))
-
-    return answer_map
-
-
-# -------------------------------------------------
-# 9️⃣ XỬ LÝ FILE DOCX + TRỘN ĐỀ
-# -------------------------------------------------
-def create_header_paragraph(text, is_bold=False):
-    """Tạo một paragraph với text trong Word XML"""
-    p = etree.Element(f"{{{NS['w']}}}p")
-    r = etree.SubElement(p, f"{{{NS['w']}}}r")
-    rpr = etree.SubElement(r, f"{{{NS['w']}}}rPr")
-    if is_bold:
-        b = etree.SubElement(rpr, f"{{{NS['w']}}}b")
-    t = etree.SubElement(r, f"{{{NS['w']}}}t")
-    t.text = text
-    return p
-
-
-def process_docx_shuffling(input_path, output_dir, num_variants=1, default_shuffle_mode='g3', 
-                           school_name='', class_name='', subject_name='', exam_time=''):
-    extract_dir = os.path.join(output_dir, "temp_extract")
-    if os.path.exists(extract_dir): shutil.rmtree(extract_dir)
-
-    with zipfile.ZipFile(input_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_dir)
-
-    doc_xml_path = os.path.join(extract_dir, 'word', 'document.xml')
-    xml_content = open(doc_xml_path, 'rb').read()
-
-    tree = etree.fromstring(xml_content)
-    body = tree.xpath('//w:body', namespaces=NS)[0]
-
-    # 🔥 ĐỌC BẢNG ĐÁP ÁN
-    external_answers = read_answer_key(body)
-
-    blocks = []
-    current_block = {'mode': 'header', 'elements': [], 'questions': [], 'current_question': []}
-    current_mode = default_shuffle_mode
-    is_in_question = False
-
-    # --------- PHÂN TÍCH CẤU TRÚC CÂU HỎI ----------
-    for el in list(body):
-        text = get_text_from_element(el)
-
-        tag = parse_group_tag(text)
-        if tag:
-            if current_block['current_question']:
-                current_block['questions'].append(current_block['current_question'])
-                current_block['current_question'] = []
-            blocks.append(current_block)
-            current_block = {'mode': tag, 'elements': [], 'questions': [], 'current_question': []}
-            continue
-
-        is_new_q = re.match(r'^\s*(Câu|Question)\s+\d+', text, re.IGNORECASE)
-
-        if is_new_q:
-            if current_block['current_question']:
-                current_block['questions'].append(current_block['current_question'])
-            current_block['current_question'] = [el]
-            is_in_question = True
-        else:
-            if is_in_question:
-                current_block['current_question'].append(el)
-            else:
-                current_block['elements'].append(el)
-
-    if current_block['current_question']:
-        current_block['questions'].append(current_block['current_question'])
-    blocks.append(current_block)
-
-    # --------- TIẾN HÀNH TRỘN ĐỀ ----------
-    generated_files = []
-    excel_data = []
-    start_code = 101
-
-    LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
-
-    for i in range(num_variants):
-        code = str(start_code + i)
-        variant_tree = etree.fromstring(xml_content)
-        variant_body = variant_tree.xpath('//w:body', namespaces=NS)[0]
-        variant_body.clear()
-
-        variant_key_row = {"Mã Đề": code}
-        global_q_num = 1
-
-        # Thêm header thông tin vào đầu đề
-        if school_name or class_name or subject_name or exam_time:
-            # Tạo paragraph trống để tạo khoảng cách
-            empty_p = etree.Element(f"{{{NS['w']}}}p")
-            variant_body.append(empty_p)
-            
-            # Thêm thông tin Trường
-            if school_name:
-                school_p = create_header_paragraph(f"Trường: {school_name}", is_bold=True)
-                variant_body.append(school_p)
-            
-            # Thêm thông tin Lớp
-            if class_name:
-                class_p = create_header_paragraph(f"Lớp: {class_name}", is_bold=True)
-                variant_body.append(class_p)
-            
-            # Thêm thông tin Môn
-            if subject_name:
-                subject_p = create_header_paragraph(f"Môn: {subject_name}", is_bold=True)
-                variant_body.append(subject_p)
-            
-            # Thêm thông tin Thời gian kiểm tra
-            if exam_time:
-                time_p = create_header_paragraph(f"Thời gian kiểm tra: {exam_time}", is_bold=True)
-                variant_body.append(time_p)
-            
-            # Thêm Mã đề
-            code_p = create_header_paragraph(f"Mã đề: {code}", is_bold=True)
-            variant_body.append(code_p)
-            
-            # Thêm paragraph trống để tạo khoảng cách
-            empty_p2 = etree.Element(f"{{{NS['w']}}}p")
-            variant_body.append(empty_p2)
-
-        # Thu thập tất cả câu hỏi từ tất cả các blocks
-        all_questions_with_blocks = []
-        original_q_num = 1
+    <!-- MAIN CARD -->
+    <div class="bg-white rounded-b-2xl shadow-xl w-full max-w-2xl overflow-hidden mb-8">
         
-        for block_idx, block in enumerate(blocks):
-            # Nếu block không có thẻ (mode là 'header'), sử dụng default_shuffle_mode
-            mode = block['mode']
-            if mode == 'header':
-                mode = default_shuffle_mode
-            
-            for q_group in block['questions']:
-                all_questions_with_blocks.append({
-                    'block_idx': block_idx,
-                    'block': block,
-                    'question': q_group,
-                    'mode': mode,
-                    'original_q_num': original_q_num
-                })
-                original_q_num += 1
+        <!-- HƯỚNG DẪN (ACCORDION) -->
+        <div class="border-b border-gray-100">
+            <button type="button" onclick="toggleGuide()" class="w-full p-4 flex justify-between items-center bg-yellow-50 text-yellow-800 font-bold hover:bg-yellow-100 transition">
+                <span><i class="fas fa-book mr-2"></i> Hướng dẫn soạn thảo (Quan trọng)</span>
+                <i id="guideIcon" class="fas fa-chevron-down transition-transform"></i>
+            </button>
+            <div id="guideContent" class="accordion-content bg-yellow-50 px-6 pb-6 text-sm text-gray-700 leading-relaxed">
+                <div class="border-b border-yellow-200 pb-3 mb-3">
+                    <p class="font-bold text-indigo-700 mb-1">1. Quy tắc cơ bản:</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><b>Câu hỏi:</b> Bắt đầu bằng <code>"Câu"</code> hoặc <code>"Question"</code> (VD: <i>Câu 1:, Câu 2.</i>).</li>
+                        <li><b>Đáp án:</b> Bắt đầu bằng <code>A.</code>, <code>B.</code>, <code>C.</code>, <code>D.</code>.</li>
+                        <li><b>Đáp án đúng:</b> Phải được <span class="text-red-600 font-bold">TÔ ĐỎ</span> (Font color = Red/FF0000) hoặc gạch chân.</li>
+                        <li><b>Cố định đáp án:</b> Thêm dấu <code>#</code> trước đáp án (VD: <i>#A. Cả A và B đều đúng</i>) để giữ vị trí cuối cùng.</li>
+                        <li><b>Hình ảnh:</b> Nên để chế độ <i>Inline With Text</i>.</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-bold text-indigo-700 mb-1">2. Chia nhóm & Chế độ trộn (Nâng cao):</p>
+                    <p class="mb-2">Thêm các thẻ sau vào dòng trên cùng của một nhóm câu hỏi:</p>
+                    <ul class="list-none space-y-2 font-mono text-xs bg-white p-3 rounded border border-yellow-200">
+                        <li><span class="font-bold text-red-600">&lt;g0&gt;</span> : Không trộn (Giữ nguyên thứ tự câu & đáp án. VD: Bài đọc hiểu)</li>
+                        <li><span class="font-bold text-blue-600">&lt;g1&gt;</span> : Chỉ hoán vị thứ tự CÂU HỎI (Đáp án giữ nguyên)</li>
+                        <li><span class="font-bold text-green-600">&lt;g2&gt;</span> : Chỉ hoán vị các ĐÁP ÁN (Thứ tự câu giữ nguyên)</li>
+                        <li><span class="font-bold text-purple-600">&lt;g3&gt;</span> : Hoán vị cả CÂU HỎI và ĐÁP ÁN (Mặc định)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-        # Xáo trộn câu hỏi:
-        # - Nếu có block g0: giữ nguyên thứ tự block g0, xáo trộn các block khác
-        # - Nếu không có block g0 và default_shuffle_mode là g1/g3: xáo trộn toàn bộ
-        has_g0_block = any(b['mode'] == 'g0' for b in blocks)
-        
-        if has_g0_block:
-            # Có block g0: xáo trộn từng block riêng biệt
-            # Giữ nguyên thứ tự các block, nhưng xáo trộn câu hỏi trong từng block (trừ g0)
-            questions_by_block = {}
-            for q_item in all_questions_with_blocks:
-                block_idx = q_item['block_idx']
-                if block_idx not in questions_by_block:
-                    questions_by_block[block_idx] = []
-                questions_by_block[block_idx].append(q_item)
-            
-            shuffled_all = []
-            for block_idx in sorted(questions_by_block.keys()):
-                block_questions = questions_by_block[block_idx]
-                mode = block_questions[0]['mode']
-                
-                if mode == 'g0':
-                    # Giữ nguyên thứ tự cho block g0
-                    shuffled_all.extend(block_questions)
-                elif mode in ['g1', 'g3']:
-                    # Xáo trộn câu hỏi trong block này
-                    random.shuffle(block_questions)
-                    shuffled_all.extend(block_questions)
-                elif default_shuffle_mode in ['g1', 'g3']:
-                    # Block không có thẻ, áp dụng default_shuffle_mode
-                    random.shuffle(block_questions)
-                    shuffled_all.extend(block_questions)
-                else:
-                    # Giữ nguyên thứ tự
-                    shuffled_all.extend(block_questions)
-            
-            all_questions_with_blocks = shuffled_all
-        else:
-            # Không có block g0: xáo trộn toàn bộ nếu default_shuffle_mode là g1 hoặc g3
-            if default_shuffle_mode in ['g1', 'g3']:
-                random.shuffle(all_questions_with_blocks)
+        <div class="p-8">
+            <form id="uploadForm" class="space-y-6">
+                <!-- Upload Area -->
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition cursor-pointer relative group" id="dropZone">
+                    <input type="file" id="fileInput" name="file" accept=".docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="uploadPlaceholder" class="group-hover:scale-105 transition-transform">
+                        <i class="fas fa-file-word text-6xl text-blue-500 mb-4"></i>
+                        <p class="text-gray-700 font-bold text-lg">Kéo thả hoặc Click chọn file .docx</p>
+                        <p class="text-xs text-gray-400 mt-2">Hỗ trợ MathType & Công thức Toán</p>
+                    </div>
+                    <div id="fileInfo" class="hidden">
+                        <i class="fas fa-check-circle text-5xl text-green-500 mb-3"></i>
+                        <p class="text-gray-800 font-bold text-lg" id="fileName">de_thi.docx</p>
+                        <p class="text-sm text-gray-500 cursor-pointer hover:text-red-500 z-20 relative" onclick="resetFile(event)">(Chọn lại)</p>
+                    </div>
+                </div>
 
-        # Xử lý từng block và câu hỏi
-        current_block_idx = -1
-        for q_item in all_questions_with_blocks:
-            block = q_item['block']
-            mode = q_item['mode']
-            q_group = q_item['question']
-            block_idx = q_item['block_idx']
-            original_q_num = q_item['original_q_num']
-            
-            # Đảm bảo mode không phải 'header' (nếu là header thì dùng default_shuffle_mode)
-            if mode == 'header':
-                mode = default_shuffle_mode
+                <!-- Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg flex flex-col justify-center">
+                        <label class="font-bold text-gray-700 text-sm mb-2">Số lượng mã đề:</label>
+                        <div class="flex items-center">
+                            <button type="button" onclick="adjVal(-1)" class="w-10 h-10 rounded-l bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold">-</button>
+                            <input type="number" id="numVariants" name="num_variants" value="4" min="1" max="20" class="w-full h-10 text-center border-y border-indigo-100 outline-none font-bold text-lg">
+                            <button type="button" onclick="adjVal(1)" class="w-10 h-10 rounded-r bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between cursor-pointer" onclick="document.getElementById('shuffleOptions').click()">
+                        <div>
+                            <label class="font-bold text-gray-700 block cursor-pointer">Đảo cả đáp án</label>
+                            <span class="text-xs text-gray-500">(Áp dụng nếu không dùng thẻ &lt;g&gt;)</span>
+                        </div>
+                        <input type="checkbox" id="shuffleOptions" name="shuffle_options" class="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
+                    </div>
+                </div>
 
-            # Thêm phần tử header của block nếu chuyển sang block mới
-            if block_idx != current_block_idx:
-                if current_block_idx >= 0:
-                    # Đã xử lý xong block trước, không cần làm gì
-                    pass
-                current_block_idx = block_idx
-                # Thêm các phần tử không phải câu hỏi của block
-                for el in block['elements']:
-                    variant_body.append(el.__copy__())
+                <!-- Thông tin đề thi -->
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                    <h3 class="font-bold text-indigo-800 mb-3"><i class="fas fa-info-circle mr-2"></i>Thông tin đề thi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Trường:</label>
+                            <input type="text" id="schoolName" name="school_name" placeholder="Nhập tên trường" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Lớp:</label>
+                            <input type="text" id="className" name="class_name" placeholder="Nhập tên lớp" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Môn:</label>
+                            <input type="text" id="subjectName" name="subject_name" placeholder="Nhập tên môn học" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Thời gian kiểm tra:</label>
+                            <input type="text" id="examTime" name="exam_time" placeholder="VD: 45 phút" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                    </div>
+                </div>
 
-            # Xử lý câu hỏi
-            q_stem = []
-            q_options = []
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span><i class="fas fa-cogs"></i> Bắt đầu Trộn & Tải Về</span>
+                </button>
+            </form>
+        </div>
+    </div>
 
-            for el in q_group:
-                t = get_text_from_element(el)
-                ans_char = extract_answer_char(t)
+    <script>
+        const API_URL = "https://hoangthiencm-giangbai.hf.space/mix-word-exam"; 
+        const fileInput = document.getElementById('fileInput');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileNameDisplay = document.getElementById('fileName');
+        const submitBtn = document.getElementById('submitBtn');
 
-                if ans_char:
-                    q_options.append({
-                        'el': el,
-                        'char': ans_char,
-                        'is_correct': check_is_correct_answer(el),
-                        'is_fixed': is_fixed_option(t)
-                    })
-                else:
-                    if not q_options:
-                        q_stem.append(el)
+        function toggleGuide() {
+            const content = document.getElementById('guideContent');
+            const icon = document.getElementById('guideIcon');
+            content.classList.toggle('active');
+            icon.classList.toggle('rotate-180');
+        }
 
-            # Xác định đáp án đúng ban đầu từ bảng đáp án hoặc từ định dạng
-            original_correct_char = None
-            
-            # Ưu tiên 1: Sử dụng bảng đáp án nếu có (chính xác nhất)
-            if original_q_num in external_answers:
-                original_correct_char = external_answers[original_q_num]
-            else:
-                # Ưu tiên 2: Tìm đáp án đúng từ định dạng (màu đỏ, gạch chân, highlight)
-                # Chỉ chấp nhận nếu có đúng 1 lựa chọn được đánh dấu là đúng
-                correct_options = [opt for opt in q_options if opt['is_correct']]
-                if len(correct_options) == 1:
-                    # Chỉ chấp nhận nếu có đúng 1 lựa chọn được đánh dấu
-                    original_correct_char = correct_options[0]['char']
-                elif len(correct_options) > 1:
-                    # Nếu có nhiều hơn 1 lựa chọn được đánh dấu, không tin tưởng
-                    # Có thể do nhận diện sai, bỏ qua và để là '?'
-                    pass
-                # Nếu không có lựa chọn nào được đánh dấu, để original_correct_char = None
+        fileInput.addEventListener('change', function() {
+            if(this.files.length > 0) {
+                uploadPlaceholder.classList.add('hidden');
+                fileInfo.classList.remove('hidden');
+                fileNameDisplay.textContent = this.files[0].name;
+            }
+        });
 
-            # Xáo trộn các lựa chọn nếu mode là g2 hoặc g3, hoặc default_shuffle_mode là g3
-            final_options = q_options.copy()
-            correct_option_index = None
+        function resetFile(e) {
+            e.stopPropagation(); 
+            e.preventDefault();
+            fileInput.value = "";
+            uploadPlaceholder.classList.remove('hidden');
+            fileInfo.classList.add('hidden');
+        }
 
-            # Xáo trộn lựa chọn nếu:
-            # - Mode block là g2/g3 (xáo trộn đáp án), HOẶC
-            # - default_shuffle_mode là g3 (xáo trộn cả câu và đáp án), HOẶC
-            # - Mode block là g1 nhưng default_shuffle_mode là g3 (áp dụng xáo trộn đáp án)
-            # KHÔNG xáo trộn nếu mode block là g0 (không trộn)
-            should_shuffle_options = False
-            if mode == 'g0':
-                should_shuffle_options = False  # Không trộn nếu block là g0
-            elif mode in ['g2', 'g3']:
-                should_shuffle_options = True  # Trộn nếu block yêu cầu
-            elif mode == 'g1' and default_shuffle_mode == 'g3':
-                should_shuffle_options = True  # Trộn nếu block là g1 nhưng default là g3
-            elif default_shuffle_mode == 'g3':
-                should_shuffle_options = True  # Trộn nếu default mode là g3 (khi không có thẻ block)
-            
-            if should_shuffle_options and len(q_options) > 1:
-                # Tìm vị trí của đáp án đúng ban đầu
-                if original_correct_char:
-                    for idx, opt in enumerate(q_options):
-                        if opt['char'] == original_correct_char:
-                            correct_option_index = idx
-                            break
+        function adjVal(amount) {
+            const input = document.getElementById('numVariants');
+            let val = parseInt(input.value) + amount;
+            if(val < 1) val = 1;
+            if(val > 50) val = 50;
+            input.value = val;
+        }
 
-                # Tách các lựa chọn cố định và các lựa chọn có thể di chuyển
-                fixed = [(i, o) for i, o in enumerate(q_options) if o['is_fixed']]
-                moving = [o for o in q_options if not o['is_fixed']]
-                random.shuffle(moving)
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if(!fileInput.files[0]) return alert("Vui lòng chọn file đề thi (.docx)!");
 
-                final_options = [None] * len(q_options)
-                for idx, opt in fixed:
-                    final_options[idx] = opt
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loader mr-2"></div> Đang phân tích & Xáo trộn...';
 
-                m = 0
-                for idx in range(len(final_options)):
-                    if final_options[idx] is None:
-                        final_options[idx] = moving[m]
-                        m += 1
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('num_variants', document.getElementById('numVariants').value);
+            formData.append('shuffle_options', document.getElementById('shuffleOptions').checked);
+            formData.append('school_name', document.getElementById('schoolName').value);
+            formData.append('class_name', document.getElementById('className').value);
+            formData.append('subject_name', document.getElementById('subjectName').value);
+            formData.append('exam_time', document.getElementById('examTime').value);
 
-                # Cập nhật vị trí đáp án đúng sau khi xáo trộn
-                if correct_option_index is not None:
-                    for idx, opt in enumerate(final_options):
-                        if opt['char'] == original_correct_char:
-                            correct_option_index = idx
-                            break
+            try {
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
 
-            # Thêm phần thân câu hỏi (tất cả các phần tử trong q_stem)
-            # Đồng thời cập nhật số thứ tự câu hỏi
-            for stem_el in q_stem:
-                cloned_stem = stem_el.__copy__()
-                # Tìm và thay thế số câu hỏi trong text
-                t_nodes = cloned_stem.xpath('.//w:t', namespaces=NS)
-                for t in t_nodes:
-                    if t.text:
-                        # Thay thế "Câu X" hoặc "Question X" thành số mới
-                        old_text = t.text
-                        new_text = re.sub(
-                            r'(Câu|Question)\s+\d+',
-                            f'\\1 {global_q_num}',
-                            old_text,
-                            flags=re.IGNORECASE
-                        )
-                        if new_text != old_text:
-                            t.text = new_text
-                variant_body.append(cloned_stem)
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = "Bo_De_Tron_Word.zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Hoàn tất! Tải lại trang để tiếp tục.';
+                    submitBtn.classList.remove('from-indigo-600', 'to-blue-600');
+                    submitBtn.classList.add('bg-green-600');
+                } else {
+                    const errText = await response.text();
+                    let errMsg = "Lỗi server.";
+                    try { errMsg = JSON.parse(errText).error; } catch(e) { errMsg = errText; }
+                    alert("Lỗi: " + errMsg);
+                    resetButton();
+                }
+            } catch (error) {
+                alert("Lỗi kết nối: " + error.message);
+                resetButton();
+            }
+        });
 
-            # Xác định đáp án đúng cuối cùng sau khi xáo trộn
-            correct_char = '?'
-            if should_shuffle_options and len(q_options) > 1:
-                # Đã xáo trộn lựa chọn, tìm vị trí mới của đáp án đúng
-                if original_correct_char:
-                    for idx, opt in enumerate(final_options):
-                        if opt['char'] == original_correct_char:
-                            correct_char = LABELS[idx]
-                            break
-            else:
-                # Không xáo trộn lựa chọn, sử dụng đáp án gốc
-                if original_correct_char:
-                    # Tìm vị trí của đáp án đúng trong danh sách gốc
-                    for idx, opt in enumerate(q_options):
-                        if opt['char'] == original_correct_char:
-                            correct_char = LABELS[idx]
-                            break
-                    else:
-                        correct_char = original_correct_char
-
-            # Thêm các lựa chọn vào document
-            for idx, opt in enumerate(final_options):
-                new_label = LABELS[idx]
-                cloned = opt['el'].__copy__()
-
-                # Xóa màu đỏ khỏi lựa chọn (bỏ định dạng màu đỏ)
-                # Tìm tất cả các node w:color và đổi thành màu đen
-                color_nodes = cloned.xpath('.//w:color', namespaces=NS)
-                for color_node in color_nodes:
-                    val = color_node.get(f"{{{NS['w']}}}val")
-                    if val:
-                        val_lower = val.lower().strip()
-                        # Nếu là màu đỏ, đổi thành màu đen (000000)
-                        if val_lower in RED_CODES or val_lower in ['ff0000', 'c00000', 'e81123', 'a31515', 'dc143c', 'b22222', 'cd5c5c', 'ff6347', 'ff4500', '8b0000']:
-                            color_node.set(f"{{{NS['w']}}}val", "000000")  # Đổi thành màu đen
-                
-                # Xóa highlight đỏ
-                highlight_nodes = cloned.xpath('.//w:highlight', namespaces=NS)
-                for highlight_node in highlight_nodes:
-                    val = highlight_node.get(f"{{{NS['w']}}}val")
-                    if val and val.lower() in HIGHLIGHT_REDS:
-                        parent = highlight_node.getparent()
-                        if parent is not None:
-                            parent.remove(highlight_node)
-                
-                # Xóa gạch chân (underline) - đổi thành none
-                underline_nodes = cloned.xpath('.//w:u', namespaces=NS)
-                for underline_node in underline_nodes:
-                    val = underline_node.get(f"{{{NS['w']}}}val")
-                    if val and val.lower() != "none":
-                        underline_node.set(f"{{{NS['w']}}}val", "none")
-
-                t_nodes = cloned.xpath('.//w:t', namespaces=NS)
-                for t in t_nodes:
-                    if t.text and re.match(r'^\s*#?[A-D]', t.text):
-                        t.text = re.sub(r'^\s*#?[A-D]', new_label, t.text, 1)
-                        break
-
-                variant_body.append(cloned)
-
-            # Lưu đáp án vào Excel
-            variant_key_row[f"Câu {global_q_num}"] = correct_char
-            global_q_num += 1
-
-        excel_data.append(variant_key_row)
-
-        new_xml = etree.tostring(variant_tree, encoding='UTF-8',
-                                 xml_declaration=True, standalone=True)
-        variant_dir = os.path.join(output_dir, code)
-        if os.path.exists(variant_dir): shutil.rmtree(variant_dir)
-
-        shutil.copytree(extract_dir, variant_dir)
-        with open(os.path.join(variant_dir, 'word', 'document.xml'), 'wb') as f:
-            f.write(new_xml)
-
-        docx_out = os.path.join(output_dir, f"De_{code}.docx")
-        shutil.make_archive(os.path.splitext(docx_out)[0], 'zip', variant_dir)
-        shutil.move(os.path.splitext(docx_out)[0] + ".zip", docx_out)
-
-        generated_files.append(docx_out)
-        shutil.rmtree(variant_dir)
-
-    shutil.rmtree(extract_dir)
-    return generated_files, excel_data
-
-
-
-# -------------------------------------------------
-# 🔟 API FASTAPI
-# -------------------------------------------------
-@router.post("/mix-word-exam")
-async def mix_word_exam(
-    file: UploadFile = File(...),
-    num_variants: int = Form(1),
-    shuffle_options: bool = Form(True),
-    school_name: str = Form(''),
-    class_name: str = Form(''),
-    subject_name: str = Form(''),
-    exam_time: str = Form('')
-):
-    try:
-        session_id = str(int(time.time()))
-        base_dir = f"uploads/{session_id}"
-        os.makedirs(base_dir, exist_ok=True)
-
-        input_path = os.path.join(base_dir, "original.docx")
-        with open(input_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-
-        default_mode = 'g3' if shuffle_options else 'g1'
-
-        generated_files, excel_data = process_docx_shuffling(
-            input_path, base_dir, num_variants, default_mode,
-            school_name=school_name,
-            class_name=class_name,
-            subject_name=subject_name,
-            exam_time=exam_time
-        )
-
-        df = pd.DataFrame(excel_data)
-        excel_path = os.path.join(base_dir, "Bang_Dap_An.xlsx")
-        df.to_excel(excel_path, index=False)
-        generated_files.append(excel_path)
-
-        zip_path = os.path.join("uploads", f"TronDe_{session_id}.zip")
-        with zipfile.ZipFile(zip_path, 'w') as zf:
-            for f in generated_files:
-                zf.write(f, os.path.basename(f))
-
-        shutil.rmtree(base_dir)
-
-        return FileResponse(zip_path, media_type='application/zip',
-                            filename=f"TronDe_{session_id}.zip")
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return {"error": str(e)}
+        function resetButton() {
+            submitBtn.innerHTML = '<span><i class="fas fa-cogs"></i> Bắt đầu Trộn & Tải Về</span>';
+            submitBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>
