@@ -185,21 +185,26 @@
 
                     <!-- Upload Ảnh -->
                     <div id="method-image" class="answer-method hidden">
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center mb-3">
-                            <input type="file" id="answerImageInput" accept="image/*" class="hidden">
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center mb-3 cursor-pointer hover:border-indigo-400 transition" 
+                             id="imagePasteArea" 
+                             tabindex="0"
+                             onclick="document.getElementById('answerImageInput').click()">
                             <i class="fas fa-image text-3xl text-indigo-500 mb-2"></i>
-                            <p class="text-gray-700 font-bold text-sm mb-1">Chọn ảnh bảng đáp án</p>
-                            <p class="text-xs text-gray-500 mb-2">JPG/PNG/WebP</p>
-                            <button onclick="document.getElementById('answerImageInput').click()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-lg font-bold text-xs">
-                                <i class="fas fa-camera mr-1"></i>Chọn Ảnh
-                            </button>
-                            <div id="answerImagePreview" class="hidden mt-2">
-                                <img id="previewImg" src="" alt="Preview" class="max-w-full h-auto rounded border border-gray-300 max-h-32">
+                            <p class="text-gray-700 font-bold text-sm mb-1">Chụp hoặc dán ảnh bảng đáp án</p>
+                            <p class="text-xs text-gray-500 mb-2">Click để chọn file hoặc Ctrl+V để dán</p>
+                            <input type="file" id="answerImageInput" accept="image/*" class="hidden">
+                            <div id="answerImagePreview" class="hidden mt-2 relative">
+                                <img id="previewImg" src="" alt="Preview" class="max-w-full h-auto rounded border border-gray-300 max-h-32 mx-auto">
+                                <button onclick="clearImagePreview()" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-600">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Gemini API Key:</label>
-                            <input type="text" id="geminiApiKey" placeholder="Tùy chọn" class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none">
+                        <div class="mb-3 bg-blue-50 border border-blue-200 rounded p-2">
+                            <p class="text-xs text-blue-700">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                API Key sẽ tự động lấy từ cấu hình hệ thống
+                            </p>
                         </div>
                         <button onclick="loadAnswersFromImage()" id="loadImageBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg disabled:opacity-50 text-sm" disabled>
                             <i class="fas fa-eye mr-2"></i>Nhận Diện Đáp Án
@@ -557,24 +562,63 @@
             }
         }
 
+        let currentImageDataUrl = null; // Lưu ảnh dưới dạng data URL
+
+        // Xử lý chọn file
         document.getElementById('answerImageInput').addEventListener('change', function(e) {
             if (this.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     if (evt && evt.target) {
+                        currentImageDataUrl = evt.target.result;
                         document.getElementById('previewImg').src = evt.target.result;
                         document.getElementById('answerImagePreview').classList.remove('hidden');
+                        document.getElementById('loadImageBtn').disabled = false;
                     }
                 };
                 reader.readAsDataURL(this.files[0]);
-                document.getElementById('loadImageBtn').disabled = false;
             }
         });
 
+        // Xử lý paste ảnh
+        document.getElementById('imagePasteArea').addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf("image") !== -1) {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        if (evt && evt.target) {
+                            currentImageDataUrl = evt.target.result;
+                            document.getElementById('previewImg').src = evt.target.result;
+                            document.getElementById('answerImagePreview').classList.remove('hidden');
+                            document.getElementById('loadImageBtn').disabled = false;
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    return;
+                }
+            }
+        });
+
+        function clearImagePreview() {
+            currentImageDataUrl = null;
+            document.getElementById('answerImagePreview').classList.add('hidden');
+            document.getElementById('answerImageInput').value = '';
+            document.getElementById('loadImageBtn').disabled = true;
+        }
+
         async function loadAnswersFromImage() {
-            const imageInput = document.getElementById('answerImageInput');
-            if (!imageInput.files[0]) {
-                alert("Vui lòng chọn ảnh!");
+            if (!currentImageDataUrl) {
+                alert("Vui lòng chụp hoặc dán ảnh!");
+                return;
+            }
+            
+            // Lấy API keys từ localStorage (như trong index.html)
+            const apiKeys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
+            if (apiKeys.length === 0) {
+                alert("Chưa nạp API Key! Vui lòng vào trang chủ để nạp API Key.");
                 return;
             }
             
@@ -582,33 +626,35 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-2"></div> Đang nhận diện...';
             
-            const formData = new FormData();
-            formData.append('file', imageInput.files[0]);
-            const apiKey = document.getElementById('geminiApiKey').value;
-            if (apiKey) {
-                formData.append('api_key', apiKey);
-            }
-            
             try {
-                const response = await fetch(`${BASE_API_URL}/ocr-answers-from-image`, {
+                // Chuyển data URL thành blob
+                const response = await fetch(currentImageDataUrl);
+                const blob = await response.blob();
+                
+                const formData = new FormData();
+                formData.append('file', blob, 'answer_sheet.jpg');
+                
+                // Lấy API key đầu tiên (hoặc có thể xoay vòng)
+                formData.append('api_key', apiKeys[0]);
+                
+                const apiResponse = await fetch(`${BASE_API_URL}/ocr-answers-from-image`, {
                     method: 'POST',
                     body: formData
                 });
                 
-                const result = await response.json();
+                const result = await apiResponse.json();
                 
                 if (result.error) {
                     alert("Lỗi: " + result.error);
                 } else {
-                    currentAnswers = result.answers;
-                    showAnswerResult(result.total);
-                    setTimeout(() => goToStep(3), 1500);
+                    manualAnswers = result.answers;
+                    showAnswerResult(result.total, 'manual');
                 }
             } catch (error) {
                 alert("Lỗi: " + error.message);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-eye mr-2"></i>Nhận Diện Đáp Án từ Ảnh';
+                btn.innerHTML = '<i class="fas fa-eye mr-2"></i>Nhận Diện Đáp Án';
             }
         }
 
