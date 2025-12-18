@@ -185,17 +185,17 @@
 
                     <!-- Upload Ảnh -->
                     <div id="method-image" class="answer-method hidden">
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center mb-3 cursor-pointer hover:border-indigo-400 transition" 
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center mb-3 hover:border-indigo-400 transition bg-gray-50" 
                              id="imagePasteArea" 
                              tabindex="0"
-                             onclick="document.getElementById('answerImageInput').click()">
-                            <i class="fas fa-image text-3xl text-indigo-500 mb-2"></i>
-                            <p class="text-gray-700 font-bold text-sm mb-1">Chụp hoặc dán ảnh bảng đáp án</p>
-                            <p class="text-xs text-gray-500 mb-2">Click để chọn file hoặc Ctrl+V để dán</p>
+                             style="min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <i class="fas fa-image text-4xl text-indigo-500 mb-3"></i>
+                            <p class="text-gray-700 font-bold text-base mb-2">Dán ảnh bảng đáp án</p>
+                            <p class="text-xs text-gray-500 mb-2">Nhấn <kbd class="px-2 py-1 bg-gray-200 rounded text-xs font-mono">Ctrl+V</kbd> để dán ảnh</p>
                             <input type="file" id="answerImageInput" accept="image/*" class="hidden">
-                            <div id="answerImagePreview" class="hidden mt-2 relative">
-                                <img id="previewImg" src="" alt="Preview" class="max-w-full h-auto rounded border border-gray-300 max-h-32 mx-auto">
-                                <button onclick="clearImagePreview()" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-600">
+                            <div id="answerImagePreview" class="hidden mt-3 relative w-full">
+                                <img id="previewImg" src="" alt="Preview" class="max-w-full h-auto rounded border border-gray-300 max-h-40 mx-auto">
+                                <button onclick="clearImagePreview()" class="absolute -top-2 -right-2 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm hover:bg-red-600 shadow-lg">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -429,6 +429,16 @@
             document.getElementById(`tab-${method}`).classList.add('active', 'border-indigo-600', 'text-indigo-600');
             document.getElementById(`tab-${method}`).classList.remove('text-gray-600');
             document.getElementById(`method-${method}`).classList.remove('hidden');
+            
+            // Tự động focus vào vùng paste khi chuyển sang tab Image
+            if (method === 'image') {
+                setTimeout(() => {
+                    const pasteArea = document.getElementById('imagePasteArea');
+                    if (pasteArea) {
+                        pasteArea.focus();
+                    }
+                }, 100);
+            }
         }
 
         let autoDetectedAnswers = null; // Đáp án tự động nhận diện
@@ -580,12 +590,22 @@
             }
         });
 
-        // Xử lý paste ảnh
-        document.getElementById('imagePasteArea').addEventListener('paste', function(e) {
+        // Xử lý paste ảnh - tự động khi focus vào vùng paste
+        const imagePasteArea = document.getElementById('imagePasteArea');
+        
+        // Tự động focus vào vùng paste khi chuyển sang tab Image
+        function focusPasteArea() {
+            imagePasteArea.focus();
+        }
+        
+        // Xử lý paste ảnh - không cần click, chỉ cần Ctrl+V
+        imagePasteArea.addEventListener('paste', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const items = e.clipboardData.items;
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf("image") !== -1) {
-                    e.preventDefault();
                     const file = items[i].getAsFile();
                     const reader = new FileReader();
                     reader.onload = function(evt) {
@@ -594,13 +614,23 @@
                             document.getElementById('previewImg').src = evt.target.result;
                             document.getElementById('answerImagePreview').classList.remove('hidden');
                             document.getElementById('loadImageBtn').disabled = false;
+                            
+                            // Ẩn text hướng dẫn
+                            const pasteArea = document.getElementById('imagePasteArea');
+                            pasteArea.querySelector('i').style.display = 'none';
+                            pasteArea.querySelector('p:first-of-type').style.display = 'none';
+                            pasteArea.querySelector('p:last-of-type').style.display = 'none';
                         }
                     };
                     reader.readAsDataURL(file);
                     return;
                 }
             }
+            
+            // Nếu không có ảnh trong clipboard
+            alert("Không tìm thấy ảnh trong clipboard. Vui lòng copy ảnh trước khi dán.");
         });
+        
 
         function clearImagePreview() {
             currentImageDataUrl = null;
