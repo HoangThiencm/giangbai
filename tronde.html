@@ -168,7 +168,26 @@
 
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if(!fileInput.files[0]) return alert("Vui lòng chọn file đề thi (.docx)!");
+            if(!fileInput.files[0]) {
+                alert("⚠️ Vui lòng chọn file đề thi (.docx)!");
+                return;
+            }
+            
+            // Kiểm tra extension file
+            const fileName = fileInput.files[0].name;
+            const fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+            if(fileExt !== '.docx') {
+                alert(
+                    "⚠️ ĐỊNH DẠNG FILE KHÔNG HỢP LỆ!\n\n" +
+                    "File bạn chọn: " + fileName + "\n" +
+                    "Định dạng yêu cầu: .docx (Word 2007 trở lên)\n\n" +
+                    "Lưu ý:\n" +
+                    "• File .doc (Word cũ) không được hỗ trợ\n" +
+                    "• Vui lòng mở file trong Word và lưu lại dưới dạng .docx\n" +
+                    "  (File > Save As > Word Document (*.docx))"
+                );
+                return;
+            }
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<div class="loader mr-2"></div> Đang phân tích & Xáo trộn...';
@@ -200,8 +219,20 @@
                 } else {
                     const errText = await response.text();
                     let errMsg = "Lỗi server.";
-                    try { errMsg = JSON.parse(errText).error; } catch(e) { errMsg = errText; }
-                    alert("Lỗi: " + errMsg);
+                    try { 
+                        const errJson = JSON.parse(errText);
+                        errMsg = errJson.error || errText;
+                    } catch(e) { 
+                        errMsg = errText; 
+                    }
+                    
+                    // Hiển thị lỗi với format đẹp hơn
+                    const errorLines = errMsg.split('\n');
+                    const formattedError = errorLines.length > 1 
+                        ? errorLines.join('\n') 
+                        : errMsg;
+                    
+                    alert("❌ LỖI XỬ LÝ FILE:\n\n" + formattedError + "\n\nVui lòng kiểm tra lại file và thử lại.");
                     resetButton();
                 }
             } catch (error) {
