@@ -127,6 +127,47 @@
         </div>
     </div>
 
+    <!-- CÔNG CỤ HIGHLIGHT TỰ ĐỘNG -->
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden mb-8">
+        <div class="bg-green-600 rounded-t-2xl p-6 text-white">
+            <h2 class="text-xl font-bold"><i class="fas fa-magic mr-2"></i> Công cụ Highlight Tự động</h2>
+            <p class="text-green-100 text-sm mt-1">Tự động tô đỏ đáp án đúng từ bảng đáp án</p>
+        </div>
+        
+        <div class="p-8">
+            <form id="highlightForm" class="space-y-6">
+                <!-- Upload Area -->
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition cursor-pointer relative group" id="highlightDropZone">
+                    <input type="file" id="highlightFileInput" name="file" accept=".docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="highlightPlaceholder" class="group-hover:scale-105 transition-transform">
+                        <i class="fas fa-file-word text-6xl text-green-500 mb-4"></i>
+                        <p class="text-gray-700 font-bold text-lg">Chọn file Word cần highlight</p>
+                        <p class="text-xs text-gray-400 mt-2">File phải có bảng đáp án hoặc bạn nhập đáp án thủ công</p>
+                    </div>
+                    <div id="highlightFileInfo" class="hidden">
+                        <i class="fas fa-check-circle text-5xl text-green-500 mb-3"></i>
+                        <p class="text-gray-800 font-bold text-lg" id="highlightFileName">de_thi.docx</p>
+                        <p class="text-sm text-gray-500 cursor-pointer hover:text-red-500 z-20 relative" onclick="resetHighlightFile(event)">(Chọn lại)</p>
+                    </div>
+                </div>
+
+                <!-- Đáp án thủ công (tùy chọn) -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="font-bold text-gray-700 text-sm mb-2 block">
+                        <i class="fas fa-edit mr-2"></i>Đáp án thủ công (tùy chọn):
+                    </label>
+                    <textarea id="answersInput" placeholder='Nhập JSON: {"1": "A", "2": "B", "3": "C", ...}&#10;Hoặc để trống để tự động đọc từ bảng đáp án' class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none font-mono text-sm" rows="4"></textarea>
+                    <p class="text-xs text-gray-500 mt-2">Nếu file có bảng đáp án, bạn có thể để trống phần này.</p>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="highlightBtn" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span><i class="fas fa-magic"></i> Highlight Đáp Án Tự Động</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_URL = "https://hoangthiencm-giangbai.hf.space/mix-word-exam"; 
         const fileInput = document.getElementById('fileInput');
@@ -244,6 +285,95 @@
         function resetButton() {
             submitBtn.innerHTML = '<span><i class="fas fa-cogs"></i> Bắt đầu Trộn & Tải Về</span>';
             submitBtn.disabled = false;
+        }
+
+        // ========== CÔNG CỤ HIGHLIGHT TỰ ĐỘNG ==========
+        const HIGHLIGHT_API_URL = "https://hoangthiencm-giangbai.hf.space/auto-highlight-answers";
+        const highlightFileInput = document.getElementById('highlightFileInput');
+        const highlightPlaceholder = document.getElementById('highlightPlaceholder');
+        const highlightFileInfo = document.getElementById('highlightFileInfo');
+        const highlightFileNameDisplay = document.getElementById('highlightFileName');
+        const highlightBtn = document.getElementById('highlightBtn');
+
+        highlightFileInput.addEventListener('change', function() {
+            if(this.files.length > 0) {
+                highlightPlaceholder.classList.add('hidden');
+                highlightFileInfo.classList.remove('hidden');
+                highlightFileNameDisplay.textContent = this.files[0].name;
+            }
+        });
+
+        function resetHighlightFile(e) {
+            e.stopPropagation(); 
+            e.preventDefault();
+            highlightFileInput.value = "";
+            highlightPlaceholder.classList.remove('hidden');
+            highlightFileInfo.classList.add('hidden');
+        }
+
+        document.getElementById('highlightForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if(!highlightFileInput.files[0]) {
+                alert("⚠️ Vui lòng chọn file Word!");
+                return;
+            }
+            
+            // Kiểm tra extension file
+            const fileName = highlightFileInput.files[0].name;
+            const fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+            if(fileExt !== '.docx') {
+                alert("⚠️ File phải có định dạng .docx!");
+                return;
+            }
+
+            highlightBtn.disabled = true;
+            highlightBtn.innerHTML = '<div class="loader mr-2"></div> Đang highlight đáp án...';
+
+            const formData = new FormData();
+            formData.append('file', highlightFileInput.files[0]);
+            
+            const answersText = document.getElementById('answersInput').value.trim();
+            if(answersText) {
+                formData.append('answers_json', answersText);
+            }
+
+            try {
+                const response = await fetch(HIGHLIGHT_API_URL, { method: 'POST', body: formData });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = "De_Thi_Da_Highlight.docx";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    highlightBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Hoàn tất! Tải lại trang để tiếp tục.';
+                    highlightBtn.classList.remove('from-green-600', 'to-emerald-600');
+                    highlightBtn.classList.add('bg-green-600');
+                } else {
+                    const errText = await response.text();
+                    let errMsg = "Lỗi server.";
+                    try { 
+                        const errJson = JSON.parse(errText);
+                        errMsg = errJson.error || errText;
+                    } catch(e) { 
+                        errMsg = errText; 
+                    }
+                    
+                    alert("❌ LỖI:\n\n" + errMsg);
+                    resetHighlightButton();
+                }
+            } catch (error) {
+                alert("Lỗi kết nối: " + error.message);
+                resetHighlightButton();
+            }
+        });
+
+        function resetHighlightButton() {
+            highlightBtn.innerHTML = '<span><i class="fas fa-magic"></i> Highlight Đáp Án Tự Động</span>';
+            highlightBtn.disabled = false;
         }
     </script>
 </body>
