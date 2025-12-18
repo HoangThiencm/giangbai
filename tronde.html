@@ -3,248 +3,584 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trộn Đề Thi Word Pro</title>
+    <title>Trộn Đề Thi Word Pro - 3 Bước</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Accordion Style */
-        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content.active { max-height: 1000px; }
+        .step-indicator { position: relative; }
+        .step-indicator::after { content: ''; position: absolute; top: 20px; left: 50%; width: 100%; height: 2px; background: #e5e7eb; z-index: 0; }
+        .step-indicator.active .step-number { background: #4f46e5; color: white; }
+        .step-indicator.completed .step-number { background: #10b981; color: white; }
+        .step-content { display: none; }
+        .step-content.active { display: block; }
     </style>
 </head>
 <body class="flex flex-col items-center min-h-screen p-4">
-
     <!-- HEADER -->
-    <div class="w-full max-w-2xl bg-indigo-600 rounded-t-2xl p-6 text-white flex justify-between items-center shadow-lg">
+    <div class="w-full max-w-4xl bg-indigo-600 rounded-t-2xl p-6 text-white flex justify-between items-center shadow-lg">
         <div>
-            <h1 class="text-2xl font-bold"><i class="fas fa-random mr-2"></i> Trộn Đề Word 100%</h1>
-            <p class="text-indigo-200 text-sm mt-1">Giữ nguyên MathType, Hình ảnh - Hỗ trợ Smart Mix</p>
+            <h1 class="text-2xl font-bold"><i class="fas fa-random mr-2"></i> Trộn Đề Word Pro - 3 Bước</h1>
+            <p class="text-indigo-200 text-sm mt-1">Kiểm tra → Nạp đáp án → Trộn đề</p>
         </div>
         <a href="index.html" class="text-white hover:text-indigo-200"><i class="fas fa-home text-xl"></i></a>
     </div>
 
     <!-- MAIN CARD -->
-    <div class="bg-white rounded-b-2xl shadow-xl w-full max-w-2xl overflow-hidden mb-8">
+    <div class="bg-white rounded-b-2xl shadow-xl w-full max-w-4xl overflow-hidden mb-8">
         
-        <!-- HƯỚNG DẪN (ACCORDION) -->
-        <div class="border-b border-gray-100">
-            <button type="button" onclick="toggleGuide()" class="w-full p-4 flex justify-between items-center bg-yellow-50 text-yellow-800 font-bold hover:bg-yellow-100 transition">
-                <span><i class="fas fa-book mr-2"></i> Hướng dẫn soạn thảo (Quan trọng)</span>
-                <i id="guideIcon" class="fas fa-chevron-down transition-transform"></i>
-            </button>
-            <div id="guideContent" class="accordion-content bg-yellow-50 px-6 pb-6 text-sm text-gray-700 leading-relaxed">
-                <div class="border-b border-yellow-200 pb-3 mb-3">
-                    <p class="font-bold text-indigo-700 mb-1">1. Quy tắc cơ bản:</p>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li><b>Câu hỏi:</b> Bắt đầu bằng <code>"Câu"</code> hoặc <code>"Question"</code> (VD: <i>Câu 1:, Câu 2.</i>).</li>
-                        <li><b>Đáp án:</b> Bắt đầu bằng <code>A.</code>, <code>B.</code>, <code>C.</code>, <code>D.</code>.</li>
-                        <li><b>Đáp án đúng:</b> Phải được <span class="text-red-600 font-bold">TÔ ĐỎ</span> (Font color = Red/FF0000) hoặc gạch chân.</li>
-                        <li><b>Cố định đáp án:</b> Thêm dấu <code>#</code> trước đáp án (VD: <i>#A. Cả A và B đều đúng</i>) để giữ vị trí cuối cùng.</li>
-                        <li><b>Hình ảnh:</b> Nên để chế độ <i>Inline With Text</i>.</li>
-                    </ul>
+        <!-- STEP INDICATOR -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div class="step-indicator active flex-1" id="step1-indicator">
+                    <div class="flex flex-col items-center">
+                        <div class="step-number w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold relative z-10">1</div>
+                        <p class="text-xs mt-2 font-semibold text-indigo-600">Kiểm tra File</p>
+                    </div>
                 </div>
-                <div>
-                    <p class="font-bold text-indigo-700 mb-1">2. Chia nhóm & Chế độ trộn (Nâng cao):</p>
-                    <p class="mb-2">Thêm các thẻ sau vào dòng trên cùng của một nhóm câu hỏi:</p>
-                    <ul class="list-none space-y-2 font-mono text-xs bg-white p-3 rounded border border-yellow-200">
-                        <li><span class="font-bold text-red-600">&lt;g0&gt;</span> : Không trộn (Giữ nguyên thứ tự câu & đáp án. VD: Bài đọc hiểu)</li>
-                        <li><span class="font-bold text-blue-600">&lt;g1&gt;</span> : Chỉ hoán vị thứ tự CÂU HỎI (Đáp án giữ nguyên)</li>
-                        <li><span class="font-bold text-green-600">&lt;g2&gt;</span> : Chỉ hoán vị các ĐÁP ÁN (Thứ tự câu giữ nguyên)</li>
-                        <li><span class="font-bold text-purple-600">&lt;g3&gt;</span> : Hoán vị cả CÂU HỎI và ĐÁP ÁN (Mặc định)</li>
-                    </ul>
+                <div class="step-indicator flex-1" id="step2-indicator">
+                    <div class="flex flex-col items-center">
+                        <div class="step-number w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold relative z-10">2</div>
+                        <p class="text-xs mt-2 font-semibold text-gray-500">Nạp Đáp Án</p>
+                    </div>
+                </div>
+                <div class="step-indicator flex-1" id="step3-indicator">
+                    <div class="flex flex-col items-center">
+                        <div class="step-number w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold relative z-10">3</div>
+                        <p class="text-xs mt-2 font-semibold text-gray-500">Trộn Đề</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="p-8">
-            <form id="uploadForm" class="space-y-6">
-                <!-- Upload Area -->
-                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition cursor-pointer relative group" id="dropZone">
-                    <input type="file" id="fileInput" name="file" accept=".docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                    <div id="uploadPlaceholder" class="group-hover:scale-105 transition-transform">
-                        <i class="fas fa-file-word text-6xl text-blue-500 mb-4"></i>
-                        <p class="text-gray-700 font-bold text-lg">Kéo thả hoặc Click chọn file .docx</p>
-                        <p class="text-xs text-gray-400 mt-2">Hỗ trợ MathType & Công thức Toán</p>
-                    </div>
-                    <div id="fileInfo" class="hidden">
-                        <i class="fas fa-check-circle text-5xl text-green-500 mb-3"></i>
-                        <p class="text-gray-800 font-bold text-lg" id="fileName">de_thi.docx</p>
-                        <p class="text-sm text-gray-500 cursor-pointer hover:text-red-500 z-20 relative" onclick="resetFile(event)">(Chọn lại)</p>
-                    </div>
+        <!-- STEP 1: KIỂM TRA FILE -->
+        <div class="step-content active p-8" id="step1-content">
+            <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-file-check mr-2 text-indigo-600"></i>Bước 1: Kiểm tra và Làm sạch File Word</h2>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition cursor-pointer relative group mb-4" id="dropZone">
+                <input type="file" id="fileInput" name="file" accept=".docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                <div id="uploadPlaceholder" class="group-hover:scale-105 transition-transform">
+                    <i class="fas fa-file-word text-6xl text-indigo-500 mb-4"></i>
+                    <p class="text-gray-700 font-bold text-lg">Kéo thả hoặc Click chọn file .docx</p>
+                    <p class="text-xs text-gray-400 mt-2">File sẽ được kiểm tra tự động</p>
                 </div>
-
-                <!-- Controls -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg flex flex-col justify-center">
-                        <label class="font-bold text-gray-700 text-sm mb-2">Số lượng mã đề:</label>
-                        <div class="flex items-center">
-                            <button type="button" onclick="adjVal(-1)" class="w-10 h-10 rounded-l bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold">-</button>
-                            <input type="number" id="numVariants" name="num_variants" value="4" min="1" max="20" class="w-full h-10 text-center border-y border-indigo-100 outline-none font-bold text-lg">
-                            <button type="button" onclick="adjVal(1)" class="w-10 h-10 rounded-r bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold">+</button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between cursor-pointer" onclick="document.getElementById('shuffleOptions').click()">
-                        <div>
-                            <label class="font-bold text-gray-700 block cursor-pointer">Đảo cả đáp án</label>
-                            <span class="text-xs text-gray-500">(Áp dụng nếu không dùng thẻ &lt;g&gt;)</span>
-                        </div>
-                        <input type="checkbox" id="shuffleOptions" name="shuffle_options" class="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
-                    </div>
+                <div id="fileInfo" class="hidden">
+                    <i class="fas fa-check-circle text-5xl text-green-500 mb-3"></i>
+                    <p class="text-gray-800 font-bold text-lg" id="fileName">de_thi.docx</p>
+                    <p class="text-sm text-gray-500 cursor-pointer hover:text-red-500 z-20 relative" onclick="resetFile(event)">(Chọn lại)</p>
                 </div>
+            </div>
 
-                <!-- Thông tin đề thi -->
-                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                    <h3 class="font-bold text-indigo-800 mb-3"><i class="fas fa-info-circle mr-2"></i>Thông tin đề thi</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Kết quả kiểm tra -->
+            <div id="checkResult" class="hidden mb-4">
+                <div id="checkSuccess" class="hidden bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 text-2xl mr-3"></i>
                         <div>
-                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Trường:</label>
-                            <input type="text" id="schoolName" name="school_name" placeholder="Nhập tên trường" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Lớp:</label>
-                            <input type="text" id="className" name="class_name" placeholder="Nhập tên lớp" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Môn:</label>
-                            <input type="text" id="subjectName" name="subject_name" placeholder="Nhập tên môn học" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="font-semibold text-gray-700 text-sm mb-1 block">Thời gian kiểm tra:</label>
-                            <input type="text" id="examTime" name="exam_time" placeholder="VD: 45 phút" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                            <p class="font-bold text-green-800">File Word sạch và sẵn sàng!</p>
+                            <p class="text-sm text-green-600">Bạn có thể tiếp tục bước 2.</p>
                         </div>
                     </div>
                 </div>
+                <div id="checkIssues" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mr-3 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="font-bold text-yellow-800 mb-2">File Word cần được làm sạch</p>
+                            <ul id="issuesList" class="list-disc list-inside text-sm text-yellow-700 mb-3"></ul>
+                            <button onclick="autoCleanFile()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                                <i class="fas fa-magic mr-2"></i>Auto Clean File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <!-- Submit Button -->
-                <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span><i class="fas fa-cogs"></i> Bắt đầu Trộn & Tải Về</span>
+            <button onclick="checkFile()" id="checkBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <i class="fas fa-search mr-2"></i>Kiểm tra File
+            </button>
+        </div>
+
+        <!-- STEP 2: NẠP ĐÁP ÁN -->
+        <div class="step-content p-8" id="step2-content">
+            <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-key mr-2 text-indigo-600"></i>Bước 2: Nạp Đáp Án</h2>
+            
+            <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>Bạn có thể nạp đáp án bằng 3 cách:</p>
+                <ul class="list-disc list-inside text-sm text-blue-700 mt-2 ml-4">
+                    <li>Tự động đọc từ bảng đáp án trong file Word</li>
+                    <li>Upload file đáp án (Word/XLSX/TXT)</li>
+                    <li>Upload ảnh bảng đáp án (OCR nhận diện)</li>
+                </ul>
+            </div>
+
+            <!-- Tab chọn phương thức -->
+            <div class="flex border-b border-gray-200 mb-4">
+                <button onclick="switchAnswerMethod('auto')" class="answer-tab active px-4 py-2 font-semibold text-sm border-b-2 border-indigo-600 text-indigo-600" id="tab-auto">
+                    <i class="fas fa-magic mr-2"></i>Tự động
                 </button>
-            </form>
-        </div>
-    </div>
+                <button onclick="switchAnswerMethod('file')" class="answer-tab px-4 py-2 font-semibold text-sm text-gray-600 hover:text-indigo-600" id="tab-file">
+                    <i class="fas fa-file-upload mr-2"></i>Upload File
+                </button>
+                <button onclick="switchAnswerMethod('image')" class="answer-tab px-4 py-2 font-semibold text-sm text-gray-600 hover:text-indigo-600" id="tab-image">
+                    <i class="fas fa-image mr-2"></i>Upload Ảnh
+                </button>
+            </div>
 
-    <!-- CÔNG CỤ HIGHLIGHT TỰ ĐỘNG -->
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden mb-8">
-        <div class="bg-green-600 rounded-t-2xl p-6 text-white">
-            <h2 class="text-xl font-bold"><i class="fas fa-magic mr-2"></i> Công cụ Highlight Tự động</h2>
-            <p class="text-green-100 text-sm mt-1">Tự động tô đỏ đáp án đúng từ bảng đáp án</p>
-        </div>
-        
-        <div class="p-8">
-            <form id="highlightForm" class="space-y-6">
-                <!-- Upload Area -->
-                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition cursor-pointer relative group" id="highlightDropZone">
-                    <input type="file" id="highlightFileInput" name="file" accept=".docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                    <div id="highlightPlaceholder" class="group-hover:scale-105 transition-transform">
-                        <i class="fas fa-file-word text-6xl text-green-500 mb-4"></i>
-                        <p class="text-gray-700 font-bold text-lg">Chọn file Word cần highlight</p>
-                        <p class="text-xs text-gray-400 mt-2">File phải có bảng đáp án hoặc bạn nhập đáp án thủ công</p>
-                    </div>
-                    <div id="highlightFileInfo" class="hidden">
-                        <i class="fas fa-check-circle text-5xl text-green-500 mb-3"></i>
-                        <p class="text-gray-800 font-bold text-lg" id="highlightFileName">de_thi.docx</p>
-                        <p class="text-sm text-gray-500 cursor-pointer hover:text-red-500 z-20 relative" onclick="resetHighlightFile(event)">(Chọn lại)</p>
+            <!-- Tự động -->
+            <div id="method-auto" class="answer-method">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-green-800"><i class="fas fa-check-circle mr-2"></i>Hệ thống sẽ tự động đọc bảng đáp án từ file Word đã upload ở bước 1.</p>
+                </div>
+                <button onclick="loadAnswersAuto()" id="loadAutoBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg">
+                    <i class="fas fa-magic mr-2"></i>Đọc Đáp Án Tự Động
+                </button>
+            </div>
+
+            <!-- Upload File -->
+            <div id="method-file" class="answer-method hidden">
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center mb-4">
+                    <input type="file" id="answerFileInput" accept=".docx,.xlsx,.xls,.txt" class="hidden">
+                    <i class="fas fa-file-upload text-4xl text-indigo-500 mb-3"></i>
+                    <p class="text-gray-700 font-bold mb-2">Chọn file đáp án</p>
+                    <p class="text-xs text-gray-500 mb-3">Hỗ trợ: Word (.docx), Excel (.xlsx), Text (.txt)</p>
+                    <button onclick="document.getElementById('answerFileInput').click()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm">
+                        <i class="fas fa-folder-open mr-2"></i>Chọn File
+                    </button>
+                    <p id="answerFileName" class="text-sm text-gray-600 mt-2 hidden"></p>
+                </div>
+                <button onclick="loadAnswersFromFile()" id="loadFileBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg disabled:opacity-50" disabled>
+                    <i class="fas fa-upload mr-2"></i>Nạp Đáp Án từ File
+                </button>
+            </div>
+
+            <!-- Upload Ảnh -->
+            <div id="method-image" class="answer-method hidden">
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center mb-4">
+                    <input type="file" id="answerImageInput" accept="image/*" class="hidden">
+                    <i class="fas fa-image text-4xl text-indigo-500 mb-3"></i>
+                    <p class="text-gray-700 font-bold mb-2">Chọn ảnh bảng đáp án</p>
+                    <p class="text-xs text-gray-500 mb-3">Hỗ trợ: JPG, PNG, WebP</p>
+                    <button onclick="document.getElementById('answerImageInput').click()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm">
+                        <i class="fas fa-camera mr-2"></i>Chọn Ảnh
+                    </button>
+                    <div id="answerImagePreview" class="hidden mt-3">
+                        <img id="previewImg" src="" alt="Preview" class="max-w-full h-auto rounded-lg border border-gray-300">
                     </div>
                 </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Gemini API Key (tùy chọn):</label>
+                    <input type="text" id="geminiApiKey" placeholder="Để trống nếu đã cấu hình trên server" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <button onclick="loadAnswersFromImage()" id="loadImageBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg disabled:opacity-50" disabled>
+                    <i class="fas fa-eye mr-2"></i>Nhận Diện Đáp Án từ Ảnh
+                </button>
+            </div>
 
-                <!-- Đáp án thủ công (tùy chọn) -->
+            <!-- Kết quả nạp đáp án -->
+            <div id="answerResult" class="hidden mt-4">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-bold text-green-800"><i class="fas fa-check-circle mr-2"></i>Đã nạp thành công!</p>
+                            <p class="text-sm text-green-600" id="answerCount">0 đáp án</p>
+                        </div>
+                        <button onclick="showAnswerPreview()" class="text-green-700 hover:text-green-900 text-sm font-bold">
+                            <i class="fas fa-eye mr-1"></i>Xem
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: TRỘN ĐỀ -->
+        <div class="step-content p-8" id="step3-content">
+            <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-random mr-2 text-indigo-600"></i>Bước 3: Trộn Đề</h2>
+            
+            <!-- Thông tin đề thi -->
+            <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-4">
+                <h3 class="font-bold text-indigo-800 mb-3"><i class="fas fa-info-circle mr-2"></i>Thông tin đề thi</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-semibold text-gray-700 text-sm mb-1 block">Trường:</label>
+                        <input type="text" id="schoolName" placeholder="Nhập tên trường" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700 text-sm mb-1 block">Lớp:</label>
+                        <input type="text" id="className" placeholder="Nhập tên lớp" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700 text-sm mb-1 block">Môn:</label>
+                        <input type="text" id="subjectName" placeholder="Nhập tên môn học" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700 text-sm mb-1 block">Thời gian kiểm tra:</label>
+                        <input type="text" id="examTime" placeholder="VD: 45 phút" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="bg-gray-50 p-4 rounded-lg">
-                    <label class="font-bold text-gray-700 text-sm mb-2 block">
-                        <i class="fas fa-edit mr-2"></i>Đáp án thủ công (tùy chọn):
-                    </label>
-                    <textarea id="answersInput" placeholder='Nhập JSON: {"1": "A", "2": "B", "3": "C", ...}&#10;Hoặc để trống để tự động đọc từ bảng đáp án' class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none font-mono text-sm" rows="4"></textarea>
-                    <p class="text-xs text-gray-500 mt-2">Nếu file có bảng đáp án, bạn có thể để trống phần này.</p>
+                    <label class="font-bold text-gray-700 text-sm mb-2 block">Số lượng mã đề:</label>
+                    <div class="flex items-center">
+                        <button type="button" onclick="adjVal(-1)" class="w-10 h-10 rounded-l bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold">-</button>
+                        <input type="number" id="numVariants" value="4" min="1" max="20" class="w-full h-10 text-center border-y border-indigo-100 outline-none font-bold text-lg">
+                        <button type="button" onclick="adjVal(1)" class="w-10 h-10 rounded-r bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold">+</button>
+                    </div>
                 </div>
+                <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between cursor-pointer" onclick="document.getElementById('shuffleOptions').click()">
+                    <div>
+                        <label class="font-bold text-gray-700 block cursor-pointer">Đảo cả đáp án</label>
+                        <span class="text-xs text-gray-500">(Áp dụng nếu không dùng thẻ &lt;g&gt;)</span>
+                    </div>
+                    <input type="checkbox" id="shuffleOptions" class="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
+                </div>
+            </div>
 
-                <!-- Submit Button -->
-                <button type="submit" id="highlightBtn" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span><i class="fas fa-magic"></i> Highlight Đáp Án Tự Động</span>
-                </button>
-            </form>
+            <button onclick="mixExam()" id="mixBtn" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-cogs mr-2"></i>Bắt đầu Trộn & Tải Về
+            </button>
         </div>
     </div>
 
     <script>
-        const API_URL = "https://hoangthiencm-giangbai.hf.space/mix-word-exam"; 
-        const fileInput = document.getElementById('fileInput');
-        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-        const fileInfo = document.getElementById('fileInfo');
-        const fileNameDisplay = document.getElementById('fileName');
-        const submitBtn = document.getElementById('submitBtn');
+        const BASE_API_URL = "https://hoangthiencm-giangbai.hf.space";
+        let currentStep = 1;
+        let currentFile = null;
+        let currentAnswers = null;
 
-        function toggleGuide() {
-            const content = document.getElementById('guideContent');
-            const icon = document.getElementById('guideIcon');
-            content.classList.toggle('active');
-            icon.classList.toggle('rotate-180');
+        // Step management
+        function goToStep(step) {
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.step-indicator').forEach(el => {
+                el.classList.remove('active', 'completed');
+            });
+
+            // Show current step
+            document.getElementById(`step${step}-content`).classList.add('active');
+            
+            // Update indicators
+            for (let i = 1; i < step; i++) {
+                document.getElementById(`step${i}-indicator`).classList.add('completed');
+            }
+            document.getElementById(`step${step}-indicator`).classList.add('active');
+            
+            currentStep = step;
         }
 
+        // Step 1: File upload and check
+        const fileInput = document.getElementById('fileInput');
+        const checkBtn = document.getElementById('checkBtn');
+
         fileInput.addEventListener('change', function() {
-            if(this.files.length > 0) {
-                uploadPlaceholder.classList.add('hidden');
-                fileInfo.classList.remove('hidden');
-                fileNameDisplay.textContent = this.files[0].name;
+            if (this.files.length > 0) {
+                currentFile = this.files[0];
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                document.getElementById('fileInfo').classList.remove('hidden');
+                document.getElementById('fileName').textContent = this.files[0].name;
+                checkBtn.disabled = false;
+                document.getElementById('checkResult').classList.add('hidden');
             }
         });
 
         function resetFile(e) {
-            e.stopPropagation(); 
+            e.stopPropagation();
             e.preventDefault();
             fileInput.value = "";
-            uploadPlaceholder.classList.remove('hidden');
-            fileInfo.classList.add('hidden');
+            currentFile = null;
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+            document.getElementById('fileInfo').classList.add('hidden');
+            checkBtn.disabled = true;
+            document.getElementById('checkResult').classList.add('hidden');
         }
 
-        function adjVal(amount) {
-            const input = document.getElementById('numVariants');
-            let val = parseInt(input.value) + amount;
-            if(val < 1) val = 1;
-            if(val > 50) val = 50;
-            input.value = val;
+        async function checkFile() {
+            if (!currentFile) return;
+            
+            checkBtn.disabled = true;
+            checkBtn.innerHTML = '<div class="loader mr-2"></div> Đang kiểm tra...';
+            
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            
+            try {
+                const response = await fetch(`${BASE_API_URL}/check-docx-clean`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.is_clean) {
+                    document.getElementById('checkSuccess').classList.remove('hidden');
+                    document.getElementById('checkIssues').classList.add('hidden');
+                    setTimeout(() => goToStep(2), 1500);
+                } else {
+                    document.getElementById('checkSuccess').classList.add('hidden');
+                    document.getElementById('checkIssues').classList.remove('hidden');
+                    const issuesList = document.getElementById('issuesList');
+                    issuesList.innerHTML = result.issues.map(issue => `<li>${issue}</li>`).join('');
+                }
+                
+                document.getElementById('checkResult').classList.remove('hidden');
+            } catch (error) {
+                alert("Lỗi kiểm tra file: " + error.message);
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Kiểm tra File';
+            }
         }
 
-        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if(!fileInput.files[0]) {
-                alert("⚠️ Vui lòng chọn file đề thi (.docx)!");
+        async function autoCleanFile() {
+            if (!currentFile) return;
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader mr-2"></div> Đang làm sạch...';
+            
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            
+            try {
+                const response = await fetch(`${BASE_API_URL}/auto-clean-docx`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = "File_Da_Lam_Sach.docx";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    
+                    // Update file
+                    const newFile = new File([blob], "File_Da_Lam_Sach.docx", { type: blob.type });
+                    currentFile = newFile;
+                    fileInput.files = new DataTransfer().files;
+                    
+                    alert("✅ File đã được làm sạch! Vui lòng upload lại file mới.");
+                    resetFile(event);
+                } else {
+                    const error = await response.json();
+                    alert("Lỗi: " + (error.error || "Không thể làm sạch file"));
+                }
+            } catch (error) {
+                alert("Lỗi: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Auto Clean File';
+            }
+        }
+
+        // Step 2: Load answers
+        function switchAnswerMethod(method) {
+            document.querySelectorAll('.answer-tab').forEach(tab => {
+                tab.classList.remove('active', 'border-indigo-600', 'text-indigo-600');
+                tab.classList.add('text-gray-600');
+            });
+            document.querySelectorAll('.answer-method').forEach(m => m.classList.add('hidden'));
+            
+            document.getElementById(`tab-${method}`).classList.add('active', 'border-indigo-600', 'text-indigo-600');
+            document.getElementById(`tab-${method}`).classList.remove('text-gray-600');
+            document.getElementById(`method-${method}`).classList.remove('hidden');
+        }
+
+        async function loadAnswersAuto() {
+            if (!currentFile) {
+                alert("Vui lòng upload file ở bước 1!");
                 return;
             }
             
-            // Kiểm tra extension file
-            const fileName = fileInput.files[0].name;
-            const fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-            if(fileExt !== '.docx') {
-                alert(
-                    "⚠️ ĐỊNH DẠNG FILE KHÔNG HỢP LỆ!\n\n" +
-                    "File bạn chọn: " + fileName + "\n" +
-                    "Định dạng yêu cầu: .docx (Word 2007 trở lên)\n\n" +
-                    "Lưu ý:\n" +
-                    "• File .doc (Word cũ) không được hỗ trợ\n" +
-                    "• Vui lòng mở file trong Word và lưu lại dưới dạng .docx\n" +
-                    "  (File > Save As > Word Document (*.docx))"
-                );
+            const btn = document.getElementById('loadAutoBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader mr-2"></div> Đang đọc...';
+            
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            
+            try {
+                const response = await fetch(`${BASE_API_URL}/read-answers-from-file`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert("Lỗi: " + result.error);
+                } else {
+                    currentAnswers = result.answers;
+                    showAnswerResult(result.total);
+                    setTimeout(() => goToStep(3), 1500);
+                }
+            } catch (error) {
+                alert("Lỗi: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Đọc Đáp Án Tự Động';
+            }
+        }
+
+        document.getElementById('answerFileInput').addEventListener('change', function() {
+            if (this.files.length > 0) {
+                document.getElementById('answerFileName').textContent = this.files[0].name;
+                document.getElementById('answerFileName').classList.remove('hidden');
+                document.getElementById('loadFileBtn').disabled = false;
+            }
+        });
+
+        async function loadAnswersFromFile() {
+            const fileInput = document.getElementById('answerFileInput');
+            if (!fileInput.files[0]) {
+                alert("Vui lòng chọn file!");
                 return;
             }
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="loader mr-2"></div> Đang phân tích & Xáo trộn...';
-
+            
+            const btn = document.getElementById('loadFileBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader mr-2"></div> Đang đọc...';
+            
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            
+            try {
+                const response = await fetch(`${BASE_API_URL}/read-answers-from-file`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert("Lỗi: " + result.error);
+                } else {
+                    currentAnswers = result.answers;
+                    showAnswerResult(result.total);
+                    setTimeout(() => goToStep(3), 1500);
+                }
+            } catch (error) {
+                alert("Lỗi: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload mr-2"></i>Nạp Đáp Án từ File';
+            }
+        }
+
+        document.getElementById('answerImageInput').addEventListener('change', function(e) {
+            if (this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('previewImg').src = event.target.result;
+                    document.getElementById('answerImagePreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(this.files[0]);
+                document.getElementById('loadImageBtn').disabled = false;
+            }
+        });
+
+        async function loadAnswersFromImage() {
+            const imageInput = document.getElementById('answerImageInput');
+            if (!imageInput.files[0]) {
+                alert("Vui lòng chọn ảnh!");
+                return;
+            }
+            
+            const btn = document.getElementById('loadImageBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader mr-2"></div> Đang nhận diện...';
+            
+            const formData = new FormData();
+            formData.append('file', imageInput.files[0]);
+            const apiKey = document.getElementById('geminiApiKey').value;
+            if (apiKey) {
+                formData.append('api_key', apiKey);
+            }
+            
+            try {
+                const response = await fetch(`${BASE_API_URL}/ocr-answers-from-image`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert("Lỗi: " + result.error);
+                } else {
+                    currentAnswers = result.answers;
+                    showAnswerResult(result.total);
+                    setTimeout(() => goToStep(3), 1500);
+                }
+            } catch (error) {
+                alert("Lỗi: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-eye mr-2"></i>Nhận Diện Đáp Án từ Ảnh';
+            }
+        }
+
+        function showAnswerResult(count) {
+            document.getElementById('answerCount').textContent = `${count} đáp án`;
+            document.getElementById('answerResult').classList.remove('hidden');
+        }
+
+        function showAnswerPreview() {
+            if (!currentAnswers) return;
+            const preview = Object.entries(currentAnswers)
+                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                .slice(0, 20)
+                .map(([q, a]) => `Câu ${q}: ${a}`)
+                .join('\n');
+            alert(preview + (Object.keys(currentAnswers).length > 20 ? '\n...' : ''));
+        }
+
+        // Step 3: Mix exam
+        function adjVal(amount) {
+            const input = document.getElementById('numVariants');
+            let val = parseInt(input.value) + amount;
+            if (val < 1) val = 1;
+            if (val > 50) val = 50;
+            input.value = val;
+        }
+
+        async function mixExam() {
+            if (!currentFile) {
+                alert("Vui lòng upload file ở bước 1!");
+                return;
+            }
+            
+            const btn = document.getElementById('mixBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader mr-2"></div> Đang trộn đề...';
+            
+            const formData = new FormData();
+            formData.append('file', currentFile);
             formData.append('num_variants', document.getElementById('numVariants').value);
             formData.append('shuffle_options', document.getElementById('shuffleOptions').checked);
             formData.append('school_name', document.getElementById('schoolName').value);
             formData.append('class_name', document.getElementById('className').value);
             formData.append('subject_name', document.getElementById('subjectName').value);
             formData.append('exam_time', document.getElementById('examTime').value);
-
+            
+            if (currentAnswers) {
+                formData.append('answers_json', JSON.stringify(currentAnswers));
+            }
+            
             try {
-                const response = await fetch(API_URL, { method: 'POST', body: formData });
-
+                const response = await fetch(`${BASE_API_URL}/mix-word-exam`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -254,126 +590,28 @@
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
-                    submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Hoàn tất! Tải lại trang để tiếp tục.';
-                    submitBtn.classList.remove('from-indigo-600', 'to-blue-600');
-                    submitBtn.classList.add('bg-green-600');
+                    
+                    btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Hoàn tất!';
+                    btn.classList.remove('from-indigo-600', 'to-blue-600');
+                    btn.classList.add('bg-green-600');
                 } else {
                     const errText = await response.text();
                     let errMsg = "Lỗi server.";
-                    try { 
+                    try {
                         const errJson = JSON.parse(errText);
                         errMsg = errJson.error || errText;
-                    } catch(e) { 
-                        errMsg = errText; 
+                    } catch(e) {
+                        errMsg = errText;
                     }
-                    
-                    // Hiển thị lỗi với format đẹp hơn
-                    const errorLines = errMsg.split('\n');
-                    const formattedError = errorLines.length > 1 
-                        ? errorLines.join('\n') 
-                        : errMsg;
-                    
-                    alert("❌ LỖI XỬ LÝ FILE:\n\n" + formattedError + "\n\nVui lòng kiểm tra lại file và thử lại.");
-                    resetButton();
-                }
-            } catch (error) {
-                alert("Lỗi kết nối: " + error.message);
-                resetButton();
-            }
-        });
-
-        function resetButton() {
-            submitBtn.innerHTML = '<span><i class="fas fa-cogs"></i> Bắt đầu Trộn & Tải Về</span>';
-            submitBtn.disabled = false;
-        }
-
-        // ========== CÔNG CỤ HIGHLIGHT TỰ ĐỘNG ==========
-        const HIGHLIGHT_API_URL = "https://hoangthiencm-giangbai.hf.space/auto-highlight-answers";
-        const highlightFileInput = document.getElementById('highlightFileInput');
-        const highlightPlaceholder = document.getElementById('highlightPlaceholder');
-        const highlightFileInfo = document.getElementById('highlightFileInfo');
-        const highlightFileNameDisplay = document.getElementById('highlightFileName');
-        const highlightBtn = document.getElementById('highlightBtn');
-
-        highlightFileInput.addEventListener('change', function() {
-            if(this.files.length > 0) {
-                highlightPlaceholder.classList.add('hidden');
-                highlightFileInfo.classList.remove('hidden');
-                highlightFileNameDisplay.textContent = this.files[0].name;
-            }
-        });
-
-        function resetHighlightFile(e) {
-            e.stopPropagation(); 
-            e.preventDefault();
-            highlightFileInput.value = "";
-            highlightPlaceholder.classList.remove('hidden');
-            highlightFileInfo.classList.add('hidden');
-        }
-
-        document.getElementById('highlightForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if(!highlightFileInput.files[0]) {
-                alert("⚠️ Vui lòng chọn file Word!");
-                return;
-            }
-            
-            // Kiểm tra extension file
-            const fileName = highlightFileInput.files[0].name;
-            const fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-            if(fileExt !== '.docx') {
-                alert("⚠️ File phải có định dạng .docx!");
-                return;
-            }
-
-            highlightBtn.disabled = true;
-            highlightBtn.innerHTML = '<div class="loader mr-2"></div> Đang highlight đáp án...';
-
-            const formData = new FormData();
-            formData.append('file', highlightFileInput.files[0]);
-            
-            const answersText = document.getElementById('answersInput').value.trim();
-            if(answersText) {
-                formData.append('answers_json', answersText);
-            }
-
-            try {
-                const response = await fetch(HIGHLIGHT_API_URL, { method: 'POST', body: formData });
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = "De_Thi_Da_Highlight.docx";
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    highlightBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Hoàn tất! Tải lại trang để tiếp tục.';
-                    highlightBtn.classList.remove('from-green-600', 'to-emerald-600');
-                    highlightBtn.classList.add('bg-green-600');
-                } else {
-                    const errText = await response.text();
-                    let errMsg = "Lỗi server.";
-                    try { 
-                        const errJson = JSON.parse(errText);
-                        errMsg = errJson.error || errText;
-                    } catch(e) { 
-                        errMsg = errText; 
-                    }
-                    
                     alert("❌ LỖI:\n\n" + errMsg);
-                    resetHighlightButton();
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-cogs mr-2"></i>Bắt đầu Trộn & Tải Về';
                 }
             } catch (error) {
                 alert("Lỗi kết nối: " + error.message);
-                resetHighlightButton();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cogs mr-2"></i>Bắt đầu Trộn & Tải Về';
             }
-        });
-
-        function resetHighlightButton() {
-            highlightBtn.innerHTML = '<span><i class="fas fa-magic"></i> Highlight Đáp Án Tự Động</span>';
-            highlightBtn.disabled = false;
         }
     </script>
 </body>
