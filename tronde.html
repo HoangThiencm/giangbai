@@ -90,7 +90,7 @@
                         <div class="flex-1">
                             <p class="font-bold text-yellow-800 mb-2">File Word cần được làm sạch</p>
                             <ul id="issuesList" class="list-disc list-inside text-sm text-yellow-700 mb-3"></ul>
-                            <button onclick="autoCleanFile()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                            <button onclick="autoCleanFile(event)" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-bold text-sm">
                                 <i class="fas fa-magic mr-2"></i>Auto Clean File
                             </button>
                         </div>
@@ -289,8 +289,10 @@
         });
 
         function resetFile(e) {
-            e.stopPropagation();
-            e.preventDefault();
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
             fileInput.value = "";
             currentFile = null;
             document.getElementById('uploadPlaceholder').classList.remove('hidden');
@@ -336,10 +338,12 @@
             }
         }
 
-        async function autoCleanFile() {
+        async function autoCleanFile(e) {
             if (!currentFile) return;
             
-            const btn = event.target;
+            const btn = e ? e.target : document.querySelector('#checkIssues button');
+            if (!btn) return;
+            
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-2"></div> Đang làm sạch...';
             
@@ -368,7 +372,7 @@
                     fileInput.files = new DataTransfer().files;
                     
                     alert("✅ File đã được làm sạch! Vui lòng upload lại file mới.");
-                    resetFile(event);
+                    resetFile(null);
                 } else {
                     const error = await response.json();
                     alert("Lỗi: " + (error.error || "Không thể làm sạch file"));
@@ -478,9 +482,11 @@
         document.getElementById('answerImageInput').addEventListener('change', function(e) {
             if (this.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById('previewImg').src = event.target.result;
-                    document.getElementById('answerImagePreview').classList.remove('hidden');
+                reader.onload = function(evt) {
+                    if (evt && evt.target) {
+                        document.getElementById('previewImg').src = evt.target.result;
+                        document.getElementById('answerImagePreview').classList.remove('hidden');
+                    }
                 };
                 reader.readAsDataURL(this.files[0]);
                 document.getElementById('loadImageBtn').disabled = false;
