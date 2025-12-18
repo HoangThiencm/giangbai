@@ -622,6 +622,9 @@
                 return;
             }
             
+            // Lấy model từ localStorage (như trong index.html)
+            const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+            
             const btn = document.getElementById('loadImageBtn');
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-2"></div> Đang nhận diện...';
@@ -636,6 +639,9 @@
                 
                 // Lấy API key đầu tiên (hoặc có thể xoay vòng)
                 formData.append('api_key', apiKeys[0]);
+                
+                // Gửi model từ localStorage
+                formData.append('model', model);
                 
                 const apiResponse = await fetch(`${BASE_API_URL}/ocr-answers-from-image`, {
                     method: 'POST',
