@@ -24,14 +24,61 @@
         /* SỬA: Tăng kích thước lựa chọn trong trình chiếu thêm 30% */
         .presentation-option { 
             font-size: 1.7em !important; 
-            min-height: 120px !important;
+            min-height: 100px !important;
+            max-height: 200px !important;
             padding: 1.5rem !important;
             line-height: 1.4;
+            overflow-y: auto;
+            transition: font-size 0.2s ease;
+        }
+        .presentation-option.auto-scaled-option {
+            /* Font size sẽ được điều chỉnh động bằng JavaScript */
+            will-change: font-size;
+        }
+        .presentation-option::-webkit-scrollbar {
+            width: 6px;
+        }
+        .presentation-option::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        .presentation-option::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
         }
         .presentation-question {
             font-size: 2.2em !important;
             margin-bottom: 2rem !important;
             line-height: 1.3;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            /* Tự động điều chỉnh font size, chỉ scroll khi bất khả kháng */
+            overflow-x: hidden;
+            transition: font-size 0.2s ease;
+        }
+        .presentation-question.auto-scaled {
+            /* Font size sẽ được điều chỉnh động bằng JavaScript */
+            will-change: font-size;
+        }
+        .presentation-question.need-scroll {
+            /* Chỉ bật scroll khi font đã giảm đến mức tối thiểu */
+            overflow-y: auto;
+            max-height: 40vh;
+            scroll-behavior: smooth;
+        }
+        .presentation-question.need-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .presentation-question.need-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .presentation-question.need-scroll::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .presentation-question.need-scroll::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
         
         /* SỬA: Tăng kích thước chữ cái A,B,C,D */
@@ -408,8 +455,95 @@
             const [score, setScore] = useState(0);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
             const [showResults, setShowResults] = useState(false);
+            const questionRef = useRef(null);
+            const contentRef = useRef(null);
             const handleNext = useCallback(() => { if (idx < shuffledQuestions.length - 1) { setIdx(prev => prev + 1); } else { setShowResults(true); } }, [idx, shuffledQuestions.length]);
             const handlePrev = useCallback(() => { if (idx > 0) { setIdx(prev => prev - 1); } }, [idx]);
+            
+            // Tự động điều chỉnh font size cho câu hỏi
+            useEffect(() => {
+                if (!questionRef.current || !contentRef.current) return;
+                
+                const adjustFontSize = () => {
+                    const questionEl = questionRef.current;
+                    const contentEl = contentRef.current;
+                    if (!questionEl || !contentEl) return;
+                    
+                    // Tính toán chiều cao khả dụng
+                    const headerEl = document.querySelector('.fixed.inset-0 > div:first-child');
+                    const footerEl = document.querySelector('.fixed.inset-0 > div:last-child');
+                    const headerHeight = headerEl ? headerEl.offsetHeight : 60;
+                    const footerHeight = footerEl ? footerEl.offsetHeight : 80;
+                    const padding = 80; // Padding top/bottom của content
+                    const availableHeight = window.innerHeight - headerHeight - footerHeight - padding;
+                    
+                    // Chiều cao tối đa cho câu hỏi (35% viewport hoặc dựa trên availableHeight)
+                    const maxQuestionHeight = Math.min(availableHeight * 0.35, 350);
+                    
+                    // Reset font size về mặc định
+                    questionEl.style.fontSize = '';
+                    questionEl.style.maxHeight = '';
+                    questionEl.classList.remove('auto-scaled', 'need-scroll');
+                    
+                    // Đợi DOM render xong
+                    setTimeout(() => {
+                        const scrollHeight = questionEl.scrollHeight;
+                        
+                        if (scrollHeight > maxQuestionHeight) {
+                            // Nội dung vượt quá, cần giảm font size
+                            const computedStyle = window.getComputedStyle(questionEl);
+                            let fontSize = parseFloat(computedStyle.fontSize);
+                            const minFontSize = 1.0; // Font size tối thiểu (em) = 16px
+                            
+                            // Tính toán font size mới dựa trên tỷ lệ
+                            const ratio = maxQuestionHeight / scrollHeight;
+                            let newFontSize = Math.max(fontSize * ratio * 0.95, minFontSize * 16); // Nhân 0.95 để có buffer
+                            
+                            // Áp dụng font size mới
+                            questionEl.style.fontSize = `${newFontSize}px`;
+                            questionEl.classList.add('auto-scaled');
+                            
+                            // Kiểm tra lại sau khi điều chỉnh
+                            setTimeout(() => {
+                                const newScrollHeight = questionEl.scrollHeight;
+                                
+                                // Nếu vẫn vượt quá sau khi giảm font đến mức tối thiểu, bật scroll
+                                if (newScrollHeight > maxQuestionHeight && newFontSize <= minFontSize * 16 + 2) {
+                                    questionEl.classList.add('need-scroll');
+                                    questionEl.style.maxHeight = `${maxQuestionHeight}px`;
+                                } else if (newScrollHeight <= maxQuestionHeight) {
+                                    // Nếu đã vừa, có thể tăng font size một chút
+                                    let optimalSize = newFontSize;
+                                    for (let testSize = newFontSize + 2; testSize <= fontSize; testSize += 2) {
+                                        questionEl.style.fontSize = `${testSize}px`;
+                                        if (questionEl.scrollHeight > maxQuestionHeight) {
+                                            break;
+                                        }
+                                        optimalSize = testSize;
+                                    }
+                                    questionEl.style.fontSize = `${optimalSize}px`;
+                                }
+                            }, 50);
+                        }
+                    }, 150);
+                };
+                
+                // Đợi một chút để đảm bảo MathText đã render xong
+                const timer = setTimeout(adjustFontSize, 300);
+                
+                // Điều chỉnh lại khi resize window
+                const handleResize = () => {
+                    clearTimeout(timer);
+                    setTimeout(adjustFontSize, 100);
+                };
+                
+                window.addEventListener('resize', handleResize);
+                
+                return () => {
+                    clearTimeout(timer);
+                    window.removeEventListener('resize', handleResize);
+                };
+            }, [idx, showAns, shuffledQuestions, questions]);
             
             useEffect(() => {
                 document.body.style.overflow = 'hidden';
@@ -511,8 +645,9 @@
             const q = shuffledQuestions[idx] || questions[idx];
 
             return (
-                <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-2 md:p-4 transition-colors duration-500">
-                    <div className="flex justify-between items-center mb-2">
+                <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col transition-colors duration-500">
+                    {/* Header cố định */}
+                    <div className="flex justify-between items-center p-2 md:p-4 flex-shrink-0 border-b border-slate-700">
                         <button onClick={onExit} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"><i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span></button>
                         <div className="text-lg font-bold text-gray-300">Câu {idx+1} <span className="text-sm font-normal text-gray-500">/ {questions.length}</span></div>
                         <div className="flex items-center gap-4">
@@ -523,13 +658,14 @@
                         </div>
                     </div>
                     
-                    <div className="flex-1 flex flex-col justify-center items-center max-w-7xl mx-auto w-full p-2">
-                        <div className="bg-white text-slate-900 p-6 md:p-10 rounded-3xl shadow-2xl w-full min-h-[70vh] flex flex-col justify-center relative overflow-hidden">
+                    {/* Nội dung tự động điều chỉnh */}
+                    <div ref={contentRef} className="flex-1 flex flex-col justify-center items-center max-w-7xl mx-auto w-full p-2 md:p-4">
+                        <div className="bg-white text-slate-900 p-6 md:p-10 rounded-3xl shadow-2xl w-full my-4 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-100 rounded-bl-full -z-0 opacity-50"></div>
-                            <h3 className="text-3xl md:text-4xl font-bold mb-8 leading-relaxed text-slate-800 z-10 border-l-8 border-indigo-500 pl-6 presentation-question"><MathText text={q.question} /></h3>
+                            <h3 ref={questionRef} className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 md:mb-8 leading-relaxed text-slate-800 z-10 border-l-8 border-indigo-500 pl-4 md:pl-6 presentation-question"><MathText text={q.question} /></h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 z-10">
                                 {q.options.map((opt, i) => {
-                                    let containerClass = "p-6 rounded-2xl text-xl border-2 transition-all duration-300 cursor-pointer flex items-center gap-4 relative overflow-hidden presentation-option ";
+                                    let containerClass = "p-4 md:p-6 rounded-2xl text-lg md:text-xl border-2 transition-all duration-300 cursor-pointer flex items-center gap-3 md:gap-4 relative overflow-hidden presentation-option ";
                                     if (showAns && i === q.correctAnswerIndex) containerClass += "bg-green-50 border-green-500 text-green-900 font-bold shadow-lg transform scale-105 ring-4 ring-green-100";
                                     else if (selectedOpt === i) containerClass += "bg-blue-50 border-blue-500 text-blue-900 shadow-md";
                                     else if (showAns && selectedOpt === i && i !== q.correctAnswerIndex) containerClass += "bg-red-50 border-red-300 text-red-900 opacity-70";
@@ -537,18 +673,20 @@
                                     return (
                                         <div key={i} onClick={() => handleOptionSelect(i)} className={containerClass}>
                                             <div className={`option-letter rounded-full flex items-center justify-center font-bold flex-shrink-0 transition-colors ${showAns && i === q.correctAnswerIndex ? 'bg-green-600 text-white' : selectedOpt === i ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+i)}</div>
-                                            <div className="flex-1 text-5xl"><MathText text={cleanOptionText(opt)} /></div>
-                                            {showAns && i === q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600 text-3xl absolute right-6"></i>}
+                                            <div className="flex-1 overflow-auto"><MathText text={cleanOptionText(opt)} /></div>
+                                            {showAns && i === q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600 text-2xl md:text-3xl absolute right-4 md:right-6"></i>}
                                         </div>
                                     );
                                 })}
                             </div>
                         </div>
                     </div>
-                    <div className="mt-4 flex justify-center items-center gap-4">
-                        <button disabled={idx===0} onClick={handlePrev} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-xl"></i></button>
-                        <button onClick={() => setShowAns(!showAns)} className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-extrabold rounded-xl text-lg shadow-xl transition transform active:scale-95 flex items-center gap-3 min-w-[200px] justify-center">{showAns ? <><i className="fas fa-eye-slash"></i> Ẩn Đáp Án</> : <><i className="fas fa-eye"></i> Hiện Đáp Án</>}</button>
-                        <button disabled={idx===questions.length-1} onClick={handleNext} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-xl"></i></button>
+                    
+                    {/* Footer cố định với các nút điều khiển */}
+                    <div className="p-3 md:p-4 flex justify-center items-center gap-4 flex-shrink-0 border-t border-slate-700 bg-slate-900">
+                        <button disabled={idx===0} onClick={handlePrev} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 disabled:cursor-not-allowed transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-xl"></i></button>
+                        <button onClick={() => setShowAns(!showAns)} className="px-4 md:px-6 py-2 md:py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-extrabold rounded-xl text-base md:text-lg shadow-xl transition transform active:scale-95 flex items-center gap-2 md:gap-3 min-w-[180px] md:min-w-[200px] justify-center"><i className={`fas ${showAns ? 'fa-eye-slash' : 'fa-eye'}`}></i> <span>{showAns ? 'Ẩn Đáp Án' : 'Hiện Đáp Án'}</span></button>
+                        <button disabled={idx===questions.length-1} onClick={handleNext} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 disabled:cursor-not-allowed transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-xl"></i></button>
                     </div>
                 </div>
             );
