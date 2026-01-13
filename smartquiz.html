@@ -52,6 +52,46 @@
 			font-size: 1.8em !important;
 			line-height: 1.6;
 		}
+		
+		/* STYLING CHO BẢNG MARKDOWN */
+		table {
+			border-collapse: collapse;
+			width: 100%;
+			margin: 15px 0;
+			border: 1px solid #ddd;
+			font-size: 0.95em;
+			background-color: white;
+		}
+		table th {
+			background-color: #f2f2f2;
+			border: 1px solid #ddd;
+			padding: 10px;
+			text-align: left;
+			font-weight: bold;
+		}
+		table td {
+			border: 1px solid #ddd;
+			padding: 10px;
+			vertical-align: top;
+		}
+		table tr:nth-child(even) {
+			background-color: #f9f9f9;
+		}
+		table tr:hover {
+			background-color: #f5f5f5;
+		}
+		
+		/* BẢNG TRONG TRÌNH CHIẾU - TĂNG KÍCH THƯỚC */
+		.presentation-question table,
+		.presentation-option table {
+			font-size: 1.3em !important;
+		}
+		.presentation-question table th,
+		.presentation-question table td,
+		.presentation-option table th,
+		.presentation-option table td {
+			padding: 15px !important;
+		}
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
@@ -125,12 +165,19 @@
         // --- HELPER: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD ---
         const convertToMathML = (text) => {
             if (!text) return "";
-            let standardized = text
+            
+            // Bước 1: Xử lý markdown tables trước (chuyển sang HTML)
+            let processed = parseMarkdownTable(text);
+            
+            // Bước 2: Xử lý công thức toán
+            processed = processed
                 .replace(/`([^`]+)`/g, '$$$1$$') 
                 .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
                 .replace(/\\\((.*?)\\\)/g, '$$$1$$');
 
-            return standardized.replace(/\$([^$]+)\$/g, (match, latex) => {
+            // Bước 3: Chuyển đổi công thức toán sang MathML
+            // Xử lý cả công thức trong HTML table cells
+            return processed.replace(/\$([^$]+)\$/g, (match, latex) => {
                 try {
                     return katex.renderToString(latex, {
                         throwOnError: false,
@@ -143,12 +190,104 @@
             });
         };
 
+        // --- HELPER: CHUYỂN ĐỔI MARKDOWN TABLE SANG HTML ---
+        const parseMarkdownTable = (text) => {
+            if (!text) return "";
+            
+            // Tìm các bảng markdown: | Header | Header |\n|--------|--------|\n| Cell | Cell |
+            // Pattern: bắt đầu bằng |, có ít nhất 2 dòng, dòng thứ 2 là separator
+            const lines = text.split(/\r?\n/);
+            let result = [];
+            let i = 0;
+            
+            while (i < lines.length) {
+                const line = lines[i];
+                const trimmedLine = line.trim();
+                
+                // Kiểm tra nếu dòng này có thể là header của bảng (bắt đầu và kết thúc bằng |)
+                if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|') && trimmedLine.length > 2) {
+                    const tableLines = [line];
+                    let j = i + 1;
+                    
+                    // Kiểm tra dòng tiếp theo có phải separator không (chứa : hoặc -)
+                    if (j < lines.length) {
+                        const nextLine = lines[j].trim();
+                        if (nextLine.match(/^\|[\s:\-|]+\|$/)) {
+                            tableLines.push(lines[j]);
+                            j++;
+                            
+                            // Thu thập các dòng data tiếp theo (phải bắt đầu và kết thúc bằng |)
+                            while (j < lines.length) {
+                                const dataLine = lines[j].trim();
+                                if (dataLine.startsWith('|') && dataLine.endsWith('|')) {
+                                    tableLines.push(lines[j]);
+                                    j++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            // Nếu có ít nhất 3 dòng (header + separator + 1 data row), xử lý như bảng
+                            if (tableLines.length >= 3) {
+                                // Parse header
+                                const headerLine = tableLines[0].trim();
+                                const headers = headerLine.split('|').map(h => h.trim()).filter(h => h);
+                                
+                                if (headers.length > 0) {
+                                    // Tạo HTML table
+                                    let tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 15px 0; border: 1px solid #ddd; font-size: 0.95em;">';
+                                    
+                                    // Header row
+                                    tableHtml += '<thead><tr style="background-color: #f2f2f2;">';
+                                    headers.forEach(header => {
+                                        tableHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: left; font-weight: bold;">${header}</th>`;
+                                    });
+                                    tableHtml += '</tr></thead><tbody>';
+                                    
+                                    // Data rows (bỏ qua dòng separator - index 1)
+                                    for (let k = 2; k < tableLines.length; k++) {
+                                        const rowLine = tableLines[k].trim();
+                                        const cells = rowLine.split('|').map(c => c.trim()).filter(c => c);
+                                        if (cells.length === headers.length) {
+                                            tableHtml += '<tr>';
+                                            cells.forEach(cell => {
+                                                // Giữ nguyên nội dung cell (có thể chứa công thức toán)
+                                                // Không escape vì MathText component sẽ xử lý an toàn
+                                                tableHtml += `<td style="border: 1px solid #ddd; padding: 10px; vertical-align: top;">${cell}</td>`;
+                                            });
+                                            tableHtml += '</tr>';
+                                        }
+                                    }
+                                    
+                                    tableHtml += '</tbody></table>';
+                                    result.push(tableHtml);
+                                    i = j;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Nếu không phải bảng, giữ nguyên dòng
+                result.push(lines[i]);
+                i++;
+            }
+            
+            return result.join('\n');
+        };
+
         // --- COMPONENT HIỂN THỊ TOÁN TRÊN WEB ---
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = text
+                
+                // Bước 1: Xử lý markdown tables trước (chuyển sang HTML)
+                let processed = parseMarkdownTable(text);
+                
+                // Bước 2: Xử lý công thức toán trong text (chuẩn hóa format)
+                processed = processed
                     .replace(/`([^`]+)`/g, '$$$1$$')
                     .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
                     .replace(/\\\((.*?)\\\)/g, '$$$1$$');
@@ -158,11 +297,57 @@
                     processed = `$${processed}$`;
                 }
                 
-                const parts = processed.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                // Bước 3: Tách thành các phần (math, HTML table, và text thường)
+                // Tách theo thứ tự: HTML tables trước, rồi đến math formulas, cuối cùng là text
+                const tableRegex = /<table[\s\S]*?<\/table>/g;
+                const tables = [];
+                let tableIndex = 0;
+                processed = processed.replace(tableRegex, (match) => {
+                    tables.push(match);
+                    return `__TABLE_${tableIndex++}__`;
+                });
+                
+                // Bước 4: Xử lý math formulas trong phần còn lại
+                const parts = processed.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|__TABLE_\d+__)/g);
                 ref.current.innerHTML = "";
                 
                 parts.forEach(part => {
-                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                    if (part.startsWith('__TABLE_') && part.endsWith('__')) {
+                        // Khôi phục table HTML
+                        const tableIdx = parseInt(part.match(/\d+/)[0]);
+                        if (tables[tableIdx]) {
+                            // Xử lý công thức toán trong table cells trước khi thêm vào DOM
+                            let tableHTML = tables[tableIdx];
+                            // Tìm và xử lý math trong các td/th
+                            tableHTML = tableHTML.replace(/>([^<]+)</g, (match, content) => {
+                                if (content.trim()) {
+                                    let cellContent = content
+                                        .replace(/\$\$([^$]+)\$\$/g, (m, latex) => {
+                                            try {
+                                                return katex.renderToString(latex, { throwOnError: false, displayMode: true });
+                                            } catch {
+                                                return m;
+                                            }
+                                        })
+                                        .replace(/\$([^$]+)\$/g, (m, latex) => {
+                                            try {
+                                                return katex.renderToString(latex, { throwOnError: false, displayMode: false });
+                                            } catch {
+                                                return m;
+                                            }
+                                        });
+                                    return `>${cellContent}<`;
+                                }
+                                return match;
+                            });
+                            
+                            const tempDiv = document.createElement("div");
+                            tempDiv.innerHTML = tableHTML;
+                            while (tempDiv.firstChild) {
+                                ref.current.appendChild(tempDiv.firstChild);
+                            }
+                        }
+                    } else if (part.startsWith('$$') && part.endsWith('$$')) {
                         const span = document.createElement("span");
                         try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
                         ref.current.appendChild(span);
@@ -170,7 +355,7 @@
                         const span = document.createElement("span");
                         try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else {
+                    } else if (part.trim()) {
                         ref.current.appendChild(document.createTextNode(part));
                     }
                 });
