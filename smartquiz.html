@@ -662,6 +662,11 @@
                     <div ref={contentRef} className="flex-1 flex flex-col justify-center items-center max-w-7xl mx-auto w-full p-2 md:p-4">
                         <div className="bg-white text-slate-900 p-6 md:p-10 rounded-3xl shadow-2xl w-full my-4 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-100 rounded-bl-full -z-0 opacity-50"></div>
+                            {q.question_image && (
+                                <div className="mb-4 z-10 flex justify-center">
+                                    <img src={q.question_image} alt="Câu hỏi" className="max-h-80 rounded-lg border-2 border-indigo-200 object-contain bg-white shadow-md"/>
+                                </div>
+                            )}
                             <h3 ref={questionRef} className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 md:mb-8 leading-relaxed text-slate-800 z-10 border-l-8 border-indigo-500 pl-4 md:pl-6 presentation-question"><MathText text={q.question} /></h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 z-10">
                                 {q.options.map((opt, i) => {
@@ -724,6 +729,11 @@
                     <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full gap-6">
                         <div className="bg-white text-slate-900 p-6 md:p-8 rounded-2xl shadow-2xl flex-1">
                             <h3 className="text-xl font-bold text-blue-600 mb-4">Đề bài:</h3>
+                            {essay.question_image && (
+                                <div className="mb-4 flex justify-center">
+                                    <img src={essay.question_image} alt="Đề bài" className="max-h-96 rounded-lg border-2 border-blue-200 object-contain bg-white shadow-md"/>
+                                </div>
+                            )}
                             <div className="text-lg leading-relaxed"><MathText text={essay.question} /></div>
                         </div>
                         {showSolution && (
@@ -749,7 +759,8 @@
                 question: item.question,
                 options: item.options ? [...item.options] : undefined,
                 correctAnswerIndex: item.correctAnswerIndex !== undefined ? item.correctAnswerIndex : -1,
-                solution: item.solution
+                solution: item.solution,
+                question_image: item.question_image || null // Thêm trường hình ảnh
             })));
 
             const handleUpdate = (index, field, value) => {
@@ -776,13 +787,36 @@
                 if (mode === 'quiz') {
                     setEditedData(prev => [
                         ...prev, 
-                        { question: "Câu hỏi mới...", options: ["A", "B", "C", "D"], correctAnswerIndex: 0 }
+                        { question: "Câu hỏi mới...", options: ["A", "B", "C", "D"], correctAnswerIndex: 0, question_image: null }
                     ]);
                 } else {
                     setEditedData(prev => [
                         ...prev, 
-                        { question: "Bài tập mới...", solution: "Lời giải mới..." }
+                        { question: "Bài tập mới...", solution: "Lời giải mới...", question_image: null }
                     ]);
+                }
+            };
+            
+            // Xử lý upload hình ảnh
+            const handleImageUpload = (index, file) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    handleUpdate(index, 'question_image', e.target.result);
+                };
+                reader.readAsDataURL(file);
+            };
+            
+            // Xử lý paste hình ảnh
+            const handlePasteImage = (index, e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        handleImageUpload(index, file);
+                        return;
+                    }
                 }
             };
             
@@ -833,8 +867,49 @@
                                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-base resize-y min-h-[80px]" 
                                         value={item.question} 
                                         onChange={(e) => handleUpdate(i, 'question', e.target.value)}
+                                        onPaste={(e) => handlePasteImage(i, e)}
+                                        placeholder="Nhập câu hỏi hoặc dán hình ảnh (Ctrl+V)..."
                                     ></textarea>
-                                    <div className="mt-2 bg-gray-50 p-2 rounded border border-gray-200 text-sm"><MathText text={item.question}/></div>
+                                    
+                                    {/* Hình ảnh câu hỏi */}
+                                    <div className="mt-2 flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
+                                        {item.question_image ? (
+                                            <div className="relative inline-block">
+                                                <img src={item.question_image} alt="Câu hỏi" className="max-h-32 rounded border object-contain bg-white"/>
+                                                <button 
+                                                    onClick={() => handleUpdate(i, 'question_image', null)} 
+                                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition shadow-lg"
+                                                    title="Xóa hình ảnh"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <label className="text-xs text-blue-600 cursor-pointer flex items-center gap-2 hover:underline px-2 py-1 rounded hover:bg-blue-50 transition">
+                                                <i className="fas fa-image"></i>
+                                                <span>Chèn hình ảnh</span>
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={(e) => {
+                                                        const file = e.target.files[0];
+                                                        if (file) handleImageUpload(i, file);
+                                                        e.target.value = ''; // Reset để có thể chọn lại file cùng tên
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="mt-2 bg-gray-50 p-2 rounded border border-gray-200 text-sm">
+                                        {item.question_image && (
+                                            <div className="mb-2">
+                                                <img src={item.question_image} alt="Câu hỏi" className="max-h-40 rounded border object-contain bg-white"/>
+                                            </div>
+                                        )}
+                                        <MathText text={item.question}/>
+                                    </div>
                                 </div>
                                 
                                 {mode === 'quiz' ? (
@@ -1010,10 +1085,13 @@
                         const optB = convertToMathML(cleanOptionText(q.options[1]));
                         const optC = convertToMathML(cleanOptionText(q.options[2]));
                         const optD = convertToMathML(cleanOptionText(q.options[3]));
+                        
+                        const imageHtml = q.question_image ? `<div style="text-align: center; margin: 10pt 0;"><img src="${q.question_image}" style="max-height: 300px; max-width: 100%; object-fit: contain;" alt="Câu hỏi ${i+1}"/></div>` : '';
 
                         bodyContent += `
                         <div class="question-block">
                             <b>Câu ${i+1}:</b> ${qText}
+                            ${imageHtml}
                             <table class="options-table">
                                 <tr><td width="50%"><b>A.</b> ${optA}</td><td width="50%"><b>B.</b> ${optB}</td></tr>
                                 <tr><td width="50%"><b>C.</b> ${optC}</td><td width="50%"><b>D.</b> ${optD}</td></tr>
@@ -1038,7 +1116,8 @@
                     dataToExport.forEach((essay, i) => {
                         const questionText = convertToMathML(essay.question);
                         const solutionText = convertToMathML(essay.solution);
-                        bodyContent += `<div class="essay-block"><b>Bài ${i+1}:</b> ${questionText}<div class="solution"><b>Lời giải:</b> ${solutionText}</div></div>`;
+                        const imageHtml = essay.question_image ? `<div style="text-align: center; margin: 10pt 0;"><img src="${essay.question_image}" style="max-height: 300px; max-width: 100%; object-fit: contain;" alt="Đề bài ${i+1}"/></div>` : '';
+                        bodyContent += `<div class="essay-block"><b>Bài ${i+1}:</b> ${questionText}${imageHtml}<div class="solution"><b>Lời giải:</b> ${solutionText}</div></div>`;
                     });
                 }
 
@@ -1210,7 +1289,14 @@
                                         <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition group">
                                             <div className="flex gap-3 mb-4">
                                                 <span className="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Câu {i+1}</span>
-                                                <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={q.question}/></h3>
+                                                <div className="flex-1">
+                                                    {q.question_image && (
+                                                        <div className="mb-3">
+                                                            <img src={q.question_image} alt="Câu hỏi" className="max-h-60 rounded-lg border object-contain bg-gray-50"/>
+                                                        </div>
+                                                    )}
+                                                    <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={q.question}/></h3>
+                                                </div>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-12">
                                                 {q.options.map((o, idx) => (
@@ -1229,7 +1315,14 @@
                                         <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
                                             <div className="flex gap-3 mb-4">
                                                 <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Bài {i+1}</span>
-                                                <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={essay.question}/></h3>
+                                                <div className="flex-1">
+                                                    {essay.question_image && (
+                                                        <div className="mb-3">
+                                                            <img src={essay.question_image} alt="Đề bài" className="max-h-60 rounded-lg border object-contain bg-gray-50"/>
+                                                        </div>
+                                                    )}
+                                                    <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={essay.question}/></h3>
+                                                </div>
                                             </div>
                                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                                                 <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><i className="fas fa-lightbulb text-yellow-500"></i>Lời giải:</h4>
