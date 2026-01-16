@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Giáo Dục - Dạy Học Bằng AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap');
+        body { font-family: 'Lexend', sans-serif; background: #0f172a; color: #f8fafc; }
+        .game-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden; }
+        .game-card:hover { transform: scale(1.05); }
+        .game-card:hover .play-overlay { opacity: 1; }
+        .gradient-text { background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header Trò Chơi -->
+    <nav class="p-8 flex justify-between items-center border-b border-white/10 backdrop-blur-md sticky top-0 z-50 bg-slate-900/80">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-gamepad text-white"></i>
+            </div>
+            <h1 class="text-2xl font-black gradient-text">Arcade AI</h1>
+        </div>
+        <a href="smartquiz.html" class="bg-white/5 hover:bg-white/10 px-6 py-2 rounded-full border border-white/20 transition-all font-bold">
+            <i class="fas fa-arrow-left mr-2"></i> Trở lại Quiz
+        </a>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-8">
+        <div class="text-center mb-16">
+            <h2 class="text-5xl font-black mb-4">Thế Giới Trò Chơi</h2>
+            <p class="text-slate-400 text-xl">Học chưa bao giờ vui đến thế!</p>
+        </div>
+
+        <!-- Danh sách trò chơi -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- Game 1: Ai là triệu phú -->
+            <div class="game-card relative bg-slate-800 rounded-3xl p-2 border border-white/10 group">
+                <div class="relative rounded-[1.4rem] overflow-hidden aspect-video bg-indigo-900 flex items-center justify-center">
+                    <i class="fas fa-crown text-6xl text-yellow-400"></i>
+                    <div class="play-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex items-center justify-center">
+                        <button class="bg-indigo-600 text-white font-black px-8 py-3 rounded-full hover:bg-indigo-700">CHƠI NGAY</button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-indigo-400 tracking-tighter uppercase">Kiến thức tổng hợp</span>
+                        <div class="flex gap-1 text-yellow-500 text-xs">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Ai Là Triệu Phú</h3>
+                    <p class="text-slate-400 text-sm">Vượt qua 15 câu hỏi kịch tính để trở thành nhà thông thái.</p>
+                </div>
+            </div>
+
+            <!-- Game 2: Nhanh như chớp -->
+            <div class="game-card relative bg-slate-800 rounded-3xl p-2 border border-white/10 group">
+                <div class="relative rounded-[1.4rem] overflow-hidden aspect-video bg-rose-900 flex items-center justify-center">
+                    <i class="fas fa-bolt text-6xl text-yellow-400"></i>
+                    <div class="play-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex items-center justify-center">
+                        <button class="bg-rose-600 text-white font-black px-8 py-3 rounded-full hover:bg-rose-700">CHƠI NGAY</button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-rose-400 tracking-tighter uppercase">Phản xạ nhanh</span>
+                        <span class="text-slate-500 text-xs"><i class="fas fa-users mr-1"></i> 2.4k lượt chơi</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Nhanh Như Chớp</h3>
+                    <p class="text-slate-400 text-sm">Trả lời đúng 10 câu liên tiếp trong thời gian ngắn nhất.</p>
+                </div>
+            </div>
+
+            <!-- Game 3: Đuổi hình bắt chữ -->
+            <div class="game-card relative bg-slate-800 rounded-3xl p-2 border border-white/10 group">
+                <div class="relative rounded-[1.4rem] overflow-hidden aspect-video bg-emerald-900 flex items-center justify-center">
+                    <i class="fas fa-image text-6xl text-white"></i>
+                    <div class="play-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex items-center justify-center">
+                        <button class="bg-emerald-600 text-white font-black px-8 py-3 rounded-full hover:bg-emerald-700">CHƠI NGAY</button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-emerald-400 tracking-tighter uppercase">Tư duy hình ảnh</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Đuổi Hình Bắt Chữ</h3>
+                    <p class="text-slate-400 text-sm">Sử dụng trí tưởng tượng để giải mã các hình ảnh ẩn dụ.</p>
+                </div>
+            </div>
+
+            <!-- Game 4: Lật mảnh ghép -->
+            <div class="game-card relative bg-slate-800 rounded-3xl p-2 border border-white/10 group">
+                <div class="relative rounded-[1.4rem] overflow-hidden aspect-video bg-amber-900 flex items-center justify-center">
+                    <i class="fas fa-puzzle-piece text-6xl text-white"></i>
+                    <div class="play-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex items-center justify-center">
+                        <button class="bg-amber-600 text-white font-black px-8 py-3 rounded-full hover:bg-amber-700">CHƠI NGAY</button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-amber-400 tracking-tighter uppercase">Ghi nhớ & Logic</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Lật Mảnh Ghép</h3>
+                    <p class="text-slate-400 text-sm">Giải mã bức tranh ẩn giấu đằng sau các ô kiến thức.</p>
+                </div>
+            </div>
+
+            <!-- Thêm Game Mới -->
+            <div class="border-2 border-dashed border-white/20 rounded-3xl flex flex-col items-center justify-center p-8 opacity-50 hover:opacity-100 transition-all cursor-pointer">
+                <i class="fas fa-plus-circle text-4xl mb-4"></i>
+                <p class="font-bold">Đang cập nhật thêm trò chơi...</p>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="mt-20 p-12 text-center text-slate-500 border-t border-white/5">
+        <p>&copy; 2024 Dạy Học Bằng AI - Hệ thống trò chơi giáo dục thông minh</p>
+    </footer>
+
+</body>
+</html>
