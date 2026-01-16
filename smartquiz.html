@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>SmartQuiz AI - Trắc nghiệm đa dạng</title>
+    <title>SmartQuiz AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -221,6 +221,7 @@
             const [selectedOpt, setSelectedOpt] = useState(null);
             const [fillBlankAnswer, setFillBlankAnswer] = useState("");
             const [matchingAnswers, setMatchingAnswers] = useState([]);
+            const [selectedAIndex, setSelectedAIndex] = useState(null);
             const [timeLeft, setTimeLeft] = useState(settings.countdownTime);
             const [score, setScore] = useState(0);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
@@ -276,6 +277,7 @@
                 setSelectedOpt(null);
                 setFillBlankAnswer("");
                 setMatchingAnswers([]);
+                setSelectedAIndex(null);
             }, [idx, settings.countdownTime]);
 
             const handleOptionSelect = (optionIndex) => {
@@ -297,11 +299,17 @@
                 }
             };
 
-            const handleMatchingSelect = (columnBIndex, columnAIndex) => {
+            const handleColumnASelect = (columnAIndex) => {
                 if (showAns) return;
+                setSelectedAIndex(columnAIndex);
+            };
+
+            const handleColumnBSelect = (columnBIndex) => {
+                if (showAns || selectedAIndex === null) return;
                 const newAnswers = [...matchingAnswers];
-                newAnswers[columnAIndex] = columnBIndex;
+                newAnswers[selectedAIndex] = columnBIndex;
                 setMatchingAnswers(newAnswers);
+                setSelectedAIndex(null); // Reset selection after matching
             };
 
             const handleKeyDown = (e) => {
@@ -489,17 +497,51 @@
 
                             {q.type === "matching" && (
                                 <div className="z-10">
+                                    <div className="mb-6 text-center">
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                                            <i className="fas fa-info-circle mr-2"></i>
+                                            <strong>Hướng dẫn:</strong> Click vào item trong <strong>Cột A</strong> để chọn, sau đó click vào item tương ứng trong <strong>Cột B</strong> để nối.
+                                        </div>
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         {/* Cột A */}
                                         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
                                             <h3 className="text-xl font-bold text-blue-800 mb-4 text-center">Cột A</h3>
                                             <div className="space-y-3">
-                                                {q.columnA.map((item, i) => (
-                                                    <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-200">
-                                                        <span className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm">{i+1}</span>
-                                                        <span className="flex-1 text-lg"><MathText text={item} /></span>
-                                                    </div>
-                                                ))}
+                                                {q.columnA.map((item, i) => {
+                                                    const isSelected = selectedAIndex === i;
+                                                    const hasAnswer = matchingAnswers[i] !== undefined;
+                                                    const isCorrect = showAns && matchingAnswers[i] === q.correctMatches[i];
+                                                    const isWrong = showAns && matchingAnswers[i] !== q.correctMatches[i];
+
+                                                    let itemClass = "flex items-center gap-3 p-3 bg-white rounded-lg border cursor-pointer transition ";
+                                                    if (showAns) {
+                                                        if (isCorrect) itemClass += "border-green-400 bg-green-50";
+                                                        else if (isWrong) itemClass += "border-red-400 bg-red-50";
+                                                        else if (hasAnswer) itemClass += "border-gray-300";
+                                                        else itemClass += "border-gray-200 opacity-50";
+                                                    } else {
+                                                        if (isSelected) itemClass += "border-blue-500 bg-blue-100 ring-2 ring-blue-200";
+                                                        else if (hasAnswer) itemClass += "border-green-400 bg-green-50";
+                                                        else itemClass += "border-blue-200 hover:border-blue-300 hover:bg-blue-50";
+                                                    }
+
+                                                    return (
+                                                        <div key={i} onClick={() => handleColumnASelect(i)} className={itemClass}>
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
+                                                                showAns && isCorrect ? 'bg-green-600 text-white' :
+                                                                showAns && isWrong ? 'bg-red-600 text-white' :
+                                                                isSelected ? 'bg-blue-600 text-white' :
+                                                                hasAnswer ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+                                                            }`}>{i+1}</span>
+                                                            <span className="flex-1 text-lg"><MathText text={item} /></span>
+                                                            {showAns && isCorrect && <i className="fas fa-check-circle text-green-600"></i>}
+                                                            {showAns && isWrong && <i className="fas fa-times-circle text-red-600"></i>}
+                                                            {hasAnswer && !showAns && <span className="text-green-600 font-bold">✓</span>}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
 
@@ -508,23 +550,40 @@
                                             <h3 className="text-xl font-bold text-purple-800 mb-4 text-center">Cột B</h3>
                                             <div className="space-y-3">
                                                 {q.columnB.map((item, j) => {
-                                                    const isSelected = matchingAnswers.includes(j);
+                                                    const isMatched = matchingAnswers.includes(j);
+                                                    const matchingAIndex = matchingAnswers.indexOf(j);
                                                     const isCorrectMatch = showAns && q.correctMatches.includes(j);
                                                     const isWrongMatch = showAns && matchingAnswers.some((answer, idx) => answer === j && q.correctMatches[idx] !== j);
+                                                    const isSelectable = selectedAIndex !== null && !showAns;
 
-                                                    let itemClass = "flex items-center gap-3 p-3 bg-white rounded-lg border cursor-pointer transition ";
+                                                    let itemClass = "flex items-center gap-3 p-3 bg-white rounded-lg border transition ";
                                                     if (showAns) {
                                                         if (isCorrectMatch) itemClass += "border-green-400 bg-green-50";
                                                         else if (isWrongMatch) itemClass += "border-red-400 bg-red-50";
                                                         else itemClass += "border-gray-200 opacity-50";
                                                     } else {
-                                                        itemClass += isSelected ? "border-purple-400 bg-purple-100" : "border-purple-200 hover:border-purple-300";
+                                                        if (isMatched) {
+                                                            itemClass += "border-green-400 bg-green-50 cursor-not-allowed";
+                                                        } else if (isSelectable) {
+                                                            itemClass += "border-purple-200 hover:border-purple-400 hover:bg-purple-50 cursor-pointer";
+                                                        } else {
+                                                            itemClass += "border-gray-200 cursor-not-allowed opacity-60";
+                                                        }
                                                     }
 
                                                     return (
-                                                        <div key={j} className={itemClass}>
-                                                            <span className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm">{String.fromCharCode(65+j)}</span>
+                                                        <div
+                                                            key={j}
+                                                            onClick={() => handleColumnBSelect(j)}
+                                                            className={itemClass}
+                                                        >
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
+                                                                showAns && isCorrectMatch ? 'bg-green-600 text-white' :
+                                                                showAns && isWrongMatch ? 'bg-red-600 text-white' :
+                                                                isMatched ? 'bg-green-600 text-white' : 'bg-purple-600 text-white'
+                                                            }`}>{String.fromCharCode(65+j)}</span>
                                                             <span className="flex-1 text-lg"><MathText text={item} /></span>
+                                                            {isMatched && !showAns && <span className="text-green-600 font-bold text-sm">← {matchingAIndex + 1}</span>}
                                                             {showAns && isCorrectMatch && <i className="fas fa-check-circle text-green-600"></i>}
                                                             {showAns && isWrongMatch && <i className="fas fa-times-circle text-red-600"></i>}
                                                         </div>
@@ -533,6 +592,30 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Hiển thị kết nối hiện tại */}
+                                    {!showAns && (
+                                        <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                                            <h4 className="font-bold text-gray-700 mb-2">Kết nối hiện tại:</h4>
+                                            <div className="text-sm text-gray-600">
+                                                {matchingAnswers.some(ans => ans !== undefined) ? (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                                                        {matchingAnswers.map((matchIdx, i) =>
+                                                            matchIdx !== undefined ? (
+                                                                <div key={i} className="flex items-center gap-2">
+                                                                    <span className="font-mono bg-white px-2 py-1 rounded border">
+                                                                        {i+1} → {String.fromCharCode(65+matchIdx)}
+                                                                    </span>
+                                                                </div>
+                                                            ) : null
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 italic">Chưa có kết nối nào</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {showAns && (
                                         <div className="mt-6 p-6 bg-green-50 border-2 border-green-200 rounded-2xl">
