@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>SmartQuiz AI - Soạn & Dạy</title>
+    <title>SmartQuiz AI - Trắc nghiệm đa dạng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -874,9 +874,8 @@
         const App = () => {
             const [step, setStep] = useState(1);
             const [mode, setMode] = useState("quiz");
-            const [quizType, setQuizType] = useState("multiple-choice"); // multiple-choice, true-false, fill-blank, matching
             const [topics, setTopics] = useState([
-                { id: Date.now(), name: '', count: 5, level: 'Trung bình' }
+                { id: Date.now(), name: '', count: 5, level: 'Trung bình', quizType: 'multiple-choice' }
             ]);
             
             const [questions, setQuestions] = useState([]);
@@ -911,7 +910,8 @@
                     id: Date.now(),
                     name: '',
                     count: 5,
-                    level: 'Trung bình'
+                    level: 'Trung bình',
+                    quizType: 'multiple-choice'
                 };
                 setTopics([...topics, newTopic]);
             };
@@ -935,35 +935,37 @@
                 setLoading(true);
                 setRetryCount(0);
                 
-                const structurePrompt = topics.map((t, idx) => 
-                    `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} ${mode === "quiz" ? "câu" : "bài"}, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`
-                ).join('\n');
-
                 const totalQuestions = topics.reduce((sum, t) => sum + t.count, 0);
 
                 let prompt = "";
                 if (mode === "quiz") {
-                    if (quizType === "multiple-choice") {
-                        prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D) dựa trên cấu trúc sau:\n${structurePrompt}\n
-                        QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
-                        QUY TẮC ĐÁP ÁN: Trong mảng "options", CHỈ đưa nội dung đáp án, KHÔNG bao gồm "A.", "B.", "C.", "D." ở đầu.
-                        Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi: [{"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0}, ...]`;
-                    } else if (quizType === "true-false") {
-                        prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi trắc nghiệm đúng-sai dựa trên cấu trúc sau:\n${structurePrompt}\n
-                        QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
-                        Mỗi câu hỏi chỉ có 2 phương án: "Đúng" hoặc "Sai".
-                        Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi: [{"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0}, ...]`;
-                    } else if (quizType === "fill-blank") {
-                        prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi điền khuyết dựa trên cấu trúc sau:\n${structurePrompt}\n
-                        QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
-                        Câu hỏi có chỗ trống được đánh dấu bằng ______, và đáp án là từ/cụm từ điền vào chỗ trống.
-                        Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi: [{"question":"Câu hỏi có chỗ trống ______ như thế nào?","correctAnswer":"đáp án đúng"}, ...]`;
-                    } else if (quizType === "matching") {
-                        prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi nối ô dựa trên cấu trúc sau:\n${structurePrompt}\n
-                        QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
-                        Mỗi câu hỏi nối có 2 cột: columnA (cột trái) và columnB (cột phải), và correctMatches là mảng chỉ số kết nối.
-                        Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi: [{"question":"Chủ đề nối","columnA":["A1","A2","A3","A4"],"columnB":["B1","B2","B3","B4"],"correctMatches":[0,1,2,3]}, ...]`;
-                    }
+                    // Tạo prompt riêng cho từng topic dựa trên quizType của nó
+                    const topicPrompts = topics.map((t, idx) => {
+                        const basePrompt = `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} câu, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`;
+
+                        if (t.quizType === "multiple-choice") {
+                            return `${basePrompt} - Loại: Trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D)`;
+                        } else if (t.quizType === "true-false") {
+                            return `${basePrompt} - Loại: Trắc nghiệm đúng-sai (2 phương án Đúng/Sai)`;
+                        } else if (t.quizType === "fill-blank") {
+                            return `${basePrompt} - Loại: Điền khuyết (có chỗ trống ______)`;
+                        } else if (t.quizType === "matching") {
+                            return `${basePrompt} - Loại: Nối ô (2 cột A và B)`;
+                        }
+                        return basePrompt;
+                    }).join('\n');
+
+                    prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi trắc nghiệm dựa trên cấu trúc sau:\n${topicPrompts}\n
+                    QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
+                    QUY TẮC OUTPUT: Trả về một mảng phẳng chứa tất cả câu hỏi. Mỗi câu hỏi phải có field "type" để chỉ loại trắc nghiệm.
+
+                    Chi tiết từng loại:
+                    - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
+                    - true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
+                    - fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
+                    - matching: {"question":"Chủ đề nối","columnA":["A1","A2","A3"],"columnB":["B1","B2","B3"],"correctMatches":[0,1,2],"type":"matching"}
+
+                    Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi theo thứ tự các phần đã định.`;
                 } else {
                     prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} bài tập TỰ LUẬN dựa trên cấu trúc sau:\n${structurePrompt}\n
                     Mỗi bài tập bao gồm:
@@ -977,9 +979,7 @@
                     const parsedData = GeminiModule.parseJSONResponse(response);
 
                     if (mode === "quiz") {
-                        // Thêm type cho mỗi câu hỏi để biết loại trắc nghiệm
-                        const questionsWithType = parsedData.map(q => ({ ...q, type: quizType }));
-                        setQuestions(questionsWithType);
+                        setQuestions(parsedData);
                     } else {
                         setEssays(parsedData);
                     }
@@ -1164,16 +1164,18 @@
                         <button onClick={() => window.location.href = 'index.html'} className="text-slate-500 hover:text-indigo-600 font-bold transition flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
                             <i className="fas fa-arrow-left"></i> Về Trang Chủ
                         </button>
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg">AI</div>
-                            <h1 className="text-xl md:text-2xl font-bold text-indigo-900">SMART QUIZ</h1>
-                        </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg">AI</div>
+                                <h1 className="text-xl md:text-2xl font-bold text-indigo-900">SMART QUIZ</h1>
+                                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">Đa dạng hình thức</span>
+                            </div>
                     </div>
 
                     {step === 1 && (
                         <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-indigo-50 relative overflow-hidden fade-in">
                             <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-100 to-transparent w-40 h-full opacity-50 pointer-events-none"></div>
-                            <h2 className="text-2xl font-bold text-slate-800 mb-6">Thiết lập ma trận đề</h2>
+                            <h2 className="text-2xl font-bold text-slate-800 mb-6">Thiết lập ma trận đề trắc nghiệm</h2>
+                            <p className="text-slate-600 mb-6 text-sm">Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng: nhiều lựa chọn, đúng/sai, điền khuyết, hoặc nối ô.</p>
                             
                             {/* Chọn chế độ */}
                             <div className="mb-6">
@@ -1188,31 +1190,11 @@
                                 </div>
                             </div>
 
-                            {/* Chọn loại trắc nghiệm - chỉ hiển thị khi mode là quiz */}
-                            {mode === "quiz" && (
-                                <div className="mb-6">
-                                    <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Loại trắc nghiệm</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-gray-200">
-                                        <button onClick={() => setQuizType("multiple-choice")} className={`py-3 px-2 rounded-lg font-bold text-xs transition ${quizType === "multiple-choice" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
-                                            <i className="fas fa-list-ol mr-1"></i>Nhiều lựa chọn
-                                        </button>
-                                        <button onClick={() => setQuizType("true-false")} className={`py-3 px-2 rounded-lg font-bold text-xs transition ${quizType === "true-false" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
-                                            <i className="fas fa-check-circle mr-1"></i>Đúng/Sai
-                                        </button>
-                                        <button onClick={() => setQuizType("fill-blank")} className={`py-3 px-2 rounded-lg font-bold text-xs transition ${quizType === "fill-blank" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
-                                            <i className="fas fa-edit mr-1"></i>Điền khuyết
-                                        </button>
-                                        <button onClick={() => setQuizType("matching")} className={`py-3 px-2 rounded-lg font-bold text-xs transition ${quizType === "matching" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
-                                            <i className="fas fa-link mr-1"></i>Nối ô
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
 
                             {/* DANH SÁCH CHỦ ĐỀ */}
                             <div className="mb-6 space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <label className="block font-bold text-slate-700 text-sm uppercase tracking-wide">Danh sách chủ đề</label>
+                                    <label className="block font-bold text-slate-700 text-sm uppercase tracking-wide">Danh sách chủ đề và hình thức trắc nghiệm</label>
                                     <button onClick={addTopic} className="text-sm bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-bold hover:bg-indigo-100 transition"><i className="fas fa-plus mr-1"></i> Thêm chủ đề</button>
                                 </div>
                                 
@@ -1225,32 +1207,44 @@
                                             )}
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                            <div className="md:col-span-6">
-                                                <input 
-                                                    value={topic.name} 
+                                            <div className="md:col-span-4">
+                                                <input
+                                                    value={topic.name}
                                                     onChange={(e) => updateTopic(topic.id, 'name', e.target.value)}
-                                                    className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                    placeholder="Nhập tên chủ đề..." 
+                                                    className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                    placeholder="Nhập tên chủ đề..."
                                                 />
                                             </div>
-                                            <div className="md:col-span-3">
+                                            <div className="md:col-span-2">
                                                 <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2">
                                                     <span className="text-gray-500 text-xs whitespace-nowrap mr-2">SL:</span>
-                                                    <input 
-                                                        type="number" min="1" max="50" 
-                                                        value={topic.count} 
+                                                    <input
+                                                        type="number" min="1" max="50"
+                                                        value={topic.count}
                                                         onChange={(e) => updateTopic(topic.id, 'count', parseInt(e.target.value) || 1)}
-                                                        className="w-full p-2 outline-none" 
+                                                        className="w-full p-2 outline-none"
                                                     />
                                                 </div>
                                             </div>
                                             <div className="md:col-span-3">
-                                                <select 
-                                                    value={topic.level} 
+                                                <select
+                                                    value={topic.level}
                                                     onChange={(e) => updateTopic(topic.id, 'level', e.target.value)}
                                                     className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                                                 >
                                                     {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="md:col-span-3">
+                                                <select
+                                                    value={topic.quizType}
+                                                    onChange={(e) => updateTopic(topic.id, 'quizType', e.target.value)}
+                                                    className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm"
+                                                >
+                                                    <option value="multiple-choice">🔤 Nhiều lựa chọn</option>
+                                                    <option value="true-false">✅ Đúng/Sai</option>
+                                                    <option value="fill-blank">📝 Điền khuyết</option>
+                                                    <option value="matching">🔗 Nối ô</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1259,9 +1253,19 @@
                             </div>
 
                             {/* TỔNG KẾT */}
-                            <div className="mb-6 flex justify-end items-center gap-2 text-slate-600 text-sm font-bold">
-                                <span>Tổng câu hỏi:</span>
-                                <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-lg">{topics.reduce((acc, t) => acc + t.count, 0)}</span>
+                            <div className="mb-6 flex justify-end items-center gap-4 text-slate-600 text-sm">
+                                <div className="flex items-center gap-2 font-bold">
+                                    <span>Tổng câu hỏi:</span>
+                                    <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-lg">{topics.reduce((acc, t) => acc + t.count, 0)}</span>
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                    {topics.map((t, idx) => {
+                                        const typeName = t.quizType === 'multiple-choice' ? '🔤' :
+                                                       t.quizType === 'true-false' ? '✅' :
+                                                       t.quizType === 'fill-blank' ? '📝' : '🔗';
+                                        return `${typeName} ${idx+1}: ${t.count}`;
+                                    }).join(', ')}
+                                </div>
                             </div>
 
                             <button 
@@ -1287,6 +1291,21 @@
                                     </h2>
                                     <p className="text-xs text-slate-500">
                                         {mode === "quiz" ? questions.length : essays.length} {mode === "quiz" ? "câu" : "bài"}
+                                        {mode === "quiz" && (
+                                            <span className="block mt-1">
+                                                {Object.entries(
+                                                    questions.reduce((acc, q) => {
+                                                        acc[q.type] = (acc[q.type] || 0) + 1;
+                                                        return acc;
+                                                    }, {})
+                                                ).map(([type, count]) => {
+                                                    const typeName = type === 'multiple-choice' ? 'Nhiều lựa chọn' :
+                                                                   type === 'true-false' ? 'Đúng/Sai' :
+                                                                   type === 'fill-blank' ? 'Điền khuyết' : 'Nối ô';
+                                                    return `${typeName}: ${count}`;
+                                                }).join(', ')}
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
@@ -1304,9 +1323,24 @@
                                 <div className="space-y-6 pb-20">
                                     {questions.map((q, i) => (
                                         <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition group">
-                                            <div className="flex gap-3 mb-4">
+                                            <div className="flex gap-3 mb-4 items-start">
                                                 <span className="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Câu {i+1}</span>
-                                                <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={q.question}/></h3>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <h3 className="text-lg font-medium text-slate-800 leading-relaxed flex-1"><MathText text={q.question}/></h3>
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                            q.type === 'multiple-choice' ? 'bg-blue-100 text-blue-700' :
+                                                            q.type === 'true-false' ? 'bg-green-100 text-green-700' :
+                                                            q.type === 'fill-blank' ? 'bg-yellow-100 text-yellow-700' :
+                                                            'bg-purple-100 text-purple-700'
+                                                        }`}>
+                                                            {q.type === 'multiple-choice' ? '🔤 Nhiều lựa chọn' :
+                                                             q.type === 'true-false' ? '✅ Đúng/Sai' :
+                                                             q.type === 'fill-blank' ? '📝 Điền khuyết' :
+                                                             '🔗 Nối ô'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Hiển thị theo loại trắc nghiệm */}
