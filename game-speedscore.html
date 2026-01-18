@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Game 2: Đúng Nhanh Ghi Điểm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse-correct {
+            animation: pulseCorrect 0.5s ease-out;
+        }
+
+        @keyframes pulseCorrect {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-yellow-50 to-orange-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = text
+                    .replace(/`([^`]+)`/g, '$$$1$$')
+                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = "";
+                parts.forEach(part => {
+                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                        catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part.startsWith("$") && part.endsWith("$")) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                        catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else {
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const SpeedScoreGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [streak, setStreak] = useState(0);
+            const [timeLeft, setTimeLeft] = useState(20);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [gameOver, setGameOver] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(true);
+
+            useEffect(() => {
+                const data = localStorage.getItem('gameData');
+                if (!data) {
+                    alert('Không có dữ liệu game!');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+                setGameData(JSON.parse(data));
+                setTimeLeft(20);
+            }, []);
+
+            useEffect(() => {
+                if (!showAnswer && !gameOver && timeLeft > 0) {
+                    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+                    return () => clearTimeout(timer);
+                } else if (timeLeft === 0 && !showAnswer) {
+                    handleTimeUp();
+                }
+            }, [timeLeft, showAnswer, gameOver]);
+
+            const handleTimeUp = () => {
+                if (selectedAnswer === null) {
+                    setShowAnswer(true);
+                    setStreak(0);
+                    setTimeout(handleNextQuestion, 2000);
+                } else {
+                    handleSubmitAnswer();
+                }
+            };
+
+            const handleSelectAnswer = (idx) => {
+                if (showAnswer) return;
+                setSelectedAnswer(idx);
+            };
+
+            const handleSubmitAnswer = () => {
+                if (selectedAnswer === null) return;
+
+                setShowAnswer(true);
+                const currentQuestion = gameData.content.questions[currentQuestionIndex];
+                const isCorrect = selectedAnswer === currentQuestion.answer;
+
+                if (isCorrect) {
+                    const base = 100;
+                    const timeBonus = Math.floor(base * (timeLeft / 20));
+                    const streakBonus = streak * 10;
+                    const finalPoints = timeBonus + streakBonus;
+
+                    setScore(score + finalPoints);
+                    setStreak(streak + 1);
+                } else {
+                    setStreak(0);
+                }
+
+                setTimeout(handleNextQuestion, 2500);
+            };
+
+            const handleNextQuestion = () => {
+                if (currentQuestionIndex < gameData.content.questions.length - 1) {
+                    setCurrentQuestionIndex(currentQuestionIndex + 1);
+                    setSelectedAnswer(null);
+                    setShowAnswer(false);
+                    setTimeLeft(20);
+                } else {
+                    setGameOver(true);
+                }
+            };
+
+            if (!gameData) return <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Đang tải...</div></div>;
+
+            if (gameOver) {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
+                            <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i className="fas fa-trophy text-5xl text-yellow-500"></i>
+                            </div>
+                            <h2 className="text-4xl font-bold mb-4 text-gray-800">Hoàn thành!</h2>
+                            <div className="text-7xl font-bold text-yellow-600 mb-2">{score}</div>
+                            <div className="text-2xl text-gray-600 mb-8">Tổng điểm</div>
+                            <div className="flex gap-4 justify-center">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
+                                    <i className="fas fa-redo mr-2"></i>Chơi lại
+                                </button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700">
+                                    <i className="fas fa-home mr-2"></i>Về menu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const currentQuestion = gameData.content.questions[currentQuestionIndex];
+
+            if (showInstructions) {
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-orange-700">
+                                    <i className="fas fa-bolt mr-3"></i>ĐÚNG NHANH GHI ĐIỂM
+                                </h2>
+                                <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
+                                    <i className="fas fa-times text-2xl"></i>
+                                </button>
+                            </div>
+                            <div className="space-y-4 text-gray-700">
+                                <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
+                                    <h3 className="font-bold text-lg text-orange-800 mb-2">
+                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
+                                    </h3>
+                                    <p>Khởi động bài học, không loại ai. Trả lời nhanh để có điểm cao!</p>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
+                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
+                                    </h3>
+                                    <ul className="space-y-2 ml-6">
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-bold">1.</span>
+                                            <span>Mỗi câu có <strong>20 giây</strong> để trả lời</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-bold">2.</span>
+                                            <span>Chọn đáp án → Click <strong>"Gửi câu trả lời"</strong></span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-bold">3.</span>
+                                            <span>Đúng sớm → <strong className="text-green-600">Nhiều điểm hơn!</strong></span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-bold">4.</span>
+                                            <span>Sai → 0 điểm (nhưng <strong>KHÔNG bị loại</strong>)</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-bold">5.</span>
+                                            <span><strong className="text-orange-600">Streak</strong> (chuỗi đúng) tăng điểm thưởng</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
+                                        <i className="fas fa-calculator mr-2"></i>Tính điểm
+                                    </h3>
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                                        <p><strong>Điểm = 100 × (Thời gian còn / 20) + Streak × 10</strong></p>
+                                        <p className="text-sm">VD: Đúng lúc 15s còn, streak=0 → 75đ</p>
+                                        <p className="text-sm">VD: Đúng lúc 15s còn, streak=3 → 105đ</p>
+                                    </div>
+                                </div>
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                    <p className="text-sm">
+                                        <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                                        <strong>Mẹo:</strong> Giữ streak cao bằng cách trả lời đúng liên tiếp!
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowInstructions(false)}
+                                className="w-full mt-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
+                            >
+                                <i className="fas fa-play mr-2"></i>Bắt đầu chơi
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-4xl mx-auto p-6 fade-in">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                                <i className="fas fa-arrow-left mr-2"></i>Thoát
+                            </button>
+                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" title="Xem hướng dẫn">
+                                <i className="fas fa-question-circle"></i>
+                            </button>
+                        </div>
+
+                        <h1 className="text-3xl font-bold text-orange-700">
+                            <i className="fas fa-bolt mr-2"></i>ĐÚNG NHANH GHI ĐIỂM
+                        </h1>
+
+                        <div className="flex gap-4">
+                            <div className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">
+                                <i className="fas fa-star mr-2"></i>{score}
+                            </div>
+                            <div className="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold">
+                                <i className="fas fa-fire mr-2"></i>{streak}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-4 mb-4 text-center">
+                        <div className="text-sm text-gray-600">Câu {currentQuestionIndex + 1}/{gameData.content.questions.length}</div>
+                        <div className={`text-5xl font-bold ${timeLeft <= 5 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                            {timeLeft}s
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                            <MathText text={currentQuestion.prompt} />
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {currentQuestion.choices.map((choice, idx) => {
+                                const isSelected = selectedAnswer === idx;
+                                const isCorrect = currentQuestion.answer === idx;
+
+                                let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
+
+                                if (showAnswer) {
+                                    if (isCorrect) className += "bg-green-100 border-green-500 text-green-900 pulse-correct";
+                                    else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
+                                    else className += "border-gray-200 opacity-50";
+                                } else {
+                                    if (isSelected) className += "bg-blue-100 border-blue-500";
+                                    else className += "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
+                                }
+
+                                return (
+                                    <button key={idx} onClick={() => handleSelectAnswer(idx)} disabled={showAnswer} className={className}>
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">
+                                                {String.fromCharCode(65 + idx)}
+                                            </span>
+                                            <div className="flex-1 text-left"><MathText text={choice} /></div>
+                                            {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-2xl"></i>}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {!showAnswer && selectedAnswer !== null && (
+                            <button onClick={handleSubmitAnswer} className="w-full mt-6 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700">
+                                <i className="fas fa-check mr-2"></i>Gửi câu trả lời
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<SpeedScoreGame />, document.getElementById('root'));
+    </script>
+</body>
+
+</html>
