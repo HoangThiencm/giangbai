@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <title>SmartQuiz AI</title>
@@ -8,32 +9,50 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    
+
     <!-- KaTeX cho hiển thị toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .katex { font-size: 1.2em; color: #1e3a8a; }
+        .katex {
+            font-size: 1.2em;
+            color: #1e3a8a;
+        }
+
         /* Animation nhẹ */
-        .fade-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* SỬA: Tăng kích thước lựa chọn trong trình chiếu thêm 30% */
-        .presentation-option { 
-            font-size: 1.7em !important; 
+        .presentation-option {
+            font-size: 1.7em !important;
             min-height: 120px !important;
             padding: 1.5rem !important;
             line-height: 1.4;
         }
+
         .presentation-question {
             font-size: 2.2em !important;
             margin-bottom: 2rem !important;
             line-height: 1.3;
         }
-        
+
         /* SỬA: Tăng kích thước chữ cái A,B,C,D */
         .option-letter {
             width: 70px !important;
@@ -41,19 +60,20 @@
             font-size: 2em !important;
             font-weight: bold;
         }
-        
+
         /* Tăng kích thước icon check */
         .fa-check-circle {
             font-size: 2em !important;
         }
-		
-		/* TĂNG KÍCH THƯỚC CHỮ TỰ LUẬN */
-		.text-lg.leading-relaxed {
-			font-size: 1.8em !important;
-			line-height: 1.6;
-		}
+
+        /* TĂNG KÍCH THƯỚC CHỮ TỰ LUẬN */
+        .text-lg.leading-relaxed {
+            font-size: 1.8em !important;
+            line-height: 1.6;
+        }
     </style>
 </head>
+
 <body class="bg-slate-50 min-h-screen font-sans">
     <div id="root"></div>
 
@@ -76,9 +96,9 @@
             callGeminiAPI: async (prompt, onRetry = null) => {
                 const apiKeys = GeminiModule.getApiKeys();
                 const defaultModule = GeminiModule.getDefaultModule();
-                
+
                 if (!apiKeys.length) throw new Error("Chưa nạp API Keys! Vui lòng cấu hình trong trang chủ.");
-                
+
                 let finalError = "";
                 const shuffledKeys = [...apiKeys].sort(() => Math.random() - 0.5);
 
@@ -86,22 +106,22 @@
                     const currentKey = shuffledKeys[i];
                     try {
                         if (onRetry && i > 0) onRetry(i);
-                        
+
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${defaultModule}:generateContent?key=${currentKey}`, {
                             method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                         });
-                        
+
                         const data = await res.json();
                         if (data.error) throw new Error(data.error.message);
-                        
+
                         const txt = data.candidates[0].content.parts[0].text;
                         return txt;
-                        
-                    } catch(e) {
+
+                    } catch (e) {
                         finalError = e.message;
-                        console.error(`Key ${i+1} lỗi:`, e.message);
+                        console.error(`Key ${i + 1} lỗi:`, e.message);
                     }
                 }
                 throw new Error(`Tất cả keys đều lỗi: ${finalError}`);
@@ -109,8 +129,8 @@
             parseJSONResponse: (text) => {
                 const startIdx = text.indexOf('[');
                 const endIdx = text.lastIndexOf(']');
-                let jsonStr = (startIdx !== -1 && endIdx !== -1) 
-                    ? text.substring(startIdx, endIdx + 1) 
+                let jsonStr = (startIdx !== -1 && endIdx !== -1)
+                    ? text.substring(startIdx, endIdx + 1)
                     : text.replace(/```json|```/g, '').trim();
                 return JSON.parse(jsonStr);
             }
@@ -126,7 +146,7 @@
         const convertToMathML = (text) => {
             if (!text) return "";
             let standardized = text
-                .replace(/`([^`]+)`/g, '$$$1$$') 
+                .replace(/`([^`]+)`/g, '$$$1$$')
                 .replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$')
                 .replace(/\\\((.*?)\\\)/g, '$$$1$$');
 
@@ -134,7 +154,7 @@
                 try {
                     return katex.renderToString(latex, {
                         throwOnError: false,
-                        output: 'mathml', 
+                        output: 'mathml',
                         displayMode: false
                     }).replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, '');
                 } catch (e) {
@@ -157,10 +177,10 @@
                 if (processed.includes('\\') && !processed.includes('$')) {
                     processed = `$${processed}$`;
                 }
-                
+
                 const parts = processed.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
                 ref.current.innerHTML = "";
-                
+
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
                         const span = document.createElement("span");
@@ -190,20 +210,20 @@
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <label className="font-medium">Tráo đáp án</label>
-                                <input type="checkbox" checked={settings.shuffleOptions} onChange={(e) => onSettingsChange({...settings, shuffleOptions: e.target.checked})} className="w-5 h-5"/>
+                                <input type="checkbox" checked={settings.shuffleOptions} onChange={(e) => onSettingsChange({ ...settings, shuffleOptions: e.target.checked })} className="w-5 h-5" />
                             </div>
                             <div>
                                 <label className="font-medium block mb-2">Thời gian đếm ngược (giây)</label>
-                                <input type="number" min="0" value={settings.countdownTime} onChange={(e) => onSettingsChange({...settings, countdownTime: parseInt(e.target.value) || 0})} className="w-full p-2 border rounded-lg"/>
+                                <input type="number" min="0" value={settings.countdownTime} onChange={(e) => onSettingsChange({ ...settings, countdownTime: parseInt(e.target.value) || 0 })} className="w-full p-2 border rounded-lg" />
                                 <p className="text-xs text-gray-500 mt-1">0 = không giới hạn thời gian</p>
                             </div>
                             <div className="flex items-center justify-between">
                                 <label className="font-medium">Tự động chuyển câu</label>
-                                <input type="checkbox" checked={settings.autoNext} onChange={(e) => onSettingsChange({...settings, autoNext: e.target.checked})} className="w-5 h-5"/>
+                                <input type="checkbox" checked={settings.autoNext} onChange={(e) => onSettingsChange({ ...settings, autoNext: e.target.checked })} className="w-5 h-5" />
                             </div>
                             <div>
                                 <label className="font-medium block mb-2">Điểm mỗi câu</label>
-                                <input type="number" min="0.1" step="0.1" value={settings.pointsPerQuestion} onChange={(e) => onSettingsChange({...settings, pointsPerQuestion: parseFloat(e.target.value) || 1})} className="w-full p-2 border rounded-lg"/>
+                                <input type="number" min="0.1" step="0.1" value={settings.pointsPerQuestion} onChange={(e) => onSettingsChange({ ...settings, pointsPerQuestion: parseFloat(e.target.value) || 1 })} className="w-full p-2 border rounded-lg" />
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end">
@@ -215,7 +235,7 @@
         };
 
         // --- TRÌNH CHIẾU TRẮC NGHIỆM ---
-        const QuizPresentationMode = ({ questions, onExit, settings }) => { /* Giữ nguyên QuizPresentationMode */ 
+        const QuizPresentationMode = ({ questions, onExit, settings }) => { /* Giữ nguyên QuizPresentationMode */
             const [idx, setIdx] = useState(0);
             const [showAns, setShowAns] = useState(false);
             const [selectedOpt, setSelectedOpt] = useState(null);
@@ -228,7 +248,7 @@
             const [showResults, setShowResults] = useState(false);
             const handleNext = useCallback(() => { if (idx < shuffledQuestions.length - 1) { setIdx(prev => prev + 1); } else { setShowResults(true); } }, [idx, shuffledQuestions.length]);
             const handlePrev = useCallback(() => { if (idx > 0) { setIdx(prev => prev - 1); } }, [idx]);
-            
+
             useEffect(() => {
                 document.body.style.overflow = 'hidden';
                 const shuffled = questions.map(q => {
@@ -314,7 +334,7 @@
 
             const handleKeyDown = (e) => {
                 if (showResults) return;
-                switch(e.key) {
+                switch (e.key) {
                     case "ArrowRight": handleNext(); break;
                     case "ArrowLeft": handlePrev(); break;
                     case " ": setShowAns(prev => !prev); break;
@@ -363,7 +383,7 @@
             if (showResults) {
                 const totalScore = (score).toFixed(1);
                 const percentage = ((score / (questions.length * settings.pointsPerQuestion)) * 100).toFixed(1);
-                
+
                 return (
                     <div className="fixed inset-0 bg-gradient-to-br from-blue-900 to-purple-900 text-white z-50 flex flex-col items-center justify-center p-6">
                         <div className="bg-white text-gray-800 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl">
@@ -400,7 +420,7 @@
                 <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-2 md:p-4 transition-colors duration-500">
                     <div className="flex justify-between items-center mb-2">
                         <button onClick={onExit} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"><i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span></button>
-                        <div className="text-lg font-bold text-gray-300">Câu {idx+1} <span className="text-sm font-normal text-gray-500">/ {questions.length}</span></div>
+                        <div className="text-lg font-bold text-gray-300">Câu {idx + 1} <span className="text-sm font-normal text-gray-500">/ {questions.length}</span></div>
                         <div className="flex items-center gap-4">
                             {settings.countdownTime > 0 && (
                                 <div className={`px-3 py-1 rounded-full font-bold ${timeLeft <= 10 ? 'bg-red-600 animate-pulse' : 'bg-blue-600'}`}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
@@ -408,7 +428,7 @@
                             <div className="bg-green-600 px-3 py-1 rounded-full font-bold">Điểm: {(score).toFixed(1)}</div>
                         </div>
                     </div>
-                    
+
                     <div className="flex-1 flex flex-col justify-center items-center max-w-7xl mx-auto w-full p-2">
                         <div className="bg-white text-slate-900 p-6 md:p-10 rounded-3xl shadow-2xl w-full min-h-[70vh] flex flex-col justify-center relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-100 rounded-bl-full -z-0 opacity-50"></div>
@@ -424,7 +444,7 @@
                                         else { containerClass += "border-gray-200 hover:bg-gray-50 hover:border-indigo-300"; if (showAns) containerClass += " opacity-40 grayscale"; }
                                         return (
                                             <div key={i} onClick={() => handleOptionSelect(i)} className={containerClass}>
-                                                <div className={`option-letter rounded-full flex items-center justify-center font-bold flex-shrink-0 transition-colors ${showAns && i === q.correctAnswerIndex ? 'bg-green-600 text-white' : selectedOpt === i ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65+i)}</div>
+                                                <div className={`option-letter rounded-full flex items-center justify-center font-bold flex-shrink-0 transition-colors ${showAns && i === q.correctAnswerIndex ? 'bg-green-600 text-white' : selectedOpt === i ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{String.fromCharCode(65 + i)}</div>
                                                 <div className="flex-1 text-5xl"><MathText text={cleanOptionText(opt)} /></div>
                                                 {showAns && i === q.correctAnswerIndex && <i className="fas fa-check-circle text-green-600 text-3xl absolute right-6"></i>}
                                             </div>
@@ -529,12 +549,11 @@
 
                                                     return (
                                                         <div key={i} onClick={() => handleColumnASelect(i)} className={itemClass}>
-                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-                                                                showAns && isCorrect ? 'bg-green-600 text-white' :
-                                                                showAns && isWrong ? 'bg-red-600 text-white' :
-                                                                isSelected ? 'bg-blue-600 text-white' :
-                                                                hasAnswer ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
-                                                            }`}>{i+1}</span>
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${showAns && isCorrect ? 'bg-green-600 text-white' :
+                                                                    showAns && isWrong ? 'bg-red-600 text-white' :
+                                                                        isSelected ? 'bg-blue-600 text-white' :
+                                                                            hasAnswer ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+                                                                }`}>{i + 1}</span>
                                                             <span className="flex-1 text-lg"><MathText text={item} /></span>
                                                             {showAns && isCorrect && <i className="fas fa-check-circle text-green-600"></i>}
                                                             {showAns && isWrong && <i className="fas fa-times-circle text-red-600"></i>}
@@ -577,11 +596,10 @@
                                                             onClick={() => handleColumnBSelect(j)}
                                                             className={itemClass}
                                                         >
-                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-                                                                showAns && isCorrectMatch ? 'bg-green-600 text-white' :
-                                                                showAns && isWrongMatch ? 'bg-red-600 text-white' :
-                                                                isMatched ? 'bg-green-600 text-white' : 'bg-purple-600 text-white'
-                                                            }`}>{String.fromCharCode(65+j)}</span>
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${showAns && isCorrectMatch ? 'bg-green-600 text-white' :
+                                                                    showAns && isWrongMatch ? 'bg-red-600 text-white' :
+                                                                        isMatched ? 'bg-green-600 text-white' : 'bg-purple-600 text-white'
+                                                                }`}>{String.fromCharCode(65 + j)}</span>
                                                             <span className="flex-1 text-lg"><MathText text={item} /></span>
                                                             {isMatched && !showAns && <span className="text-green-600 font-bold text-sm">← {matchingAIndex + 1}</span>}
                                                             {showAns && isCorrectMatch && <i className="fas fa-check-circle text-green-600"></i>}
@@ -604,7 +622,7 @@
                                                             matchIdx !== undefined ? (
                                                                 <div key={i} className="flex items-center gap-2">
                                                                     <span className="font-mono bg-white px-2 py-1 rounded border">
-                                                                        {i+1} → {String.fromCharCode(65+matchIdx)}
+                                                                        {i + 1} → {String.fromCharCode(65 + matchIdx)}
                                                                     </span>
                                                                 </div>
                                                             ) : null
@@ -623,7 +641,7 @@
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                                                 {q.correctMatches.map((matchIdx, i) => (
                                                     <div key={i} className="flex items-center gap-2">
-                                                        <span className="font-bold">{i+1} → {String.fromCharCode(65+matchIdx)}</span>
+                                                        <span className="font-bold">{i + 1} → {String.fromCharCode(65 + matchIdx)}</span>
                                                         {matchingAnswers[i] === matchIdx ?
                                                             <i className="fas fa-check text-green-600"></i> :
                                                             <i className="fas fa-times text-red-600"></i>
@@ -638,9 +656,9 @@
                         </div>
                     </div>
                     <div className="mt-4 flex justify-center items-center gap-4">
-                        <button disabled={idx===0} onClick={handlePrev} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-xl"></i></button>
+                        <button disabled={idx === 0} onClick={handlePrev} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-xl"></i></button>
                         <button onClick={() => setShowAns(!showAns)} className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-extrabold rounded-xl text-lg shadow-xl transition transform active:scale-95 flex items-center gap-3 min-w-[200px] justify-center">{showAns ? <><i className="fas fa-eye-slash"></i> Ẩn Đáp Án</> : <><i className="fas fa-eye"></i> Hiện Đáp Án</>}</button>
-                        <button disabled={idx===questions.length-1} onClick={handleNext} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-xl"></i></button>
+                        <button disabled={idx === questions.length - 1} onClick={handleNext} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-xl"></i></button>
                     </div>
                 </div>
             );
@@ -651,7 +669,7 @@
             const [idx, setIdx] = useState(0);
             const [showSolution, setShowSolution] = useState(false);
             const handleKeyDown = (e) => {
-                switch(e.key) {
+                switch (e.key) {
                     case "ArrowRight": if (idx < essays.length - 1) setIdx(prev => prev + 1); break;
                     case "ArrowLeft": if (idx > 0) setIdx(prev => prev - 1); break;
                     case " ": setShowSolution(prev => !prev); break;
@@ -672,7 +690,7 @@
                 <div className="fixed inset-0 bg-gradient-to-br from-blue-900 to-purple-900 text-white z-50 flex flex-col p-4 md:p-6">
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={onExit} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition flex items-center gap-2"><i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span></button>
-                        <div className="text-xl font-bold text-white">Bài {idx+1} <span className="text-sm font-normal text-gray-300">/ {essays.length}</span></div>
+                        <div className="text-xl font-bold text-white">Bài {idx + 1} <span className="text-sm font-normal text-gray-300">/ {essays.length}</span></div>
                         <button onClick={() => setShowSolution(!showSolution)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-lg transition">{showSolution ? <><i className="fas fa-eye-slash"></i> Ẩn Lời giải</> : <><i className="fas fa-eye"></i> Hiện Lời giải</>}</button>
                     </div>
                     <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full gap-6">
@@ -683,13 +701,13 @@
                         {showSolution && (
                             <div className="bg-green-50 border border-green-200 text-slate-800 p-6 md:p-8 rounded-2xl shadow-lg">
                                 <h3 className="text-xl font-bold text-green-600 mb-4">Lời giải:</h3>
-                                <div className="text-lg leading-relaxed"><MathText text={essay.solution}/></div>
+                                <div className="text-lg leading-relaxed"><MathText text={essay.solution} /></div>
                             </div>
                         )}
                     </div>
                     <div className="mt-6 flex justify-center items-center gap-6">
-                        <button disabled={idx===0} onClick={() => setIdx(prev => prev - 1)} className="w-14 h-14 bg-white/20 rounded-full hover:bg-white/30 disabled:opacity-30 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-2xl"></i></button>
-                        <button disabled={idx===essays.length-1} onClick={() => setIdx(prev => prev + 1)} className="w-14 h-14 bg-white/20 rounded-full hover:bg-white/30 disabled:opacity-30 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-2xl"></i></button>
+                        <button disabled={idx === 0} onClick={() => setIdx(prev => prev - 1)} className="w-14 h-14 bg-white/20 rounded-full hover:bg-white/30 disabled:opacity-30 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-2xl"></i></button>
+                        <button disabled={idx === essays.length - 1} onClick={() => setIdx(prev => prev + 1)} className="w-14 h-14 bg-white/20 rounded-full hover:bg-white/30 disabled:opacity-30 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-2xl"></i></button>
                     </div>
                 </div>
             );
@@ -725,7 +743,7 @@
                     return item;
                 }));
             };
-            
+
             const handleAddQuestion = () => {
                 if (mode === 'quiz') {
                     // Lấy loại trắc nghiệm từ câu hỏi đầu tiên hoặc mặc định multiple-choice
@@ -759,13 +777,13 @@
                     ]);
                 }
             };
-            
+
             const handleDeleteQuestion = (index) => {
-                if(confirm(`Bạn có chắc chắn muốn xóa ${mode === 'quiz' ? 'Câu' : 'Bài'} ${index + 1}?`)) {
+                if (confirm(`Bạn có chắc chắn muốn xóa ${mode === 'quiz' ? 'Câu' : 'Bài'} ${index + 1}?`)) {
                     setEditedData(prev => prev.filter((_, i) => i !== index));
                 }
             };
-            
+
             const handleFinalSave = () => {
                 // Validation for quiz mode
                 if (mode === 'quiz') {
@@ -799,9 +817,9 @@
                             <i className="fas fa-pencil-alt"></i> CHỈNH SỬA {mode === 'quiz' ? 'TRẮC NGHIỆM' : 'TỰ LUẬN'}
                         </h2>
                         <div className="flex gap-2">
-                             <button onClick={handleAddQuestion} className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold hover:bg-indigo-600 transition"><i className="fas fa-plus"></i> Thêm</button>
-                             <button onClick={onBack} className="px-4 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition">Hủy</button>
-                             <button onClick={handleFinalSave} className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition"><i className="fas fa-save"></i> LƯU THAY ĐỔI</button>
+                            <button onClick={handleAddQuestion} className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold hover:bg-indigo-600 transition"><i className="fas fa-plus"></i> Thêm</button>
+                            <button onClick={onBack} className="px-4 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition">Hủy</button>
+                            <button onClick={handleFinalSave} className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition"><i className="fas fa-save"></i> LƯU THAY ĐỔI</button>
                         </div>
                     </div>
 
@@ -812,18 +830,18 @@
                                     <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">#{i + 1}</span>
                                     <button onClick={() => handleDeleteQuestion(i)} className="text-gray-400 hover:text-red-600" title="Xóa câu hỏi"><i className="fas fa-trash-alt"></i></button>
                                 </div>
-                                
+
                                 {/* QUESTION TEXTAREA */}
                                 <div className="mb-4 pr-16">
                                     <label className="block text-sm font-bold text-indigo-700 mb-1">{mode === 'quiz' ? 'Câu hỏi' : 'Đề bài'}:</label>
-                                    <textarea 
-                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-base resize-y min-h-[80px]" 
-                                        value={item.question} 
+                                    <textarea
+                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-base resize-y min-h-[80px]"
+                                        value={item.question}
                                         onChange={(e) => handleUpdate(i, 'question', e.target.value)}
                                     ></textarea>
-                                    <div className="mt-2 bg-gray-50 p-2 rounded border border-gray-200 text-sm"><MathText text={item.question}/></div>
+                                    <div className="mt-2 bg-gray-50 p-2 rounded border border-gray-200 text-sm"><MathText text={item.question} /></div>
                                 </div>
-                                
+
                                 {mode === 'quiz' ? (
                                     item.type === 'multiple-choice' ? (
                                         /* MULTIPLE CHOICE OPTIONS */
@@ -886,7 +904,7 @@
                                                 <div className="space-y-2">
                                                     {(item.columnA || []).map((colItem, colIdx) => (
                                                         <div key={colIdx} className="flex items-center gap-2">
-                                                            <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">{colIdx+1}</span>
+                                                            <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">{colIdx + 1}</span>
                                                             <input
                                                                 className="flex-1 p-1 border rounded text-sm"
                                                                 value={colItem}
@@ -915,7 +933,7 @@
                                                                 }}
                                                             >
                                                                 {(item.columnA || []).map((_, aIdx) => (
-                                                                    <option key={aIdx} value={aIdx}>{aIdx+1}</option>
+                                                                    <option key={aIdx} value={aIdx}>{aIdx + 1}</option>
                                                                 ))}
                                                             </select>
                                                             <span className="text-sm text-purple-600">→ {item.correctMatches ? item.correctMatches[colIdx] + 1 : colIdx + 1}</span>
@@ -938,12 +956,12 @@
                                     /* ESSAY SOLUTION */
                                     <div className="mt-4 bg-green-50 border border-green-200 rounded p-3">
                                         <label className="block text-sm font-bold text-green-700 mb-1">Lời giải:</label>
-                                        <textarea 
-                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-200 outline-none text-base resize-y min-h-[120px]" 
-                                            value={item.solution} 
+                                        <textarea
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-200 outline-none text-base resize-y min-h-[120px]"
+                                            value={item.solution}
                                             onChange={(e) => handleUpdate(i, 'solution', e.target.value)}
                                         ></textarea>
-                                        <div className="mt-2 bg-white p-2 rounded border border-gray-200 text-sm"><MathText text={item.solution}/></div>
+                                        <div className="mt-2 bg-white p-2 rounded border border-gray-200 text-sm"><MathText text={item.solution} /></div>
                                     </div>
                                 )}
                             </div>
@@ -952,7 +970,7 @@
                 </div>
             );
         };
-        
+
         // --- APP CHÍNH ---
         const App = () => {
             const [step, setStep] = useState(1);
@@ -960,7 +978,7 @@
             const [topics, setTopics] = useState([
                 { id: Date.now(), name: '', count: 5, level: 'Trung bình', quizType: 'multiple-choice' }
             ]);
-            
+
             const [questions, setQuestions] = useState([]);
             const [essays, setEssays] = useState([]);
             const [loading, setLoading] = useState(false);
@@ -974,7 +992,7 @@
             });
 
             // [NEW] Ẩn hiện màn hình chỉnh sửa
-            const [isEditing, setIsEditing] = useState(false); 
+            const [isEditing, setIsEditing] = useState(false);
 
             // SỬA: Thêm check auth ngay khi vào trang
             useEffect(() => {
@@ -1014,10 +1032,10 @@
             const generateContent = async () => {
                 const emptyTopics = topics.filter(t => !t.name.trim());
                 if (emptyTopics.length > 0) return alert("Vui lòng nhập tên cho tất cả các chủ đề!");
-                
+
                 setLoading(true);
                 setRetryCount(0);
-                
+
                 const totalQuestions = topics.reduce((sum, t) => sum + t.count, 0);
 
                 let prompt = "";
@@ -1091,12 +1109,12 @@
                         .solution { margin-top: 10pt; padding: 10pt; background: #f5f5f5; border-left: 4px solid #4CAF50; }
                     </style>
                 </head><body>`;
-                
+
                 const dataToExport = mode === "quiz" ? questions : essays;
                 const totalQ = dataToExport.length;
                 let bodyContent = `<h1>${mode === "quiz" ? "ĐỀ THI TRẮC NGHIỆM" : "BÀI TẬP TỰ LUẬN"} TỔNG HỢP</h1>`;
                 bodyContent += `<p style="text-align:center; margin-bottom: 30px;"><i>Tổng số câu: ${totalQ}</i></p>`;
-                
+
                 if (mode === "quiz") {
                     dataToExport.forEach((q, i) => {
                         const qText = convertToMathML(q.question);
@@ -1109,7 +1127,7 @@
 
                             bodyContent += `
                             <div class="question-block">
-                                <b>Câu ${i+1} (Trắc nghiệm):</b> ${qText}
+                                <b>Câu ${i + 1} (Trắc nghiệm):</b> ${qText}
                                 <table class="options-table">
                                     <tr><td width="50%"><b>A.</b> ${optA}</td><td width="50%"><b>B.</b> ${optB}</td></tr>
                                     <tr><td width="50%"><b>C.</b> ${optC}</td><td width="50%"><b>D.</b> ${optD}</td></tr>
@@ -1121,7 +1139,7 @@
 
                             bodyContent += `
                             <div class="question-block">
-                                <b>Câu ${i+1} (Đúng/Sai):</b> ${qText}
+                                <b>Câu ${i + 1} (Đúng/Sai):</b> ${qText}
                                 <table class="options-table">
                                     <tr><td width="50%"><b>A.</b> ${optA}</td><td width="50%"><b>B.</b> ${optB}</td></tr>
                                 </table>
@@ -1131,7 +1149,7 @@
 
                             bodyContent += `
                             <div class="question-block">
-                                <b>Câu ${i+1} (Điền khuyết):</b> ${qText}
+                                <b>Câu ${i + 1} (Điền khuyết):</b> ${qText}
                                 <div style="margin-top: 8px; padding: 8px; background-color: #f5f5f5; border-left: 4px solid #2196F3;">
                                     <b>Đáp án:</b> ${answer}
                                 </div>
@@ -1139,13 +1157,13 @@
                         } else if (q.type === "matching") {
                             bodyContent += `
                             <div class="question-block">
-                                <b>Câu ${i+1} (Nối ô):</b> ${qText}
+                                <b>Câu ${i + 1} (Nối ô):</b> ${qText}
                                 <table class="options-table" style="margin-top: 10px;">
                                     <tr><td width="50%" style="vertical-align: top;">
                                         <b>Cột A:</b><br>`;
 
                             q.columnA.forEach((item, idx) => {
-                                bodyContent += `${idx+1}. ${convertToMathML(item)}<br>`;
+                                bodyContent += `${idx + 1}. ${convertToMathML(item)}<br>`;
                             });
 
                             bodyContent += `</td><td width="50%" style="vertical-align: top;">
@@ -1153,7 +1171,7 @@
 
                             q.columnB.forEach((item, idx) => {
                                 const matchIdx = q.correctMatches[idx];
-                                bodyContent += `${String.fromCharCode(65+idx)}. ${convertToMathML(item)} (→ ${matchIdx+1})<br>`;
+                                bodyContent += `${String.fromCharCode(65 + idx)}. ${convertToMathML(item)} (→ ${matchIdx + 1})<br>`;
                             });
 
                             bodyContent += `</td></tr></table></div>`;
@@ -1178,10 +1196,10 @@
                             const chunk = questions.slice(i, i + chunkSize);
                             bodyContent += `<table class="answer-table"><tr><td style="font-weight:bold; background-color:#f0f0f0; width: 100px;">Câu hỏi</td>`;
                             chunk.forEach((_, idx) => bodyContent += `<td>${questions.indexOf(chunk[idx]) + 1}</td>`);
-                            for(let k = chunk.length; k < chunkSize; k++) bodyContent += `<td></td>`;
+                            for (let k = chunk.length; k < chunkSize; k++) bodyContent += `<td></td>`;
                             bodyContent += `</tr><tr><td style="font-weight:bold; background-color:#f0f0f0;">Đáp án</td>`;
                             chunk.forEach(q => bodyContent += `<td style="font-weight:bold;">${getAnswer(q)}</td>`);
-                            for(let k = chunk.length; k < chunkSize; k++) bodyContent += `<td></td>`;
+                            for (let k = chunk.length; k < chunkSize; k++) bodyContent += `<td></td>`;
                             bodyContent += `</tr></table>`;
                         }
                     };
@@ -1196,11 +1214,11 @@
                     dataToExport.forEach((essay, i) => {
                         const questionText = convertToMathML(essay.question);
                         const solutionText = convertToMathML(essay.solution);
-                        bodyContent += `<div class="essay-block"><b>Bài ${i+1}:</b> ${questionText}<div class="solution"><b>Lời giải:</b> ${solutionText}</div></div>`;
+                        bodyContent += `<div class="essay-block"><b>Bài ${i + 1}:</b> ${questionText}<div class="solution"><b>Lời giải:</b> ${solutionText}</div></div>`;
                     });
                 }
 
-                const blob = new Blob([header + bodyContent + "</body></html>"], {type: "application/msword"});
+                const blob = new Blob([header + bodyContent + "</body></html>"], { type: "application/msword" });
                 saveAs(blob, `De_Thi_Tong_Hop.doc`);
             };
 
@@ -1209,13 +1227,13 @@
                 if (mode === "essay" && essays.length === 0) return alert("Chưa có bài tập nào!");
                 setStep(4); // Đổi step 3 thành 4 để EditorComponent dùng step 3
             };
-            
+
             // Xử lý khi nhấn nút Sửa
             const startEditing = () => {
                 setIsEditing(true);
                 setStep(3);
             };
-            
+
             // Xử lý khi lưu từ EditorComponent
             const handleEditorSave = (newContent) => {
                 if (mode === 'quiz') {
@@ -1227,18 +1245,18 @@
                 setStep(2); // Quay lại màn hình xem lại
             };
 
-            if(step === 4) { // Trình chiếu
-                if (mode === "quiz") return <QuizPresentationMode questions={questions} onExit={() => setStep(2)} settings={presentationSettings}/>;
-                else return <EssayPresentationMode essays={essays} onExit={() => setStep(2)}/>;
+            if (step === 4) { // Trình chiếu
+                if (mode === "quiz") return <QuizPresentationMode questions={questions} onExit={() => setStep(2)} settings={presentationSettings} />;
+                else return <EssayPresentationMode essays={essays} onExit={() => setStep(2)} />;
             }
 
-            if(step === 3) { // Chỉnh sửa
-                return <EditorComponent 
-                            mode={mode} 
-                            data={mode === 'quiz' ? questions : essays} 
-                            onSave={handleEditorSave} 
-                            onBack={() => setStep(2)} 
-                        />;
+            if (step === 3) { // Chỉnh sửa
+                return <EditorComponent
+                    mode={mode}
+                    data={mode === 'quiz' ? questions : essays}
+                    onSave={handleEditorSave}
+                    onBack={() => setStep(2)}
+                />;
             }
 
             return (
@@ -1247,11 +1265,11 @@
                         <button onClick={() => window.location.href = 'index.html'} className="text-slate-500 hover:text-indigo-600 font-bold transition flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
                             <i className="fas fa-arrow-left"></i> Về Trang Chủ
                         </button>
-                            <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg">AI</div>
-                                <h1 className="text-xl md:text-2xl font-bold text-indigo-900">SMART QUIZ</h1>
-                                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">Đa dạng hình thức</span>
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg">AI</div>
+                            <h1 className="text-xl md:text-2xl font-bold text-indigo-900">SMART QUIZ</h1>
+                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">Đa dạng hình thức</span>
+                        </div>
                     </div>
 
                     {step === 1 && (
@@ -1259,16 +1277,19 @@
                             <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-100 to-transparent w-40 h-full opacity-50 pointer-events-none"></div>
                             <h2 className="text-2xl font-bold text-slate-800 mb-6">THIẾT LẬP YÊU CẦU</h2>
                             <p className="text-slate-600 mb-6 text-sm">Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng: nhiều lựa chọn, đúng/sai, điền khuyết, hoặc nối ô.</p>
-                            
+
                             {/* Chọn chế độ */}
                             <div className="mb-6">
                                 <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Chế độ</label>
-                                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-2 rounded-xl border border-gray-200">
+                                <div className="grid grid-cols-3 gap-4 bg-slate-50 p-2 rounded-xl border border-gray-200">
                                     <button onClick={() => setMode("quiz")} className={`py-3 px-4 rounded-lg font-bold transition ${mode === "quiz" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
                                         <i className="fas fa-list-ol mr-2"></i>Trắc nghiệm
                                     </button>
                                     <button onClick={() => setMode("essay")} className={`py-3 px-4 rounded-lg font-bold transition ${mode === "essay" ? 'bg-white shadow text-green-600 ring-1 ring-green-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
                                         <i className="fas fa-edit mr-2"></i>Tự luận
+                                    </button>
+                                    <button onClick={() => window.location.href = 'trochoi.html'} className="py-3 px-4 rounded-lg font-bold transition text-gray-400 hover:text-gray-600 hover:bg-gray-100 hover:text-purple-600 hover:ring-1 hover:ring-purple-100">
+                                        <i className="fas fa-gamepad mr-2"></i>Game giáo dục
                                     </button>
                                 </div>
                             </div>
@@ -1280,7 +1301,7 @@
                                     <label className="block font-bold text-slate-700 text-sm uppercase tracking-wide">Danh sách chủ đề và hình thức trắc nghiệm</label>
                                     <button onClick={addTopic} className="text-sm bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-bold hover:bg-indigo-100 transition"><i className="fas fa-plus mr-1"></i> Thêm chủ đề</button>
                                 </div>
-                                
+
                                 {topics.map((topic, index) => (
                                     <div key={topic.id} className="bg-slate-50 p-4 rounded-xl border border-gray-200 relative group transition hover:border-indigo-300 hover:shadow-sm">
                                         <div className="flex justify-between items-center mb-3">
@@ -1344,16 +1365,16 @@
                                 <div className="text-xs text-slate-500">
                                     {topics.map((t, idx) => {
                                         const typeName = t.quizType === 'multiple-choice' ? '🔤' :
-                                                       t.quizType === 'true-false' ? '✅' :
-                                                       t.quizType === 'fill-blank' ? '📝' : '🔗';
-                                        return `${typeName} ${idx+1}: ${t.count}`;
+                                            t.quizType === 'true-false' ? '✅' :
+                                                t.quizType === 'fill-blank' ? '📝' : '🔗';
+                                        return `${typeName} ${idx + 1}: ${t.count}`;
                                     }).join(', ')}
                                 </div>
                             </div>
 
-                            <button 
-                                onClick={generateContent} 
-                                disabled={loading} 
+                            <button
+                                onClick={generateContent}
+                                disabled={loading}
                                 className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold hover:shadow-lg hover:scale-[1.01] transition disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center gap-3 text-lg"
                             >
                                 {loading ? (
@@ -1383,8 +1404,8 @@
                                                     }, {})
                                                 ).map(([type, count]) => {
                                                     const typeName = type === 'multiple-choice' ? 'Nhiều lựa chọn' :
-                                                                   type === 'true-false' ? 'Đúng/Sai' :
-                                                                   type === 'fill-blank' ? 'Điền khuyết' : 'Nối ô';
+                                                        type === 'true-false' ? 'Đúng/Sai' :
+                                                            type === 'fill-blank' ? 'Điền khuyết' : 'Nối ô';
                                                     return `${typeName}: ${count}`;
                                                 }).join(', ')}
                                             </span>
@@ -1407,20 +1428,19 @@
                                     {questions.map((q, i) => (
                                         <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition group">
                                             <div className="flex gap-3 mb-4 items-start">
-                                                <span className="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Câu {i+1}</span>
+                                                <span className="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Câu {i + 1}</span>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <h3 className="text-lg font-medium text-slate-800 leading-relaxed flex-1"><MathText text={q.question}/></h3>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                            q.type === 'multiple-choice' ? 'bg-blue-100 text-blue-700' :
-                                                            q.type === 'true-false' ? 'bg-green-100 text-green-700' :
-                                                            q.type === 'fill-blank' ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-purple-100 text-purple-700'
-                                                        }`}>
+                                                        <h3 className="text-lg font-medium text-slate-800 leading-relaxed flex-1"><MathText text={q.question} /></h3>
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${q.type === 'multiple-choice' ? 'bg-blue-100 text-blue-700' :
+                                                                q.type === 'true-false' ? 'bg-green-100 text-green-700' :
+                                                                    q.type === 'fill-blank' ? 'bg-yellow-100 text-yellow-700' :
+                                                                        'bg-purple-100 text-purple-700'
+                                                            }`}>
                                                             {q.type === 'multiple-choice' ? '🔤 Nhiều lựa chọn' :
-                                                             q.type === 'true-false' ? '✅ Đúng/Sai' :
-                                                             q.type === 'fill-blank' ? '📝 Điền khuyết' :
-                                                             '🔗 Nối ô'}
+                                                                q.type === 'true-false' ? '✅ Đúng/Sai' :
+                                                                    q.type === 'fill-blank' ? '📝 Điền khuyết' :
+                                                                        '🔗 Nối ô'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1431,8 +1451,8 @@
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-12">
                                                     {q.options.map((o, idx) => (
                                                         <div key={idx} className={`p-3 border rounded-xl flex items-center gap-3 transition ${idx === q.correctAnswerIndex ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-slate-200 group-hover:bg-white'}`}>
-                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${idx === q.correctAnswerIndex ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}>{String.fromCharCode(65+idx)}</span>
-                                                            <span className="text-slate-700"><MathText text={cleanOptionText(o)}/></span>
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${idx === q.correctAnswerIndex ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}>{String.fromCharCode(65 + idx)}</span>
+                                                            <span className="text-slate-700"><MathText text={cleanOptionText(o)} /></span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1456,7 +1476,7 @@
                                                             <i className="fas fa-check-circle text-green-600"></i>
                                                             <span className="font-bold text-green-700">Đáp án:</span>
                                                         </div>
-                                                        <div className="text-green-800 font-medium"><MathText text={q.correctAnswer}/></div>
+                                                        <div className="text-green-800 font-medium"><MathText text={q.correctAnswer} /></div>
                                                     </div>
                                                 </div>
                                             )}
@@ -1469,8 +1489,8 @@
                                                             <div className="space-y-2">
                                                                 {q.columnA.map((item, idx) => (
                                                                     <div key={idx} className="flex items-center gap-2">
-                                                                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{idx+1}</span>
-                                                                        <span className="text-blue-800"><MathText text={item}/></span>
+                                                                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{idx + 1}</span>
+                                                                        <span className="text-blue-800"><MathText text={item} /></span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -1482,8 +1502,8 @@
                                                                     const matchIndex = q.correctMatches[idx];
                                                                     return (
                                                                         <div key={idx} className="flex items-center gap-2">
-                                                                            <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{matchIndex+1}</span>
-                                                                            <span className="text-purple-800"><MathText text={item}/></span>
+                                                                            <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{matchIndex + 1}</span>
+                                                                            <span className="text-purple-800"><MathText text={item} /></span>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -1500,12 +1520,12 @@
                                     {essays.map((essay, i) => (
                                         <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
                                             <div className="flex gap-3 mb-4">
-                                                <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Bài {i+1}</span>
-                                                <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={essay.question}/></h3>
+                                                <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Bài {i + 1}</span>
+                                                <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={essay.question} /></h3>
                                             </div>
                                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                                                 <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><i className="fas fa-lightbulb text-yellow-500"></i>Lời giải:</h4>
-                                                <div className="text-slate-600 leading-relaxed"><MathText text={essay.solution}/></div>
+                                                <div className="text-slate-600 leading-relaxed"><MathText text={essay.solution} /></div>
                                             </div>
                                         </div>
                                     ))}
@@ -1523,4 +1543,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>
