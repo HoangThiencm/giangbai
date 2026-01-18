@@ -404,6 +404,35 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                 }
             }, []);
 
+            // PASTE IMAGE: Handle Ctrl+V to paste image from clipboard
+            useEffect(() => {
+                if (step !== 'EDIT' || focusedQuestion === null || !editingContent) return;
+
+                const handlePaste = (e) => {
+                    const items = e.clipboardData?.items;
+                    if (!items) return;
+
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            e.preventDefault();
+                            const blob = items[i].getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const newContent = { ...editingContent };
+                                const questionItems = newContent.questions || newContent.pairs || newContent.locks;
+                                questionItems[focusedQuestion].image = event.target.result;
+                                setEditingContent(newContent);
+                            };
+                            reader.readAsDataURL(blob);
+                            break;
+                        }
+                    }
+                };
+
+                document.addEventListener('paste', handlePaste);
+                return () => document.removeEventListener('paste', handlePaste);
+            }, [step, focusedQuestion, editingContent]);
+
             // Danh sách 8 games
             const games = [
                 {
@@ -757,35 +786,6 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
             // EDIT - Chỉnh sửa nội dung
             if (step === 'EDIT' && editingContent) {
                 const questions = editingContent.questions || editingContent.pairs || editingContent.locks || [];
-
-                // PASTE IMAGE: Handle Ctrl+V to paste image from clipboard
-                useEffect(() => {
-                    const handlePaste = (e) => {
-                        if (focusedQuestion === null) return;
-
-                        const items = e.clipboardData?.items;
-                        if (!items) return;
-
-                        for (let i = 0; i < items.length; i++) {
-                            if (items[i].type.indexOf('image') !== -1) {
-                                e.preventDefault();
-                                const blob = items[i].getAsFile();
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                    const newContent = { ...editingContent };
-                                    const questionItems = newContent.questions || newContent.pairs || newContent.locks;
-                                    questionItems[focusedQuestion].image = event.target.result;
-                                    setEditingContent(newContent);
-                                };
-                                reader.readAsDataURL(blob);
-                                break;
-                            }
-                        }
-                    };
-
-                    document.addEventListener('paste', handlePaste);
-                    return () => document.removeEventListener('paste', handlePaste);
-                }, [focusedQuestion, editingContent]);
 
                 const handleImageUpload = (qIdx, e) => {
                     const file = e.target.files[0];
