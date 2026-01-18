@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Game 2: Đúng Nhanh Ghi Điểm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse-correct {
+            animation: pulseCorrect 0.5s ease-out;
+        }
+
+        @keyframes pulseCorrect {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-yellow-50 to-orange-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = text
+                    .replace(/`([^`]+)`/g, '$$$1$$')
+                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = "";
+                parts.forEach(part => {
+                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                        catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part.startsWith("$") && part.endsWith("$")) {
+                        const span = document.createElement("span");
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                        catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else {
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const SpeedScoreGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [streak, setStreak] = useState(0);
+            const [timeLeft, setTimeLeft] = useState(20);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [gameOver, setGameOver] = useState(false);
+
+            useEffect(() => {
+                const data = localStorage.getItem('gameData');
+                if (!data) {
+                    alert('Không có dữ liệu game!');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+                setGameData(JSON.parse(data));
+                setTimeLeft(20);
+            }, []);
+
+            useEffect(() => {
+                if (!showAnswer && !gameOver && timeLeft > 0) {
+                    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+                    return () => clearTimeout(timer);
+                } else if (timeLeft === 0 && !showAnswer) {
+                    handleTimeUp();
+                }
+            }, [timeLeft, showAnswer, gameOver]);
+
+            const handleTimeUp = () => {
+                if (selectedAnswer === null) {
+                    setShowAnswer(true);
+                    setStreak(0);
+                    setTimeout(handleNextQuestion, 2000);
+                } else {
+                    handleSubmitAnswer();
+                }
+            };
+
+            const handleSelectAnswer = (idx) => {
+                if (showAnswer) return;
+                setSelectedAnswer(idx);
+            };
+
+            const handleSubmitAnswer = () => {
+                if (selectedAnswer === null) return;
+
+                setShowAnswer(true);
+                const currentQuestion = gameData.content.questions[currentQuestionIndex];
+                const isCorrect = selectedAnswer === currentQuestion.answer;
+
+                if (isCorrect) {
+                    const base = 100;
+                    const timeBonus = Math.floor(base * (timeLeft / 20));
+                    const streakBonus = streak * 10;
+                    const finalPoints = timeBonus + streakBonus;
+
+                    setScore(score + finalPoints);
+                    setStreak(streak + 1);
+                } else {
+                    setStreak(0);
+                }
+
+                setTimeout(handleNextQuestion, 2500);
+            };
+
+            const handleNextQuestion = () => {
+                if (currentQuestionIndex < gameData.content.questions.length - 1) {
+                    setCurrentQuestionIndex(currentQuestionIndex + 1);
+                    setSelectedAnswer(null);
+                    setShowAnswer(false);
+                    setTimeLeft(20);
+                } else {
+                    setGameOver(true);
+                }
+            };
+
+            if (!gameData) return <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Đang tải...</div></div>;
+
+            if (gameOver) {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
+                            <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i className="fas fa-trophy text-5xl text-yellow-500"></i>
+                            </div>
+                            <h2 className="text-4xl font-bold mb-4 text-gray-800">Hoàn thành!</h2>
+                            <div className="text-7xl font-bold text-yellow-600 mb-2">{score}</div>
+                            <div className="text-2xl text-gray-600 mb-8">Tổng điểm</div>
+                            <div className="flex gap-4 justify-center">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
+                                    <i className="fas fa-redo mr-2"></i>Chơi lại
+                                </button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700">
+                                    <i className="fas fa-home mr-2"></i>Về menu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const currentQuestion = gameData.content.questions[currentQuestionIndex];
+
+            return (
+                <div className="max-w-4xl mx-auto p-6 fade-in">
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                            <i className="fas fa-arrow-left mr-2"></i>Thoát
+                        </button>
+
+                        <h1 className="text-3xl font-bold text-orange-700">
+                            <i className="fas fa-bolt mr-2"></i>ĐÚNG NHANH GHI ĐIỂM
+                        </h1>
+
+                        <div className="flex gap-4">
+                            <div className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">
+                                <i className="fas fa-star mr-2"></i>{score}
+                            </div>
+                            <div className="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold">
+                                <i className="fas fa-fire mr-2"></i>{streak}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-4 mb-4 text-center">
+                        <div className="text-sm text-gray-600">Câu {currentQuestionIndex + 1}/{gameData.content.questions.length}</div>
+                        <div className={`text-5xl font-bold ${timeLeft <= 5 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                            {timeLeft}s
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                            <MathText text={currentQuestion.prompt} />
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {currentQuestion.choices.map((choice, idx) => {
+                                const isSelected = selectedAnswer === idx;
+                                const isCorrect = currentQuestion.answer === idx;
+
+                                let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
+
+                                if (showAnswer) {
+                                    if (isCorrect) className += "bg-green-100 border-green-500 text-green-900 pulse-correct";
+                                    else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
+                                    else className += "border-gray-200 opacity-50";
+                                } else {
+                                    if (isSelected) className += "bg-blue-100 border-blue-500";
+                                    else className += "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
+                                }
+
+                                return (
+                                    <button key={idx} onClick={() => handleSelectAnswer(idx)} disabled={showAnswer} className={className}>
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">
+                                                {String.fromCharCode(65 + idx)}
+                                            </span>
+                                            <div className="flex-1 text-left"><MathText text={choice} /></div>
+                                            {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-2xl"></i>}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {!showAnswer && selectedAnswer !== null && (
+                            <button onClick={handleSubmitAnswer} className="w-full mt-6 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700">
+                                <i className="fas fa-check mr-2"></i>Gửi câu trả lời
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<SpeedScoreGame />, document.getElementById('root'));
+    </script>
+</body>
+
+</html>
