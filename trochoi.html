@@ -371,7 +371,7 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
 
         // ============ MAIN APP ============
         const App = () => {
-            const [step, setStep] = useState('SETUP'); // SETUP, GENERATING, REVIEW, PLAYING
+            const [step, setStep] = useState('SETUP'); // SETUP, GENERATING, REVIEW, EDIT, PLAYING
             const [selectedGame, setSelectedGame] = useState(null);
             const [formData, setFormData] = useState({
                 subject: 'Toán',
@@ -382,6 +382,18 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
             });
             const [generatedContent, setGeneratedContent] = useState(null);
             const [loading, setLoading] = useState(false);
+
+            // EDIT screen states - MUST be at top level, not inside conditional!
+            const [editingContent, setEditingContent] = useState(null);
+            const [editingIndex, setEditingIndex] = useState(null);
+            const [focusedQuestion, setFocusedQuestion] = useState(null);
+
+            // Initialize editingContent when entering EDIT mode
+            useEffect(() => {
+                if (step === 'EDIT' && generatedContent && !editingContent) {
+                    setEditingContent(JSON.parse(JSON.stringify(generatedContent)));
+                }
+            }, [step, generatedContent]);
 
             // Check auth
             useEffect(() => {
@@ -743,11 +755,7 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
             }
 
             // EDIT - Chỉnh sửa nội dung
-            if (step === 'EDIT' && generatedContent) {
-                const [editingContent, setEditingContent] = useState(JSON.parse(JSON.stringify(generatedContent)));
-                const [editingIndex, setEditingIndex] = useState(null);
-                const [focusedQuestion, setFocusedQuestion] = useState(null);
-
+            if (step === 'EDIT' && editingContent) {
                 const questions = editingContent.questions || editingContent.pairs || editingContent.locks || [];
 
                 // PASTE IMAGE: Handle Ctrl+V to paste image from clipboard
