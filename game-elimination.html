@@ -272,7 +272,7 @@
                         return;
                     }
 
-                    const defaultModule = localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp';
+                    const defaultModule = localStorage.getItem('default_gemini_module') || 'gemini-1.5-flash';
 
                     // Build prompt
                     const prompt = `Bạn là trợ lý tạo câu hỏi trắc nghiệm.
@@ -283,16 +283,17 @@ Chủ đề: ${aiFormData.topic}
 Số câu: ${aiFormData.numQuestions}
 
 YÊU CẦU:
-- Tạo ${aiFormData.numQuestions} câu hỏi trắc nghiệm 4 đáp án (A, B, C, D)
+- Tạo ${aiFormData.numQuestions} câu hỏi trắc nghiệm 4 đáp án
 - Câu hỏi ngắn gọn, rõ ràng, độ khó ${aiFormData.difficulty}
+- QUAN TRỌNG: Các đáp án KHÔNG được có tiền tố "A.", "B.", "C.", "D." - chỉ ghi nội dung đáp án
 - Nếu có công thức toán/lý/hóa, viết bằng LaTeX trong dấu \\\\( \\\\) hoặc \\\\[ \\\\]
 - Trả về DUY NHẤT JSON đúng schema sau, không thêm chữ nào khác
 
 SCHEMA:
 [
   {
-    "prompt": "Câu hỏi (có thể chứa LaTeX)",
-    "choices": ["A", "B", "C", "D"],
+    "prompt": "Nội dung câu hỏi",
+    "choices": ["Đáp án 1", "Đáp án 2", "Đáp án 3", "Đáp án 4"],
     "answer": 0
   }
 ]
