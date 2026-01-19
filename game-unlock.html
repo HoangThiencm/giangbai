@@ -132,9 +132,16 @@
                         ref.current.appendChild(img);
                     } else {
                         const hasLatexCommand = /\\[a-zA-Z]+[\{_\^]/.test(fragment.content);
+                        // Check if already has $...$ pattern
+                        const hasDollarSigns = /\$[^$]+\$/.test(fragment.content);
+
                         let processed = fragment.content.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
-                        if (hasLatexCommand && !processed.includes('$')) processed = `$${processed}$`;
-                        else if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+
+                        // Auto-wrap if has LaTeX commands or already has $ signs (don't double-wrap)
+                        if (!hasDollarSigns) {
+                            if (hasLatexCommand && !processed.includes('$')) processed = `$${processed}$`;
+                            else if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                        }
 
                         const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
                         parts.forEach(part => {
@@ -326,15 +333,25 @@ JSON format (KHÔNG thêm chữ):
                 try {
                     const result = await GeminiService.generate(aiGenParams);
                     if (result.questions && result.questions.length > 0) {
-                        // Dedupe MCQ choices
+                        // Strip letter prefixes and dedupe MCQ choices
                         const cleanedQuestions = result.questions.map(q => {
                             if (q.type === 'mcq' && q.choices) {
-                                const uniqueChoices = [...new Set(q.choices)];
-                                if (uniqueChoices.length < q.choices.length) {
+                                // Strip "A. ", "B. ", etc.
+                                let cleaned = q.choices.map(ch => {
+                                    if (typeof ch === 'string') {
+                                        return ch.replace(/^[A-D]\.\s*/, '').trim();
+                                    }
+                                    return ch;
+                                });
+                                // Dedupe after stripping
+                                const uniqueChoices = [...new Set(cleaned)];
+                                if (uniqueChoices.length < cleaned.length) {
                                     q.choices = uniqueChoices;
                                     while (q.choices.length < 4) {
                                         q.choices.push(`Đáp án ${q.choices.length + 1}`);
                                     }
+                                } else {
+                                    q.choices = cleaned;
                                 }
                             }
                             return q;
