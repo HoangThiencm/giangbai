@@ -550,9 +550,9 @@
                                                     return (
                                                         <div key={i} onClick={() => handleColumnASelect(i)} className={itemClass}>
                                                             <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${showAns && isCorrect ? 'bg-green-600 text-white' :
-                                                                    showAns && isWrong ? 'bg-red-600 text-white' :
-                                                                        isSelected ? 'bg-blue-600 text-white' :
-                                                                            hasAnswer ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+                                                                showAns && isWrong ? 'bg-red-600 text-white' :
+                                                                    isSelected ? 'bg-blue-600 text-white' :
+                                                                        hasAnswer ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
                                                                 }`}>{i + 1}</span>
                                                             <span className="flex-1 text-lg"><MathText text={item} /></span>
                                                             {showAns && isCorrect && <i className="fas fa-check-circle text-green-600"></i>}
@@ -597,8 +597,8 @@
                                                             className={itemClass}
                                                         >
                                                             <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${showAns && isCorrectMatch ? 'bg-green-600 text-white' :
-                                                                    showAns && isWrongMatch ? 'bg-red-600 text-white' :
-                                                                        isMatched ? 'bg-green-600 text-white' : 'bg-purple-600 text-white'
+                                                                showAns && isWrongMatch ? 'bg-red-600 text-white' :
+                                                                    isMatched ? 'bg-green-600 text-white' : 'bg-purple-600 text-white'
                                                                 }`}>{String.fromCharCode(65 + j)}</span>
                                                             <span className="flex-1 text-lg"><MathText text={item} /></span>
                                                             {isMatched && !showAns && <span className="text-green-600 font-bold text-sm">← {matchingAIndex + 1}</span>}
@@ -1343,13 +1343,20 @@
                                                 <select
                                                     value={topic.quizType}
                                                     onChange={(e) => updateTopic(topic.id, 'quizType', e.target.value)}
-                                                    className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm"
+                                                    disabled={mode === "essay"}
+                                                    className={`w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm ${mode === "essay" ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
                                                 >
                                                     <option value="multiple-choice">🔤 Nhiều lựa chọn</option>
                                                     <option value="true-false">✅ Đúng/Sai</option>
                                                     <option value="fill-blank">📝 Điền khuyết</option>
                                                     <option value="matching">🔗 Nối ô</option>
                                                 </select>
+                                                {mode === "essay" && (
+                                                    <p className="text-xs text-gray-500 mt-1 italic">
+                                                        <i className="fas fa-info-circle mr-1"></i>
+                                                        Chế độ tự luận không cần chọn hình thức
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1433,9 +1440,9 @@
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <h3 className="text-lg font-medium text-slate-800 leading-relaxed flex-1"><MathText text={q.question} /></h3>
                                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${q.type === 'multiple-choice' ? 'bg-blue-100 text-blue-700' :
-                                                                q.type === 'true-false' ? 'bg-green-100 text-green-700' :
-                                                                    q.type === 'fill-blank' ? 'bg-yellow-100 text-yellow-700' :
-                                                                        'bg-purple-100 text-purple-700'
+                                                            q.type === 'true-false' ? 'bg-green-100 text-green-700' :
+                                                                q.type === 'fill-blank' ? 'bg-yellow-100 text-yellow-700' :
+                                                                    'bg-purple-100 text-purple-700'
                                                             }`}>
                                                             {q.type === 'multiple-choice' ? '🔤 Nhiều lựa chọn' :
                                                                 q.type === 'true-false' ? '✅ Đúng/Sai' :
