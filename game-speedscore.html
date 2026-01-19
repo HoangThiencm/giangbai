@@ -278,6 +278,7 @@ LƯU Ý:
             // Screen states
             const [currentScreen, setCurrentScreen] = useState('SETUP'); // SETUP, AI_GEN, MANUAL, QUESTION_LIST, GAME, GAME_OVER
             const [questions, setQuestions] = useState([]);
+            const [showInstructions, setShowInstructions] = useState(true); // Show instructions on load
 
             // AI Generation states
             const [aiGenParams, setAiGenParams] = useState({
@@ -673,6 +674,127 @@ LƯU Ý:
             if (currentScreen === 'SETUP') {
                 return (
                     <div className="max-w-4xl mx-auto p-6 fade-in">
+                        {/* Instructions Modal */}
+                        {showInstructions && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-3xl font-bold text-orange-700">
+                                            <i className="fas fa-bolt mr-3"></i>ĐÚNG NHANH GHI ĐIỂM
+                                        </h2>
+                                        <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
+                                            <i className="fas fa-times text-2xl"></i>
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4 text-gray-700">
+                                        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
+                                            <h3 className="font-bold text-lg text-orange-800 mb-2">
+                                                <i className="fas fa-bullseye mr-2"></i>Mục tiêu
+                                            </h3>
+                                            <p>Game khởi động, tạo không khí vui vẻ! Thi đua với AI để ghi điểm cao nhất. <strong>KHÔNG loại ai</strong>!</p>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-800 mb-2">
+                                                <i className="fas fa-gamepad mr-2"></i>Luật chơi
+                                            </h3>
+                                            <ul className="space-y-2 ml-6">
+                                                <li className="flex items-start gap-2">
+                                                    <span className="text-orange-600 font-bold">1.</span>
+                                                    <span>Mỗi câu có <strong>20 giây</strong> để trả lời (nhanh hơn game 1)</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="text-orange-600 font-bold">2.</span>
+                                                    <span>3 dạng câu hỏi: <strong>Trắc nghiệm</strong>, <strong>Kéo thả</strong> (sắp xếp), <strong>Nối ô</strong> (ghép cặp)</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="text-orange-600 font-bold">3.</span>
+                                                    <span>Đúng sớm → <strong className="text-green-600">Nhiều điểm hơn!</strong></span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="text-orange-600 font-bold">4.</span>
+                                                    <span>Sai → 0 điểm nhưng <strong>VẪN CHƠI TIẾP</strong> (không bị loại)</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="text-orange-600 font-bold">5.</span>
+                                                    <span>Thi đấu với <strong>4 AI</strong> trên bảng xếp hạng TOP 5 realtime</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-800 mb-2">
+                                                <i className="fas fa-fire mr-2"></i>Hệ thống Combo & Power-ups
+                                            </h3>
+                                            <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-3 mb-3">
+                                                <p className="font-bold text-orange-700 mb-2">🔥 Combo Multiplier:</p>
+                                                <ul className="text-sm space-y-1 ml-4">
+                                                    <li>• 3 câu đúng liên tiếp: <strong>x1.5 điểm</strong></li>
+                                                    <li>• 5 câu đúng liên tiếp: <strong>x2 điểm</strong></li>
+                                                    <li>• 7+ câu đúng liên tiếp: <strong>x3 điểm</strong> ✨</li>
+                                                </ul>
+                                            </div>
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                <p className="font-bold text-blue-700 mb-2">⚡ Power-ups ngẫu nhiên:</p>
+                                                <ul className="text-sm space-y-1 ml-4">
+                                                    <li>• <strong>⚡ Double Points</strong>: Điểm x2 cho câu này</li>
+                                                    <li>• <strong>🎯 Streak Saver</strong>: Giữ combo khi sai</li>
+                                                    <li>• <strong>⏰ Time Bonus</strong>: +5 giây thời gian</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-800 mb-2">
+                                                <i className="fas fa-calculator mr-2"></i>Tính điểm
+                                            </h3>
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                <p><strong>Điểm cơ bản = 100 × (Thời gian còn / 20)</strong></p>
+                                                <p className="text-sm mt-2">VD: Đúng lúc 15s còn → 75 điểm</p>
+                                                <p className="text-sm mt-1"><strong>Combo x2:</strong> 75 × 2 = 150 điểm!</p>
+                                                <p className="text-sm mt-1"><strong>Power-up 2x:</strong> 75 × 2 × 2 = 300 điểm!!</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                                            <h3 className="font-bold text-lg text-green-800 mb-3">
+                                                <i className="fas fa-chalkboard-teacher mr-2"></i>Cách tổ chức lớp
+                                            </h3>
+                                            <div className="space-y-3 text-sm">
+                                                <div>
+                                                    <div className="font-bold text-green-700 mb-1">👥 Chế độ 1: Cá nhân</div>
+                                                    <p className="text-gray-700 ml-4">Mỗi học sinh chơi riêng, xem ai đạt điểm cao nhất để thưởng</p>
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-green-700 mb-1">👥 Chế độ 2: Đội nhóm</div>
+                                                    <p className="text-gray-700 ml-4">Chia lớp thành nhóm, cộng điểm cho nhóm, nhóm cao nhất thắng</p>
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-green-700 mb-1">👥 Chế độ 3: Cả lớp</div>
+                                                    <p className="text-gray-700 ml-4">Mỗi em có giấy viết A/B/C/D, giơ cao, GV chấm điểm cho từng em</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                            <p className="text-sm">
+                                                <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                                                <strong>Mẹo:</strong> Giữ combo cao để nhân điểm! Trả lời nhanh để có điểm cơ bản cao!
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setShowInstructions(false)}
+                                        className="w-full mt-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
+                                    >
+                                        <i className="fas fa-play mr-2"></i>Bắt đầu tạo game
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-center mb-8">
                             <button
                                 onClick={() => window.location.href = 'index.html'}
@@ -683,7 +805,13 @@ LƯU Ý:
                             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600">
                                 <i className="fas fa-bolt mr-2"></i>GAME SPEED SCORE
                             </h1>
-                            <div></div>
+                            <button
+                                onClick={() => setShowInstructions(true)}
+                                className="w-10 h-10 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"
+                                title="Xem hướng dẫn"
+                            >
+                                <i className="fas fa-question"></i>
+                            </button>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -783,14 +911,20 @@ LƯU Ý:
                                             onChange={(e) => setAiGenParams({ ...aiGenParams, subject: e.target.value })}
                                             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
                                         >
-                                            <option>Toán</option>
-                                            <option>Lý</option>
-                                            <option>Hóa</option>
-                                            <option>Sinh</option>
-                                            <option>Văn</option>
-                                            <option>Anh</option>
-                                            <option>Sử</option>
-                                            <option>Địa</option>
+                                            <option>Toán học</option>
+                                            <option>Vật lý</option>
+                                            <option>Hóa học</option>
+                                            <option>Sinh học</option>
+                                            <option>Ngữ văn</option>
+                                            <option>Tiếng Anh</option>
+                                            <option>Lịch sử</option>
+                                            <option>Địa lý</option>
+                                            <option>GDCD</option>
+                                            <option>Tin học</option>
+                                            <option>Công nghệ</option>
+                                            <option>Âm nhạc</option>
+                                            <option>Mỹ thuật</option>
+                                            <option>Thể dục</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1127,8 +1261,8 @@ LƯU Ý:
                                             <div>
                                                 <div className="flex gap-2 mb-2">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${q.type === 'mcq' ? 'bg-blue-100 text-blue-700' :
-                                                            q.type === 'drag-drop' ? 'bg-purple-100 text-purple-700' :
-                                                                'bg-green-100 text-green-700'
+                                                        q.type === 'drag-drop' ? 'bg-purple-100 text-purple-700' :
+                                                            'bg-green-100 text-green-700'
                                                         }`}>
                                                         {q.type === 'mcq' ? 'Trắc nghiệm' :
                                                             q.type === 'drag-drop' ? 'Kéo thả' : 'Nối ô'}
@@ -1271,7 +1405,7 @@ LƯU Ý:
                                     </div>
                                     {currentQ.powerUp && (
                                         <div className={`px-4 py-2 rounded-lg font-bold text-white ${currentQ.powerUp === 'double' ? 'bg-yellow-500' :
-                                                currentQ.powerUp === 'streakSaver' ? 'bg-blue-500' : 'bg-purple-500'
+                                            currentQ.powerUp === 'streakSaver' ? 'bg-blue-500' : 'bg-purple-500'
                                             }`}>
                                             {currentQ.powerUp === 'double' ? '⚡ 2X ĐIỂM' :
                                                 currentQ.powerUp === 'streakSaver' ? '🎯 STREAK SAVER' : '⏰ +5s'}
@@ -1357,7 +1491,7 @@ LƯU Ý:
                                             <p className="text-gray-600 mb-4">Thứ tự đúng:</p>
                                             {currentQ.items.map((item, idx) => (
                                                 <div key={idx} className={`p-4 rounded-xl flex items-center gap-3 ${JSON.stringify(draggedItems) === JSON.stringify(currentQ.items) ?
-                                                        'bg-green-100 border-2 border-green-500' : 'bg-gray-100'
+                                                    'bg-green-100 border-2 border-green-500' : 'bg-gray-100'
                                                     }`}>
                                                     <span className="font-bold">{idx + 1}.</span>
                                                     <span>{item}</span>
@@ -1429,11 +1563,11 @@ LƯU Ý:
                     <div className="max-w-4xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
                             <div className={`w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6 ${playerRank === 1 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
-                                    playerRank <= 3 ? 'bg-gradient-to-br from-blue-400 to-purple-500' :
-                                        'bg-gradient-to-br from-gray-400 to-gray-500'
+                                playerRank <= 3 ? 'bg-gradient-to-br from-blue-400 to-purple-500' :
+                                    'bg-gradient-to-br from-gray-400 to-gray-500'
                                 }`}>
                                 <i className={`text-6xl text-white ${playerRank === 1 ? 'fas fa-trophy' :
-                                        playerRank <= 3 ? 'fas fa-medal' : 'fas fa-flag-checkered'
+                                    playerRank <= 3 ? 'fas fa-medal' : 'fas fa-flag-checkered'
                                     }`}></i>
                             </div>
 
