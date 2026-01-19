@@ -117,31 +117,65 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Math Renderer
+        // Math Renderer - Hỗ trợ cả ảnh markdown
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = text
-                    .replace(/`([^`]+)`/g, '$$$1$$')
-                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
-                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
-                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
-                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
                 ref.current.innerHTML = "";
-                parts.forEach(part => {
-                    if (part.startsWith('$$') && part.endsWith('$$')) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
-                        catch { span.textContent = part; }
-                        ref.current.appendChild(span);
-                    } else if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
-                        catch { span.textContent = part; }
-                        ref.current.appendChild(span);
+
+                // Tách text thành các phần: ảnh markdown và phần còn lại
+                const imgPattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+                let lastIndex = 0;
+                let match;
+                const fragments = [];
+
+                while ((match = imgPattern.exec(text)) !== null) {
+                    // Phần text trước ảnh
+                    if (match.index > lastIndex) {
+                        fragments.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+                    }
+                    // Ảnh markdown
+                    fragments.push({ type: 'image', alt: match[1], src: match[2] });
+                    lastIndex = match.index + match[0].length;
+                }
+                // Phần text còn lại sau ảnh cuối
+                if (lastIndex < text.length) {
+                    fragments.push({ type: 'text', content: text.substring(lastIndex) });
+                }
+
+                // Render từng fragment
+                fragments.forEach(fragment => {
+                    if (fragment.type === 'image') {
+                        const img = document.createElement('img');
+                        img.src = fragment.src;
+                        img.alt = fragment.alt || 'Hình minh họa';
+                        img.className = 'max-h-48 rounded-lg my-2 border border-gray-200 shadow-sm inline-block';
+                        ref.current.appendChild(img);
                     } else {
-                        ref.current.appendChild(document.createTextNode(part));
+                        // Xử lý text với công thức toán
+                        let processed = fragment.content
+                            .replace(/`([^`]+)`/g, '$$$1$$')
+                            .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                            .replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                        if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                        const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
+
+                        parts.forEach(part => {
+                            if (part.startsWith('$$') && part.endsWith('$$')) {
+                                const span = document.createElement("span");
+                                try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                                catch { span.textContent = part; }
+                                ref.current.appendChild(span);
+                            } else if (part.startsWith("$") && part.endsWith("$")) {
+                                const span = document.createElement("span");
+                                try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                                catch { span.textContent = part; }
+                                ref.current.appendChild(span);
+                            } else if (part.trim()) {
+                                ref.current.appendChild(document.createTextNode(part));
+                            }
+                        });
                     }
                 });
             }, [text]);
@@ -732,6 +766,39 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none"
                                                 rows="3"
                                             />
+                                            {/* Preview hình ảnh đã dán */}
+                                            {editingQuestion.prompt && editingQuestion.prompt.includes('![') && (
+                                                <div className="mt-3 p-3 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                                                    <div className="text-sm font-bold text-gray-600 mb-2">
+                                                        <i className="fas fa-image mr-2"></i>Hình ảnh đính kèm:
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {editingQuestion.prompt.match(/!\[.*?\]\((data:image\/[^)]+)\)/g)?.map((match, idx) => {
+                                                            const src = match.match(/\((data:image\/[^)]+)\)/)?.[1];
+                                                            return src ? (
+                                                                <div key={idx} className="relative group">
+                                                                    <img
+                                                                        src={src}
+                                                                        alt={`Hình ${idx + 1}`}
+                                                                        className="max-h-32 rounded-lg border-2 border-gray-200 shadow-sm"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const newPrompt = editingQuestion.prompt.replace(match, '');
+                                                                            setEditingQuestion({ ...editingQuestion, prompt: newPrompt.trim() });
+                                                                        }}
+                                                                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
+                                                                        title="Xóa ảnh"
+                                                                    >
+                                                                        <i className="fas fa-times"></i>
+                                                                    </button>
+                                                                </div>
+                                                            ) : null;
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -931,6 +998,33 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                                                 rows="3"
                                                                 placeholder="Nhập câu hỏi... (Ctrl+V để dán ảnh)"
                                                             />
+                                                            {/* Preview hình ảnh khi chỉnh sửa */}
+                                                            {editingQuestion.prompt && editingQuestion.prompt.includes('![') && (
+                                                                <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                                                                    <div className="text-xs font-bold text-gray-500 mb-1">
+                                                                        <i className="fas fa-image mr-1"></i>Hình ảnh:
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {editingQuestion.prompt.match(/!\[.*?\]\((data:image\/[^)]+)\)/g)?.map((match, imgIdx) => {
+                                                                            const src = match.match(/\((data:image\/[^)]+)\)/)?.[1];
+                                                                            return src ? (
+                                                                                <div key={imgIdx} className="relative group">
+                                                                                    <img src={src} alt={`Hình ${imgIdx + 1}`} className="max-h-20 rounded border border-gray-200" />
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            const newPrompt = editingQuestion.prompt.replace(match, '');
+                                                                                            setEditingQuestion({ ...editingQuestion, prompt: newPrompt.trim() });
+                                                                                        }}
+                                                                                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition"
+                                                                                        title="Xóa ảnh"
+                                                                                    >×</button>
+                                                                                </div>
+                                                                            ) : null;
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-2">
                                                             {editingQuestion.choices.map((choice, cIdx) => (
