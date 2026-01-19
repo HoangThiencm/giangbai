@@ -546,7 +546,22 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                     </div>
                                 )}
                                 <div className="flex gap-3 pt-4">
-                                    <button onClick={handleAddQuestion} className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl"><i className="fas fa-plus mr-2"></i>Thêm câu hỏi</button>
+                                    <button onClick={() => {
+                                        if (!editingQuestion.prompt.trim()) { alert('Vui lòng nhập câu hỏi!'); return; }
+                                        if (editingQuestion.id) {
+                                            // Edit mode: update existing question
+                                            const updated = questions.map(q => q.id === editingQuestion.id ? editingQuestion : q);
+                                            setQuestions(updated);
+                                        } else {
+                                            // Add mode: create new question
+                                            const newQ = { ...editingQuestion, id: `q${questions.length + 1}` };
+                                            setQuestions([...questions, newQ]);
+                                        }
+                                        setEditingQuestion({ type: 'mcq', prompt: '', choices: ['', '', '', ''], answer: 0, items: ['', '', ''], leftItems: ['', ''], rightItems: ['', ''], powerUp: null });
+                                        setCurrentScreen('QUESTION_LIST');
+                                    }} className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl">
+                                        <i className={`fas ${editingQuestion.id ? 'fa-save' : 'fa-plus'} mr-2`}></i>{editingQuestion.id ? 'Cập nhật' : 'Thêm câu hỏi'}
+                                    </button>
                                     <button onClick={() => setCurrentScreen('SETUP')} className="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
                                 </div>
                                 {questions.length > 0 && (
@@ -584,7 +599,10 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                                 </div>
                                                 <div className="text-gray-800"><MathText text={q.prompt} /></div>
                                             </div>
-                                            <button onClick={() => { if (confirm('Xóa câu này?')) setQuestions(questions.filter((_, i) => i !== idx)); }} className="ml-4 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"><i className="fas fa-trash"></i></button>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => { setEditingQuestion(q); setCurrentScreen('MANUAL'); }} className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"><i className="fas fa-edit"></i></button>
+                                                <button onClick={() => { if (confirm('Xóa câu này?')) setQuestions(questions.filter((_, i) => i !== idx)); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"><i className="fas fa-trash"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -655,7 +673,7 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-3">
                                         {currentQ.leftItems.map((item, idx) => (
-                                            <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (!existing) setMatchingPairs([...matchingPairs, [idx, null]]); } }} className="p-4 rounded-xl border-2 bg-blue-50 border-blue-300 cursor-pointer hover:border-blue-500 transition"><Math Text text={item} /></div>
+                                            <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (!existing) setMatchingPairs([...matchingPairs, [idx, null]]); } }} className="p-4 rounded-xl border-2 bg-blue-50 border-blue-300 cursor-pointer hover:border-blue-500 transition"><MathText text={item} /></div>
                                         ))}
                                     </div>
                                     <div className="space-y-3">
