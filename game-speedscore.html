@@ -670,17 +670,58 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                 </div>
                             )}
                             {currentQ.type === 'matching' && (
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-3">
-                                        {currentQ.leftItems.map((item, idx) => (
-                                            <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (!existing) setMatchingPairs([...matchingPairs, [idx, null]]); } }} className="p-4 rounded-xl border-2 bg-blue-50 border-blue-300 cursor-pointer hover:border-blue-500 transition"><MathText text={item} /></div>
-                                        ))}
+                                <div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            {currentQ.leftItems.map((item, idx) => {
+                                                const pair = matchingPairs.find(p => p[0] === idx);
+                                                const pairNumber = pair ? matchingPairs.indexOf(pair) + 1 : null;
+                                                const isCorrect = showAnswer && pair && currentQ.correctPairs && currentQ.correctPairs[idx] && currentQ.correctPairs[idx][1] === pair[1];
+                                                return (
+                                                    <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (!existing) setMatchingPairs([...matchingPairs, [idx, null]]); } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
+                                                            ? (isCorrect ? 'bg-green-100 border-green-500' : pair ? 'bg-red-100 border-red-500' : 'bg-gray-100 border-gray-300')
+                                                            : (pair ? 'bg-blue-100 border-blue-500' : 'bg-blue-50 border-blue-300 hover:border-blue-500')
+                                                        }`}>
+                                                        {pairNumber && (
+                                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                                                {pairNumber}
+                                                            </div>
+                                                        )}
+                                                        <MathText text={item} />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="space-y-3">
+                                            {currentQ.rightItems.map((item, idx) => {
+                                                const pair = matchingPairs.find(p => p[1] === idx);
+                                                const pairNumber = pair ? matchingPairs.indexOf(pair) + 1 : null;
+                                                const leftIdx = pair ? pair[0] : null;
+                                                const isCorrect = showAnswer && pair && currentQ.correctPairs && currentQ.correctPairs[leftIdx] && currentQ.correctPairs[leftIdx][1] === idx;
+                                                return (
+                                                    <div key={idx} onClick={() => { if (!showAnswer) { const incomplete = matchingPairs.find(p => p[1] === null); if (incomplete) { const updated = matchingPairs.map(p => p === incomplete ? [p[0], idx] : p); setMatchingPairs(updated); } } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
+                                                            ? (isCorrect ? 'bg-green-100 border-green-500' : pair ? 'bg-red-100 border-red-500' : 'bg-gray-100 border-gray-300')
+                                                            : (pair ? 'bg-green-100 border-green-500' : 'bg-green-50 border-green-300 hover:border-green-500')
+                                                        }`}>
+                                                        {pairNumber && (
+                                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                                                {pairNumber}
+                                                            </div>
+                                                        )}
+                                                        <MathText text={item} />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        {currentQ.rightItems.map((item, idx) => (
-                                            <div key={idx} onClick={() => { if (!showAnswer) { const incomplete = matchingPairs.find(p => p[1] === null); if (incomplete) { const updated = matchingPairs.map(p => p === incomplete ? [p[0], idx] : p); setMatchingPairs(updated); } } }} className="p-4 rounded-xl border-2 bg-green-50 border-green-300 cursor-pointer hover:border-green-500 transition"><MathText text={item} /></div>
-                                        ))}
-                                    </div>
+                                    {!showAnswer && matchingPairs.length > 0 && (
+                                        <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-xl">
+                                            <p className="text-sm font-bold text-blue-800">
+                                                <i className="fas fa-info-circle mr-2"></i>
+                                                Đã nối {matchingPairs.filter(p => p[1] !== null).length}/{currentQ.leftItems.length} cặp
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {!showAnswer && <button onClick={handleRevealAnswer} className="w-full mt-6 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold text-lg hover:shadow-xl"><i className="fas fa-check mr-2"></i>Trả lời</button>}
