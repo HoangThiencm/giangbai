@@ -116,7 +116,9 @@
                         ref.current.appendChild(img);
                     } else {
                         let processed = fragment.content.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
-                        if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                        // Auto-wrap if contains LaTeX commands like \text{}, \frac{}, etc.
+                        if (/\\[a-zA-Z]+(\{|_|\^)/.test(processed) && !processed.includes('$')) processed = `$${processed}$`;
+                        else if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
                         const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
                         parts.forEach(part => {
                             if (!part) return;
