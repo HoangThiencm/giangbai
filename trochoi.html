@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Game Giáo Dục</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-card {
+            transition: all 0.3s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 min-h-screen font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ============ CONTENT SERVICE ============
+        const ContentService = {
+            // Lấy API keys và module từ localStorage
+            getApiKeys: () => {
+                const keys = localStorage.getItem('global_gemini_keys');
+                return keys ? JSON.parse(keys) : [];
+            },
+
+            getDefaultModule: () => {
+                return localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+            },
+
+            // Generate content từ Gemini
+            generate: async (gameType, params) => {
+                const { subject, gradeMax, topic, difficulty, numQuestions } = params;
+
+                // Build prompt theo game type
+                const prompt = ContentService.buildPrompt(gameType, params);
+
+                // Call Gemini API
+                const apiKeys = ContentService.getApiKeys();
+                if (!apiKeys.length) throw new Error("Chưa có API Keys! Vui lòng cấu hình trong trang chủ.");
+
+                const defaultModule = ContentService.getDefaultModule();
+                let finalError = "";
+                const shuffledKeys = [...apiKeys].sort(() => Math.random() - 0.5);
+
+                for (let i = 0; i < shuffledKeys.length; i++) {
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${defaultModule}:generateContent?key=${shuffledKeys[i]}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+
+                        const data = await res.json();
+                        if (data.error) throw new Error(data.error.message);
+
+                        const text = data.candidates[0].content.parts[0].text;
+
+                        // Parse JSON từ response
+                        const content = ContentService.parseJSON(text);
+
+                        // Validate
+                        const validated = ContentService.validate(content, gameType, gradeMax);
+
+                        return validated;
+
+                    } catch (e) {
+                        finalError = e.message;
+                        console.error(`Key ${i + 1} lỗi:`, e.message);
+                    }
+                }
+                throw new Error(`Tất cả keys đều lỗi: ${finalError}`);
+            },
+
+            // Build prompt cho từng game type
+            buildPrompt: (gameType, params) => {
+                const { subject, gradeMax, topic, difficulty, numQuestions } = params;
+
+                const basePrompt = `Bạn là trợ lý tạo nội dung trò chơi học tập.
+Môn: ${subject}
+Chủ đề: ${topic}
+Giới hạn kiến thức: KHÔNG vượt quá chương trình lớp ${gradeMax} (không dùng kiến thức lớp cao hơn).
+Độ khó: ${difficulty}
+Số câu: ${numQuestions}
+
+YÊU CẦU:
+- Câu ngắn gọn, rõ ràng, không đánh đố
+- Nếu có công thức toán/lý/hóa, viết bằng LaTeX trong dấu \\( \\) hoặc \\[ \\]
+- Trả về DUY NHẤT JSON đúng schema, không thêm chữ nào khác
+
+`;
+
+                let schema = '';
+
+                switch (gameType) {
+                    case 'elimination':
+                    case 'speedscore':
+                        schema = `SCHEMA:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "mcq",
+      "prompt": "Câu hỏi (có thể chứa LaTeX)",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "explanation": "Giải thích ngắn"
+    }
+  ]
+}`;
+                        break;
+
+                    case 'unlock':
+                        schema = `SCHEMA:
+{
+  "questions": [
+    {
+      "id": "lock1",
+      "type": "mcq",
+      "prompt": "Câu hỏi trọng tâm",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "hint": "Gợi ý nếu sai",
+      "explanation": "Giải thích"
+    }
+  ]
+}`;
+                        break;
+
+                    case 'tower':
+                        schema = `SCHEMA:
+{
+  "questions": [
+    {
+      "id": "level1",
+      "level": 1,
+      "type": "mcq",
+      "prompt": "Câu hỏi",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "explanation": "Giải thích"
+    }
+  ]
+}
+Level 1-3: dễ, 4-7: vừa, 8-10: khó`;
+                        break;
+
+                    case 'matching':
+                        schema = `SCHEMA:
+{
+  "pairs": [
+    {
+      "id": 1,
+      "left": "Khái niệm/công thức",
+      "right": "Định nghĩa/tên",
+      "explanation": "Giải thích"
+    }
+  ]
+}`;
+                        break;
+
+                    case 'treasure':
+                        schema = `SCHEMA:
+{
+  "gridSize": 3,
+  "questions": [
+    {
+      "id": "cell1",
+      "cellType": "normal",
+      "type": "mcq",
+      "prompt": "Câu hỏi",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "points": 10
+    }
+  ]
+}
+cellType: normal (70%), bonus (15%), trap (15%)`;
+                        break;
+
+                    case 'escape':
+                        schema = `SCHEMA:
+{
+  "locks": [
+    {
+      "id": "lock1",
+      "type": "mcq",
+      "prompt": "Câu hỏi khóa",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "hint1": "Gợi ý 1",
+      "hint2": "Gợi ý 2",
+      "codeChar": "A"
+    }
+  ],
+  "finalCode": "Mã cuối cùng ghép từ codeChar"
+}`;
+                        break;
+
+                    case 'teambattle':
+                        schema = `SCHEMA:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "mcq",
+      "prompt": "Câu hỏi",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "value": 10,
+      "isSpecial": false
+    }
+  ]
+}
+value: 10/20/30, isSpecial: true cho câu đặc biệt`;
+                        break;
+                }
+
+                return basePrompt + schema;
+            },
+
+            // Parse JSON từ text
+            parseJSON: (text) => {
+                // Tìm JSON trong response
+                let jsonStr = text;
+
+                // Xóa markdown code block
+                jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+
+                // Tìm object/array
+                const startIdx = Math.min(
+                    jsonStr.indexOf('{') >= 0 ? jsonStr.indexOf('{') : Infinity,
+                    jsonStr.indexOf('[') >= 0 ? jsonStr.indexOf('[') : Infinity
+                );
+                const endIdx = Math.max(
+                    jsonStr.lastIndexOf('}'),
+                    jsonStr.lastIndexOf(']')
+                );
+
+                if (startIdx !== Infinity && endIdx >= 0) {
+                    jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+                }
+
+                // CRITICAL FIX: Xử lý backslash trong LaTeX
+                // LaTeX dùng \frac, \sqrt, etc. nhưng JSON cần \\frac, \\sqrt
+                // Ta cần escape các backslash TRƯỚC khi parse
+                try {
+                    // Thử parse trực tiếp trước
+                    return JSON.parse(jsonStr);
+                } catch (e) {
+                    // Nếu lỗi, có thể do backslash chưa escape
+                    // Tìm tất cả string trong JSON và escape backslash
+                    const fixed = jsonStr.replace(/"([^"]*)"/g, (match, str) => {
+                        // Escape backslash trong string
+                        const escaped = str.replace(/\\/g, '\\\\');
+                        return `"${escaped}"`;
+                    });
+
+                    try {
+                        return JSON.parse(fixed);
+                    } catch (e2) {
+                        // Nếu vẫn lỗi, báo lỗi gốc
+                        console.error("JSON parse error:", e2.message);
+                        console.error("Original JSON:", jsonStr);
+                        console.error("Fixed JSON:", fixed);
+                        throw new Error(`Không thể parse JSON: ${e2.message}`);
+                    }
+                }
+            },
+
+            // Validate content
+            validate: (content, gameType, gradeMax) => {
+                // TODO: Thêm validation "khóa lớp" - check từ khóa nâng cao
+                // Ví dụ: nếu gradeMax < 11, không được có "đạo hàm", "tích phân"
+
+                const prohibitedKeywords = {
+                    9: ['đạo hàm', 'tích phân', 'lượng giác nâng cao'],
+                    10: ['tích phân', 'phương trình vi phân'],
+                    11: ['phương trình vi phân']
+                };
+
+                // Simple validation
+                if (!content || (!content.questions && !content.pairs && !content.locks)) {
+                    throw new Error('Invalid content structure');
+                }
+
+                return content;
+            }
+        };
+
+        // ============ MATH RENDERER ============
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+
+            useEffect(() => {
+                if (!text || !ref.current) return;
+
+                let processed = text
+                    .replace(/`([^`]+)`/g, '$$$1$$')
+                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
+
+                if (processed.includes('\\') && !processed.includes('$')) {
+                    processed = `$${processed}$`;
+                }
+
+                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = "";
+
+                parts.forEach(part => {
+                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                        const span = document.createElement("span");
+                        try {
+                            katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true });
+                        } catch {
+                            span.textContent = part;
+                        }
+                        ref.current.appendChild(span);
+                    } else if (part.startsWith("$") && part.endsWith("$")) {
+                        const span = document.createElement("span");
+                        try {
+                            katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
+                        } catch {
+                            span.textContent = part;
+                        }
+                        ref.current.appendChild(span);
+                    } else {
+                        ref.current.appendChild(document.createTextNode(part));
+                    }
+                });
+            }, [text]);
+
+            return <span ref={ref} />;
+        };
+
+        // ============ MAIN APP ============
+        const App = () => {
+            const [step, setStep] = useState('SETUP'); // SETUP, GENERATING, REVIEW, EDIT, PLAYING
+            const [selectedGame, setSelectedGame] = useState(null);
+            const [formData, setFormData] = useState({
+                subject: 'Toán',
+                gradeMax: 9,
+                topic: '',
+                difficulty: 'Vừa',
+                numQuestions: 10
+            });
+            const [generatedContent, setGeneratedContent] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            // EDIT screen states - MUST be at top level, not inside conditional!
+            const [editingContent, setEditingContent] = useState(null);
+            const [editingIndex, setEditingIndex] = useState(null);
+            const [focusedQuestion, setFocusedQuestion] = useState(null);
+
+            // Initialize editingContent when entering EDIT mode
+            useEffect(() => {
+                if (step === 'EDIT' && generatedContent && !editingContent) {
+                    setEditingContent(JSON.parse(JSON.stringify(generatedContent)));
+                }
+            }, [step, generatedContent]);
+
+            // Check auth
+            useEffect(() => {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    alert("Bạn chưa đăng nhập! Hệ thống sẽ chuyển về trang đăng nhập.");
+                    window.location.href = 'login.html';
+                }
+            }, []);
+
+            // PASTE IMAGE: Handle Ctrl+V to paste image from clipboard
+            useEffect(() => {
+                if (step !== 'EDIT' || focusedQuestion === null || !editingContent) return;
+
+                const handlePaste = (e) => {
+                    const items = e.clipboardData?.items;
+                    if (!items) return;
+
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            e.preventDefault();
+                            const blob = items[i].getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const newContent = { ...editingContent };
+                                const questionItems = newContent.questions || newContent.pairs || newContent.locks;
+                                questionItems[focusedQuestion].image = event.target.result;
+                                setEditingContent(newContent);
+                            };
+                            reader.readAsDataURL(blob);
+                            break;
+                        }
+                    }
+                };
+
+                document.addEventListener('paste', handlePaste);
+                return () => document.removeEventListener('paste', handlePaste);
+            }, [step, focusedQuestion, editingContent]);
+
+            // Danh sách 8 games
+            const games = [
+                {
+                    id: 'elimination',
+                    name: 'Loại Trực Tiếp',
+                    icon: 'fa-user-slash',
+                    color: 'from-red-400 to-pink-500',
+                    purpose: 'Kiểm tra bài cũ',
+                    description: 'Trả lời sai → bị loại. Ai trụ lại cuối cùng?',
+                    suitable: 'Kiểm tra nhanh, tạo áp lực nhẹ'
+                },
+                {
+                    id: 'speedscore',
+                    name: 'Đúng Nhanh Ghi Điểm',
+                    icon: 'fa-bolt',
+                    color: 'from-yellow-400 to-orange-500',
+                    purpose: 'Khởi động',
+                    description: 'Trả lời đúng sớm → nhiều điểm hơn!',
+                    suitable: 'Khởi động bài, không loại ai'
+                },
+                {
+                    id: 'unlock',
+                    name: 'Mở Khóa Kiến Thức',
+                    icon: 'fa-unlock',
+                    color: 'from-blue-400 to-cyan-500',
+                    purpose: 'Dẫn vào bài mới',
+                    description: 'Mỗi câu đúng mở 1 ổ khóa. Mở đủ → vào bài!',
+                    suitable: 'Giới thiệu bài mới'
+                },
+                {
+                    id: 'tower',
+                    name: 'Leo Tháp Kiến Thức',
+                    icon: 'fa-chess-rook',
+                    color: 'from-purple-400 to-indigo-500',
+                    purpose: 'Luyện tập tăng dần',
+                    description: 'Đúng → lên tầng. Sai → tụt xuống. Lên đỉnh!',
+                    suitable: 'Luyện tập từ dễ đến khó'
+                },
+                {
+                    id: 'matching',
+                    name: 'Giải Mã Ghép Đúng',
+                    icon: 'fa-puzzle-piece',
+                    color: 'from-green-400 to-emerald-500',
+                    purpose: 'Củng cố',
+                    description: 'Ghép khái niệm với định nghĩa, công thức với tên',
+                    suitable: 'Củng cố khái niệm'
+                },
+                {
+                    id: 'treasure',
+                    name: 'Truy Tìm Kho Báu',
+                    icon: 'fa-gem',
+                    color: 'from-pink-400 to-rose-500',
+                    purpose: 'Ôn tập cuối bài',
+                    description: 'Chọn ô trên bản đồ. Có bonus, trap, steal!',
+                    suitable: 'Ôn tập + may mắn'
+                },
+                {
+                    id: 'escape',
+                    name: 'Escape Room',
+                    icon: 'fa-door-open',
+                    color: 'from-indigo-400 to-purple-600',
+                    purpose: 'Ôn tập đỉnh cao',
+                    description: 'Giải 5-8 khóa liên tiếp. Có gợi ý + mật mã',
+                    suitable: 'Ôn tập theo nhóm'
+                },
+                {
+                    id: 'teambattle',
+                    name: 'Đấu Đội Chiếm Điểm',
+                    icon: 'fa-users',
+                    color: 'from-orange-400 to-red-500',
+                    purpose: 'Tổng kết',
+                    description: '2-4 đội tranh tài. Đúng chiếm điểm, sai mất điểm',
+                    suitable: 'Tổng kết bài học'
+                }
+            ];
+
+            const handleGenerateContent = async () => {
+                if (!formData.topic.trim()) {
+                    alert('Vui lòng nhập chủ đề!');
+                    return;
+                }
+
+                setLoading(true);
+                setStep('GENERATING');
+
+                try {
+                    const content = await ContentService.generate(selectedGame.id, formData);
+                    setGeneratedContent(content);
+                    setStep('REVIEW');
+                } catch (error) {
+                    alert('Lỗi: ' + error.message);
+                    setStep('SETUP');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleStartGame = () => {
+                // Lưu vào localStorage để các trang game con lấy
+                localStorage.setItem('gameData', JSON.stringify({
+                    gameType: selectedGame.id,
+                    content: generatedContent,
+                    formData: formData
+                }));
+
+                // Chuyển sang trang game tương ứng
+                window.location.href = `game-${selectedGame.id}.html`;
+            };
+
+            // SETUP - Chọn game
+            if (!selectedGame) {
+                return (
+                    <div className="max-w-7xl mx-auto p-6 fade-in">
+                        <div className="text-center mb-8">
+                            <button
+                                onClick={() => window.location.href = 'smartquiz.html'}
+                                className="text-gray-500 hover:text-purple-600 font-bold transition mb-4"
+                            >
+                                <i className="fas fa-arrow-left mr-2"></i>Quay lại SmartQuiz
+                            </button>
+                            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 mb-3">
+                                GAME GIÁO DỤC - TRỢ LÝ DẠY HỌC
+                            </h1>
+                            <p className="text-xl text-gray-600">Chọn trò chơi phù hợp với mục tiêu bài học</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {games.map(game => (
+                                <div
+                                    key={game.id}
+                                    onClick={() => window.location.href = `game-${game.id}.html`}
+                                    className="game-card bg-white rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-purple-400"
+                                >
+                                    <div className={`w-16 h-16 bg-gradient-to-br ${game.color} rounded-2xl flex items-center justify-center mb-4`}>
+                                        <i className={`fas ${game.icon} text-3xl text-white`}></i>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2 text-gray-800">{game.name}</h3>
+                                    <div className="text-xs font-semibold text-purple-600 mb-2 uppercase">{game.purpose}</div>
+                                    <p className="text-sm text-gray-600 mb-3">{game.description}</p>
+                                    <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2">
+                                        <i className="fas fa-check-circle text-green-500 mr-1"></i>{game.suitable}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            // SETUP - Form nhập thông tin
+            if (step === 'SETUP') {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <button
+                            onClick={() => setSelectedGame(null)}
+                            className="text-gray-500 hover:text-purple-600 font-bold transition mb-6"
+                        >
+                            <i className="fas fa-arrow-left mr-2"></i>Chọn game khác
+                        </button>
+
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <div className="text-center mb-6">
+                                <div className={`w-20 h-20 bg-gradient-to-br ${selectedGame.color} rounded-3xl flex items-center justify-center mx-auto mb-4`}>
+                                    <i className={`fas ${selectedGame.icon} text-4xl text-white`}></i>
+                                </div>
+                                <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedGame.name}</h2>
+                                <p className="text-gray-600">{selectedGame.description}</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block font-bold mb-2 text-gray-700">Môn học</label>
+                                        <select
+                                            value={formData.subject}
+                                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                                        >
+                                            <option>Toán</option>
+                                            <option>Lý</option>
+                                            <option>Hóa</option>
+                                            <option>Sinh</option>
+                                            <option>Văn</option>
+                                            <option>Anh</option>
+                                            <option>Sử</option>
+                                            <option>Địa</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-bold mb-2 text-gray-700">Lớp tối đa</label>
+                                        <select
+                                            value={formData.gradeMax}
+                                            onChange={(e) => setFormData({ ...formData, gradeMax: parseInt(e.target.value) })}
+                                            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                                        >
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                                                <option key={g} value={g}>Lớp {g}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold mb-2 text-gray-700">Chủ đề</label>
+                                    <input
+                                        type="text"
+                                        value={formData.topic}
+                                        onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                                        className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                                        placeholder="VD: Phương trình bậc 2, Định luật Ôm, Bảng tuần hoàn..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block font-bold mb-2 text-gray-700">Độ khó</label>
+                                        <select
+                                            value={formData.difficulty}
+                                            onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
+                                            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                                        >
+                                            <option>Dễ</option>
+                                            <option>Vừa</option>
+                                            <option>Khó</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-bold mb-2 text-gray-700">Số câu</label>
+                                        <input
+                                            type="number"
+                                            min="5"
+                                            max="20"
+                                            value={formData.numQuestions}
+                                            onChange={(e) => setFormData({ ...formData, numQuestions: parseInt(e.target.value) })}
+                                            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleGenerateContent}
+                                    className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition mt-6"
+                                >
+                                    <i className="fas fa-magic mr-2"></i>Tạo nội dung với AI
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // GENERATING
+            if (step === 'GENERATING') {
+                return (
+                    <div className="max-w-2xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
+                            <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                                <i className="fas fa-robot text-4xl text-white"></i>
+                            </div>
+                            <h2 className="text-3xl font-bold mb-4 text-gray-800">AI đang tạo nội dung...</h2>
+                            <p className="text-gray-600 mb-6">Gemini đang sinh câu hỏi cho game <span className="font-bold text-purple-600">{selectedGame.name}</span></p>
+                            <div className="w-64 h-2 bg-gray-200 rounded-full mx-auto overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // REVIEW
+            if (step === 'REVIEW' && generatedContent) {
+                return (
+                    <div className="max-w-4xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold mb-6 text-gray-800">
+                                <i className="fas fa-eye text-purple-600 mr-3"></i>
+                                Xem trước nội dung
+                            </h2>
+
+                            <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 mb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-600">Môn:</span>
+                                        <span className="font-bold ml-2">{formData.subject}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Lớp:</span>
+                                        <span className="font-bold ml-2">{formData.gradeMax}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Độ khó:</span>
+                                        <span className="font-bold ml-2">{formData.difficulty}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Số câu:</span>
+                                        <span className="font-bold ml-2">{generatedContent.questions?.length || generatedContent.pairs?.length || generatedContent.locks?.length || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="max-h-96 overflow-y-auto mb-6 space-y-4">
+                                {generatedContent.questions && generatedContent.questions.slice(0, 3).map((q, idx) => (
+                                    <div key={idx} className="bg-gray-50 p-4 rounded-xl">
+                                        <div className="font-bold text-gray-700 mb-2">Câu {idx + 1}:</div>
+                                        <div className="text-gray-800"><MathText text={q.prompt} /></div>
+                                        {q.choices && (
+                                            <div className="mt-2 space-y-1">
+                                                {q.choices.map((choice, cidx) => (
+                                                    <div key={cidx} className={`text-sm ${q.answer === cidx ? 'text-green-600 font-bold' : 'text-gray-600'}`}>
+                                                        {String.fromCharCode(65 + cidx)}. <MathText text={choice} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {generatedContent.questions && generatedContent.questions.length > 3 && (
+                                    <div className="text-center text-gray-500 text-sm">
+                                        ... và {generatedContent.questions.length - 3} câu nữa
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setStep('SETUP')}
+                                    className="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                                >
+                                    <i className="fas fa-redo mr-2"></i>Tạo lại
+                                </button>
+                                <button
+                                    onClick={() => setStep('EDIT')}
+                                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
+                                >
+                                    <i className="fas fa-edit mr-2"></i>Chỉnh sửa (sửa câu, thêm ảnh)
+                                </button>
+                                <button
+                                    onClick={handleStartGame}
+                                    className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl transition"
+                                >
+                                    <i className="fas fa-play mr-2"></i>Chơi luôn
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // EDIT - Chỉnh sửa nội dung
+            if (step === 'EDIT' && editingContent) {
+                const questions = editingContent.questions || editingContent.pairs || editingContent.locks || [];
+
+                const handleImageUpload = (qIdx, e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const newContent = { ...editingContent };
+                        const items = newContent.questions || newContent.pairs || newContent.locks;
+                        items[qIdx].image = event.target.result;
+                        setEditingContent(newContent);
+                    };
+                    reader.readAsDataURL(file);
+                };
+
+                const handleSaveEdit = (qIdx, field, value) => {
+                    const newContent = { ...editingContent };
+                    const items = newContent.questions || newContent.pairs || newContent.locks;
+                    items[qIdx][field] = value;
+                    setEditingContent(newContent);
+                };
+
+                const handleSaveChoice = (qIdx, cIdx, value) => {
+                    const newContent = { ...editingContent };
+                    const items = newContent.questions || newContent.pairs || newContent.locks;
+                    items[qIdx].choices[cIdx] = value;
+                    setEditingContent(newContent);
+                };
+
+                const handleFinishEdit = () => {
+                    setGeneratedContent(editingContent);
+                    handleStartGame(); // Lưu và chơi luôn
+                };
+
+                return (
+                    <div className="max-w-6xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-gray-800">
+                                    <i className="fas fa-edit text-blue-600 mr-3"></i>
+                                    Chỉnh sửa nội dung
+                                </h2>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setStep('REVIEW')}
+                                        className="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"
+                                    >
+                                        <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                                    </button>
+                                    <button
+                                        onClick={handleFinishEdit}
+                                        className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl"
+                                    >
+                                        <i className="fas fa-save mr-2"></i>Lưu & Chơi
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-6">
+                                <div className="flex items-start gap-3">
+                                    <i className="fas fa-lightbulb text-yellow-600 text-xl mt-1"></i>
+                                    <div>
+                                        <div className="font-bold text-yellow-800 mb-1">Bạn có thể:</div>
+                                        <ul className="text-sm text-yellow-700 space-y-1">
+                                            <li>✏️ Sửa câu hỏi, đáp án nếu AI sinh không chính xác</li>
+                                            <li>🖼️ <strong>Thêm ảnh:</strong> Click "Thêm ảnh" hoặc <span className="bg-yellow-200 px-2 py-0.5 rounded font-mono">Ctrl+V</span> paste ảnh đã chụp màn hình</li>
+                                            <li>✅ Đổi đáp án đúng bằng cách click radio button</li>
+                                            <li className="text-xs italic">💡 Click vào vùng câu hỏi trước khi paste ảnh</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                                {questions.map((q, qIdx) => (
+                                    <div
+                                        key={qIdx}
+                                        onClick={() => setFocusedQuestion(qIdx)}
+                                        className={`bg-gray-50 border-2 rounded-xl p-6 hover:border-blue-300 transition cursor-pointer ${focusedQuestion === qIdx ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="font-bold text-lg text-gray-700">Câu {qIdx + 1}</div>
+                                            <label className="px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600 transition text-sm">
+                                                <i className="fas fa-image mr-2"></i>Thêm ảnh
+                                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(qIdx, e)} className="hidden" />
+                                            </label>
+                                        </div>
+
+                                        {/* Hình ảnh nếu có */}
+                                        {q.image && (
+                                            <div className="mb-4 relative">
+                                                <img src={q.image} className="max-w-md max-h-64 rounded-lg border-2 border-blue-300" alt="Question" />
+                                                <button
+                                                    onClick={() => handleSaveEdit(qIdx, 'image', null)}
+                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 hover:bg-red-600"
+                                                >
+                                                    <i className="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Câu hỏi */}
+                                        <div className="mb-4">
+                                            <label className="block font-semibold text-gray-700 mb-2">Câu hỏi:</label>
+                                            <textarea
+                                                value={q.prompt || q.left || ''}
+                                                onChange={(e) => handleSaveEdit(qIdx, q.prompt ? 'prompt' : 'left', e.target.value)}
+                                                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 outline-none min-h-[80px]"
+                                            />
+                                        </div>
+
+                                        {/* Đáp án (nếu có choices) */}
+                                        {q.choices && (
+                                            <div className="space-y-3">
+                                                <label className="block font-semibold text-gray-700">Các đáp án:</label>
+                                                {q.choices.map((choice, cIdx) => (
+                                                    <div key={cIdx} className="flex items-center gap-3">
+                                                        <input
+                                                            type="radio"
+                                                            name={`answer-${qIdx}`}
+                                                            checked={q.answer === cIdx}
+                                                            onChange={() => handleSaveEdit(qIdx, 'answer', cIdx)}
+                                                            className="w-5 h-5 text-green-600 cursor-pointer"
+                                                        />
+                                                        <span className="font-bold text-gray-600 w-8">{String.fromCharCode(65 + cIdx)}.</span>
+                                                        <input
+                                                            type="text"
+                                                            value={choice}
+                                                            onChange={(e) => handleSaveChoice(qIdx, cIdx, e.target.value)}
+                                                            className={`flex-1 p-2 border-2 rounded-lg outline-none ${q.answer === cIdx ? 'border-green-500 bg-green-50' : 'border-gray-300'
+                                                                }`}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Right column cho matching */}
+                                        {q.right && (
+                                            <div className="mt-4">
+                                                <label className="block font-semibold text-gray-700 mb-2">Định nghĩa/Ghép với:</label>
+                                                <textarea
+                                                    value={q.right}
+                                                    onChange={(e) => handleSaveEdit(qIdx, 'right', e.target.value)}
+                                                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 outline-none"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return null;
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+
+</html>

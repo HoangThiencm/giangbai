@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Đề Từ Ma Trận và Bảng đặc tả</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+
+        body {
+            font-family: 'Times New Roman', serif;
+            background-color: #f3f4f6;
+        }
+
+        .font-ui {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #2563eb;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ==========================================
+        // 1. LOGIC XỬ LÝ TEXT & CONSTANTS
+        // ==========================================
+
+        // Định nghĩa cấu trúc mức độ nhận thức theo chuẩn 3 mức của CV 7991
+        const LEVELS_7991 = [
+            { code: 'B', name: 'Biết', prompt_key: 'Know' },
+            { code: 'H', name: 'Hiểu', prompt_key: 'Understand' },
+            { code: 'V', name: 'Vận dụng', prompt_key: 'Apply' },
+        ];
+
+        const normalizeRichText = (raw) => {
+            if (!raw) return "";
+            return raw
+                .replace(/`([^`]+)`/g, '$$$1$$')
+                .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
+                .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
+                .replace(/\\\\+(?=\\begin\{cases\})/g, '\\')
+                .replace(/\\\\+(?=\\end\{cases\})/g, '\\')
+                .replace(/\\\\\s*\\\\/g, '\\\\')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>');
+        };
+
+        const tokenizeRichText = (raw) => {
+            const text = normalizeRichText(raw);
+            return text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g).map(part => {
+                if (part.startsWith('$$') && part.endsWith('$$')) return { type: 'math', display: true, content: part.slice(2, -2).trim() };
+                else if (part.startsWith('$') && part.endsWith('$')) return { type: 'math', display: false, content: part.slice(1, -1).trim() };
+                else return { type: 'text', content: part };
+            }).filter(token => token.content !== "");
+        };
+
+        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }); } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>`; } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+
+        // --- Render Word dùng MathML bọc trong OMML ---
+        const renderToWord = (tokens) => tokens.map(t =>
+            t.type === 'math'
+                ? (() => {
+                    try {
+                        const m = katex.renderToString(t.content, {
+                            displayMode: t.display,
+                            throwOnError: false,
+                            output: 'mathml',
+                        }).match(/<math[\s\S]*?<\/math>/);
+
+                        if (m) {
+                            // Bọc MathML trong thẻ m:oMathPara (Office Math Paragraph) để Word nhận diện
+                            return `
+                                <m:oMathPara>
+                                    <m:oMath>
+                                        ${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}
+                                    </m:oMath>
+                                </m:oMathPara>
+                            `;
+                        }
+                    } catch (e) { }
+                    return t.content.replace(/\$/g, '');
+                })()
+                : t.content
+                    .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>')
+                    .replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>')
+                    .replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>')
+                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                    .replace(/\\\\/g, '<br/>')
+                    .replace(/\\n/g, '<br/>')
+                    .replace(/\n/g, '<br/>')
+        ).join('');
+
+        const MathRender = ({ text }) => {
+            const ref = useRef();
+            useEffect(() => { if (!ref.current) return; ref.current.innerHTML = renderToWeb(tokenizeRichText(text || "")); }, [text]);
+            return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>;
+        };
+
+        const calcExamTotals = (bp) => {
+            let total = 0;
+            bp.sections.forEach(sec => {
+                let secTotal = 0; (sec.questions || []).forEach(q => { const s = parseFloat(q.score); if (!isNaN(s)) { secTotal += s; total += s; } });
+                sec.score = parseFloat(secTotal.toFixed(2));
+            });
+            return parseFloat(total.toFixed(2));
+        };
+
+        const normalizeQuestionType = (rawType, sectionName = "", defaultType = "MC") => {
+            const s = (rawType || "").toString().trim().toUpperCase();
+            const sec = (sectionName || "").toString().trim().toUpperCase();
+
+            // Dạng Đúng/Sai (TF)
+            if (sec.includes("ĐÚNG SAI") || sec.includes("TRUE/FALSE") || s.includes("TF") || s.includes("Đ/S")) return "TF";
+            // Dạng Tự luận (TL)
+            if (sec.includes("TỰ LUẬN") || sec.includes("TU LUAN") || s.includes("TL") || s.includes("TỰ")) return "TL";
+            // Dạng Nhiều lựa chọn (MC)
+            if (sec.includes("TRẮC NGHIỆM") || s.includes("TN") || s.includes("MC")) return "MC";
+
+            return defaultType;
+        };
+
+        const inferDefaultQuestionType = (bp, durationStr = "90") => {
+            const allText = JSON.stringify(bp).toUpperCase();
+            if (allText.includes("TRẮC NGHIỆM") && allText.includes("TỰ LUẬN")) return "MC";
+            if (allText.includes("TRẮC NGHIỆM")) return "MC";
+            if (allText.includes("TỰ LUẬN")) return "TL";
+            let totalQuestions = 0; bp.sections.forEach(s => totalQuestions += (s.questions || []).length);
+            const duration = parseInt(durationStr) || 90;
+            if (totalQuestions <= 15 && duration >= 45) return "TL";
+            return "MC";
+        };
+
+        const parseQuestionCode = (code) => {
+            const match = code.match(/.*?(\d+)(?:[.\-_ ]?([a-zA-Z]+|[0-9]+))?/);
+            if (match) {
+                const main = match[1];
+                let sub = match[2];
+                if (sub === main) sub = null;
+                return { main: main, sub: sub || null };
+            }
+            return { main: code, sub: null };
+        };
+
+        const toChar = (val) => {
+            if (!val) return 'a';
+            if (!isNaN(val)) return String.fromCharCode(96 + parseInt(val)); // 1->a, 2->b
+            return val.toLowerCase();
+        };
+
+        // ==========================================
+        // 2. AI ADAPTER
+        // ==========================================
+        const AIAdapter = {
+            getConfig: () => ({
+                geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
+                hfTokens: JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
+                geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
+                hfModels: {
+                    speed: 'Qwen/Qwen2.5-1.5B-Instruct',
+                    balanced: 'Qwen/Qwen2.5-7B-Instruct',
+                    expert: 'Qwen/Qwen2.5-Math-7B-Instruct'
+                }
+            }),
+
+            selectModel: (qType, qLevel) => {
+                const { hfModels } = AIAdapter.getConfig();
+                if (qType === 'MC' || qType === 'TF') return { id: hfModels.speed, name: 'Qwen 1.5B (Speed)' };
+                if (qType === 'TL' && ['B', 'H'].includes(qLevel)) return { id: hfModels.balanced, name: 'Qwen 7B (Balanced)' };
+                return { id: hfModels.expert, name: 'Qwen Math (Expert)' };
+            },
+
+            callGemini: async (payloadParts) => {
+                const { geminiKeys, geminiModel } = AIAdapter.getConfig();
+                if (!geminiKeys.length) throw new Error("Thiếu Gemini API Key!");
+                const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
+                for (let i = 0; i < Math.min(shuffledKeys.length, 3); i++) {
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${shuffledKeys[i]}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: payloadParts }] }) });
+                        if (!res.ok) throw new Error((await res.json()).error?.message);
+                        return (await res.json()).candidates[0].content.parts[0].text;
+                    } catch (e) { await new Promise(r => setTimeout(r, 1000)); }
+                }
+                throw new Error("Gemini quá tải.");
+            },
+
+            callHF: async (promptText, specificModel = null) => {
+                const { hfTokens, hfModels } = AIAdapter.getConfig();
+                if (!hfTokens.length) throw new Error("Thiếu HuggingFace Token!");
+                const modelToUse = specificModel || hfModels.expert;
+                const token = hfTokens[Math.floor(Math.random() * hfTokens.length)];
+                const formattedPrompt = `<|im_start|>system\nBạn là trợ lý Toán học. CHỈ trả về JSON thuần, không markdown, không giải thích thêm.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
+                for (let i = 0; i < 2; i++) {
+                    try {
+                        const res = await fetch(`https://api-inference.huggingface.co/models/${modelToUse}`, {
+                            method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ inputs: formattedPrompt, parameters: { max_new_tokens: 1024, temperature: 0.5, return_full_text: false } })
+                        });
+                        if (!res.ok) { if (res.status === 503) { await new Promise(r => setTimeout(r, 5000)); continue; } throw new Error(`HF Error ${res.status}`); }
+                        const data = await res.json();
+                        if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
+                        throw new Error("HF invalid response");
+                    } catch (e) { await new Promise(r => setTimeout(r, 1500)); }
+                }
+                throw new Error("HF API Failed");
+            }
+        };
+
+        // ==========================================
+        // 3. MAIN APP
+        // ==========================================
+        const App = () => {
+            const [step, setStep] = useState(1);
+            const [loading, setLoading] = useState(false);
+            const [loadingMsg, setLoadingMsg] = useState("");
+            const [info, setInfo] = useState({ dept: "SỞ GIÁO DỤC VÀ ĐÀO TẠO", school: "TRƯỜNG THPT/THCS", title: "KIỂM TRA", time: "90" });
+            const [images, setImages] = useState([]);
+            const [blueprint, setBlueprint] = useState(null);
+            const [hfStatus, setHfStatus] = useState(false);
+            const [totalScoreWarning, setTotalScoreWarning] = useState(null);
+            const [globalType, setGlobalType] = useState("MC");
+
+            useEffect(() => { setHfStatus(AIAdapter.getConfig().hfTokens.length > 0); }, []);
+            const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
+
+            const handleUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const buffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument(buffer).promise;
+                    const imgs = [];
+                    for (let i = 1; i <= Math.min(pdf.numPages, 15); i++) {
+                        const page = await pdf.getPage(i);
+                        const vp = page.getViewport({ scale: 2 });
+                        const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
+                        await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+                        imgs.push(cvs.toDataURL('image/jpeg').split(',')[1]);
+                    }
+                    setImages(imgs);
+
+                    const prompt = `Phân tích ảnh Ma trận và Bảng Đặc tả (theo chuẩn CV 7991).
+                    Yêu cầu:
+                    1. Đọc và gom nhóm các dòng thành sections/questions.
+                    2. Chuẩn hóa mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
+                    3. Chuẩn hóa loại câu: "TNKQ/Trắc nghiệm" -> MC, "Đúng-Sai" -> TF, "Tự luận/TL" -> TL.
+                    4. Trường 'level' (mức độ) phải là B, H, hoặc V.
+                    
+                    Trích JSON: { 
+                        "exam_type": "...", 
+                        "sections": [ 
+                            { 
+                                "id": "...", 
+                                "name": "...", 
+                                "questions": [ 
+                                    { 
+                                        "code": "C1", 
+                                        "group": "", 
+                                        "topic": "...", 
+                                        "level": "B", 
+                                        "type": "MC", 
+                                        "score": 0.25, 
+                                        "spec": "Yêu cầu cần đạt...",
+                                        "parts": [] // Dùng cho TF
+                                    } 
+                                ] 
+                            } 
+                        ] 
+                    }. Quy tắc: Tổng điểm = 10.`;
+
+                    let finalJson = null;
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        setLoading(true); setLoadingMsg(`Đang phân tích Ma trận (Lần ${attempt})...`);
+                        try {
+                            const res = await AIAdapter.callGemini([{ text: prompt }, ...imgs.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))]);
+                            const jsonMatch = res.match(/\{[\s\S]*\}/);
+                            if (!jsonMatch) continue;
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            const detectedDefaultType = inferDefaultQuestionType(parsed, info.time);
+                            setGlobalType(detectedDefaultType);
+
+                            parsed.sections.forEach(sec => {
+                                sec.questions = sec.questions || [];
+                                sec.questions.forEach(q => {
+                                    q.type = normalizeQuestionType(q.type, sec.name, detectedDefaultType);
+                                    // Chuẩn hóa mức độ theo 3 mức (B, H, V)
+                                    const rawLevel = (q.level || "").toUpperCase();
+                                    if (rawLevel.includes("N") || rawLevel.includes("B")) q.level = "B";
+                                    else if (rawLevel.includes("T") || rawLevel.includes("H")) q.level = "H";
+                                    else if (rawLevel.includes("V")) q.level = "V";
+                                    else q.level = "B"; // Mặc định
+                                });
+                            });
+                            const total = calcExamTotals(parsed);
+                            finalJson = parsed;
+                            if (Math.abs(total - 10.0) < 0.1) break;
+                        } catch (err) { console.error(err); }
+                    }
+                    if (!finalJson) throw new Error("Không đọc được cấu trúc ma trận.");
+
+                    const finalTotal = calcExamTotals(finalJson);
+                    if (Math.abs(finalTotal - 10.0) >= 0.1) { setTotalScoreWarning(finalTotal); alert(`⚠️ Tổng điểm là ${finalTotal}/10. Vui lòng kiểm tra lại.`); }
+                    finalJson.sections.forEach(s => s.questions.forEach(q => {
+                        q.status = 'pending'; q.q = ""; q.c = ""; q.correct_char = "";
+                        if (q.type === 'MC') q.a = q.a || ['', '', '', ''];
+                        else if (q.type === 'TF') q.parts = q.parts || [{ label: 'a', content: '', is_correct: false }, { label: 'b', content: '', is_correct: false }, { label: 'c', content: '', is_correct: false }, { label: 'd', content: '', is_correct: false }];
+                        else q.a = []; // TL
+                    }));
+
+                    setBlueprint(finalJson);
+                    setStep(2);
+                } catch (e) { alert("Lỗi: " + e.message); } finally { setLoading(false); }
+            };
+
+            const forceUpdateGlobalType = (newType) => {
+                if (!blueprint) return;
+                const newBp = { ...blueprint };
+                newBp.sections.forEach(sec => {
+                    sec.questions.forEach(q => {
+                        q.type = normalizeQuestionType(newType, sec.name, newType);
+                        if (q.type === 'MC') q.a = q.a || ['', '', '', ''];
+                        else if (q.type === 'TF') q.parts = q.parts || [{ label: 'a', content: '', is_correct: false }, { label: 'b', content: '', is_correct: false }, { label: 'c', content: '', is_correct: false }, { label: 'd', content: '', is_correct: false }];
+                        else q.a = [];
+                    });
+                });
+                setBlueprint(newBp); setGlobalType(newType);
+            };
+
+            const generateQuestion = async (sIdx, qIdx) => {
+                const qData = blueprint.sections[sIdx].questions[qIdx];
+                const newBp = { ...blueprint };
+                const selectedModel = AIAdapter.selectModel(qData.type, qData.level);
+                newBp.sections[sIdx].questions[qIdx].status = 'generating';
+                setBlueprint(newBp);
+
+                const levelData = LEVELS_7991.find(l => l.code === qData.level) || LEVELS_7991[0];
+                const levelPromptKey = levelData.prompt_key;
+
+                const promptText = `
+                    Đóng vai Giáo viên Toán 9. Soạn câu hỏi:
+                    - Chủ đề: ${qData.topic} | Mức độ: ${levelPromptKey} | Loại: ${qData.type} | Đặc tả: ${qData.spec} ${qData.group ? `| Nhóm: ${qData.group}` : ""}
+                    YÊU CẦU:
+                    1. Toán học: Dùng LaTeX $...$. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
+                    2. Nếu là Trắc nghiệm (MC), chỉ 4 đáp án (A, B, C, D), chỉ rõ đáp án đúng (A/B/C/D).
+                    3. NẾU LÀ ĐÚNG/SAI (TF), phải tạo 4 mệnh đề độc lập (a, b, c, d), và CHỈ RÕ GIÁ TRỊ CHÂN LÝ (Đúng/Sai) cho từng ý.
+                    4. Output JSON: DÙNG CẤU TRÚC JSON PHÙ HỢP VỚI LOẠI CÂU HỎI.
+
+                    // === CẤU TRÚC JSON THEO LOẠI (CHỈ TRẢ VỀ JSON) ===
+                    ${qData.type === 'TF' ? `
+                    {
+                        "q": "Nội dung câu dẫn...",
+                        "parts": [
+                            {"content": "Ý a", "is_correct": true},
+                            {"content": "Ý b", "is_correct": false},
+                            {"content": "Ý c", "is_correct": false},
+                            {"content": "Ý d", "is_correct": true}
+                        ],
+                        "c": "Lời giải/Giải thích chung"
+                    }
+                    ` : `
+                    { 
+                        "q": "Nội dung câu hỏi...", 
+                        "a": ["A...", "B...", "C...", "D..."], 
+                        "c": "Lời giải...", 
+                        "correct_char": "A" 
+                    }
+                    `}
+                `;
+
+                try {
+                    let jsonStr = "", usedSource = "Gemini";
+                    if (AIAdapter.getConfig().hfTokens.length > 0) {
+                        try {
+                            jsonStr = await AIAdapter.callHF(promptText, selectedModel.id);
+                            usedSource = selectedModel.name;
+                        }
+                        catch (hfErr) {
+                            const payload = [{ text: promptText }, ...images.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
+                            jsonStr = await AIAdapter.callGemini(payload);
+                            usedSource = "Gemini (Backup)";
+                        }
+                    } else {
+                        const payload = [{ text: promptText }, ...images.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
+                        jsonStr = await AIAdapter.callGemini(payload);
+                    }
+
+                    const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) throw new Error("Invalid JSON");
+                    const json = JSON.parse(jsonMatch[0]);
+
+                    const finalBp = { ...blueprint };
+                    const target = finalBp.sections[sIdx].questions[qIdx];
+
+                    if (qData.type === 'TF') {
+                        target.parts = json.parts?.map((p, i) => ({
+                            label: p.label || String.fromCharCode(97 + i),
+                            content: p.content,
+                            is_correct: p.is_correct
+                        })) || [];
+                        target.q = json.q;
+                        target.c = json.c;
+                        target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-'); // Chuỗi Đ-S-S-Đ
+                    } else { // MC / TL
+                        target.q = json.q;
+                        target.a = json.a || [];
+                        target.c = json.c || "";
+                        target.correct_char = json.correct_char || "";
+                    }
+
+                    target.status = 'done'; target.source = usedSource;
+                    setBlueprint(finalBp);
+                } catch (e) {
+                    const errBp = { ...blueprint };
+                    errBp.sections[sIdx].questions[qIdx].status = 'error';
+                    errBp.sections[sIdx].questions[qIdx].source = "ERR";
+                    setBlueprint(errBp);
+                }
+            };
+
+            const generateAll = async () => {
+                if (!confirm(`Hệ thống sẽ tạo nội dung toàn bộ đề. Tiếp tục?`)) return;
+                for (let s = 0; s < blueprint.sections.length; s++) { for (let q = 0; q < blueprint.sections[s].questions.length; q++) { if (blueprint.sections[s].questions[q].status !== 'done') { await generateQuestion(s, q); await new Promise(r => setTimeout(r, 1000)); } } }
+                alert("Hoàn tất!");
+            };
+
+            const updateData = (sIdx, qIdx, field, val, pIdx = null, pField = null) => {
+                const n = { ...blueprint };
+                const q = n.sections[sIdx].questions[qIdx];
+
+                if (field === 'parts') {
+                    if (pIdx !== null && pField !== null) {
+                        q.parts[pIdx][pField] = val;
+                    } else if (pIdx !== null) {
+                        // Toggle is_correct
+                        q.parts[pIdx].is_correct = !q.parts[pIdx].is_correct;
+                    } else {
+                        q[field] = val; // Set entire parts array
+                    }
+                    q.correct_char = q.parts.map(p => p.is_correct ? 'Đ' : 'S').join('-');
+
+                } else {
+                    q[field] = val;
+                }
+
+                if (field === 'score') {
+                    const newTotal = calcExamTotals(n);
+                    setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null);
+                }
+                setBlueprint(n);
+            };
+
+            // --- EXPORT WORD (V28 - OMML NAMESPACE + GROUPING) ---
+            const exportWord = () => {
+                let html = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                          xmlns:w='urn:schemas-microsoft-com:office:word'
+                          xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
+                    <head>
+                        <meta charset='utf-8'><title>De Thi</title>
+                        <style>
+                            @page {
+                                size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2.5cm; mso-page-orientation: portrait;
+                            }
+                            body {
+                                font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.3; text-align: justify; color: #000;
+                            } 
+                            table { width: 100%; border-collapse: collapse; } 
+                            td { vertical-align: top; padding: 4px; } 
+                            .question-block { margin-bottom: 10pt; text-align: justify; }
+                            .ans-key-table td { border: 1px solid black; text-align: center; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                    <div style="text-align:center;font-weight:bold;margin-bottom:20px">
+                        <p style="margin:0">${info.dept.toUpperCase()}</p>
+                        <p style="margin:0">${info.school.toUpperCase()}</p>
+                        <p style="margin:10px 0 5px 0;font-size:14pt">${info.title.toUpperCase()}</p>
+                        <p style="margin:0;font-style:italic">Môn: TOÁN 9 - Thời gian: ${info.time} phút</p>
+                    </div>
+                    <hr/>
+                `;
+
+                blueprint.sections.forEach(sec => {
+                    html += `<p style='font-weight:bold;margin-top:15px;text-transform:uppercase'>${sec.name}</p>`;
+
+                    const groups = {};
+                    const groupOrder = [];
+
+                    // --- GOM NHÓM LOGIC ---
+                    sec.questions.forEach(q => {
+                        const { main, sub } = parseQuestionCode(q.code);
+                        if (!groups[main]) {
+                            groups[main] = { main, stem: null, subs: [] };
+                            groupOrder.push(main);
+                        }
+
+                        if (sub) {
+                            groups[main].subs.push({ ...q, subLabel: toChar(sub) });
+                        } else {
+                            groups[main].stem = q;
+                        }
+                    });
+
+                    // --- RENDER NHÓM ---
+                    groupOrder.forEach(main => {
+                        const g = groups[main];
+                        html += `<div class='question-block'>`;
+
+                        // Render Stem (Câu dẫn) - Nếu có
+                        if (g.stem) {
+                            const stemQ = g.stem;
+                            if (stemQ.type === 'TF') {
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(stemQ.q))}</div>`;
+                                html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                stemQ.parts.forEach(p => {
+                                    html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                });
+                                html += `</table>`;
+                            } else {
+                                html += `<p><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(stemQ.q))}</p>`;
+                                if (stemQ.type === 'MC' && stemQ.a?.length) {
+                                    html += `<table style='margin-left:20px;margin-bottom:10px'><tr>`;
+                                    stemQ.a.forEach((opt, k) => {
+                                        const prefix = String.fromCharCode(65 + k);
+                                        html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k % 2 !== 0 ? '</tr><tr>' : ''}`;
+                                    });
+                                    html += `</tr></table>`;
+                                }
+                            }
+                        }
+
+                        // 2. Render Subs (a, b, c) - Nếu có
+                        if (g.subs.length > 0) {
+                            g.subs.sort((a, b) => a.subLabel.localeCompare(b.subLabel));
+                            g.subs.forEach(sq => {
+                                if (sq.type === 'TF') {
+                                    html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                    html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                    html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                    sq.parts.forEach(p => {
+                                        html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                    });
+                                    html += `</table>`;
+                                } else { // MC/TL sub-question
+                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                    if (sq.type === 'MC' && sq.a?.length) {
+                                        html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
+                                        sq.a.forEach((opt, k) => {
+                                            const prefix = String.fromCharCode(65 + k);
+                                            html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k % 2 !== 0 ? '</tr><tr>' : ''}`;
+                                        });
+                                        html += `</tr></table>`;
+                                    }
+                                }
+                            });
+                        }
+
+                        html += `</div>`;
+                    });
+                });
+
+                // PHẦN ĐÁP ÁN
+                html += `<br clear=all style='page-break-before:always'><h3 style='text-align:center'>ĐÁP ÁN & HƯỚNG DẪN CHẤM</h3>`;
+                blueprint.sections.forEach(sec => {
+                    const mcQuestions = sec.questions.filter(q => q.type === 'MC' && q.correct_char);
+                    if (mcQuestions.length > 0) {
+                        html += `<h4>${sec.name} - Bảng đáp án Trắc nghiệm</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        mcQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
+                        html += `</tr><tr>`;
+                        mcQuestions.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`);
+                        html += `</tr></table><br/>`;
+                    }
+
+                    const tfQuestions = sec.questions.filter(q => q.type === 'TF' && q.correct_char);
+                    if (tfQuestions.length > 0) {
+                        html += `<h4>${sec.name} - Bảng đáp án Đúng/Sai (Đ-S-S-Đ)</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        tfQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
+                        html += `</tr><tr>`;
+                        tfQuestions.forEach(q => html += `<td style="color:red; font-size: 10pt">${q.correct_char}</td>`);
+                        html += `</tr></table><br/>`;
+                    }
+
+                    html += `<h4>Lời giải chi tiết</h4>`;
+                    sec.questions.forEach(q => {
+                        const tokensAns = tokenizeRichText(q.c);
+                        const displayCode = q.code;
+                        html += `<p><b>${displayCode}:</b></p><div>${renderToWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
+                    });
+                });
+
+                html += `</body></html>`;
+                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_9.doc`);
+            };
+
+            return (
+                <div className="max-w-7xl mx-auto p-4 font-ui">
+                    <div className="flex justify-between items-end border-b pb-4 mb-6">
+                        <div><h1 className="text-2xl font-bold text-indigo-800">CÔNG CỤ TẠO ĐỀ THI TỪ MA TRẬN VÀ BẢNG ĐẶC TẢ THEO CV 7991</h1><p className="text-gray-500 text-sm">Engine: {hfStatus ? <span className="text-green-600 font-bold">Hybrid (Auto Select)</span> : <span className="text-blue-600 font-bold">Gemini</span>} | Mode: Smart Grouping + OMML Math</p></div>
+                        <a href="index.html" className="text-gray-500 hover:text-indigo-600 text-sm font-medium"><i className="fas fa-home"></i> Dashboard</a>
+                    </div>
+
+                    {!hasGemini && <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm font-bold">⚠️ Chưa có Gemini Key.</div>}
+
+                    {step === 1 && hasGemini && (
+                        <div className="bg-white p-6 rounded-xl shadow-sm border space-y-4 max-w-3xl mx-auto">
+                            <div className="grid grid-cols-2 gap-4">
+                                <input className="border p-2 rounded w-full" placeholder="Sở/Phòng" value={info.dept} onChange={e => setInfo({ ...info, dept: e.target.value })} />
+                                <input className="border p-2 rounded w-full" placeholder="Trường" value={info.school} onChange={e => setInfo({ ...info, school: e.target.value })} />
+                                <input className="border p-2 rounded w-full" placeholder="Tên kỳ thi" value={info.title} onChange={e => setInfo({ ...info, title: e.target.value })} />
+                                <input className="border p-2 rounded w-full" placeholder="Thời gian (phút)" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} />
+                            </div>
+                            <label className="block border-2 border-dashed border-indigo-300 bg-indigo-50 rounded-xl p-8 text-center cursor-pointer hover:bg-indigo-100 transition">
+                                <input type="file" className="hidden" accept=".pdf" onChange={handleUpload} />
+                                {loading ? <div className="flex flex-col items-center"><div className="loader mb-2"></div><span className="text-indigo-600 font-bold">{loadingMsg}</span></div> : <div className="text-indigo-600"><i className="fas fa-file-pdf text-3xl mb-2"></i><div className="font-bold">Tải lên file PDF (Ma trận & Đặc tả)</div></div>}
+                            </label>
+                        </div>
+                    )}
+
+                    {step === 2 && blueprint && (
+                        <div className="flex flex-col h-[85vh] bg-white rounded-xl shadow-sm border overflow-hidden">
+                            <div className="p-4 border-b bg-gray-50 flex justify-between items-center gap-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="font-bold text-gray-800 text-lg">Biên soạn Đề thi</h2>
+                                        {totalScoreWarning && <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded animate-pulse">⚠️ {totalScoreWarning}/10đ</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                                        <span>Kiểu đề mặc định:</span>
+                                        {['TL', 'MC', 'TF'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} className={`px-2 py-0.5 rounded border text-xs font-bold transition ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}</button>))}
+                                    </div>
+                                </div>
+                                <div className="space-x-2">
+                                    <button onClick={generateAll} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 text-sm"><i className="fas fa-bolt"></i> Sinh toàn bộ</button>
+                                    <button onClick={exportWord} className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 text-sm"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 bg-slate-100">
+                                {blueprint.sections.map((sec, sIdx) => (
+                                    <div key={sIdx} className="mb-6 bg-white rounded-lg shadow p-4 border border-gray-200">
+                                        <div className="flex items-center gap-2 mb-4"><input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} /><span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span></div>
+                                        <table className="w-full text-sm text-left border-collapse"><thead className="bg-gray-50 text-gray-600 font-bold border-b"><tr><th className="p-2 w-16">Mã</th><th className="p-2 w-24">Nhóm</th><th className="p-2 w-16">Mức độ</th> <th className="p-2 w-20">Loại</th><th className="p-2">Nội dung</th><th className="p-2 w-20 text-center">Tác vụ</th></tr></thead><tbody className="divide-y">
+                                            {sec.questions.map((q, qIdx) => (
+                                                <tr key={qIdx} className="group hover:bg-gray-50 align-top">
+                                                    <td className="p-2"><input className="w-full border rounded p-1 text-center font-bold mb-1" value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} /><input className="w-full border rounded p-1 text-center text-xs" type="number" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} /></td>
+                                                    <td className="p-2"><input className="w-full border rounded p-1 text-xs bg-yellow-50" placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} /></td>
+                                                    <td className="p-2">
+                                                        <select className="w-full border rounded p-1 font-bold text-xs" value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
+                                                            {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
+                                                            <option value="MC">Trắc nghiệm</option>
+                                                            <option value="TF">Đúng/Sai</option>
+                                                            <option value="TL">Tự luận</option>
+                                                        </select>
+                                                        <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'}`}>{q.status}</div>
+                                                        <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <div className="mb-2 grid grid-cols-2 gap-2">
+                                                            <input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
+                                                            <input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
+                                                        </div>
+
+                                                        <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100">
+                                                            <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between">
+                                                                <span>Câu hỏi:</span>
+                                                                <input className="text-xs border rounded px-1" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án đúng (A/B..)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} />
+                                                            </div>
+                                                            <textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} />
+                                                            <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
+
+                                                            {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
+                                                            {(q.type === 'MC') && q.a?.length && (
+                                                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">
+                                                                    {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{String.fromCharCode(65 + k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
+                                                            {(q.type === 'TF') && q.parts?.length && (
+                                                                <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
+                                                                    {q.parts.map((p, k) => (
+                                                                        <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'}`}>
+                                                                            <span className="font-bold text-xs w-6">{p.label})</span>
+                                                                            <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
+                                                                            <input
+                                                                                className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                value={p.content}
+                                                                                onChange={e => {
+                                                                                    const newParts = [...q.parts];
+                                                                                    newParts[k].content = e.target.value;
+                                                                                    updateData(sIdx, qIdx, 'parts', newParts);
+                                                                                }}
+                                                                            />
+                                                                            <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-xs text-blue-500 hover:text-blue-700 w-10 shrink-0">Toggle</button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
+                                                    </td>
+                                                    <td className="p-2 text-center align-middle"><button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1 rounded text-xs font-bold shadow-sm">{q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <i className="fas fa-magic"></i>}</button><button onClick={() => { if (confirm('Xóa?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); setBlueprint(n) } }} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button></td>
+                                                </tr>
+                                            ))}
+                                            <tr><td colSpan="6" className="p-2 text-center bg-gray-50 border-t border-dashed"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); setBlueprint(n); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle"></i> Thêm câu hỏi</button></td></tr>
+                                        </tbody></table>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

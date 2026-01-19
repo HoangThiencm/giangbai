@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vẽ Hình Học AI - GiangBai Pro</title>
+
+    <script>
+        if (!localStorage.getItem('authToken')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .canvas-container {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .tool-btn {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .tool-btn.active {
+            background-color: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        button[data-tool="select"].active {
+            background-color: #4f46e5;
+            color: white;
+        }
+
+        #loader {
+            border: 5px solid #e5e7eb;
+            border-top: 5px solid #4f46e5;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .accordion-header {
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+
+        .accordion-content.active {
+            max-height: 500px;
+        }
+
+        .accordion-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        .geogebra-container.hidden {
+            display: none;
+        }
+
+        #zoom-viewer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            background-color: white;
+            border: 3px solid #4f46e5;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 20;
+            display: none;
+        }
+
+        #zoom-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #mini-toolbar {
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+
+        html.dark {
+            background-color: #111827;
+            color: #d1d5db;
+        }
+
+        html.dark body {
+            background-color: #111827;
+        }
+
+        html.dark main {
+            background-color: #1f2937;
+        }
+
+        html.dark h1,
+        html.dark h2,
+        html.dark h3 {
+            color: #f9fafb;
+        }
+
+        html.dark #toolbar,
+        html.dark .bg-white {
+            background-color: #374151;
+        }
+
+        html.dark #geogebra-toggle {
+            background-color: #374151;
+        }
+
+        html.dark .tool-btn {
+            color: #d1d5db;
+        }
+
+        html.dark .tool-btn:hover {
+            background-color: #4b5563;
+        }
+
+        html.dark .tool-btn.active {
+            background-color: #4338ca;
+            color: white;
+        }
+
+        html.dark button[data-tool="select"].active {
+            background-color: #6366f1;
+        }
+
+        html.dark .border,
+        html.dark .border-l {
+            border-color: #4b5563;
+        }
+
+        html.dark #text-controls input {
+            background-color: #4b5563;
+            border-color: #6b7280;
+            color: white;
+        }
+
+        html.dark #color-picker {
+            border-color: #6b7280;
+        }
+
+        html.dark ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        html.dark ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        html.dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 10px;
+        }
+
+        html.dark ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        html.dark #mini-toolbar {
+            background-color: #4b5563;
+            border-color: #6b7280;
+        }
+
+        html.dark #mini-toolbar button {
+            color: #d1d5db;
+        }
+
+        html.dark #mini-toolbar button:hover {
+            background-color: #6b7280;
+        }
+    </style>
+</head>
+
+<body class="text-gray-800">
+    <div class="flex h-screen bg-gray-100">
+        <main class="flex-1 flex flex-col p-4 lg:p-6 gap-6 overflow-y-auto">
+            <h1 class="text-2xl font-bold text-gray-700">Vẽ hình & Biểu đồ AI (Gemini)</h1>
+            <div id="toolbar" class="flex flex-wrap items-center p-2 bg-white rounded-lg shadow-sm gap-2">
+                <div class="flex items-center gap-1">
+                    <button data-tool="select" class="tool-btn active p-2 rounded-md hover:bg-gray-200"
+                        title="Chọn & Di Chuyển"> <i data-lucide="mouse-pointer-2"></i> </button>
+                    <button data-tool="point" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Vẽ Điểm"> <i
+                            data-lucide="dot"></i> </button>
+                    <button data-tool="pencil" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Vẽ Tự do"> <i
+                            data-lucide="pencil"></i> </button>
+                    <button data-tool="line" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Vẽ Đoạn thẳng"> <i
+                            data-lucide="minus"></i> </button>
+                    <button data-tool="circle" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Vẽ Hình tròn">
+                        <i data-lucide="circle"></i> </button>
+                    <button data-tool="text" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Chèn Văn bản"> <i
+                            data-lucide="type"></i> </button>
+                    <button id="latex-tool-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="Chèn công thức (LaTeX)"> <i data-lucide="function-square"></i> </button>
+                    <button id="insert-image-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Chèn ảnh"> <i
+                            data-lucide="image"></i> </button>
+                </div>
+                <div class="h-6 border-l border-gray-300 mx-2"></div>
+                <div class="flex items-center gap-1">
+                    <button id="undo-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Hoàn tác (Ctrl+Z)">
+                        <i data-lucide="undo-2"></i> </button>
+                    <button id="redo-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Làm lại (Ctrl+Y)"> <i
+                            data-lucide="redo-2"></i> </button>
+                </div>
+                <div class="h-6 border-l border-gray-300 mx-2"></div>
+                <div class="flex items-center gap-1">
+                    <button id="copy-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Sao chép (Ctrl+C)">
+                        <i data-lucide="copy"></i> </button>
+                    <button id="paste-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Dán (Ctrl+V)"> <i
+                            data-lucide="clipboard-paste"></i> </button>
+                    <button id="delete-btn" class="tool-btn p-2 rounded-md text-red-600 hover:bg-red-100"
+                        title="Xóa (Delete)"> <i data-lucide="trash-2"></i> </button>
+                </div>
+                <div class="h-6 border-l border-gray-300 mx-2"></div>
+                <div id="text-controls" class="hidden items-center gap-2">
+                    <input type="number" id="font-size" class="w-16 p-1 border border-gray-300 rounded-md text-sm"
+                        value="18" title="Cỡ chữ">
+                    <button id="font-bold" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="In đậm (Ctrl+B)"> <i
+                            data-lucide="bold"></i> </button>
+                    <button id="font-italic" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="In nghiêng (Ctrl+I)"> <i data-lucide="italic"></i> </button>
+                    <button id="font-underline" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="Gạch chân (Ctrl+U)"> <i data-lucide="underline"></i> </button>
+                </div>
+                <div class="h-6 border-l border-gray-300 mx-2"></div>
+                <div id="align-controls" class="hidden items-center gap-1">
+                    <button id="align-left" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Căn trái"><i
+                            data-lucide="align-left"></i></button>
+                    <button id="align-center-h" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="Căn giữa ngang"><i data-lucide="align-center-horizontal"></i></button>
+                    <button id="align-right" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Căn phải"><i
+                            data-lucide="align-right"></i></button>
+                    <div class="h-5 border-l border-gray-300 mx-1"></div>
+                    <button id="align-top" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Căn trên"><i
+                            data-lucide="align-start-vertical"></i></button>
+                    <button id="align-center-v" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="Căn giữa dọc"><i data-lucide="align-center-vertical"></i></button>
+                    <button id="align-bottom" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Căn dưới"><i
+                            data-lucide="align-end-vertical"></i></button>
+                </div>
+
+                <div class="flex items-center gap-2 ml-auto">
+                    <input type="color" id="color-picker"
+                        class="w-8 h-8 rounded-md cursor-pointer border-2 border-gray-300" title="Chọn màu"
+                        value="#000000">
+                    <div class="h-6 border-l border-gray-300"></div>
+                    <button id="zoom-in-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Phóng to"> <i
+                            data-lucide="zoom-in"></i> </button>
+                    <button id="zoom-out-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Thu nhỏ"> <i
+                            data-lucide="zoom-out"></i> </button>
+                    <button id="reset-zoom-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Reset Zoom"> <i
+                            data-lucide="scan"></i> </button>
+                    <button id="toggle-grid-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200" title="Bật/Tắt Lưới">
+                        <i data-lucide="grid"></i> </button>
+                    <button id="toggle-snap-btn" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="Bật/Tắt Hút vào lưới"> <i data-lucide="move-diagonal"></i> </button>
+                    <div class="h-6 border-l border-gray-300"></div>
+                    <button id="lock-ai-btn" class="tool-btn p-2 rounded-md text-yellow-600 hover:bg-yellow-100"
+                        title="Khóa/Mở khóa đối tượng AI">
+                        <i id="lock-icon-unlocked" data-lucide="unlock"></i>
+                        <i id="lock-icon-locked" data-lucide="lock" class="hidden"></i>
+                    </button>
+                    <button id="dark-mode-toggle" class="tool-btn p-2 rounded-md hover:bg-gray-200"
+                        title="Chế độ Tối/Sáng">
+                        <i data-lucide="moon"></i>
+                        <i data-lucide="sun" class="hidden"></i>
+                    </button>
+                </div>
+                <input type="file" id="image-inserter" accept="image/*" class="hidden">
+            </div>
+            <div class="relative flex-1 bg-white rounded-lg overflow-hidden border">
+                <canvas id="geometry-canvas"></canvas>
+                <div id="loader" class="hidden"></div>
+                <div id="zoom-viewer"> <canvas id="zoom-canvas"></canvas> </div>
+                <div id="mini-toolbar"
+                    class="absolute hidden bg-white rounded-lg shadow-lg border border-gray-200 p-1 flex items-center gap-1 z-10">
+                    <input type="color" id="mini-color-picker" class="w-7 h-7 rounded cursor-pointer" title="Đổi màu">
+                    <div class="h-5 border-l border-gray-200 mx-1"></div>
+                    <button id="mini-delete-btn" class="p-1.5 rounded text-red-600 hover:bg-red-100" title="Xóa">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <button id="geogebra-toggle"
+                    class="w-full text-left font-semibold text-gray-700 p-3 bg-white rounded-lg shadow-sm hover:bg-gray-50 flex items-center justify-between">
+                    <span>Khung vẽ hình học tương tác (GeoGebra)</span>
+                    <i data-lucide="chevron-down" class="transition-transform"></i>
+                </button>
+                <div id="geogebra-container"
+                    class="mt-2 w-full h-[600px] border rounded-lg overflow-hidden shadow hidden">
+                    <iframe scrolling="no" title="GeoGebra Classic" src="https://www.geogebra.org/classic" width="100%"
+                        height="100%" style="border:0px;"></iframe>
+                </div>
+            </div>
+        </main>
+
+        <aside class="w-full lg:w-96 bg-gray-800 text-white flex flex-col h-full shadow-2xl">
+            <header class="p-4 border-b border-gray-700 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold">Trợ Lý AI</h2>
+                    <p class="text-sm text-gray-400">Điều khiển và ra lệnh cho AI</p>
+                </div>
+                <button onclick="window.location.href='index.html'"
+                    class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full transition" title="Về Trang Chủ">
+                    <i data-lucide="home"></i>
+                </button>
+            </header>
+
+            <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                <div class="flex flex-col space-y-2">
+                    <button id="generate-btn"
+                        class="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500 transition-all transform hover:scale-105 active:scale-100">
+                        <i data-lucide="wand-2"></i> <span>Vẽ Hình (Ctrl+Q)</span>
+                    </button>
+                    <button id="regenerate-btn"
+                        class="w-full flex items-center justify-center gap-2 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 transition-all disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="rotate-cw"></i> <span>Vẽ lại</span>
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="bg-gray-900 rounded-lg hidden pointer-events-none">
+                        <div class="accordion-header flex justify-between items-center p-3">
+                            <h3 class="font-semibold">Cài đặt AI</h3>
+                            <i class="accordion-icon" data-lucide="chevron-down"></i>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="p-3 border-t border-gray-700 space-y-4">
+                                <div>
+                                    <label for="api-key-file" class="block text-sm font-medium text-gray-300 mb-1">Tệp
+                                        API Key (.txt)</label>
+                                    <input type="file" id="api-key-file" accept=".txt"
+                                        class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-indigo-300 hover:file:bg-gray-600 cursor-pointer">
+                                    <p id="api-key-filename" class="text-xs text-gray-400 mt-1">Chưa chọn tệp nào.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-1">Model (Cấu hình
+                                        chung)</label>
+                                    <div id="current-model-display"
+                                        class="w-full p-2 border border-gray-600 rounded-lg text-sm bg-gray-700 text-green-400 font-mono">
+                                        ...
+                                    </div>
+                                    <script>document.getElementById('current-model-display').innerText = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';</script>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 rounded-lg">
+                        <div class="accordion-header flex justify-between items-center p-3 active">
+                            <h3 class="font-semibold">Nhập đề bài</h3>
+                            <i class="accordion-icon" data-lucide="chevron-down"></i>
+                        </div>
+                        <div class="accordion-content active">
+                            <div class="p-3 border-t border-gray-700">
+                                <textarea id="prompt-input" rows="8"
+                                    class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-white"
+                                    placeholder="Ví dụ: Cho tam giác ABC vuông tại A... Hoặc dán (paste) ảnh trực tiếp vào đây."></textarea>
+                                <div id="prompt-suggestions" class="mt-2 flex flex-wrap gap-2">
+                                    <button
+                                        class="suggestion-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded-full">Tam
+                                        giác ABC vuông tại A</button>
+                                    <button
+                                        class="suggestion-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded-full">Hình
+                                        thang ABCD</button>
+                                    <button
+                                        class="suggestion-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded-full">Biểu
+                                        đồ tròn 3 loại</button>
+                                    <button
+                                        class="suggestion-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded-full">Biểu
+                                        đồ cột có pattern</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 rounded-lg">
+                        <div class="accordion-header flex justify-between items-center p-3">
+                            <h3 class="font-semibold">Tải ảnh lên</h3>
+                            <i class="accordion-icon" data-lucide="chevron-down"></i>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="p-3 border-t border-gray-700 space-y-3">
+                                <input type="file" id="image-upload" accept="image/*"
+                                    class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-indigo-300 hover:file:bg-gray-600 cursor-pointer" />
+                                <img id="image-preview" src="" alt="Xem trước ảnh"
+                                    class="w-full h-auto object-cover rounded-lg hidden border-2 border-gray-600" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <footer class="p-4 border-t border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">Phân tích của AI</h3>
+                <div id="analysis-output"
+                    class="w-full h-32 p-3 bg-gray-900 border border-gray-700 rounded-lg overflow-y-auto text-sm text-gray-400">
+                    Phân tích về các đối tượng và quan hệ hình học sẽ xuất hiện ở đây...
+                </div>
+            </footer>
+        </aside>
+
+    </div>
+
+    <div id="latex-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-60 hidden z-40"></div>
+    <div id="latex-modal"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 w-full max-w-lg hidden z-50">
+        <h3 class="text-xl font-bold mb-4">Chèn công thức LaTeX</h3>
+        <div id="math-input" class="w-full p-2 border rounded-md mb-4 h-16 text-lg"></div>
+        <p class="text-sm text-gray-600 mb-2">Xem trước (KaTeX):</p>
+        <div id="latex-preview"
+            class="w-full p-3 border rounded-md mb-6 bg-gray-50 min-h-[60px] flex items-center justify-center"></div>
+        <div class="flex justify-end gap-4">
+            <button id="cancel-latex-btn"
+                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Hủy</button>
+            <button id="insert-latex-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Chèn
+                vào hình</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
