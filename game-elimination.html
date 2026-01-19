@@ -204,6 +204,15 @@
                             hasAnswered: false
                         }
                     ];
+                    // Tạo 5 AI với trình độ khác nhau
+                    const aiSkillLevels = [
+                        { correctRate: 0.95, answerSpeed: 0.20 }, // AI giỏi
+                        { correctRate: 0.90, answerSpeed: 0.18 }, // AI khá giỏi
+                        { correctRate: 0.85, answerSpeed: 0.15 }, // AI khá
+                        { correctRate: 0.75, answerSpeed: 0.12 }, // AI trung bình
+                        { correctRate: 0.70, answerSpeed: 0.10 }  // AI yếu hơn
+                    ];
+
                     for (let i = 0; i < 5; i++) {
                         initialPlayers.push({
                             id: i + 1,
@@ -213,7 +222,8 @@
                             score: 0,
                             avatar: AVATARS[i],
                             answer: null,
-                            hasAnswered: false
+                            hasAnswered: false,
+                            aiSkill: aiSkillLevels[i] // Lưu thông tin kỹ năng AI
                         });
                     }
                     setPlayers(initialPlayers);
@@ -231,7 +241,7 @@
                 }
             }, [timeLeft, timerActive]);
 
-            // AI simulation
+            // AI simulation - Mỗi AI có trình độ khác nhau
             useEffect(() => {
                 if (timerActive && !showAnswer && questions.length > 0) {
                     const interval = setInterval(() => {
@@ -240,10 +250,26 @@
                             const currentQ = questions[currentQuestionIndex];
 
                             updated.forEach(player => {
-                                if (!player.isHuman && !player.eliminated && !player.hasAnswered && Math.random() < 0.15) {
-                                    const isCorrect = Math.random() < 0.8;
-                                    player.answer = isCorrect ? currentQ.answer : Math.floor(Math.random() * currentQ.choices.length);
-                                    player.hasAnswered = true;
+                                if (!player.isHuman && !player.eliminated && !player.hasAnswered && player.aiSkill) {
+                                    // Mỗi AI có tốc độ trả lời khác nhau
+                                    if (Math.random() < player.aiSkill.answerSpeed) {
+                                        // Quyết định trả lời đúng hay sai dựa trên correctRate của AI
+                                        const isCorrect = Math.random() < player.aiSkill.correctRate;
+
+                                        if (isCorrect) {
+                                            player.answer = currentQ.answer;
+                                        } else {
+                                            // Khi sai, chọn ngẫu nhiên trong các đáp án SAI (loại bỏ đáp án đúng)
+                                            const wrongChoices = [];
+                                            for (let i = 0; i < currentQ.choices.length; i++) {
+                                                if (i !== currentQ.answer) {
+                                                    wrongChoices.push(i);
+                                                }
+                                            }
+                                            player.answer = wrongChoices[Math.floor(Math.random() * wrongChoices.length)];
+                                        }
+                                        player.hasAnswered = true;
+                                    }
                                 }
                             });
 
