@@ -469,7 +469,8 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                     color: 'from-purple-400 to-indigo-500',
                     purpose: 'Luyện tập tăng dần',
                     description: 'Đúng → lên tầng. Sai → tụt xuống. Lên đỉnh!',
-                    suitable: 'Luyện tập từ dễ đến khó'
+                    suitable: 'Luyện tập từ dễ đến khó',
+                    disabled: true
                 },
                 {
                     id: 'matching',
@@ -478,7 +479,8 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                     color: 'from-green-400 to-emerald-500',
                     purpose: 'Củng cố',
                     description: 'Ghép khái niệm với định nghĩa, công thức với tên',
-                    suitable: 'Củng cố khái niệm'
+                    suitable: 'Củng cố khái niệm',
+                    disabled: true
                 },
                 {
                     id: 'treasure',
@@ -487,7 +489,8 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                     color: 'from-pink-400 to-rose-500',
                     purpose: 'Ôn tập cuối bài',
                     description: 'Chọn ô trên bản đồ. Có bonus, trap, steal!',
-                    suitable: 'Ôn tập + may mắn'
+                    suitable: 'Ôn tập + may mắn',
+                    disabled: true
                 },
                 {
                     id: 'escape',
@@ -496,7 +499,8 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                     color: 'from-indigo-400 to-purple-600',
                     purpose: 'Ôn tập đỉnh cao',
                     description: 'Giải 5-8 khóa liên tiếp. Có gợi ý + mật mã',
-                    suitable: 'Ôn tập theo nhóm'
+                    suitable: 'Ôn tập theo nhóm',
+                    disabled: true
                 },
                 {
                     id: 'teambattle',
@@ -505,7 +509,8 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                     color: 'from-orange-400 to-red-500',
                     purpose: 'Tổng kết',
                     description: '2-4 đội tranh tài. Đúng chiếm điểm, sai mất điểm',
-                    suitable: 'Tổng kết bài học'
+                    suitable: 'Tổng kết bài học',
+                    disabled: true
                 }
             ];
 
@@ -563,9 +568,14 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
                             {games.map(game => (
                                 <div
                                     key={game.id}
-                                    onClick={() => window.location.href = `game-${game.id}.html`}
-                                    className="game-card bg-white rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-purple-400"
+                                    onClick={() => !game.disabled && (window.location.href = `game-${game.id}.html`)}
+                                    className={`game-card bg-white rounded-2xl shadow-lg p-6 border-2 border-transparent relative ${game.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-purple-400'}`}
                                 >
+                                    {game.disabled && (
+                                        <div className="absolute top-3 right-3 px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">
+                                            Đang phát triển
+                                        </div>
+                                    )}
                                     <div className={`w-16 h-16 bg-gradient-to-br ${game.color} rounded-2xl flex items-center justify-center mb-4`}>
                                         <i className={`fas ${game.icon} text-3xl text-white`}></i>
                                     </div>
