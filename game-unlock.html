@@ -325,7 +325,7 @@ Trả về JSON ĐÚNG format (KHÔNG thêm chữ):
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800 mb-2"><i className="fas fa-gamepad mr-2"></i>Luật chơi</h3>
                                     <ul className="space-y-2 ml-6">
-                                        <li className="flex items-start gap-2"><span className="text-blue-600 font-bold">1.</span><span>Có <strong>{aiGenParams.numQuestions} ổ khóa</strong> cần mở</span></li>
+                                        <li className="flex items-start gap-2"><span className="text-blue-600 font-bold">1.</span><span>Có <strong>3-7 ổ khóa</strong> cần mở (khuyến nghị 5 câu)</span></li>
                                         <li className="flex items-start gap-2"><span className="text-blue-600 font-bold">2.</span><span>Mỗi câu đúng → <strong className="text-green-600">Mở 1 khóa</strong></span></li>
                                         <li className="flex items-start gap-2"><span className="text-blue-600 font-bold">3.</span><span>Có <strong>2 gợi ý</strong> mỗi câu (nhưng trừ điểm)</span></li>
                                         <li className="flex items-start gap-2"><span className="text-blue-600 font-bold">4.</span><span>Mở đủ → <strong className="text-green-600">Thẻ kiến thức</strong></span></li>
@@ -366,7 +366,7 @@ Trả về JSON ĐÚNG format (KHÔNG thêm chữ):
                                     <div>
                                         <label className="block font-bold mb-2">Môn học:</label>
                                         <select value={aiGenParams.subject} onChange={(e) => setAiGenParams({ ...aiGenParams, subject: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
-                                            <option>Toán học</option><option>Tiếng Việt</option><option>Ngữ văn</option><option>Tiếng Anh</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Khoa học</option><option>L ịch sử</option><option>Địa lý</option><option>GDCD</option><option>Tin học</option><option>Công nghệ</option>
+                                            <option>Toán học</option><option>Tiếng Việt</option><option>Ngữ văn</option><option>Tiếng Anh</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Khoa học</option><option>Lịch sử</option><option>Địa lý</option><option>Lịch sử và Địa lý</option><option>GDCD</option><option>Đạo đức</option><option>Tự nhiên và Xã hội</option><option>Tin học</option><option>Công nghệ</option><option>Hoạt động trải nghiệm</option><option>Âm nhạc</option><option>Mỹ thuật</option><option>Thể dục</option><option>Ngoại ngữ khác</option>
                                         </select>
                                     </div>
                                     <div>
