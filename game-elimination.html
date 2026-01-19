@@ -179,12 +179,21 @@
             const [timeLeft, setTimeLeft] = useState(30);
             const [timerActive, setTimerActive] = useState(false);
             const [showInstructions, setShowInstructions] = useState(true);
+            const [showModeSelection, setShowModeSelection] = useState(false);
+            const [showQuestionCreation, setShowQuestionCreation] = useState(false);
             const [showProfileSetup, setShowProfileSetup] = useState(false);
-            const [roundPhase, setRoundPhase] = useState('question'); // question, reveal, next
+            const [gameMode, setGameMode] = useState('elimination'); // 'elimination' or 'complete'
+            const [roundPhase, setRoundPhase] = useState('question');
             const [currentRound, setCurrentRound] = useState(1);
             const [playerProfile, setPlayerProfile] = useState(() => {
                 const saved = localStorage.getItem('playerProfile');
                 return saved ? JSON.parse(saved) : { name: '', class: '', avatar: '🎮' };
+            });
+            const [questions, setQuestions] = useState([]);
+            const [currentQuestion, setCurrentQuestion] = useState({
+                prompt: '',
+                choices: ['', '', '', ''],
+                answer: 0
             });
 
             useEffect(() => {
