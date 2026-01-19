@@ -482,9 +482,17 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                         const isCorrect = player.answer === correctAnswer;
 
                         if (gameMode === 'complete') {
-                            if (player.isHuman && isCorrect) {
-                                const timeBonus = Math.floor(100 * (timeLeft / 30));
-                                return { ...player, score: player.score + timeBonus };
+                            if (isCorrect) {
+                                // Tính điểm: Người dùng tính theo thời gian thực
+                                // AI tính điểm ngẫu nhiên quanh mốc thời gian đó để tạo sự đa dạng
+                                let bonus = 0;
+                                if (player.isHuman) {
+                                    bonus = Math.floor(100 * (timeLeft / 30));
+                                } else {
+                                    const variation = Math.floor(Math.random() * 15); // Biến thiên 0-15 điểm
+                                    bonus = Math.max(10, Math.floor(100 * (timeLeft / 30)) - variation);
+                                }
+                                return { ...player, score: player.score + bonus };
                             }
                             return player;
                         }
@@ -493,12 +501,17 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                             return { ...player, eliminated: true };
                         }
 
-                        if (player.isHuman && isCorrect) {
-                            const timeBonus = Math.floor(100 * (timeLeft / 30));
-                            return { ...player, score: player.score + timeBonus };
+                        // Chế độ loại trực tiếp: Trả lời đúng được cộng điểm
+                        let bonus = 0;
+                        if (player.isHuman) {
+                            bonus = Math.floor(100 * (timeLeft / 30));
+                        } else {
+                            // AI điểm thấp hơn chút hoặc ngẫu nhiên để trông thật hơn
+                            const variation = Math.floor(Math.random() * 20);
+                            bonus = Math.max(10, Math.floor(100 * (timeLeft / 30)) - variation);
                         }
 
-                        return player;
+                        return { ...player, score: player.score + bonus };
                     }));
                 }, 1500);
             };
