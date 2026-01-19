@@ -89,22 +89,6 @@
             }
         }
 
-        .winner-celebration {
-            animation: celebrate 1s ease-in-out infinite;
-        }
-
-        @keyframes celebrate {
-
-            0%,
-            100% {
-                transform: translateY(0px) scale(1);
-            }
-
-            50% {
-                transform: translateY(-10px) scale(1.05);
-            }
-        }
-
         .shake {
             animation: shake 0.5s ease-in-out;
         }
@@ -164,68 +148,70 @@
             return <span ref={ref} />;
         };
 
-        // Player avatars
         const AVATARS = ['👨‍🎓', '👩‍🎓', '🧑‍💼', '👨‍💻', '👩‍🔬', '🧑‍🏫'];
         const AI_NAMES = ['Minh', 'Lan', 'Hùng', 'Linh', 'Tuấn'];
 
-        // Main Game Component
         const EliminationGame = () => {
-            const [gameData, setGameData] = useState(null);
-            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-            const [players, setPlayers] = useState([]);
-            const [playerAnswer, setPlayerAnswer] = useState(null);
-            const [showAnswer, setShowAnswer] = useState(false);
-            const [gameOver, setGameOver] = useState(false);
-            const [timeLeft, setTimeLeft] = useState(30);
-            const [timerActive, setTimerActive] = useState(false);
-            const [showInstructions, setShowInstructions] = useState(true);
-            const [showModeSelection, setShowModeSelection] = useState(false);
-            const [showQuestionCreation, setShowQuestionCreation] = useState(false);
-            const [showProfileSetup, setShowProfileSetup] = useState(false);
+            // Flow states
+            const [currentScreen, setCurrentScreen] = useState('instructions'); // instructions, modeSelection, questionCreation, profileSetup, game, gameOver
+
+            // Game configuration
             const [gameMode, setGameMode] = useState('elimination'); // 'elimination' or 'complete'
-            const [roundPhase, setRoundPhase] = useState('question');
-            const [currentRound, setCurrentRound] = useState(1);
+            const [questions, setQuestions] = useState([]);
             const [playerProfile, setPlayerProfile] = useState(() => {
                 const saved = localStorage.getItem('playerProfile');
                 return saved ? JSON.parse(saved) : { name: '', class: '', avatar: '🎮' };
             });
-            const [questions, setQuestions] = useState([]);
-            const [currentQuestion, setCurrentQuestion] = useState({
+
+            // Question creation
+            const [editingQuestion, setEditingQuestion] = useState({
                 prompt: '',
                 choices: ['', '', '', ''],
                 answer: 0
             });
 
+            // Game play states
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [players, setPlayers] = useState([]);
+            const [playerAnswer, setPlayerAnswer] = useState(null);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [timeLeft, setTimeLeft] = useState(30);
+            const [timerActive, setTimerActive] = useState(false);
+
+            // Initialize players when game starts
             useEffect(() => {
-                const data = localStorage.getItem('gameData');
-                if (!data) {
-                    alert('Không có dữ liệu game!');
-                    window.location.href = 'trochoi.html';
-                    return;
+                if (currentScreen === 'game' && players.length === 0 && questions.length > 0) {
+                    const initialPlayers = [
+                        {
+                            id: 0,
+                            name: playerProfile.name,
+                            class: playerProfile.class,
+                            isHuman: true,
+                            eliminated: false,
+                            score: 0,
+                            avatar: playerProfile.avatar,
+                            answer: null,
+                            hasAnswered: false
+                        }
+                    ];
+                    for (let i = 0; i < 5; i++) {
+                        initialPlayers.push({
+                            id: i + 1,
+                            name: AI_NAMES[i],
+                            isHuman: false,
+                            eliminated: false,
+                            score: 0,
+                            avatar: AVATARS[i],
+                            answer: null,
+                            hasAnswered: false
+                        });
+                    }
+                    setPlayers(initialPlayers);
+                    startQuestion();
                 }
-                const parsed = JSON.parse(data);
-                setGameData(parsed);
+            }, [currentScreen, questions]);
 
-                // Initialize players: 1 human + 5 AI
-                const profile = JSON.parse(localStorage.getItem('playerProfile') || '{"name":"Bạn","class":"","avatar":"🎮"}');
-                const initialPlayers = [
-                    { id: 0, name: profile.name, class: profile.class, isHuman: true, eliminated: false, score: 0, avatar: profile.avatar, answer: null, hasAnswered: false }
-                ];
-                for (let i = 0; i < 5; i++) {
-                    initialPlayers.push({
-                        id: i + 1,
-                        name: AI_NAMES[i],
-                        isHuman: false,
-                        eliminated: false,
-                        score: 0,
-                        avatar: AVATARS[i],
-                        answer: null,
-                        hasAnswered: false
-                    });
-                }
-                setPlayers(initialPlayers);
-            }, []);
-
+            // Timer
             useEffect(() => {
                 if (timerActive && timeLeft > 0) {
                     const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -235,19 +221,18 @@
                 }
             }, [timeLeft, timerActive]);
 
-            // AI answer simulation
+            // AI simulation
             useEffect(() => {
-                if (timerActive && !showAnswer) {
+                if (timerActive && !showAnswer && questions.length > 0) {
                     const interval = setInterval(() => {
                         setPlayers(prev => {
                             const updated = [...prev];
-                            const currentQuestion = gameData.content.questions[currentQuestionIndex];
+                            const currentQ = questions[currentQuestionIndex];
 
                             updated.forEach(player => {
                                 if (!player.isHuman && !player.eliminated && !player.hasAnswered && Math.random() < 0.15) {
-                                    // AI answers with 80% accuracy
                                     const isCorrect = Math.random() < 0.8;
-                                    player.answer = isCorrect ? currentQuestion.answer : Math.floor(Math.random() * currentQuestion.choices.length);
+                                    player.answer = isCorrect ? currentQ.answer : Math.floor(Math.random() * currentQ.choices.length);
                                     player.hasAnswered = true;
                                 }
                             });
@@ -258,16 +243,14 @@
 
                     return () => clearInterval(interval);
                 }
-            }, [timerActive, showAnswer, gameData, currentQuestionIndex]);
+            }, [timerActive, showAnswer, questions, currentQuestionIndex]);
 
             const startQuestion = () => {
                 setShowAnswer(false);
                 setPlayerAnswer(null);
                 setTimeLeft(30);
                 setTimerActive(true);
-                setRoundPhase('question');
 
-                // Reset all players' answers
                 setPlayers(prev => prev.map(p => ({
                     ...p,
                     answer: null,
@@ -284,14 +267,13 @@
             };
 
             const handleTimeUp = () => {
-                // Auto-answer for AI who haven't answered
                 setPlayers(prev => {
                     const updated = [...prev];
-                    const currentQuestion = gameData.content.questions[currentQuestionIndex];
+                    const currentQ = questions[currentQuestionIndex];
 
                     updated.forEach(player => {
                         if (!player.hasAnswered && !player.eliminated) {
-                            player.answer = Math.floor(Math.random() * currentQuestion.choices.length);
+                            player.answer = Math.floor(Math.random() * currentQ.choices.length);
                             player.hasAnswered = true;
                         }
                     });
@@ -305,21 +287,28 @@
             const handleRevealAnswer = () => {
                 setTimerActive(false);
                 setShowAnswer(true);
-                setRoundPhase('reveal');
 
-                const currentQuestion = gameData.content.questions[currentQuestionIndex];
-                const correctAnswer = currentQuestion.answer;
+                const currentQ = questions[currentQuestionIndex];
+                const correctAnswer = currentQ.answer;
 
                 setTimeout(() => {
                     setPlayers(prev => prev.map(player => {
                         if (player.eliminated) return player;
 
                         const isCorrect = player.answer === correctAnswer;
+
+                        if (gameMode === 'complete') {
+                            if (player.isHuman && isCorrect) {
+                                const timeBonus = Math.floor(100 * (timeLeft / 30));
+                                return { ...player, score: player.score + timeBonus };
+                            }
+                            return player;
+                        }
+
                         if (!isCorrect) {
                             return { ...player, eliminated: true };
                         }
 
-                        // Add score for human player
                         if (player.isHuman && isCorrect) {
                             const timeBonus = Math.floor(100 * (timeLeft / 30));
                             return { ...player, score: player.score + timeBonus };
@@ -333,40 +322,364 @@
             const handleNextQuestion = () => {
                 const alivePlayers = players.filter(p => !p.eliminated);
 
-                if (alivePlayers.length === 0) {
-                    setGameOver(true);
-                    return;
+                if (gameMode === 'elimination') {
+                    if (alivePlayers.length === 0 || alivePlayers.length === 1) {
+                        setCurrentScreen('gameOver');
+                        return;
+                    }
                 }
 
-                if (alivePlayers.length === 1) {
-                    setGameOver(true);
-                    return;
-                }
-
-                if (currentQuestionIndex < gameData.content.questions.length - 1) {
+                if (currentQuestionIndex < questions.length - 1) {
                     setCurrentQuestionIndex(currentQuestionIndex + 1);
-                    setCurrentRound(currentRound + 1);
                     setTimeout(startQuestion, 500);
                 } else {
-                    setGameOver(true);
+                    setCurrentScreen('gameOver');
                 }
             };
 
-            if (!gameData) {
-                return <div className="flex items-center justify-center min-h-screen">
-                    <div className="text-2xl text-gray-600">Đang tải...</div>
-                </div>;
+            const handleAddQuestion = () => {
+                if (!editingQuestion.prompt.trim()) {
+                    alert('Vui lòng nhập câu hỏi!');
+                    return;
+                }
+                if (editingQuestion.choices.some(c => !c.trim())) {
+                    alert('Vui lòng nhập đầy đủ các đáp án!');
+                    return;
+                }
+
+                setQuestions([...questions, { ...editingQuestion }]);
+                setEditingQuestion({
+                    prompt: '',
+                    choices: ['', '', '', ''],
+                    answer: 0
+                });
+            };
+
+            const handleRemoveQuestion = (index) => {
+                setQuestions(questions.filter((_, i) => i !== index));
+            };
+
+            // SCREEN: Instructions
+            if (currentScreen === 'instructions') {
+                return (
+                    <div className="fixed inset-0 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto fade-in">
+                            <div className="text-center mb-6">
+                                <h2 className="text-4xl font-bold text-red-700 mb-2">
+                                    <i className="fas fa-user-slash mr-3"></i>LOẠI TRỰC TIẾP
+                                </h2>
+                                <p className="text-gray-600">Battle Royale - Ai sai bị loại!</p>
+                            </div>
+
+                            <div className="space-y-4 text-gray-700">
+                                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                                    <h3 className="font-bold text-lg text-red-800 mb-2">
+                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
+                                    </h3>
+                                    <p>Thi đấu với 5 AI trong trận Battle Royale! Trả lời đúng để sống sót, sai là bị loại ngay!</p>
+                                </div>
+
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
+                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
+                                    </h3>
+                                    <ul className="space-y-2 ml-6">
+                                        <li>• 6 người chơi thi đấu cùng lúc (Bạn + 5 AI)</li>
+                                        <li>• Mỗi câu hỏi có 30 giây</li>
+                                        <li>• <strong className="text-red-600">Trả lời SAI → BỊ LOẠI</strong> (chế độ loại trực tiếp)</li>
+                                        <li>• Người cuối cùng sống sót → <strong className="text-green-600">CHIẾN THẮNG</strong></li>
+                                    </ul>
+                                </div>
+
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-sm">
+                                        <strong>💡 Điểm = 100 × (Thời gian còn / 30)</strong><br />
+                                        Trả lời nhanh = Nhiều điểm hơn!
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentScreen('modeSelection')}
+                                className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
+                            >
+                                <i className="fas fa-arrow-right mr-2"></i>Tiếp tục
+                            </button>
+
+                            <button
+                                onClick={() => window.location.href = 'trochoi.html'}
+                                className="w-full mt-3 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                            >
+                                <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                            </button>
+                        </div>
+                    </div>
+                );
             }
 
-            if (gameOver) {
+            // SCREEN: Mode Selection
+            if (currentScreen === 'modeSelection') {
+                return (
+                    <div className="fixed inset-0 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-center text-red-700 mb-6">
+                                <i className="fas fa-cog mr-2"></i>Chọn chế độ chơi
+                            </h2>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <button
+                                    onClick={() => {
+                                        setGameMode('elimination');
+                                        setCurrentScreen('questionCreation');
+                                    }}
+                                    className="border-4 border-red-500 rounded-2xl p-6 hover:bg-red-50 transition text-left"
+                                >
+                                    <div className="text-5xl mb-4 text-center">⚔️</div>
+                                    <h3 className="text-2xl font-bold text-red-700 mb-3">Loại Trực Tiếp</h3>
+                                    <p className="text-gray-600 mb-2">• Trả lời sai → Bị loại ngay</p>
+                                    <p className="text-gray-600 mb-2">• Người cuối cùng thắng</p>
+                                    <p className="text-gray-600">• Căng thẳng cao!</p>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setGameMode('complete');
+                                        setCurrentScreen('questionCreation');
+                                    }}
+                                    className="border-4 border-green-500 rounded-2xl p-6 hover:bg-green-50 transition text-left"
+                                >
+                                    <div className="text-5xl mb-4 text-center">📝</div>
+                                    <h3 className="text-2xl font-bold text-green-700 mb-3">Làm Hết Câu Hỏi</h3>
+                                    <p className="text-gray-600 mb-2">• Sai vẫn làm tiếp</p>
+                                    <p className="text-gray-600 mb-2">• Ai nhiều điểm nhất thắng</p>
+                                    <p className="text-gray-600">• Nhẹ nhàng hơn!</p>
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentScreen('instructions')}
+                                className="w-full mt-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                            >
+                                <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: Question Creation
+            if (currentScreen === 'questionCreation') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 p-6">
+                        <div className="max-w-4xl mx-auto fade-in">
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                                <h2 className="text-3xl font-bold text-red-700 mb-6">
+                                    <i className="fas fa-plus-circle mr-2"></i>Tạo câu hỏi
+                                    <span className="text-sm text-gray-500 ml-3">({questions.length} câu)</span>
+                                </h2>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block font-bold text-gray-700 mb-2">Câu hỏi:</label>
+                                        <textarea
+                                            value={editingQuestion.prompt}
+                                            onChange={(e) => setEditingQuestion({ ...editingQuestion, prompt: e.target.value })}
+                                            placeholder="Nhập câu hỏi..."
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none"
+                                            rows="3"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {editingQuestion.choices.map((choice, idx) => (
+                                            <div key={idx}>
+                                                <label className="block font-bold text-gray-700 mb-2">
+                                                    Đáp án {String.fromCharCode(65 + idx)}:
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="radio"
+                                                        name="correct"
+                                                        checked={editingQuestion.answer === idx}
+                                                        onChange={() => setEditingQuestion({ ...editingQuestion, answer: idx })}
+                                                        className="mt-3"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={choice}
+                                                        onChange={(e) => {
+                                                            const newChoices = [...editingQuestion.choices];
+                                                            newChoices[idx] = e.target.value;
+                                                            setEditingQuestion({ ...editingQuestion, choices: newChoices });
+                                                        }}
+                                                        placeholder={`Đáp án ${String.fromCharCode(65 + idx)}...`}
+                                                        className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={handleAddQuestion}
+                                        className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition"
+                                    >
+                                        <i className="fas fa-plus mr-2"></i>Thêm câu hỏi
+                                    </button>
+                                </div>
+                            </div>
+
+                            {questions.length > 0 && (
+                                <div className="bg-white rounded-3xl shadow-2xl p-8">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                                        Danh sách câu hỏi ({questions.length})
+                                    </h3>
+                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                        {questions.map((q, idx) => (
+                                            <div key={idx} className="border-2 border-gray-200 rounded-xl p-4 hover:border-red-300 transition">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-gray-800 mb-2">Câu {idx + 1}: {q.prompt}</div>
+                                                        <div className="text-sm text-gray-600">
+                                                            Đáp án đúng: <span className="font-bold text-green-600">{q.choices[q.answer]}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRemoveQuestion(idx)}
+                                                        className="ml-4 px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                                                    >
+                                                        <i className="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex gap-4 mt-6">
+                                        <button
+                                            onClick={() => setCurrentScreen('modeSelection')}
+                                            className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                                        >
+                                            <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (questions.length < 3) {
+                                                    alert('Vui lòng tạo ít nhất 3 câu hỏi!');
+                                                    return;
+                                                }
+                                                setCurrentScreen('profileSetup');
+                                            }}
+                                            className="flex-1 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl transition"
+                                        >
+                                            <i className="fas fa-arrow-right mr-2"></i>Tiếp tục ({questions.length} câu)
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: Profile Setup  
+            if (currentScreen === 'profileSetup') {
+                return (
+                    <div className="fixed inset-0 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full fade-in">
+                            <div className="text-center mb-6">
+                                <h2 className="text-3xl font-bold text-red-700 mb-2">
+                                    <i className="fas fa-user-circle mr-2"></i>Thông tin người chơi
+                                </h2>
+                                <p className="text-gray-600">Nhập thông tin để bắt đầu!</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-user mr-2"></i>Tên của bạn *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={playerProfile.name}
+                                        onChange={(e) => setPlayerProfile({ ...playerProfile, name: e.target.value })}
+                                        placeholder="Nhập tên..."
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none text-lg"
+                                        maxLength={20}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-school mr-2"></i>Lớp
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={playerProfile.class}
+                                        onChange={(e) => setPlayerProfile({ ...playerProfile, class: e.target.value })}
+                                        placeholder="Ví dụ: 10A1..."
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none text-lg"
+                                        maxLength={10}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-smile mr-2"></i>Chọn avatar
+                                    </label>
+                                    <div className="grid grid-cols-6 gap-2">
+                                        {['🎮', '👨‍🎓', '👩‍🎓', '🧑‍💼', '👨‍💻', '👩‍🔬', '🧑‍🏫', '⭐', '🔥', '⚡', '🎯', '🏆'].map(emoji => (
+                                            <button
+                                                key={emoji}
+                                                onClick={() => setPlayerProfile({ ...playerProfile, avatar: emoji })}
+                                                className={`text-4xl p-3 rounded-xl border-2 transition hover:scale-110 ${playerProfile.avatar === emoji
+                                                        ? 'border-red-500 bg-red-50'
+                                                        : 'border-gray-300 hover:border-red-300'
+                                                    }`}
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => setCurrentScreen('questionCreation')}
+                                    className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                                >
+                                    <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (!playerProfile.name.trim()) {
+                                            alert('Vui lòng nhập tên!');
+                                            return;
+                                        }
+                                        localStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+                                        setCurrentScreen('game');
+                                    }}
+                                    className="flex-1 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl transition"
+                                >
+                                    <i className="fas fa-play mr-2"></i>Bắt đầu!
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: Game Over
+            if (currentScreen === 'gameOver') {
                 const survivors = players.filter(p => !p.eliminated).sort((a, b) => b.score - a.score);
                 const humanPlayer = players.find(p => p.isHuman);
                 const humanWon = survivors.length > 0 && survivors[0].isHuman;
 
                 return (
-                    <div className="max-w-4xl mx-auto p-6 fade-in">
-                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
-                            <div className={`w-24 h-24 ${humanWon ? 'bg-yellow-100' : 'bg-gray-100'} rounded-full flex items-center justify-center mx-auto mb-6 ${humanWon ? 'winner-celebration' : ''}`}>
+                    <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-6">
+                        <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-4xl w-full text-center fade-in">
+                            <div className={`w-24 h-24 ${humanWon ? 'bg-yellow-100' : 'bg-gray-100'} rounded-full flex items-center justify-center mx-auto mb-6`}>
                                 <i className={`fas ${humanWon ? 'fa-trophy' : 'fa-sad-tear'} text-5xl ${humanWon ? 'text-yellow-500' : 'text-gray-400'}`}></i>
                             </div>
                             <h2 className="text-4xl font-bold mb-6 text-gray-800">
@@ -387,7 +700,7 @@
                             )}
 
                             <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                                <h3 className="font-bold text-lg mb-4">Bảng xếp hạng cuối cùng</h3>
+                                <h3 className="font-bold text-lg mb-4">Bảng xếp hạng</h3>
                                 <div className="space-y-2">
                                     {players.sort((a, b) => {
                                         if (a.eliminated && !b.eliminated) return 1;
@@ -399,6 +712,7 @@
                                             <div className="flex items-center gap-3">
                                                 <span className="text-2xl">{player.avatar}</span>
                                                 <span className="font-bold">{player.name}</span>
+                                                {player.class && <span className="text-xs text-gray-500">{player.class}</span>}
                                                 {player.eliminated && <span className="text-red-600 text-sm">❌ Đã loại</span>}
                                                 {!player.eliminated && <span className="text-green-600 text-sm">✅ Sống sót</span>}
                                             </div>
@@ -427,351 +741,150 @@
                 );
             }
 
-            const currentQuestion = gameData.content.questions[currentQuestionIndex];
+            // SCREEN: Game Play
+            const currentQ = questions[currentQuestionIndex];
             const alivePlayers = players.filter(p => !p.eliminated);
 
-            // Profile Setup Screen
-            if (showProfileSetup) {
-                return (
-                    <div className="fixed inset-0 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
-                            <div className="text-center mb-6">
-                                <h2 className="text-3xl font-bold text-red-700 mb-2">
-                                    <i className="fas fa-user-circle mr-2"></i>Thông tin người chơi
-                                </h2>
-                                <p className="text-gray-600">Nhập thông tin để bắt đầu thi đấu!</p>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                                        <i className="fas fa-user mr-2"></i>Tên của bạn *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={playerProfile.name}
-                                        onChange={(e) => setPlayerProfile({ ...playerProfile, name: e.target.value })}
-                                        placeholder="Nhập tên của bạn..."
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none text-lg"
-                                        maxLength={20}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                                        <i className="fas fa-school mr-2"></i>Lớp (không bắt buộc)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={playerProfile.class}
-                                        onChange={(e) => setPlayerProfile({ ...playerProfile, class: e.target.value })}
-                                        placeholder="Ví dụ: 10A1, 11B3..."
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none text-lg"
-                                        maxLength={10}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                                        <i className="fas fa-smile mr-2"></i>Chọn avatar
-                                    </label>
-                                    <div className="grid grid-cols-6 gap-2">
-                                        {['🎮', '👨‍🎓', '👩‍🎓', '🧑‍💼', '👨‍💻', '👩‍🔬', '🧑‍🏫', '⭐', '🔥', '⚡', '🎯', '🏆'].map(emoji => (
-                                            <button
-                                                key={emoji}
-                                                onClick={() => setPlayerProfile({ ...playerProfile, avatar: emoji })}
-                                                className={`text-4xl p-3 rounded-xl border-2 transition hover:scale-110 ${playerProfile.avatar === emoji
-                                                    ? 'border-red-500 bg-red-50'
-                                                    : 'border-gray-300 hover:border-red-300'
-                                                    }`}
-                                            >
-                                                {emoji}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => {
-                                    if (!playerProfile.name.trim()) {
-                                        alert('Vui lòng nhập tên của bạn!');
-                                        return;
-                                    }
-                                    localStorage.setItem('playerProfile', JSON.stringify(playerProfile));
-                                    setShowProfileSetup(false);
-                                    startQuestion();
-                                }}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <i className="fas fa-arrow-right mr-2"></i>Bắt đầu chơi
-                            </button>
-
-                            <p className="text-xs text-gray-500 text-center mt-4">
-                                <i className="fas fa-info-circle mr-1"></i>
-                                Thông tin được lưu cho lần chơi tiếp theo
-                            </p>
-                        </div>
-                    </div>
-                );
-            }
-
-            // Instructions Modal
-            if (showInstructions) {
-                return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-3xl font-bold text-red-700">
-                                    <i className="fas fa-user-slash mr-3"></i>LOẠI TRỰC TIẾP - BATTLE ROYALE
-                                </h2>
-                                <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
-                                    <i className="fas fa-times text-2xl"></i>
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 p-6">
+                    <div className="max-w-7xl mx-auto fade-in">
+                        {/* Header */}
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => window.location.href = 'trochoi.html'}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                                >
+                                    <i className="fas fa-arrow-left mr-2"></i>Thoát
                                 </button>
                             </div>
 
-                            <div className="space-y-4 text-gray-700">
-                                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-lg text-red-800 mb-2">
-                                        <i className="fas fa-bullseye mr-2"></i>Chế độ mới: Battle Royale!
-                                    </h3>
-                                    <p>Thi đấu với 5 học sinh khác trong trận chiến loại trực tiếp! Ai trả lời sai sẽ bị loại ngay lập tức. Người cuối cùng sống sót là người chiến thắng!</p>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
-                                    </h3>
-                                    <ul className="space-y-2 ml-6">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-red-600 font-bold">1.</span>
-                                            <span><strong>6 người chơi</strong> cùng thi đấu (bạn + 5 AI)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-red-600 font-bold">2.</span>
-                                            <span>Mỗi câu hỏi có <strong>30 giây</strong> để trả lời</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-red-600 font-bold">3.</span>
-                                            <span>Xem <strong>trạng thái real-time</strong> của các đối thủ</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-red-600 font-bold">4.</span>
-                                            <span><strong className="text-red-600">Trả lời SAI → BỊ LOẠI</strong> ngay lập tức!</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-red-600 font-bold">5.</span>
-                                            <span>Người cuối cùng sống sót → <strong className="text-green-600">CHIẾN THẮNG</strong></span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-calculator mr-2"></i>Tính điểm
-                                    </h3>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                                        <p><strong>Điểm = 100 × (Thời gian còn lại / 30)</strong></p>
-                                        <p className="text-sm">Trả lời nhanh = Nhiều điểm hơn!</p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                    <p className="text-sm">
-                                        <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
-                                        <strong>Mẹo:</strong> Theo dõi đối thủ để biết ai đã trả lời. Trả lời nhanh nhưng chính xác!
-                                    </p>
+                            <div className="text-center">
+                                <h1 className="text-3xl font-bold text-red-700">
+                                    <i className="fas fa-user-slash mr-2"></i>
+                                    {gameMode === 'elimination' ? 'LOẠI TRỰC TIẾP' : 'LÀM HẾT CÂU'}
+                                </h1>
+                                <div className="text-sm text-gray-600 mt-1">
+                                    Câu {currentQuestionIndex + 1}/{questions.length} •
+                                    {gameMode === 'elimination' && <span className="font-bold text-red-600"> {alivePlayers.length} người còn lại</span>}
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => {
-                                    const profile = localStorage.getItem('playerProfile');
-                                    if (profile) {
-                                        const parsed = JSON.parse(profile);
-                                        if (parsed.name && parsed.name.trim()) {
-                                            // Profile exists, start game directly
-                                            setShowInstructions(false);
-                                            startQuestion();
+                            <div className={`px-6 py-3 rounded-xl font-bold text-2xl ${timeLeft <= 5 ? 'bg-red-600 text-white animate-pulse shake' : timeLeft <= 10 ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                <i className="fas fa-clock mr-2"></i>{timeLeft}s
+                            </div>
+                        </div>
+
+                        {/* Players Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                            {players.map(player => (
+                                <div
+                                    key={player.id}
+                                    className={`p-4 rounded-xl border-2 transition ${player.eliminated
+                                            ? 'bg-gray-100 border-gray-300 eliminated'
+                                            : player.hasAnswered
+                                                ? 'bg-green-100 border-green-500 player-answered'
+                                                : 'bg-white border-blue-300 player-thinking'
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-3xl">{player.avatar}</span>
+                                            <div>
+                                                <div className="font-bold">
+                                                    {player.name}
+                                                    {player.isHuman && <span className="ml-1 text-xs bg-blue-500 text-white px-2 py-0.5 rounded">Bạn</span>}
+                                                </div>
+                                                {player.class && <div className="text-xs text-gray-500">{player.class}</div>}
+                                                <div className="text-sm text-gray-600">{player.score}đ</div>
+                                            </div>
+                                        </div>
+                                        {player.eliminated && <i className="fas fa-times-circle text-red-500 text-2xl"></i>}
+                                        {!player.eliminated && player.hasAnswered && <i className="fas fa-check-circle text-green-500 text-2xl"></i>}
+                                        {!player.eliminated && !player.hasAnswered && <i className="fas fa-brain text-gray-400 text-2xl"></i>}
+                                    </div>
+                                    {player.eliminated && <div className="text-sm text-red-600 font-bold">❌ ĐÃ BỊ LOẠI</div>}
+                                    {!player.eliminated && player.hasAnswered && <div className="text-sm text-green-600 font-bold">✅ Đã trả lời</div>}
+                                    {!player.eliminated && !player.hasAnswered && <div className="text-sm text-gray-500">🤔 Đang suy nghĩ...</div>}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Question */}
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                            <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                                <MathText text={currentQ.prompt} />
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {currentQ.choices.map((choice, idx) => {
+                                    const isSelected = playerAnswer === idx;
+                                    const isCorrect = currentQ.answer === idx;
+                                    const humanPlayer = players.find(p => p.isHuman);
+
+                                    let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
+
+                                    if (showAnswer) {
+                                        if (isCorrect) {
+                                            className += "bg-green-100 border-green-500 text-green-900";
+                                        } else if (isSelected) {
+                                            className += "bg-red-100 border-red-500 text-red-900";
                                         } else {
-                                            // Profile incomplete, show setup
-                                            setShowInstructions(false);
-                                            setShowProfileSetup(true);
+                                            className += "border-gray-200 opacity-50";
                                         }
                                     } else {
-                                        // No profile, show setup
-                                        setShowInstructions(false);
-                                        setShowProfileSetup(true);
+                                        if (isSelected) {
+                                            className += "bg-blue-100 border-blue-500";
+                                        } else {
+                                            className += "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
+                                        }
                                     }
-                                }}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
-                            >
-                                <i className="fas fa-play mr-2"></i>Bắt đầu Battle Royale!
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
 
-            return (
-                <div className="max-w-7xl mx-auto p-6 fade-in">
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => window.location.href = 'trochoi.html'}
-                                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                            >
-                                <i className="fas fa-arrow-left mr-2"></i>Thoát
-                            </button>
-                            <button
-                                onClick={() => setShowInstructions(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                            >
-                                <i className="fas fa-question-circle"></i>
-                            </button>
-                        </div>
-
-                        <div className="text-center">
-                            <h1 className="text-3xl font-bold text-red-700">
-                                <i className="fas fa-user-slash mr-2"></i>BATTLE ROYALE
-                            </h1>
-                            <div className="text-sm text-gray-600 mt-1">
-                                Vòng {currentRound} • Câu {currentQuestionIndex + 1}/{gameData.content.questions.length} •
-                                <span className="font-bold text-red-600"> {alivePlayers.length} người còn lại</span>
-                            </div>
-                        </div>
-
-                        <div className={`px-6 py-3 rounded-xl font-bold text-2xl ${timeLeft <= 5 ? 'bg-red-600 text-white animate-pulse shake' : timeLeft <= 10 ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                            <i className="fas fa-clock mr-2"></i>{timeLeft}s
-                        </div>
-                    </div>
-
-                    {/* Players Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                        {players.map(player => (
-                            <div
-                                key={player.id}
-                                className={`p-4 rounded-xl border-2 transition ${player.eliminated
-                                    ? 'bg-gray-100 border-gray-300 eliminated'
-                                    : player.hasAnswered
-                                        ? 'bg-green-100 border-green-500 player-answered'
-                                        : 'bg-white border-blue-300 player-thinking'
-                                    }`}
-                            >
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-3xl">{player.avatar}</span>
-                                        <div>
-                                            <div className="font-bold">
-                                                {player.name}
-                                                {player.isHuman && <span className="ml-1 text-xs bg-blue-500 text-white px-2 py-0.5 rounded">Bạn</span>}
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => handlePlayerAnswer(idx)}
+                                            disabled={showAnswer || humanPlayer?.eliminated || playerAnswer !== null}
+                                            className={className}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">
+                                                    {String.fromCharCode(65 + idx)}
+                                                </span>
+                                                <div className="flex-1 text-left">
+                                                    <MathText text={choice} />
+                                                </div>
+                                                {showAnswer && isCorrect && (
+                                                    <i className="fas fa-check-circle text-green-600 text-2xl"></i>
+                                                )}
                                             </div>
-                                            {player.class && <div className="text-xs text-gray-500">{player.class}</div>}
-                                            <div className="text-sm text-gray-600">{player.score}đ</div>
-                                        </div>
-                                    </div>
-                                    {player.eliminated && <i className="fas fa-times-circle text-red-500 text-2xl"></i>}
-                                    {!player.eliminated && player.hasAnswered && <i className="fas fa-check-circle text-green-500 text-2xl"></i>}
-                                    {!player.eliminated && !player.hasAnswered && <i className="fas fa-thinking text-gray-400 text-2xl"></i>}
-                                </div>
-                                {player.eliminated && (
-                                    <div className="text-sm text-red-600 font-bold">❌ ĐÃ BỊ LOẠI</div>
-                                )}
-                                {!player.eliminated && player.hasAnswered && (
-                                    <div className="text-sm text-green-600 font-bold">✅ Đã trả lời</div>
-                                )}
-                                {!player.eliminated && !player.hasAnswered && (
-                                    <div className="text-sm text-gray-500">🤔 Đang suy nghĩ...</div>
-                                )}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        ))}
-                    </div>
-
-                    {/* Question */}
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
-                            <MathText text={currentQuestion.prompt} />
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {currentQuestion.choices.map((choice, idx) => {
-                                const isSelected = playerAnswer === idx;
-                                const isCorrect = currentQuestion.answer === idx;
-                                const humanPlayer = players.find(p => p.isHuman);
-
-                                let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
-
-                                if (showAnswer) {
-                                    if (isCorrect) {
-                                        className += "bg-green-100 border-green-500 text-green-900";
-                                    } else if (isSelected) {
-                                        className += "bg-red-100 border-red-500 text-red-900";
-                                    } else {
-                                        className += "border-gray-200 opacity-50";
-                                    }
-                                } else {
-                                    if (isSelected) {
-                                        className += "bg-blue-100 border-blue-500";
-                                    } else {
-                                        className += "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
-                                    }
-                                }
-
-                                return (
-                                    <button
-                                        key={idx}
-                                        onClick={() => handlePlayerAnswer(idx)}
-                                        disabled={showAnswer || humanPlayer?.eliminated || playerAnswer !== null}
-                                        className={className}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">
-                                                {String.fromCharCode(65 + idx)}
-                                            </span>
-                                            <div className="flex-1 text-left">
-                                                <MathText text={choice} />
-                                            </div>
-                                            {showAnswer && isCorrect && (
-                                                <i className="fas fa-check-circle text-green-600 text-2xl"></i>
-                                            )}
-                                        </div>
-                                    </button>
-                                );
-                            })}
                         </div>
 
-                        {showAnswer && currentQuestion.explanation && (
-                            <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                                <div className="font-bold text-blue-800 mb-2">
-                                    <i className="fas fa-lightbulb mr-2"></i>Giải thích:
-                                </div>
-                                <div className="text-gray-700">
-                                    <MathText text={currentQuestion.explanation} />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        {/* Actions */}
+                        <div className="flex gap-4 justify-center">
+                            {!showAnswer && playerAnswer !== null && (
+                                <button
+                                    onClick={handleRevealAnswer}
+                                    className="px-8 py-4 bg-yellow-500 text-white rounded-xl font-bold text-lg hover:bg-yellow-600 transition shadow-lg"
+                                >
+                                    <i className="fas fa-eye mr-2"></i>Hiện đáp án
+                                </button>
+                            )}
 
-                    {/* Actions */}
-                    <div className="flex gap-4 justify-center">
-                        {!showAnswer && playerAnswer !== null && (
-                            <button
-                                onClick={handleRevealAnswer}
-                                className="px-8 py-4 bg-yellow-500 text-white rounded-xl font-bold text-lg hover:bg-yellow-600 transition shadow-lg"
-                            >
-                                <i className="fas fa-eye mr-2"></i>Hiện đáp án
-                            </button>
-                        )}
-
-                        {showAnswer && (
-                            <button
-                                onClick={handleNextQuestion}
-                                className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition shadow-lg"
-                            >
-                                <i className="fas fa-arrow-right mr-2"></i>Vòng tiếp theo
-                            </button>
-                        )}
+                            {showAnswer && (
+                                <button
+                                    onClick={handleNextQuestion}
+                                    className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition shadow-lg"
+                                >
+                                    <i className="fas fa-arrow-right mr-2"></i>
+                                    {currentQuestionIndex < questions.length - 1 ? 'Câu tiếp theo' : 'Kết thúc'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
