@@ -168,6 +168,7 @@
             const [aiGenerating, setAiGenerating] = useState(false);
             const [aiFormData, setAiFormData] = useState({
                 subject: 'Toán',
+                grade: 'Lớp 10',
                 topic: '',
                 difficulty: 'Vừa',
                 numQuestions: 5
@@ -276,6 +277,7 @@
                     // Build prompt
                     const prompt = `Bạn là trợ lý tạo câu hỏi trắc nghiệm.
 Môn: ${aiFormData.subject}
+Lớp: ${aiFormData.grade}
 Chủ đề: ${aiFormData.topic}
 Độ khó: ${aiFormData.difficulty}
 Số câu: ${aiFormData.numQuestions}
@@ -739,7 +741,7 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                             <p className="text-sm text-purple-700">AI sẽ tự động sinh câu hỏi dựa trên chủ đề bạn nhập.</p>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-3 gap-4">
                                             <div>
                                                 <label className="block font-bold text-gray-700 mb-2">Môn học:</label>
                                                 <select
@@ -748,13 +750,46 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
                                                 >
                                                     <option>Toán</option>
-                                                    <option>Lý</option>
-                                                    <option>Hóa</option>
-                                                    <option>Sinh</option>
-                                                    <option>Văn</option>
-                                                    <option>Anh</option>
-                                                    <option>Sử</option>
-                                                    <option>Địa</option>
+                                                    <option>Vật Lý</option>
+                                                    <option>Hóa học</option>
+                                                    <option>Sinh học</option>
+                                                    <option>Ngữ Văn</option>
+                                                    <option>Tiếng Anh</option>
+                                                    <option>Lịch Sử</option>
+                                                    <option>Địa Lý</option>
+                                                    <option>GDCD</option>
+                                                    <option>Công Nghệ</option>
+                                                    <option>Tin học</option>
+                                                    <option>Âm nhạc</option>
+                                                    <option>Mỹ thuật</option>
+                                                    <option>Thể dục</option>
+                                                    <option>Tiếng Việt</option>
+                                                    <option>Đạo đức</option>
+                                                    <option>Tự nhiên và Xã hội</option>
+                                                    <option>Khoa học</option>
+                                                    <option>Lịch sử và Địa lý</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block font-bold text-gray-700 mb-2">Lớp:</label>
+                                                <select
+                                                    value={aiFormData.grade}
+                                                    onChange={(e) => setAiFormData({ ...aiFormData, grade: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                >
+                                                    <option>Lớp 1</option>
+                                                    <option>Lớp 2</option>
+                                                    <option>Lớp 3</option>
+                                                    <option>Lớp 4</option>
+                                                    <option>Lớp 5</option>
+                                                    <option>Lớp 6</option>
+                                                    <option>Lớp 7</option>
+                                                    <option>Lớp 8</option>
+                                                    <option>Lớp 9</option>
+                                                    <option>Lớp 10</option>
+                                                    <option>Lớp 11</option>
+                                                    <option>Lớp 12</option>
                                                 </select>
                                             </div>
 
@@ -768,6 +803,7 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                                     <option>Dễ</option>
                                                     <option>Vừa</option>
                                                     <option>Khó</option>
+                                                    <option>Tổng hợp</option>
                                                 </select>
                                             </div>
                                         </div>
