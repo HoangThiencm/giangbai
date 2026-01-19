@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Game 1: Loại Trực Tiếp</title>
+    <title>Game 1: Loại Trực Tiếp - Battle Royale</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -27,7 +27,6 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -35,20 +34,60 @@
         }
 
         .eliminated {
-            animation: eliminateOut 0.5s ease-out forwards;
+            animation: eliminateOut 0.8s ease-out forwards;
         }
 
         @keyframes eliminateOut {
             0% {
-                transform: scale(1);
+                transform: scale(1) rotate(0deg);
                 opacity: 1;
             }
-
+            50% {
+                transform: scale(1.1) rotate(5deg);
+            }
             100% {
-                transform: scale(0.8);
-                opacity: 0.3;
+                transform: scale(0.9) rotate(-2deg);
+                opacity: 0.4;
                 filter: grayscale(100%);
             }
+        }
+
+        .player-thinking {
+            animation: thinkPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes thinkPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .player-answered {
+            animation: answerPop 0.3s ease-out;
+        }
+
+        @keyframes answerPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .winner-celebration {
+            animation: celebrate 1s ease-in-out infinite;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-10px) scale(1.05); }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
         }
     </style>
 </head>
@@ -90,34 +129,51 @@
             return <span ref={ref} />;
         };
 
+        // Player avatars
+        const AVATARS = ['👨‍🎓', '👩‍🎓', '🧑‍💼', '👨‍💻', '👩‍🔬', '🧑‍🏫'];
+        const AI_NAMES = ['Minh', 'Lan', 'Hùng', 'Linh', 'Tuấn'];
+
         // Main Game Component
         const EliminationGame = () => {
             const [gameData, setGameData] = useState(null);
             const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
             const [players, setPlayers] = useState([]);
-            const [playerAnswers, setPlayerAnswers] = useState({});
+            const [playerAnswer, setPlayerAnswer] = useState(null);
             const [showAnswer, setShowAnswer] = useState(false);
             const [gameOver, setGameOver] = useState(false);
             const [timeLeft, setTimeLeft] = useState(30);
             const [timerActive, setTimerActive] = useState(false);
             const [showInstructions, setShowInstructions] = useState(true);
+            const [roundPhase, setRoundPhase] = useState('question'); // question, reveal, next
+            const [currentRound, setCurrentRound] = useState(1);
 
             useEffect(() => {
-                // Load game data from localStorage
                 const data = localStorage.getItem('gameData');
                 if (!data) {
                     alert('Không có dữ liệu game!');
                     window.location.href = 'trochoi.html';
                     return;
                 }
-
                 const parsed = JSON.parse(data);
                 setGameData(parsed);
 
-                // Initialize players (solo mode for MVP)
-                setPlayers([
-                    { id: 1, name: 'Bạn', eliminated: false, score: 0 }
-                ]);
+                // Initialize players: 1 human + 5 AI
+                const initialPlayers = [
+                    { id: 0, name: 'Bạn', isHuman: true, eliminated: false, score: 0, avatar: '🎮', answer: null, hasAnswered: false }
+                ];
+                for (let i = 0; i < 5; i++) {
+                    initialPlayers.push({
+                        id: i + 1,
+                        name: AI_NAMES[i],
+                        isHuman: false,
+                        eliminated: false,
+                        score: 0,
+                        avatar: AVATARS[i],
+                        answer: null,
+                        hasAnswered: false
+                    });
+                }
+                setPlayers(initialPlayers);
             }, []);
 
             useEffect(() => {
@@ -125,51 +181,122 @@
                     const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
                     return () => clearTimeout(timer);
                 } else if (timeLeft === 0 && timerActive) {
-                    // Time's up - check answers
-                    handleShowAnswer();
+                    handleTimeUp();
                 }
             }, [timeLeft, timerActive]);
 
+            // AI answer simulation
+            useEffect(() => {
+                if (timerActive && !showAnswer) {
+                    const interval = setInterval(() => {
+                        setPlayers(prev => {
+                            const updated = [...prev];
+                            const currentQuestion = gameData.content.questions[currentQuestionIndex];
+                            
+                            updated.forEach(player => {
+                                if (!player.isHuman && !player.eliminated && !player.hasAnswered && Math.random() < 0.15) {
+                                    // AI answers with 80% accuracy
+                                    const isCorrect = Math.random() < 0.8;
+                                    player.answer = isCorrect ? currentQuestion.answer : Math.floor(Math.random() * currentQuestion.choices.length);
+                                    player.hasAnswered = true;
+                                }
+                            });
+                            
+                            return updated;
+                        });
+                    }, 1000);
+                    
+                    return () => clearInterval(interval);
+                }
+            }, [timerActive, showAnswer, gameData, currentQuestionIndex]);
+
             const startQuestion = () => {
                 setShowAnswer(false);
-                setPlayerAnswers({});
+                setPlayerAnswer(null);
                 setTimeLeft(30);
                 setTimerActive(true);
+                setRoundPhase('question');
+                
+                // Reset all players' answers
+                setPlayers(prev => prev.map(p => ({
+                    ...p,
+                    answer: null,
+                    hasAnswered: false
+                })));
             };
 
-            const handlePlayerAnswer = (playerId, answerIndex) => {
-                if (showAnswer) return;
-                setPlayerAnswers({ ...playerAnswers, [playerId]: answerIndex });
+            const handlePlayerAnswer = (answerIndex) => {
+                if (showAnswer || playerAnswer !== null) return;
+                setPlayerAnswer(answerIndex);
+                setPlayers(prev => prev.map(p => 
+                    p.isHuman ? { ...p, answer: answerIndex, hasAnswered: true } : p
+                ));
             };
 
-            const handleShowAnswer = () => {
+            const handleTimeUp = () => {
+                // Auto-answer for AI who haven't answered
+                setPlayers(prev => {
+                    const updated = [...prev];
+                    const currentQuestion = gameData.content.questions[currentQuestionIndex];
+                    
+                    updated.forEach(player => {
+                        if (!player.hasAnswered && !player.eliminated) {
+                            player.answer = Math.floor(Math.random() * currentQuestion.choices.length);
+                            player.hasAnswered = true;
+                        }
+                    });
+                    
+                    return updated;
+                });
+                
+                handleRevealAnswer();
+            };
+
+            const handleRevealAnswer = () => {
                 setTimerActive(false);
                 setShowAnswer(true);
+                setRoundPhase('reveal');
 
-                // Check answers and eliminate wrong players
                 const currentQuestion = gameData.content.questions[currentQuestionIndex];
                 const correctAnswer = currentQuestion.answer;
 
-                setPlayers(prev => prev.map(player => {
-                    const playerAnswer = playerAnswers[player.id];
-                    if (playerAnswer === undefined || playerAnswer !== correctAnswer) {
-                        return { ...player, eliminated: true };
-                    }
-                    return { ...player, score: player.score + (timeLeft > 0 ? Math.floor(100 * (timeLeft / 30)) : 10) };
-                }));
+                setTimeout(() => {
+                    setPlayers(prev => prev.map(player => {
+                        if (player.eliminated) return player;
+                        
+                        const isCorrect = player.answer === correctAnswer;
+                        if (!isCorrect) {
+                            return { ...player, eliminated: true };
+                        }
+                        
+                        // Add score for human player
+                        if (player.isHuman && isCorrect) {
+                            const timeBonus = Math.floor(100 * (timeLeft / 30));
+                            return { ...player, score: player.score + timeBonus };
+                        }
+                        
+                        return player;
+                    }));
+                }, 1500);
             };
 
             const handleNextQuestion = () => {
-                // Check if all players eliminated
                 const alivePlayers = players.filter(p => !p.eliminated);
+                
                 if (alivePlayers.length === 0) {
+                    setGameOver(true);
+                    return;
+                }
+                
+                if (alivePlayers.length === 1) {
                     setGameOver(true);
                     return;
                 }
 
                 if (currentQuestionIndex < gameData.content.questions.length - 1) {
                     setCurrentQuestionIndex(currentQuestionIndex + 1);
-                    startQuestion();
+                    setCurrentRound(currentRound + 1);
+                    setTimeout(startQuestion, 500);
                 } else {
                     setGameOver(true);
                 }
@@ -183,33 +310,54 @@
 
             if (gameOver) {
                 const survivors = players.filter(p => !p.eliminated).sort((a, b) => b.score - a.score);
-                const allEliminated = survivors.length === 0;
+                const humanPlayer = players.find(p => p.isHuman);
+                const humanWon = survivors.length > 0 && survivors[0].isHuman;
 
                 return (
-                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                    <div className="max-w-4xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
-                            <div className={`w-24 h-24 ${allEliminated ? 'bg-gray-100' : 'bg-yellow-100'} rounded-full flex items-center justify-center mx-auto mb-6`}>
-                                <i className={`fas ${allEliminated ? 'fa-sad-tear' : 'fa-trophy'} text-5xl ${allEliminated ? 'text-gray-400' : 'text-yellow-500'}`}></i>
+                            <div className={`w-24 h-24 ${humanWon ? 'bg-yellow-100' : 'bg-gray-100'} rounded-full flex items-center justify-center mx-auto mb-6 ${humanWon ? 'winner-celebration' : ''}`}>
+                                <i className={`fas ${humanWon ? 'fa-trophy' : 'fa-sad-tear'} text-5xl ${humanWon ? 'text-yellow-500' : 'text-gray-400'}`}></i>
                             </div>
                             <h2 className="text-4xl font-bold mb-6 text-gray-800">
-                                {allEliminated ? 'Tất cả bị loại!' : 'Kết thúc!'}
+                                {humanWon ? '🎉 CHIẾN THẮNG!' : survivors.length === 0 ? 'Tất cả bị loại!' : 'Đã bị loại!'}
                             </h2>
 
-                            {!allEliminated && (
-                                <div className="space-y-4 mb-8">
-                                    {survivors.map((player, idx) => (
-                                        <div key={player.id} className="bg-gradient-to-r from-yellow-100 to-yellow-50 border-2 border-yellow-400 rounded-xl p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-3xl font-bold text-yellow-600">#{idx + 1}</span>
-                                                    <span className="text-xl font-bold text-gray-800">{player.name}</span>
-                                                </div>
-                                                <span className="text-2xl font-bold text-yellow-600">{player.score}đ</span>
+                            {survivors.length > 0 && (
+                                <div className="mb-8">
+                                    <div className="text-2xl font-bold mb-4 text-yellow-600">
+                                        🏆 Người chiến thắng: {survivors[0].name} {survivors[0].avatar}
+                                    </div>
+                                    {humanPlayer && (
+                                        <div className="text-xl text-gray-600">
+                                            Điểm của bạn: {humanPlayer.score}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                                <h3 className="font-bold text-lg mb-4">Bảng xếp hạng cuối cùng</h3>
+                                <div className="space-y-2">
+                                    {players.sort((a, b) => {
+                                        if (a.eliminated && !b.eliminated) return 1;
+                                        if (!a.eliminated && b.eliminated) return -1;
+                                        return b.score - a.score;
+                                    }).map((player, idx) => (
+                                        <div key={player.id} className={`flex items-center justify-between p-3 rounded-lg ${
+                                            player.eliminated ? 'bg-gray-200 opacity-50' : 'bg-green-100'
+                                        }`}>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">{player.avatar}</span>
+                                                <span className="font-bold">{player.name}</span>
+                                                {player.eliminated && <span className="text-red-600 text-sm">❌ Đã loại</span>}
+                                                {!player.eliminated && <span className="text-green-600 text-sm">✅ Sống sót</span>}
                                             </div>
+                                            <span className="font-bold text-lg">{player.score}đ</span>
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            </div>
 
                             <div className="flex gap-4 justify-center">
                                 <button
@@ -231,6 +379,7 @@
             }
 
             const currentQuestion = gameData.content.questions[currentQuestionIndex];
+            const alivePlayers = players.filter(p => !p.eliminated);
 
             // Instructions Modal
             if (showInstructions) {
@@ -239,7 +388,7 @@
                         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-3xl font-bold text-red-700">
-                                    <i className="fas fa-user-slash mr-3"></i>LOẠI TRỰC TIẾP
+                                    <i className="fas fa-user-slash mr-3"></i>LOẠI TRỰC TIẾP - BATTLE ROYALE
                                 </h2>
                                 <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
                                     <i className="fas fa-times text-2xl"></i>
@@ -249,9 +398,9 @@
                             <div className="space-y-4 text-gray-700">
                                 <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                                     <h3 className="font-bold text-lg text-red-800 mb-2">
-                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
+                                        <i className="fas fa-bullseye mr-2"></i>Chế độ mới: Battle Royale!
                                     </h3>
-                                    <p>Kiểm tra bài cũ nhanh, tạo áp lực nhẹ. Ai trả lời sai sẽ bị loại ngay lập tức!</p>
+                                    <p>Thi đấu với 5 học sinh khác trong trận chiến loại trực tiếp! Ai trả lời sai sẽ bị loại ngay lập tức. Người cuối cùng sống sót là người chiến thắng!</p>
                                 </div>
 
                                 <div>
@@ -261,15 +410,15 @@
                                     <ul className="space-y-2 ml-6">
                                         <li className="flex items-start gap-2">
                                             <span className="text-red-600 font-bold">1.</span>
-                                            <span>Mỗi câu hỏi có <strong>30 giây</strong> để trả lời</span>
+                                            <span><strong>6 người chơi</strong> cùng thi đấu (bạn + 5 AI)</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-red-600 font-bold">2.</span>
-                                            <span>Chọn đáp án bằng cách <strong>click vào ô</strong></span>
+                                            <span>Mỗi câu hỏi có <strong>30 giây</strong> để trả lời</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-red-600 font-bold">3.</span>
-                                            <span>Click <strong>"Hiện đáp án"</strong> để kiểm tra kết quả</span>
+                                            <span>Xem <strong>trạng thái real-time</strong> của các đối thủ</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-red-600 font-bold">4.</span>
@@ -277,7 +426,7 @@
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-red-600 font-bold">5.</span>
-                                            <span>Ai còn sống đến cuối → <strong className="text-green-600">THẮNG</strong></span>
+                                            <span>Người cuối cùng sống sót → <strong className="text-green-600">CHIẾN THẮNG</strong></span>
                                         </li>
                                     </ul>
                                 </div>
@@ -288,52 +437,14 @@
                                     </h3>
                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                                         <p><strong>Điểm = 100 × (Thời gian còn lại / 30)</strong></p>
-                                        <p className="text-sm">Ví dụ: Trả lời đúng khi còn 20s → 66 điểm</p>
-                                        <p className="text-sm">Trả lời đúng khi còn 5s → 16 điểm</p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-lg text-green-800 mb-3">
-                                        <i className="fas fa-chalkboard-teacher mr-2"></i>Cách tổ chức lớp
-                                    </h3>
-
-                                    <div className="space-y-3 text-sm">
-                                        <div>
-                                            <div className="font-bold text-green-700 mb-1">👥 Chế độ 1: GV gọi học sinh lên bảng</div>
-                                            <ul className="ml-4 space-y-1 text-gray-700">
-                                                <li>• Gọi 3-5 học sinh lên bảng</li>
-                                                <li>• Mỗi em có giấy/bảng nhỏ để viết đáp án</li>
-                                                <li>• Sau mỗi câu: học sinh nào sai ngồi xuống</li>
-                                                <li>• Còn lại cuối cùng được khen thưởng</li>
-                                            </ul>
-                                        </div>
-
-                                        <div>
-                                            <div className="font-bold text-green-700 mb-1">👥 Chế độ 2: Chia lớp thành nhóm</div>
-                                            <ul className="ml-4 space-y-1 text-gray-700">
-                                                <li>• Chia lớp thành 4-6 nhóm</li>
-                                                <li>• Mỗi nhóm cử đại diện trả lời</li>
-                                                <li>• Nhóm nào sai bị loại</li>
-                                                <li>• Nhóm sống sót cuối → chiến thắng</li>
-                                            </ul>
-                                        </div>
-
-                                        <div>
-                                            <div className="font-bold text-green-700 mb-1">👥 Chế độ 3: Cả lớp tham gia (dùng giấy)</div>
-                                            <ul className="ml-4 space-y-1 text-gray-700">
-                                                <li>• Mỗi em có giấy viết A/B/C/D</li>
-                                                <li>• Sau mỗi câu: em nào sai đứng lên (bị loại)</li>
-                                                <li>• Còn ngồi cuối cùng → thắng</li>
-                                            </ul>
-                                        </div>
+                                        <p className="text-sm">Trả lời nhanh = Nhiều điểm hơn!</p>
                                     </div>
                                 </div>
 
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                                     <p className="text-sm">
                                         <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
-                                        <strong>Mẹo:</strong> Trả lời nhanh để có điểm cao hơn, nhưng hãy cẩn thận - sai là loại ngay!
+                                        <strong>Mẹo:</strong> Theo dõi đối thủ để biết ai đã trả lời. Trả lời nhanh nhưng chính xác!
                                     </p>
                                 </div>
                             </div>
@@ -342,7 +453,7 @@
                                 onClick={() => { setShowInstructions(false); startQuestion(); }}
                                 className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
                             >
-                                <i className="fas fa-play mr-2"></i>Bắt đầu chơi
+                                <i className="fas fa-play mr-2"></i>Bắt đầu Battle Royale!
                             </button>
                         </div>
                     </div>
@@ -350,7 +461,7 @@
             }
 
             return (
-                <div className="max-w-5xl mx-auto p-6 fade-in">
+                <div className="max-w-7xl mx-auto p-6 fade-in">
                     {/* Header */}
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex gap-2">
@@ -363,7 +474,6 @@
                             <button
                                 onClick={() => setShowInstructions(true)}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                title="Xem hướng dẫn"
                             >
                                 <i className="fas fa-question-circle"></i>
                             </button>
@@ -371,35 +481,55 @@
 
                         <div className="text-center">
                             <h1 className="text-3xl font-bold text-red-700">
-                                <i className="fas fa-user-slash mr-2"></i>LOẠI TRỰC TIẾP
+                                <i className="fas fa-user-slash mr-2"></i>BATTLE ROYALE
                             </h1>
-                            <div className="text-sm text-gray-600 mt-1">Câu {currentQuestionIndex + 1}/{gameData.content.questions.length}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                                Vòng {currentRound} • Câu {currentQuestionIndex + 1}/{gameData.content.questions.length} • 
+                                <span className="font-bold text-red-600"> {alivePlayers.length} người còn lại</span>
+                            </div>
                         </div>
 
-                        <div className={`px-6 py-3 rounded-xl font-bold text-2xl ${timeLeft <= 10 ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-600 text-white'}`}>
+                        <div className={`px-6 py-3 rounded-xl font-bold text-2xl ${timeLeft <= 5 ? 'bg-red-600 text-white animate-pulse shake' : timeLeft <= 10 ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
                             <i className="fas fa-clock mr-2"></i>{timeLeft}s
                         </div>
                     </div>
 
-                    {/* Players Status */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    {/* Players Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         {players.map(player => (
                             <div
                                 key={player.id}
-                                className={`p-4 rounded-xl border-2 transition ${player.eliminated
-                                    ? 'bg-gray-100 border-gray-300 eliminated'
-                                    : 'bg-white border-green-500'
-                                    }`}
+                                className={`p-4 rounded-xl border-2 transition ${
+                                    player.eliminated 
+                                        ? 'bg-gray-100 border-gray-300 eliminated' 
+                                        : player.hasAnswered
+                                            ? 'bg-green-100 border-green-500 player-answered'
+                                            : 'bg-white border-blue-300 player-thinking'
+                                }`}
                             >
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <i className={`fas ${player.eliminated ? 'fa-times-circle text-red-500' : 'fa-check-circle text-green-500'} text-2xl`}></i>
-                                        <span className="font-bold text-lg">{player.name}</span>
+                                        <span className="text-3xl">{player.avatar}</span>
+                                        <div>
+                                            <div className="font-bold">
+                                                {player.name}
+                                                {player.isHuman && <span className="ml-1 text-xs bg-blue-500 text-white px-2 py-0.5 rounded">Bạn</span>}
+                                            </div>
+                                            <div className="text-sm text-gray-600">{player.score}đ</div>
+                                        </div>
                                     </div>
-                                    <span className="text-xl font-bold">{player.score}đ</span>
+                                    {player.eliminated && <i className="fas fa-times-circle text-red-500 text-2xl"></i>}
+                                    {!player.eliminated && player.hasAnswered && <i className="fas fa-check-circle text-green-500 text-2xl"></i>}
+                                    {!player.eliminated && !player.hasAnswered && <i className="fas fa-thinking text-gray-400 text-2xl"></i>}
                                 </div>
                                 {player.eliminated && (
-                                    <div className="text-sm text-red-600 mt-1">Đã bị loại</div>
+                                    <div className="text-sm text-red-600 font-bold">❌ ĐÃ BỊ LOẠI</div>
+                                )}
+                                {!player.eliminated && player.hasAnswered && (
+                                    <div className="text-sm text-green-600 font-bold">✅ Đã trả lời</div>
+                                )}
+                                {!player.eliminated && !player.hasAnswered && (
+                                    <div className="text-sm text-gray-500">🤔 Đang suy nghĩ...</div>
                                 )}
                             </div>
                         ))}
@@ -413,8 +543,9 @@
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {currentQuestion.choices.map((choice, idx) => {
-                                const isSelected = playerAnswers[1] === idx;
+                                const isSelected = playerAnswer === idx;
                                 const isCorrect = currentQuestion.answer === idx;
+                                const humanPlayer = players.find(p => p.isHuman);
 
                                 let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
 
@@ -437,8 +568,8 @@
                                 return (
                                     <button
                                         key={idx}
-                                        onClick={() => handlePlayerAnswer(1, idx)}
-                                        disabled={showAnswer}
+                                        onClick={() => handlePlayerAnswer(idx)}
+                                        disabled={showAnswer || humanPlayer?.eliminated || playerAnswer !== null}
                                         className={className}
                                     >
                                         <div className="flex items-center gap-3">
@@ -471,9 +602,9 @@
 
                     {/* Actions */}
                     <div className="flex gap-4 justify-center">
-                        {!showAnswer && (
+                        {!showAnswer && playerAnswer !== null && (
                             <button
-                                onClick={handleShowAnswer}
+                                onClick={handleRevealAnswer}
                                 className="px-8 py-4 bg-yellow-500 text-white rounded-xl font-bold text-lg hover:bg-yellow-600 transition shadow-lg"
                             >
                                 <i className="fas fa-eye mr-2"></i>Hiện đáp án
@@ -485,7 +616,7 @@
                                 onClick={handleNextQuestion}
                                 className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition shadow-lg"
                             >
-                                <i className="fas fa-arrow-right mr-2"></i>Câu tiếp theo
+                                <i className="fas fa-arrow-right mr-2"></i>Vòng tiếp theo
                             </button>
                         )}
                     </div>
