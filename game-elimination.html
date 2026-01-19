@@ -712,7 +712,23 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                             <textarea
                                                 value={editingQuestion.prompt}
                                                 onChange={(e) => setEditingQuestion({ ...editingQuestion, prompt: e.target.value })}
-                                                placeholder="Nhập câu hỏi..."
+                                                onPaste={(e) => {
+                                                    const items = e.clipboardData.items;
+                                                    for (let i = 0; i < items.length; i++) {
+                                                        if (items[i].type.indexOf('image') !== -1) {
+                                                            e.preventDefault();
+                                                            const blob = items[i].getAsFile();
+                                                            const reader = new FileReader();
+                                                            reader.onload = (event) => {
+                                                                const imgTag = `\n![Hình minh họa](${event.target.result})\n`;
+                                                                setEditingQuestion({ ...editingQuestion, prompt: editingQuestion.prompt + imgTag });
+                                                            };
+                                                            reader.readAsDataURL(blob);
+                                                            break;
+                                                        }
+                                                    }
+                                                }}
+                                                placeholder="Nhập câu hỏi... (Ctrl+V để dán hình ảnh)"
                                                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:outline-none"
                                                 rows="3"
                                             />
