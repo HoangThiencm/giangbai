@@ -912,16 +912,22 @@ LƯU Ý:
                                             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
                                         >
                                             <option>Toán học</option>
+                                            <option>Tiếng Việt</option>
+                                            <option>Ngữ văn</option>
+                                            <option>Tiếng Anh</option>
                                             <option>Vật lý</option>
                                             <option>Hóa học</option>
                                             <option>Sinh học</option>
-                                            <option>Ngữ văn</option>
-                                            <option>Tiếng Anh</option>
+                                            <option>Khoa học</option>
                                             <option>Lịch sử</option>
                                             <option>Địa lý</option>
+                                            <option>Lịch sử và Địa lý</option>
                                             <option>GDCD</option>
+                                            <option>Đạo đức</option>
+                                            <option>Tự nhiên và Xã hội</option>
                                             <option>Tin học</option>
                                             <option>Công nghệ</option>
+                                            <option>Hoạt động trải nghiệm</option>
                                             <option>Âm nhạc</option>
                                             <option>Mỹ thuật</option>
                                             <option>Thể dục</option>
@@ -948,7 +954,7 @@ LƯU Ý:
                                             onChange={(e) => setAiGenParams({ ...aiGenParams, gradeMax: parseInt(e.target.value) })}
                                             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
                                         >
-                                            {[6, 7, 8, 9, 10, 11, 12].map(g => (
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
                                                 <option key={g} value={g}>Lớp {g}</option>
                                             ))}
                                         </select>
@@ -964,6 +970,7 @@ LƯU Ý:
                                             <option>Dễ</option>
                                             <option>Vừa</option>
                                             <option>Khó</option>
+                                            <option>Tổng hợp</option>
                                         </select>
                                     </div>
 
