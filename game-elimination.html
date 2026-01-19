@@ -178,8 +178,8 @@
             const [gameOver, setGameOver] = useState(false);
             const [timeLeft, setTimeLeft] = useState(30);
             const [timerActive, setTimerActive] = useState(false);
-            const [showInstructions, setShowInstructions] = useState(false);
-            const [showProfileSetup, setShowProfileSetup] = useState(true);
+            const [showInstructions, setShowInstructions] = useState(true);
+            const [showProfileSetup, setShowProfileSetup] = useState(false);
             const [roundPhase, setRoundPhase] = useState('question'); // question, reveal, next
             const [currentRound, setCurrentRound] = useState(1);
             const [playerProfile, setPlayerProfile] = useState(() => {
@@ -491,11 +491,11 @@
                                     }
                                     localStorage.setItem('playerProfile', JSON.stringify(playerProfile));
                                     setShowProfileSetup(false);
-                                    setShowInstructions(true);
+                                    startQuestion();
                                 }}
                                 className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <i className="fas fa-arrow-right mr-2"></i>Tiếp tục
+                                <i className="fas fa-arrow-right mr-2"></i>Bắt đầu chơi
                             </button>
 
                             <p className="text-xs text-gray-500 text-center mt-4">
@@ -576,7 +576,25 @@
                             </div>
 
                             <button
-                                onClick={() => { setShowInstructions(false); startQuestion(); }}
+                                onClick={() => {
+                                    const profile = localStorage.getItem('playerProfile');
+                                    if (profile) {
+                                        const parsed = JSON.parse(profile);
+                                        if (parsed.name && parsed.name.trim()) {
+                                            // Profile exists, start game directly
+                                            setShowInstructions(false);
+                                            startQuestion();
+                                        } else {
+                                            // Profile incomplete, show setup
+                                            setShowInstructions(false);
+                                            setShowProfileSetup(true);
+                                        }
+                                    } else {
+                                        // No profile, show setup
+                                        setShowInstructions(false);
+                                        setShowProfileSetup(true);
+                                    }
+                                }}
                                 className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
                             >
                                 <i className="fas fa-play mr-2"></i>Bắt đầu Battle Royale!
