@@ -195,10 +195,11 @@ DẠNG CÂU HỎI:
    - Chỉ có 1 thứ tự đúng duy nhất
 
 MỖI CÂU CẦN:
-- prompt: Dùng LaTeX đúng cách:
-  * Wrap công thức trong $...$ hoặc \\(...\\)
-  * VD đúng: "$5 \times [___] = 10$" hoặc "\\(5 \times [___] = 10\\)"
-  * KHÔNG để raw: "5 \times [___] = 10"
+- prompt: TÁCH RÕ text và công thức:
+  * Text thuần KHÔNG wrap: "Điền số thích hợp:"
+  * Công thức PHẢI wrap trong $...$: "$10 \\div [___] = 5$"
+  * VD đúng: "Điền số thích hợp: $10 \\div [___] = 5$"
+  * VD sai: "Điền số: 10 \\div [___] = 5" (không wrap)
 - 2 hints: hint1 (concept), hint2 (gần đáp án)
 - codeChar (1 ký tự)
 
