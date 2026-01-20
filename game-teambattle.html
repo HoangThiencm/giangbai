@@ -123,23 +123,38 @@
             getApiKeys: () => { const keys = localStorage.getItem('global_gemini_keys'); return keys ? JSON.parse(keys) : []; },
             getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp',
             buildPrompt: (params) => {
-                const { subject, gradeMax, topic, difficulty, numQuestions, mode } = params;
-                return `Bạn là trợ lý tạo câu hỏi cho game "Team Strategy Quiz".
+                const { subject, gradeMax, topic, difficulty, numQuestions, mode, numTeams } = params;
+                return `Bạn là trợ lý tạo câu hỏi cho game "Team Strategy Quiz" - game đối kháng đội.
 
 Môn: ${subject}, Lớp tối đa: ${gradeMax}, Chủ đề: ${topic}, Độ khó: ${difficulty}
 Mode: ${mode === 'classroom' ? 'Lớp học' : 'Thi đấu'}
+Số đội chơi: ${numTeams || 2}
 
-Tạo ${numQuestions} câu hỏi MIX dạng: MCQ (60%), True/False (40%)
+Tạo ${numQuestions} câu hỏi MIX 6 dạng:
+1. MCQ (40%): Trắc nghiệm 4 đáp án
+2. True/False (20%): Đúng/Sai  
+3. Fill-blank (15%): Điền từ khuyết
+4. Multi-select (10%): Chọn NHIỀU đáp án đúng
+5. Matching (10%): Nối cặp (2-4 cặp)
+6. Drag-drop (5%): Sắp xếp thứ tự (3-4 items)
+
+YÊU CẦU:
 - ${Math.ceil(numQuestions * 0.3)} câu CÁ NHÂN (individual: true)
 - ${Math.floor(numQuestions * 0.7)} câu ĐỘI (individual: false)
-- LaTeX: \\( ... \\)
-- KHÔNG tiền tố A., B., C., D.
+- ⚠️ QUAN TRỌNG: Độ khó phải PHÂN BỐ ĐỀU giữa các đội. Vì có ${numTeams} đội, mỗi đội sẽ chơi ${numQuestions / numTeams} câu. 
+  Đảm bảo mỗi ${numTeams} câu liên tiếp có độ khó TƯƠNG ĐƯƠNG (VD: nếu 2 đội, câu 1-2 cùng mức, câu 3-4 cùng mức...)
+- LaTeX: \\( ... \\) hoặc \\[ ... \\]
+- KHÔNG thêm tiền tố A., B., C., D.
 
-JSON (KHÔNG thêm chữ):
+JSON format (KHÔNG thêm chữ):
 {
   "questions": [
     {"id":"q1","type":"mcq","prompt":"...","choices":["A","B","C","D"],"answer":0,"individual":true},
-    {"id":"q2","type":"truefalse","prompt":"...","answer":true,"individual":false}
+    {"id":"q2","type":"truefalse","prompt":"...","answer":true,"individual":false},
+    {"id":"q3","type":"fill-blank","prompt":"Điền vào chỗ trống: _____","answer":"đáp án chính xác","acceptedAnswers":["đáp án 1","đáp án 2"],"individual":true},
+    {"id":"q4","type":"multi-select","prompt":"...","choices":["A","B","C","D"],"answers":[0,2],"individual":false},
+    {"id":"q5","type":"matching","prompt":"Nối cặp","leftItems":["A","B","C"],"rightItems":["Def C","Def A","Def B"],"correctPairs":[[0,1],[1,0],[2,2]],"individual":true},
+    {"id":"q6","type":"drag-drop","prompt":"Sắp xếp theo thứ tự đúng","items":["Item 2","Item 1","Item 3"],"correctOrder":[1,0,2],"individual":false}
   ]
 }`;
             },
@@ -194,6 +209,10 @@ JSON (KHÔNG thêm chữ):
             const [showAnswer, setShowAnswer] = useState(false);
             const [selectedAnswer, setSelectedAnswer] = useState(null);
             const [trueFalseAnswer, setTrueFalseAnswer] = useState(null);
+            const [fillBlankAnswer, setFillBlankAnswer] = useState('');
+            const [selectedAnswers, setSelectedAnswers] = useState([]);
+            const [matchingPairs, setMatchingPairs] = useState([]);
+            const [dragOrder, setDragOrder] = useState([]);
             const [activePowerUps, setActivePowerUps] = useState({});
             const [aiGenParams, setAiGenParams] = useState({ subject: 'Toán học', gradeMax: 9, topic: '', difficulty: 'Vừa', numQuestions: 10, mode: 'classroom' });
             const [aiGenerating, setAiGenerating] = useState(false);
@@ -216,7 +235,7 @@ JSON (KHÔNG thêm chữ):
 
                 setAiGenerating(true);
                 try {
-                    const result = await GeminiService.generate({ ...aiGenParams, numQuestions: adjustedNumQuestions, mode: gameMode });
+                    const result = await GeminiService.generate({ ...aiGenParams, numQuestions: adjustedNumQuestions, mode: gameMode, numTeams: teams.length });
                     if (result.questions && result.questions.length > 0) {
                         const cleanedQuestions = result.questions.map(q => {
                             if (q.type === 'mcq' && q.choices) {
@@ -240,7 +259,15 @@ JSON (KHÔNG thêm chữ):
 
             const startQuestion = () => {
                 const timeLimit = gameMode === 'classroom' ? 30 : 20;
-                setTimeLeft(timeLimit); setTimerActive(true); setShowAnswer(false); setSelectedAnswer(null); setTrueFalseAnswer(null);
+                setTimeLeft(timeLimit);
+                setTimerActive(true);
+                setShowAnswer(false);
+                setSelectedAnswer(null);
+                setTrueFalseAnswer(null);
+                setFillBlankAnswer('');
+                setSelectedAnswers([]);
+                setMatchingPairs([]);
+                setDragOrder([]);
             };
 
             const handleRevealAnswer = () => {
@@ -248,11 +275,60 @@ JSON (KHÔNG thêm chữ):
                 const currentQ = questions[currentQuestionIndex];
                 const currentTeam = teams[currentTeamIndex];
                 let isCorrect = false;
-                if (currentQ.type === 'mcq') isCorrect = selectedAnswer === currentQ.answer;
-                else if (currentQ.type === 'truefalse') isCorrect = trueFalseAnswer === currentQ.answer;
+
+                // Check answer by type
+                switch (currentQ.type) {
+                    case 'mcq':
+                        isCorrect = selectedAnswer === currentQ.answer;
+                        break;
+                    case 'truefalse':
+                        isCorrect = trueFalseAnswer === currentQ.answer;
+                        break;
+                    case 'fill-blank':
+                        // Fuzzy matching - 70% similarity
+                        const userAnswer = fillBlankAnswer.toLowerCase().trim();
+                        const correctAnswer = currentQ.answer.toLowerCase().trim();
+                        const acceptedAnswers = currentQ.acceptedAnswers || [];
+
+                        // Check exact match first
+                        if (userAnswer === correctAnswer || acceptedAnswers.some(a => userAnswer === a.toLowerCase().trim())) {
+                            isCorrect = true;
+                        } else {
+                            // Calculate similarity (simple character overlap)
+                            const similarity = (a, b) => {
+                                const longer = a.length > b.length ? a : b;
+                                const shorter = a.length > b.length ? b : a;
+                                let matches = 0;
+                                for (let char of shorter) {
+                                    if (longer.includes(char)) matches++;
+                                }
+                                return matches / longer.length;
+                            };
+                            const sim = similarity(userAnswer, correctAnswer);
+                            isCorrect = sim >= 0.7; // 70% threshold
+                        }
+                        break;
+                    case 'multi-select':
+                        isCorrect = JSON.stringify([...selectedAnswers].sort()) === JSON.stringify([...currentQ.answers].sort());
+                        break;
+                    case 'matching':
+                        isCorrect = matchingPairs.length === currentQ.leftItems.length &&
+                            matchingPairs.every(pair => {
+                                const correct = currentQ.correctPairs.find(p => p[0] === pair[0]);
+                                return correct && correct[1] === pair[1];
+                            });
+                        break;
+                    case 'drag-drop':
+                        isCorrect = JSON.stringify(dragOrder) === JSON.stringify(currentQ.correctOrder);
+                        break;
+                }
+
                 if (isCorrect) {
                     let points = 10;
-                    if (activePowerUps[currentTeam.id]?.double) { points *= 2; setActivePowerUps({ ...activePowerUps, [currentTeam.id]: { ...activePowerUps[currentTeam.id], double: false } }); }
+                    if (activePowerUps[currentTeam.id]?.double) {
+                        points *= 2;
+                        setActivePowerUps({ ...activePowerUps, [currentTeam.id]: { ...activePowerUps[currentTeam.id], double: false } });
+                    }
                     const updatedTeams = [...teams];
                     const teamIdx = updatedTeams.findIndex(t => t.id === currentTeam.id);
                     if (currentQ.individual) updatedTeams[teamIdx].individualScore += points;
@@ -458,7 +534,14 @@ JSON (KHÔNG thêm chữ):
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <span className="text-lg font-bold text-purple-600">#{idx + 1}</span>
                                                     <span className={`px-2 py-1 ${q.individual ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'} text-xs rounded-full font-bold`}>{q.individual ? 'CÁ NHÂN' : 'ĐỘI'}</span>
-                                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">{q.type === 'mcq' ? 'Trắc nghiệm' : 'Đúng/Sai'}</span>
+                                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                                        {q.type === 'mcq' ? 'Trắc nghiệm' :
+                                                            q.type === 'truefalse' ? 'Đúng/Sai' :
+                                                                q.type === 'fill-blank' ? 'Điền khuyết' :
+                                                                    q.type === 'multi-select' ? 'Nhiều đáp án' :
+                                                                        q.type === 'matching' ? 'Nối cặp' :
+                                                                            q.type === 'drag-drop' ? 'Sắp xếp' : q.type}
+                                                    </span>
                                                 </div>
                                                 <div className="text-gray-800"><MathText text={q.prompt} /></div>
                                             </div>
@@ -569,10 +652,162 @@ JSON (KHÔNG thêm chữ):
                                 </div>
                             )}
 
+                            {currentQ.type === 'fill-blank' && (
+                                <div className="mb-6">
+                                    <label className="block font-bold mb-3 text-gray-700">Điền vào chỗ trống:</label>
+                                    <input
+                                        type="text"
+                                        value={fillBlankAnswer}
+                                        onChange={(e) => setFillBlankAnswer(e.target.value)}
+                                        disabled={showAnswer}
+                                        className="w-full p-4 border-2 border-gray-300 rounded-xl text-lg focus:border-blue-500 outline-none disabled:bg-gray-100"
+                                        placeholder="Nhập câu trả lời..."
+                                    />
+                                    {showAnswer && (
+                                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p className="text-sm text-gray-700"><strong>Đáp án:</strong> <MathText text={currentQ.answer} /></p>
+                                            {currentQ.acceptedAnswers && currentQ.acceptedAnswers.length > 0 && (
+                                                <p className="text-sm text-gray-600 mt-1">Chấp nhận: {currentQ.acceptedAnswers.join(', ')}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {currentQ.type === 'multi-select' && (
+                                <div className="space-y-3 mb-6">
+                                    <p className="font-bold text-orange-600"><i className="fas fa-info-circle mr-1"></i>Chọn TẤT CẢ đáp án đúng</p>
+                                    {currentQ.choices.map((choice, idx) => {
+                                        const isSelected = selectedAnswers.includes(idx);
+                                        const isCorrect = currentQ.answers.includes(idx);
+                                        let className = "p-4 rounded-xl border-2 cursor-pointer transition ";
+                                        if (showAnswer) {
+                                            if (isCorrect) className += "bg-green-100 border-green-500";
+                                            else if (isSelected) className += "bg-red-100 border-red-500";
+                                            else className += "border-gray-200 opacity-50";
+                                        } else {
+                                            className += isSelected ? "bg-blue-100 border-blue-500" : "border-gray-300 hover:border-blue-400";
+                                        }
+                                        return (
+                                            <button key={idx} onClick={() => {
+                                                if (showAnswer) return;
+                                                setSelectedAnswers(prev =>
+                                                    prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                                                );
+                                            }} disabled={showAnswer} className={className}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-400'}`}>
+                                                        {isSelected && <i className="fas fa-check text-white text-sm"></i>}
+                                                    </div>
+                                                    <div className="flex-1 text-left"><MathText text={choice} /></div>
+                                                    {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-xl"></i>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {currentQ.type === 'matching' && (
+                                <div className="mb-6">
+                                    <p className="font-bold mb-3 text-gray-700">Nối các cặp cho đúng:</p>
+                                    <div className="space-y-3">
+                                        {currentQ.leftItems.map((leftItem, idx) => {
+                                            const selectedRight = matchingPairs.find(p => p[0] === idx)?.[1];
+                                            const correctRight = currentQ.correctPairs.find(p => p[0] === idx)?.[1];
+                                            return (
+                                                <div key={idx} className="grid grid-cols-5 gap-3 items-center">
+                                                    <div className="col-span-2 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg font-medium">
+                                                        <MathText text={leftItem} />
+                                                    </div>
+                                                    <div className="text-center text-2xl">→</div>
+                                                    <div className="col-span-2">
+                                                        <select
+                                                            value={selectedRight !== undefined ? selectedRight : ''}
+                                                            onChange={(e) => {
+                                                                const rightIdx = parseInt(e.target.value);
+                                                                setMatchingPairs(prev => {
+                                                                    const filtered = prev.filter(p => p[0] !== idx);
+                                                                    if (!isNaN(rightIdx)) return [...filtered, [idx, rightIdx]];
+                                                                    return filtered;
+                                                                });
+                                                            }}
+                                                            disabled={showAnswer}
+                                                            className={`w-full p-3 border-2 rounded-lg ${showAnswer && selectedRight === correctRight ? 'bg-green-100 border-green-500' : showAnswer && selectedRight !== correctRight ? 'bg-red-100 border-red-500' : 'border-gray-300'}`}
+                                                        >
+                                                            <option value="">-- Chọn --</option>
+                                                            {currentQ.rightItems.map((rightItem, rIdx) => (
+                                                                <option key={rIdx} value={rIdx}>{rightItem}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentQ.type === 'drag-drop' && (
+                                <div className="mb-6">
+                                    <p className="font-bold mb-3 text-gray-700">Sắp xếp theo thứ tự đúng (kéo hoặc dùng mũi tên):</p>
+                                    <div className="space-y-2">
+                                        {(dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i)).map((itemIdx, position) => {
+                                            const item = currentQ.items[itemIdx];
+                                            const isCorrectPosition = showAnswer && currentQ.correctOrder[position] === itemIdx;
+                                            return (
+                                                <div key={position} className={`flex items-center gap-3 p-4 rounded-xl border-2 ${isCorrectPosition ? 'bg-green-100 border-green-500' : showAnswer ? 'bg-red-100 border-red-500' : 'bg-white border-gray-300'}`}>
+                                                    <span className="font-bold text-purple-600 text-xl">#{position + 1}</span>
+                                                    <div className="flex-1 font-medium"><MathText text={item} /></div>
+                                                    {!showAnswer && (
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (position > 0) {
+                                                                        const newOrder = [...(dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i))];
+                                                                        [newOrder[position], newOrder[position - 1]] = [newOrder[position - 1], newOrder[position]];
+                                                                        setDragOrder(newOrder);
+                                                                    }
+                                                                }}
+                                                                disabled={position === 0}
+                                                                className="px-2 py-1 bg-blue-500 text-white rounded disabled:opacity-30"
+                                                            >
+                                                                <i className="fas fa-arrow-up"></i>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const currentOrder = dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i);
+                                                                    if (position < currentOrder.length - 1) {
+                                                                        const newOrder = [...currentOrder];
+                                                                        [newOrder[position], newOrder[position + 1]] = [newOrder[position + 1], newOrder[position]];
+                                                                        setDragOrder(newOrder);
+                                                                    }
+                                                                }}
+                                                                disabled={position === (dragOrder.length > 0 ? dragOrder.length : currentQ.items.length) - 1}
+                                                                className="px-2 py-1 bg-blue-500 text-white rounded disabled:opacity-30"
+                                                            >
+                                                                <i className="fas fa-arrow-down"></i>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex gap-4">
-                                {!showAnswer && ((currentQ.type === 'mcq' && selectedAnswer !== null) || (currentQ.type === 'truefalse' && trueFalseAnswer !== null)) && (
-                                    <button onClick={handleRevealAnswer} className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700"><i className="fas fa-check mr-2"></i>Gửi câu trả lời</button>
-                                )}
+                                {!showAnswer && (
+                                    (currentQ.type === 'mcq' && selectedAnswer !== null) ||
+                                    (currentQ.type === 'truefalse' && trueFalseAnswer !== null) ||
+                                    (currentQ.type === 'fill-blank' && fillBlankAnswer.trim()) ||
+                                    (currentQ.type === 'multi-select' && selectedAnswers.length > 0) ||
+                                    (currentQ.type === 'matching' && matchingPairs.length === currentQ.leftItems.length) ||
+                                    (currentQ.type === 'drag-drop' && dragOrder.length > 0)
+                                ) && (
+                                        <button onClick={handleRevealAnswer} className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700"><i className="fas fa-check mr-2"></i>Gửi câu trả lời</button>
+                                    )}
                             </div>
                         </div>
                     </div>
