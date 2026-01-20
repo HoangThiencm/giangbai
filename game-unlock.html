@@ -535,10 +535,12 @@ JSON format:
             const handleDrop = (e, dropIdx) => {
                 if (e.stopPropagation) e.stopPropagation();
                 const dragIdx = parseInt(e.dataTransfer.getData('text/html'));
+                console.log('handleDrop:', { dragIdx, dropIdx, currentDragOrder: dragOrder });
                 if (dragIdx !== dropIdx) {
                     const newOrder = [...dragOrder];
                     const [removed] = newOrder.splice(dragIdx, 1);
                     newOrder.splice(dropIdx, 0, removed);
+                    console.log('New dragOrder:', newOrder);
                     setDragOrder(newOrder);
                     setHasDraggedOrder(true); // Mark as dragged
                 }
@@ -550,7 +552,9 @@ JSON format:
                 const currentQ = questions[currentQuestionIndex];
                 if (currentQ && currentQ.type === 'drag-drop') {
                     if (currentQ.items && currentQ.items.length > 0) {
-                        setDragOrder(currentQ.items.map((_, i) => i));
+                        const initialOrder = currentQ.items.map((_, i) => i);
+                        console.log('Init dragOrder:', { items: currentQ.items, initialOrder });
+                        setDragOrder(initialOrder);
                     } else {
                         console.error('Drag-drop question missing items:', currentQ);
                         setDragOrder([]);
