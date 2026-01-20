@@ -187,7 +187,7 @@ DẠNG CÂU HỎI:
 3. fill-blank: Điền khuyết - Hiển thị [___], cho 3-4 lựa chọn để CLICK (như MCQ)
 4. multi-select: Chọn NHIỀU đáp án đúng
 5. matching: Nối cặp
-6. drag-drop: Kéo thả sắp xếp
+6. drag-drop: Kéo thả sắp xếp - QUAN TRỌNG: items phải SHUFFLE, KHÔNG theo thứ tự đúng
 
 MỖI CÂU CẦN:
 - prompt (LaTeX: \\\\(...\\\\), với fill-blank dùng [___] làm chỗ trống)
@@ -300,6 +300,7 @@ JSON format:
             const [selectedAnswers, setSelectedAnswers] = useState([]); // Multi-select
             const [matchingPairs, setMatchingPairs] = useState([]); // Matching
             const [dragOrder, setDragOrder] = useState([]); // Drag-drop
+            const [hasDraggedOrder, setHasDraggedOrder] = useState(false); // Track if user has dragged
 
             // Editing
             const [editingQuestion, setEditingQuestion] = useState(null);
@@ -495,6 +496,7 @@ JSON format:
                     setSelectedAnswers([]);
                     setMatchingPairs([]);
                     setDragOrder([]);
+                    setHasDraggedOrder(false);
                     setShowAnswer(false);
                     setHintsUsed({ 1: false, 2: false });
                     setShowHint1(false);
@@ -538,6 +540,7 @@ JSON format:
                     const [removed] = newOrder.splice(dragIdx, 1);
                     newOrder.splice(dropIdx, 0, removed);
                     setDragOrder(newOrder);
+                    setHasDraggedOrder(true); // Mark as dragged
                 }
                 return false;
             };
@@ -545,8 +548,13 @@ JSON format:
             // Initialize drag order when question loads
             useEffect(() => {
                 const currentQ = questions[currentQuestionIndex];
-                if (currentQ && currentQ.type === 'drag-drop' && currentQ.items) {
-                    setDragOrder(currentQ.items.map((_, i) => i));
+                if (currentQ && currentQ.type === 'drag-drop') {
+                    if (currentQ.items && currentQ.items.length > 0) {
+                        setDragOrder(currentQ.items.map((_, i) => i));
+                    } else {
+                        console.error('Drag-drop question missing items:', currentQ);
+                        setDragOrder([]);
+                    }
                 }
             }, [currentQuestionIndex, questions]);
 
@@ -1473,38 +1481,45 @@ JSON format:
                                     <div className="text-sm text-gray-600 mb-3 font-medium">
                                         <i className="fas fa-arrows-alt mr-2"></i>Kéo thả để sắp xếp đúng thứ tự
                                     </div>
-                                    <div className="space-y-2">
-                                        {(dragOrder.length > 0 ? dragOrder : (currentQ.items || []).map((_, i) => i)).map((itemIdx, displayIdx) => {
-                                            const item = currentQ.items[itemIdx];
-                                            const isCorrect = showAnswer && currentQ.correctOrder[displayIdx] === itemIdx;
+                                    {currentQ.items && currentQ.items.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {(dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i)).map((itemIdx, displayIdx) => {
+                                                const item = currentQ.items[itemIdx];
+                                                if (!item) return null;
+                                                const isCorrect = showAnswer && currentQ.correctOrder && currentQ.correctOrder[displayIdx] === itemIdx;
 
-                                            return (
-                                                <div
-                                                    key={`${item}-${displayIdx}`}
-                                                    draggable={!showAnswer}
-                                                    onDragStart={(e) => handleDragStart(e, displayIdx)}
-                                                    onDragOver={handleDragOver}
-                                                    onDrop={(e) => handleDrop(e, displayIdx)}
-                                                    className={`drag-item p-4 rounded-xl border-2 flex items-center gap-3 ${showAnswer
-                                                        ? isCorrect
-                                                            ? 'bg-green-100 border-green-500'
-                                                            : 'bg-red-100 border-red-500'
-                                                        : 'border-gray-300 bg-white hover:border-blue-400 hover:shadow-md'
-                                                        }`}
-                                                >
-                                                    <div className="text-2xl text-gray-400">
-                                                        <i className="fas fa-grip-vertical"></i>
+                                                return (
+                                                    <div
+                                                        key={`${item}-${displayIdx}`}
+                                                        draggable={!showAnswer}
+                                                        onDragStart={(e) => handleDragStart(e, displayIdx)}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleDrop(e, displayIdx)}
+                                                        className={`drag-item p-4 rounded-xl border-2 flex items-center gap-3 ${showAnswer
+                                                            ? isCorrect
+                                                                ? 'bg-green-100 border-green-500'
+                                                                : 'bg-red-100 border-red-500'
+                                                            : 'border-gray-300 bg-white hover:border-blue-400 hover:shadow-md'
+                                                            }`}
+                                                    >
+                                                        <div className="text-2xl text-gray-400">
+                                                            <i className="fas fa-grip-vertical"></i>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <MathText text={item} />
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                                                            {displayIdx + 1}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <MathText text={item} />
-                                                    </div>
-                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
-                                                        {displayIdx + 1}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 bg-red-50 border-2 border-red-300 rounded-xl text-red-700">
+                                            ⚠️ Lỗi: Câu hỏi kéo thả không có items!
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1568,7 +1583,7 @@ JSON format:
                                     } else if (currentQ.type === 'matching') {
                                         hasAnswer = matchingPairs.length > 0;
                                     } else if (currentQ.type === 'drag-drop') {
-                                        hasAnswer = dragOrder.length > 0;
+                                        hasAnswer = dragOrder.length > 0; // Always true after init
                                     }
                                     return hasAnswer;
                                 })() && (
