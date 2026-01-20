@@ -194,7 +194,7 @@ MỖI CÂU CẦN:
 - 2 hints: hint1 (concept), hint2 (gần đáp án)
 - codeChar (1 ký tự)
 
-TẠO codeWord (5-7 ký tự liên quan chủ đề)
+TẠO codeWord: ĐÚNG ${numQuestions} ký tự (không lặp), liên quan chủ đề
 
 JSON format:
 {
@@ -279,7 +279,8 @@ JSON format:
                 topic: '',
                 difficulty: 'Vừa',
                 numQuestions: 5,
-                questionTypes: [] // Will be filled after user selects
+                questionTypes: [], // Will be filled after user selects
+                customCodeWord: '' // User can input custom code word
             });
             const [aiGenerating, setAiGenerating] = useState(false);
 
@@ -331,6 +332,11 @@ JSON format:
                     alert('Vui lòng nhập chủ đề!');
                     return;
                 }
+                // Validate custom code word if provided
+                if (aiGenParams.customCodeWord && aiGenParams.customCodeWord.length !== aiGenParams.numQuestions) {
+                    alert(`Từ khóa phải có đúng ${aiGenParams.numQuestions} ký tự!`);
+                    return;
+                }
                 setAiGenerating(true);
                 try {
                     const result = await GeminiService.generate(aiGenParams);
@@ -359,7 +365,8 @@ JSON format:
                             return q;
                         });
                         setQuestions(cleanedQuestions);
-                        setCodeWord(result.codeWord || 'SECRET');
+                        // Use custom code word if provided, otherwise use AI-generated one
+                        setCodeWord(aiGenParams.customCodeWord || result.codeWord || 'SECRET');
                         setKnowledgeCard(result.knowledgeCard || null);
                         setCurrentScreen('EDIT');
                     } else {
@@ -786,6 +793,30 @@ JSON format:
 
                                     </div>
                                 )}
+
+                                {/* Custom Code Word Input */}
+                                <div>
+                                    <label className="block font-bold mb-2">
+                                        Từ khóa mở khóa ({aiGenParams.numQuestions} ký tự):
+                                        <span className="text-sm font-normal text-gray-600 ml-2">(Để trống nếu muốn AI tự tạo)</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={aiGenParams.customCodeWord || ''}
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase();
+                                            setAiGenParams({ ...aiGenParams, customCodeWord: value });
+                                        }}
+                                        className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none uppercase"
+                                        placeholder={`VD: ${aiGenParams.topic ? 'PHANSO' : 'TOANHOC'} (đúng ${aiGenParams.numQuestions} ký tự)`}
+                                        maxLength={aiGenParams.numQuestions}
+                                    />
+                                    {aiGenParams.customCodeWord && aiGenParams.customCodeWord.length !== aiGenParams.numQuestions && (
+                                        <p className="text-sm text-red-600 mt-1">
+                                            ⚠️ Từ khóa phải có đúng {aiGenParams.numQuestions} ký tự (hiện: {aiGenParams.customCodeWord.length})
+                                        </p>
+                                    )}
+                                </div>
 
                                 <button
                                     onClick={handleGenerateQuestions}
@@ -1443,13 +1474,13 @@ JSON format:
                                         <i className="fas fa-arrows-alt mr-2"></i>Kéo thả để sắp xếp đúng thứ tự
                                     </div>
                                     <div className="space-y-2">
-                                        {dragOrder.map((itemIdx, displayIdx) => {
+                                        {(dragOrder.length > 0 ? dragOrder : (currentQ.items || []).map((_, i) => i)).map((itemIdx, displayIdx) => {
                                             const item = currentQ.items[itemIdx];
                                             const isCorrect = showAnswer && currentQ.correctOrder[displayIdx] === itemIdx;
 
                                             return (
                                                 <div
-                                                    key={displayIdx}
+                                                    key={`${item}-${displayIdx}`}
                                                     draggable={!showAnswer}
                                                     onDragStart={(e) => handleDragStart(e, displayIdx)}
                                                     onDragOver={handleDragOver}
