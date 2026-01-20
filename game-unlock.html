@@ -141,11 +141,9 @@
 
                         // Check if already wrapped in $...$
                         const alreadyWrapped = /^\$.*\$$/.test(processed.trim());
-                        // Check if has Vietnamese characters - don't auto-wrap mixed content
-                        const hasVietnamese = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ]/.test(processed);
 
-                        // Only auto-wrap if: has LaTeX AND no Vietnamese (pure math)
-                        if (!alreadyWrapped && !hasVietnamese && processed.includes('\\')) {
+                        // Auto-wrap if has LaTeX commands (backslash) and not already wrapped
+                        if (!alreadyWrapped && processed.includes('\\')) {
                             processed = `$${processed}$`;
                         }
 
