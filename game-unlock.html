@@ -199,7 +199,10 @@ DẠNG CÂU HỎI:
    - Chỉ có 1 thứ tự đúng duy nhất
 
 MỖI CÂU CẦN:
-- prompt (LaTeX: \\\\(...\\\\), với fill-blank dùng [___] làm chỗ trống)
+- prompt: Dùng LaTeX đúng cách:
+  * Wrap công thức trong $...$ hoặc \\(...\\)
+  * VD đúng: "$5 \times [___] = 10$" hoặc "\\(5 \times [___] = 10\\)"
+  * KHÔNG để raw: "5 \times [___] = 10"
 - 2 hints: hint1 (concept), hint2 (gần đáp án)
 - codeChar (1 ký tự)
 
@@ -1485,6 +1488,44 @@ JSON format:
                                             })}
                                         </div>
                                     </div>
+
+                                    {/* Show matching results */}
+                                    {showAnswer && (
+                                        <div className="mt-4 p-4 bg-gray-50 border-2 border-gray-300 rounded-xl">
+                                            <div className="font-bold text-gray-800 mb-2">
+                                                <i className="fas fa-list mr-2"></i>Kết quả ghép cặp:
+                                            </div>
+                                            <div className="space-y-2">
+                                                {currentQ.leftItems && currentQ.leftItems.map((leftItem, leftIdx) => {
+                                                    const userPair = matchingPairs.find(p => p[0] === leftIdx);
+                                                    const correctPair = currentQ.correctPairs.find(p => p[0] === leftIdx);
+                                                    const isCorrect = userPair && correctPair && userPair[1] === correctPair[1];
+
+                                                    return (
+                                                        <div key={leftIdx} className={`p-2 rounded ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
+                                                            <div className="flex items-center gap-2">
+                                                                <i className={`fas ${isCorrect ? 'fa-check-circle text-green-600' : 'fa-times-circle text-red-600'}`}></i>
+                                                                <MathText text={leftItem} />
+                                                                <span className="mx-2">→</span>
+                                                                {userPair && userPair[1] !== -1 ? (
+                                                                    <>
+                                                                        <MathText text={currentQ.rightItems[userPair[1]]} />
+                                                                        {!isCorrect && (
+                                                                            <span className="text-sm text-gray-600 ml-2">
+                                                                                (Đúng: <MathText text={currentQ.rightItems[correctPair[1]]} />)
+                                                                            </span>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-gray-500 italic">Chưa ghép</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
