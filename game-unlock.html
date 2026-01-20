@@ -135,7 +135,7 @@
                         // Check if already has $...$ pattern
                         const hasDollarSigns = /\$[^$]+\$/.test(fragment.content);
 
-                        let processed = fragment.content.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                        let processed = fragment.content.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
 
                         // Auto-wrap if has LaTeX commands or already has $ signs (don't double-wrap)
                         if (!hasDollarSigns) {
@@ -170,37 +170,38 @@
             getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp',
 
             buildPrompt: (params) => {
-                const { subject, gradeMax, topic, difficulty, numQuestions } = params;
-                return `Bạn là trợ lý tạo game "Mở Khóa Kiến Thức" (progressive unlock).
+                const { subject, gradeMax, topic, difficulty, numQuestions, questionTypes } = params;
+                const typeInstructions = questionTypes && questionTypes.length > 0
+                    ? `Tạo ${numQuestions} câu theo thứ tự: ${questionTypes.map((t, i) => `Câu ${i + 1}: ${t}`).join(', ')}`
+                    : `Tạo ${numQuestions} câu hỏi PROGRESSIVE (dễ → khó) với MIX 6 dạng`;
+
+                return `Bạn là trợ lý tạo game "Mở Khóa Kiến Thức".
 
 Môn: ${subject}, Lớp tối đa: ${gradeMax}, Chủ đề: ${topic}, Độ khó: ${difficulty}
 
-Tạo ${numQuestions} câu hỏi PROGRESSIVE (dễ → khó):
-- Câu 1-2: Nhận biết
-- Câu 3-4: Thông hiểu
-- Câu 5+: Vận dụng
+${typeInstructions}
 
-DẠNG CÂU HỎI (mix 6 dạng):
-1. MCQ (40%): Multiple choice, 4 đáp án
-2. True/False (15%): Đúng/Sai
-3. Fill-blank (15%): Điền từ khuyết
-4. Multi-select (10%): Chọn NHIỀU đáp án đúng
-5. Matching (10%): Nối cặp
-6. Drag-drop (10%): Kéo thả sắp xếp
+DẠNG CÂU HỎI:
+1. mcq: Multiple choice, 4 đáp án
+2. truefalse: Đúng/Sai
+3. fill-blank: Điền khuyết - Hiển thị [___], cho 3-4 lựa chọn để CLICK (như MCQ)
+4. multi-select: Chọn NHIỀU đáp án đúng
+5. matching: Nối cặp
+6. drag-drop: Kéo thả sắp xếp
 
 MỖI CÂU CẦN:
-- prompt (LaTeX: \\\\(...\\\\))
+- prompt (LaTeX: \\\\(...\\\\), với fill-blank dùng [___] làm chỗ trống)
 - 2 hints: hint1 (concept), hint2 (gần đáp án)
-- codeChar (1 ký tự của từ khóa)
+- codeChar (1 ký tự)
 
-TẠO codeWord (5-7 ký tự liên quan chủ đề, VD: "PHANSO")
+TẠO codeWord (5-7 ký tự liên quan chủ đề)
 
-JSON format (KHÔNG thêm chữ):
+JSON format:
 {
   "questions": [
     {"id":"q1","type":"mcq","prompt":"...","choices":["A","B","C","D"],"answer":0,"hint1":"...","hint2":"...","codeChar":"P"},
     {"id":"q2","type":"truefalse","prompt":"...","answer":true,"hint1":"...","hint2":"...","codeChar":"H"},
-    {"id":"q3","type":"fill-blank","prompt":"...","blanks":[{"text":"_____","answer":"từ đúng"}],"hint1":"...","hint2":"...","codeChar":"A"},
+    {"id":"q3","type":"fill-blank","prompt":"Điền: 4 + [___] = 9","choices":["3","5","6","8"],"answer":1,"hint1":"...","hint2":"...","codeChar":"A"},
     {"id":"q4","type":"multi-select","prompt":"...","choices":["A","B","C","D"],"answers":[0,2],"hint1":"...","hint2":"...","codeChar":"N"},
     {"id":"q5","type":"matching","prompt":"...","leftItems":["A","B"],"rightItems":["Def B","Def A"],"correctPairs":[[0,1],[1,0]],"hint1":"...","hint2":"...","codeChar":"S"},
     {"id":"q6","type":"drag-drop","prompt":"...","items":["Item 1","Item 2","Item 3"],"correctOrder":[0,1,2],"hint1":"...","hint2":"...","codeChar":"O"}
@@ -277,7 +278,8 @@ JSON format (KHÔNG thêm chữ):
                 gradeMax: 9,
                 topic: '',
                 difficulty: 'Vừa',
-                numQuestions: 5
+                numQuestions: 5,
+                questionTypes: [] // Will be filled after user selects
             });
             const [aiGenerating, setAiGenerating] = useState(false);
 
@@ -441,9 +443,7 @@ JSON format (KHÔNG thêm chữ):
                         isCorrect = trueFalseAnswer === currentQ.answer;
                         break;
                     case 'fill-blank':
-                        isCorrect = fillAnswers.every((ans, i) =>
-                            ans.toLowerCase().trim() === currentQ.blanks[i].answer.toLowerCase().trim()
-                        );
+                        isCorrect = selectedAnswer === currentQ.answer;
                         break;
                     case 'multi-select':
                         isCorrect = JSON.stringify([...selectedAnswers].sort()) ===
@@ -738,13 +738,57 @@ JSON format (KHÔNG thêm chữ):
                                         <input
                                             type="number"
                                             value={aiGenParams.numQuestions}
-                                            onChange={(e) => setAiGenParams({ ...aiGenParams, numQuestions: parseInt(e.target.value) || 5 })}
+                                            onChange={(e) => {
+                                                const num = parseInt(e.target.value) || 5;
+                                                const newTypes = Array(num).fill('mcq');
+                                                // Keep existing selections if possible
+                                                for (let i = 0; i < Math.min(num, aiGenParams.questionTypes.length); i++) {
+                                                    newTypes[i] = aiGenParams.questionTypes[i];
+                                                }
+                                                setAiGenParams({ ...aiGenParams, numQuestions: num, questionTypes: newTypes });
+                                            }}
                                             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
                                             min="3"
                                             max="7"
                                         />
                                     </div>
                                 </div>
+
+                                {/* Question Type Selection Table */}
+                                {aiGenParams.numQuestions > 0 && (
+                                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-4">
+                                        <h3 className="font-bold text-purple-800 mb-3">
+                                            <i className="fas fa-list-check mr-2"></i>Chọn dạng câu hỏi:
+                                        </h3>
+                                        <div className="space-y-2">
+                                            {Array.from({ length: aiGenParams.numQuestions }).map((_, idx) => (
+                                                <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-3">
+                                                    <span className="font-bold text-purple-700 min-w-[80px]">Câu {idx + 1}:</span>
+                                                    <select
+                                                        value={aiGenParams.questionTypes[idx] || 'mcq'}
+                                                        onChange={(e) => {
+                                                            const newTypes = [...aiGenParams.questionTypes];
+                                                            newTypes[idx] = e.target.value;
+                                                            setAiGenParams({ ...aiGenParams, questionTypes: newTypes });
+                                                        }}
+                                                        className="flex-1 p-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 outline-none"
+                                                    >
+                                                        <option value="mcq">📝 Trắc nghiệm (MCQ)</option>
+                                                        <option value="fill-blank">✏️ Điền khuyết (chấp nhận sai số 70%)</option>
+                                                        <option value="truefalse">✔️ Đúng/Sai</option>
+                                                        <option value="drag-drop">🔄 Kéo thả</option>
+                                                        <option value="matching">🔗 Nối cặp</option>
+                                                        <option value="multi-select">☑️ Nhiều đáp án</option>
+                                                    </select>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mt-3 text-sm text-purple-700 bg-purple-100 p-2 rounded">
+                                            <i className="fas fa-info-circle mr-1"></i>
+                                            <strong>Điền khuyết:</strong> Chấp nhận đáp án có độ chính xác ≥70%
+                                        </div>
+                                    </div>
+                                )}
 
                                 <button
                                     onClick={handleGenerateQuestions}
@@ -1205,39 +1249,49 @@ JSON format (KHÔNG thêm chữ):
 
                             {/* Rest of question types and hints/buttons will continue */}
 
-                            {/* FILL-BLANK Type */}
+                            {/* FILL-BLANK Type - Click Pills */}
                             {currentQ.type === 'fill-blank' && (
-                                <div className="space-y-3 mb-4">
-                                    {currentQ.blanks && currentQ.blanks.map((blank, idx) => (
-                                        <div key={idx}>
-                                            <label className="block font-bold mb-2 text-gray-700">
-                                                Điền vào chỗ trống {idx + 1}:
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={fillAnswers[idx] || ''}
-                                                onChange={(e) => {
-                                                    const newAnswers = [...fillAnswers];
-                                                    newAnswers[idx] = e.target.value;
-                                                    setFillAnswers(newAnswers);
-                                                }}
-                                                disabled={showAnswer}
-                                                className={`w-full p-4 text-lg rounded-xl border-2 outline-none ${showAnswer
-                                                    ? fillAnswers[idx]?.toLowerCase().trim() === blank.answer.toLowerCase().trim()
-                                                        ? 'bg-green-100 border-green-500 text-green-900'
-                                                        : 'bg-red-100 border-red-500 text-red-900'
-                                                    : 'border-gray-300 focus:border-blue-500'
-                                                    }`}
-                                                placeholder="Nhập câu trả lời..."
-                                            />
-                                            {showAnswer && (
-                                                <div className="mt-2 text-sm">
-                                                    <span className="font-bold text-green-700">Đáp án đúng: </span>
-                                                    <MathText text={blank.answer} />
-                                                </div>
-                                            )}
+                                <div className="mb-4">
+                                    <div className="text-sm text-gray-600 mb-3 font-medium">
+                                        <i className="fas fa-hand-pointer mr-2"></i>Click chọn đáp án phù hợp
+                                    </div>
+                                    <div className="flex flex-wrap gap-3 justify-center">
+                                        {currentQ.choices && currentQ.choices.map((choice, idx) => {
+                                            const isSelected = selectedAnswer === idx;
+                                            const isCorrect = currentQ.answer === idx;
+                                            let className = "px-6 py-3 rounded-full border-2 cursor-pointer transition font-bold text-lg ";
+
+                                            if (showAnswer) {
+                                                if (isCorrect) className += "bg-green-100 border-green-500 text-green-900 shadow-lg";
+                                                else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
+                                                else className += "border-gray-200 opacity-40";
+                                            } else {
+                                                className += isSelected
+                                                    ? "bg-blue-500 border-blue-600 text-white shadow-lg transform scale-110"
+                                                    : "bg-white border-blue-300 hover:border-blue-500 hover:bg-blue-50 hover:shadow";
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => !showAnswer && setSelectedAnswer(idx)}
+                                                    disabled={showAnswer}
+                                                    className={className}
+                                                    style={{ transition: 'all 0.2s ease' }}
+                                                >
+                                                    <MathText text={choice} />
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedAnswer !== null && !showAnswer && (
+                                        <div className="mt-4 p-3 bg-blue-50 border border-blue-300 rounded-lg text-center">
+                                            <span className="text-blue-800 font-medium">
+                                                <i className="fas fa-check-circle mr-2"></i>
+                                                Đã chọn: <strong><MathText text={currentQ.choices[selectedAnswer]} /></strong>
+                                            </span>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             )}
 
