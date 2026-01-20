@@ -271,11 +271,17 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                 showCommentary("Bắt đầu!"); startQuestion();
             };
 
+
             const startQuestion = () => {
                 setShowAnswer(false); setSelectedAnswer(null); setTimeLeft(20); setTimerActive(true); setMatchingPairs([]);
                 const currentQ = questions[currentQuestionIndex];
-                if (currentQ.type === 'drag-drop') setDraggedItems([...currentQ.items].sort(() => Math.random() - 0.5));
+                if (currentQ.type === 'drag-drop' && currentQ.items && currentQ.items.length > 0) {
+                    setDraggedItems([...currentQ.items].sort(() => Math.random() - 0.5));
+                } else if (currentQ.type === 'drag-drop') {
+                    console.error('Câu hỏi drag-drop thiếu items:', currentQ);
+                }
             };
+
 
             useEffect(() => {
                 if (timerActive && timeLeft > 0 && !showAnswer) {
@@ -660,9 +666,9 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                             )}
                             {currentQ.type === 'drag-drop' && (
                                 <div className="space-y-3">
-                                    {draggedItems.map((item, idx) => (
+                                    {(draggedItems.length > 0 ? draggedItems : currentQ.items || []).map((item, idx) => (
                                         <div key={`${item}-${idx}`} draggable={!showAnswer} onDragStart={() => setDraggedIndex(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => {
-                                            if (draggedIndex !== null && draggedIndex !== idx) { const newItems = [...draggedItems];[newItems[draggedIndex], newItems[idx]] = [newItems[idx], newItems[draggedIndex]]; setDraggedItems(newItems); }
+                                            if (draggedIndex !== null && draggedIndex !== idx) { const newItems = draggedItems.length > 0 ? [...draggedItems] : [...(currentQ.items || [])];[newItems[draggedIndex], newItems[idx]] = [newItems[idx], newItems[draggedIndex]]; setDraggedItems(newItems); }
                                         }} className={`p-4 rounded-xl border-2 cursor-move transition ${showAnswer ? (item === currentQ.items[idx] ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500') : 'bg-white border-gray-300 hover:border-orange-400'}`}>
                                             <div className="flex items-center gap-3"><span className="text-2xl"><i className="fas fa-grip-vertical"></i></span><span className="font-bold">{idx + 1}.</span><span className="flex-1"><MathText text={item} /></span></div>
                                         </div>
