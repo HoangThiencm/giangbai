@@ -597,7 +597,7 @@ JSON format:
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-600 font-bold">6.</span>
-                                            <span><strong className="text-purple-600">6 dạng câu:</strong> MCQ, Đúng/Sai, Điền khuyết, Nhiều đáp án, Nối ô, Kéo thả</span>
+                                            <span><strong className="text-purple-600">6 dạng câu:</strong> Trắc nghiệm, Đúng/Sai, Điền khuyết (click chọn), Nhiều đáp án, Nối cặp, Kéo thả</span>
                                         </li>
                                     </ul>
                                 </div>
@@ -774,7 +774,7 @@ JSON format:
                                                         className="flex-1 p-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 outline-none"
                                                     >
                                                         <option value="mcq">📝 Trắc nghiệm (MCQ)</option>
-                                                        <option value="fill-blank">✏️ Điền khuyết</option>
+                                                        <option value="fill-blank">✏️ Điền khuyết (Click chọn đáp án)</option>
                                                         <option value="truefalse">✔️ Đúng/Sai</option>
                                                         <option value="drag-drop">🔄 Kéo thả</option>
                                                         <option value="matching">🔗 Nối cặp</option>
@@ -783,10 +783,7 @@ JSON format:
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="mt-3 text-sm text-purple-700 bg-purple-100 p-2 rounded">
-                                            <i className="fas fa-info-circle mr-1"></i>
-                                            <strong>Điền khuyết:</strong> Chấp nhận đáp án có độ chính xác ≥70%
-                                        </div>
+
                                     </div>
                                 )}
 
@@ -1528,14 +1525,29 @@ JSON format:
                                         <i className="fas fa-fire mr-2"></i>Hint 2 (-5đ)
                                     </button>
                                 )}
-                                {!showAnswer && hasAnswer && (
-                                    <button
-                                        onClick={handleRevealAnswer}
-                                        className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700"
-                                    >
-                                        <i className="fas fa-key mr-2"></i>Mở khóa
-                                    </button>
-                                )}
+                                {!showAnswer && (() => {
+                                    // Check if user has answered based on question type
+                                    let hasAnswer = false;
+                                    if (currentQ.type === 'mcq' || currentQ.type === 'fill-blank') {
+                                        hasAnswer = selectedAnswer !== null;
+                                    } else if (currentQ.type === 'truefalse') {
+                                        hasAnswer = trueFalseAnswer !== null;
+                                    } else if (currentQ.type === 'multi-select') {
+                                        hasAnswer = selectedAnswers.length > 0;
+                                    } else if (currentQ.type === 'matching') {
+                                        hasAnswer = matchingPairs.length > 0;
+                                    } else if (currentQ.type === 'drag-drop') {
+                                        hasAnswer = dragOrder.length > 0;
+                                    }
+                                    return hasAnswer;
+                                })() && (
+                                        <button
+                                            onClick={handleRevealAnswer}
+                                            className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700"
+                                        >
+                                            <i className="fas fa-key mr-2"></i>Mở khóa
+                                        </button>
+                                    )}
                             </div>
                         </div>
                     </div>
@@ -1639,4 +1651,3 @@ JSON format:
 </body>
 
 </html>
-
