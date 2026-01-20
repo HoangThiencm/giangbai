@@ -131,15 +131,20 @@
                         img.className = 'max-h-48 rounded-lg my-2 border border-gray-200 shadow-sm inline-block';
                         ref.current.appendChild(img);
                     } else {
+                        // More comprehensive LaTeX detection
                         const hasLatexCommand = /\\[a-zA-Z]+[\{_\^]/.test(fragment.content);
+                        const hasBlank = /\[___+\]/.test(fragment.content); // Detect [___]
+                        const hasMathSymbols = /\\[a-zA-Z]+/.test(fragment.content); // \div, \times, etc.
                         // Check if already has $...$ pattern
                         const hasDollarSigns = /\$[^$]+\$/.test(fragment.content);
 
                         let processed = fragment.content.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
 
-                        // Auto-wrap if has LaTeX commands or already has $ signs (don't double-wrap)
+                        // Auto-wrap if has LaTeX commands, blanks, or math symbols
                         if (!hasDollarSigns) {
                             if (hasLatexCommand && !processed.includes('$')) processed = `$${processed}$`;
+                            else if (hasBlank && !processed.includes('$')) processed = `$${processed}$`;
+                            else if (hasMathSymbols && !processed.includes('$')) processed = `$${processed}$`;
                             else if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
                         }
 
@@ -187,7 +192,11 @@ DẠNG CÂU HỎI:
 3. fill-blank: Điền khuyết - Hiển thị [___], cho 3-4 lựa chọn để CLICK (như MCQ)
 4. multi-select: Chọn NHIỀU đáp án đúng
 5. matching: Nối cặp
-6. drag-drop: Kéo thả sắp xếp - QUAN TRỌNG: items phải SHUFFLE, KHÔNG theo thứ tự đúng
+6. drag-drop: Sắp xếp QUY TRÌNH/THỨ TỰ - QUAN TRỌNG:
+   - TRÁNH: Phép toán có NHIỀU đáp án đúng (VD: "8:2=4" vs "8:4=2")
+   - DÙNG: Các bước giải toán, sắp xếp số, quy trình thí nghiệm, câu văn logic
+   - Items phải SHUFFLE, không theo thứ tự đúng
+   - Chỉ có 1 thứ tự đúng duy nhất
 
 MỖI CÂU CẦN:
 - prompt (LaTeX: \\\\(...\\\\), với fill-blank dùng [___] làm chỗ trống)
