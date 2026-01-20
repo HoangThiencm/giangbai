@@ -203,9 +203,20 @@ JSON (KHÔNG thêm chữ):
 
             const handleGenerateQuestions = async () => {
                 if (!aiGenParams.topic.trim()) { alert('Vui lòng nhập chủ đề!'); return; }
+
+                // Validate: số câu phải chia hết cho số đội
+                const numTeams = teams.length;
+                let adjustedNumQuestions = aiGenParams.numQuestions;
+                if (adjustedNumQuestions % numTeams !== 0) {
+                    // Tự động làm tròn lên bội số gần nhất
+                    adjustedNumQuestions = Math.ceil(adjustedNumQuestions / numTeams) * numTeams;
+                    alert(`Số câu đã điều chỉnh từ ${aiGenParams.numQuestions} thành ${adjustedNumQuestions} (chia đều cho ${numTeams} đội)`);
+                    setAiGenParams({ ...aiGenParams, numQuestions: adjustedNumQuestions });
+                }
+
                 setAiGenerating(true);
                 try {
-                    const result = await GeminiService.generate({ ...aiGenParams, mode: gameMode });
+                    const result = await GeminiService.generate({ ...aiGenParams, numQuestions: adjustedNumQuestions, mode: gameMode });
                     if (result.questions && result.questions.length > 0) {
                         const cleanedQuestions = result.questions.map(q => {
                             if (q.type === 'mcq' && q.choices) {
@@ -416,7 +427,11 @@ JSON (KHÔNG thêm chữ):
                                 <div><label className="block font-bold mb-2">Chủ đề:</label><input type="text" value={aiGenParams.topic} onChange={(e) => setAiGenParams({ ...aiGenParams, topic: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl" placeholder="VD: Phân số, Phương trình..." /></div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div><label className="block font-bold mb-2">Độ khó:</label><select value={aiGenParams.difficulty} onChange={(e) => setAiGenParams({ ...aiGenParams, difficulty: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl"><option>Dễ</option><option>Vừa</option><option>Khó</option><option>Tổng hợp</option></select></div>
-                                    <div><label className="block font-bold mb-2">Số câu:</label><input type="number" value={aiGenParams.numQuestions} onChange={(e) => setAiGenParams({ ...aiGenParams, numQuestions: parseInt(e.target.value) || 10 })} className="w-full p-3 border-2 border-gray-200 rounded-xl" min="5" max="20" /></div>
+                                    <div>
+                                        <label className="block font-bold mb-2">Số câu:</label>
+                                        <input type="number" value={aiGenParams.numQuestions} onChange={(e) => setAiGenParams({ ...aiGenParams, numQuestions: parseInt(e.target.value) || 10 })} className="w-full p-3 border-2 border-gray-200 rounded-xl" min="4" max="20" />
+                                        <p className="text-xs text-orange-600 mt-1"><i className="fas fa-info-circle mr-1"></i>Phải chia hết cho {teams.length} đội ({teams.length === 2 ? '4, 6, 8, 10...' : teams.length === 3 ? '6, 9, 12, 15...' : '4, 8, 12, 16...'})</p>
+                                    </div>
                                 </div>
                                 <button onClick={handleGenerateQuestions} disabled={aiGenerating} className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl disabled:opacity-50">{aiGenerating ? <><i className="fas fa-spinner fa-spin mr-2"></i>Đang tạo...</> : <><i className="fas fa-magic mr-2"></i>Tạo câu hỏi</>}</button>
                                 <button onClick={() => setCurrentScreen('TEAM_SETUP')} className="w-full py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
