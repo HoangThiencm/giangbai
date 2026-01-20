@@ -684,7 +684,7 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                                 const pairNumber = pair ? matchingPairs.indexOf(pair) + 1 : null;
                                                 const isCorrect = showAnswer && pair && currentQ.correctPairs && currentQ.correctPairs[idx] && currentQ.correctPairs[idx][1] === pair[1];
                                                 return (
-                                                    <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (!existing) setMatchingPairs([...matchingPairs, [idx, null]]); } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
+                                                    <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (existing) { setMatchingPairs(matchingPairs.filter(p => p[0] !== idx)); } else { setMatchingPairs([...matchingPairs, [idx, null]]); } } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
                                                         ? (isCorrect ? 'bg-green-100 border-green-500' : pair ? 'bg-red-100 border-red-500' : 'bg-gray-100 border-gray-300')
                                                         : (pair ? 'bg-blue-100 border-blue-500' : 'bg-blue-50 border-blue-300 hover:border-blue-500')
                                                         }`}>
@@ -705,7 +705,7 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                                 const leftIdx = pair ? pair[0] : null;
                                                 const isCorrect = showAnswer && pair && currentQ.correctPairs && currentQ.correctPairs[leftIdx] && currentQ.correctPairs[leftIdx][1] === idx;
                                                 return (
-                                                    <div key={idx} onClick={() => { if (!showAnswer) { const incomplete = matchingPairs.find(p => p[1] === null); if (incomplete) { const updated = matchingPairs.map(p => p === incomplete ? [p[0], idx] : p); setMatchingPairs(updated); } } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
+                                                    <div key={idx} onClick={() => { if (!showAnswer) { const existingPair = matchingPairs.find(p => p[1] === idx); if (existingPair) { setMatchingPairs(matchingPairs.filter(p => p[1] !== idx)); } else { const incomplete = matchingPairs.find(p => p[1] === null); if (incomplete) { const updated = matchingPairs.map(p => p === incomplete ? [p[0], idx] : p); setMatchingPairs(updated); } } } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
                                                         ? (isCorrect ? 'bg-green-100 border-green-500' : pair ? 'bg-red-100 border-red-500' : 'bg-gray-100 border-gray-300')
                                                         : (pair ? 'bg-green-100 border-green-500' : 'bg-green-50 border-green-300 hover:border-green-500')
                                                         }`}>
