@@ -131,39 +131,52 @@
                         img.className = 'max-h-48 rounded-lg my-2 border border-gray-200 shadow-sm inline-block';
                         ref.current.appendChild(img);
                     } else {
-                        // Process math symbols first, but DON'T auto-wrap yet
+                        // Step 1: Handle backticks and LaTeX delimiters first
                         let processed = fragment.content
-                            // Convert backticks and LaTeX brackets first
-                            .replace(/`([^`]+)`/g, '$$$$1$$')
-                            .replace(/\\\[(.+?)\\\]/g, '$$$$$$1$$$$')
-                            .replace(/\\\((.+?)\\\)/g, '$$$$1$$');
+                            .replace(/`([^`]+)`/g, '$$$1$$')
+                            .replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$')
+                            .replace(/\\\((.+?)\\\)/g, '$$$1$$');
 
-                        // Check if already has $ delimiters
-                        const hasMathDelimiters = /\$.*?\$/.test(processed);
+                        // Step 2: Check if already wrapped
+                        const hasDelimiters = /\$/.test(processed);
 
-                        // If NO math delimiters yet, convert symbols and auto-wrap math parts
-                        if (!hasMathDelimiters) {
-                            // Smart detection: Find math expressions (numbers with operators)
-                            // Pattern: sequences with numbers and math operators
+                        if (!hasDelimiters) {
+                            // Step 3: Convert math symbols to LaTeX
                             processed = processed
-                                // Convert symbols (support numbers and [___] placeholders)
-                                .replace(/([\d\[\]_]+)\s*×\s*([\d\[\]_]+)/g, '$1 \\times $2')
-                                .replace(/([\d\[\]_]+)\s*\*\s*([\d\[\]_]+)/g, '$1 \\times $2')
-                                .replace(/([\d\[\]_]+)\s*÷\s*([\d\[\]_]+)/g, '$1 \\div $2')
-                                .replace(/([\d\[\]_]+)\s*\/\s*([\d\[\]_]+)/g, '$1 \\div $2')
-                                // Now wrap math expressions - support numbers, [___], variables, ?
-                                // Pattern: any sequence with math operators and operands
-                                .replace(/((?:\d+|\[___\]|[a-zA-Z]|\?)(?:\s*(?:\\times|\\div|\+|\-|×|÷|\*|\/|=)\s*(?:\d+|\[___\]|[a-zA-Z]|\?))+)/g, '$$$1$$');
-                        } else {
-                            // Already has delimiters, convert symbols (support placeholders)
-                            processed = processed
-                                .replace(/([\d\[\]_]+)\s*×\s*([\d\[\]_]+)/g, '$1 \\times $2')
-                                .replace(/([\d\[\]_]+)\s*\*\s*([\d\[\]_]+)/g, '$1 \\times $2')
-                                .replace(/([\d\[\]_]+)\s*÷\s*([\d\[\]_]+)/g, '$1 \\div $2')
-                                .replace(/([\d\[\]_]+)\s*\/\s*([\d\[\]_]+)/g, '$1 \\div $2');
+                                .replace(/×/g, '\\times')
+                                .replace(/\*/g, '\\times')
+                                .replace(/÷/g, '\\div')
+                                .replace(/\//g, '\\div');
+
+                            // Step 4: Smart wrap - separate Vietnamese text from formulas
+                            // Pattern: "text: formula" or "text formula" at end
+                            // Look for: colon/period followed by math expression
+                            if (processed.includes('\\')) {
+                                // Try to find separator (: hoặc khoảng trắng đầu công thức)
+                                const separatorMatch = processed.match(/^(.+?[:?])(\s*[\d\[\]].+)$/);
+                                if (separatorMatch) {
+                                    // Found "text: formula" pattern
+                                    processed = separatorMatch[1] + ' $' + separatorMatch[2].trim() + '$';
+                                } else {
+                                    // Check if it's mostly formula (starts with number/bracket)
+                                    if (/^[\d\[\]]/.test(processed.trim())) {
+                                        // It's a formula, wrap it all
+                                        processed = `$${processed}$`;
+                                    } else {
+                                        // Mixed text-formula, try to find where formula starts
+                                        const lastVietnameseWord = processed.match(/^(.+?\s)([\d\[\]].+)$/);
+                                        if (lastVietnameseWord) {
+                                            processed = lastVietnameseWord[1] + '$' + lastVietnameseWord[2] + '$';
+                                        } else {
+                                            // Fallback: wrap all if can't separate
+                                            processed = `$${processed}$`;
+                                        }
+                                    }
+                                }
+                            }
                         }
 
-                        // Now split and render
+                        // Step 5: Split and render
                         const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
                         parts.forEach(part => {
                             if (!part) return;
