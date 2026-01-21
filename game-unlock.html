@@ -131,31 +131,39 @@
                         img.className = 'max-h-48 rounded-lg my-2 border border-gray-200 shadow-sm inline-block';
                         ref.current.appendChild(img);
                     } else {
-                        // Auto-fix common math symbols for KaTeX
+                        // Process math symbols first, but DON'T auto-wrap yet
                         let processed = fragment.content
-                            // Convert multiplication symbols (with proper spacing around numbers)
-                            .replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2')
-                            .replace(/(\d+)\s*\*\s*(\d+)/g, '$1 \\times $2')
-                            .replace(/×/g, ' \\times ')  // Fallback for remaining ×
-                            // Convert division symbols (with proper spacing around numbers)
-                            .replace(/(\d+)\s*÷\s*(\d+)/g, '$1 \\div $2')
-                            .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 \\div $2')  // Only between numbers
-                            .replace(/÷/g, ' \\div ')  // Fallback for remaining ÷
-                            // Convert standalone * to times (but not in URLs or between numbers already handled)
-                            .replace(/(\s)\*(\s)/g, '$1\\times$2')
-                            // Handle other conversions
-                            .replace(/`([^`]+)`/g, '$$$1$$')
-                            .replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$')
-                            .replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                            // Convert backticks and LaTeX brackets first
+                            .replace(/`([^`]+)`/g, '$$$$1$$')
+                            .replace(/\\\[(.+?)\\\]/g, '$$$$$$1$$$$')
+                            .replace(/\\\((.+?)\\\)/g, '$$$$1$$');
 
-                        // Check if already wrapped in $...$
-                        const alreadyWrapped = /^\$.*\$$/.test(processed.trim());
+                        // Check if already has $ delimiters
+                        const hasMathDelimiters = /\$.*?\$/.test(processed);
 
-                        // Auto-wrap if has LaTeX commands (backslash) and not already wrapped
-                        if (!alreadyWrapped && processed.includes('\\')) {
-                            processed = `$${processed}$`;
+                        // If NO math delimiters yet, convert symbols and auto-wrap math parts
+                        if (!hasMathDelimiters) {
+                            // Smart detection: Find math expressions (numbers with operators)
+                            // Pattern: sequences with numbers and math operators
+                            processed = processed
+                                // Convert symbols first
+                                .replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2')
+                                .replace(/(\d+)\s*\*\s*(\d+)/g, '$1 \\times $2')
+                                .replace(/(\d+)\s*÷\s*(\d+)/g, '$1 \\div $2')
+                                .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 \\div $2')
+                                // Now wrap math expressions ONLY (number + operator + number + ...)
+                                // Pattern: consecutive sequence of numbers, operators, equals, brackets
+                                .replace(/(\d+(?:\s*(?:\\times|\\div|\+|\-|=|×|÷)\s*\d+)+(?:\s*=\s*(?:\d+|\[___\]|\?))?)/g, '$$$1$$');
+                        } else {
+                            // Already has delimiters, just convert symbols inside
+                            processed = processed
+                                .replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2')
+                                .replace(/(\d+)\s*\*\s*(\d+)/g, '$1 \\times $2')
+                                .replace(/(\d+)\s*÷\s*(\d+)/g, '$1 \\div $2')
+                                .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 \\div $2');
                         }
 
+                        // Now split and render
                         const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
                         parts.forEach(part => {
                             if (!part) return;
