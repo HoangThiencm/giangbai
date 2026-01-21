@@ -155,30 +155,24 @@
                                 .replace(/÷/g, '\\div')
                                 .replace(/\//g, '\\div');
 
-                            // Step 4: Smart wrap - separate Vietnamese text from formulas
-                            // Pattern: "text: formula" or "text formula" at end
-                            // Look for: colon/period followed by math expression
+                            // Step 4: Smart wrap - find and wrap ONLY math expressions
+                            // Look for mathematical expressions containing LaTeX commands
                             if (processed.includes('\\')) {
-                                // Try to find separator (: hoặc khoảng trắng đầu công thức)
-                                const separatorMatch = processed.match(/^(.+?[:?])(\s*[\d\[\]].+)$/);
-                                if (separatorMatch) {
-                                    // Found "text: formula" pattern
-                                    processed = separatorMatch[1] + ' $' + separatorMatch[2].trim() + '$';
-                                } else {
-                                    // Check if it's mostly formula (starts with number/bracket)
-                                    if (/^[\d\[\]]/.test(processed.trim())) {
-                                        // It's a formula, wrap it all
-                                        processed = `$${processed}$`;
-                                    } else {
-                                        // Mixed text-formula, try to find where formula starts
-                                        const lastVietnameseWord = processed.match(/^(.+?\s)([\d\[\]].+)$/);
-                                        if (lastVietnameseWord) {
-                                            processed = lastVietnameseWord[1] + '$' + lastVietnameseWord[2] + '$';
-                                        } else {
-                                            // Fallback: wrap all if can't separate
-                                            processed = `$${processed}$`;
-                                        }
-                                    }
+                                // Pattern: find sequences with LaTeX commands
+                                // Match: numbers, [___], operators, equals, LaTeX commands
+                                // Example: "10 \div [___] = 2" or "2 \times 3 = 6"
+                                processed = processed.replace(
+                                    /([\d\[\]_]+\s*\\[a-z]+\s*[\d\[\]_]+(?:\s*[=+\-]\s*[\d\[\]_?]+)*)/g,
+                                    '$$$1$$'
+                                );
+
+                                // If no match yet, try simpler pattern for just LaTeX commands
+                                if (!processed.includes('$')) {
+                                    // Fallback: wrap anything with backslash
+                                    processed = processed.replace(
+                                        /([\d\[\]_]+(?:\s*[\\+\-=×÷*/]\s*[\d\[\]_?]+)+)/g,
+                                        '$$$1$$'
+                                    );
                                 }
                             }
                         }
