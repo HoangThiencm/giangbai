@@ -137,6 +137,13 @@
                             .replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$')
                             .replace(/\\\((.+?)\\\)/g, '$$$1$$');
 
+                        // Step 1.5: Normalize double backslashes to single (in case Gemini sends \\times)
+                        processed = processed
+                            .replace(/\\\\times/g, '\\times')
+                            .replace(/\\\\div/g, '\\div')
+                            .replace(/\\\\frac/g, '\\frac')
+                            .replace(/\\\\sqrt/g, '\\sqrt');
+
                         // Step 2: Check if already wrapped
                         const hasDelimiters = /\$/.test(processed);
 
@@ -296,20 +303,6 @@ JSON format:
                 const endIdx = Math.max(jsonStr.lastIndexOf('}'), jsonStr.lastIndexOf(']'));
                 if (startIdx !== Infinity && endIdx >= 0) jsonStr = jsonStr.substring(startIdx, endIdx + 1);
 
-                // Fix LaTeX commands that need proper escaping in JSON
-                // Gemini might return \times which JSON parses as <TAB>imes
-                // We need to fix these BEFORE JSON.parse
-                jsonStr = jsonStr
-                    .replace(/\\times/g, '\\\\times')
-                    .replace(/\\div/g, '\\\\div')
-                    .replace(/\\frac/g, '\\\\frac')
-                    .replace(/\\sqrt/g, '\\\\sqrt')
-                    .replace(/\\pm/g, '\\\\pm')
-                    .replace(/\\cdot/g, '\\\\cdot')
-                    .replace(/\\leq/g, '\\\\leq')
-                    .replace(/\\geq/g, '\\\\geq')
-                    .replace(/\\neq/g, '\\\\neq')
-                    .replace(/\\approx/g, '\\\\approx');
 
                 try {
                     return JSON.parse(jsonStr);
