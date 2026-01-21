@@ -155,26 +155,12 @@
                                 .replace(/÷/g, '\\div')
                                 .replace(/(\d)\s*\/\s*(\d)/g, '$1 \\div $2');
 
-                            // Step 4: Smart wrap - find and wrap ONLY math expressions
-                            // Look for mathematical expressions containing LaTeX commands
-                            if (processed.includes('\\')) {
-                                // Pattern: find sequences with LaTeX commands
-                                // Match: numbers, [___], operators, equals, LaTeX commands
-                                // Example: "10 \div [___] = 2" or "2 \times 3 = 6"
-                                processed = processed.replace(
-                                    /([\d\[\]_]+\s*\\[a-z]+\s*[\d\[\]_]+(?:\s*[=+\-]\s*[\d\[\]_?]+)*)/g,
-                                    '$$$1$$'
-                                );
-
-                                // If no match yet, try simpler pattern for just LaTeX commands
-                                if (!processed.includes('$')) {
-                                    // Fallback: wrap anything with backslash
-                                    processed = processed.replace(
-                                        /([\d\[\]_]+(?:\s*[\\+\-=×÷*/]\s*[\d\[\]_?]+)+)/g,
-                                        '$$$1$$'
-                                    );
-                                }
-                            }
+                            // Step 4: Smart wrap - wrap math chunks even inside normal sentences
+                            // Supports: 15 × 7, 84 \div [___] = 12, 3*4=12, 10/2=5, with spaces
+                            processed = processed.replace(
+                                /(\d+|\[\s*_{2,}\s*\])(?:\s*(?:\\times|\\div|[×÷*\/+\-=])\s*(?:\d+|\[\s*_{2,}\s*\]))+(?:\s*=\s*(?:\d+|\[\s*_{2,}\s*\]))?/g,
+                                (m) => `$${m}$`
+                            );
                         }
 
                         // FINAL: if contains latex commands but no $...$, wrap whole fragment as inline math
