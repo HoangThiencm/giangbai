@@ -133,8 +133,17 @@
                     } else {
                         // Auto-fix common math symbols for KaTeX
                         let processed = fragment.content
-                            .replace(/×/g, '\\times ')
-                            .replace(/÷/g, '\\div ')
+                            // Convert multiplication symbols (with proper spacing around numbers)
+                            .replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2')
+                            .replace(/(\d+)\s*\*\s*(\d+)/g, '$1 \\times $2')
+                            .replace(/×/g, ' \\times ')  // Fallback for remaining ×
+                            // Convert division symbols (with proper spacing around numbers)
+                            .replace(/(\d+)\s*÷\s*(\d+)/g, '$1 \\div $2')
+                            .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 \\div $2')  // Only between numbers
+                            .replace(/÷/g, ' \\div ')  // Fallback for remaining ÷
+                            // Convert standalone * to times (but not in URLs or between numbers already handled)
+                            .replace(/(\s)\*(\s)/g, '$1\\times$2')
+                            // Handle other conversions
                             .replace(/`([^`]+)`/g, '$$$1$$')
                             .replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$')
                             .replace(/\\\((.+?)\\\)/g, '$$$1$$');
@@ -198,11 +207,14 @@ DẠNG CÂU HỎI:
    - Chỉ có 1 thứ tự đúng duy nhất
 
 MỖI CÂU CẦN:
-- prompt: TÁCH RÕ text và công thức:
+- prompt: TÁCH RÕ text và công thức - QUY TẮC QUAN TRỌNG:
   * Text thuần KHÔNG wrap: "Điền số thích hợp:"
   * Công thức PHẢI wrap trong $...$: "$10 \\div [___] = 5$"
   * VD đúng: "Điền số thích hợp: $10 \\div [___] = 5$"
   * VD sai: "Điền số: 10 \\div [___] = 5" (không wrap)
+  * PHÉP NHÂN: Dùng \\times - VD: "$5 \\times 3 = 15$"
+  * PHÉP CHIA: Dùng \\div - VD: "$20 \\div 4 = 5$"
+  * TRÁNH dùng: ×, ÷, *, / (trừ khi trong text thuần)
 - 2 hints: hint1 (concept), hint2 (gần đáp án)
 - codeChar (1 ký tự)
 
