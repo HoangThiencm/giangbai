@@ -146,21 +146,21 @@
                             // Smart detection: Find math expressions (numbers with operators)
                             // Pattern: sequences with numbers and math operators
                             processed = processed
-                                // Convert symbols first
-                                .replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2')
-                                .replace(/(\d+)\s*\*\s*(\d+)/g, '$1 \\times $2')
-                                .replace(/(\d+)\s*÷\s*(\d+)/g, '$1 \\div $2')
-                                .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 \\div $2')
-                                // Now wrap math expressions ONLY (number + operator + number + ...)
-                                // Pattern: consecutive sequence of numbers, operators, equals, brackets
-                                .replace(/(\d+(?:\s*(?:\\times|\\div|\+|\-|=|×|÷)\s*\d+)+(?:\s*=\s*(?:\d+|\[___\]|\?))?)/g, '$$$1$$');
+                                // Convert symbols (support numbers and [___] placeholders)
+                                .replace(/([\d\[\]_]+)\s*×\s*([\d\[\]_]+)/g, '$1 \\times $2')
+                                .replace(/([\d\[\]_]+)\s*\*\s*([\d\[\]_]+)/g, '$1 \\times $2')
+                                .replace(/([\d\[\]_]+)\s*÷\s*([\d\[\]_]+)/g, '$1 \\div $2')
+                                .replace(/([\d\[\]_]+)\s*\/\s*([\d\[\]_]+)/g, '$1 \\div $2')
+                                // Now wrap math expressions - support numbers, [___], variables, ?
+                                // Pattern: any sequence with math operators and operands
+                                .replace(/((?:\d+|\[___\]|[a-zA-Z]|\?)(?:\s*(?:\\times|\\div|\+|\-|×|÷|\*|\/|=)\s*(?:\d+|\[___\]|[a-zA-Z]|\?))+)/g, '$$$1$$');
                         } else {
-                            // Already has delimiters, just convert symbols inside
+                            // Already has delimiters, convert symbols (support placeholders)
                             processed = processed
-                                .replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2')
-                                .replace(/(\d+)\s*\*\s*(\d+)/g, '$1 \\times $2')
-                                .replace(/(\d+)\s*÷\s*(\d+)/g, '$1 \\div $2')
-                                .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 \\div $2');
+                                .replace(/([\d\[\]_]+)\s*×\s*([\d\[\]_]+)/g, '$1 \\times $2')
+                                .replace(/([\d\[\]_]+)\s*\*\s*([\d\[\]_]+)/g, '$1 \\times $2')
+                                .replace(/([\d\[\]_]+)\s*÷\s*([\d\[\]_]+)/g, '$1 \\div $2')
+                                .replace(/([\d\[\]_]+)\s*\/\s*([\d\[\]_]+)/g, '$1 \\div $2');
                         }
 
                         // Now split and render
