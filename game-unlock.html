@@ -1438,6 +1438,7 @@ JSON format:
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => {
+                                                            console.log('Math Editor button clicked', q, idx);
                                                             setMathEditingQuestion(q);
                                                             setMathEditingIndex(idx);
                                                         }}
@@ -2271,14 +2272,10 @@ JSON format:
                 setMathEditingIndex(null);
             };
 
-            return (
-                <>
-                    {/* Main content - determined by screens above */}
-                    {currentScreen === 'INSTRUCTIONS' || currentScreen === 'AI_GEN' ||
-                        currentScreen === 'EDIT' || currentScreen === 'SETUP' ||
-                        currentScreen === 'GAME' || currentScreen === 'SUCCESS' ? null :
-                        <div>Screen not found</div>}
+            console.log('Render - mathEditingQuestion:', mathEditingQuestion, 'mathEditingIndex:', mathEditingIndex);
 
+            return (
+                <React.Fragment>
                     {/* Math Editor Modal */}
                     {mathEditingQuestion && (
                         <EditQuestionModal
@@ -2291,7 +2288,7 @@ JSON format:
                             }}
                         />
                     )}
-                </>
+                </React.Fragment>
             );
         };
 
