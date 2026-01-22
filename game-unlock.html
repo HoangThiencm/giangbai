@@ -1311,7 +1311,7 @@ JSON format:
 
             // SCREEN: EDIT
             if (currentScreen === 'EDIT') {
-                return (
+                const editScreenContent = (
                     <div className="max-w-4xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-8">
                             <div className="flex justify-between items-center mb-6">
@@ -1490,6 +1490,43 @@ JSON format:
                             </button>
                         </div>
                     </div>
+                );
+
+                return (
+                    <React.Fragment>
+                        {editScreenContent}
+                        {mathEditingQuestion && (
+                            <EditQuestionModal
+                                question={mathEditingQuestion}
+                                questionIndex={mathEditingIndex}
+                                onSave={(editedData) => {
+                                    const q = mathEditingQuestion;
+                                    const idx = mathEditingIndex;
+
+                                    // Save to localStorage
+                                    Object.keys(editedData).forEach(field => {
+                                        EditStorage.saveEdit(q.id, field, editedData[field]);
+                                    });
+
+                                    // Update questions in state
+                                    const updated = [...questions];
+                                    updated[idx] = {
+                                        ...updated[idx],
+                                        ...editedData
+                                    };
+                                    setQuestions(updated);
+
+                                    // Close modal
+                                    setMathEditingQuestion(null);
+                                    setMathEditingIndex(null);
+                                }}
+                                onClose={() => {
+                                    setMathEditingQuestion(null);
+                                    setMathEditingIndex(null);
+                                }}
+                            />
+                        )}
+                    </React.Fragment>
                 );
             }
 
@@ -2249,47 +2286,7 @@ JSON format:
                 );
             }
 
-            // Render Math Editor Modal
-            const handleMathSave = (editedData) => {
-                const q = mathEditingQuestion;
-                const idx = mathEditingIndex;
-
-                // Save to localStorage
-                Object.keys(editedData).forEach(field => {
-                    EditStorage.saveEdit(q.id, field, editedData[field]);
-                });
-
-                // Update questions in state
-                const updated = [...questions];
-                updated[idx] = {
-                    ...updated[idx],
-                    ...editedData
-                };
-                setQuestions(updated);
-
-                // Close modal
-                setMathEditingQuestion(null);
-                setMathEditingIndex(null);
-            };
-
-            console.log('Render - mathEditingQuestion:', mathEditingQuestion, 'mathEditingIndex:', mathEditingIndex);
-
-            return (
-                <React.Fragment>
-                    {/* Math Editor Modal */}
-                    {mathEditingQuestion && (
-                        <EditQuestionModal
-                            question={mathEditingQuestion}
-                            questionIndex={mathEditingIndex}
-                            onSave={handleMathSave}
-                            onClose={() => {
-                                setMathEditingQuestion(null);
-                                setMathEditingIndex(null);
-                            }}
-                        />
-                    )}
-                </React.Fragment>
-            );
+            return <div>Screen not found</div>;
         };
 
         ReactDOM.render(<UnlockGame />, document.getElementById('root'));
