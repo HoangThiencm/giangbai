@@ -11,9 +11,97 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MathLive for visual math editing -->
+    <script defer src="https://unpkg.com/mathlive"></script>
     <style>
         .katex {
             font-size: 1.1em;
+        }
+
+        /* Math Editor Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 1.5rem;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        math-field {
+            display: block;
+            border: 2px solid #d1d5db;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            font-size: 1.25rem;
+            min-height: 60px;
+        }
+
+        math-field:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+
+        .math-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .math-btn {
+            padding: 0.5rem 0.75rem;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .math-btn:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .edited-badge {
+            display: inline-block;
+            background: #fbbf24;
+            color: #78350f;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
         }
 
         .fade-in {
@@ -190,6 +278,313 @@
             return <span ref={ref} />;
         };
 
+        // ============ QUESTION EDIT STORAGE ============
+        const EditStorage = {
+            KEY: 'game_unlock_edits',
+
+            getEdits: () => {
+                try {
+                    const data = localStorage.getItem(EditStorage.KEY);
+                    return data ? JSON.parse(data) : {};
+                } catch {
+                    return {};
+                }
+            },
+
+            saveEdit: (questionId, field, value) => {
+                const edits = EditStorage.getEdits();
+                if (!edits[questionId]) edits[questionId] = {};
+                edits[questionId][field] = value;
+                localStorage.setItem(EditStorage.KEY, JSON.stringify(edits));
+            },
+
+            getEdit: (questionId, field) => {
+                const edits = EditStorage.getEdits();
+                return edits[questionId]?.[field];
+            },
+
+            hasEdits: (questionId) => {
+                const edits = EditStorage.getEdits();
+                return !!edits[questionId];
+            },
+
+            clearQuestion: (questionId) => {
+                const edits = EditStorage.getEdits();
+                delete edits[questionId];
+                localStorage.setItem(EditStorage.KEY, JSON.stringify(edits));
+            },
+
+            clearAll: () => {
+                localStorage.removeItem(EditStorage.KEY);
+            }
+        };
+
+        // ============ MATH FIELD COMPONENT ============
+        const MathField = ({ value, onChange, placeholder }) => {
+            const ref = React.useRef(null);
+            const mfRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!ref.current || mfRef.current) return;
+
+                // Create math-field element
+                const mf = document.createElement('math-field');
+                mf.value = value || '';
+
+                // Configure
+                mf.setAttribute('virtual-keyboard-mode', 'manual');
+
+                // Listen to input
+                mf.addEventListener('input', (e) => {
+                    onChange(e.target.value);
+                });
+
+                ref.current.appendChild(mf);
+                mfRef.current = mf;
+            }, []);
+
+            React.useEffect(() => {
+                if (mfRef.current && mfRef.current.value !== value) {
+                    mfRef.current.value = value || '';
+                }
+            }, [value]);
+
+            return React.createElement('div', { ref, className: 'math-field-wrapper' });
+        };
+
+        // ============ EDIT QUESTION MODAL ============
+        const EditQuestionModal = ({ question, questionIndex, onSave, onClose }) => {
+            const [editedData, setEditedData] = React.useState({});
+
+            React.useEffect(() => {
+                // Initialize with existing data
+                const initial = {
+                    prompt: question.prompt || '',
+                    hint1: question.hint1 || '',
+                    hint2: question.hint2 || ''
+                };
+
+                // Add type-specific fields
+                if (question.type === 'mcq' || question.type === 'fill-blank' || question.type === 'multi-select') {
+                    initial.choices = [...(question.choices || [])];
+                }
+                if (question.type === 'matching') {
+                    initial.leftItems = [...(question.leftItems || [])];
+                    initial.rightItems = [...(question.rightItems || [])];
+                }
+                if (question.type === 'drag-drop') {
+                    initial.items = [...(question.items || [])];
+                }
+
+                setEditedData(initial);
+            }, [question]);
+
+            const handleSave = () => {
+                onSave(editedData);
+                onClose();
+            };
+
+            const insertSymbol = (field, symbol) => {
+                setEditedData(prev => ({
+                    ...prev,
+                    [field]: (prev[field] || '') + symbol
+                }));
+            };
+
+            const Toolbar = ({ field }) => {
+                const symbols = [
+                    { label: '×', latex: '\\times' },
+                    { label: '÷', latex: '\\div' },
+                    { label: '²', latex: '^2' },
+                    { label: '³', latex: '^3' },
+                    { label: '√', latex: '\\sqrt{}' },
+                    { label: 'frac', latex: '\\frac{}{}' },
+                    { label: '[___]', latex: '[___]' },
+                    { label: '=', latex: '=' },
+                    { label: '+', latex: '+' },
+                    { label: '-', latex: '-' }
+                ];
+
+                return React.createElement('div', { className: 'math-toolbar' },
+                    symbols.map(sym =>
+                        React.createElement('button', {
+                            key: sym.label,
+                            type: 'button',
+                            className: 'math-btn',
+                            onClick: () => insertSymbol(field, sym.latex),
+                            title: sym.label
+                        }, sym.label)
+                    )
+                );
+            };
+
+            return React.createElement('div', {
+                className: 'modal-overlay',
+                onClick: (e) => e.target.className === 'modal-overlay' && onClose()
+            },
+                React.createElement('div', { className: 'modal-content' },
+                    React.createElement('div', { className: 'p-6' },
+                        // Header
+                        React.createElement('div', { className: 'flex justify-between items-center mb-6' },
+                            React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' },
+                                `✏️ Sửa Câu ${questionIndex + 1} (${question.type})`
+                            ),
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: 'text-gray-500 hover:text-gray-700 text-2xl'
+                            }, '×')
+                        ),
+
+                        // Prompt
+                        React.createElement('div', { className: 'mb-6' },
+                            React.createElement('label', { className: 'block font-bold mb-2' }, '📝 Câu hỏi:'),
+                            React.createElement(MathField, {
+                                value: editedData.prompt || '',
+                                onChange: (val) => setEditedData(prev => ({ ...prev, prompt: val })),
+                                placeholder: 'Nhập câu hỏi...'
+                            }),
+                            React.createElement(Toolbar, { field: 'prompt' }),
+                            React.createElement('div', { className: 'mt-2 p-3 bg-gray-50 rounded-lg' },
+                                React.createElement('div', { className: 'text-xs text-gray-600 mb-1' }, 'Preview:'),
+                                React.createElement(MathText, { text: editedData.prompt || '' })
+                            )
+                        ),
+
+                        // Choices (MCQ, Fill-blank, Multi-select)
+                        (question.type === 'mcq' || question.type === 'fill-blank' || question.type === 'multi-select') &&
+                        React.createElement('div', { className: 'mb-6' },
+                            React.createElement('label', { className: 'block font-bold mb-2' }, '✅ Đáp án:'),
+                            React.createElement('div', { className: 'space-y-3' },
+                                (editedData.choices || []).map((choice, idx) =>
+                                    React.createElement('div', { key: idx },
+                                        React.createElement('div', { className: 'text-sm text-gray-600 mb-1' },
+                                            `${String.fromCharCode(65 + idx)}:`
+                                        ),
+                                        React.createElement(MathField, {
+                                            value: choice,
+                                            onChange: (val) => {
+                                                const newChoices = [...editedData.choices];
+                                                newChoices[idx] = val;
+                                                setEditedData(prev => ({ ...prev, choices: newChoices }));
+                                            }
+                                        }),
+                                        React.createElement('div', { className: 'mt-1 p-2 bg-gray-50 rounded text-sm' },
+                                            React.createElement(MathText, { text: choice })
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Matching
+                        question.type === 'matching' && React.createElement('div', { className: 'mb-6' },
+                            React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                                React.createElement('div', {},
+                                    React.createElement('label', { className: 'block font-bold mb-2' }, '📋 Cột A:'),
+                                    React.createElement('div', { className: 'space-y-2' },
+                                        (editedData.leftItems || []).map((item, idx) =>
+                                            React.createElement('div', { key: idx },
+                                                React.createElement(MathField, {
+                                                    value: item,
+                                                    onChange: (val) => {
+                                                        const newItems = [...editedData.leftItems];
+                                                        newItems[idx] = val;
+                                                        setEditedData(prev => ({ ...prev, leftItems: newItems }));
+                                                    }
+                                                }),
+                                                React.createElement('div', { className: 'mt-1 p-1 bg-gray-50 rounded text-xs' },
+                                                    React.createElement(MathText, { text: item })
+                                                )
+                                            )
+                                        )
+                                    )
+                                ),
+                                React.createElement('div', {},
+                                    React.createElement('label', { className: 'block font-bold mb-2' }, '📝 Cột B:'),
+                                    React.createElement('div', { className: 'space-y-2' },
+                                        (editedData.rightItems || []).map((item, idx) =>
+                                            React.createElement('div', { key: idx },
+                                                React.createElement(MathField, {
+                                                    value: item,
+                                                    onChange: (val) => {
+                                                        const newItems = [...editedData.rightItems];
+                                                        newItems[idx] = val;
+                                                        setEditedData(prev => ({ ...prev, rightItems: newItems }));
+                                                    }
+                                                }),
+                                                React.createElement('div', { className: 'mt-1 p-1 bg-gray-50 rounded text-xs' },
+                                                    React.createElement(MathText, { text: item })
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Drag-drop items
+                        question.type === 'drag-drop' && React.createElement('div', { className: 'mb-6' },
+                            React.createElement('label', { className: 'block font-bold mb-2' }, '🔄 Items:'),
+                            React.createElement('div', { className: 'space-y-2' },
+                                (editedData.items || []).map((item, idx) =>
+                                    React.createElement('div', { key: idx },
+                                        React.createElement('div', { className: 'text-sm text-gray-600 mb-1' }, `${idx + 1}.`),
+                                        React.createElement(MathField, {
+                                            value: item,
+                                            onChange: (val) => {
+                                                const newItems = [...editedData.items];
+                                                newItems[idx] = val;
+                                                setEditedData(prev => ({ ...prev, items: newItems }));
+                                            }
+                                        }),
+                                        React.createElement('div', { className: 'mt-1 p-2 bg-gray-50 rounded text-sm' },
+                                            React.createElement(MathText, { text: item })
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Hints
+                        React.createElement('div', { className: 'mb-6 space-y-3' },
+                            React.createElement('div', {},
+                                React.createElement('label', { className: 'block font-bold mb-2' }, '💡 Gợi ý 1:'),
+                                React.createElement(MathField, {
+                                    value: editedData.hint1 || '',
+                                    onChange: (val) => setEditedData(prev => ({ ...prev, hint1: val }))
+                                }),
+                                React.createElement('div', { className: 'mt-1 p-2 bg-gray-50 rounded text-sm' },
+                                    React.createElement(MathText, { text: editedData.hint1 || '' })
+                                )
+                            ),
+                            React.createElement('div', {},
+                                React.createElement('label', { className: 'block font-bold mb-2' }, '💡 Gợi ý 2:'),
+                                React.createElement(MathField, {
+                                    value: editedData.hint2 || '',
+                                    onChange: (val) => setEditedData(prev => ({ ...prev, hint2: val }))
+                                }),
+                                React.createElement('div', { className: 'mt-1 p-2 bg-gray-50 rounded text-sm' },
+                                    React.createElement(MathText, { text: editedData.hint2 || '' })
+                                )
+                            )
+                        ),
+
+                        // Actions
+                        React.createElement('div', { className: 'flex gap-3' },
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: 'px-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600'
+                            }, 'Hủy'),
+                            React.createElement('button', {
+                                onClick: handleSave,
+                                className: 'flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700'
+                            }, '💾 Lưu')
+                        )
+                    )
+                )
+            );
+        };
+
         // ============ GEMINI AI SERVICE ============
         const GeminiService = {
             getApiKeys: () => { const keys = localStorage.getItem('global_gemini_keys'); return keys ? JSON.parse(keys) : []; },
@@ -343,6 +738,8 @@ JSON format:
 
             // Editing
             const [editingQuestion, setEditingQuestion] = useState(null);
+            const [mathEditingQuestion, setMathEditingQuestion] = useState(null);
+            const [mathEditingIndex, setMathEditingIndex] = useState(null);
 
             // Betting
             const [showGuessInput, setShowGuessInput] = useState(false);
@@ -404,7 +801,26 @@ JSON format:
                             }
                             return q;
                         });
-                        setQuestions(cleanedQuestions);
+
+                        // Apply any existing edits from localStorage
+                        const edits = EditStorage.getEdits();
+                        const questionsWithEdits = cleanedQuestions.map(q => {
+                            const qEdits = edits[q.id];
+                            if (!qEdits) return q;
+
+                            return {
+                                ...q,
+                                prompt: qEdits.prompt || q.prompt,
+                                hint1: qEdits.hint1 || q.hint1,
+                                hint2: qEdits.hint2 || q.hint2,
+                                choices: qEdits.choices || q.choices,
+                                leftItems: qEdits.leftItems || q.leftItems,
+                                rightItems: qEdits.rightItems || q.rightItems,
+                                items: qEdits.items || q.items
+                            };
+                        });
+
+                        setQuestions(questionsWithEdits);
                         // Use custom code word if provided, otherwise use AI-generated one
                         setCodeWord(aiGenParams.customCodeWord || result.codeWord || 'SECRET');
                         setKnowledgeCard(result.knowledgeCard || null);
@@ -1011,12 +1427,25 @@ JSON format:
                                                         <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
                                                             Khóa: {q.codeChar}
                                                         </span>
+                                                        {EditStorage.hasEdits(q.id) && (
+                                                            <span className="edited-badge">✏️ Đã sửa</span>
+                                                        )}
                                                     </div>
                                                     <div className="text-gray-800">
                                                         <MathText text={q.prompt} />
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setMathEditingQuestion(q);
+                                                            setMathEditingIndex(idx);
+                                                        }}
+                                                        className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+                                                        title="Sửa công thức (Math Editor)"
+                                                    >
+                                                        <i className="fas fa-square-root-alt"></i>
+                                                    </button>
                                                     <button
                                                         onClick={() => setEditingQuestion(q)}
                                                         className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
@@ -1031,6 +1460,20 @@ JSON format:
                                                     >
                                                         <i className="fas fa-trash"></i>
                                                     </button>
+                                                    {EditStorage.hasEdits(q.id) && (
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm('Reset về bản gốc?')) {
+                                                                    EditStorage.clearQuestion(q.id);
+                                                                    window.location.reload();
+                                                                }
+                                                            }}
+                                                            className="px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm"
+                                                            title="Reset về bản gốc"
+                                                        >
+                                                            <i className="fas fa-undo"></i>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -1805,7 +2248,51 @@ JSON format:
                 );
             }
 
-            return <div>Screen not found</div>;
+            // Render Math Editor Modal
+            const handleMathSave = (editedData) => {
+                const q = mathEditingQuestion;
+                const idx = mathEditingIndex;
+
+                // Save to localStorage
+                Object.keys(editedData).forEach(field => {
+                    EditStorage.saveEdit(q.id, field, editedData[field]);
+                });
+
+                // Update questions in state
+                const updated = [...questions];
+                updated[idx] = {
+                    ...updated[idx],
+                    ...editedData
+                };
+                setQuestions(updated);
+
+                // Close modal
+                setMathEditingQuestion(null);
+                setMathEditingIndex(null);
+            };
+
+            return (
+                <>
+                    {/* Main content - determined by screens above */}
+                    {currentScreen === 'INSTRUCTIONS' || currentScreen === 'AI_GEN' ||
+                        currentScreen === 'EDIT' || currentScreen === 'SETUP' ||
+                        currentScreen === 'GAME' || currentScreen === 'SUCCESS' ? null :
+                        <div>Screen not found</div>}
+
+                    {/* Math Editor Modal */}
+                    {mathEditingQuestion && (
+                        <EditQuestionModal
+                            question={mathEditingQuestion}
+                            questionIndex={mathEditingIndex}
+                            onSave={handleMathSave}
+                            onClose={() => {
+                                setMathEditingQuestion(null);
+                                setMathEditingIndex(null);
+                            }}
+                        />
+                    )}
+                </>
+            );
         };
 
         ReactDOM.render(<UnlockGame />, document.getElementById('root'));
