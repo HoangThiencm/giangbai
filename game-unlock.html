@@ -2233,7 +2233,7 @@ JSON format:
                                     } else if (currentQ.type === 'matching') {
                                         hasAnswer = matchingPairs.length > 0;
                                     } else if (currentQ.type === 'drag-drop') {
-                                        hasAnswer = dragOrder.length > 0; // Always true after init
+                                        hasAnswer = hasDraggedOrder; // Only true if user has actually dragged
                                     }
                                     return hasAnswer;
                                 })() && (
