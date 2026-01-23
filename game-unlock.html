@@ -70,6 +70,15 @@
             outline: none;
         }
 
+        /* MathLive Virtual Keyboard - MUST be above modal */
+        .ML__keyboard {
+            z-index: 10000 !important;
+        }
+
+        .ML__keyboard-backdrop {
+            z-index: 9999 !important;
+        }
+
         .math-toolbar {
             display: flex;
             gap: 0.5rem;
@@ -323,6 +332,7 @@
         const MathField = ({ value, onChange, placeholder }) => {
             const ref = React.useRef(null);
             const mfRef = React.useRef(null);
+            const isUserEditingRef = React.useRef(false);
 
             React.useEffect(() => {
                 if (!ref.current || mfRef.current) return;
@@ -353,8 +363,18 @@
                     }
                 });
 
+                // Track when user is editing
+                mf.addEventListener('focus', () => {
+                    isUserEditingRef.current = true;
+                });
+
+                mf.addEventListener('blur', () => {
+                    isUserEditingRef.current = false;
+                });
+
                 // Listen to input
                 mf.addEventListener('input', (e) => {
+                    isUserEditingRef.current = true;
                     onChange(e.target.value);
                 });
 
@@ -363,7 +383,8 @@
             }, []);
 
             React.useEffect(() => {
-                if (mfRef.current && mfRef.current.value !== value) {
+                // Only update if value changed AND user is not actively editing
+                if (mfRef.current && !isUserEditingRef.current && mfRef.current.value !== value) {
                     mfRef.current.value = value || '';
                 }
             }, [value]);
