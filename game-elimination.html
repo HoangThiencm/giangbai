@@ -156,7 +156,7 @@
                         // Xử lý text với công thức toán
                         let processed = fragment.content
                             .replace(/`([^`]+)`/g, '$$$1$$')
-                            .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                            .replace(/\\\[(.+?)\\\]/g, '$$$$$1$$$$')
                             .replace(/\\\((.+?)\\\)/g, '$$$1$$');
                         if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
                         const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
@@ -187,7 +187,7 @@
 
         const EliminationGame = () => {
             // Flow states
-            const [currentScreen, setCurrentScreen] = useState('instructions'); // instructions, questionSource, questionCreation, modeSelection, profileSetup, game, gameOver
+            const [currentScreen, setCurrentScreen] = useState('instructions'); // instructions, questionSource, questionCreation, modeSelection, timeSettings, profileSetup, game, gameOver
 
             // Game configuration
             const [gameMode, setGameMode] = useState('elimination'); // 'elimination' or 'complete'
@@ -195,6 +195,10 @@
             const [playerProfile, setPlayerProfile] = useState(() => {
                 const saved = localStorage.getItem('playerProfile');
                 return saved ? JSON.parse(saved) : { name: '', class: '', avatar: '🎮' };
+            });
+            const [timeSettings, setTimeSettings] = useState(() => {
+                const saved = localStorage.getItem('timeSettings');
+                return saved ? JSON.parse(saved) : { mode: 'custom', duration: 30 }; // mode: 'free' or 'custom', duration in seconds
             });
 
             // Question creation
@@ -432,8 +436,14 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
             const startQuestion = () => {
                 setShowAnswer(false);
                 setPlayerAnswer(null);
-                setTimeLeft(30);
-                setTimerActive(true);
+                // Use configured time settings
+                if (timeSettings.mode === 'free') {
+                    setTimeLeft(999); // Large number for free mode
+                    setTimerActive(false);
+                } else {
+                    setTimeLeft(timeSettings.duration);
+                    setTimerActive(true);
+                }
 
                 setPlayers(prev => prev.map(p => ({
                     ...p,
@@ -681,7 +691,7 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                 <button
                                     onClick={() => {
                                         setGameMode('elimination');
-                                        setCurrentScreen('profileSetup');
+                                        setCurrentScreen('timeSettings');
                                     }}
                                     className="border-4 border-red-500 rounded-2xl p-6 hover:bg-red-50 transition text-left"
                                 >
@@ -695,7 +705,7 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                 <button
                                     onClick={() => {
                                         setGameMode('complete');
-                                        setCurrentScreen('profileSetup');
+                                        setCurrentScreen('timeSettings');
                                     }}
                                     className="border-4 border-green-500 rounded-2xl p-6 hover:bg-green-50 transition text-left"
                                 >
@@ -713,6 +723,115 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                             >
                                 <i className="fas fa-arrow-left mr-2"></i>Quay lại
                             </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: Time Settings
+            if (currentScreen === 'timeSettings') {
+                return (
+                    <div className="fixed inset-0 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-center text-red-700 mb-6">
+                                <i className="fas fa-clock mr-2"></i>Cài đặt thời gian
+                            </h2>
+
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <button
+                                        onClick={() => setTimeSettings({ ...timeSettings, mode: 'free' })}
+                                        className={`border-4 rounded-2xl p-6 transition text-left ${timeSettings.mode === 'free'
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <div className="text-5xl mb-4 text-center">♾️</div>
+                                        <h3 className="text-2xl font-bold text-blue-700 mb-3">Tự do</h3>
+                                        <p className="text-gray-600 mb-2">• Không giới hạn thời gian</p>
+                                        <p className="text-gray-600 mb-2">• Suy nghĩ thỏa mái</p>
+                                        <p className="text-gray-600">• Không có áp lực!</p>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setTimeSettings({ ...timeSettings, mode: 'custom' })}
+                                        className={`border-4 rounded-2xl p-6 transition text-left ${timeSettings.mode === 'custom'
+                                            ? 'border-orange-500 bg-orange-50'
+                                            : 'border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <div className="text-5xl mb-4 text-center">⏱️</div>
+                                        <h3 className="text-2xl font-bold text-orange-700 mb-3">Tùy chỉnh</h3>
+                                        <p className="text-gray-600 mb-2">• Đặt thời gian riêng</p>
+                                        <p className="text-gray-600 mb-2">• Điều chỉnh độ khó</p>
+                                        <p className="text-gray-600">• Linh hoạt hơn!</p>
+                                    </button>
+                                </div>
+
+                                {timeSettings.mode === 'custom' && (
+                                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6">
+                                        <label className="block font-bold text-gray-700 mb-3">
+                                            <i className="fas fa-stopwatch mr-2"></i>Thời gian mỗi câu (giây):
+                                        </label>
+                                        <div className="flex items-center gap-4">
+                                            <input
+                                                type="range"
+                                                min="10"
+                                                max="120"
+                                                step="5"
+                                                value={timeSettings.duration}
+                                                onChange={(e) => setTimeSettings({ ...timeSettings, duration: parseInt(e.target.value) })}
+                                                className="flex-1"
+                                            />
+                                            <div className="w-20 text-center">
+                                                <input
+                                                    type="number"
+                                                    min="10"
+                                                    max="120"
+                                                    value={timeSettings.duration}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value) || 10;
+                                                        setTimeSettings({ ...timeSettings, duration: Math.min(120, Math.max(10, val)) });
+                                                    }}
+                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-center font-bold text-xl focus:border-orange-500 focus:outline-none"
+                                                />
+                                            </div>
+                                            <span className="text-gray-600 font-medium">giây</span>
+                                        </div>
+                                        <div className="mt-4 flex justify-between text-sm text-gray-600">
+                                            <span>Dễ (60-120s)</span>
+                                            <span>Trung bình (30-60s)</span>
+                                            <span>Khó (10-30s)</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <p className="text-sm text-gray-700">
+                                        <strong>💡 Gợi ý:</strong><br />
+                                        • <strong>Tự do:</strong> Phù hợp để ôn tập, không áp lực thời gian<br />
+                                        • <strong>Tùy chỉnh:</strong> Tạo thử thách, tăng tính cạnh tranh
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 mt-6">
+                                <button
+                                    onClick={() => setCurrentScreen('modeSelection')}
+                                    className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                                >
+                                    <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        localStorage.setItem('timeSettings', JSON.stringify(timeSettings));
+                                        setCurrentScreen('profileSetup');
+                                    }}
+                                    className="flex-1 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl transition"
+                                >
+                                    <i className="fas fa-arrow-right mr-2"></i>Tiếp tục
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -1205,7 +1324,7 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
 
                             <div className="flex gap-3 mt-6">
                                 <button
-                                    onClick={() => setCurrentScreen('modeSelection')}
+                                    onClick={() => setCurrentScreen('timeSettings')}
                                     className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
                                 >
                                     <i className="fas fa-arrow-left mr-2"></i>Quay lại
@@ -1329,8 +1448,16 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                 </div>
                             </div>
 
-                            <div className={`px-6 py-3 rounded-xl font-bold text-2xl ${timeLeft <= 5 ? 'bg-red-600 text-white animate-pulse shake' : timeLeft <= 10 ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                <i className="fas fa-clock mr-2"></i>{timeLeft}s
+                            <div className={`px-6 py-3 rounded-xl font-bold text-2xl ${timeSettings.mode === 'free'
+                                ? 'bg-blue-500 text-white'
+                                : timeLeft <= 5
+                                    ? 'bg-red-600 text-white animate-pulse shake'
+                                    : timeLeft <= 10
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-blue-600 text-white'
+                                }`}>
+                                <i className="fas fa-clock mr-2"></i>
+                                {timeSettings.mode === 'free' ? 'Tự do ♾️' : `${timeLeft}s`}
                             </div>
                         </div>
 
@@ -1454,4 +1581,3 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
 </body>
 
 </html>
-
