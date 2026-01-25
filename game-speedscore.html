@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Game 2: Đúng Nhanh Ghi Điểm</title>
+    <title>Game 4: Đối kháng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -32,47 +32,29 @@
             }
         }
 
-        .pulse-correct {
-            animation: pulseCorrect 0.5s ease-out;
+        .team-pulse {
+            animation: teamPulse 2s ease-in-out infinite;
         }
 
-        @keyframes pulseCorrect {
+        @keyframes teamPulse {
 
             0%,
             100% {
-                transform: scale(1);
+                box-shadow: 0 0 20px currentColor;
             }
 
             50% {
-                transform: scale(1.05);
+                box-shadow: 0 0 40px currentColor;
             }
         }
 
-        .commentary-toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
+        .powerup-activate {
+            animation: powerupPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-            }
-
-            to {
-                transform: translateX(0);
-            }
-        }
-
-        .combo-badge {
-            animation: comboUp 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        @keyframes comboUp {
+        @keyframes powerupPop {
             0% {
-                transform: scale(0.5) rotate(-10deg);
+                transform: scale(0) rotate(-180deg);
                 opacity: 0;
             }
 
@@ -84,12 +66,12 @@
     </style>
 </head>
 
-<body class="bg-gradient-to-br from-yellow-50 to-orange-100 min-h-screen">
+<body class="bg-gradient-to-br from-purple-50 to-pink-100 min-h-screen">
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // ============ MATH RENDERER (FIXED) ============
+        // Math Text Component
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
@@ -109,7 +91,7 @@
                     if (fragment.type === 'image') {
                         const img = document.createElement('img');
                         img.src = fragment.src;
-                        img.alt = fragment.alt || 'Hình minh họa';
+                        img.alt = fragment.alt || 'Image';
                         img.className = 'max-h-48 rounded-lg my-2 border border-gray-200 shadow-sm inline-block';
                         ref.current.appendChild(img);
                     } else {
@@ -136,28 +118,48 @@
             return <span ref={ref} />;
         };
 
-        // ============ GEMINI SERVICE ============
+        // Gemini Service
         const GeminiService = {
             getApiKeys: () => { const keys = localStorage.getItem('global_gemini_keys'); return keys ? JSON.parse(keys) : []; },
             getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp',
-            buildPrompt: (questionType, params) => {
-                const { subject, gradeMax, topic, difficulty, numQuestions } = params;
-                let typeInstructions = '';
-                if (questionType === 'mixed') typeInstructions = `Tạo MIX cả 3 dạng: MCQ (60%), Drag-Drop (20%), Matching (20%)`;
-                else if (questionType === 'mcq') typeInstructions = 'Chỉ tạo TRẮC NGHIỆM (MCQ)';
-                else if (questionType === 'drag-drop') typeInstructions = 'Chỉ tạo KÉO THẢ (sắp xếp)';
-                else if (questionType === 'matching') typeInstructions = 'Chỉ tạo NỐI Ô (ghép cặp)';
-                return `Bạn là trợ lý tạo câu hỏi game SPEED SCORE.
-Môn: ${subject}, Chủ đề: ${topic}, Lớp tối đa: ${gradeMax}, Độ khó: ${difficulty}, Số câu: ${numQuestions}
-${typeInstructions}
+            buildPrompt: (params) => {
+                const { subject, gradeMax, topic, difficulty, numQuestions, mode, numTeams } = params;
+                return `Bạn là trợ lý tạo câu hỏi cho game "Team Strategy Quiz" - game đối kháng đội.
 
-Trả về JSON ĐÚNG format sau, KHÔNG thêm chữ nào:
-{"questions":[{"id":"q1","type":"mcq","prompt":"Câu hỏi","choices":["A","B","C","D"],"answer":0,"powerUp":null},{"id":"q2","type":"drag-drop","prompt":"Sắp xếp","items":["1","2","3"],"correctOrder":[0,1,2]},{"id":"q3","type":"matching","prompt":"Nối","leftItems":["A","B"],"rightItems":["Def B","Def A"],"correctPairs":[[0,1],[1,0]]}]}
+Môn: ${subject}, Lớp tối đa: ${gradeMax}, Chủ đề: ${topic}, Độ khó: ${difficulty}
+Mode: ${mode === 'classroom' ? 'Lớp học' : 'Thi đấu'}
+Số đội chơi: ${numTeams || 2}
 
-LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức LaTeX dùng \\( \\) hoặc \\[ \\]`;
+Tạo ${numQuestions} câu hỏi MIX 6 dạng:
+1. MCQ (40%): Trắc nghiệm 4 đáp án
+2. True/False (20%): Đúng/Sai  
+3. Fill-blank (15%): Điền từ khuyết
+4. Multi-select (10%): Chọn NHIỀU đáp án đúng
+5. Matching (10%): Nối cặp (2-4 cặp)
+6. Drag-drop (5%): Sắp xếp thứ tự (3-4 items)
+
+YÊU CẦU:
+- ${Math.ceil(numQuestions * 0.3)} câu CÁ NHÂN (individual: true)
+- ${Math.floor(numQuestions * 0.7)} câu ĐỘI (individual: false)
+- ⚠️ QUAN TRỌNG: Độ khó phải PHÂN BỐ ĐỀU giữa các đội. Vì có ${numTeams} đội, mỗi đội sẽ chơi ${numQuestions / numTeams} câu. 
+  Đảm bảo mỗi ${numTeams} câu liên tiếp có độ khó TƯƠNG ĐƯƠNG (VD: nếu 2 đội, câu 1-2 cùng mức, câu 3-4 cùng mức...)
+- LaTeX: \\( ... \\) hoặc \\[ ... \\]
+- KHÔNG thêm tiền tố A., B., C., D.
+
+JSON format (KHÔNG thêm chữ):
+{
+  "questions": [
+    {"id":"q1","type":"mcq","prompt":"...","choices":["A","B","C","D"],"answer":0,"individual":true},
+    {"id":"q2","type":"truefalse","prompt":"...","answer":true,"individual":false},
+    {"id":"q3","type":"fill-blank","prompt":"Điền vào chỗ trống: _____","answer":"đáp án chính xác","acceptedAnswers":["đáp án 1","đáp án 2"],"individual":true},
+    {"id":"q4","type":"multi-select","prompt":"...","choices":["A","B","C","D"],"answers":[0,2],"individual":false},
+    {"id":"q5","type":"matching","prompt":"Nối cặp","leftItems":["A","B","C"],"rightItems":["Def C","Def A","Def B"],"correctPairs":[[0,1],[1,0],[2,2]],"individual":true},
+    {"id":"q6","type":"drag-drop","prompt":"Sắp xếp theo thứ tự đúng","items":["Item 2","Item 1","Item 3"],"correctOrder":[1,0,2],"individual":false}
+  ]
+}`;
             },
-            generate: async (questionType, params) => {
-                const prompt = GeminiService.buildPrompt(questionType, params);
+            generate: async (params) => {
+                const prompt = GeminiService.buildPrompt(params);
                 const apiKeys = GeminiService.getApiKeys();
                 if (!apiKeys.length) throw new Error("Chưa có API Keys!");
                 const defaultModule = GeminiService.getDefaultModule();
@@ -184,100 +186,82 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                 const startIdx = Math.min(jsonStr.indexOf('{') >= 0 ? jsonStr.indexOf('{') : Infinity, jsonStr.indexOf('[') >= 0 ? jsonStr.indexOf('[') : Infinity);
                 const endIdx = Math.max(jsonStr.lastIndexOf('}'), jsonStr.lastIndexOf(']'));
                 if (startIdx !== Infinity && endIdx >= 0) jsonStr = jsonStr.substring(startIdx, endIdx + 1);
-                try { return JSON.parse(jsonStr); } catch (e) {
-                    const fixed = jsonStr.replace(/"([^"]*)"/g, (match, str) => `"${str.replace(/\\/g, '\\\\')}"`);
-                    return JSON.parse(fixed);
-                }
+                try { return JSON.parse(jsonStr); } catch (e) { const fixed = jsonStr.replace(/"([^"]*)"/g, (match, str) => `"${str.replace(/\\/g, '\\\\')}"`); return JSON.parse(fixed); }
             }
         };
 
-        // ============ MAIN APP ============
-        const SpeedScoreGame = () => {
-            const [currentScreen, setCurrentScreen] = useState('SETUP'); // SETUP, TIME_SETTINGS, AI_GEN, MANUAL, QUESTION_LIST, GAME, GAME_OVER
+        const TEAM_COLORS = {
+            blue: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-700', light: 'bg-blue-50' },
+            red: { bg: 'bg-red-500', border: 'border-red-500', text: 'text-red-700', light: 'bg-red-50' },
+            green: { bg: 'bg-green-500', border: 'border-green-500', text: 'text-green-700', light: 'bg-green-50' },
+            yellow: { bg: 'bg-yellow-500', border: 'border-yellow-500', text: 'text-yellow-700', light: 'bg-yellow-50' }
+        };
+
+        const TeamBattleGame = () => {
+            const [currentScreen, setCurrentScreen] = useState('INSTRUCTIONS');
+            const [gameMode, setGameMode] = useState('classroom');
+            const [teams, setTeams] = useState([]);
             const [questions, setQuestions] = useState([]);
-            const [showInstructions, setShowInstructions] = useState(true);
-            const [playerName, setPlayerName] = useState('');
-            const [playerAvatar, setPlayerAvatar] = useState('👨‍🎓');
-            const [score, setScore] = useState(0);
-            const [streak, setStreak] = useState(0);
-            const [aiGenParams, setAiGenParams] = useState({ questionType: 'mixed', subject: 'Toán học', gradeMax: 9, topic: '', difficulty: 'Vừa', numQuestions: 10 });
-            const [aiGenerating, setAiGenerating] = useState(false);
-            const [editingQuestion, setEditingQuestion] = useState({ type: 'mcq', prompt: '', choices: ['', '', '', ''], answer: 0, items: ['', '', ''], leftItems: ['', ''], rightItems: ['', ''], powerUp: null });
+            const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
             const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-            const [timeLeft, setTimeLeft] = useState(20);
-            const [selectedAnswer, setSelectedAnswer] = useState(null);
-            const [showAnswer, setShowAnswer] = useState(false);
+            const [timeLeft, setTimeLeft] = useState(30);
             const [timerActive, setTimerActive] = useState(false);
-            const [commentary, setCommentary] = useState('');
-            const [combo, setCombo] = useState(1);
-            const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
-            const [achievements, setAchievements] = useState([]);
-            const [showAchievement, setShowAchievement] = useState(null);
-            const [draggedItems, setDraggedItems] = useState([]);
-            const [draggedIndex, setDraggedIndex] = useState(null);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [trueFalseAnswer, setTrueFalseAnswer] = useState(null);
+            const [fillBlankAnswer, setFillBlankAnswer] = useState('');
+            const [selectedAnswers, setSelectedAnswers] = useState([]);
             const [matchingPairs, setMatchingPairs] = useState([]);
+            const [dragOrder, setDragOrder] = useState([]);
+            const [activePowerUps, setActivePowerUps] = useState({});
+            const [aiGenParams, setAiGenParams] = useState({ subject: 'Toán học', gradeMax: 9, topic: '', difficulty: 'Vừa', numQuestions: 10, mode: 'classroom' });
+            const [aiGenerating, setAiGenerating] = useState(false);
             const [timeSettings, setTimeSettings] = useState(() => {
-                const saved = localStorage.getItem('speedScoreTimeSettings');
-                return saved ? JSON.parse(saved) : { mode: 'custom', duration: 20 };
+                const saved = localStorage.getItem('teamBattleTimeSettings');
+                return saved ? JSON.parse(saved) : { mode: 'custom', duration: 30 };
             });
 
             useEffect(() => { const token = localStorage.getItem('authToken'); if (!token) { alert("Chưa đăng nhập!"); window.location.href = 'login.html'; } }, []);
-
-            const showCommentary = (message) => { setCommentary(message); setTimeout(() => setCommentary(''), 2000); };
-            const unlockAchievement = (badge) => {
-                const existing = achievements.find(a => a.id === badge.id);
-                if (!existing) { setAchievements([...achievements, badge]); setShowAchievement(badge); setTimeout(() => setShowAchievement(null), 3000); }
-            };
+            useEffect(() => { if (timerActive && timeLeft > 0 && !showAnswer) { const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000); return () => clearTimeout(timer); } else if (timeLeft === 0 && timerActive && !showAnswer) { handleRevealAnswer(); } }, [timeLeft, timerActive, showAnswer]);
 
             const handleGenerateQuestions = async () => {
                 if (!aiGenParams.topic.trim()) { alert('Vui lòng nhập chủ đề!'); return; }
+
+                // Validate: số câu phải chia hết cho số đội
+                const numTeams = teams.length;
+                let adjustedNumQuestions = aiGenParams.numQuestions;
+                if (adjustedNumQuestions % numTeams !== 0) {
+                    // Tự động làm tròn lên bội số gần nhất
+                    adjustedNumQuestions = Math.ceil(adjustedNumQuestions / numTeams) * numTeams;
+                    alert(`Số câu đã điều chỉnh từ ${aiGenParams.numQuestions} thành ${adjustedNumQuestions} (chia đều cho ${numTeams} đội)`);
+                    setAiGenParams({ ...aiGenParams, numQuestions: adjustedNumQuestions });
+                }
+
                 setAiGenerating(true);
                 try {
-                    const result = await GeminiService.generate(aiGenParams.questionType, aiGenParams);
-                    if (result.questions && result.questions.length > 0) { setQuestions(result.questions); setCurrentScreen('QUESTION_LIST'); }
-                    else alert('Không tạo được câu hỏi!');
+                    const result = await GeminiService.generate({ ...aiGenParams, numQuestions: adjustedNumQuestions, mode: gameMode, numTeams: teams.length });
+                    if (result.questions && result.questions.length > 0) {
+                        const cleanedQuestions = result.questions.map(q => {
+                            if (q.type === 'mcq' && q.choices) {
+                                let cleaned = q.choices.map(ch => typeof ch === 'string' ? ch.replace(/^[A-D]\.\s*/, '').trim() : ch);
+                                const uniqueChoices = [...new Set(cleaned)];
+                                if (uniqueChoices.length < cleaned.length) { q.choices = uniqueChoices; while (q.choices.length < 4) { q.choices.push(`Đáp án ${q.choices.length + 1}`); } } else { q.choices = cleaned; }
+                            }
+                            return q;
+                        });
+                        setQuestions(cleanedQuestions);
+                        setCurrentScreen('Q_LIST');
+                    } else { alert('Không tạo được câu hỏi!'); }
                 } catch (error) { alert('Lỗi: ' + error.message); } finally { setAiGenerating(false); }
             };
 
-            const handleAddQuestion = () => {
-                if (!editingQuestion.prompt.trim()) { alert('Vui lòng nhập câu hỏi!'); return; }
-                const newQ = { ...editingQuestion, id: `q${questions.length + 1}` };
-                setQuestions([...questions, newQ]);
-                setEditingQuestion({ type: 'mcq', prompt: '', choices: ['', '', '', ''], answer: 0, items: ['', '', ''], leftItems: ['', ''], rightItems: ['', ''], powerUp: null });
-            };
-
-            const handleImagePaste = (e) => {
-                const items = e.clipboardData.items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        e.preventDefault();
-                        const blob = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const imgTag = `\n![Hình minh họa](${event.target.result})\n`;
-                            setEditingQuestion({ ...editingQuestion, prompt: editingQuestion.prompt + imgTag });
-                        };
-                        reader.readAsDataURL(blob);
-                        break;
-                    }
-                }
-            };
-
-            const handleRemoveImage = (imgSrc) => {
-                const newPrompt = editingQuestion.prompt.replace(new RegExp(`!\\[.*?\\]\\(${imgSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g'), '');
-                setEditingQuestion({ ...editingQuestion, prompt: newPrompt });
-            };
-
             const startGame = () => {
+                if (teams.length < 2) { alert('Cần ít nhất 2 đội!'); return; }
                 if (questions.length === 0) { alert('Cần ít nhất 1 câu hỏi!'); return; }
-                if (!playerName.trim()) { alert('Vui lòng nhập tên!'); return; }
-                setScore(0); setStreak(0); setCombo(1); setConsecutiveCorrect(0); setCurrentQuestionIndex(0); setCurrentScreen('GAME');
-                showCommentary("Bắt đầu!"); startQuestion();
+                setCurrentQuestionIndex(0); setCurrentTeamIndex(0); setCurrentScreen('GAME'); startQuestion();
             };
-
 
             const startQuestion = () => {
-                setShowAnswer(false); setSelectedAnswer(null); setMatchingPairs([]);
                 // Use configured time settings
                 if (timeSettings.mode === 'free') {
                     setTimeLeft(999);
@@ -286,164 +270,240 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                     setTimeLeft(timeSettings.duration);
                     setTimerActive(true);
                 }
-                const currentQ = questions[currentQuestionIndex];
-                if (currentQ.type === 'drag-drop' && currentQ.items && currentQ.items.length > 0) {
-                    setDraggedItems([...currentQ.items].sort(() => Math.random() - 0.5));
-                } else if (currentQ.type === 'drag-drop') {
-                    console.error('Câu hỏi drag-drop thiếu items:', currentQ);
-                }
+                setShowAnswer(false);
+                setSelectedAnswer(null);
+                setTrueFalseAnswer(null);
+                setFillBlankAnswer('');
+                setSelectedAnswers([]);
+                setMatchingPairs([]);
+                setDragOrder([]);
             };
-
-
-            useEffect(() => {
-                if (timerActive && timeLeft > 0 && !showAnswer) {
-                    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-                    return () => clearTimeout(timer);
-                } else if (timeLeft === 0 && timerActive && !showAnswer) handleTimeUp();
-            }, [timeLeft, timerActive, showAnswer]);
-
-            const handleTimeUp = () => { if (!showAnswer) handleRevealAnswer(); };
 
             const handleRevealAnswer = () => {
                 setTimerActive(false); setShowAnswer(true);
                 const currentQ = questions[currentQuestionIndex];
-                let isPlayerCorrect = false;
-                if (currentQ.type === 'mcq') isPlayerCorrect = selectedAnswer === currentQ.answer;
-                else if (currentQ.type === 'drag-drop') isPlayerCorrect = JSON.stringify(draggedItems) === JSON.stringify(currentQ.items);
-                else if (currentQ.type === 'matching') isPlayerCorrect = matchingPairs.length === (currentQ.leftItems?.length || 0);
-                setTimeout(() => {
-                    if (isPlayerCorrect) {
-                        let baseScore = Math.floor(100 * (timeLeft / (timeSettings.duration || 20)));
-                        if (currentQ.powerUp === 'double') baseScore *= 2;
-                        if (currentQ.powerUp === 'timeBonus') baseScore += 50;
-                        baseScore = Math.floor(baseScore * combo);
-                        setScore(score + baseScore); setStreak(streak + 1);
-                        const newConsecutive = consecutiveCorrect + 1; setConsecutiveCorrect(newConsecutive);
-                        if (newConsecutive === 3) { setCombo(1.5); showCommentary("Combo x1.5! 🔥"); }
-                        else if (newConsecutive === 5) { setCombo(2); showCommentary("Combo x2!! 🔥🔥"); }
-                        else if (newConsecutive >= 7) { setCombo(3); showCommentary("Combo x3!!! ✨🔥"); }
-                        else showCommentary(["Tuyệt vời!", "Chính xác!", "Đúng rồi!"][Math.floor(Math.random() * 3)]);
-                        if (timeLeft >= 15) unlockAchievement({ id: 'speed-demon', name: 'Speed Demon', icon: '🔥' });
-                    } else { setConsecutiveCorrect(0); setCombo(1); setStreak(0); showCommentary(["Ồ không!", "Sai rồi!", "Cố lên!"][Math.floor(Math.random() * 3)]); }
-                }, 1500);
-                setTimeout(handleNextQuestion, 3000);
+                const currentTeam = teams[currentTeamIndex];
+                let isCorrect = false;
+
+                // Check answer by type
+                switch (currentQ.type) {
+                    case 'mcq':
+                        isCorrect = selectedAnswer === currentQ.answer;
+                        break;
+                    case 'truefalse':
+                        isCorrect = trueFalseAnswer === currentQ.answer;
+                        break;
+                    case 'fill-blank':
+                        // Fuzzy matching - 70% similarity
+                        const userAnswer = fillBlankAnswer.toLowerCase().trim();
+                        const correctAnswer = currentQ.answer.toLowerCase().trim();
+                        const acceptedAnswers = currentQ.acceptedAnswers || [];
+
+                        // Check exact match first
+                        if (userAnswer === correctAnswer || acceptedAnswers.some(a => userAnswer === a.toLowerCase().trim())) {
+                            isCorrect = true;
+                        } else {
+                            // Calculate similarity (simple character overlap)
+                            const similarity = (a, b) => {
+                                const longer = a.length > b.length ? a : b;
+                                const shorter = a.length > b.length ? b : a;
+                                let matches = 0;
+                                for (let char of shorter) {
+                                    if (longer.includes(char)) matches++;
+                                }
+                                return matches / longer.length;
+                            };
+                            const sim = similarity(userAnswer, correctAnswer);
+                            isCorrect = sim >= 0.7; // 70% threshold
+                        }
+                        break;
+                    case 'multi-select':
+                        isCorrect = JSON.stringify([...selectedAnswers].sort()) === JSON.stringify([...currentQ.answers].sort());
+                        break;
+                    case 'matching':
+                        isCorrect = matchingPairs.length === currentQ.leftItems.length &&
+                            matchingPairs.every(pair => {
+                                const correct = currentQ.correctPairs.find(p => p[0] === pair[0]);
+                                return correct && correct[1] === pair[1];
+                            });
+                        break;
+                    case 'drag-drop':
+                        isCorrect = JSON.stringify(dragOrder) === JSON.stringify(currentQ.correctOrder);
+                        break;
+                }
+
+                if (isCorrect) {
+                    let points = 10;
+                    if (activePowerUps[currentTeam.id]?.double) {
+                        points *= 2;
+                        setActivePowerUps({ ...activePowerUps, [currentTeam.id]: { ...activePowerUps[currentTeam.id], double: false } });
+                    }
+                    const updatedTeams = [...teams];
+                    const teamIdx = updatedTeams.findIndex(t => t.id === currentTeam.id);
+                    if (currentQ.individual) updatedTeams[teamIdx].individualScore += points;
+                    else updatedTeams[teamIdx].teamScore += points;
+                    setTeams(updatedTeams);
+                }
+                setTimeout(() => { goNextQuestion(); }, 2500);
             };
 
-            const handleNextQuestion = () => {
-                if (currentQuestionIndex < questions.length - 1) { setCurrentQuestionIndex(currentQuestionIndex + 1); startQuestion(); }
-                else endGame();
+            const goNextQuestion = () => {
+                if (currentQuestionIndex < questions.length - 1) {
+                    setCurrentQuestionIndex(currentQuestionIndex + 1);
+                    const nextTeamIndex = (currentTeamIndex + 1) % teams.length;
+                    setCurrentTeamIndex(nextTeamIndex);
+                    setTimeout(startQuestion, 500);
+                } else { setCurrentScreen('RESULTS'); }
             };
 
-            const endGame = () => {
-                setTimerActive(false); setCurrentScreen('GAME_OVER'); showCommentary(`Hoàn thành! ${score} điểm!`);
-                const allCorrect = streak === questions.length;
-                if (allCorrect) unlockAchievement({ id: 'perfect', name: 'Perfect', icon: '🎯' });
-                if (score >= 1000) unlockAchievement({ id: 'high-scorer', name: 'High Scorer', icon: '💯' });
+            const usePowerUp = (powerUpId) => {
+                const currentTeam = teams[currentTeamIndex];
+                if (activePowerUps[currentTeam.id]?.[powerUpId]) { alert('Power-up đã được kích hoạt!'); return; }
+                setActivePowerUps({ ...activePowerUps, [currentTeam.id]: { ...activePowerUps[currentTeam.id], [powerUpId]: true } });
+                if (powerUpId === 'timefreeze') setTimeLeft(timeLeft + 10);
+                else if (powerUpId === 'steal') {
+                    const otherTeams = teams.filter(t => t.id !== currentTeam.id);
+                    if (otherTeams.length > 0) {
+                        const targetTeam = otherTeams[Math.floor(Math.random() * otherTeams.length)];
+                        const stolenPoints = Math.floor((targetTeam.teamScore + targetTeam.individualScore) * 0.2);
+                        const updatedTeams = teams.map(t => {
+                            if (t.id === targetTeam.id) return { ...t, teamScore: Math.max(0, t.teamScore - stolenPoints) };
+                            else if (t.id === currentTeam.id) return { ...t, teamScore: t.teamScore + stolenPoints };
+                            return t;
+                        });
+                        setTeams(updatedTeams);
+                    }
+                }
             };
 
-            // ========== SCREENS ==========
-            if (currentScreen === 'SETUP') {
+            // SCREEN: INSTRUCTIONS
+            if (currentScreen === 'INSTRUCTIONS') {
                 return (
                     <div className="max-w-4xl mx-auto p-6 fade-in">
-                        {showInstructions && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-3xl font-bold text-orange-700"><i className="fas fa-bolt mr-3"></i>ĐÚNG NHANH GHI ĐIỂM</h2>
-                                        <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700"><i className="fas fa-times text-2xl"></i></button>
-                                    </div>
-                                    <div className="space-y-4 text-gray-700">
-                                        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
-                                            <h3 className="font-bold text-lg text-orange-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
-                                            <p>Game khởi động vui vẻ! Trả lời nhanh ghi điểm cao. <strong>KHÔNG loại ai</strong>!</p>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg text-gray-800 mb-2"><i className="fas fa-gamepad mr-2"></i>Luật chơi</h3>
-                                            <ul className="space-y-2 ml-6">
-                                                <li className="flex items-start gap-2"><span className="text-orange-600 font-bold">1.</span><span>Mỗi câu <strong>20 giây</strong></span></li>
-                                                <li className="flex items-start gap-2"><span className="text-orange-600 font-bold">2.</span><span>3 dạng: <strong>Trắc nghiệm, Kéo thả, Nối ô</strong></span></li>
-                                                <li className="flex items-start gap-2"><span className="text-orange-600 font-bold">3.</span><span>Đúng sớm → <strong className="text-green-600">Nhiều điểm!</strong></span></li>
-                                                <li className="flex items-start gap-2"><span className="text-orange-600 font-bold">4.</span><span>Sai → 0 điểm nhưng <strong>VẪN CHƠI TIẾP</strong></span></li>
-                                            </ul>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg text-gray-800 mb-2"><i className="fas fa-fire mr-2"></i>Combo & Power-ups</h3>
-                                            <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-3 mb-3">
-                                                <p className="font-bold text-orange-700 mb-2">🔥 Combo:</p>
-                                                <ul className="text-sm space-y-1 ml-4">
-                                                    <li>• 3 đúng → <strong>x1.5</strong></li>
-                                                    <li>• 5 đúng → <strong>x2</strong></li>
-                                                    <li>• 7+ đúng → <strong>x3</strong> ✨</li>
-                                                </ul>
-                                            </div>
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                <p className="font-bold text-blue-700 mb-2">⚡ Power-ups:</p>
-                                                <p className="text-sm">⚡ 2x điểm ･ 🎯 Giữ streak ･ ⏰ +5s</p>
-                                            </div>
-                                        </div>
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                            <p><strong>Điểm = 100 × (Thời gian còn / 20) × Combo</strong></p>
-                                            <p className="text-sm mt-1">VD: 15s còn, combo x2 = 150đ</p>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setShowInstructions(false)} className="w-full mt-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl font-bold text-lg hover:shadow-xl"><i className="fas fa-play mr-2"></i>Bắt đầu</button>
-                                </div>
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-purple-700"><i className="fas fa-users mr-3"></i>ĐỐI KHÁNG ĐỘI</h2>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="text-gray-500 hover:text-gray-700"><i className="fas fa-times text-2xl"></i></button>
                             </div>
-                        )}
-                        <div className="flex justify-between items-center mb-8">
-                            <button onClick={() => window.location.href = 'index.html'} className="text-gray-500 hover:text-orange-600 font-bold"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
-                            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600"><i className="fas fa-bolt mr-2"></i>SPEED SCORE</h1>
-                            <button onClick={() => setShowInstructions(true)} className="w-10 h-10 bg-blue-500 text-white rounded-full hover:bg-blue-600" title="Hướng dẫn"><i className="fas fa-question"></i></button>
-                        </div>
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6"><i className="fas fa-user mr-2"></i>Thông tin người chơi</h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block font-bold mb-2 text-gray-700">Tên (cá nhân hoặc nhóm):</label>
-                                    <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-orange-500 outline-none" placeholder="VD: Bạn An, Nhóm 1, Lớp 9A..." />
+                            <div className="space-y-4 text-gray-700">
+                                <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+                                    <h3 className="font-bold text-lg text-purple-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
+                                    <p>Game đối kháng đội! Hợp tác + Chiến thuật + Kiến thức!</p>
                                 </div>
                                 <div>
-                                    <label className="block font-bold mb-2 text-gray-700">Avatar:</label>
-                                    <div className="flex gap-2">
-                                        {['👨‍🎓', '👩‍🎓', '🧑‍💼', '👨‍💻', '👩‍💻', '🦸‍♂️', '🦸‍♀️', '🧙‍♂️'].map(emoji => (
-                                            <button key={emoji} onClick={() => setPlayerAvatar(emoji)} className={`text-4xl p-3 rounded-xl border-2 transition ${playerAvatar === emoji ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}>{emoji}</button>
-                                        ))}
-                                    </div>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2"><i className="fas fa-gamepad mr-2"></i>Luật chơi</h3>
+                                    <ul className="space-y-2 ml-6">
+                                        <li className="flex items-start gap-2"><span className="text-purple-600 font-bold">1.</span><span>2-4 đội thi đấu, mỗi đội 1-6 người</span></li>
+                                        <li className="flex items-start gap-2"><span className="text-purple-600 font-bold">2.</span><span>Chơi theo <strong>lượt</strong></span></li>
+                                        <li className="flex items-start gap-2"><span className="text-purple-600 font-bold">3.</span><span>Có câu <strong className="text-blue-600">ĐỘI</strong> + câu <strong className="text-green-600">CÁ NHÂN</strong></span></li>
+                                        <li className="flex items-start gap-2"><span className="text-purple-600 font-bold">4.</span><span>Điểm = <strong>70% đội + 30% cá nhân</strong></span></li>
+                                        <li className="flex items-start gap-2"><span className="text-purple-600 font-bold">5.</span><span>Có <strong className="text-yellow-600">Kỹ năng</strong></span></li>
+                                    </ul>
                                 </div>
                             </div>
+                            <button onClick={() => setCurrentScreen('MODE_SELECT')} className="w-full mt-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl"><i className="fas fa-arrow-right mr-2"></i>Tiếp tục</button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div onClick={() => setCurrentScreen('AI_GEN')} className="bg-white rounded-3xl shadow-xl p-8 cursor-pointer hover:shadow-2xl transition transform hover:-translate-y-2">
-                                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><i className="fas fa-robot text-4xl text-white"></i></div>
-                                <h2 className="text-2xl font-bold text-gray-800 text-center mb-3">Tạo bằng AI</h2>
-                                <p className="text-gray-600 text-center">Gemini tự động tạo</p>
-                            </div>
-                            <div onClick={() => setCurrentScreen('MANUAL')} className="bg-white rounded-3xl shadow-xl p-8 cursor-pointer hover:shadow-2xl transition transform hover:-translate-y-2">
-                                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><i className="fas fa-pen text-4xl text-white"></i></div>
-                                <h2 className="text-2xl font-bold text-gray-800 text-center mb-3">Tạo thủ công</h2>
-                                <p className="text-gray-600 text-center">Tự viết, paste ảnh</p>
-                            </div>
-                        </div>
-                        {questions.length > 0 && (
-                            <div className="mt-8 bg-green-50 border-2 border-green-300 rounded-2xl p-6">
-                                <div className="flex justify-between items-center">
-                                    <div><i className="fas fa-check-circle text-green-600 mr-2"></i><span className="font-bold text-green-800">Đã có {questions.length} câu</span></div>
-                                    <div className="flex gap-3">
-                                        <button onClick={() => setCurrentScreen('QUESTION_LIST')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i className="fas fa-list mr-2"></i>Xem danh sách</button>
-                                        <button onClick={() => setCurrentScreen('TIME_SETTINGS')} className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-bold hover:shadow-xl"><i className="fas fa-play mr-2"></i>Chơi ngay</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 );
             }
 
+            // SCREEN: MODE_SELECT
+            if (currentScreen === 'MODE_SELECT') {
+                return (
+                    <div className="max-w-4xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold text-center text-purple-700 mb-6"><i className="fas fa-cog mr-2"></i>Chọn chế độ</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <button onClick={() => { setGameMode('classroom'); setCurrentScreen('TEAM_SETUP'); }} className="border-4 border-blue-500 rounded-2xl p-6 hover:bg-blue-50 transition text-left">
+                                    <div className="text-5xl mb-4 text-center">🏫</div>
+                                    <h3 className="text-2xl font-bold text-blue-700 mb-3">Chế độ Lớp học</h3>
+                                    <p className="text-gray-600 mb-2">• 2 đội</p>
+                                    <p className="text-gray-600 mb-2">• Không sabotage</p>
+                                    <p className="text-gray-600 mb-2">• 2 kỹ năng</p>
+                                    <p className="text-gray-600">• Dành cho lớp học</p>
+                                </button>
+                                <button onClick={() => { setGameMode('tournament'); setCurrentScreen('TEAM_SETUP'); }} className="border-4 border-red-500 rounded-2xl p-6 hover:bg-red-50 transition text-left">
+                                    <div className="text-5xl mb-4 text-center">🏆</div>
+                                    <h3 className="text-2xl font-bold text-red-700 mb-3">Chế độ Thi đấu</h3>
+                                    <p className="text-gray-600 mb-2">• 3-4 đội</p>
+                                    <p className="text-gray-600 mb-2">• Đầy đủ kỹ năng</p>
+                                    <p className="text-gray-600 mb-2">• Hệ thống chuông</p>
+                                    <p className="text-gray-600">• Thi đấu/sự kiện</p>
+                                </button>
+                            </div>
+                            <button onClick={() => setCurrentScreen('INSTRUCTIONS')} className="w-full mt-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: TEAM_SETUP
+            if (currentScreen === 'TEAM_SETUP') {
+                const maxTeams = gameMode === 'classroom' ? 2 : 4;
+                const addTeam = () => {
+                    if (teams.length >= maxTeams) { alert(`Tối đa ${maxTeams} đội!`); return; }
+                    const colors = ['blue', 'red', 'green', 'yellow'];
+                    const usedColors = teams.map(t => t.color);
+                    const availableColor = colors.find(c => !usedColors.includes(c));
+                    setTeams([...teams, { id: Date.now(), name: `Đội ${teams.length + 1}`, color: availableColor, players: [], teamScore: 0, individualScore: 0 }]);
+                };
+                const removeTeam = (id) => setTeams(teams.filter(t => t.id !== id));
+                const updateTeamName = (id, name) => setTeams(teams.map(t => t.id === id ? { ...t, name } : t));
+                const addPlayer = (teamId) => {
+                    const updatedTeams = teams.map(t => {
+                        if (t.id === teamId) {
+                            if (t.players.length >= 6) { alert('Tối đa 6 người/đội!'); return t; }
+                            return { ...t, players: [...t.players, { id: Date.now(), name: `Người ${t.players.length + 1}` }] };
+                        }
+                        return t;
+                    });
+                    setTeams(updatedTeams);
+                };
+                const removePlayer = (teamId, playerId) => setTeams(teams.map(t => t.id === teamId ? { ...t, players: t.players.filter(p => p.id !== playerId) } : t));
+                const updatePlayerName = (teamId, playerId, name) => setTeams(teams.map(t => t.id === teamId ? { ...t, players: t.players.map(p => p.id === playerId ? { ...p, name } : p) } : t));
+
+                return (
+                    <div className="max-w-5xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold text-purple-700 mb-6"><i className="fas fa-users mr-2"></i>Thiết lập đội ({teams.length}/{maxTeams})</h2>
+                            <div className="space-y-4 mb-6">
+                                {teams.map(team => {
+                                    const colors = TEAM_COLORS[team.color];
+                                    return (
+                                        <div key={team.id} className={`border-2 ${colors.border} rounded-xl p-4 ${colors.light}`}>
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <input type="text" value={team.name} onChange={(e) => updateTeamName(team.id, e.target.value)} className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg font-bold text-lg" />
+                                                <button onClick={() => removeTeam(team.id)} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><i className="fas fa-trash"></i></button>
+                                            </div>
+                                            <div className="ml-4 space-y-2">
+                                                {team.players.map(player => (
+                                                    <div key={player.id} className="flex items-center gap-2">
+                                                        <input type="text" value={player.name} onChange={(e) => updatePlayerName(team.id, player.id, e.target.value)} className="flex-1 px-3 py-1 border border-gray-300 rounded" placeholder="Tên thành viên" />
+                                                        <button onClick={() => removePlayer(team.id, player.id)} className="px-2 py-1 bg-red-400 text-white rounded text-sm"><i className="fas fa-times"></i></button>
+                                                    </div>
+                                                ))}
+                                                <button onClick={() => addPlayer(team.id)} className="text-sm text-blue-600 hover:underline"><i className="fas fa-plus mr-1"></i>Thêm thành viên ({team.players.length}/6)</button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {teams.length < maxTeams && <button onClick={addTeam} className="w-full py-3 border-2 border-dashed border-purple-400 text-purple-600 rounded-xl font-bold hover:bg-purple-50"><i className="fas fa-plus mr-2"></i>Thêm đội</button>}
+                            <div className="flex gap-4 mt-6">
+                                <button onClick={() => setCurrentScreen('MODE_SELECT')} className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                                <button onClick={() => { if (teams.length >= 2) setCurrentScreen('TIME_SETTINGS'); else alert('Cần ít nhất 2 đội!'); }} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700"><i className="fas fa-arrow-right mr-2"></i>Tiếp tục</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: TIME_SETTINGS
             if (currentScreen === 'TIME_SETTINGS') {
                 return (
                     <div className="max-w-3xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-8">
-                            <h2 className="text-3xl font-bold text-center text-orange-700 mb-6">
+                            <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
                                 <i className="fas fa-clock mr-2"></i>Cài đặt thời gian
                             </h2>
 
@@ -466,12 +526,12 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                     <button
                                         onClick={() => setTimeSettings({ ...timeSettings, mode: 'custom' })}
                                         className={`border-4 rounded-2xl p-6 transition text-left ${timeSettings.mode === 'custom'
-                                                ? 'border-orange-500 bg-orange-50'
+                                                ? 'border-purple-500 bg-purple-50'
                                                 : 'border-gray-300 hover:bg-gray-50'
                                             }`}
                                     >
                                         <div className="text-5xl mb-4 text-center">⏱️</div>
-                                        <h3 className="text-2xl font-bold text-orange-700 mb-3">Tùy chỉnh</h3>
+                                        <h3 className="text-2xl font-bold text-purple-700 mb-3">Tùy chỉnh</h3>
                                         <p className="text-gray-600 mb-2">• Đặt thời gian riêng</p>
                                         <p className="text-gray-600 mb-2">• Điều chỉnh độ khó</p>
                                         <p className="text-gray-600">• Linh hoạt hơn!</p>
@@ -503,7 +563,7 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                                         const val = parseInt(e.target.value) || 10;
                                                         setTimeSettings({ ...timeSettings, duration: Math.min(120, Math.max(10, val)) });
                                                     }}
-                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-center font-bold text-xl focus:border-orange-500 focus:outline-none"
+                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-center font-bold text-xl focus:border-purple-500 focus:outline-none"
                                                 />
                                             </div>
                                             <span className="text-gray-600 font-medium">giây</span>
@@ -520,26 +580,26 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                     <p className="text-sm text-gray-700">
                                         <strong>💡 Gợi ý:</strong><br />
                                         • <strong>Tự do:</strong> Phù hợp để ôn tập, không áp lực thời gian<br />
-                                        • <strong>Tùy chỉnh:</strong> Tạo thử thách, tăng tính cạnh tranh
+                                        • <strong>Tùy chỉnh:</strong> Tạo thử thách, tăng tính cạnh tranh giữa các đội
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex gap-4 mt-6">
                                 <button
-                                    onClick={() => setCurrentScreen('SETUP')}
+                                    onClick={() => setCurrentScreen('TEAM_SETUP')}
                                     className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
                                 >
                                     <i className="fas fa-arrow-left mr-2"></i>Quay lại
                                 </button>
                                 <button
                                     onClick={() => {
-                                        localStorage.setItem('speedScoreTimeSettings', JSON.stringify(timeSettings));
-                                        startGame();
+                                        localStorage.setItem('teamBattleTimeSettings', JSON.stringify(timeSettings));
+                                        setCurrentScreen('AI_GEN');
                                     }}
-                                    className="flex-1 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold hover:shadow-xl transition"
+                                    className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl transition"
                                 >
-                                    <i className="fas fa-play mr-2"></i>Bắt đầu
+                                    <i className="fas fa-arrow-right mr-2"></i>Tiếp tục
                                 </button>
                             </div>
                         </div>
@@ -547,223 +607,84 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                 );
             }
 
+            // SCREEN: AI_GEN
             if (currentScreen === 'AI_GEN') {
                 return (
                     <div className="max-w-3xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-8">
-                            <h2 className="text-3xl font-bold text-purple-700 mb-6"><i className="fas fa-robot mr-2"></i>Tạo câu hỏi bằng AI</h2>
+                            <h2 className="text-3xl font-bold text-purple-700 mb-6"><i className="fas fa-robot mr-2"></i>Tạo câu hỏi</h2>
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block font-bold mb-2">Môn học:</label>
-                                        <select value={aiGenParams.subject} onChange={(e) => setAiGenParams({ ...aiGenParams, subject: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
-                                            <option>Toán học</option><option>Tiếng Việt</option><option>Ngữ văn</option><option>Tiếng Anh</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Khoa học</option><option>Lịch sử</option><option>Địa lý</option><option>Lịch sử và Địa lý</option><option>GDCD</option><option>Đạo đức</option><option>Tự nhiên và Xã hội</option><option>Tin học</option><option>Công nghệ</option><option>Hoạt động trải nghiệm</option><option>Âm nhạc</option><option>Mỹ thuật</option><option>Thể dục</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block font-bold mb-2">Lớp (tối đa):</label>
-                                        <select value={aiGenParams.gradeMax} onChange={(e) => setAiGenParams({ ...aiGenParams, gradeMax: parseInt(e.target.value) })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
-                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}
-                                        </select>
-                                    </div>
+                                    <div><label className="block font-bold mb-2">Môn học:</label><select value={aiGenParams.subject} onChange={(e) => setAiGenParams({ ...aiGenParams, subject: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl"><option>Toán học</option><option>Tiếng Việt</option><option>Ngữ văn</option><option>Tiếng Anh</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Khoa học</option><option>Lịch sử</option><option>Địa lý</option><option>Lịch sử và Địa lý</option><option>GDCD</option><option>Đạo đức</option><option>Tự nhiên và Xã hội</option><option>Tin học</option><option>Công nghệ</option><option>Hoạt động trải nghiệm</option><option>Âm nhạc</option><option>Mỹ thuật</option><option>Thể dục</option><option>Ngoại ngữ khác</option></select></div>
+                                    <div><label className="block font-bold mb-2">Lớp (tối đa):</label><select value={aiGenParams.gradeMax} onChange={(e) => setAiGenParams({ ...aiGenParams, gradeMax: parseInt(e.target.value) })} className="w-full p-3 border-2 border-gray-200 rounded-xl">{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
                                 </div>
-                                <div>
-                                    <label className="block font-bold mb-2">Chủ đề:</label>
-                                    <input type="text" value={aiGenParams.topic} onChange={(e) => setAiGenParams({ ...aiGenParams, topic: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none" placeholder="VD: Phân số, Phương trình bậc 2..." />
-                                </div>
+                                <div><label className="block font-bold mb-2">Chủ đề:</label><input type="text" value={aiGenParams.topic} onChange={(e) => setAiGenParams({ ...aiGenParams, topic: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl" placeholder="VD: Phân số, Phương trình..." /></div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block font-bold mb-2">Độ khó:</label>
-                                        <select value={aiGenParams.difficulty} onChange={(e) => setAiGenParams({ ...aiGenParams, difficulty: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
-                                            <option>Dễ</option><option>Vừa</option><option>Khó</option><option>Tổng hợp</option>
-                                        </select>
-                                    </div>
+                                    <div><label className="block font-bold mb-2">Độ khó:</label><select value={aiGenParams.difficulty} onChange={(e) => setAiGenParams({ ...aiGenParams, difficulty: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl"><option>Dễ</option><option>Vừa</option><option>Khó</option><option>Tổng hợp</option></select></div>
                                     <div>
                                         <label className="block font-bold mb-2">Số câu:</label>
-                                        <input type="number" value={aiGenParams.numQuestions} onChange={(e) => setAiGenParams({ ...aiGenParams, numQuestions: parseInt(e.target.value) || 5 })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none" min="1" max="30" />
+                                        <input type="number" value={aiGenParams.numQuestions} onChange={(e) => setAiGenParams({ ...aiGenParams, numQuestions: parseInt(e.target.value) || 10 })} className="w-full p-3 border-2 border-gray-200 rounded-xl" min="4" max="20" />
+                                        <p className="text-xs text-orange-600 mt-1"><i className="fas fa-info-circle mr-1"></i>Phải chia hết cho {teams.length} đội ({teams.length === 2 ? '4, 6, 8, 10...' : teams.length === 3 ? '6, 9, 12, 15...' : '4, 8, 12, 16...'})</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block font-bold mb-2">Dạng câu hỏi:</label>
-                                    <select value={aiGenParams.questionType} onChange={(e) => setAiGenParams({ ...aiGenParams, questionType: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
-                                        <option value="mixed">Trộn lẫn (MCQ + Kéo thả + Nối ô)</option><option value="mcq">Chỉ Trắc nghiệm</option><option value="drag-drop">Chỉ Kéo thả</option><option value="matching">Chỉ Nối ô</option>
-                                    </select>
-                                </div>
-                                <button onClick={handleGenerateQuestions} disabled={aiGenerating} className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl disabled:opacity-50">
-                                    {aiGenerating ? <><i className="fas fa-spinner fa-spin mr-2"></i>Đang tạo...</> : <><i className="fas fa-magic mr-2"></i>Tạo câu hỏi</>}
-                                </button>
-                                <button onClick={() => setCurrentScreen('SETUP')} className="w-full py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                                <button onClick={handleGenerateQuestions} disabled={aiGenerating} className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl disabled:opacity-50">{aiGenerating ? <><i className="fas fa-spinner fa-spin mr-2"></i>Đang tạo...</> : <><i className="fas fa-magic mr-2"></i>Tạo câu hỏi</>}</button>
+                                <button onClick={() => setCurrentScreen('TEAM_SETUP')} className="w-full py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
                             </div>
                         </div>
                     </div>
                 );
             }
 
-            if (currentScreen === 'MANUAL') {
+            // SCREEN: Q_LIST
+            if (currentScreen === 'Q_LIST') {
                 return (
                     <div className="max-w-4xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-8">
-                            <h2 className="text-3xl font-bold text-green-700 mb-6"><i className="fas fa-pen mr-2"></i>Tạo thủ công</h2>
-                            <div className="mb-4">
-                                <label className="block font-bold mb-2">Dạng:</label>
-                                <div className="flex gap-3">
-                                    <button onClick={() => setEditingQuestion({ ...editingQuestion, type: 'mcq', choices: ['', '', '', ''], answer: 0 })} className={`px-4 py-2 rounded-xl border-2 ${editingQuestion.type === 'mcq' ? 'bg-green-50 border-green-600' : 'border-gray-300'}`}>Trắc nghiệm</button>
-                                    <button onClick={() => setEditingQuestion({ ...editingQuestion, type: 'drag-drop', items: ['', '', ''] })} className={`px-4 py-2 rounded-xl border-2 ${editingQuestion.type === 'drag-drop' ? 'bg-green-50 border-green-600' : 'border-gray-300'}`}>Kéo thả</button>
-                                    <button onClick={() => setEditingQuestion({ ...editingQuestion, type: 'matching', leftItems: ['', ''], rightItems: ['', ''] })} className={`px-4 py-2 rounded-xl border-2 ${editingQuestion.type === 'matching' ? 'bg-green-50 border-green-600' : 'border-gray-300'}`}>Nối ô</button>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <label className="block font-bold">Câu hỏi:</label>
-                                        <label className="cursor-pointer px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
-                                            <i className="fas fa-image mr-1"></i>Dán ảnh (Ctrl+V)
-                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                                const file = e.target.files[0];
-                                                if (file) { const reader = new FileReader(); reader.onload = (ev) => setEditingQuestion({ ...editingQuestion, prompt: editingQuestion.prompt + `\n![Hình](${ev.target.result})\n` }); reader.readAsDataURL(file); }
-                                            }} />
-                                        </label>
-                                    </div>
-                                    <textarea value={editingQuestion.prompt} onChange={(e) => setEditingQuestion({ ...editingQuestion, prompt: e.target.value })} onPaste={handleImagePaste} className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-green-500 outline-none" rows="3" placeholder="Nhập câu hỏi... (Ctrl+V để dán ảnh)" />
-                                    {editingQuestion.prompt && editingQuestion.prompt.includes('![') && (
-                                        <div className="mt-2 p-3 bg-gray-50 rounded-xl border-2 border-dashed">
-                                            <div className="text-sm font-bold mb-2">Preview:</div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {editingQuestion.prompt.match(/!\[.*?\]\((data:image\/[^)]+)\)/g)?.map((match, idx) => {
-                                                    const src = match.match(/\((data:image\/[^)]+)\)/)?.[1];
-                                                    return src ? (
-                                                        <div key={idx} className="relative group">
-                                                            <img src={src} alt={`Ảnh ${idx + 1}`} className="max-h-32 rounded border" />
-                                                            <button onClick={() => handleRemoveImage(src)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100"><i className="fas fa-times"></i></button>
-                                                        </div>
-                                                    ) : null;
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                {editingQuestion.type === 'mcq' && (
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {editingQuestion.choices.map((choice, idx) => (
-                                            <div key={idx} className="flex items-center gap-2">
-                                                <input type="radio" checked={editingQuestion.answer === idx} onChange={() => setEditingQuestion({ ...editingQuestion, answer: idx })} />
-                                                <input type="text" value={choice} onChange={(e) => { const newChoices = [...editingQuestion.choices]; newChoices[idx] = e.target.value; setEditingQuestion({ ...editingQuestion, choices: newChoices }); }} className="flex-1 p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 outline-none" placeholder={`Đáp án ${String.fromCharCode(65 + idx)}`} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                {editingQuestion.type === 'drag-drop' && (
-                                    <div>
-                                        <label className="block font-bold mb-2">Các bước (thứ tự đúng):</label>
-                                        {editingQuestion.items.map((item, idx) => <input key={idx} type="text" value={item} onChange={(e) => { const newItems = [...editingQuestion.items]; newItems[idx] = e.target.value; setEditingQuestion({ ...editingQuestion, items: newItems }); }} className="w-full p-2 mb-2 border-2 border-gray-200 rounded-lg focus:border-green-500 outline-none" placeholder={`Bước ${idx + 1}`} />)}
-                                        <button onClick={() => setEditingQuestion({ ...editingQuestion, items: [...editingQuestion.items, ''] })} className="text-green-600 text-sm hover:underline">+ Thêm bước</button>
-                                    </div>
-                                )}
-                                {editingQuestion.type === 'matching' && (
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block font-bold mb-2">Cột trái:</label>
-                                            {editingQuestion.leftItems.map((item, idx) => <input key={idx} type="text" value={item} onChange={(e) => { const newItems = [...editingQuestion.leftItems]; newItems[idx] = e.target.value; setEditingQuestion({ ...editingQuestion, leftItems: newItems }); }} className="w-full p-2 mb-2 border-2 border-gray-200 rounded-lg focus:border-green-500 outline-none" placeholder={`Mục ${idx + 1}`} />)}
-                                        </div>
-                                        <div>
-                                            <label className="block font-bold mb-2">Cột phải (đáp án):</label>
-                                            {editingQuestion.rightItems.map((item, idx) => <input key={idx} type="text" value={item} onChange={(e) => { const newItems = [...editingQuestion.rightItems]; newItems[idx] = e.target.value; setEditingQuestion({ ...editingQuestion, rightItems: newItems }); }} className="w-full p-2 mb-2 border-2 border-gray-200 rounded-lg focus:border-green-500 outline-none" placeholder={`Đáp án ${idx + 1}`} />)}
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="flex gap-3 pt-4">
-                                    <button onClick={() => {
-                                        if (!editingQuestion.prompt.trim()) { alert('Vui lòng nhập câu hỏi!'); return; }
-                                        if (editingQuestion.id) {
-                                            // Edit mode: update existing question
-                                            const updated = questions.map(q => q.id === editingQuestion.id ? editingQuestion : q);
-                                            setQuestions(updated);
-                                        } else {
-                                            // Add mode: create new question
-                                            const newQ = { ...editingQuestion, id: `q${questions.length + 1}` };
-                                            setQuestions([...questions, newQ]);
-                                        }
-                                        setEditingQuestion({ type: 'mcq', prompt: '', choices: ['', '', '', ''], answer: 0, items: ['', '', ''], leftItems: ['', ''], rightItems: ['', ''], powerUp: null });
-                                        setCurrentScreen('QUESTION_LIST');
-                                    }} className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl">
-                                        <i className={`fas ${editingQuestion.id ? 'fa-save' : 'fa-plus'} mr-2`}></i>{editingQuestion.id ? 'Cập nhật' : 'Thêm câu hỏi'}
-                                    </button>
-                                    <button onClick={() => setCurrentScreen('SETUP')} className="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
-                                </div>
-                                {questions.length > 0 && (
-                                    <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 text-center">
-                                        <span className="font-bold text-green-800">Đã có {questions.length} câu</span>
-                                        <button onClick={() => setCurrentScreen('QUESTION_LIST')} className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Xem danh sách</button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            if (currentScreen === 'QUESTION_LIST') {
-                return (
-                    <div className="max-w-5xl mx-auto p-6 fade-in">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-3xl font-bold text-gray-800"><i className="fas fa-list mr-2"></i>Danh sách ({questions.length})</h2>
-                                <div className="flex gap-3">
-                                    <button onClick={() => setCurrentScreen('MANUAL')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"><i className="fas fa-plus mr-2"></i>Thêm</button>
-                                    <button onClick={startGame} className="px-6 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-bold hover:shadow-xl"><i className="fas fa-play mr-2"></i>Chơi</button>
-                                </div>
+                                <h2 className="text-3xl font-bold text-purple-700"><i className="fas fa-list mr-2"></i>Câu hỏi ({questions.length})</h2>
+                                <button onClick={startGame} className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl"><i className="fas fa-play mr-2"></i>Chơi ngay</button>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-3 mb-6">
                                 {questions.map((q, idx) => (
-                                    <div key={idx} className="border-2 border-gray-200 rounded-xl p-4 hover:border-orange-400 transition">
+                                    <div key={idx} className="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-400 transition">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-lg font-bold text-orange-600">#{idx + 1}</span>
-                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-bold">{q.type === 'mcq' ? 'Trắc nghiệm' : q.type === 'drag-drop' ? 'Kéo thả' : 'Nối ô'}</span>
-                                                    {q.powerUp && <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">{q.powerUp === 'double' ? '⚡ 2x' : q.powerUp === 'streakSaver' ? '🎯 Saver' : '⏰ +5s'}</span>}
+                                                    <span className="text-lg font-bold text-purple-600">#{idx + 1}</span>
+                                                    <span className={`px-2 py-1 ${q.individual ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'} text-xs rounded-full font-bold`}>{q.individual ? 'CÁ NHÂN' : 'ĐỘI'}</span>
+                                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                                        {q.type === 'mcq' ? 'Trắc nghiệm' :
+                                                            q.type === 'truefalse' ? 'Đúng/Sai' :
+                                                                q.type === 'fill-blank' ? 'Điền khuyết' :
+                                                                    q.type === 'multi-select' ? 'Nhiều đáp án' :
+                                                                        q.type === 'matching' ? 'Nối cặp' :
+                                                                            q.type === 'drag-drop' ? 'Sắp xếp' : q.type}
+                                                    </span>
                                                 </div>
                                                 <div className="text-gray-800"><MathText text={q.prompt} /></div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => { setEditingQuestion(q); setCurrentScreen('MANUAL'); }} className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"><i className="fas fa-edit"></i></button>
-                                                <button onClick={() => { if (confirm('Xóa câu này?')) setQuestions(questions.filter((_, i) => i !== idx)); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"><i className="fas fa-trash"></i></button>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <button onClick={() => setCurrentScreen('SETUP')} className="w-full mt-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                            <button onClick={() => setCurrentScreen('AI_GEN')} className="w-full py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
                         </div>
                     </div>
                 );
             }
 
+            // SCREEN: GAME
             if (currentScreen === 'GAME') {
                 const currentQ = questions[currentQuestionIndex];
-                if (!currentQ) return null;
+                const currentTeam = teams[currentTeamIndex];
+                const colors = TEAM_COLORS[currentTeam.color];
+
                 return (
                     <div className="max-w-6xl mx-auto p-6 fade-in">
-                        {commentary && (
-                            <div className="commentary-toast bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl">
-                                <div className="flex items-center gap-3"><i className="fas fa-bullhorn text-2xl"></i><span className="font-bold text-lg">{commentary}</span></div>
-                            </div>
-                        )}
-                        {showAchievement && (
-                            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-                                <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-6 rounded-3xl shadow-2xl animate-bounce">
-                                    <div className="text-center"><div className="text-6xl mb-2">{showAchievement.icon}</div><div className="text-2xl font-bold">Mở khóa!</div><div className="text-lg">{showAchievement.name}</div></div>
-                                </div>
-                            </div>
-                        )}
                         <div className="bg-white rounded-3xl shadow-xl p-6 mb-6">
                             <div className="grid grid-cols-3 gap-4 items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="text-4xl">{playerAvatar}</div>
-                                    <div><div className="font-bold text-gray-800">{playerName}</div><div className="text-2xl font-bold text-orange-600">{score} điểm</div></div>
-                                </div>
+                                <div className="text-sm text-gray-600">Câu {currentQuestionIndex + 1}/{questions.length}</div>
                                 <div className="text-center">
-                                    <div className="text-sm text-gray-600">Câu {currentQuestionIndex + 1}/{questions.length}</div>
                                     <div className={`text-5xl font-bold ${timeSettings.mode === 'free'
                                             ? 'text-blue-600'
                                             : timeLeft <= 5
@@ -772,125 +693,300 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
                                         }`}>
                                         {timeSettings.mode === 'free' ? '♾️ Tự do' : `${timeLeft}s`}
                                     </div>
-                                    {currentQ.powerUp && <div className="mt-2 inline-block px-4 py-2 bg-purple-100 text-purple-700 rounded-full font-bold">{currentQ.powerUp === 'double' ? '⚡ Double Points!' : currentQ.powerUp === 'streakSaver' ? '🎯 Streak Saver!' : '⏰ Time Bonus!'}</div>}
                                 </div>
                                 <div className="text-right">
-                                    {streak > 0 && <div className="text-2xl font-bold text-orange-600">🔥 Streak: {streak}</div>}
-                                    {combo > 1 && <div className="inline-block px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full font-bold text-lg combo-badge">Combo x{combo}</div>}
+                                    {gameMode === 'tournament' && (
+                                        <div className="flex gap-2 justify-end">
+                                            <button onClick={() => usePowerUp('shield')} disabled={activePowerUps[currentTeam.id]?.shield} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm disabled:opacity-50">🛡️ Shield</button>
+                                            <button onClick={() => usePowerUp('double')} disabled={activePowerUps[currentTeam.id]?.double} className="px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm disabled:opacity-50">✨ x2</button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-3xl shadow-xl p-8 mb-6">
-                            <div className="text-2xl font-bold text-gray-800 mb-6"><MathText text={currentQ.prompt} /></div>
-                            {currentQ.type === 'mcq' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {currentQ.choices.map((choice, idx) => (
-                                        <button key={idx} onClick={() => !showAnswer && setSelectedAnswer(idx)} disabled={showAnswer} className={`p-6 rounded-2xl border-4 transition text-left text-lg font-bold ${showAnswer ? (idx === currentQ.answer ? 'bg-green-100 border-green-500 text-green-800' : selectedAnswer === idx ? 'bg-red-100 border-red-500 text-red-800' : 'bg-gray-100 border-gray-300') : (selectedAnswer === idx ? 'bg-orange-100 border-orange-500' : 'bg-white border-gray-300 hover:border-orange-400')}`}>
-                                            <div className="flex items-center gap-3"><span className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">{String.fromCharCode(65 + idx)}</span><MathText text={choice} /></div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {currentQ.type === 'drag-drop' && (
-                                <div className="space-y-3">
-                                    {(draggedItems.length > 0 ? draggedItems : currentQ.items || []).map((item, idx) => (
-                                        <div key={`${item}-${idx}`} draggable={!showAnswer} onDragStart={() => setDraggedIndex(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => {
-                                            if (draggedIndex !== null && draggedIndex !== idx) { const newItems = draggedItems.length > 0 ? [...draggedItems] : [...(currentQ.items || [])];[newItems[draggedIndex], newItems[idx]] = [newItems[idx], newItems[draggedIndex]]; setDraggedItems(newItems); }
-                                        }} className={`p-4 rounded-xl border-2 cursor-move transition ${showAnswer ? (item === currentQ.items[idx] ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500') : 'bg-white border-gray-300 hover:border-orange-400'}`}>
-                                            <div className="flex items-center gap-3"><span className="text-2xl"><i className="fas fa-grip-vertical"></i></span><span className="font-bold">{idx + 1}.</span><span className="flex-1"><MathText text={item} /></span></div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {currentQ.type === 'matching' && (
-                                <div>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            {currentQ.leftItems.map((item, idx) => {
-                                                const pair = matchingPairs.find(p => p[0] === idx);
-                                                const pairNumber = pair ? matchingPairs.indexOf(pair) + 1 : null;
-                                                const isCorrect = showAnswer && pair && currentQ.correctPairs && currentQ.correctPairs[idx] && currentQ.correctPairs[idx][1] === pair[1];
-                                                return (
-                                                    <div key={idx} onClick={() => { if (!showAnswer) { const existing = matchingPairs.find(p => p[0] === idx); if (existing) { setMatchingPairs(matchingPairs.filter(p => p[0] !== idx)); } else { setMatchingPairs([...matchingPairs, [idx, null]]); } } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
-                                                        ? (isCorrect ? 'bg-green-100 border-green-500' : pair ? 'bg-red-100 border-red-500' : 'bg-gray-100 border-gray-300')
-                                                        : (pair ? 'bg-blue-100 border-blue-500' : 'bg-blue-50 border-blue-300 hover:border-blue-500')
-                                                        }`}>
-                                                        {pairNumber && (
-                                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                                                {pairNumber}
-                                                            </div>
-                                                        )}
-                                                        <MathText text={item} />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                        <div className="space-y-3">
-                                            {currentQ.rightItems.map((item, idx) => {
-                                                const pair = matchingPairs.find(p => p[1] === idx);
-                                                const pairNumber = pair ? matchingPairs.indexOf(pair) + 1 : null;
-                                                const leftIdx = pair ? pair[0] : null;
-                                                const isCorrect = showAnswer && pair && currentQ.correctPairs && currentQ.correctPairs[leftIdx] && currentQ.correctPairs[leftIdx][1] === idx;
-                                                return (
-                                                    <div key={idx} onClick={() => { if (!showAnswer) { const existingPair = matchingPairs.find(p => p[1] === idx); if (existingPair) { setMatchingPairs(matchingPairs.filter(p => p[1] !== idx)); } else { const incomplete = matchingPairs.find(p => p[1] === null); if (incomplete) { const updated = matchingPairs.map(p => p === incomplete ? [p[0], idx] : p); setMatchingPairs(updated); } } } }} className={`p-4 rounded-xl border-2 cursor-pointer transition relative ${showAnswer
-                                                        ? (isCorrect ? 'bg-green-100 border-green-500' : pair ? 'bg-red-100 border-red-500' : 'bg-gray-100 border-gray-300')
-                                                        : (pair ? 'bg-green-100 border-green-500' : 'bg-green-50 border-green-300 hover:border-green-500')
-                                                        }`}>
-                                                        {pairNumber && (
-                                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                                                {pairNumber}
-                                                            </div>
-                                                        )}
-                                                        <MathText text={item} />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            {teams.map((team, idx) => {
+                                const tColors = TEAM_COLORS[team.color];
+                                const finalScore = Math.round(team.teamScore * 0.7 + team.individualScore * 0.3);
+                                return (
+                                    <div key={team.id} className={`p-4 rounded-xl border-2 transition ${idx === currentTeamIndex ? `${tColors.border} ${tColors.light} shadow-lg scale-105` : 'border-gray-300 bg-white'}`}>
+                                        <div className="text-xs text-gray-600 mb-1">{idx === currentTeamIndex ? '👉 Lượt chơi' : ''}</div>
+                                        <div className="font-bold text-lg mb-1">{team.name}</div>
+                                        <div className="text-2xl font-bold text-purple-600">{finalScore}đ</div>
+                                        <div className="text-xs text-gray-500 mt-1">Đội: {team.teamScore} | Cá nhân: {team.individualScore}</div>
                                     </div>
-                                    {!showAnswer && matchingPairs.length > 0 && (
-                                        <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-xl">
-                                            <p className="text-sm font-bold text-blue-800">
-                                                <i className="fas fa-info-circle mr-2"></i>
-                                                Đã nối {matchingPairs.filter(p => p[1] !== null).length}/{currentQ.leftItems.length} cặp
-                                            </p>
+                                );
+                            })}
+                        </div>
+
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <div className={`text-center p-4 rounded-xl mb-6 ${colors.light} border-2 ${colors.border}`}>
+                                <div className="text-2xl font-bold">{currentTeam.name} - {currentQ.individual ? 'Câu CÁ NHÂN' : 'Câu ĐỘI'}</div>
+                            </div>
+
+                            <h3 className="text-2xl font-bold text-gray-800 mb-6"><MathText text={currentQ.prompt} /></h3>
+
+                            {currentQ.type === 'mcq' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    {currentQ.choices.map((choice, idx) => {
+                                        const isSelected = selectedAnswer === idx;
+                                        const isCorrect = currentQ.answer === idx;
+                                        let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
+                                        if (showAnswer) {
+                                            if (isCorrect) className += "bg-green-100 border-green-500 text-green-900";
+                                            else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
+                                            else className += "border-gray-200 opacity-50";
+                                        } else {
+                                            className += isSelected ? "bg-blue-100 border-blue-500" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
+                                        }
+                                        return (
+                                            <button key={idx} onClick={() => setSelectedAnswer(idx)} disabled={showAnswer} className={className}>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">{String.fromCharCode(65 + idx)}</span>
+                                                    <div className="flex-1 text-left"><MathText text={choice} /></div>
+                                                    {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-2xl"></i>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {currentQ.type === 'truefalse' && (
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    {[true, false].map((value) => {
+                                        const isSelected = trueFalseAnswer === value;
+                                        const isCorrect = currentQ.answer === value;
+                                        let className = "p-6 rounded-xl border-2 cursor-pointer transition font-bold text-xl ";
+                                        if (showAnswer) {
+                                            if (isCorrect) className += "bg-green-100 border-green-500 text-green-900";
+                                            else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
+                                            else className += "border-gray-200 opacity-50";
+                                        } else {
+                                            className += isSelected ? "bg-blue-100 border-blue-500" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
+                                        }
+                                        return (
+                                            <button key={String(value)} onClick={() => setTrueFalseAnswer(value)} disabled={showAnswer} className={className}>
+                                                <div className="flex items-center justify-center gap-3">
+                                                    <span className="text-4xl">{value ? '✓' : '✗'}</span>
+                                                    <span>{value ? 'ĐÚNG' : 'SAI'}</span>
+                                                    {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-2xl"></i>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {currentQ.type === 'fill-blank' && (
+                                <div className="mb-6">
+                                    <label className="block font-bold mb-3 text-gray-700">Điền vào chỗ trống:</label>
+                                    <input
+                                        type="text"
+                                        value={fillBlankAnswer}
+                                        onChange={(e) => setFillBlankAnswer(e.target.value)}
+                                        disabled={showAnswer}
+                                        className="w-full p-4 border-2 border-gray-300 rounded-xl text-lg focus:border-blue-500 outline-none disabled:bg-gray-100"
+                                        placeholder="Nhập câu trả lời..."
+                                    />
+                                    {showAnswer && (
+                                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p className="text-sm text-gray-700"><strong>Đáp án:</strong> <MathText text={currentQ.answer} /></p>
+                                            {currentQ.acceptedAnswers && currentQ.acceptedAnswers.length > 0 && (
+                                                <p className="text-sm text-gray-600 mt-1">Chấp nhận: {currentQ.acceptedAnswers.join(', ')}</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             )}
-                            {!showAnswer && <button onClick={handleRevealAnswer} className="w-full mt-6 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold text-lg hover:shadow-xl"><i className="fas fa-check mr-2"></i>Trả lời</button>}
+
+                            {currentQ.type === 'multi-select' && (
+                                <div className="space-y-3 mb-6">
+                                    <p className="font-bold text-orange-600"><i className="fas fa-info-circle mr-1"></i>Chọn TẤT CẢ đáp án đúng</p>
+                                    {currentQ.choices.map((choice, idx) => {
+                                        const isSelected = selectedAnswers.includes(idx);
+                                        const isCorrect = currentQ.answers.includes(idx);
+                                        let className = "p-4 rounded-xl border-2 cursor-pointer transition ";
+                                        if (showAnswer) {
+                                            if (isCorrect) className += "bg-green-100 border-green-500";
+                                            else if (isSelected) className += "bg-red-100 border-red-500";
+                                            else className += "border-gray-200 opacity-50";
+                                        } else {
+                                            className += isSelected ? "bg-blue-100 border-blue-500" : "border-gray-300 hover:border-blue-400";
+                                        }
+                                        return (
+                                            <button key={idx} onClick={() => {
+                                                if (showAnswer) return;
+                                                setSelectedAnswers(prev =>
+                                                    prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                                                );
+                                            }} disabled={showAnswer} className={className}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-400'}`}>
+                                                        {isSelected && <i className="fas fa-check text-white text-sm"></i>}
+                                                    </div>
+                                                    <div className="flex-1 text-left"><MathText text={choice} /></div>
+                                                    {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-xl"></i>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {currentQ.type === 'matching' && (
+                                <div className="mb-6">
+                                    <p className="font-bold mb-3 text-gray-700">Nối các cặp cho đúng:</p>
+                                    <div className="space-y-3">
+                                        {currentQ.leftItems.map((leftItem, idx) => {
+                                            const selectedRight = matchingPairs.find(p => p[0] === idx)?.[1];
+                                            const correctRight = currentQ.correctPairs.find(p => p[0] === idx)?.[1];
+                                            return (
+                                                <div key={idx} className="grid grid-cols-5 gap-3 items-center">
+                                                    <div className="col-span-2 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg font-medium">
+                                                        <MathText text={leftItem} />
+                                                    </div>
+                                                    <div className="text-center text-2xl">→</div>
+                                                    <div className="col-span-2">
+                                                        <select
+                                                            value={selectedRight !== undefined ? selectedRight : ''}
+                                                            onChange={(e) => {
+                                                                const rightIdx = parseInt(e.target.value);
+                                                                setMatchingPairs(prev => {
+                                                                    const filtered = prev.filter(p => p[0] !== idx);
+                                                                    if (!isNaN(rightIdx)) return [...filtered, [idx, rightIdx]];
+                                                                    return filtered;
+                                                                });
+                                                            }}
+                                                            disabled={showAnswer}
+                                                            className={`w-full p-3 border-2 rounded-lg ${showAnswer && selectedRight === correctRight ? 'bg-green-100 border-green-500' : showAnswer && selectedRight !== correctRight ? 'bg-red-100 border-red-500' : 'border-gray-300'}`}
+                                                        >
+                                                            <option value="">-- Chọn --</option>
+                                                            {currentQ.rightItems.map((rightItem, rIdx) => (
+                                                                <option key={rIdx} value={rIdx}>{rightItem}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentQ.type === 'drag-drop' && (
+                                <div className="mb-6">
+                                    <p className="font-bold mb-3 text-gray-700">Sắp xếp theo thứ tự đúng (kéo hoặc dùng mũi tên):</p>
+                                    <div className="space-y-2">
+                                        {(dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i)).map((itemIdx, position) => {
+                                            const item = currentQ.items[itemIdx];
+                                            const isCorrectPosition = showAnswer && currentQ.correctOrder[position] === itemIdx;
+                                            return (
+                                                <div key={position} className={`flex items-center gap-3 p-4 rounded-xl border-2 ${isCorrectPosition ? 'bg-green-100 border-green-500' : showAnswer ? 'bg-red-100 border-red-500' : 'bg-white border-gray-300'}`}>
+                                                    <span className="font-bold text-purple-600 text-xl">#{position + 1}</span>
+                                                    <div className="flex-1 font-medium"><MathText text={item} /></div>
+                                                    {!showAnswer && (
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (position > 0) {
+                                                                        const newOrder = [...(dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i))];
+                                                                        [newOrder[position], newOrder[position - 1]] = [newOrder[position - 1], newOrder[position]];
+                                                                        setDragOrder(newOrder);
+                                                                    }
+                                                                }}
+                                                                disabled={position === 0}
+                                                                className="px-2 py-1 bg-blue-500 text-white rounded disabled:opacity-30"
+                                                            >
+                                                                <i className="fas fa-arrow-up"></i>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const currentOrder = dragOrder.length > 0 ? dragOrder : currentQ.items.map((_, i) => i);
+                                                                    if (position < currentOrder.length - 1) {
+                                                                        const newOrder = [...currentOrder];
+                                                                        [newOrder[position], newOrder[position + 1]] = [newOrder[position + 1], newOrder[position]];
+                                                                        setDragOrder(newOrder);
+                                                                    }
+                                                                }}
+                                                                disabled={position === (dragOrder.length > 0 ? dragOrder.length : currentQ.items.length) - 1}
+                                                                className="px-2 py-1 bg-blue-500 text-white rounded disabled:opacity-30"
+                                                            >
+                                                                <i className="fas fa-arrow-down"></i>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex gap-4">
+                                {!showAnswer && (
+                                    (currentQ.type === 'mcq' && selectedAnswer !== null) ||
+                                    (currentQ.type === 'truefalse' && trueFalseAnswer !== null) ||
+                                    (currentQ.type === 'fill-blank' && fillBlankAnswer.trim()) ||
+                                    (currentQ.type === 'multi-select' && selectedAnswers.length > 0) ||
+                                    (currentQ.type === 'matching' && matchingPairs.length === currentQ.leftItems.length) ||
+                                    (currentQ.type === 'drag-drop' && dragOrder.length > 0)
+                                ) && (
+                                        <button onClick={handleRevealAnswer} className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700"><i className="fas fa-check mr-2"></i>Gửi câu trả lời</button>
+                                    )}
+                            </div>
                         </div>
                     </div>
                 );
             }
 
-            if (currentScreen === 'GAME_OVER') {
+            // SCREEN: RESULTS
+            if (currentScreen === 'RESULTS') {
+                const rankedTeams = [...teams].map(t => ({ ...t, finalScore: Math.round(t.teamScore * 0.7 + t.individualScore * 0.3) })).sort((a, b) => b.finalScore - a.finalScore);
+                const winner = rankedTeams[0];
+
                 return (
                     <div className="max-w-4xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
                             <div className="text-8xl mb-6">🎉</div>
-                            <h1 className="text-5xl font-bold text-orange-600 mb-4">Hoàn thành!</h1>
-                            <div className="mb-8"><div className="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600 mb-2">{score}</div><div className="text-2xl text-gray-600">điểm</div></div>
-                            <div className="grid grid-cols-3 gap-6 mb-8">
-                                <div className="bg-blue-50 rounded-2xl p-6"><div className="text-3xl mb-2">🎯</div><div className="text-2xl font-bold text-blue-600">{streak}</div><div className="text-gray-600">Streak cao nhất</div></div>
-                                <div className="bg-purple-50 rounded-2xl p-6"><div className="text-3xl mb-2">⚡</div><div className="text-2xl font-bold text-purple-600">x{combo}</div><div className="text-gray-600">Combo tối đa</div></div>
-                                <div className="bg-green-50 rounded-2xl p-6"><div className="text-3xl mb-2">✅</div><div className="text-2xl font-bold text-green-600">{questions.length}</div><div className="text-gray-600">Câu hoàn thành</div></div>
+                            <h1 className="text-5xl font-bold text-purple-600 mb-4">Hoàn thành!</h1>
+                            <div className="mb-8">
+                                <div className="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600 mb-2">{winner.name}</div>
+                                <div className="text-3xl text-gray-600">Chiến thắng với {winner.finalScore} điểm!</div>
                             </div>
-                            {achievements.length > 0 && (
-                                <div className="mb-8"><h3 className="text-xl font-bold mb-4">Thành tích:</h3><div className="flex justify-center gap-4">{achievements.map((badge, idx) => <div key={idx} className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4"><div className="text-4xl mb-2">{badge.icon}</div><div className="font-bold text-yellow-800">{badge.name}</div></div>)}</div></div>
-                            )}
+                            <div className="space-y-3 mb-8">
+                                {rankedTeams.map((team, idx) => {
+                                    const colors = TEAM_COLORS[team.color];
+                                    return (
+                                        <div key={team.id} className={`p-6 rounded-2xl border-2 ${idx === 0 ? `${colors.light} ${colors.border}` : 'bg-gray-100 border-gray-300'}`}>
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-4xl font-bold">#{idx + 1}</span>
+                                                    <div className="text-left">
+                                                        <div className="text-2xl font-bold">{team.name}</div>
+                                                        <div className="text-sm text-gray-600">Đội: {team.teamScore}đ | Cá nhân: {team.individualScore}đ</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-4xl font-bold text-purple-600">{team.finalScore}đ</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                             <div className="flex gap-4 justify-center">
-                                <button onClick={() => { setCurrentQuestionIndex(0); startGame(); }} className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:shadow-xl"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
-                                <button onClick={() => setCurrentScreen('SETUP')} className="px-8 py-4 bg-gray-500 text-white rounded-2xl font-bold text-lg hover:bg-gray-600"><i className="fas fa-home mr-2"></i>Trang chủ</button>
+                                <button onClick={() => window.location.reload()} className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:shadow-xl"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-4 bg-gray-500 text-white rounded-2xl font-bold text-lg hover:bg-gray-600"><i className="fas fa-home mr-2"></i>Menu</button>
                             </div>
                         </div>
                     </div>
                 );
             }
 
-            return null;
+            return <div className="text-center p-8">Đang tải...</div>;
         };
 
-        ReactDOM.render(<SpeedScoreGame />, document.getElementById('root'));
+        ReactDOM.render(<TeamBattleGame />, document.getElementById('root'));
     </script>
 </body>
 
