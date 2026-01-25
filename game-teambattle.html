@@ -216,6 +216,10 @@ JSON format (KHÔNG thêm chữ):
             const [activePowerUps, setActivePowerUps] = useState({});
             const [aiGenParams, setAiGenParams] = useState({ subject: 'Toán học', gradeMax: 9, topic: '', difficulty: 'Vừa', numQuestions: 10, mode: 'classroom' });
             const [aiGenerating, setAiGenerating] = useState(false);
+            const [timeSettings, setTimeSettings] = useState(() => {
+                const saved = localStorage.getItem('teamBattleTimeSettings');
+                return saved ? JSON.parse(saved) : { mode: 'custom', duration: 30 };
+            });
 
             useEffect(() => { const token = localStorage.getItem('authToken'); if (!token) { alert("Chưa đăng nhập!"); window.location.href = 'login.html'; } }, []);
             useEffect(() => { if (timerActive && timeLeft > 0 && !showAnswer) { const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000); return () => clearTimeout(timer); } else if (timeLeft === 0 && timerActive && !showAnswer) { handleRevealAnswer(); } }, [timeLeft, timerActive, showAnswer]);
@@ -258,9 +262,14 @@ JSON format (KHÔNG thêm chữ):
             };
 
             const startQuestion = () => {
-                const timeLimit = gameMode === 'classroom' ? 30 : 20;
-                setTimeLeft(timeLimit);
-                setTimerActive(true);
+                // Use configured time settings
+                if (timeSettings.mode === 'free') {
+                    setTimeLeft(999);
+                    setTimerActive(false);
+                } else {
+                    setTimeLeft(timeSettings.duration);
+                    setTimerActive(true);
+                }
                 setShowAnswer(false);
                 setSelectedAnswer(null);
                 setTrueFalseAnswer(null);
@@ -482,7 +491,116 @@ JSON format (KHÔNG thêm chữ):
                             {teams.length < maxTeams && <button onClick={addTeam} className="w-full py-3 border-2 border-dashed border-purple-400 text-purple-600 rounded-xl font-bold hover:bg-purple-50"><i className="fas fa-plus mr-2"></i>Thêm đội</button>}
                             <div className="flex gap-4 mt-6">
                                 <button onClick={() => setCurrentScreen('MODE_SELECT')} className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
-                                <button onClick={() => { if (teams.length >= 2) setCurrentScreen('AI_GEN'); else alert('Cần ít nhất 2 đội!'); }} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700"><i className="fas fa-arrow-right mr-2"></i>Tiếp tục</button>
+                                <button onClick={() => { if (teams.length >= 2) setCurrentScreen('TIME_SETTINGS'); else alert('Cần ít nhất 2 đội!'); }} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700"><i className="fas fa-arrow-right mr-2"></i>Tiếp tục</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SCREEN: TIME_SETTINGS
+            if (currentScreen === 'TIME_SETTINGS') {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
+                                <i className="fas fa-clock mr-2"></i>Cài đặt thời gian
+                            </h2>
+
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <button
+                                        onClick={() => setTimeSettings({ ...timeSettings, mode: 'free' })}
+                                        className={`border-4 rounded-2xl p-6 transition text-left ${timeSettings.mode === 'free'
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <div className="text-5xl mb-4 text-center">♾️</div>
+                                        <h3 className="text-2xl font-bold text-blue-700 mb-3">Tự do</h3>
+                                        <p className="text-gray-600 mb-2">• Không giới hạn thời gian</p>
+                                        <p className="text-gray-600 mb-2">• Suy nghĩ thỏa mái</p>
+                                        <p className="text-gray-600">• Không có áp lực!</p>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setTimeSettings({ ...timeSettings, mode: 'custom' })}
+                                        className={`border-4 rounded-2xl p-6 transition text-left ${timeSettings.mode === 'custom'
+                                                ? 'border-purple-500 bg-purple-50'
+                                                : 'border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <div className="text-5xl mb-4 text-center">⏱️</div>
+                                        <h3 className="text-2xl font-bold text-purple-700 mb-3">Tùy chỉnh</h3>
+                                        <p className="text-gray-600 mb-2">• Đặt thời gian riêng</p>
+                                        <p className="text-gray-600 mb-2">• Điều chỉnh độ khó</p>
+                                        <p className="text-gray-600">• Linh hoạt hơn!</p>
+                                    </button>
+                                </div>
+
+                                {timeSettings.mode === 'custom' && (
+                                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6">
+                                        <label className="block font-bold text-gray-700 mb-3">
+                                            <i className="fas fa-stopwatch mr-2"></i>Thời gian mỗi câu (giây):
+                                        </label>
+                                        <div className="flex items-center gap-4">
+                                            <input
+                                                type="range"
+                                                min="10"
+                                                max="120"
+                                                step="5"
+                                                value={timeSettings.duration}
+                                                onChange={(e) => setTimeSettings({ ...timeSettings, duration: parseInt(e.target.value) })}
+                                                className="flex-1"
+                                            />
+                                            <div className="w-20 text-center">
+                                                <input
+                                                    type="number"
+                                                    min="10"
+                                                    max="120"
+                                                    value={timeSettings.duration}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value) || 10;
+                                                        setTimeSettings({ ...timeSettings, duration: Math.min(120, Math.max(10, val)) });
+                                                    }}
+                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-center font-bold text-xl focus:border-purple-500 focus:outline-none"
+                                                />
+                                            </div>
+                                            <span className="text-gray-600 font-medium">giây</span>
+                                        </div>
+                                        <div className="mt-4 flex justify-between text-sm text-gray-600">
+                                            <span>Dễ (60-120s)</span>
+                                            <span>Trung bình (30-60s)</span>
+                                            <span>Khó (10-30s)</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <p className="text-sm text-gray-700">
+                                        <strong>💡 Gợi ý:</strong><br />
+                                        • <strong>Tự do:</strong> Phù hợp để ôn tập, không áp lực thời gian<br />
+                                        • <strong>Tùy chỉnh:</strong> Tạo thử thách, tăng tính cạnh tranh giữa các đội
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 mt-6">
+                                <button
+                                    onClick={() => setCurrentScreen('TEAM_SETUP')}
+                                    className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition"
+                                >
+                                    <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        localStorage.setItem('teamBattleTimeSettings', JSON.stringify(timeSettings));
+                                        setCurrentScreen('AI_GEN');
+                                    }}
+                                    className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl transition"
+                                >
+                                    <i className="fas fa-arrow-right mr-2"></i>Tiếp tục
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -566,7 +684,16 @@ JSON format (KHÔNG thêm chữ):
                         <div className="bg-white rounded-3xl shadow-xl p-6 mb-6">
                             <div className="grid grid-cols-3 gap-4 items-center">
                                 <div className="text-sm text-gray-600">Câu {currentQuestionIndex + 1}/{questions.length}</div>
-                                <div className="text-center"><div className={`text-5xl font-bold ${timeLeft <= 5 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>{timeLeft}s</div></div>
+                                <div className="text-center">
+                                    <div className={`text-5xl font-bold ${timeSettings.mode === 'free'
+                                            ? 'text-blue-600'
+                                            : timeLeft <= 5
+                                                ? 'text-red-600 animate-pulse'
+                                                : 'text-blue-600'
+                                        }`}>
+                                        {timeSettings.mode === 'free' ? '♾️ Tự do' : `${timeLeft}s`}
+                                    </div>
+                                </div>
                                 <div className="text-right">
                                     {gameMode === 'tournament' && (
                                         <div className="flex gap-2 justify-end">
