@@ -261,7 +261,12 @@
                         }
 
                         // FINAL: if contains latex commands but no $...$, wrap whole fragment as inline math
-                        if (!/\$/.test(processed) && /\\(times|div|frac|sqrt|cdot)/.test(processed)) {
+                        // Also check for common LaTeX patterns like [___] which should be rendered
+                        if (!/\$/.test(processed) && /\\(times|div|frac|sqrt|cdot|left|right|Box)/.test(processed)) {
+                            processed = `$${processed}$`;
+                        }
+                        // Special case: If text contains [___] (fill-in-blank marker), treat as math
+                        if (!/\$/.test(processed) && /\[_+\]/.test(processed)) {
                             processed = `$${processed}$`;
                         }
 
