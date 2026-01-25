@@ -245,28 +245,39 @@
                         const hasDelimiters = /\$/.test(processed);
 
                         if (!hasDelimiters) {
-                            // Step 3: Convert math symbols to LaTeX
-                            processed = processed
-                                .replace(/×/g, '\\times')
-                                .replace(/\*/g, '\\times')
-                                .replace(/÷/g, '\\div')
-                                .replace(/(\d)\s*\/\s*(\d)/g, '$1 \\div $2');
+                            // Step 2.5: PRIORITY - Detect and wrap fill-in-blank patterns FIRST
+                            // This handles cases like "2[___] = 8" or "[___] : 2 = 5"
+                            // Pattern: any text containing [___] surrounded by numbers/operators
+                            if (/\[_+\]/.test(processed)) {
+                                // If the whole line looks like a math expression with [___], wrap it all
+                                if (/^[^a-zA-Zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]*[\d\[_\]\s+\-×÷*\/=:().]+[^a-zA-Zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]*$/.test(processed)) {
+                                    processed = `$${processed}$`;
+                                } else {
+                                    // Otherwise, wrap just the math parts
+                                    processed = processed.replace(
+                                        /(\d+|\[\s*_{2,}\s*\])(?:\s*[+\-×÷*\/=:]\s*(?:\d+|\[\s*_{2,}\s*\]))+/g,
+                                        (m) => `$${m}$`
+                                    );
+                                }
+                            } else {
+                                // Step 3: Convert math symbols to LaTeX
+                                processed = processed
+                                    .replace(/×/g, '\\times')
+                                    .replace(/\*/g, '\\times')
+                                    .replace(/÷/g, '\\div')
+                                    .replace(/(\d)\s*\/\s*(\d)/g, '$1 \\div $2');
 
-                            // Step 4: Smart wrap - wrap math chunks even inside normal sentences
-                            // Supports: 15 × 7, 84 \div [___] = 12, 3*4=12, 10/2=5, with spaces
-                            processed = processed.replace(
-                                /(\d+|\[\s*_{2,}\s*\])(?:\s*(?:\\times|\\div|[×÷*\/+\-=])\s*(?:\d+|\[\s*_{2,}\s*\]))+(?:\s*=\s*(?:\d+|\[\s*_{2,}\s*\]))?/g,
-                                (m) => `$${m}$`
-                            );
+                                // Step 4: Smart wrap - wrap math chunks even inside normal sentences
+                                // Supports: 15 × 7, 84 \div [___] = 12, 3*4=12, 10/2=5, with spaces
+                                processed = processed.replace(
+                                    /(\d+|\[\s*_{2,}\s*\])(?:\s*(?:\\times|\\div|[×÷*\/+\-=])\s*(?:\d+|\[\s*_{2,}\s*\]))+(?:\s*=\s*(?:\d+|\[\s*_{2,}\s*\]))?/g,
+                                    (m) => `$${m}$`
+                                );
+                            }
                         }
 
                         // FINAL: if contains latex commands but no $...$, wrap whole fragment as inline math
-                        // Also check for common LaTeX patterns like [___] which should be rendered
                         if (!/\$/.test(processed) && /\\(times|div|frac|sqrt|cdot|left|right|Box)/.test(processed)) {
-                            processed = `$${processed}$`;
-                        }
-                        // Special case: If text contains [___] (fill-in-blank marker), treat as math
-                        if (!/\$/.test(processed) && /\[_+\]/.test(processed)) {
                             processed = `$${processed}$`;
                         }
 
