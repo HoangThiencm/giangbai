@@ -284,26 +284,27 @@ JSON format:
 
         // ============ MAIN GAME ============
         const TowerGame = () => {
-            // Screen: SETUP, GAME, GAME_OVER
-            const [screen, setScreen] = useState('SETUP');
+            // Screen: INSTRUCTIONS, SETUP, PREVIEW, GAME, GAME_OVER
+            const [screen, setScreen] = useState('INSTRUCTIONS');
+            const [showInstructions, setShowInstructions] = useState(true);
             const [playerName, setPlayerName] = useState('Player 1');
             const [avatar, setAvatar] = useState('🧑‍🎓');
 
             // Configuration
             const [qCounts, setQCounts] = useState({ easy: 3, medium: 4, hard: 3 });
-            const [aiParams, setAiParams] = useState({ subject: 'Toán', topic: '', gradeMax: 5 });
+            const [aiParams, setAiParams] = useState({ subject: 'Toán học', topic: '', gradeMax: 5 });
             const [timeMode, setTimeMode] = useState('custom'); // free, custom
             const [timePerQ, setTimePerQ] = useState(30);
 
             // Game Data
             const [questions, setQuestions] = useState([]);
             const [currentQIdx, setCurrentQIdx] = useState(0);
+            const [editingQ, setEditingQ] = useState(null);
 
             // Game State
             const [level, setLevel] = useState(1);
             const [score, setScore] = useState(0);
             const [streak, setStreak] = useState(0);
-            const [hp, setHp] = useState(3); // Maybe add lives? Or stick to tower mechanics? Tower mechanic: fall down.
             const [timeLeft, setTimeLeft] = useState(30);
             const [timerActive, setTimerActive] = useState(false);
 
@@ -336,9 +337,9 @@ JSON format:
                     const data = await GeminiService.generate({ ...aiParams, counts: qCounts });
                     if (data.questions) {
                         // Shuffle and assign ID
-                        const qs = data.questions.map((q, i) => ({ ...q, id: i, used: false }));
+                        const qs = data.questions.map((q, i) => ({ ...q, id: `q${i}`, used: false }));
                         setQuestions(qs);
-                        setScreen('PREIEW'); // Let user see/edit before start
+                        setScreen('PREVIEW'); // Changed from 'PREIEW'
                         setMessage('');
                     }
                 } catch (e) { alert("Lỗi tạo câu hỏi: " + e.message); setMessage(''); }
@@ -463,76 +464,180 @@ JSON format:
             };
 
             // Renders
-            const renderSetup = () => (
-                <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-xl mt-10">
-                    <h1 className="text-4xl font-bold text-center text-purple-700 mb-6">Leo Tháp Kiến Thức</h1>
-
-                    <div className="mb-6">
-                        <label className="block font-bold mb-2">Tên người chơi</label>
-                        <input className="w-full border p-3 rounded-xl" value={playerName} onChange={e => setPlayerName(e.target.value)} />
-                    </div>
-
-                    <div className="mb-6">
-                        <label className="block font-bold mb-2">Cấu hình câu hỏi (Tổng: {qCounts.easy + qCounts.medium + qCounts.hard})</label>
-                        <div className="flex gap-4 mb-2">
-                            <div className="flex-1">
-                                <span className="text-green-600 font-bold">Dễ: {qCounts.easy}</span>
-                                <input type="range" min="0" max="10" value={qCounts.easy} onChange={e => setQCounts({ ...qCounts, easy: parseInt(e.target.value) })} className="w-full accent-green-600" />
+            const renderInstructions = () => (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-3xl font-bold text-purple-700"><i className="fas fa-chess-rook mr-3"></i>Leo Tháp Kiến Thức</h2>
+                            <button onClick={() => { setShowInstructions(false); setScreen('SETUP') }} className="text-gray-500 hover:text-gray-700 text-3xl">&times;</button>
+                        </div>
+                        <div className="space-y-4 text-gray-700">
+                            <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+                                <h3 className="font-bold text-lg text-purple-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
+                                <p>Leo lên <strong>tầng 10</strong> để chinh phục đỉnh tháp! Câu hỏi càng cao càng khó.</p>
                             </div>
-                            <div className="flex-1">
-                                <span className="text-blue-600 font-bold">Vừa: {qCounts.medium}</span>
-                                <input type="range" min="0" max="10" value={qCounts.medium} onChange={e => setQCounts({ ...qCounts, medium: parseInt(e.target.value) })} className="w-full accent-blue-600" />
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                                <div className="bg-green-50 p-3 rounded-xl"><div className="text-2xl mb-1">🌲</div><div className="font-bold text-green-700">Tầng 1-3</div><div className="text-sm">Câu Dễ</div></div>
+                                <div className="bg-blue-50 p-3 rounded-xl"><div className="text-2xl mb-1">⛅</div><div className="font-bold text-blue-700">Tầng 4-6</div><div className="text-sm">Câu Vừa</div></div>
+                                <div className="bg-red-50 p-3 rounded-xl"><div className="text-2xl mb-1">🔥</div><div className="font-bold text-red-700">Tầng 7-10</div><div className="text-sm">Câu Khó</div></div>
                             </div>
-                            <div className="flex-1">
-                                <span className="text-red-600 font-bold">Khó: {qCounts.hard}</span>
-                                <input type="range" min="0" max="10" value={qCounts.hard} onChange={e => setQCounts({ ...qCounts, hard: parseInt(e.target.value) })} className="w-full accent-red-600" />
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                                <h3 className="font-bold text-yellow-800 mb-2">⚡ Luật chơi</h3>
+                                <ul className="list-disc ml-5 space-y-1">
+                                    <li><strong>Trả lời đúng</strong>: Leo 1 tầng + Tăng điểm</li>
+                                    <li><strong>Trả lời sai</strong>: Tụt 1 tầng + Mất streak</li>
+                                    <li><strong>Tầng 5 & 10</strong>: Boss level (điểm x2/x3)</li>
+                                </ul>
+                            </div>
+                            <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+                                <h3 className="font-bold text-pink-800 mb-2">🎯 Power-ups</h3>
+                                <div className="grid grid-cols-3 gap-2 text-sm">
+                                    <div><strong>🛡️ Shield:</strong> Không tụt tầng</div>
+                                    <div><strong>🪜 Ladder:</strong> Bỏ qua câu</div>
+                                    <div><strong>💡 Hint:</strong> Loại 2 đáp án</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="mb-6 grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block font-bold mb-2">AI Chủ đề</label>
-                            <input className="w-full border p-3 rounded-xl" placeholder="VD: Phép cộng" value={aiParams.topic} onChange={e => setAiParams({ ...aiParams, topic: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="block font-bold mb-2">Thời gian (giây/câu)</label>
-                            <div className="flex gap-2">
-                                <button onClick={() => setTimeMode(timeMode === 'free' ? 'custom' : 'free')} className={`p-3 rounded-xl border ${timeMode === 'free' ? 'bg-green-100 border-green-500' : 'bg-gray-100'}`}>
-                                    {timeMode === 'free' ? 'Tự do' : 'Giới hạn'}
-                                </button>
-                                {timeMode === 'custom' && <input type="number" className="w-full border p-3 rounded-xl" value={timePerQ} onChange={e => setTimePerQ(parseInt(e.target.value))} />}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <button onClick={() => generateQuestions()} className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-xl font-bold hover:shadow-lg">
-                            {message || 'Tạo bằng AI'}
+                        <button onClick={() => { setShowInstructions(false); setScreen('SETUP') }} className="w-full mt-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-xl">
+                            <i className="fas fa-play mr-2"></i>Bắt đầu
                         </button>
-                        {/* Manual create could go here, omitting for brevity in this fix focus */}
+                    </div>
+                </div>
+            );
+
+            const renderSetup = () => (
+                <div className="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-xl mt-10">
+                    <div className="flex justify-between items-center mb-6">
+                        <h1 className="text-4xl font-bold text-purple-700"><i className="fas fa-chess-rook mr-3"></i>Leo Tháp Kiến Thức</h1>
+                        <button onClick={() => setShowInstructions(true)} className="w-10 h-10 bg-blue-500 text-white rounded-full hover:bg-blue-600"><i className="fas fa-question"></i></button>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block font-bold mb-2">Tên người chơi</label>
+                            <input className="w-full border-2 p-3 rounded-xl focus:border-purple-500 outline-none" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block font-bold mb-2">Môn học</label>
+                                <select value={aiParams.subject} onChange={e => setAiParams({ ...aiParams, subject: e.target.value })} className="w-full border-2 p-3 rounded-xl focus:border-purple-500 outline-none">
+                                    <option>Toán học</option><option>Tiếng Việt</option><option>Tiếng Anh</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Lịch sử</option><option>Địa lý</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block font-bold mb-2">Lớp (tối đa)</label>
+                                <select value={aiParams.gradeMax} onChange={e => setAiParams({ ...aiParams, gradeMax: parseInt(e.target.value) })} className="w-full border-2 p-3 rounded-xl focus:border-purple-500 outline-none">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block font-bold mb-2">Chủ đề</label>
+                            <input className="w-full border-2 p-3 rounded-xl focus:border-purple-500 outline-none" placeholder="VD: Phép cộng, Định luật Newton..." value={aiParams.topic} onChange={e => setAiParams({ ...aiParams, topic: e.target.value })} />
+                        </div>
+
+                        <div>
+                            <label className="block font-bold mb-2">Cấu hình câu hỏi (Tổng: {qCounts.easy + qCounts.medium + qCounts.hard})</label>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <span className="text-green-600 font-bold block mb-2">Dễ: {qCounts.easy}</span>
+                                    <input type="range" min="0" max="10" value={qCounts.easy} onChange={e => setQCounts({ ...qCounts, easy: parseInt(e.target.value) })} className="w-full accent-green-600" />
+                                </div>
+                                <div>
+                                    <span className="text-blue-600 font-bold block mb-2">Vừa: {qCounts.medium}</span>
+                                    <input type="range" min="0" max="10" value={qCounts.medium} onChange={e => setQCounts({ ...qCounts, medium: parseInt(e.target.value) })} className="w-full accent-blue-600" />
+                                </div>
+                                <div>
+                                    <span className="text-red-600 font-bold block mb-2">Khó: {qCounts.hard}</span>
+                                    <input type="range" min="0" max="10" value={qCounts.hard} onChange={e => setQCounts({ ...qCounts, hard: parseInt(e.target.value) })} className="w-full accent-red-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block font-bold mb-2">Thời gian</label>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setTimeMode(timeMode === 'free' ? 'custom' : 'free')} className={`flex-1 p-3 rounded-xl border-2 font-bold ${timeMode === 'free' ? 'bg-green-100 border-green-500' : 'bg-gray-100'}`}>
+                                        {timeMode === 'free' ? 'Tự do ♾️' : 'Giới hạn'}
+                                    </button>
+                                    {timeMode === 'custom' && <input type="number" className="w-24 border-2 p-3 rounded-xl" value={timePerQ} onChange={e => setTimePerQ(parseInt(e.target.value))} />}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onClick={() => generateQuestions()} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-xl font-bold hover:shadow-lg">
+                            {message || <><i className="fas fa-magic mr-2"></i>Tạo bằng AI</>}
+                        </button>
                     </div>
                 </div>
             );
 
             const renderPreview = () => (
-                <div className="max-w-4xl mx-auto bg-white p-6 rounded-3xl shadow-xl mt-10">
-                    <h2 className="text-2xl font-bold mb-4">Danh sách câu hỏi ({questions.length})</h2>
-                    <div className="max-h-96 overflow-y-auto mb-6 space-y-2">
-                        {questions.map((q, i) => (
-                            <div key={i} className="p-3 border rounded-lg flex justify-between">
-                                <div>
-                                    <span className={`font-bold mr-2 ${q.level === 'easy' ? 'text-green-600' : q.level === 'medium' ? 'text-blue-600' : 'text-red-600'}`}>[{q.level}]</span>
-                                    <span className="text-sm text-gray-500 mr-2">({q.type})</span>
-                                    <MathText text={q.prompt.substring(0, 50) + '...'} />
-                                </div>
-                                <button onClick={() => setQuestions(questions.filter((_, idx) => idx !== i))} className="text-red-500"><i className="fas fa-trash"></i></button>
-                            </div>
-                        ))}
+                <div className="max-w-4xl mx-auto bg-white p-6 rounded-3xl shadow-xl mt-10 max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-green-700"><i className="fas fa-list-check mr-2"></i>Danh sách ({questions.length} câu)</h2>
+                        <button onClick={startGame} className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl">
+                            <i className="fas fa-play mr-2"></i>B ắt đầu chơi
+                        </button>
                     </div>
+
+                    <div className="space-y-3 mb-6">
+                        {questions.map((q, i) => {
+                            const isEditing = editingQ?.index === i;
+                            return (
+                                <div key={i} className="border-2 border-gray-200 rounded-xl p-4">
+                                    {isEditing ? (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="font-bold block mb-2">Câu hỏi:</label>
+                                                <textarea value={editingQ.data.prompt} onChange={e => setEditingQ({ ...editingQ, data: { ...editingQ.data, prompt: e.target.value } })} className="w-full border-2 p-3 rounded-xl" rows="3" />
+                                            </div>
+                                            {q.type === 'mcq' && (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {editingQ.data.choices.map((ch, ci) => (
+                                                        <div key={ci} className="flex gap-2 items-center">
+                                                            <input type="radio" checked={editingQ.data.answer === ci} onChange={() => setEditingQ({ ...editingQ, data: { ...editingQ.data, answer: ci } })} />
+                                                            <input className="flex-1 border-2 p-2 rounded-lg" value={ch} onChange={e => { const newCh = [...editingQ.data.choices]; newCh[ci] = e.target.value; setEditingQ({ ...editingQ, data: { ...editingQ.data, choices: newCh } }) }} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <button onClick={() => { const newQ = [...questions]; newQ[i] = editingQ.data; setQuestions(newQ); setEditingQ(null); }} className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg"><i className="fas fa-save mr-2"></i>Lưu</button>
+                                                <button onClick={() => setEditingQ(null)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">Hủy</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="font-bold text-lg">#{i + 1}</span>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${q.level === 'easy' ? 'bg-green-100 text-green-700' : q.level === 'medium' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{q.level}</span>
+                                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">{q.type}</span>
+                                                </div>
+                                                <div className="text-gray-700"><MathText text={q.prompt.length > 80 ? q.prompt.substring(0, 80) + '...' : q.prompt} /></div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setEditingQ({ index: i, data: JSON.parse(JSON.stringify(q)) })} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded"><i className="fas fa-edit"></i></button>
+                                                <button onClick={() => setQuestions(questions.filter((_, idx) => idx !== i))} className="text-red-600 hover:bg-red-50 px-3 py-1 rounded"><i className="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
                     <div className="flex gap-4">
-                        <button onClick={() => setScreen('SETUP')} className="bg-gray-500 text-white px-6 py-3 rounded-xl">Quay lại</button>
-                        <button onClick={startGame} className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold flex-1">Bắt đầu chơi</button>
+                        <button onClick={() => setScreen('SETUP')} className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600">
+                            <i className="fas fa-arrow-left mr-2"></i>Quay lại
+                        </button>
+                        <button onClick={startGame} className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-xl">
+                            <i className="fas fa-play mr-2"></i>Bắt đầu chơi
+                        </button>
                     </div>
                 </div>
             );
@@ -778,8 +883,9 @@ JSON format:
 
             return (
                 <div className="min-h-screen">
+                    {showInstructions && renderInstructions()}
                     {screen === 'SETUP' && renderSetup()}
-                    {screen === 'PREIEW' && renderPreview()}
+                    {screen === 'PREVIEW' && renderPreview()}
                     {screen === 'GAME' && renderGame()}
                     {screen === 'GAME_OVER' && renderGameOver()}
                 </div>
