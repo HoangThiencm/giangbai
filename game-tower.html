@@ -3,332 +3,689 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Game 4: Leo Tháp Kiến Thức</title>
+    <title>Game 5: Leo Tháp Kiến Thức</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .katex {
-            font-size: 1.1em;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        .katex { font-size: 1.1em; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes climbUp { 0% { transform: translateY(0); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0); } }
+        @keyframes fallDown { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(20px) rotate(10deg); } 100% { transform: translateY(0) rotate(0deg); } }
+        @keyframes celebrate { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .climb-up { animation: climbUp 0.5s ease-out; }
+        .fall-down { animation: fallDown 0.5s ease-out; }
+        .celebrate { animation: celebrate 0.5s ease-out; }
+        .pulse { animation: pulse 1s infinite; }
+        .tower-level { transition: all 0.3s ease; }
+        .tower-level.active { transform: scale(1.05); box-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
+        .commentary-toast { position: fixed; top: 20px; right: 20px; z-index: 1000; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
+        @keyframes confetti { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+        .confetti { position: fixed; top: -10px; animation: confetti 3s ease-out forwards; pointer-events: none; z-index: 9999; }
     </style>
 </head>
 
-<body class="bg-gradient-to-br from-purple-50 to-indigo-100 min-h-screen">
+<body class="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 min-h-screen">
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
+        // ============ MATH RENDERER ============
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
-                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
-                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
                 ref.current.innerHTML = "";
-                parts.forEach(part => {
-                    if (part.startsWith('$$') && part.endsWith('$$')) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
-                        ref.current.appendChild(span);
-                    } else if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
-                        ref.current.appendChild(span);
+                const imgPattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+                const fragments = [];
+                let lastIndex = 0, match;
+                while ((match = imgPattern.exec(text)) !== null) {
+                    if (match.index > lastIndex) fragments.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+                    fragments.push({ type: 'image', alt: match[1], src: match[2] });
+                    lastIndex = match.index + match[0].length;
+                }
+                if (lastIndex < text.length) fragments.push({ type: 'text', content: text.substring(lastIndex) });
+                if (fragments.length === 0) fragments.push({ type: 'text', content: text });
+                fragments.forEach(fragment => {
+                    if (fragment.type === 'image') {
+                        const img = document.createElement('img');
+                        img.src = fragment.src; img.alt = fragment.alt || 'Hình';
+                        img.className = 'max-h-48 rounded-lg my-2 border border-gray-200 shadow-sm inline-block';
+                        ref.current.appendChild(img);
                     } else {
-                        ref.current.appendChild(document.createTextNode(part));
+                        let processed = fragment.content.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                        if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                        const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
+                        parts.forEach(part => {
+                            if (!part) return;
+                            if (part.startsWith('$$') && part.endsWith('$$')) {
+                                const span = document.createElement("span");
+                                try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
+                                ref.current.appendChild(span);
+                            } else if (part.startsWith("$") && part.endsWith("$")) {
+                                const span = document.createElement("span");
+                                try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
+                                ref.current.appendChild(span);
+                            } else if (part.trim()) {
+                                ref.current.appendChild(document.createTextNode(part));
+                            }
+                        });
                     }
                 });
             }, [text]);
             return <span ref={ref} />;
         };
 
+        // ============ GEMINI SERVICE ============
+        const GeminiService = {
+            getApiKeys: () => { const keys = localStorage.getItem('global_gemini_keys'); return keys ? JSON.parse(keys) : []; },
+            getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
+            buildPrompt: (params) => {
+                const { subject, gradeMax, topic, numQuestions } = params;
+                return `Bạn là trợ lý tạo câu hỏi cho game LEO THÁP KIẾN THỨC.
+Môn: ${subject}, Chủ đề: ${topic}, Lớp tối đa: ${gradeMax}, Số câu: ${numQuestions}
+
+QUAN TRỌNG: Tạo câu hỏi theo 3 CẤP ĐỘ cho tháp 10 tầng:
+- Tầng 1-3: Câu DỄ (nhận biết cơ bản)
+- Tầng 4-6: Câu VỪA (thông hiểu, áp dụng)  
+- Tầng 7-10: Câu KHÓ (vận dụng cao)
+
+Trả về JSON format:
+{"questions":[
+  {"id":"q1","level":"easy","prompt":"Câu hỏi dễ","choices":["A","B","C","D"],"answer":0,"explanation":"Giải thích"},
+  {"id":"q2","level":"medium","prompt":"Câu hỏi vừa","choices":["A","B","C","D"],"answer":1,"explanation":"Giải thích"},
+  {"id":"q3","level":"hard","prompt":"Câu hỏi khó","choices":["A","B","C","D"],"answer":2,"explanation":"Giải thích"}
+]}
+
+Phân bổ: 30% easy, 40% medium, 30% hard. LaTeX dùng \\( \\) hoặc \\[ \\]`;
+            },
+            generate: async (params) => {
+                const prompt = GeminiService.buildPrompt(params);
+                const apiKeys = GeminiService.getApiKeys();
+                if (!apiKeys.length) throw new Error("Chưa có API Keys!");
+                const defaultModule = GeminiService.getDefaultModule();
+                const shuffledKeys = [...apiKeys].sort(() => Math.random() - 0.5);
+                for (let i = 0; i < shuffledKeys.length; i++) {
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${defaultModule}:generateContent?key=${shuffledKeys[i]}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        const data = await res.json();
+                        if (data.error) throw new Error(data.error.message);
+                        const text = data.candidates[0].content.parts[0].text;
+                        return GeminiService.parseJSON(text);
+                    } catch (e) { console.error(`Key ${i + 1} lỗi:`, e.message); if (i === shuffledKeys.length - 1) throw e; }
+                }
+            },
+            parseJSON: (text) => {
+                let jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+                const startIdx = Math.min(jsonStr.indexOf('{') >= 0 ? jsonStr.indexOf('{') : Infinity, jsonStr.indexOf('[') >= 0 ? jsonStr.indexOf('[') : Infinity);
+                const endIdx = Math.max(jsonStr.lastIndexOf('}'), jsonStr.lastIndexOf(']'));
+                if (startIdx !== Infinity && endIdx >= 0) jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+                try { return JSON.parse(jsonStr); } catch (e) {
+                    const fixed = jsonStr.replace(/"([^"]*)"/g, (match, str) => `"${str.replace(/\\/g, '\\\\')}"`);
+                    return JSON.parse(fixed);
+                }
+            }
+        };
+
+        // ============ CONFETTI ============
+        const createConfetti = () => {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = confetti.style.width;
+                confetti.style.animationDuration = Math.random() * 2 + 2 + 's';
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        };
+
+        // ============ MAIN APP ============
         const TowerGame = () => {
-            const [gameData, setGameData] = useState(null);
+            const [screen, setScreen] = useState('SETUP');
+            const [playerName, setPlayerName] = useState('');
+            const [playerAvatar, setPlayerAvatar] = useState('🧑‍🎓');
+            const [questions, setQuestions] = useState([]);
+            const [showInstructions, setShowInstructions] = useState(true);
+            const [aiParams, setAiParams] = useState({ subject: 'Toán học', gradeMax: 9, topic: '', numQuestions: 15 });
+            const [aiGenerating, setAiGenerating] = useState(false);
+            const [timeSettings, setTimeSettings] = useState(() => {
+                const saved = localStorage.getItem('towerTimeSettings');
+                return saved ? JSON.parse(saved) : { mode: 'custom', duration: 30 };
+            });
+
+            // Game states
             const [currentLevel, setCurrentLevel] = useState(1);
             const [score, setScore] = useState(0);
             const [streak, setStreak] = useState(0);
             const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
             const [selectedAnswer, setSelectedAnswer] = useState(null);
             const [showAnswer, setShowAnswer] = useState(false);
-            const [gameOver, setGameOver] = useState(false);
-            const [showInstructions, setShowInstructions] = useState(true);
+            const [timeLeft, setTimeLeft] = useState(30);
+            const [timerActive, setTimerActive] = useState(false);
+            const [commentary, setCommentary] = useState('');
+            const [characterState, setCharacterState] = useState('standing');
+            const [checkpoint, setCheckpoint] = useState(1);
+            
+            // Power-ups
+            const [powerUps, setPowerUps] = useState({ shield: 0, ladder: 0, hint: 0 });
+            const [hintUsed, setHintUsed] = useState(false);
+            const [hiddenChoices, setHiddenChoices] = useState([]);
+
+            useEffect(() => { const token = localStorage.getItem('authToken'); if (!token) { alert("Chưa đăng nhập!"); window.location.href = 'login.html'; } }, []);
+
+            const showCommentaryMsg = (msg) => { setCommentary(msg); setTimeout(() => setCommentary(''), 2500); };
+
+            const getLevelForCurrentFloor = () => {
+                if (currentLevel <= 3) return 'easy';
+                if (currentLevel <= 6) return 'medium';
+                return 'hard';
+            };
+
+            const getQuestionForLevel = () => {
+                const level = getLevelForCurrentFloor();
+                const levelQuestions = questions.filter(q => q.level === level && !q.used);
+                if (levelQuestions.length === 0) {
+                    const anyUnused = questions.filter(q => !q.used);
+                    if (anyUnused.length === 0) return null;
+                    return anyUnused[Math.floor(Math.random() * anyUnused.length)];
+                }
+                return levelQuestions[Math.floor(Math.random() * levelQuestions.length)];
+            };
+
+            const isBossLevel = () => currentLevel === 5 || currentLevel === 10;
+
+            const handleGenerateQuestions = async () => {
+                if (!aiParams.topic.trim()) { alert('Vui lòng nhập chủ đề!'); return; }
+                setAiGenerating(true);
+                try {
+                    const result = await GeminiService.generate(aiParams);
+                    if (result.questions && result.questions.length > 0) {
+                        setQuestions(result.questions.map((q, i) => ({ ...q, id: `q${i}`, used: false })));
+                        setScreen('QUESTION_LIST');
+                    } else alert('Không tạo được câu hỏi!');
+                } catch (error) { alert('Lỗi: ' + error.message); } finally { setAiGenerating(false); }
+            };
+
+            const startGame = () => {
+                if (questions.length === 0) { alert('Cần ít nhất 1 câu hỏi!'); return; }
+                if (!playerName.trim()) { alert('Vui lòng nhập tên!'); return; }
+                setCurrentLevel(1); setScore(0); setStreak(0); setCheckpoint(1);
+                setPowerUps({ shield: 1, ladder: 0, hint: 1 });
+                setQuestions(questions.map(q => ({ ...q, used: false })));
+                setScreen('GAME');
+                startNewQuestion();
+            };
+
+            const startNewQuestion = () => {
+                setSelectedAnswer(null); setShowAnswer(false); setHintUsed(false); setHiddenChoices([]);
+                setCharacterState('standing');
+                if (timeSettings.mode === 'free') { setTimeLeft(999); setTimerActive(false); }
+                else { setTimeLeft(timeSettings.duration); setTimerActive(true); }
+            };
 
             useEffect(() => {
-                const data = localStorage.getItem('gameData');
-                if (!data) {
-                    alert('Không có dữ liệu game!');
-                    window.location.href = 'trochoi.html';
-                    return;
-                }
-                setGameData(JSON.parse(data));
-            }, []);
+                if (timerActive && timeLeft > 0 && !showAnswer) {
+                    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+                    return () => clearTimeout(timer);
+                } else if (timeLeft === 0 && timerActive && !showAnswer) handleRevealAnswer();
+            }, [timeLeft, timerActive, showAnswer]);
 
-            const handleSelectAnswer = (idx) => {
-                if (showAnswer) return;
-                setSelectedAnswer(idx);
-            };
+            const handleSelectAnswer = (idx) => { if (!showAnswer && !hiddenChoices.includes(idx)) setSelectedAnswer(idx); };
 
-            const handleSubmit = () => {
-                if (selectedAnswer === null) return;
-                setShowAnswer(true);
-
-                const currentQuestion = gameData.content.questions[currentQuestionIndex];
-                const isCorrect = selectedAnswer === currentQuestion.answer;
+            const handleRevealAnswer = () => {
+                setTimerActive(false); setShowAnswer(true);
+                const currentQ = getQuestionForLevel();
+                if (!currentQ) { setScreen('GAME_OVER'); return; }
+                
+                const isCorrect = selectedAnswer === currentQ.answer;
+                currentQ.used = true;
 
                 if (isCorrect) {
-                    setScore(score + (10 + streak * 5));
-                    setStreak(streak + 1);
-                    setCurrentLevel(Math.min(10, currentLevel + 1));
+                    let bonus = 10 + (currentLevel * 5) + (streak * 3);
+                    if (timeSettings.mode !== 'free') {
+                        if (timeLeft > timeSettings.duration * 0.75) bonus += Math.floor(bonus * 0.5);
+                        else if (timeLeft > timeSettings.duration * 0.5) bonus += Math.floor(bonus * 0.25);
+                    }
+                    if (isBossLevel()) { bonus *= currentLevel === 10 ? 3 : 2; showCommentaryMsg("🐉 BOSS DEFEATED! x" + (currentLevel === 10 ? 3 : 2)); }
+                    else showCommentaryMsg(["Tuyệt vời! 🎉", "Chính xác! ✨", "Giỏi lắm! 🌟"][Math.floor(Math.random() * 3)]);
+                    
+                    setScore(s => s + bonus); setStreak(s => s + 1);
+                    setCharacterState('climbing');
+                    
+                    if (currentLevel < 10) {
+                        setTimeout(() => {
+                            setCurrentLevel(l => l + 1);
+                            if (currentLevel + 1 === 5) { setCheckpoint(5); showCommentaryMsg("📍 CHECKPOINT! Tầng 5"); }
+                            if (currentLevel + 1 === 10) { createConfetti(); showCommentaryMsg("🎆 CHINH PHỤC ĐỈNH CAO!"); }
+                            // Random power-up drop
+                            if (streak > 0 && streak % 2 === 0) {
+                                const types = ['shield', 'ladder', 'hint'];
+                                const type = types[Math.floor(Math.random() * types.length)];
+                                setPowerUps(p => ({ ...p, [type]: p[type] + 1 }));
+                                showCommentaryMsg(`⚡ +1 ${type === 'shield' ? '🛡️ Shield' : type === 'ladder' ? '🪜 Ladder' : '💡 Hint'}!`);
+                            }
+                        }, 500);
+                    }
                 } else {
                     setStreak(0);
-                    setCurrentLevel(Math.max(1, currentLevel - 1));
+                    if (powerUps.shield > 0) {
+                        setPowerUps(p => ({ ...p, shield: p.shield - 1 }));
+                        showCommentaryMsg("🛡️ Shield đã cứu bạn!");
+                    } else {
+                        setCharacterState('falling');
+                        const newLevel = Math.max(checkpoint, currentLevel - (isBossLevel() ? 2 : 1));
+                        setTimeout(() => setCurrentLevel(newLevel), 500);
+                        showCommentaryMsg(isBossLevel() ? "💀 Boss quá mạnh! -2 tầng" : "😅 Sai rồi! -1 tầng");
+                    }
                 }
             };
 
-            const handleNext = () => {
-                if (currentQuestionIndex < gameData.content.questions.length - 1) {
-                    setCurrentQuestionIndex(currentQuestionIndex + 1);
-                    setSelectedAnswer(null);
-                    setShowAnswer(false);
-                } else {
-                    setGameOver(true);
+            const handleNextQuestion = () => {
+                const remaining = questions.filter(q => !q.used);
+                if (remaining.length === 0 || currentLevel >= 10) setScreen('GAME_OVER');
+                else startNewQuestion();
+            };
+
+            const usePowerUp = (type) => {
+                if (powerUps[type] <= 0 || showAnswer) return;
+                if (type === 'hint' && !hintUsed) {
+                    const currentQ = getQuestionForLevel();
+                    if (!currentQ) return;
+                    const wrongChoices = currentQ.choices.map((_, i) => i).filter(i => i !== currentQ.answer);
+                    const toHide = wrongChoices.sort(() => Math.random() - 0.5).slice(0, 2);
+                    setHiddenChoices(toHide);
+                    setHintUsed(true);
+                    setPowerUps(p => ({ ...p, hint: p.hint - 1 }));
+                    showCommentaryMsg("💡 Đã loại 2 đáp án sai!");
+                } else if (type === 'ladder') {
+                    if (currentLevel < 10) {
+                        setCurrentLevel(l => l + 1);
+                        setPowerUps(p => ({ ...p, ladder: p.ladder - 1 }));
+                        setCharacterState('climbing');
+                        showCommentaryMsg("🪜 Bỏ qua! Lên 1 tầng!");
+                        handleNextQuestion();
+                    }
                 }
             };
 
-            if (!gameData) return <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Đang tải...</div></div>;
+            const getTowerTheme = (level) => {
+                if (level <= 3) return { bg: 'from-green-400 to-emerald-500', icon: '🌲', name: 'Rừng' };
+                if (level <= 6) return { bg: 'from-blue-400 to-cyan-500', icon: '⛅', name: 'Mây' };
+                if (level <= 9) return { bg: 'from-blue-600 to-indigo-700', icon: '❄️', name: 'Băng' };
+                return { bg: 'from-orange-500 to-red-600', icon: '🔥', name: 'Đỉnh' };
+            };
 
-            if (gameOver) {
+            const currentQuestion = getQuestionForLevel();
+
+            // ========== SCREENS ==========
+            if (screen === 'SETUP') {
+                return (
+                    <div className="max-w-4xl mx-auto p-6 fade-in">
+                        {showInstructions && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-3xl font-bold text-purple-700"><i className="fas fa-chess-rook mr-3"></i>LEO THÁP KIẾN THỨC</h2>
+                                        <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700"><i className="fas fa-times text-2xl"></i></button>
+                                    </div>
+                                    <div className="space-y-4 text-gray-700">
+                                        <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+                                            <h3 className="font-bold text-lg text-purple-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
+                                            <p>Leo lên <strong>tầng 10</strong> để chinh phục đỉnh tháp! Câu hỏi càng cao càng khó.</p>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3 text-center">
+                                            <div className="bg-green-50 p-3 rounded-xl"><div className="text-2xl mb-1">🌲</div><div className="font-bold text-green-700">Tầng 1-3</div><div className="text-sm">Câu Dễ</div></div>
+                                            <div className="bg-blue-50 p-3 rounded-xl"><div className="text-2xl mb-1">⛅</div><div className="font-bold text-blue-700">Tầng 4-6</div><div className="text-sm">Câu Vừa</div></div>
+                                            <div className="bg-red-50 p-3 rounded-xl"><div className="text-2xl mb-1">🔥</div><div className="font-bold text-red-700">Tầng 7-10</div><div className="text-sm">Câu Khó</div></div>
+                                        </div>
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                                            <h3 className="font-bold text-yellow-800 mb-2">⚡ Power-ups</h3>
+                                            <div className="grid grid-cols-3 gap-2 text-sm">
+                                                <div><strong>🛡️ Shield:</strong> Không tụt tầng</div>
+                                                <div><strong>🪜 Ladder:</strong> Bỏ qua câu</div>
+                                                <div><strong>💡 Hint:</strong> Loại 2 đáp án</div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+                                            <h3 className="font-bold text-pink-800 mb-2">🐉 Boss Rounds</h3>
+                                            <p className="text-sm">Tầng 5 & 10 có <strong>BOSS</strong>! Thắng = điểm x2/x3, Thua = tụt 2 tầng!</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setShowInstructions(false)} className="w-full mt-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-xl"><i className="fas fa-play mr-2"></i>Bắt đầu</button>
+                                </div>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center mb-8">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="text-gray-500 hover:text-purple-600 font-bold"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600"><i className="fas fa-chess-rook mr-2"></i>LEO THÁP KIẾN THỨC</h1>
+                            <button onClick={() => setShowInstructions(true)} className="w-10 h-10 bg-blue-500 text-white rounded-full hover:bg-blue-600"><i className="fas fa-question"></i></button>
+                        </div>
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6"><i className="fas fa-user mr-2"></i>Thông tin người chơi</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block font-bold mb-2 text-gray-700">Tên:</label>
+                                    <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 outline-none" placeholder="Nhập tên..." />
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-2 text-gray-700">Avatar:</label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {['🧑‍🎓', '👨‍🎓', '👩‍🎓', '🦸‍♂️', '🦸‍♀️', '🧙‍♂️', '🧝‍♀️', '🥷'].map(emoji => (
+                                            <button key={emoji} onClick={() => setPlayerAvatar(emoji)} className={`text-4xl p-3 rounded-xl border-2 transition ${playerAvatar === emoji ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'}`}>{emoji}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div onClick={() => setScreen('AI_GEN')} className="bg-white rounded-3xl shadow-xl p-8 cursor-pointer hover:shadow-2xl transition transform hover:-translate-y-2">
+                                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><i className="fas fa-robot text-4xl text-white"></i></div>
+                                <h2 className="text-2xl font-bold text-gray-800 text-center mb-3">Tạo bằng AI</h2>
+                                <p className="text-gray-600 text-center">Gemini tạo câu hỏi theo cấp độ</p>
+                            </div>
+                            <div onClick={() => setScreen('MANUAL')} className="bg-white rounded-3xl shadow-xl p-8 cursor-pointer hover:shadow-2xl transition transform hover:-translate-y-2">
+                                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><i className="fas fa-pen text-4xl text-white"></i></div>
+                                <h2 className="text-2xl font-bold text-gray-800 text-center mb-3">Tạo thủ công</h2>
+                                <p className="text-gray-600 text-center">Tự nhập câu hỏi</p>
+                            </div>
+                        </div>
+                        {questions.length > 0 && (
+                            <div className="mt-8 bg-green-50 border-2 border-green-300 rounded-2xl p-6">
+                                <div className="flex justify-between items-center">
+                                    <div><i className="fas fa-check-circle text-green-600 mr-2"></i><span className="font-bold text-green-800">Đã có {questions.length} câu</span></div>
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setScreen('QUESTION_LIST')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i className="fas fa-list mr-2"></i>Xem</button>
+                                        <button onClick={() => setScreen('TIME_SETTINGS')} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-bold hover:shadow-xl"><i className="fas fa-play mr-2"></i>Chơi</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            if (screen === 'AI_GEN') {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold text-purple-700 mb-6"><i className="fas fa-robot mr-2"></i>Tạo câu hỏi bằng AI</h2>
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block font-bold mb-2">Môn học:</label>
+                                        <select value={aiParams.subject} onChange={(e) => setAiParams({ ...aiParams, subject: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl">
+                                            <option>Toán học</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Tiếng Anh</option><option>Ngữ văn</option><option>Lịch sử</option><option>Địa lý</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold mb-2">Lớp tối đa:</label>
+                                        <select value={aiParams.gradeMax} onChange={(e) => setAiParams({ ...aiParams, gradeMax: parseInt(e.target.value) })} className="w-full p-3 border-2 border-gray-200 rounded-xl">
+                                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>Lớp {g}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-2">Chủ đề:</label>
+                                    <input type="text" value={aiParams.topic} onChange={(e) => setAiParams({ ...aiParams, topic: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl" placeholder="VD: Phương trình bậc 2, Định luật Newton..." />
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-2">Số câu: {aiParams.numQuestions}</label>
+                                    <input type="range" min="10" max="30" value={aiParams.numQuestions} onChange={(e) => setAiParams({ ...aiParams, numQuestions: parseInt(e.target.value) })} className="w-full" />
+                                </div>
+                                <button onClick={handleGenerateQuestions} disabled={aiGenerating} className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl disabled:opacity-50">
+                                    {aiGenerating ? <><i className="fas fa-spinner fa-spin mr-2"></i>Đang tạo...</> : <><i className="fas fa-magic mr-2"></i>Tạo câu hỏi</>}
+                                </button>
+                                <button onClick={() => setScreen('SETUP')} className="w-full py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'MANUAL') {
+                const [editQ, setEditQ] = useState({ level: 'easy', prompt: '', choices: ['', '', '', ''], answer: 0 });
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold text-green-700 mb-6"><i className="fas fa-pen mr-2"></i>Tạo thủ công</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block font-bold mb-2">Cấp độ:</label>
+                                    <div className="flex gap-3">
+                                        {[{ v: 'easy', l: '🌲 Dễ', c: 'green' }, { v: 'medium', l: '⛅ Vừa', c: 'blue' }, { v: 'hard', l: '🔥 Khó', c: 'red' }].map(opt => (
+                                            <button key={opt.v} onClick={() => setEditQ({ ...editQ, level: opt.v })} className={`px-4 py-2 rounded-xl border-2 ${editQ.level === opt.v ? `bg-${opt.c}-50 border-${opt.c}-500` : 'border-gray-300'}`}>{opt.l}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-2">Câu hỏi:</label>
+                                    <textarea value={editQ.prompt} onChange={(e) => setEditQ({ ...editQ, prompt: e.target.value })} className="w-full p-3 border-2 border-gray-200 rounded-xl" rows="3" placeholder="Nhập câu hỏi..." />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {editQ.choices.map((c, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            <input type="radio" checked={editQ.answer === i} onChange={() => setEditQ({ ...editQ, answer: i })} />
+                                            <input type="text" value={c} onChange={(e) => { const nc = [...editQ.choices]; nc[i] = e.target.value; setEditQ({ ...editQ, choices: nc }); }} className="flex-1 p-2 border-2 border-gray-200 rounded-lg" placeholder={`Đáp án ${String.fromCharCode(65 + i)}`} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => {
+                                    if (!editQ.prompt.trim()) { alert('Nhập câu hỏi!'); return; }
+                                    setQuestions([...questions, { ...editQ, id: `q${questions.length}`, used: false }]);
+                                    setEditQ({ level: 'easy', prompt: '', choices: ['', '', '', ''], answer: 0 });
+                                }} className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold"><i className="fas fa-plus mr-2"></i>Thêm câu</button>
+                                {questions.length > 0 && <div className="text-center text-green-700 font-bold">Đã có {questions.length} câu</div>}
+                                <button onClick={() => setScreen('SETUP')} className="w-full py-3 bg-gray-500 text-white rounded-xl font-bold"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'QUESTION_LIST') {
+                return (
+                    <div className="max-w-5xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-gray-800"><i className="fas fa-list mr-2"></i>Danh sách ({questions.length} câu)</h2>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setScreen('MANUAL')} className="px-4 py-2 bg-green-600 text-white rounded-lg"><i className="fas fa-plus mr-2"></i>Thêm</button>
+                                    <button onClick={() => setScreen('TIME_SETTINGS')} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-bold"><i className="fas fa-play mr-2"></i>Chơi</button>
+                                </div>
+                            </div>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {questions.map((q, i) => (
+                                    <div key={i} className="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-400">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="font-bold text-purple-600">#{i + 1}</span>
+                                                    <span className={`px-2 py-1 text-xs rounded-full font-bold ${q.level === 'easy' ? 'bg-green-100 text-green-700' : q.level === 'medium' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {q.level === 'easy' ? '🌲 Dễ' : q.level === 'medium' ? '⛅ Vừa' : '🔥 Khó'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-gray-800"><MathText text={q.prompt} /></div>
+                                            </div>
+                                            <button onClick={() => setQuestions(questions.filter((_, j) => j !== i))} className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm"><i className="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setScreen('SETUP')} className="w-full mt-6 py-3 bg-gray-500 text-white rounded-xl font-bold"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'TIME_SETTINGS') {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8">
+                            <h2 className="text-3xl font-bold text-center text-purple-700 mb-6"><i className="fas fa-clock mr-2"></i>Cài đặt thời gian</h2>
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                                <button onClick={() => setTimeSettings({ ...timeSettings, mode: 'free' })} className={`border-4 rounded-2xl p-6 ${timeSettings.mode === 'free' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}>
+                                    <div className="text-5xl mb-4 text-center">♾️</div>
+                                    <h3 className="text-2xl font-bold text-blue-700 text-center">Tự do</h3>
+                                    <p className="text-gray-600 text-center text-sm">Không giới hạn thời gian</p>
+                                </button>
+                                <button onClick={() => setTimeSettings({ ...timeSettings, mode: 'custom' })} className={`border-4 rounded-2xl p-6 ${timeSettings.mode === 'custom' ? 'border-purple-500 bg-purple-50' : 'border-gray-300'}`}>
+                                    <div className="text-5xl mb-4 text-center">⏱️</div>
+                                    <h3 className="text-2xl font-bold text-purple-700 text-center">Tùy chỉnh</h3>
+                                    <p className="text-gray-600 text-center text-sm">Đặt thời gian riêng</p>
+                                </button>
+                            </div>
+                            {timeSettings.mode === 'custom' && (
+                                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 mb-6">
+                                    <label className="block font-bold mb-3">Thời gian mỗi câu: {timeSettings.duration}s</label>
+                                    <input type="range" min="10" max="120" step="5" value={timeSettings.duration} onChange={(e) => setTimeSettings({ ...timeSettings, duration: parseInt(e.target.value) })} className="w-full" />
+                                </div>
+                            )}
+                            <div className="flex gap-4">
+                                <button onClick={() => setScreen('SETUP')} className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                                <button onClick={() => { localStorage.setItem('towerTimeSettings', JSON.stringify(timeSettings)); startGame(); }} className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold"><i className="fas fa-play mr-2"></i>Bắt đầu</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'GAME') {
+                const theme = getTowerTheme(currentLevel);
+                return (
+                    <div className="max-w-6xl mx-auto p-6 fade-in">
+                        {commentary && (
+                            <div className="commentary-toast bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl">
+                                <div className="flex items-center gap-3"><i className="fas fa-bullhorn text-2xl"></i><span className="font-bold text-lg">{commentary}</span></div>
+                            </div>
+                        )}
+                        <div className="flex gap-6">
+                            {/* Tower */}
+                            <div className="w-48 bg-white rounded-3xl shadow-xl p-4">
+                                <div className="text-center mb-4">
+                                    <div className={`text-6xl ${characterState === 'climbing' ? 'climb-up' : characterState === 'falling' ? 'fall-down' : characterState === 'celebrating' ? 'celebrate' : ''}`}>{playerAvatar}</div>
+                                    <div className="font-bold text-gray-800">{playerName}</div>
+                                </div>
+                                <div className="flex flex-col-reverse gap-1">
+                                    {Array.from({ length: 10 }).map((_, i) => {
+                                        const level = i + 1;
+                                        const t = getTowerTheme(level);
+                                        const isActive = level === currentLevel;
+                                        const isPassed = level < currentLevel;
+                                        return (
+                                            <div key={level} className={`tower-level h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm transition ${isActive ? `bg-gradient-to-r ${t.bg} active` : isPassed ? `bg-gradient-to-r ${t.bg} opacity-60` : 'bg-gray-300'}`}>
+                                                {(level === 5 || level === 10) && <span className="mr-1">🐉</span>}
+                                                {t.icon} {level}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-4 text-center text-sm">
+                                    <div className="font-bold text-purple-600">Tầng {currentLevel}/10</div>
+                                    <div className="text-gray-600">📍 Checkpoint: {checkpoint}</div>
+                                </div>
+                            </div>
+
+                            {/* Main Game */}
+                            <div className="flex-1">
+                                <div className="bg-white rounded-3xl shadow-xl p-6 mb-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold"><i className="fas fa-star mr-2"></i>{score}</div>
+                                            {streak > 0 && <div className="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold"><i className="fas fa-fire mr-2"></i>{streak}</div>}
+                                        </div>
+                                        <div className={`text-4xl font-bold ${timeSettings.mode === 'free' ? 'text-blue-600' : timeLeft <= 5 ? 'text-red-600 pulse' : 'text-blue-600'}`}>
+                                            {timeSettings.mode === 'free' ? '♾️' : `${timeLeft}s`}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => usePowerUp('shield')} disabled={powerUps.shield <= 0 || showAnswer} className={`px-3 py-2 rounded-lg font-bold ${powerUps.shield > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-400'}`}>🛡️{powerUps.shield}</button>
+                                            <button onClick={() => usePowerUp('ladder')} disabled={powerUps.ladder <= 0 || showAnswer} className={`px-3 py-2 rounded-lg font-bold ${powerUps.ladder > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-400'}`}>🪜{powerUps.ladder}</button>
+                                            <button onClick={() => usePowerUp('hint')} disabled={powerUps.hint <= 0 || showAnswer || hintUsed} className={`px-3 py-2 rounded-lg font-bold ${powerUps.hint > 0 && !hintUsed ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-400'}`}>💡{powerUps.hint}</button>
+                                        </div>
+                                    </div>
+                                    {isBossLevel() && <div className="bg-red-100 border-2 border-red-400 rounded-xl p-3 mb-4 text-center"><span className="text-2xl mr-2">🐉</span><span className="font-bold text-red-700">BOSS LEVEL! Điểm x{currentLevel === 10 ? 3 : 2}</span></div>}
+                                </div>
+
+                                {currentQuestion && (
+                                    <div className="bg-white rounded-3xl shadow-xl p-8">
+                                        <h3 className="text-2xl font-bold text-gray-800 mb-6"><MathText text={currentQuestion.prompt} /></h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                            {currentQuestion.choices.map((choice, idx) => {
+                                                if (hiddenChoices.includes(idx)) return <div key={idx} className="p-6 rounded-2xl bg-gray-200 opacity-50 text-center text-gray-500">Đã loại</div>;
+                                                const isSelected = selectedAnswer === idx;
+                                                const isCorrect = currentQuestion.answer === idx;
+                                                let cls = "p-6 rounded-2xl border-4 cursor-pointer transition text-left text-lg font-bold ";
+                                                if (showAnswer) {
+                                                    if (isCorrect) cls += "bg-green-100 border-green-500 text-green-800";
+                                                    else if (isSelected) cls += "bg-red-100 border-red-500 text-red-800";
+                                                    else cls += "bg-gray-100 border-gray-300 opacity-50";
+                                                } else {
+                                                    cls += isSelected ? "bg-purple-100 border-purple-500" : "bg-white border-gray-300 hover:border-purple-400";
+                                                }
+                                                return (
+                                                    <button key={idx} onClick={() => handleSelectAnswer(idx)} disabled={showAnswer} className={cls}>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">{String.fromCharCode(65 + idx)}</span>
+                                                            <MathText text={choice} />
+                                                            {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-2xl ml-auto"></i>}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {!showAnswer && selectedAnswer !== null && (
+                                            <button onClick={handleRevealAnswer} className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg"><i className="fas fa-check mr-2"></i>Xác nhận</button>
+                                        )}
+                                        {showAnswer && (
+                                            <button onClick={handleNextQuestion} className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg"><i className="fas fa-arrow-right mr-2"></i>Tiếp tục</button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'GAME_OVER') {
                 return (
                     <div className="max-w-3xl mx-auto p-6 fade-in">
                         <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
-                            <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <i className="fas fa-chess-rook text-5xl text-purple-600"></i>
+                            <div className="text-8xl mb-6">{currentLevel >= 10 ? '🏆' : currentLevel >= 7 ? '🥈' : currentLevel >= 4 ? '🥉' : '🎖️'}</div>
+                            <h2 className="text-4xl font-bold mb-4 text-gray-800">{currentLevel >= 10 ? 'CHINH PHỤC ĐỈNH CAO!' : 'Hoàn thành!'}</h2>
+                            <div className="grid grid-cols-2 gap-6 mb-8">
+                                <div className="bg-purple-50 rounded-2xl p-6">
+                                    <div className="text-gray-600 mb-2">Tầng đạt được</div>
+                                    <div className="text-6xl font-bold text-purple-600">{currentLevel}</div>
+                                </div>
+                                <div className="bg-indigo-50 rounded-2xl p-6">
+                                    <div className="text-gray-600 mb-2">Tổng điểm</div>
+                                    <div className="text-6xl font-bold text-indigo-600">{score}</div>
+                                </div>
                             </div>
-                            <h2 className="text-4xl font-bold mb-4 text-gray-800">Hoàn thành!</h2>
-                            <div className="text-xl text-gray-600 mb-2">Tầng cao nhất</div>
-                            <div className="text-7xl font-bold text-purple-600 mb-6">{currentLevel}</div>
-                            <div className="text-xl text-gray-600 mb-2">Tổng điểm</div>
-                            <div className="text-4xl font-bold text-indigo-600 mb-8">{score}</div>
                             <div className="flex gap-4 justify-center">
-                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
-                                    <i className="fas fa-redo mr-2"></i>Chơi lại
-                                </button>
-                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700">
-                                    <i className="fas fa-home mr-2"></i>Về menu
-                                </button>
+                                <button onClick={() => { setScreen('SETUP'); setQuestions(questions.map(q => ({ ...q, used: false }))); }} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700"><i className="fas fa-home mr-2"></i>Về menu</button>
                             </div>
                         </div>
                     </div>
                 );
             }
 
-            const currentQuestion = gameData.content.questions[currentQuestionIndex];
-
-            if (showInstructions) {
-                return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-3xl font-bold text-purple-700">
-                                    <i className="fas fa-chess-rook mr-3"></i>LEO THÁP KIẾN THỨC
-                                </h2>
-                                <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
-                                    <i className="fas fa-times text-2xl"></i>
-                                </button>
-                            </div>
-                            <div className="space-y-4 text-gray-700">
-                                <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-lg text-purple-800 mb-2">
-                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
-                                    </h3>
-                                    <p>Luyện tập từ dễ đến khó. Leo lên đỉnh tháp!</p>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
-                                    </h3>
-                                    <ul className="space-y-2 ml-6">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-600 font-bold">1.</span>
-                                            <span>Bắt đầu từ <strong>tầng 1</strong>, mục tiêu <strong>lên tầng 10</strong></span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-600 font-bold">2.</span>
-                                            <span>Trả lời đúng → <strong className="text-green-600">LÊN 1 TẦNG</strong></span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-600 font-bold">3.</span>
-                                            <span>Trả lời sai → <strong className="text-red-600">TỤT 1 TẦNG</strong> (tối thiểu tầng 1)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-600 font-bold">4.</span>
-                                            <span>Câu hỏi càng cao càng khó</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-600 font-bold">5.</span>
-                                            <span><strong>Streak</strong> thưởng điểm</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-calculator mr-2"></i>Tính điểm
-                                    </h3>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                                        <p><strong>Điểm = 10 + Streak × 5</strong> (mỗi câu đúng)</p>
-                                    </div>
-                                </div>
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                    <p className="text-sm">
-                                        <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
-                                        <strong>Mẹo:</strong> Duy trì streak để tích lũy điểm nhanh. Không sao nếu tụt xuống, cứ tiếp tục leo!
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowInstructions(false)}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
-                            >
-                                <i className="fas fa-play mr-2"></i>Bắt đầu chơi
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="max-w-5xl mx-auto p-6 fade-in">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex gap-2">
-                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                                <i className="fas fa-arrow-left mr-2"></i>Thoát
-                            </button>
-                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" title="Xem hướng dẫn">
-                                <i className="fas fa-question-circle"></i>
-                            </button>
-                        </div>
-
-                        <h1 className="text-3xl font-bold text-purple-700">
-                            <i className="fas fa-chess-rook mr-2"></i>LEO THÁP KIẾN THỨC
-                        </h1>
-
-                        <div className="flex gap-4">
-                            <div className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">
-                                <i className="fas fa-star mr-2"></i>{score}
-                            </div>
-                            <div className="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold">
-                                <i className="fas fa-fire mr-2"></i>{streak}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tower Visualization */}
-                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                        <div className="text-center mb-4">
-                            <div className="text-4xl font-bold text-purple-600">Tầng {currentLevel}/10</div>
-                        </div>
-                        <div className="flex flex-col-reverse gap-1">
-                            {Array.from({ length: 10 }).map((_, idx) => {
-                                const level = idx + 1;
-                                const isCurrentLevel = level === currentLevel;
-                                return (
-                                    <div key={level} className={`h-8 rounded transition ${isCurrentLevel ? 'bg-purple-600 animate-pulse' :
-                                        level < currentLevel ? 'bg-purple-300' : 'bg-gray-200'
-                                        }`}>
-                                        <div className="text-center font-bold text-white pt-1">{level}</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-3xl shadow-2xl p-8">
-                        <div className="text-sm text-gray-500 mb-2">Câu {currentQuestionIndex + 1}/{gameData.content.questions.length}</div>
-                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
-                            <MathText text={currentQuestion.prompt} />
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            {currentQuestion.choices.map((choice, idx) => {
-                                const isSelected = selectedAnswer === idx;
-                                const isCorrect = currentQuestion.answer === idx;
-
-                                let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
-                                if (showAnswer) {
-                                    if (isCorrect) className += "bg-green-100 border-green-500 text-green-900";
-                                    else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
-                                    else className += "border-gray-200 opacity-50";
-                                } else {
-                                    className += isSelected ? "bg-blue-100 border-blue-500" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
-                                }
-
-                                return (
-                                    <button key={idx} onClick={() => handleSelectAnswer(idx)} disabled={showAnswer} className={className}>
-                                        <div className="flex items-center gap-3">
-                                            <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">
-                                                {String.fromCharCode(65 + idx)}
-                                            </span>
-                                            <div className="flex-1 text-left"><MathText text={choice} /></div>
-                                            {showAnswer && isCorrect && <i className="fas fa-check-circle text-green-600 text-2xl"></i>}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {!showAnswer && selectedAnswer !== null && (
-                            <button onClick={handleSubmit} className="w-full py-4 bg-purple-600 text-white rounded-xl font-bold text-lg hover:bg-purple-700">
-                                <i className="fas fa-check mr-2"></i>Gửi câu trả lời
-                            </button>
-                        )}
-
-                        {showAnswer && (
-                            <div className="space-y-4">
-                                {selectedAnswer === currentQuestion.answer ? (
-                                    <div className="p-4 bg-green-100 border-2 border-green-500 rounded-xl text-center">
-                                        <i className="fas fa-arrow-up text-3xl text-green-600 mb-2"></i>
-                                        <div className="text-xl font-bold text-green-800">Đúng! Lên tầng {currentLevel}</div>
-                                    </div>
-                                ) : (
-                                    <div className="p-4 bg-red-100 border-2 border-red-500 rounded-xl text-center">
-                                        <i className="fas fa-arrow-down text-3xl text-red-600 mb-2"></i>
-                                        <div className="text-xl font-bold text-red-800">Sai! Xuống tầng {currentLevel}</div>
-                                    </div>
-                                )}
-
-                                <button onClick={handleNext} className="w-full py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700">
-                                    <i className="fas fa-arrow-right mr-2"></i>Câu tiếp theo
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
+            return null;
         };
 
         ReactDOM.render(<TowerGame />, document.getElementById('root'));
