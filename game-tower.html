@@ -236,7 +236,13 @@
 
         // ============ GEMINI SERVICE ============
         const GeminiService = {
-            getApiKeys: () => { const k = localStorage.getItem('global_gemini_keys'); return k ? JSON.parse(k) : []; },
+            getApiKeys: () => {
+                const keys = localStorage.getItem('global_gemini_keys');
+                return keys ? JSON.parse(keys) : [];
+            },
+            getDefaultModule: () => {
+                return localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp';
+            },
             generate: async (params) => {
                 const { subject, gradeMax, topic, counts } = params;
                 const totalQ = counts.easy + counts.medium + counts.hard;
@@ -260,12 +266,14 @@ JSON format:
   {"id":"q4","type":"drag-drop","level":"hard","prompt":"Sắp xếp...","items":["B1","B2","B3"],"correctOrder":[0,1,2]}
 ]}`;
                 const keys = GeminiService.getApiKeys();
-                if (!keys.length) throw new Error("Chưa có API Key!");
+                if (!keys.length) throw new Error("Chưa có API Key! Vui lòng cấu hình ở trang Index.");
+
+                const module = GeminiService.getDefaultModule();
 
                 // Simple retry loop with defined keys
                 for (const key of keys) {
                     try {
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`, {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${module}:generateContent?key=${key}`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                         });
@@ -522,7 +530,27 @@ JSON format:
                             <div>
                                 <label className="block font-bold mb-2">Môn học</label>
                                 <select value={aiParams.subject} onChange={e => setAiParams({ ...aiParams, subject: e.target.value })} className="w-full border-2 p-3 rounded-xl focus:border-purple-500 outline-none">
-                                    <option>Toán học</option><option>Tiếng Việt</option><option>Tiếng Anh</option><option>Vật lý</option><option>Hóa học</option><option>Sinh học</option><option>Lịch sử</option><option>Địa lý</option>
+                                    <option>Toán học</option>
+                                    <option>Tiếng Việt</option>
+                                    <option>Ngữ văn</option>
+                                    <option>Tiếng Anh</option>
+                                    <option>Vật lý</option>
+                                    <option>Hóa học</option>
+                                    <option>Sinh học</option>
+                                    <option>Khoa học</option>
+                                    <option>Lịch sử</option>
+                                    <option>Địa lý</option>
+                                    <option>Lịch sử và Địa lý</option>
+                                    <option>GDCD</option>
+                                    <option>Đạo đức</option>
+                                    <option>Tự nhiên và Xã hội</option>
+                                    <option>Tin học</option>
+                                    <option>Công nghệ</option>
+                                    <option>Hoạt động trải nghiệm</option>
+                                    <option>Âm nhạc</option>
+                                    <option>Mỹ thuật</option>
+                                    <option>Thể dục</option>
+                                    <option>Ngoại ngữ khác</option>
                                 </select>
                             </div>
                             <div>
