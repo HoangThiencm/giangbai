@@ -251,12 +251,16 @@ Chủ đề: ${topic}. Môn: ${subject}. Lớp max: ${gradeMax}.
 Số lượng: ${counts.easy} Dễ, ${counts.medium} Vừa, ${counts.hard} Khó.
 
 YÊU CẦU DẠNG CÂU HỎI ĐA DẠNG:
-- mcq: Trắc nghiệm 4 đáp án
+- mcq: Trắc nghiệm PHẢI CÓ ĐÚNG 4 đáp án
 - truefalse: Đúng/Sai
-- fill-blank: Điền khuyết (dạng trắc nghiệm chọn từ điền vào)
+- fill-blank: Điền khuyết (dạng trắc nghiệm chọn từ điền vào, PHẢI CÓ 4 lựa chọn)
 - multi-select: Chọn nhiều đáp án đúng
 - matching: Nối cặp (leftItems, rightItems)
 - drag-drop: Sắp xếp thứ tự (items, correctOrder index array)
+
+QUAN TRỌNG:
+- Câu hỏi trắc nghiệm (mcq, fill-blank) BẮT BUỘC phải có ĐÚNG 4 đáp án trong mảng choices
+- Đảm bảo tất cả đáp án đều hợp lý và có ý nghĩa
 
 JSON format:
 {"questions":[
@@ -440,9 +444,10 @@ JSON format:
                     setMessage("Lên tầng!");
                     setTimeout(() => {
                         // Move logic
-                        const nextLevel = Math.min(10, level + 1);
+                        const maxLevel = questions.length;
+                        const nextLevel = Math.min(maxLevel, level + 1);
                         setLevel(nextLevel);
-                        if (nextLevel === 10 && level !== 10) setConfetti(true);
+                        if (nextLevel === maxLevel && level !== maxLevel) setConfetti(true);
                         nextQ();
                     }, 2000); // Climbing duration
                 } else {
@@ -493,19 +498,20 @@ JSON format:
                         <div className="space-y-4 text-gray-700">
                             <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
                                 <h3 className="font-bold text-lg text-purple-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
-                                <p>Leo lên <strong>tầng 10</strong> để chinh phục đỉnh tháp! Câu hỏi càng cao càng khó.</p>
+                                <p>Leo lên <strong>đỉnh tháp</strong> bằng cách trả lời đúng tất cả câu hỏi! Số tầng tương ứng với số câu hỏi bạn tạo.</p>
                             </div>
                             <div className="grid grid-cols-3 gap-3 text-center">
-                                <div className="bg-green-50 p-3 rounded-xl"><div className="text-2xl mb-1">🌲</div><div className="font-bold text-green-700">Tầng 1-3</div><div className="text-sm">Câu Dễ</div></div>
-                                <div className="bg-blue-50 p-3 rounded-xl"><div className="text-2xl mb-1">⛅</div><div className="font-bold text-blue-700">Tầng 4-6</div><div className="text-sm">Câu Vừa</div></div>
-                                <div className="bg-red-50 p-3 rounded-xl"><div className="text-2xl mb-1">🔥</div><div className="font-bold text-red-700">Tầng 7-10</div><div className="text-sm">Câu Khó</div></div>
+                                <div className="bg-green-50 p-3 rounded-xl"><div className="text-2xl mb-1">🌲</div><div className="font-bold text-green-700">Tầng đầu</div><div className="text-sm">Câu Dễ</div></div>
+                                <div className="bg-blue-50 p-3 rounded-xl"><div className="text-2xl mb-1">⛅</div><div className="font-bold text-blue-700">Tầng giữa</div><div className="text-sm">Câu Vừa</div></div>
+                                <div className="bg-red-50 p-3 rounded-xl"><div className="text-2xl mb-1">🔥</div><div className="font-bold text-red-700">Tầng cao</div><div className="text-sm">Câu Khó</div></div>
                             </div>
                             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                                 <h3 className="font-bold text-yellow-800 mb-2">⚡ Luật chơi</h3>
                                 <ul className="list-disc ml-5 space-y-1">
                                     <li><strong>Trả lời đúng</strong>: Leo 1 tầng + Tăng điểm</li>
                                     <li><strong>Trả lời sai</strong>: Tụt 1 tầng + Mất streak</li>
-                                    <li><strong>Tầng 5 & 10</strong>: Boss level (điểm x2/x3)</li>
+                                    <li><strong>Mục tiêu</strong>: Leo lên đỉnh tháp (tầng cuối cùng)</li>
+                                    <li><strong>Câu hỏi nối cặp</strong>: Phải nối đủ tất cả các cặp mới được trả lời</li>
                                 </ul>
                             </div>
                             <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
@@ -691,12 +697,14 @@ JSON format:
                             <div className="absolute inset-0 opacity-10" />
 
                             {/* Levels */}
-                            {Array.from({ length: 10 }).map((_, i) => {
+                            {Array.from({ length: questions.length }).map((_, i) => {
                                 const lvl = i + 1;
+                                const totalLevels = questions.length;
                                 let bgClass = 'bg-gray-200';
-                                if (lvl <= 3) bgClass = 'tower-bg-forest';
-                                else if (lvl <= 6) bgClass = 'tower-bg-cloud';
-                                else if (lvl <= 9) bgClass = 'tower-bg-ice';
+                                // Distribute colors based on total levels
+                                if (lvl <= Math.ceil(totalLevels * 0.3)) bgClass = 'tower-bg-forest';
+                                else if (lvl <= Math.ceil(totalLevels * 0.6)) bgClass = 'tower-bg-cloud';
+                                else if (lvl <= Math.ceil(totalLevels * 0.9)) bgClass = 'tower-bg-ice';
                                 else bgClass = 'tower-bg-fire';
 
                                 const isCurrent = level === lvl;
@@ -878,6 +886,10 @@ JSON format:
                                     // For matching, ensure all pairs are matched before allowing submit
                                     if (q.type === 'matching') {
                                         return userAns?.pairs?.length === q.leftItems?.length;
+                                    }
+                                    // For drag-drop, always show submit button
+                                    if (q.type === 'drag-drop') {
+                                        return true;
                                     }
                                     return userAns !== null;
                                 })()) && (
