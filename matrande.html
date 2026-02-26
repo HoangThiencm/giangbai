@@ -339,15 +339,50 @@
                     }
                     setImages(imgs);
 
+                    // --- BƯỚC 1: ĐỌC TỔNG QUAN CẤU TRÚC MA TRẬN (GLOBAL SCHEMA EXTRACTION) ---
+                    setLoading(true);
+                    setLoadingMsg("Bước 1/2: Đang phân tích tổng quan cấu trúc Ma trận (Tìm Header)...");
+                    let globalSchemaText = "Chưa nhận diện được cấu trúc tổng thể.";
+                    try {
+                        // Gửi 3 trang đầu tiên (thường chứa Header của cả Bảng Ma Trận & Bảng Đặc Tả)
+                        const schemaImgs = imgs.slice(0, 3);
+                        const schemaPrompt = `Đóng vai là CHUYÊN GIA PHÂN TÍCH TÀI LIỆU giáo dục. Hãy đọc các trang này và LẬP BẢN ĐỒ CẤU TRÚC CỘT (Header Mapping).
+                        File này thường chứa 2 bảng có tính chất trộn cột (Merged Cells):
+                        1. BẢNG MA TRẬN: Cột "Mức độ đánh giá" nằm trên cùng, bên dưới chia thành "TNKQ" và "Tự luận", dưới nữa lại chia thành "Biết", "Hiểu", "Vận dụng". 
+                        2. BẢNG ĐẶC TẢ: Cột "Số câu hỏi ở các mức độ" nằm trên cùng, bên dưới chia thành "TNKQ" (nhiều lựa chọn, đúng sai, trả lời ngắn) và "Tự luận", dưới cùng là "Biết", "Hiểu", "Vận dụng...".
+                        
+                        NHIỆM VỤ CỦA BẠN LÀ ĐẾM VÀ ĐỊNH VỊ CÁC "CỘT LÁ" (Cột ở tầng thấp nhất, tương ứng với các ô dữ liệu thực tế):
+                        - KHÔNG đếm các ô tiêu đề gộp to tát ở trên. Hãy đếm các cột nhỏ nhất ở dưới cùng của phần Header dọc theo chiều ngang.
+                        - Lập Bản Đồ Ma Trận: Ví dụ "Cột 4: TNKQ - Nhiều lựa chọn - Biết; Cột 5: TNKQ - Nhiều lựa chọn - Hiểu; Cột 6: TNKQ - Vận dụng; Cột 7: Tự luận - Hiểu...".
+                        - Lập Bản Đồ Đặc Tả: Tương tự, đếm từ trái sang phải các cột lá để biết cột nào chứa số lượng câu hỏi/mã câu hỏi của loại nào. Cột "(n)[4]" nằm ở đâu?
+                        
+                        TUYỆT ĐỐI KHÔNG trích xuất nội dung chi tiết. Chỉ trả về một bản mô tả CHÍNH XÁC cấu trúc các cột lá (Leaf Columns) để làm Bản đồ Gióng Cột cho hệ thống AI đọc dữ liệu các trang sau bị mất Header. Nếu làm sai Bản đồ này, toàn bộ dữ liệu sẽ đọc sai cột!`;
+
+                        const schemaPayload = [{ text: schemaPrompt }];
+                        schemaImgs.forEach(d => schemaPayload.push({ inline_data: { mime_type: "image/jpeg", data: d } }));
+
+                        const schemaRes = await AIAdapter.callGemini(schemaPayload);
+                        globalSchemaText = schemaRes.trim();
+                        console.log("=== BẢN ĐỒ CẤU TRÚC TOÀN CỤC ===", globalSchemaText);
+                    } catch (err) {
+                        console.error("Lỗi trích xuất Schema:", err);
+                    }
+
+                    // --- BƯỚC 2: TRÍCH XUẤT NỘI DUNG THEO MẺ (BATCH PROCESSING) ---
                     let mergedSectionsMap = {};
                     const batchSize = 3; // Chia mẻ 3 trang/lần gửi để tránh tràn băng thông JSON Output Tokens
 
                     for (let i = 0; i < imgs.length; i += batchSize) {
                         const batchImgs = imgs.slice(i, i + batchSize);
 
-                        const prompt = `Phân tích trang ${i + 1} đến ${i + batchImgs.length} của Ma trận Đề thi ĐÂY LÀ MỘT PHẦN CỦA BẢNG DÀI NÊN CHỈ TRÍCH XUẤT NHỮNG CÂU HỎI THỰC SỰ CÓ MẶT TRONG CÁC ẢNH NÀY.
+                        const prompt = `Bạn đang được giao Bản đồ Cấu trúc Cột do chính bạn lập ở Bước 1:
+                        === BẢN ĐỒ CẤU TRÚC CỘT (GLOBAL SCHEMA) ===
+                        ${globalSchemaText}
+                        ========================================
+                        
+                        Nhiệm vụ: Phân tích trang ${i + 1} đến ${i + batchImgs.length} của Ma trận Đề thi. ĐÂY LÀ MỘT PHẦN CỦA BẢNG DÀI NÊN CHỈ TRÍCH XUẤT NHỮNG CÂU HỎI THỰC SỰ CÓ MẶT TRONG CÁC ẢNH NÀY.
                         YÊU CẦU BẮT BUỘC VỀ VIỆC NHỚ CẤU TRÚC BẢNG (TABLE STRUCTURE MEMORY):
-                        - Hầu hết các ảnh đều chứa 2 loại bảng liên tiếp: "BẢNG MA TRẬN" (tổng quát, thường phân bố Mức độ/Số câu/Tỉ lệ) và "BẢNG ĐẶC TẢ" (chi tiết, thường phân bổ Tên chủ đề/Mức độ/Yêu cầu cần đạt/Số câu).
+                        - HÃY ÁP DỤNG "BẢN ĐỒ CẤU TRÚC CỘT" Ở TRÊN để gióng hàng cực kỳ chính xác cho các trang này kể cả khi trang này BỊ MẤT DÒNG TIÊU ĐỀ (HEADER). Ví dụ Bản đồ chỉ định cột 4 là Trắc nghiệm, bạn hãy chắc chắn text ở cột 4 sẽ lưu vào loại câu Trắc nghiệm.
                         - Nếu trang hiện tại bị mất dòng Tiêu Đề Cột (Header) do bị ngắt trang từ trang trước, bạn PHẢI TỰ SUY LUẬN lại các cột và gióng hàng dọc dựa trên nội dung các ô (Cell logic). Ví dụ: thấy ô ghi "Câu 19a", ô bên cạnh ghi mô tả "Tính góc...", ô tiếp theo ghi số "1" -> Đây là bảng Đặc tả, cột mã câu tương ứng với mô tả đó nằm ở bên trái.
                         - BẢO TOÀN LƯỢNG LOẠI CÂU: Quan sát cột "Loại câu" hoặc "Phần" đang được hiển thị ở các hàng phía trên hoặc trang trước. Nếu nó đang nằm ở khu vực "TNKQ / Nhiều phương án" (hoặc "Đúng sai", "Trả lời ngắn") thì tất cả các dòng bên dưới chưa có tiêu đề mới cũng BẮT BUỘC vẫn thuộc loại đó. Giữ tính liên tục của cấu trúc bảng kéo dài!
                         
