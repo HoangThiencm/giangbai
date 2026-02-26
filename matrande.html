@@ -400,6 +400,7 @@ TÔI VỪA GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA MỘT TÀI
 NHIỆM VỤ CỐT LÕI CỦA LẦN CHẠY NÀY:
 Bạn CHỈ ĐƯỢC PHÉP TRÍCH XUẤT các câu hỏi xuất hiện trong đoạn từ TRANG ${startPage} đến TRANG ${endPage}.
 TUYỆT ĐỐI KHÔNG trích xuất các câu ở các trang trước đó, vì chúng đã được xử lý xong rồi!
+NẾU BẢN CẤU TRÚC BÊN DƯỚI CÓ KHAI BÁO SỐ LƯỢNG CÂU HỎI Ở CÁC PHẦN, BẠN PHẢI BẢO ĐẢM TẠO RA ĐÚNG VÀ ĐỦ SỐ LƯỢNG CÂU ĐÓ NẾU CHÚNG NẰM TRONG TRANG NÀY, TUYỆT ĐỐI KHÔNG ĐƯỢC LƯỚT QUA HOẶC ĐẾM THIẾU.
 
 ${expectedConfigText}
 
@@ -578,7 +579,7 @@ Quy tắc Bóc tách Định dạng chuẩn:
 1. Phân các câu vào sections tương ứng. 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", "PHẦN TỰ LUẬN".
 2. Đối chiếu cột tiêu đề mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
 3. Loai câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
-4. Đánh Mã Câu (code) chạy tuần tự từ trên xuống dưới, rẽ sang phải theo từng ô lưới nếu trong ô có câu. VD: TN1, TN2... HOẶC NẾU CÓ CẤU TRÚC THÌ DÙNG MÃ Câu 1, Câu 2... LIÊN TIẾP.
+4. Đánh Mã Câu (code) chạy tuần tự từ trên xuống dưới, rẽ sang phải theo từng ô lưới nếu trong ô có câu. VD: TN1, TN2... HOẶC NẾU CÓ CẤU TRÚC THÌ DÙNG MÃ Câu 1, Câu 2... LIÊN TIẾP. BẠN PHẢI ĐẢM BẢO TẠO RA ĐẦY ĐỦ VÀ CHÍNH XÁC SỐ LƯỢNG CÂU LIỆT KÊ TRONG DANH SÁCH CẤU TRÚC. KHÔNG ĐƯỢC TỰ Ý CẮT BỎ CÂU NÀO DÙ BẢNG CÓ HIỂN THỊ THIẾU HAY GỘP.
 5. Để trống "spec": "".
 
 Cấu trúc JSON đầu ra Hợp lệ:
@@ -619,6 +620,7 @@ ${expectedConfigText}
 
 NHIỆM VỤ: Lấy DANH SÁCH MÃ CÂU HỎI VÀ ĐẶC TẢ CỦA CHÚNG TỪ TRANG ${startPage} đến TRANG ${endPage}.
 (Bỏ qua các trang trước). KHÔNG cần trích xuất mức độ hay loại (để mặc định).
+NẾU BẢN CẤU TRÚC Ở TRÊN CÓ KHAI BÁO SỐ LƯỢNG CÂU HỎI, BẠN BẮT BUỘC PHẢI TÌM VÀ TRÍCH XUẤT ĐỦ SỐ LƯỢNG ĐÓ (NẾU CHÚNG NẰM TRONG TRANG NÀY), TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ XÓT OR TỰ Ý CẮT BỎ NHỮNG CÂU KHÔNG RÕ RÀNG.
 
 Quy tắc Bóc tách Định dạng chuẩn:
 1. Ghi đúng Mã câu có ghi trong bảng, HOẶC ÉP ĐÚNG MÃ TRONG KHUNG CẤU TRÚC (VD: Câu 1, Câu 2) tương ứng với vị trí xuất hiện.
