@@ -1375,7 +1375,7 @@ LƯU Ý QUAN TRỌNG:
             // THỐNG KÊ BIẾN ĐỘNG THEO THỰC TẾ TRONG BẢNG (DYNAMIC)
             const parsedStats = React.useMemo(() => {
                 let stats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [], totalQuestions: 0, totalParts: 0 };
-                if (blueprint && step === 2) {
+                if (blueprint && (step === 2 || step === 3)) {
                     blueprint.sections.forEach(sec => {
                         (sec.questions || []).forEach(q => {
                             stats.totalParts++;
@@ -1800,4 +1800,3 @@ LƯU Ý QUAN TRỌNG:
 </body>
 
 </html>
-
