@@ -637,20 +637,30 @@ Cấu trúc JSON Hợp lệ:
                             }
                         });
 
+                        // Tối ưu fallback logic để tránh "Câu 1" của TF bị lấy nhầm "Câu 1" của MC
                         sec.questions.forEach(q => {
                             // Find matching spec by code
                             const exactMatch = specList.find(sq => sq.code.toLowerCase().replace(/\s/g, '') === q.code.toLowerCase().replace(/\s/g, ''));
                             if (exactMatch) {
                                 q.spec = exactMatch.spec;
+                                // Xóa khỏi danh sách để tránh bị lấy trùng
+                                specList = specList.filter(sq => sq !== exactMatch);
                             } else {
-                                // Fallback: try numeric match if format is slightly different (e.g "TL1" vs "Câu 1", "TS1")
-                                const qNum = q.code.match(/\d+/)?.[0];
-                                if (qNum) {
+                                // Fallback: try numeric match if format is slightly different 
+                                const qNumMatch = q.code.match(/\d+/);
+                                if (qNumMatch) {
+                                    const qNum = parseInt(qNumMatch[0], 10);
+
                                     // Tìm tất cả các câu trong specList có chứa số này
-                                    const possibleMatches = specList.filter(sq => sq.code.match(/\d+/)?.[0] === qNum);
+                                    const possibleMatches = specList.filter(sq => {
+                                        const sqNumMatch = sq.code.match(/\d+/);
+                                        return sqNumMatch && parseInt(sqNumMatch[0], 10) === qNum;
+                                    });
+
                                     if (possibleMatches.length > 0) {
                                         // Ưu tiên câu đầu tiên tìm thấy
                                         q.spec = possibleMatches[0].spec;
+                                        specList = specList.filter(sq => sq !== possibleMatches[0]);
                                     }
                                 }
                             }
@@ -658,11 +668,13 @@ Cấu trúc JSON Hợp lệ:
                     });
 
                     let finalSections = matJson.sections;
-                    // Bổ sung sort
+                    // Bổ sung sort CỰC MẠNH: Dựa thuần túy vào con số để tránh chữ cái làm hỏng thứ tự
                     finalSections.forEach(sec => {
                         sec.questions.sort((a, b) => {
-                            const numA = parseInt(a.code?.match(/\d+/)?.[0]) || 0;
-                            const numB = parseInt(b.code?.match(/\d+/)?.[0]) || 0;
+                            const matchA = a.code?.match(/\d+/);
+                            const matchB = b.code?.match(/\d+/);
+                            const numA = matchA ? parseInt(matchA[0], 10) : 0;
+                            const numB = matchB ? parseInt(matchB[0], 10) : 0;
                             return numA - numB;
                         });
                     });
