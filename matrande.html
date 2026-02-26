@@ -317,8 +317,39 @@
             const [matrixFile, setMatrixFile] = useState(null);
             const [specFile, setSpecFile] = useState(null);
 
+            const [matrixConfig, setMatrixConfig] = useState({
+                useConfig: false,
+                mc: { q: 12, s: 12 },
+                tf: { q: 4, s: 4 },
+                tln: { q: 6, s: 6 },
+                tl: { q: 2, s: 2 }
+            });
+
             useEffect(() => { setHfStatus(AIAdapter.getConfig().hfTokens.length > 0); }, []);
             const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
+            const generateExpectedCodes = () => {
+                if (!matrixConfig.useConfig) return "";
+                let txt = "ĐỀ THI NÀY ĐÃ ĐƯỢC CHỐT TRƯỚC CẤU TRÚC VÀ ĐÁNH SỐ THỨ TỰ CÂU HỎI LIÊN TIẾP TỪ 1 ĐẾN HẾT NHƯ SAU:\n";
+                let currentNum = 1;
+
+                if (matrixConfig.mc.q > 0) {
+                    txt += `- PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn: Có ${matrixConfig.mc.q} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.mc.q) - 1}".\n`;
+                    currentNum += parseInt(matrixConfig.mc.q);
+                }
+                if (matrixConfig.tf.q > 0) {
+                    txt += `- PHẦN II. Câu trắc nghiệm đúng sai: Có ${matrixConfig.tf.q} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.tf.q) - 1}".\n`;
+                    currentNum += parseInt(matrixConfig.tf.q);
+                }
+                if (matrixConfig.tln.q > 0) {
+                    txt += `- PHẦN III. Câu trắc nghiệm trả lời ngắn: Có ${matrixConfig.tln.q} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.tln.q) - 1}".\n`;
+                    currentNum += parseInt(matrixConfig.tln.q);
+                }
+                if (matrixConfig.tl.q > 0) {
+                    txt += `- PHẦN TỰ LUẬN: Có ${matrixConfig.tl.q} bài, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.tl.q) - 1}".\n`;
+                }
+                txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH LẤY DỮ LIỆU, BẠN BẮT BUỘC PHẢI DÙNG DANH SÁCH MÃ CÂU NÀY LÀM CHUẨN ĐỂ NHẬN DIỆN VÀ RÁP NỘI DUNG MÀ KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI (NHƯ TN1, TL2...). NẾU THẤY CHỮ Ở VÙNG TỰ LUẬN, HÃY ÁP NÓ VÀO MÃ 'Câu X' TƯƠNG ỨNG TRONG DANH SÁCH TRÊN.\n";
+                return txt;
+            };
 
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
@@ -346,6 +377,7 @@
 
                     let mergedSectionsMap = {};
                     const batchSize = 3;
+                    const expectedConfigText = generateExpectedCodes();
 
                     for (let i = 0; i < imgs.length; i += batchSize) {
                         const startPage = i + 1;
@@ -360,11 +392,13 @@ NHIỆM VỤ CỐT LÕI CỦA LẦN CHẠY NÀY:
 Bạn CHỈ ĐƯỢC PHÉP TRÍCH XUẤT các câu hỏi xuất hiện trong đoạn từ TRANG ${startPage} đến TRANG ${endPage}.
 TUYỆT ĐỐI KHÔNG trích xuất các câu ở các trang trước đó, vì chúng đã được xử lý xong rồi!
 
+${expectedConfigText}
+
 Quy tắc Bóc tách Định dạng chuẩn:
 1. Phân các câu TRONG TRANG ${startPage}-${endPage} vào sections tương ứng. Có 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", và "PHẦN TỰ LUẬN".
 2. Đối chiếu bằng mắt từ các cột tiêu đề của trang trước đó để biết câu đang xét thuộc mức độ nào: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
 3. Loai câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
-4. Xử lý gộp mã câu: Nếu ô Đặc tả ghi "TN1, 2, 3", phải tách thành 3 câu độc lập có mã "TN1", "TN2", "TN3". Nếu ghi "TL19a, b" tách thành 2 câu "TL19a", "TL19b".
+4. Xử lý gộp mã câu: Nếu ô Đặc tả ghi "TN1, 2, 3", phải tách thành 3 câu độc lập có mã "TN1", "TN2", "TN3". Nếu ghi "TL19a, b" tách thành 2 câu "TL19a", "TL19b". NẾU ĐÃ KHAI BÁO CẤU TRÚC Ở TRÊN, PHẢI THAY BẰNG MÃ "Câu X" NHƯ DANH SÁCH.
 5. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu hỏi và số lượng ý/mô tả trong cùng một ô ma trận. NẾU số câu bằng số ý, mỗi câu CHỈ lấy 1 ý duy nhất. NẾU số câu ít hơn số ý, chọn ngẫu nhiên các ý KHÔNG trùng lặp. NẾU số câu nhiều hơn số ý, phủ đều (mỗi câu 1 ý khác nhau) cho đến khi hết ý rồi mới lặp lại hoặc kết hợp. Tuyệt đối KHÔNG gộp chung tất cả các ý vào 1 câu nếu có nhiều câu. Cố gắng chia đều ý.
 6. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}. Nếu đoạn này không có mã câu hỏi nào (chỉ có chữ lý thuyết hoặc nội dung rỗng), trả về mảng sections rỗng [].
 
@@ -374,7 +408,7 @@ Cấu trúc JSON đầu ra Hợp lệ:
         {
             "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
             "questions": [
-                { "code": "TN1", "group": "", "topic": "Tên chủ đề/Nội dung...", "level": "B", "type": "MC", "score": 0.25, "spec": "Nhận biết được khái niệm...", "parts": [] }
+                { "code": "Câu 1", "group": "", "topic": "Tên chủ đề/Nội dung...", "level": "B", "type": "MC", "score": 0.25, "spec": "Nhận biết được khái niệm...", "parts": [] }
             ]
         }
     ]
@@ -518,6 +552,8 @@ Cấu trúc JSON đầu ra Hợp lệ:
                     const matImgs = await convertPdfToImages(matrixFile);
                     const specImgs = await convertPdfToImages(specFile);
 
+                    const expectedConfigText = generateExpectedCodes();
+
                     // ===================================
                     // NHỊP 1: TRÍCH XUẤT KHUNG MA TRẬN
                     // ===================================
@@ -526,19 +562,21 @@ Cấu trúc JSON đầu ra Hợp lệ:
 TÔI GỬI CHO BẠN TÀI LIỆU CHỨA BẢNG MA TRẬN (CHỈ CÓ SỐ CÂU, CHƯA CÓ NỘI DUNG ĐẶC TẢ CHI TIẾT TRONG TỪNG Ô).
 Bảng bao gồm số câu hỏi, loại câu, mức độ.
 
+${expectedConfigText}
+
 NHIỆM VỤ: Lập KHUNG json toàn bộ ma trận (bỏ trống trường "spec").
 Quy tắc Bóc tách Định dạng chuẩn:
 1. Phân các câu vào sections tương ứng. 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", "PHẦN TỰ LUẬN".
 2. Đối chiếu cột tiêu đề mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
 3. Loai câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
-4. Đánh Mã Câu (code) chạy tuần tự từ trên xuống dưới, rẽ sang phải theo từng ô lưới nếu trong ô có câu. VD: TN1, TN2...
+4. Đánh Mã Câu (code) chạy tuần tự từ trên xuống dưới, rẽ sang phải theo từng ô lưới nếu trong ô có câu. VD: TN1, TN2... HOẶC NẾU CÓ CẤU TRÚC THÌ DÙNG MÃ Câu 1, Câu 2... LIÊN TIẾP.
 5. Để trống "spec": "".
 
 Cấu trúc JSON đầu ra Hợp lệ:
 {
     "sections": [{
         "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
-        "questions": [ { "code": "TN1", "group": "", "topic": "Tên chủ đề...", "level": "B", "type": "MC", "score": 0.25, "spec": "", "parts": [] } ]
+        "questions": [ { "code": "Câu 1", "group": "", "topic": "Tên chủ đề...", "level": "B", "type": "MC", "score": 0.25, "spec": "", "parts": [] } ]
     }]
 }`;
 
@@ -568,11 +606,13 @@ Cấu trúc JSON đầu ra Hợp lệ:
                         const promptSpec = `Bạn là CHUYÊN GIA BIÊN TẬP ĐẶC TẢ ĐỀ THI. 
 TÔI GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA BẢNG ĐẶC TẢ.
 
+${expectedConfigText}
+
 NHIỆM VỤ: Lấy DANH SÁCH MÃ CÂU HỎI VÀ ĐẶC TẢ CỦA CHÚNG TỪ TRANG ${startPage} đến TRANG ${endPage}.
 (Bỏ qua các trang trước). KHÔNG cần trích xuất mức độ hay loại (để mặc định).
 
 Quy tắc Bóc tách Định dạng chuẩn:
-1. Ghi đúng Mã câu có ghi trong bảng (Ví dụ: "TN1, 2, 3").
+1. Ghi đúng Mã câu có ghi trong bảng, HOẶC ÉP ĐÚNG MÃ TRONG KHUNG CẤU TRÚC (VD: Câu 1, Câu 2) tương ứng với vị trí xuất hiện.
 2. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu và ý trong bảng. Nếu 3 câu và 3 ý -> mỗi câu 1 ý độc lập. Nếu 3 câu 1 ý -> copy nguyên ý vào 3 câu. Rẽ nhỏ mã câu nếu bảng ghi gộp "TN1,2,3".
 3. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}.
 
@@ -580,7 +620,7 @@ Cấu trúc JSON Hợp lệ:
 {
     "sections": [{
         "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
-        "questions": [ { "code": "TN1", "spec": "Nhận biết được khái niệm..." } ]
+        "questions": [ { "code": "Câu 1", "spec": "Nhận biết được khái niệm..." } ]
     }]
 }`;
                         let batchJson = null;
@@ -1161,6 +1201,69 @@ Cấu trúc JSON Hợp lệ:
                                     <input type="radio" className="w-4 h-4 text-indigo-600 focus:ring-indigo-500" checked={uploadMode === 'separate'} onChange={() => setUploadMode('separate')} />
                                     <span>Tách rời <span className="text-xs text-gray-400 font-normal">(File Ma trận & Đặc tả riêng)</span></span>
                                 </label>
+                            </div>
+
+                            {/* BỘ CHỌN KHAI BÁO CẤU TRÚC (MANUAL CONFIG) */}
+                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 transition-all">
+                                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-blue-800 mb-3">
+                                    <input type="checkbox" className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-white border-blue-300"
+                                        checked={matrixConfig.useConfig}
+                                        onChange={e => setMatrixConfig({ ...matrixConfig, useConfig: e.target.checked })}
+                                    />
+                                    Khai báo thông số cấu trúc (Khuyên dùng để AI đọc chính xác 100%)
+                                </label>
+
+                                {matrixConfig.useConfig && (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN I: Trắc nghiệm</div>
+                                            <div className="flex gap-2 items-center">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, q: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">câu</span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-2">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, s: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">ý (spec)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN II: Đúng/Sai</div>
+                                            <div className="flex gap-2 items-center">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, q: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">câu</span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-2">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, s: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">ý (spec)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN III: Trả lời ngắn</div>
+                                            <div className="flex gap-2 items-center">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, q: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">câu</span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-2">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, s: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">ý (spec)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN I-TỰ LUẬN (Tùy chọn)</div>
+                                            <div className="flex gap-2 items-center">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số bài" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">bài</span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-2">
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, s: e.target.value } })} />
+                                                <span className="text-xs text-gray-400">ý (spec)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {uploadMode === 'combined' ? (
