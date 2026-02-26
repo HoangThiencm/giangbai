@@ -332,21 +332,28 @@
                 let txt = "ĐỀ THI NÀY ĐÃ ĐƯỢC CHỐT TRƯỚC CẤU TRÚC VÀ ĐÁNH SỐ THỨ TỰ CÂU HỎI LIÊN TIẾP TỪ 1 ĐẾN HẾT NHƯ SAU:\n";
                 let currentNum = 1;
 
-                if (matrixConfig.mc.q > 0) {
-                    txt += `- PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn: Có ${matrixConfig.mc.q} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.mc.q) - 1}".\n`;
-                    currentNum += parseInt(matrixConfig.mc.q);
-                }
-                if (matrixConfig.tf.q > 0) {
-                    txt += `- PHẦN II. Câu trắc nghiệm đúng sai: Có ${matrixConfig.tf.q} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.tf.q) - 1}".\n`;
-                    currentNum += parseInt(matrixConfig.tf.q);
-                }
-                if (matrixConfig.tln.q > 0) {
-                    txt += `- PHẦN III. Câu trắc nghiệm trả lời ngắn: Có ${matrixConfig.tln.q} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.tln.q) - 1}".\n`;
-                    currentNum += parseInt(matrixConfig.tln.q);
-                }
-                if (matrixConfig.tl.q > 0) {
-                    txt += `- PHẦN TỰ LUẬN: Có ${matrixConfig.tl.q} bài, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + parseInt(matrixConfig.tl.q) - 1}".\n`;
-                }
+                const processSection = (configObj, title) => {
+                    let sectionTxt = "";
+                    const qCount = parseInt(configObj.q) || 0;
+                    const sCount = parseInt(configObj.s) || 0;
+
+                    if (qCount > 0) {
+                        sectionTxt += `- ${title}: Có ${qCount} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + qCount - 1}".\n`;
+                        if (qCount === sCount) {
+                            sectionTxt += `   -> QUY TẮC CỨNG (VÌ SỐ CÂU = SỐ Ý): Phần này có ${sCount} ý đặc tả lớn. Bắt buộc MỖI CÂU CHỈ ĐƯỢC NHẬN DUY NHẤT 1 Ý ĐẶC TẢ theo đúng thứ tự (Câu ${currentNum} nhận ý 1, Câu ${currentNum + 1} nhận ý 2...). Tuyệt đối không gộp chung nhiều ý vào 1 câu. Từng ý lớn được xem như là nội dung của câu hỏi nhỏ trong ma trận.\n`;
+                        } else {
+                            sectionTxt += `   -> Phần này có ${sCount} ý đặc tả. Hãy phân bổ đều ${sCount} ý này cho ${qCount} câu.\n`;
+                        }
+                        currentNum += qCount;
+                    }
+                    return sectionTxt;
+                };
+
+                txt += processSection(matrixConfig.mc, "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn");
+                txt += processSection(matrixConfig.tf, "PHẦN II. Câu trắc nghiệm đúng sai");
+                txt += processSection(matrixConfig.tln, "PHẦN III. Câu trắc nghiệm trả lời ngắn");
+                txt += processSection(matrixConfig.tl, "PHẦN TỰ LUẬN");
+
                 txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH LẤY DỮ LIỆU, BẠN BẮT BUỘC PHẢI DÙNG DANH SÁCH MÃ CÂU NÀY LÀM CHUẨN ĐỂ NHẬN DIỆN VÀ RÁP NỘI DUNG MÀ KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI (NHƯ TN1, TL2...). NẾU THẤY CHỮ Ở VÙNG TỰ LUẬN, HÃY ÁP NÓ VÀO MÃ 'Câu X' TƯƠNG ỨNG TRONG DANH SÁCH TRÊN.\n";
                 return txt;
             };
