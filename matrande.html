@@ -327,6 +327,65 @@
 
             useEffect(() => { setHfStatus(AIAdapter.getConfig().hfTokens.length > 0); }, []);
             const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
+
+            // ============================================================
+            // HÀM TÁI PHÂN PHỐI SPEC: Chạy SAU khi AI trả kết quả.
+            // Tách các ý bị AI gộp vào 1 câu thành mảng rồi rải đều
+            // cho TẤT CẢ câu hỏi trong section theo đúng config đã nhập.
+            // ============================================================
+            const redistributeSpecs = (sections, config) => {
+                if (!config || !config.useConfig) return sections;
+
+                const sectionMapping = {
+                    'PHẦN I': { cfg: config.mc, name: 'PHẦN I' },
+                    'PHẦN II': { cfg: config.tf, name: 'PHẦN II' },
+                    'PHẦN III': { cfg: config.tln, name: 'PHẦN III' },
+                    'TỰ LUẬN': { cfg: config.tl, name: 'TỰ LUẬN' }
+                };
+
+                return sections.map(sec => {
+                    const secNameUpper = (sec.name || '').toUpperCase();
+                    let matchedCfg = null;
+                    for (const [key, val] of Object.entries(sectionMapping)) {
+                        if (secNameUpper.includes(key)) { matchedCfg = val.cfg; break; }
+                    }
+
+                    if (!matchedCfg) return sec;
+
+                    const expectedSpecCount = parseInt(matchedCfg.s) || 0;
+                    const qCount = sec.questions.length;
+                    if (expectedSpecCount <= 0 || qCount <= 0) return sec;
+
+                    // Thu thập tất cả spec text từ các câu
+                    const rawSpecTexts = sec.questions.map(q => (q.spec || '').trim()).filter(s => s.length > 0).join('\n');
+                    if (!rawSpecTexts) return sec;
+
+                    // Tách thành các ý riêng biệt bằng cách phát hiện bullet/newline patterns
+                    const splitSpecs = rawSpecTexts
+                        .split(/\n/)
+                        .map(line => line.replace(/^[\s\-•\*\d+\.]+/, '').trim())
+                        .filter(line => line.length > 5); // bỏ dòng quá ngắn/rỗng
+
+                    if (splitSpecs.length <= 1) return sec; // AI đã ghi gọn 1 dòng, không tách được, giữ nguyên
+
+                    // Nếu số ý tách được xấp xỉ với expectedSpecCount, phân bổ đều
+                    const specsToUse = splitSpecs.slice(0, Math.max(expectedSpecCount, splitSpecs.length));
+
+                    // Phân bổ một ý vào mỗi câu theo thứ tự
+                    const newQuestions = sec.questions.map((q, idx) => {
+                        return { ...q, spec: specsToUse[idx] || q.spec || '' };
+                    });
+
+                    // Nếu số ý còn dư (nhiều hơn câu), gộp ý cuối vào câu cuối
+                    if (specsToUse.length > qCount) {
+                        const lastQ = newQuestions[qCount - 1];
+                        const extraSpecs = specsToUse.slice(qCount - 1);
+                        lastQ.spec = extraSpecs.join('; ');
+                    }
+
+                    return { ...sec, questions: newQuestions };
+                });
+            };
             const generateExpectedCodes = () => {
                 if (!matrixConfig.useConfig) return "";
                 let txt = "⚠️ YÊU CẦU ĐẶC BIỆT TỪ NGƯỜI DÙNG: ĐỀ THI ĐÃ ĐƯỢC CHỐT TRƯỚC SỐ LƯỢNG JSON VÀ ĐÁNH SỐ THỨ TỰ NHƯ SAU. BẠN PHẢI TẠO RA ĐÚNG SỐ LƯỢNG OBJECT TRONG MẢNG QUESTIONS:\n";
@@ -526,6 +585,9 @@ Cấu trúc JSON đầu ra Hợp lệ:
                     if (finalSections.length === 0) {
                         throw new Error("Không lấy được dữ liệu. Bố cục file ma trận quá phức tạp hoặc bị lỗi cấu trúc.");
                     }
+
+                    // === TÁI PHÂN PHỐI SPEC (JS-SIDE) ===
+                    finalJson.sections = redistributeSpecs(finalJson.sections, matrixConfig);
 
                     const detectedDefaultType = inferDefaultQuestionType(finalJson, info.time);
                     setGlobalType(detectedDefaultType);
@@ -756,6 +818,10 @@ Cấu trúc JSON Hợp lệ:
                     });
 
                     let finalJson = { sections: finalSections };
+
+                    // === TÁI PHÂN PHỐI SPEC (JS-SIDE) ===
+                    finalJson.sections = redistributeSpecs(finalJson.sections, matrixConfig);
+
                     const detectedDefaultType = inferDefaultQuestionType(finalJson, info.time);
                     setGlobalType(detectedDefaultType);
 
