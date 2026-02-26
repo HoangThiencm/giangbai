@@ -1696,11 +1696,11 @@ YÊU CẦU:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN I: Trắc nghiệm</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig.mc, q: { ...matrixConfig.mc, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">câu</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig.mc, s: { ...matrixConfig.mc, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1708,11 +1708,11 @@ YÊU CẦU:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN II: Đúng/Sai</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig.tf, q: { ...matrixConfig.tf, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">câu</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig.tf, s: { ...matrixConfig.tf, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1720,11 +1720,11 @@ YÊU CẦU:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN III: Trả lời ngắn</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig.tln, q: { ...matrixConfig.tln, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">câu</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig.tln, s: { ...matrixConfig.tln, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1732,11 +1732,11 @@ YÊU CẦU:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN IV: TỰ LUẬN</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig.tl, q: { ...matrixConfig.tl, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)">Tổng câu nhỏ</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig.tl, s: { ...matrixConfig.tl, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
