@@ -601,9 +601,9 @@ Cấu trúc JSON Hợp lệ:
                                 let normName = sec.name.toUpperCase();
                                 let targetName = sec.name;
                                 if (normName.includes("PHẦN I")) targetName = "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn";
-                                else if (normName.includes("PHẦN II")) targetName = "PHẦN II. Câu trắc nghiệm đúng sai";
-                                else if (normName.includes("PHẦN III")) targetName = "PHẦN III. Câu trắc nghiệm trả lời ngắn";
-                                else if (normName.includes("TỰ LUẬN")) targetName = "PHẦN TỰ LUẬN";
+                                else if (normName.includes("PHẦN II") || normName.includes("ĐÚNG SAI")) targetName = "PHẦN II. Câu trắc nghiệm đúng sai";
+                                else if (normName.includes("PHẦN III") || normName.includes("NGẮN")) targetName = "PHẦN III. Câu trắc nghiệm trả lời ngắn";
+                                else if (normName.includes("TỰ LUẬN") || normName.includes("PHẦN IV")) targetName = "PHẦN TỰ LUẬN";
                                 if (!mergedSectionsMap[targetName]) mergedSectionsMap[targetName] = { questions: [] };
 
                                 (sec.questions || []).forEach(q => {
@@ -626,22 +626,32 @@ Cấu trúc JSON Hợp lệ:
                         let specList = [];
 
                         Object.keys(mergedSectionsMap).forEach(k => {
-                            if (k.toUpperCase() === targetName || (targetName.includes('PHẦN I') && k.toUpperCase().includes('PHẦN I'))) { // soft tie
-                                specList = mergedSectionsMap[k].questions;
+                            const kUpper = k.toUpperCase();
+                            if (kUpper === targetName ||
+                                (targetName.includes('PHẦN I') && kUpper.includes('PHẦN I')) ||
+                                (targetName.includes('PHẦN II') && kUpper.includes('PHẦN II')) ||
+                                (targetName.includes('PHẦN III') && kUpper.includes('PHẦN III')) ||
+                                (targetName.includes('TỰ LUẬN') && (kUpper.includes('TỰ LUẬN') || kUpper.includes('PHẦN IV')))
+                            ) {
+                                specList = specList.concat(mergedSectionsMap[k].questions);
                             }
                         });
 
                         sec.questions.forEach(q => {
                             // Find matching spec by code
-                            const exactMatch = specList.find(sq => sq.code.toLowerCase() === q.code.toLowerCase());
+                            const exactMatch = specList.find(sq => sq.code.toLowerCase().replace(/\s/g, '') === q.code.toLowerCase().replace(/\s/g, ''));
                             if (exactMatch) {
                                 q.spec = exactMatch.spec;
                             } else {
-                                // Fallback: try numeric match if format is slightly different (e.g "C1" vs "Câu 1")
+                                // Fallback: try numeric match if format is slightly different (e.g "TL1" vs "Câu 1", "TS1")
                                 const qNum = q.code.match(/\d+/)?.[0];
-                                const specNumMatch = specList.find(sq => sq.code.match(/\d+/)?.[0] === qNum);
-                                if (specNumMatch && qNum) {
-                                    q.spec = specNumMatch.spec;
+                                if (qNum) {
+                                    // Tìm tất cả các câu trong specList có chứa số này
+                                    const possibleMatches = specList.filter(sq => sq.code.match(/\d+/)?.[0] === qNum);
+                                    if (possibleMatches.length > 0) {
+                                        // Ưu tiên câu đầu tiên tìm thấy
+                                        q.spec = possibleMatches[0].spec;
+                                    }
                                 }
                             }
                         });
