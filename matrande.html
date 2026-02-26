@@ -777,12 +777,16 @@
             };
 
             // THỐNG KÊ SAU KHI QUÉT (DÙNG ĐỂ HIỂN THỊ KIỂM TRA ĐỦ SỐ LƯỢNG)
-            let parsedStats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tl: [] };
+            let parsedStats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [] };
             if (blueprint && step === 2) {
                 blueprint.sections.forEach(sec => {
                     (sec.questions || []).forEach(q => {
                         if (q.type === 'MC') parsedStats.mc++;
-                        else if (q.type === 'TF') parsedStats.tf++;
+                        else if (q.type === 'TF') {
+                            const baseCode = (q.code || "Câu ?").replace(/(\s*[a-z])$/i, '').trim();
+                            parsedStats.tfGroups[baseCode] = (parsedStats.tfGroups[baseCode] || 0) + 1;
+                            parsedStats.tf++;
+                        }
                         else if (q.type === 'TLN') parsedStats.tln++;
                         else if (q.type === 'TL') {
                             // Cố gắng xoá bớt chữ cái a, báo phần để đếm chung cho Câu Tự Luận lớn
@@ -793,6 +797,7 @@
                     });
                 });
                 parsedStats.tl = Object.entries(parsedStats.tlGroups).map(([name, count]) => ({ name, count }));
+                parsedStats.tfList = Object.entries(parsedStats.tfGroups).map(([name, count]) => ({ name, count }));
             }
 
             return (
@@ -865,9 +870,14 @@
                                             <span className="text-gray-500 font-bold uppercase text-[10px]">Trắc nghiệm khách quan</span>
                                             <span className="font-bold text-indigo-700 text-lg">{parsedStats.mc} <span className="text-xs">câu</span></span>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Đúng / Sai</span>
-                                            <span className="font-bold text-teal-600 text-lg">{parsedStats.tf} <span className="text-xs">câu</span></span>
+                                        <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
+                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Đúng / Sai ({parsedStats.tfList.length} đại câu)</span>
+                                            <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
+                                                {parsedStats.tfList.map((t, i) => (
+                                                    <div key={i}>• {t.name} có <span className="font-bold text-teal-600">{t.count}</span> ý</div>
+                                                ))}
+                                                {parsedStats.tfList.length === 0 && <span className="italic text-gray-400">Không có câu Đúng/Sai</span>}
+                                            </div>
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-gray-500 font-bold uppercase text-[10px]">Trả lời ngắn</span>
