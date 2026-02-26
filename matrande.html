@@ -1021,9 +1021,238 @@ LƯU Ý QUAN TRỌNG:
                 setBlueprint(newBp); setGlobalType(newType);
             };
 
+            // ── PASTE ẢNH TỪ CLIPBOARD: Nhận diện câu hỏi + Sinh lời giải ──
+            const handleQuestionPaste = async (e, sIdx, qIdx) => {
+                const items = Array.from(e.clipboardData?.items || []);
+                const imgItem = items.find(it => it.type.startsWith('image/'));
+                if (!imgItem) return; // Không phải ảnh, handle paste bình thường
+
+                e.preventDefault();
+                const qData = blueprint.sections[sIdx].questions[qIdx];
+                const typeLabel = qData.type === 'MC' ? 'Trắc nghiệm' : qData.type === 'TF' ? 'Đúng/Sai' : qData.type === 'TLN' ? 'Trả lời ngắn' : 'Tự luận';
+
+                // Đánh dấu đang xử lý
+                const processingBp = { ...blueprint };
+                processingBp.sections[sIdx].questions[qIdx].q = '⏳ Đang nhận diện ảnh...';
+                processingBp.sections[sIdx].questions[qIdx].status = 'generating';
+                setBlueprint(processingBp);
+
+                try {
+                    // Chuyển ảnh → base64
+                    const blob = imgItem.getAsFile();
+                    const base64 = await new Promise((res, rej) => {
+                        const reader = new FileReader();
+                        reader.onload = () => res(reader.result.split(',')[1]);
+                        reader.onerror = rej;
+                        reader.readAsDataURL(blob);
+                    });
+
+                    const mimeType = blob.type || 'image/png';
+                    const prompt = `Bạn là giáo viên môn ${info.subject} lớp ${info.grade}.
+Hình ảnh này chứa một câu hỏi thi loại "${typeLabel}".
+
+NHIỆM VỤ: Thực hiện đồng thời 2 việc:
+1. NHẬN DIỆN: Trích xuất chính xác toàn bộ nội dung câu hỏi từ ảnh (bao gồm các đáp án nếu là MC, các mệnh đề nếu là TF). Giữ nguyên công thức toán và chuyển sang LaTeX $...$. Loại bỏ tiêu đề/số câu nếu có.
+2. GIẢI: Giải chi tiết câu hỏi vừa nhận diện được (phù hợp chương trình lớp ${info.grade}, không dùng kiến thức lớp trên).
+
+Output CHỈ JSON (không giải thích, không markdown):
+${qData.type === 'TF' ? `{
+  "q": "Câu dẫn chung...",
+  "parts": [
+    {"label": "a", "content": "Mệnh đề a...", "is_correct": true},
+    {"label": "b", "content": "Mệnh đề b...", "is_correct": false},
+    {"label": "c", "content": "Mệnh đề c...", "is_correct": false},
+    {"label": "d", "content": "Mệnh đề d...", "is_correct": true}
+  ],
+  "c": "Giải thích chi tiết từng ý...",
+  "correct_char": "Đ-S-S-Đ"
+}` : qData.type === 'MC' ? `{
+  "q": "Nội dung câu hỏi và đề bài...",
+  "a": ["Nội dung đáp án A", "Nội dung đáp án B", "Nội dung đáp án C", "Nội dung đáp án D"],
+  "c": "Lời giải chi tiết từng bước...",
+  "correct_char": "A"
+}` : qData.type === 'TLN' ? `{
+  "q": "Nội dung câu hỏi trả lời ngắn...",
+  "a": [],
+  "c": "Lời giải chi tiết từng bước dẫn đến đáp án cuối...",
+  "correct_char": "Đáp án cuối (VD: 5, -1/2, ...)"
+}` : `{
+  "q": "Toàn bộ đề bài tự luận (câu dẫn + yêu cầu chi tiết từng phần a, b, c, d nếu có)...",
+  "a": [],
+  "c": "Lời giải chi tiết từng bước, trình bày rõ từng phần a), b), c)... Đủ để học sinh hiểu và học theo.",
+  "correct_char": ""
+}`}`;
+
+                    const payload = [
+                        { text: prompt },
+                        { inline_data: { mime_type: mimeType, data: base64 } }
+                    ];
+                    const jsonStr = await AIAdapter.callGemini(payload);
+                    const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const match = clean.match(/\{[\s\S]*\}/);
+                    if (!match) throw new Error("AI không trả về JSON hợp lệ");
+                    const json = JSON.parse(match[0]);
+
+                    const doneBp = { ...blueprint };
+                    const tgt = doneBp.sections[sIdx].questions[qIdx];
+                    tgt.q = json.q || '';
+                    tgt.c = json.c || '';
+                    tgt.correct_char = json.correct_char || '';
+                    if (qData.type === 'MC') {
+                        tgt.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
+                    } else if (qData.type === 'TF' && json.parts) {
+                        tgt.parts = json.parts.map((p, i) => ({
+                            label: p.label || String.fromCharCode(97 + i),
+                            content: p.content,
+                            is_correct: p.is_correct
+                        }));
+                        tgt.correct_char = tgt.parts.map(p => p.is_correct ? 'Đ' : 'S').join('-');
+                    }
+                    tgt.status = 'done';
+                    tgt.source = 'OCR+Solve';
+                    setBlueprint(doneBp);
+                } catch (err) {
+                    console.error("Paste OCR error:", err);
+                    const errBp = { ...blueprint };
+                    errBp.sections[sIdx].questions[qIdx].q = `Lỗi nhận diện: ${err.message}`;
+                    errBp.sections[sIdx].questions[qIdx].status = 'error';
+                    setBlueprint(errBp);
+                }
+            };
+
             const generateQuestion = async (sIdx, qIdx) => {
+
                 const qData = blueprint.sections[sIdx].questions[qIdx];
                 const newBp = { ...blueprint };
+
+                // ── GROUPED GENERATION: TF/TL câu lớn (13a,13b,13c,13d → 1 AI call) ──
+                if (qData.type === 'TF' || qData.type === 'TL') {
+                    const parsedTarget = parseQuestionCode(qData.code);
+                    const baseMain = parsedTarget.main;
+
+                    // Tìm tất cả subs cùng câu lớn trong section
+                    const groupIndices = [];
+                    newBp.sections[sIdx].questions.forEach((q, idx) => {
+                        const p = parseQuestionCode(q.code);
+                        if (p.main === baseMain && q.type === qData.type) groupIndices.push(idx);
+                    });
+
+                    // Chỉ gom nếu thực sự có sub-codes (13a, 13b...)
+                    const hasSubs = groupIndices.some(idx => parseQuestionCode(newBp.sections[sIdx].questions[idx].code).sub !== null);
+                    if (!hasSubs) groupIndices.length = 0; // Treat as standalone
+
+                    if (groupIndices.length > 1) {
+                        // Mark all as generating
+                        groupIndices.forEach(idx => { newBp.sections[sIdx].questions[idx].status = 'generating'; });
+                        setBlueprint({ ...newBp });
+
+                        // Collect all specs/topics from the group
+                        const groupQs = groupIndices.map(idx => newBp.sections[sIdx].questions[idx]);
+                        const combinedSpecs = groupQs.map((q, i) => {
+                            const sub = parseQuestionCode(q.code).sub || String.fromCharCode(97 + i);
+                            return `  ${sub}) ${q.spec}`;
+                        }).join('\n');
+                        const levelData = LEVELS_7991.find(l => l.code === groupQs[0].level) || LEVELS_7991[0];
+
+                        const nSubs = groupIndices.length;
+                        const subLabels = groupIndices.map((idx, i) => {
+                            const sub = parseQuestionCode(newBp.sections[sIdx].questions[idx].code).sub;
+                            return sub || String.fromCharCode(97 + i);
+                        });
+
+                        const promptGroup = qData.type === 'TF' ? `
+Đóng vai Giáo viên môn ${info.subject} lớp ${info.grade}. Soạn 1 câu Đúng/Sai (PHẦN II) gồm ${nSubs} mệnh đề:
+- Chủ đề: ${groupQs[0].topic} | Mức độ: ${levelData.prompt_key}
+- Yêu cầu từng ý:
+${combinedSpecs}
+
+YÊU CẦU:
+1. Kiến thức KHÔNG vượt quá chương trình lớp ${info.grade}.
+2. Viết 1 câu dẫn ngữ cảnh chung, rồi tạo đúng ${nSubs} mệnh đề (${subLabels.join(', ')}).
+3. Mỗi mệnh đề phải rõ ràng là Đúng hoặc Sai.
+4. Dùng LaTeX $...$ cho công thức.
+5. Output CHỈ JSON:
+{
+  "q": "Câu dẫn chung...",
+  "parts": [
+    ${subLabels.map(l => `{"label": "${l}", "content": "Nội dung ý ${l}...", "is_correct": true}`).join(',\n    ')}
+  ],
+  "c": "Giải thích chi tiết từng ý ${subLabels.join(', ')}..."
+}` : `
+Đóng vai Giáo viên môn ${info.subject} lớp ${info.grade}. Soạn 1 bài Tự luận gồm ${nSubs} câu hỏi nhỏ:
+- Chủ đề: ${groupQs[0].topic} | Mức độ: ${levelData.prompt_key}
+- Yêu cầu từng câu nhỏ:
+${combinedSpecs}
+
+YÊU CẦU:
+1. Kiến thức KHÔNG vượt quá chương trình lớp ${info.grade}.
+2. Viết 1 bài toán/đề bài lớn (ngữ cảnh chung), rồi chia thành đúng ${nSubs} câu hỏi nhỏ (${subLabels.join(', ')}).
+3. Mỗi câu nhỏ phải phát biểu rõ ràng yêu cầu riêng.
+4. Dùng LaTeX $...$ cho công thức. Mô tả hình vẽ bằng chữ.
+5. Output CHỈ JSON:
+{
+  "q": "Đề bài/ngữ cảnh chung...",
+  "sub_parts": [
+    ${subLabels.map(l => `{"label": "${l}", "q": "Câu hỏi ${l}...", "c": "Lời giải ${l}..."}`).join(',\n    ')}
+  ],
+  "c": "Lời giải tổng quát (nếu có)..."
+}`;
+
+                        try {
+                            const payload = [{ text: promptGroup }];
+                            const jsonStr = await AIAdapter.callGemini(payload);
+                            const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                            const match = clean.match(/\{[\s\S]*\}/);
+                            if (!match) throw new Error("Invalid JSON");
+                            const json = JSON.parse(match[0]);
+
+                            const finalBp2 = { ...blueprint };
+                            if (qData.type === 'TF') {
+                                const parts = (json.parts || []);
+                                groupIndices.forEach((idx, i) => {
+                                    const tgt = finalBp2.sections[sIdx].questions[idx];
+                                    // All subs share the same câu dẫn (q) and solution (c)
+                                    tgt.q = json.q || '';
+                                    tgt.parts = parts.length > 0 ? parts.map((p, pi) => ({
+                                        label: p.label || subLabels[pi] || String.fromCharCode(97 + pi),
+                                        content: p.content,
+                                        is_correct: p.is_correct
+                                    })) : [];
+                                    tgt.correct_char = tgt.parts.map(p => p.is_correct ? 'Đ' : 'S').join('-');
+                                    tgt.c = json.c || '';
+                                    tgt.status = 'done';
+                                    tgt.source = 'Gemini (grouped)';
+                                });
+                            } else { // TL
+                                const subParts = json.sub_parts || [];
+                                groupIndices.forEach((idx, i) => {
+                                    const tgt = finalBp2.sections[sIdx].questions[idx];
+                                    const sp = subParts[i] || {};
+                                    // Each sub gets its own question, but shares the đề bài context
+                                    tgt.q = `${json.q || ''}\n\n${sp.label || subLabels[i]}) ${sp.q || ''}`.trim();
+                                    tgt.c = sp.c || json.c || '';
+                                    tgt.a = [];
+                                    tgt.correct_char = '';
+                                    tgt.status = 'done';
+                                    tgt.source = 'Gemini (grouped)';
+                                });
+                            }
+                            setBlueprint(finalBp2);
+                        } catch (e) {
+                            console.error("Grouped generation error:", e);
+                            const errBp = { ...blueprint };
+                            groupIndices.forEach(idx => {
+                                errBp.sections[sIdx].questions[idx].status = 'error';
+                                errBp.sections[sIdx].questions[idx].q = `Lỗi: ${e.message}`;
+                            });
+                            setBlueprint(errBp);
+                            if (!generatingState.isRunning) alert(`Lỗi tạo câu hỏi nhóm: ${e.message}`);
+                        }
+                        return; // Done - grouped generation handled
+                    }
+                }
+
+                // ── SINGLE GENERATION: MC, TLN, or standalone TF/TL ──
                 const selectedModel = AIAdapter.selectModel(qData.type, qData.level);
                 newBp.sections[sIdx].questions[qIdx].status = 'generating';
                 setBlueprint(newBp);
@@ -1117,7 +1346,8 @@ LƯU Ý QUAN TRỌNG:
                         target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-'); // Chuỗi Đ-S-S-Đ
                     } else { // MC / TL
                         target.q = json.q;
-                        target.a = json.a || [];
+                        // Strip leading "A. ", "B. " etc prefix if AI included it
+                        target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
                         target.c = json.c || "";
                         target.correct_char = json.correct_char || "";
                     }
@@ -1155,20 +1385,30 @@ LƯU Ý QUAN TRỌNG:
 
                 setGeneratingState({ isRunning: true, current: 0, total: totalQ, text: "Đang khởi tạo..." });
                 let currentQ = 0;
+                const processedGroups = new Set(); // Track grouped TF/TL câu lớn already generated
 
                 for (let s = 0; s < blueprint.sections.length; s++) {
                     for (let q = 0; q < blueprint.sections[s].questions.length; q++) {
-                        if (blueprint.sections[s].questions[q].status !== 'done') {
-                            currentQ++;
-                            const qCode = blueprint.sections[s].questions[q].code;
-                            setGeneratingState(prev => ({ ...prev, current: currentQ, text: `Đang tạo ${qCode} (${currentQ}/${totalQ})...` }));
+                        const qObj = blueprint.sections[s].questions[q];
+                        if (qObj.status === 'done') continue;
 
-                            await generateQuestion(s, q);
+                        // Skip siblings already handled by grouped generation
+                        const parsed = parseQuestionCode(qObj.code);
+                        if ((qObj.type === 'TF' || qObj.type === 'TL') && parsed.sub !== null) {
+                            const groupKey = `${s}-${parsed.main}-${qObj.type}`;
+                            if (processedGroups.has(groupKey)) continue;
+                            processedGroups.add(groupKey);
+                        }
 
-                            if (currentQ < totalQ) {
-                                setGeneratingState(prev => ({ ...prev, text: `Nghỉ 3 giây chống quá tải... (Đang tới câu ${currentQ}/${totalQ})` }));
-                                await new Promise(r => setTimeout(r, 3000));
-                            }
+                        currentQ++;
+                        const qCode = qObj.code;
+                        setGeneratingState(prev => ({ ...prev, current: currentQ, text: `Đang tạo ${qCode} (${currentQ}/${totalQ})...` }));
+
+                        await generateQuestion(s, q);
+
+                        if (currentQ < totalQ) {
+                            setGeneratingState(prev => ({ ...prev, text: `Nghỉ 3 giây chống quá tải... (Đang tới câu ${currentQ}/${totalQ})` }));
+                            await new Promise(r => setTimeout(r, 3000));
                         }
                     }
                 }
@@ -1273,12 +1513,10 @@ LƯU Ý QUAN TRỌNG:
                             } else {
                                 html += `<p><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(stemQ.q))}</p>`;
                                 if (stemQ.type === 'MC' && stemQ.a?.length) {
-                                    html += `<table style='margin-left:20px;margin-bottom:10px'><tr>`;
                                     stemQ.a.forEach((opt, k) => {
                                         const prefix = String.fromCharCode(65 + k);
-                                        html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k % 2 !== 0 ? '</tr><tr>' : ''}`;
+                                        html += `<p style='margin:2px 0 2px 20px'><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`;
                                     });
-                                    html += `</tr></table>`;
                                 }
                             }
                         }
@@ -1298,12 +1536,10 @@ LƯU Ý QUAN TRỌNG:
                                 } else { // MC/TL sub-question
                                     html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
                                     if (sq.type === 'MC' && sq.a?.length) {
-                                        html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
                                         sq.a.forEach((opt, k) => {
                                             const prefix = String.fromCharCode(65 + k);
-                                            html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k % 2 !== 0 ? '</tr><tr>' : ''}`;
+                                            html += `<p style='margin:2px 0 2px 1.2cm'><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`;
                                         });
-                                        html += `</tr></table>`;
                                     }
                                 }
                             });
@@ -1460,11 +1696,11 @@ LƯU Ý QUAN TRỌNG:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN I: Trắc nghiệm</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig.mc, q: { ...matrixConfig.mc, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">câu</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig.mc, s: { ...matrixConfig.mc, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1472,11 +1708,11 @@ LƯU Ý QUAN TRỌNG:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN II: Đúng/Sai</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig.tf, q: { ...matrixConfig.tf, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">câu</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig.tf, s: { ...matrixConfig.tf, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1484,11 +1720,11 @@ LƯU Ý QUAN TRỌNG:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN III: Trả lời ngắn</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig.tln, q: { ...matrixConfig.tln, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">câu</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig.tln, s: { ...matrixConfig.tln, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1496,11 +1732,11 @@ LƯU Ý QUAN TRỌNG:
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
                                             <div className="text-xs font-bold text-gray-500 mb-2">PHẦN IV: TỰ LUẬN</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig.tl, q: { ...matrixConfig.tl, q: e.target.value } })} />
                                                 <span className="text-xs text-gray-400" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)">Tổng câu nhỏ</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, s: e.target.value } })} />
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig.tl, s: { ...matrixConfig.tl, s: e.target.value } })} />
                                                 <span className="text-xs text-gray-400">ý (spec)</span>
                                             </div>
                                         </div>
@@ -1589,6 +1825,36 @@ LƯU Ý QUAN TRỌNG:
                                 </div>
                             )}
                             <div className="p-5 bg-white/80 backdrop-blur-md flex flex-col gap-4 shadow-sm z-10 pt-7">
+                                {step === 3 && (
+                                    <details className="bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 group">
+                                        <summary className="cursor-pointer px-4 py-2 font-bold flex items-center gap-2 select-none">
+                                            <i className="fas fa-lightbulb text-amber-500"></i>
+                                            Hướng dẫn chỉnh sửa & Dán ảnh câu hỏi
+                                            <i className="fas fa-chevron-down ml-auto text-amber-400 group-open:rotate-180 transition-transform"></i>
+                                        </summary>
+                                        <div className="px-4 pb-3 pt-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="font-bold text-amber-800 mb-1"><i className="fas fa-paste mr-1"></i>Dán ảnh câu hỏi (Ctrl+V)</p>
+                                                <ul className="space-y-1 text-amber-700 list-disc list-inside">
+                                                    <li>Chụp màn hình hoặc copy ảnh câu hỏi vào clipboard</li>
+                                                    <li>Click vào ô <b>"Nội dung câu hỏi"</b> của câu cần nhận diện</li>
+                                                    <li>Bấm <kbd className="bg-white border border-amber-300 px-1 rounded font-mono">Ctrl+V</kbd> để dán</li>
+                                                    <li>AI sẽ <b>tự nhận diện câu hỏi</b> và <b>sinh lời giải</b> luôn</li>
+                                                    <li>Hỗ trợ: MC (A/B/C/D), Đúng/Sai, Tự luận, Trả lời ngắn</li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-amber-800 mb-1"><i className="fas fa-edit mr-1"></i>Chỉnh sửa thủ công</p>
+                                                <ul className="space-y-1 text-amber-700 list-disc list-inside">
+                                                    <li>Sửa trực tiếp vào ô nội dung câu hỏi và lời giải</li>
+                                                    <li>Công thức toán: dùng <code className="bg-white px-1 rounded border border-amber-200">$...$</code> (LaTeX sẽ render bên dưới)</li>
+                                                    <li>Bấm <b>Sinh lại</b> để AI viết lại câu hỏi theo đặc tả</li>
+                                                    <li>TF/TL: bấm Sinh lại trên bất kỳ sub nào → sinh cả nhóm 1 lần</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </details>
+                                )}
                                 {parsedStats && (
                                     <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex flex-wrap gap-6 text-sm">
                                         <div className="flex border-r border-indigo-200 pr-6 mr-2 flex-col justify-center items-center">
@@ -1731,17 +1997,17 @@ LƯU Ý QUAN TRỌNG:
                                                                 {step === 3 && (
                                                                     <>
                                                                         <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100 mt-2">
-                                                                            <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between">
-                                                                                <span>Nội dung câu hỏi:</span>
+                                                                            <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between items-center">
+                                                                                <span>Nội dung câu hỏi: <span className="font-normal text-gray-400 text-[10px] ml-1"><i className="fas fa-clipboard mr-0.5"></i>Ctrl+V để dán ảnh nhận diện</span></span>
                                                                                 <input className="text-xs border rounded px-1 w-20 text-center font-bold" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án (A/B)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} title="Đáp án đúng" />
                                                                             </div>
-                                                                            <textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} />
+                                                                            <textarea className={`w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px] ${q.status === 'generating' ? 'opacity-50 italic text-gray-400' : ''}`} value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} onPaste={e => handleQuestionPaste(e, sIdx, qIdx)} placeholder="Soạn nội dung hoặc Ctrl+V dán ảnh câu hỏi..." />
                                                                             <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
 
                                                                             {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
                                                                             {(q.type === 'MC') && q.a?.length > 0 && (
-                                                                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">
-                                                                                    {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{String.fromCharCode(65 + k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
+                                                                                <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
+                                                                                    {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-5 shrink-0">{String.fromCharCode(65 + k)}.</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
                                                                                 </div>
                                                                             )}
 
