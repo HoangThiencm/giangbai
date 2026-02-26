@@ -346,7 +346,12 @@
                         const batchImgs = imgs.slice(i, i + batchSize);
 
                         const prompt = `Phân tích trang ${i + 1} đến ${i + batchImgs.length} của Ma trận Đề thi ĐÂY LÀ MỘT PHẦN CỦA BẢNG DÀI NÊN CHỈ TRÍCH XUẤT NHỮNG CÂU HỎI THỰC SỰ CÓ MẶT TRONG CÁC ẢNH NÀY.
-                        Yêu cầu:
+                        YÊU CẦU BẮT BUỘC VỀ VIỆC NHỚ CẤU TRÚC BẢNG (TABLE STRUCTURE MEMORY):
+                        - Hầu hết các ảnh đều chứa 2 loại bảng liên tiếp: "BẢNG MA TRẬN" (tổng quát, thường phân bố Mức độ/Số câu/Tỉ lệ) và "BẢNG ĐẶC TẢ" (chi tiết, thường phân bổ Tên chủ đề/Mức độ/Yêu cầu cần đạt/Số câu).
+                        - Nếu trang hiện tại bị mất dòng Tiêu Đề Cột (Header) do bị ngắt trang từ trang trước, bạn PHẢI TỰ SUY LUẬN lại các cột và gióng hàng dọc dựa trên nội dung các ô (Cell logic). Ví dụ: thấy ô ghi "Câu 19a", ô bên cạnh ghi mô tả "Tính góc...", ô tiếp theo ghi số "1" -> Đây là bảng Đặc tả, cột mã câu tương ứng với mô tả đó nằm ở bên trái.
+                        - BẢO TOÀN LƯỢNG LOẠI CÂU: Quan sát cột "Loại câu" hoặc "Phần" đang được hiển thị ở các hàng phía trên hoặc trang trước. Nếu nó đang nằm ở khu vực "TNKQ / Nhiều phương án" (hoặc "Đúng sai", "Trả lời ngắn") thì tất cả các dòng bên dưới chưa có tiêu đề mới cũng BẮT BUỘC vẫn thuộc loại đó. Giữ tính liên tục của cấu trúc bảng kéo dài!
+                        
+                        Yêu cầu trích xuất:
                         1. Phân các câu nhận diện được vào sections tương ứng. Có 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", và "PHẦN TỰ LUẬN". Chú ý để gom các câu vào đúng loại section.
                         2. Chuẩn hóa mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
                         3. Chuẩn hóa loại câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
@@ -958,94 +963,159 @@
                                 <div className="flex justify-between items-center gap-4">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3">
-                                            <h2 className="font-heading font-bold text-gray-800 text-xl">Biên soạn Đề thi</h2>
+                                            <h2 className="font-heading font-bold text-gray-800 text-xl">{step === 2 ? 'Kiểm tra Cấu trúc Ma trận' : 'Biên soạn Nội dung Đề thi'}</h2>
                                             {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
                                         </div>
+                                        {step === 2 && (
+                                            <p className="text-sm text-gray-500 mt-1">Vui lòng kiểm tra lại số câu hỏi, mức độ, loại câu và điểm số. Bạn <b>phải đảm bảo tổng điểm là 10đ</b> trước khi sinh đề.</p>
+                                        )}
                                         <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
                                             <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">Kiểu đề mặc định:</span>
-                                            {['MC', 'TF', 'TLN', 'TL'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}</button>))}
+                                            {['MC', 'TF', 'TLN', 'TL'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} disabled={step === 3} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} ${step === 3 ? 'opacity-50 cursor-not-allowed' : ''} `}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}</button>))}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'Trí tuệ nhân tạo biên soạn toàn bộ'}</button>
-                                        <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
+                                        {step === 2 && (
+                                            <button
+                                                onClick={() => {
+                                                    if (totalScoreWarning) {
+                                                        alert(`Tổng điểm hiện tại là ${totalScoreWarning}/10. Vui lòng thêm/bớt câu hỏi hoặc sửa lại cột điểm sao cho tổng bằng 10 tròn trước khi tiếp tục.`);
+                                                        return;
+                                                    }
+                                                    setStep(3);
+                                                }}
+                                                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center"
+                                            >
+                                                Chốt Ma trận <i className="fas fa-arrow-right ml-2"></i>
+                                            </button>
+                                        )}
+                                        {step === 3 && (
+                                            <>
+                                                <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
+                                                <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
+                                                <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+
                             <div className="flex-1 overflow-auto bg-gray-50 relative p-4" id="questions-container">
                                 {blueprint.sections.map((sec, sIdx) => (
                                     <div key={sIdx} className="mb-8 bg-white rounded-2xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow">
-                                        <div className="flex items-center gap-2 mb-4"><input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} /><span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span></div>
-                                        <table className="w-full text-sm text-left border-collapse"><thead className="bg-gray-50 text-gray-600 font-bold border-b"><tr><th className="p-2 w-24">Mã</th><th className="p-2 w-24">Nhóm</th><th className="p-2 w-16">Mức độ</th> <th className="p-2 w-20">Loại</th><th className="p-2">Nội dung</th><th className="p-2 w-20 text-center">Tác vụ</th></tr></thead><tbody className="divide-y">
-                                            {sec.questions.map((q, qIdx) => (
-                                                <tr key={qIdx} className="group hover:bg-gray-50 align-top">
-                                                    <td className="p-2"><input className="w-full border rounded p-1 text-center font-bold mb-1" value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} /><input className="w-full border rounded p-1 text-center text-xs" type="number" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} /></td>
-                                                    <td className="p-2"><input className="w-full border rounded p-1 text-xs bg-yellow-50" placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} /></td>
-                                                    <td className="p-2">
-                                                        <select className="w-full border rounded p-1 font-bold text-xs" value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
-                                                            {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
-                                                        </select>
-                                                    </td>
-                                                    <td className="p-2">
-                                                        <select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
-                                                            <option value="MC">Trắc nghiệm</option>
-                                                            <option value="TF">Đúng/Sai</option>
-                                                            <option value="TLN">Trả lời ngắn</option>
-                                                            <option value="TL">Tự luận</option>
-                                                        </select>
-                                                        <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
-                                                        <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
-                                                    </td>
-                                                    <td className="p-2">
-                                                        <div className="mb-2 grid grid-cols-2 gap-2">
-                                                            <input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
-                                                            <input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
-                                                        </div>
-
-                                                        <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100">
-                                                            <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between">
-                                                                <span>Câu hỏi:</span>
-                                                                <input className="text-xs border rounded px-1" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án đúng (A/B..)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} />
-                                                            </div>
-                                                            <textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} />
-                                                            <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
-
-                                                            {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
-                                                            {(q.type === 'MC') && q.a?.length && (
-                                                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">
-                                                                    {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{String.fromCharCode(65 + k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
-                                                                </div>
-                                                            )}
-
-                                                            {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
-                                                            {(q.type === 'TF') && q.parts?.length && (
-                                                                <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
-                                                                    {q.parts.map((p, k) => (
-                                                                        <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
-                                                                            <span className="font-bold text-xs w-6">{p.label})</span>
-                                                                            <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
-                                                                            <input
-                                                                                className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                value={p.content}
-                                                                                onChange={e => {
-                                                                                    const newParts = [...q.parts];
-                                                                                    newParts[k].content = e.target.value;
-                                                                                    updateData(sIdx, qIdx, 'parts', newParts);
-                                                                                }}
-                                                                            />
-                                                                            <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-xs text-blue-500 hover:text-blue-700 w-10 shrink-0">Toggle</button>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
-                                                    </td>
-                                                    <td className="p-2 text-center align-middle"><button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1 rounded text-xs font-bold shadow-sm">{q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <i className="fas fa-magic"></i>}</button><button onClick={() => { if (confirm('Xóa?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n) } }} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button></td>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" disabled={step === 3} value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} />
+                                            <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span>
+                                        </div>
+                                        <table className="w-full text-sm text-left border-collapse">
+                                            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                                                <tr>
+                                                    <th className="p-2 w-24">Mã</th>
+                                                    <th className="p-2 w-24">Nhóm</th>
+                                                    <th className="p-2 w-16">Mức độ</th>
+                                                    <th className="p-2 w-20">Loại</th>
+                                                    <th className="p-2">Nội dung</th>
+                                                    {step === 3 && <th className="p-2 w-20 text-center">Tác vụ</th>}
                                                 </tr>
-                                            ))}
-                                            <tr><td colSpan="6" className="p-2 text-center bg-gray-50 border-t border-dashed"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle"></i> Thêm câu hỏi</button></td></tr>
-                                        </tbody></table>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {sec.questions.map((q, qIdx) => (
+                                                    <tr key={qIdx} className="group hover:bg-gray-50 align-top">
+                                                        <td className="p-2">
+                                                            <input disabled={step === 3} className={`w-full border rounded p-1 text-center font-bold mb-1 ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} />
+                                                            <input disabled={step === 3} className={`w-full border rounded p-1 text-center text-xs ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} type="number" step="0.25" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} />
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <input disabled={step === 3} className={`w-full border rounded p-1 text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 border-dashed' : 'bg-yellow-50'}`} placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} />
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
+                                                                {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
+                                                            </select>
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
+                                                                <option value="MC">Trắc nghiệm</option>
+                                                                <option value="TF">Đúng/Sai</option>
+                                                                <option value="TLN">Trả lời ngắn</option>
+                                                                <option value="TL">Tự luận</option>
+                                                            </select>
+                                                            {step === 3 && (
+                                                                <>
+                                                                    <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
+                                                                    <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
+                                                                </>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <div className="mb-2 grid grid-cols-2 gap-2">
+                                                                <input disabled={step === 3} className={`border-b border-dashed text-xs text-blue-800 w-full bg-transparent font-medium ${step === 3 ? 'opacity-70' : ''}`} value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
+                                                                <textarea disabled={step === 3} className={`border border-dashed rounded p-1 text-xs text-gray-600 w-full resize-none bg-indigo-50/30 ${step === 3 ? 'opacity-70 bg-gray-50 text-gray-500 border-none h-8 overflow-hidden' : 'h-16'}`} value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
+                                                            </div>
+
+                                                            {step === 2 && (
+                                                                <div className="flex gap-2">
+                                                                    <button onClick={() => { if (confirm('Xóa câu này?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n) } }} className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded hover:bg-red-100 transition"><i className="fas fa-trash mr-1"></i> Xóa câu</button>
+                                                                </div>
+                                                            )}
+
+                                                            {step === 3 && (
+                                                                <>
+                                                                    <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100 mt-2">
+                                                                        <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between">
+                                                                            <span>Nội dung câu hỏi:</span>
+                                                                            <input className="text-xs border rounded px-1 w-20 text-center font-bold" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án (A/B)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} title="Đáp án đúng" />
+                                                                        </div>
+                                                                        <textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} />
+                                                                        <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
+
+                                                                        {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
+                                                                        {(q.type === 'MC') && q.a?.length > 0 && (
+                                                                            <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">
+                                                                                {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{String.fromCharCode(65 + k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
+                                                                        {(q.type === 'TF') && q.parts?.length > 0 && (
+                                                                            <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
+                                                                                {q.parts.map((p, k) => (
+                                                                                    <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
+                                                                                        <span className="font-bold text-xs w-6">{p.label})</span>
+                                                                                        <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
+                                                                                        <input
+                                                                                            className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            value={p.content}
+                                                                                            onChange={e => {
+                                                                                                const newParts = [...q.parts];
+                                                                                                newParts[k].content = e.target.value;
+                                                                                                updateData(sIdx, qIdx, 'parts', newParts);
+                                                                                            }}
+                                                                                        />
+                                                                                        <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-[10px] text-blue-600 font-bold px-1 py-1 w-12 shrink-0 bg-white border border-blue-200 rounded">Đổi Đ/S</button>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải chi tiết:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
+                                                                </>
+                                                            )}
+                                                        </td>
+                                                        {step === 3 && (
+                                                            <td className="p-2 text-center align-middle">
+                                                                <button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1.5 rounded text-xs font-bold shadow-sm flex flex-col items-center justify-center gap-1">
+                                                                    {q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <><i className="fas fa-magic"></i> Sinh lại</>}
+                                                                </button>
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                                {step === 2 && (
+                                                    <tr><td colSpan="5" className="p-3 text-center bg-gray-50 border-t border-dashed rounded-b-lg"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle mr-1"></i> Thêm thủ công 1 câu vào phần này</button></td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 ))}
                             </div>
