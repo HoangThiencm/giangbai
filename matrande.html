@@ -313,7 +313,6 @@
             const [viewFilter, setViewFilter] = useState("ALL");
             const [generatingState, setGeneratingState] = useState({ isRunning: false, current: 0, total: 0, text: "" });
 
-            const [uploadMode, setUploadMode] = useState('combined'); // 'combined' | 'separate'
             const [matrixFile, setMatrixFile] = useState(null);
             const [specFile, setSpecFile] = useState(null);
 
@@ -834,123 +833,114 @@ Cấu trúc JSON đầu ra Hợp lệ:
                     if (!matJson || !matJson.sections || matJson.sections.length === 0) throw new Error("Thất bại khi đọc file Ma trận gốc.");
 
                     // ===================================
-                    // NHỊP 2: ĐẮP ĐẶC TẢ VÀO KHUNG MA TRẬN (Trích lọc tiến trình như cũ)
+                    // NHỊP 2: ĐỌC BẢNG ĐẶC TẢ THEO CẤU TRÚC 2D
+                    // Gửi TOÀN BỘ ảnh đặc tả 1 lần duy nhất
+                    // AI đọc theo [TT-nhóm chủ đề × mức độ × loại câu]
                     // ===================================
-                    let mergedSectionsMap = {};
-                    const batchSize = 3;
+                    const promptSpec = `Bạn là CHUYÊN GIA PHÂN TÍCH BẢNG ĐẶC TẢ MA TRẬN ĐỀ THI.
 
-                    for (let i = 0; i < specImgs.length; i += batchSize) {
-                        const startPage = i + 1;
-                        const endPage = Math.min(specImgs.length, i + batchSize);
-                        const contextImgs = specImgs.slice(i, endPage);
+Tài liệu gửi kèm là "II. BẢNG ĐẶC TẢ MA TRẬN ĐỀ KIỂM TRA".
+Bảng này có cấu trúc 2D: hàng = chủ đề/mức độ/yêu cầu, cột = loại câu × mức độ đánh giá.
 
-                        const promptSpec = `Bạn là CHUYÊN GIA BIÊN TẬP ĐẶC TẢ ĐỀ THI. 
-TÔI GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA BẢNG ĐẶC TẢ.
+THUẬT TOÁN ĐỌC BẢNG BẮT BUỘC (4 bước):
+
+BƯỚC 1 - XÁC ĐỊNH CẤU TRÚC BẢNG:
+  - Tìm cột "Yêu cầu cần đạt" - đây là cột chứa nội dung đặc tả.
+  - Xác định các nhóm cột loại câu: "Nhiều lựa chọn" (MC), "Đúng-Sai" (TF), "Trả lời ngắn" (TLN), "Tự luận" (TL).
+  - Mỗi nhóm cột loại câu được chia thành các cột con: "Biết", "Hiểu", "Vận dụng".
+
+BƯỚC 2 - ĐỌC TỪNG NHÓM TT (số thứ tự chủ đề):
+  - Khi ô "Chủ đề" trống (do merge cells), TIẾP TỤC DÙNG chủ đề của hàng trên.
+  - Khi số TT thay đổi (1→2→3) thì mới kết thúc nhóm cũ, bắt đầu nhóm mới.
+  - Trong cột "Yêu cầu cần đạt", tách nội dung theo tiền tố mức độ:
+      "Biết:" hoặc "- Biết:" → bullets_B = [bullet1, bullet2, ...]
+      "Hiểu:" hoặc "- Hiểu:" → bullets_H = [bullet1, bullet2, ...]
+      "Vận dụng:" → bullets_V = [bullet1, bullet2, ...]
+  - Mỗi dấu gạch đầu dòng (+, -, •, *) = 1 bullet riêng biệt.
+
+BƯỚC 3 - ĐỌC Ô GIAO NHAU [loại câu × mức độ]:
+  - Với mỗi ô giao nhau, đọc danh sách mã câu (có thể viết tắt).
+  - Mở rộng mã câu viết tắt thành mã đầy đủ:
+      "TN1, 2, 3, 4" → ["TN1", "TN2", "TN3", "TN4"]
+      "TN13 c,d" → ["TN13c", "TN13d"]
+      "Câu 13a, b" → ["Câu 13a", "Câu 13b"]
+  - Loại câu của mã = loại cột chứa ô đó (MC/TF/TLN/TL).
+  - Mức độ của mã = mức độ cột chứa ô đó (B/H/V).
+
+BƯỚC 4 - MAP MÃ CÂU → SPEC:
+  - Với ô [MC × Biết] có codes = [TN1, TN2, TN3, TN4] và bullets_B = [b1, b2, b3, b4]:
+      TN1 → b1, TN2 → b2, TN3 → b3, TN4 → b4
+  - Nếu số codes > số bullets: CYCLE LẠI TỪ ĐẦU bullets:
+      codes[i] → bullets[i % bullets.length]
+      Ví dụ: 6 codes, 4 bullets → TN5→b1, TN6→b2
+  - Nếu số codes < số bullets: gán tuần tự cho đến hết codes.
+  - Các mã câu khác loại nhưng cùng chủ đề và mức độ DÙNG CHUNG bullets_level.
 
 ${expectedConfigText}
 
-NHIỆM VỤ: Lấy DANH SÁCH MÃ CÂU HỎI VÀ ĐẶC TẢ CỦA CHÚNG TỪ TRANG ${startPage} đến TRANG ${endPage}.
-(Bỏ qua các trang trước). KHÔNG cần trích xuất mức độ hay loại (để mặc định).
-NẾU BẢN CẤU TRÚC Ở TRÊN CÓ KHAI BÁO SỐ LƯỢNG CÂU HỎI, BẠN BẮT BUỘC PHẢI TÌM VÀ TRÍCH XUẤT ĐỦ SỐ LƯỢNG ĐÓ (NẾU CHÚNG NẰM TRONG TRANG NÀY), TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ XÓT OR TỰ Ý CẮT BỎ NHỮNG CÂU KHÔNG RÕ RÀNG.
-
-Quy tắc Bóc tách Định dạng chuẩn:
-1. Ghi đúng Mã câu có ghi trong bảng, HOẶC ÉP ĐÚNG MÃ TRONG KHUNG CẤU TRÚC (VD: Câu 1, Câu 2) tương ứng với vị trí xuất hiện.
-2. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu dọc theo đặc tả. NẾU SỐ Ý > SỐ CÂU: Bắt buộc gom các dòng ý lại vào nhau (nối theo dòng mới \n) HOẶC Rẽ nhỏ mã câu thành a, b, c theo yêu cầu CẤU TRÚC CHỐT TRƯỚC. Tuyệt đối không drop/vứt bất cứ dòng text đặc tả nào.
-3. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}.
-
-Cấu trúc JSON Hợp lệ:
+Cấu trúc JSON đầu ra (CHỈ trả về spec cho từng mã câu):
 {
-    "sections": [{
-        "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
-        "questions": [ { "code": "Câu 1", "spec": "Nhận biết được khái niệm..." } ]
-    }]
-}`;
-                        let batchJson = null;
-                        for (let attempt = 1; attempt <= 3; attempt++) {
-                            setLoadingMsg(`Đang ráp Đặc tả trang ${startPage}-${endPage} (Lần ${attempt}). Vui lòng chờ...`);
-                            try {
-                                const payload = [{ text: promptSpec }, ...contextImgs.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
-                                const res = await AIAdapter.callGemini(payload);
-                                const jsonMatch = res.match(/\{[\s\S]*\}/);
-                                if (!jsonMatch) continue;
-                                batchJson = JSON.parse(jsonMatch[0]);
-                                break;
-                            } catch (err) { console.error('Lỗi Nhịp 2', err); await new Promise(r => setTimeout(r, 2000)); }
-                        }
+  "sections": [
+    {
+      "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
+      "questions": [
+        { "code": "Câu 1", "spec": "Nhận biết được...", "topic": "Hàm số và đồ thị", "level": "B" },
+        { "code": "Câu 2", "spec": "Nhận biết được...", "topic": "Hàm số và đồ thị", "level": "B" }
+      ]
+    },
+    {
+      "name": "PHẦN II. Câu trắc nghiệm đúng sai",
+      "questions": [
+        { "code": "Câu 13a", "spec": "Nhận biết được...", "topic": "Hàm số và đồ thị", "level": "B" }
+      ]
+    }
+  ]
+}
 
-                        if (batchJson && batchJson.sections) {
-                            batchJson.sections.forEach(sec => {
-                                let normName = sec.name.toUpperCase();
-                                let targetName = sec.name;
-                                if (normName.includes("PHẦN I")) targetName = "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn";
-                                else if (normName.includes("PHẦN II") || normName.includes("ĐÚNG SAI")) targetName = "PHẦN II. Câu trắc nghiệm đúng sai";
-                                else if (normName.includes("PHẦN III") || normName.includes("NGẮN")) targetName = "PHẦN III. Câu trắc nghiệm trả lời ngắn";
-                                else if (normName.includes("TỰ LUẬN") || normName.includes("PHẦN IV")) targetName = "PHẦN TỰ LUẬN";
-                                if (!mergedSectionsMap[targetName]) mergedSectionsMap[targetName] = { questions: [] };
+LƯU Ý QUAN TRỌNG:
+- Mỗi mã câu (kể cả Câu 13a, 13b) là 1 JSON object riêng biệt.
+- TUYỆT ĐỐI KHÔNG gộp nhiều mã vào 1 object.
+- KHÔNG bỏ sót mã câu nào đã tìm thấy trong bảng.`;
 
-                                (sec.questions || []).forEach(q => {
-                                    if (!mergedSectionsMap[targetName].questions.some(eq => eq.code === q.code)) {
-                                        mergedSectionsMap[targetName].questions.push({
-                                            code: q.code,
-                                            spec: q.spec
-                                        });
-                                    }
-                                });
-                            });
-                        }
+                    let specJson = null;
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        setLoadingMsg(`Đang đọc Bảng Đặc Tả theo cấu trúc 2D (Lần ${attempt})...`);
+                        try {
+                            const payload = [{ text: promptSpec }, ...specImgs.map(d => ({ inline_data: { mime_type: 'image/jpeg', data: d } }))];
+                            const res = await AIAdapter.callGemini(payload);
+                            const jsonMatch = res.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) { specJson = JSON.parse(jsonMatch[0]); break; }
+                        } catch (err) { console.error('Lỗi Nhịp 2', err); await new Promise(r => setTimeout(r, 2000)); }
                     }
 
+                    // Build spec lookup map: normalized_code → spec/topic/level
+                    const specMap = {};
+                    if (specJson && specJson.sections) {
+                        specJson.sections.forEach(sec => {
+                            (sec.questions || []).forEach(q => {
+                                const key = (q.code || '').toLowerCase().replace(/\s/g, '');
+                                specMap[key] = { spec: q.spec || '', topic: q.topic || '', level: q.level || '' };
+                            });
+                        });
+                    }
+
+
                     // ===================================
-                    // MERGING: KHUNG (matJson) + ĐẶC TẢ (mergedSectionsMap)
+                    // MERGING: KHUNG (matJson) + ĐẶC TẢ (specMap)
                     // ===================================
                     matJson.sections.forEach(sec => {
-                        let targetName = sec.name.toUpperCase();
-                        let specList = [];
-
-                        Object.keys(mergedSectionsMap).forEach(k => {
-                            const kUpper = k.toUpperCase();
-                            if (kUpper === targetName ||
-                                (targetName.includes('PHẦN I') && kUpper.includes('PHẦN I')) ||
-                                (targetName.includes('PHẦN II') && kUpper.includes('PHẦN II')) ||
-                                (targetName.includes('PHẦN III') && kUpper.includes('PHẦN III')) ||
-                                (targetName.includes('TỰ LUẬN') && (kUpper.includes('TỰ LUẬN') || kUpper.includes('PHẦN IV')))
-                            ) {
-                                specList = specList.concat(mergedSectionsMap[k].questions);
-                            }
-                        });
-
-                        // Tối ưu fallback logic để tránh "Câu 1" của TF bị lấy nhầm "Câu 1" của MC
                         sec.questions.forEach(q => {
-                            // Find matching spec by code
-                            const exactMatch = specList.find(sq => sq.code.toLowerCase().replace(/\s/g, '') === q.code.toLowerCase().replace(/\s/g, ''));
-                            if (exactMatch) {
-                                q.spec = exactMatch.spec;
-                                // Xóa khỏi danh sách để tránh bị lấy trùng
-                                specList = specList.filter(sq => sq !== exactMatch);
-                            } else {
-                                // Fallback: try numeric match if format is slightly different 
-                                const qNumMatch = q.code.match(/\d+/);
-                                if (qNumMatch) {
-                                    const qNum = parseInt(qNumMatch[0], 10);
-
-                                    // Tìm tất cả các câu trong specList có chứa số này
-                                    const possibleMatches = specList.filter(sq => {
-                                        const sqNumMatch = sq.code.match(/\d+/);
-                                        return sqNumMatch && parseInt(sqNumMatch[0], 10) === qNum;
-                                    });
-
-                                    if (possibleMatches.length > 0) {
-                                        // Ưu tiên câu đầu tiên tìm thấy
-                                        q.spec = possibleMatches[0].spec;
-                                        specList = specList.filter(sq => sq !== possibleMatches[0]);
-                                    }
-                                }
+                            const key = (q.code || '').toLowerCase().replace(/\s/g, '');
+                            const matched = specMap[key];
+                            if (matched) {
+                                if (matched.spec) q.spec = matched.spec;
+                                if (matched.topic) q.topic = matched.topic;
+                                if (matched.level && matched.level.length === 1) q.level = matched.level.toUpperCase();
                             }
                         });
                     });
 
                     let finalSections = matJson.sections;
-                    // Bổ sung sort CỰC MẠNH: Dựa thuần túy vào con số để tránh chữ cái làm hỏng thứ tự
                     // Sắp xếp câu hỏi: số chính trước, rồi chữ phụ a,b,c
                     finalSections.forEach(sec => {
                         sec.questions.sort((a, b) => {
@@ -966,9 +956,6 @@ Cấu trúc JSON Hợp lệ:
                     });
 
                     let finalJson = { sections: finalSections };
-
-                    // === TÁI PHÂN PHỐI SPEC (JS-SIDE) ===
-                    finalJson.sections = redistributeSpecs(finalJson.sections, matrixConfig);
 
                     // === QUÉT LẠI CÂU BỊ THIẾU (AUTO-RETRY) - dùng cả matImgs + specImgs ===
                     finalJson = await findMissingQuestions(finalJson, [...matImgs, ...specImgs], setLoadingMsg);
@@ -1458,18 +1445,6 @@ Cấu trúc JSON Hợp lệ:
                                 </div>
                             </div>
 
-                            {/* BỘ CHỌN UPLOAD MODE */}
-                            <div className="flex gap-4 border-t border-b border-indigo-50 py-4 items-center justify-center bg-indigo-50/20 rounded-xl">
-                                <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-white rounded-lg transition-colors font-medium text-gray-700">
-                                    <input type="radio" className="w-4 h-4 text-indigo-600 focus:ring-indigo-500" checked={uploadMode === 'combined'} onChange={() => setUploadMode('combined')} />
-                                    <span>Gộp chung <span className="text-xs text-gray-400 font-normal">(1 file PDF)</span></span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-white rounded-lg transition-colors font-medium text-gray-700">
-                                    <input type="radio" className="w-4 h-4 text-indigo-600 focus:ring-indigo-500" checked={uploadMode === 'separate'} onChange={() => setUploadMode('separate')} />
-                                    <span>Tách rời <span className="text-xs text-gray-400 font-normal">(File Ma trận & Đặc tả riêng)</span></span>
-                                </label>
-                            </div>
-
                             {/* BỘ CHỌN KHAI BÁO CẤU TRÚC (MANUAL CONFIG) */}
                             <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 transition-all">
                                 <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-blue-800 mb-3">
@@ -1533,42 +1508,72 @@ Cấu trúc JSON Hợp lệ:
                                 )}
                             </div>
 
-                            {uploadMode === 'combined' ? (
-                                <label className="block border-2 border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 rounded-2xl p-10 text-center cursor-pointer transition-all hover:border-indigo-400 group">
-                                    <input type="file" className="hidden" accept=".pdf" onChange={handleUpload} />
-                                    {loading ? <div className="flex flex-col items-center"><div className="loader mb-3 border-indigo-600"></div><span className="text-indigo-600 font-semibold animate-pulse">{loadingMsg}</span></div> : <div className="text-indigo-500 group-hover:text-indigo-600 transition-colors"><div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-sm mb-4"><i className="fas fa-file-pdf text-3xl"></i></div><div className="font-semibold text-lg">Tải lên file PDF (Gộp)</div><p className="text-sm text-gray-400 mt-1">Gồm trọn bộ Ma trận và Đặc tả trong 1 file</p></div>}
-                                </label>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${matrixFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
-                                            <input type="file" className="hidden" accept=".pdf" onChange={e => setMatrixFile(e.target.files[0])} />
-                                            {matrixFile ? (
-                                                <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{matrixFile.name}</div>
-                                            ) : (
-                                                <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-table text-2xl mb-2"></i><br /><span className="font-bold">File Khung Ma trận</span></div>
-                                            )}
-                                        </label>
-                                        <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${specFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
-                                            <input type="file" className="hidden" accept=".pdf" onChange={e => setSpecFile(e.target.files[0])} />
-                                            {specFile ? (
-                                                <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{specFile.name}</div>
-                                            ) : (
-                                                <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-list-check text-2xl mb-2"></i><br /><span className="font-bold">File Bảng Đặc tả</span></div>
-                                            )}
-                                        </label>
-                                    </div>
-                                    <div className="text-center">
-                                        <button
-                                            disabled={loading || (!matrixFile || !specFile)}
-                                            onClick={processSeparateFiles}
-                                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center mx-auto min-w-[200px]"
-                                        >
-                                            {loading ? <div className="flex items-center"><div className="loader mr-2 border-white"></div> {loadingMsg}</div> : <><i className="fas fa-cogs mr-2"></i> Phân tích 2 File</>}
-                                        </button>
-                                    </div>
+                            {/* UPLOAD HAI FILE TACH ROI */}
+
+                            <div className="space-y-4">
+
+                                <div className="text-center text-sm text-indigo-700 font-semibold bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">
+
+                                    <i className="fas fa-info-circle mr-1"></i> Vui lòng tải lên <b>2 file PDF riêng biệt</b>: Khung Ma Trận và Bảng Đặc Tả
+
                                 </div>
-                            )}
+
+                                <div className="grid grid-cols-2 gap-4">
+
+                                    <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${matrixFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
+
+                                        <input type="file" className="hidden" accept=".pdf" onChange={e => setMatrixFile(e.target.files[0])} />
+
+                                        {matrixFile ? (
+
+                                            <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{matrixFile.name}</div>
+
+                                        ) : (
+
+                                            <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-table text-3xl mb-2"></i><br /><span className="font-bold text-base">I. Khung Ma Trận</span><p className="text-xs text-gray-400 mt-1">File chứa bảng phân bổ số câu</p></div>
+
+                                        )}
+
+                                    </label>
+
+                                    <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${specFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
+
+                                        <input type="file" className="hidden" accept=".pdf" onChange={e => setSpecFile(e.target.files[0])} />
+
+                                        {specFile ? (
+
+                                            <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{specFile.name}</div>
+
+                                        ) : (
+
+                                            <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-list-check text-3xl mb-2"></i><br /><span className="font-bold text-base">II. Bảng Đặc Tả</span><p className="text-xs text-gray-400 mt-1">File chứa mã câu &amp; Yêu cầu cần đạt</p></div>
+
+                                        )}
+
+                                    </label>
+
+                                </div>
+
+                                <div className="text-center">
+
+                                    <button
+
+                                        disabled={loading || (!matrixFile || !specFile)}
+
+                                        onClick={processSeparateFiles}
+
+                                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center mx-auto min-w-[200px]"
+
+                                    >
+
+                                        {loading ? <div className="flex items-center"><div className="loader mr-2 border-white"></div> {loadingMsg}</div> : <><i className="fas fa-cogs mr-2"></i> Phân tích 2 File</>}
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
                         </div>
                     )}
 
@@ -1776,7 +1781,7 @@ Cấu trúc JSON Hợp lệ:
                                                         </tr>
                                                     ))}
                                                 {step === 2 && (
-                                                    <tr><td colSpan="5" className="p-3 text-center bg-gray-50 border-t border-dashed rounded-b-lg"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle mr-1"></i> Thêm thủ công 1 câu vào phần này</button></td></tr>
+                                                    <tr><td colSpan="5" className="p-3 text-center bg-gray-50 border-t border-dashed rounded-b-lg"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); setViewFilter('ALL'); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle mr-1"></i> Thêm thủ công 1 câu vào phần này</button></td></tr>
                                                 )}
                                             </tbody>
                                         </table>
