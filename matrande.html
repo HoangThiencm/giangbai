@@ -1577,7 +1577,7 @@ LƯU Ý QUAN TRỌNG:
                         </div>
                     )}
 
-                    {step === 2 && blueprint && (
+                    {(step === 2 || step === 3) && blueprint && (
                         <div className="flex flex-col h-[85vh] glass-panel rounded-2xl shadow-xl overflow-hidden border-0 relative">
                             {generatingState.isRunning && (
                                 <div className="absolute top-0 left-0 w-full z-50">
