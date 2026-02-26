@@ -382,7 +382,7 @@
                     for (let i = 0; i < imgs.length; i += batchSize) {
                         const startPage = i + 1;
                         const endPage = Math.min(imgs.length, i + batchSize);
-                        const contextImgs = imgs.slice(0, endPage);
+                        const contextImgs = imgs.slice(i, endPage);
 
                         const prompt = `Bạn là CHUYÊN GIA BIÊN TẬP MA TRẬN ĐỀ THI.
 TÔI VỪA GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA MỘT TÀI LIỆU MA TRẬN VÀ ĐẶC TẢ.
@@ -601,7 +601,7 @@ Cấu trúc JSON đầu ra Hợp lệ:
                     for (let i = 0; i < specImgs.length; i += batchSize) {
                         const startPage = i + 1;
                         const endPage = Math.min(specImgs.length, i + batchSize);
-                        const contextImgs = specImgs.slice(0, endPage);
+                        const contextImgs = specImgs.slice(i, endPage);
 
                         const promptSpec = `Bạn là CHUYÊN GIA BIÊN TẬP ĐẶC TẢ ĐỀ THI. 
 TÔI GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA BẢNG ĐẶC TẢ.
