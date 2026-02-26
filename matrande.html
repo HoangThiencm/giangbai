@@ -340,9 +340,11 @@
                     if (qCount > 0) {
                         sectionTxt += `- ${title}: Có ${qCount} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + qCount - 1}".\n`;
                         if (qCount === sCount) {
-                            sectionTxt += `   -> QUY TẮC CỨNG (VÌ SỐ CÂU = SỐ Ý): Phần này có ${sCount} ý đặc tả lớn. Bắt buộc MỖI CÂU CHỈ ĐƯỢC NHẬN DUY NHẤT 1 Ý ĐẶC TẢ theo đúng thứ tự (Câu ${currentNum} nhận ý 1, Câu ${currentNum + 1} nhận ý 2...). Tuyệt đối không gộp chung nhiều ý vào 1 câu. Từng ý lớn được xem như là nội dung của câu hỏi nhỏ trong ma trận.\n`;
+                            sectionTxt += `   -> QUY TẮC CỨNG (SỐ CÂU = SỐ Ý): Bắt buộc MỖI CÂU CHỈ ĐƯỢC NHẬN DUY NHẤT 1 Ý ĐẶC TẢ theo đúng thứ tự từ trên xuống dưới (Câu ${currentNum} nhận ý 1, Câu ${currentNum + 1} nhận ý 2...). Tuyệt đối không gộp chung nhiều ý vào 1 câu.\n`;
+                        } else if (qCount < sCount) {
+                            sectionTxt += `   -> QUY TẮC CỨNG (SỐ CÂU < SỐ Ý): Có ${qCount} câu nhưng tới ${sCount} ý. BẠN PHẢI CHỌN ĐÚNG ${qCount} Ý ĐẦU TIÊN TỪ TRÊN XUỐNG DƯỚI RẢI ĐỀU CHO ${qCount} CÂU (MỖI CÂU 1 Ý DUY NHẤT). Bỏ qua hoàn toàn các ý còn dư ở dưới cuối. Tuyệt đối không được gộp 2 ý vào 1 câu.\n`;
                         } else {
-                            sectionTxt += `   -> Phần này có ${sCount} ý đặc tả. Hãy phân bổ đều ${sCount} ý này cho ${qCount} câu.\n`;
+                            sectionTxt += `   -> Phần này có ${sCount} ý đặc tả. Hãy phân bổ đều ${sCount} ý này cho ${qCount} câu một cách hợp lý.\n`;
                         }
                         currentNum += qCount;
                     }
