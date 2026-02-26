@@ -337,55 +337,69 @@
                 if (!config || !config.useConfig) return sections;
 
                 const sectionMapping = {
-                    'PHẦN I': { cfg: config.mc, name: 'PHẦN I' },
-                    'PHẦN II': { cfg: config.tf, name: 'PHẦN II' },
-                    'PHẦN III': { cfg: config.tln, name: 'PHẦN III' },
-                    'TỰ LUẬN': { cfg: config.tl, name: 'TỰ LUẬN' }
+                    'PHẦN I': config.mc,
+                    'PHẦN II': config.tf,
+                    'PHẦN III': config.tln,
+                    'TỰ LUẬN': config.tl
                 };
 
                 return sections.map(sec => {
                     const secNameUpper = (sec.name || '').toUpperCase();
                     let matchedCfg = null;
                     for (const [key, val] of Object.entries(sectionMapping)) {
-                        if (secNameUpper.includes(key)) { matchedCfg = val.cfg; break; }
+                        if (secNameUpper.includes(key)) { matchedCfg = val; break; }
                     }
 
                     if (!matchedCfg) return sec;
 
-                    const expectedSpecCount = parseInt(matchedCfg.s) || 0;
                     const qCount = sec.questions.length;
-                    if (expectedSpecCount <= 0 || qCount <= 0) return sec;
+                    if (qCount <= 0) return sec;
 
-                    // Thu thập tất cả spec text từ các câu
-                    const rawSpecTexts = sec.questions.map(q => (q.spec || '').trim()).filter(s => s.length > 0).join('\n');
-                    if (!rawSpecTexts) return sec;
+                    // === KIỂM TRA: Có cần phân phối lại không? ===
+                    // Chỉ kích hoạt khi AI dumped toàn bộ spec vào 1 câu và những câu còn lại rỗng
+                    const emptyCount = sec.questions.filter(q => !(q.spec || '').trim()).length;
+                    const totalSpecLen = sec.questions.reduce((sum, q) => sum + (q.spec || '').length, 0);
+                    const maxSpecLen = Math.max(...sec.questions.map(q => (q.spec || '').length));
 
-                    // Tách thành các ý riêng biệt bằng cách phát hiện bullet/newline patterns
-                    const splitSpecs = rawSpecTexts
-                        .split(/\n/)
-                        .map(line => line.replace(/^[\s\-•\*\d+\.]+/, '').trim())
-                        .filter(line => line.length > 5); // bỏ dòng quá ngắn/rỗng
+                    // Không phân phối nếu:
+                    // 1) Tất cả câu đều có spec (mỗi câu ít nhất 15 ký tự) → AI đã làm đúng
+                    // 2) Chỉ 1 câu rỗng trong tổng số nhiều câu
+                    const allHaveSpec = emptyCount === 0;
+                    const mostlyFilled = emptyCount <= 1 && qCount > 2;
+                    if (allHaveSpec || mostlyFilled) return sec; // Giữ nguyên, không sờ vào
 
-                    if (splitSpecs.length <= 1) return sec; // AI đã ghi gọn 1 dòng, không tách được, giữ nguyên
+                    // === Chỉ khi phát hiện dump pattern: nhiều câu rỗng, 1 câu ôm hết ===
+                    // Ghép toàn bộ spec từ câu có spec dài nhất (câu bị dump vào)
+                    const dumpedQ = sec.questions.find(q => (q.spec || '').length === maxSpecLen);
+                    if (!dumpedQ || maxSpecLen < 20) return sec;
 
-                    // Nếu số ý tách được xấp xỉ với expectedSpecCount, phân bổ đều
-                    const specsToUse = splitSpecs.slice(0, Math.max(expectedSpecCount, splitSpecs.length));
+                    const rawText = (dumpedQ.spec || '').trim();
 
-                    // Phân bổ một ý vào mỗi câu theo thứ tự
+                    // Tách ra theo các quy ước phổ biến trong đặc tả VN
+                    const splitSpecs = rawText
+                        .split(/[;\n]/)
+                        .map(line => line.replace(/^[\s\-•*\d+.]+/, '').trim())
+                        .filter(line => line.length > 8);
+
+                    if (splitSpecs.length <= 1) return sec; // Không tách được
+
+                    // Phân bổ: 1 ý cho 1 câu (ưu tiên theo thứ tự), câu cuối nhận phần còn dư
                     const newQuestions = sec.questions.map((q, idx) => {
-                        return { ...q, spec: specsToUse[idx] || q.spec || '' };
+                        if (splitSpecs[idx] !== undefined) {
+                            return { ...q, spec: splitSpecs[idx] };
+                        }
+                        return q; // Giữ nguyên nếu không còn ý
                     });
 
-                    // Nếu số ý còn dư (nhiều hơn câu), gộp ý cuối vào câu cuối
-                    if (specsToUse.length > qCount) {
-                        const lastQ = newQuestions[qCount - 1];
-                        const extraSpecs = specsToUse.slice(qCount - 1);
-                        lastQ.spec = extraSpecs.join('; ');
+                    // Gộp phần dư vào câu cuối nếu còn dư
+                    if (splitSpecs.length > qCount) {
+                        newQuestions[qCount - 1].spec = splitSpecs.slice(qCount - 1).join('; ');
                     }
 
                     return { ...sec, questions: newQuestions };
                 });
             };
+
             const generateExpectedCodes = () => {
                 if (!matrixConfig.useConfig) return "";
                 let txt = "⚠️ YÊU CẦU ĐẶC BIỆT TỪ NGƯỜI DÙNG: ĐỀ THI ĐÃ ĐƯỢC CHỐT TRƯỚC SỐ LƯỢNG JSON VÀ ĐÁNH SỐ THỨ TỰ NHƯ SAU. BẠN PHẢI TẠO RA ĐÚNG SỐ LƯỢNG OBJECT TRONG MẢNG QUESTIONS:\n";
@@ -441,6 +455,118 @@
                 txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH TRÍCH XUẤT, BẠN BẮT BUỘC PHẢI DỰA VÀO DANH SÁCH MÃ NÀY (CẢ NHỮNG MÃ CON A, B, C) ĐỂ LẬP RA SỐ LƯỢNG ITEM CHUẨN. KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI. TUYỆT ĐỐI KHÔNG BỎ XÓT Ý NÀO MÀ CẦN GỘP HOẶC TÁCH CHO KHỚP VỚI CẤU TRÚC!\n";
                 return txt;
             };
+
+            // ============================================================
+            // QUÉT LẠI CÂU BỊ THIẾU: Tự động dò tìm câu còn thiếu sau lần
+            // trích xuất đầu. Chỉ cảnh báo nếu vẫn thiếu sau khi quét lại.
+            // ============================================================
+            const findMissingQuestions = async (finalJson, imgs, setLoadingMsgFn) => {
+                if (!matrixConfig.useConfig) return finalJson;
+
+                // Tính danh sách mã câu kỳ vọng từ config
+                const buildExpectedCodes = () => {
+                    const codes = [];
+                    let n = 1;
+                    const mcQ = parseInt(matrixConfig.mc.q) || 0;
+                    const tfQ = parseInt(matrixConfig.tf.q) || 0;
+                    const tfS = parseInt(matrixConfig.tf.s) || 0;
+                    const tlnQ = parseInt(matrixConfig.tln.q) || 0;
+                    const tlQ = parseInt(matrixConfig.tl.q) || 0;
+                    const tlS = parseInt(matrixConfig.tl.s) || 0;
+                    for (let i = 0; i < mcQ; i++) codes.push({ code: `Câu ${n++}`, type: 'MC' });
+                    for (let i = 0; i < tfQ; i++) {
+                        const base = n++;
+                        const perBig = Math.ceil(tfS / tfQ);
+                        const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].slice(0, (tfS > 0 ? perBig : 1));
+                        letters.forEach(l => codes.push({ code: `Câu ${base}${l}`, type: 'TF' }));
+                    }
+                    for (let i = 0; i < tlnQ; i++) codes.push({ code: `Câu ${n++}`, type: 'TLN' });
+                    for (let i = 0; i < tlQ; i++) {
+                        const base = n++;
+                        const perBig = Math.ceil(tlS / tlQ);
+                        const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].slice(0, (tlS > 0 ? perBig : 1));
+                        letters.forEach(l => codes.push({ code: `Câu ${base}${l}`, type: 'TL' }));
+                    }
+                    return codes;
+                };
+
+                const expectedCodes = buildExpectedCodes();
+                const existingCodes = new Set();
+                finalJson.sections.forEach(sec => (sec.questions || []).forEach(q => {
+                    existingCodes.add((q.code || '').toLowerCase().replace(/\s/g, ''));
+                }));
+
+                const missingCodes = expectedCodes.filter(ec =>
+                    !existingCodes.has(ec.code.toLowerCase().replace(/\s/g, ''))
+                );
+
+                if (missingCodes.length === 0) return finalJson; // Không thiếu gì
+
+                setLoadingMsgFn(`Phát hiện ${missingCodes.length} câu bị thiếu. Đang quét lại toàn bộ tài liệu để tìm...`);
+
+                const missingList = missingCodes.map(c => `"${c.code}" (${c.type})`).join(', ');
+                const retryPrompt = `Bạn là CHUYÊN GIA TÌM KIẾM CÂU HỎI BỊ THIẾU.
+Trong lần trích xuất trước, hệ thống không tìm thấy các câu sau: ${missingList}.
+Nhiệm vụ: Quét TOÀN BỘ tài liệu được gửi kèm và CHỈ trả về thông tin của những câu trên.
+Tuyệt đối không tạo câu mới không có trong tài liệu. Nếu không tìm thấy, trả về mảng rỗng [].
+
+Cấu trúc JSON đầu ra:
+{
+  "sections": [
+    {
+      "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
+      "questions": [
+        { "code": "Câu X", "group": "", "topic": "...", "level": "B", "type": "MC", "score": 0.25, "spec": "...", "parts": [] }
+      ]
+    }
+  ]
+}`;
+
+                let retryJson = null;
+                try {
+                    const payload = [{ text: retryPrompt }, ...imgs.map(d => ({ inline_data: { mime_type: 'image/jpeg', data: d } }))];
+                    const res = await AIAdapter.callGemini(payload);
+                    const jsonMatch = res.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) retryJson = JSON.parse(jsonMatch[0]);
+                } catch (err) { console.error('Lỗi quét lại câu thiếu:', err); }
+
+                if (retryJson && retryJson.sections) {
+                    // Merge kết quả quét lại vào finalJson
+                    retryJson.sections.forEach(retrySec => {
+                        const normName = (retrySec.name || '').toUpperCase();
+                        let targetSec = finalJson.sections.find(s => {
+                            const n = (s.name || '').toUpperCase();
+                            return n.includes('PHẦN I') && normName.includes('PHẦN I') ||
+                                n.includes('PHẦN II') && normName.includes('PHẦN II') ||
+                                n.includes('PHẦN III') && normName.includes('PHẦN III') ||
+                                n.includes('TỰ LUẬN') && normName.includes('TỰ LUẬN');
+                        });
+                        if (!targetSec) {
+                            targetSec = { name: retrySec.name, questions: [] };
+                            finalJson.sections.push(targetSec);
+                        }
+                        (retrySec.questions || []).forEach(q => {
+                            const codeNorm = (q.code || '').toLowerCase().replace(/\s/g, '');
+                            if (!existingCodes.has(codeNorm)) {
+                                targetSec.questions.push(q);
+                                existingCodes.add(codeNorm); // Tránh thêm trùng
+                            }
+                        });
+                    });
+                }
+
+                // Kiểm tra lại sau retry - nếu còn thiếu thì mới cảnh báo
+                const stillMissing = missingCodes.filter(ec =>
+                    !existingCodes.has(ec.code.toLowerCase().replace(/\s/g, ''))
+                );
+                if (stillMissing.length > 0) {
+                    console.warn(`[Thông báo] Sau khi quét lại, vẫn còn ${stillMissing.length} câu không tìm thấy:`, stillMissing.map(c => c.code).join(', '));
+                    // Có thể hiển thị cảnh báo nhẹ ở UI nếu cần
+                }
+
+                return finalJson;
+            };
+
 
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
@@ -571,12 +697,15 @@ Cấu trúc JSON đầu ra Hợp lệ:
                         }
                     });
 
-                    // Sắp xếp các câu hỏi trong mỗi nhóm theo thứ tự tăng dần của mã câu
+                    // Sắp xếp câu hỏi: số chính trước, rồi chữ phụ a,b,c
                     finalSections.forEach(sec => {
                         sec.questions.sort((a, b) => {
                             const numA = parseInt(a.code?.match(/\d+/)?.[0]) || 0;
                             const numB = parseInt(b.code?.match(/\d+/)?.[0]) || 0;
-                            return numA - numB;
+                            if (numA !== numB) return numA - numB;
+                            const suffA = (a.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            const suffB = (b.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            return suffA.localeCompare(suffB);
                         });
                     });
 
@@ -588,6 +717,21 @@ Cấu trúc JSON đầu ra Hợp lệ:
 
                     // === TÁI PHÂN PHỐI SPEC (JS-SIDE) ===
                     finalJson.sections = redistributeSpecs(finalJson.sections, matrixConfig);
+
+                    // === QUÉT LẠI CÂU BỊ THIẾU (AUTO-RETRY) ===
+                    finalJson = await findMissingQuestions(finalJson, imgs, setLoadingMsg);
+
+                    // Sắp xếp lại sau khi merge
+                    finalJson.sections.forEach(sec => {
+                        sec.questions.sort((a, b) => {
+                            const numA = parseInt(a.code?.match(/\d+/)?.[0]) || 0;
+                            const numB = parseInt(b.code?.match(/\d+/)?.[0]) || 0;
+                            if (numA !== numB) return numA - numB;
+                            const suffA = (a.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            const suffB = (b.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            return suffA.localeCompare(suffB);
+                        });
+                    });
 
                     const detectedDefaultType = inferDefaultQuestionType(finalJson, info.time);
                     setGlobalType(detectedDefaultType);
@@ -807,13 +951,17 @@ Cấu trúc JSON Hợp lệ:
 
                     let finalSections = matJson.sections;
                     // Bổ sung sort CỰC MẠNH: Dựa thuần túy vào con số để tránh chữ cái làm hỏng thứ tự
+                    // Sắp xếp câu hỏi: số chính trước, rồi chữ phụ a,b,c
                     finalSections.forEach(sec => {
                         sec.questions.sort((a, b) => {
                             const matchA = a.code?.match(/\d+/);
                             const matchB = b.code?.match(/\d+/);
                             const numA = matchA ? parseInt(matchA[0], 10) : 0;
                             const numB = matchB ? parseInt(matchB[0], 10) : 0;
-                            return numA - numB;
+                            if (numA !== numB) return numA - numB;
+                            const suffA = (a.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            const suffB = (b.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            return suffA.localeCompare(suffB);
                         });
                     });
 
@@ -821,6 +969,23 @@ Cấu trúc JSON Hợp lệ:
 
                     // === TÁI PHÂN PHỐI SPEC (JS-SIDE) ===
                     finalJson.sections = redistributeSpecs(finalJson.sections, matrixConfig);
+
+                    // === QUÉT LẠI CÂU BỊ THIẾU (AUTO-RETRY) - dùng cả matImgs + specImgs ===
+                    finalJson = await findMissingQuestions(finalJson, [...matImgs, ...specImgs], setLoadingMsg);
+
+                    // Sắp xếp lại sau khi merge
+                    finalJson.sections.forEach(sec => {
+                        sec.questions.sort((a, b) => {
+                            const matchA = a.code?.match(/\d+/);
+                            const matchB = b.code?.match(/\d+/);
+                            const numA = matchA ? parseInt(matchA[0], 10) : 0;
+                            const numB = matchB ? parseInt(matchB[0], 10) : 0;
+                            if (numA !== numB) return numA - numB;
+                            const suffA = (a.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            const suffB = (b.code?.match(/[a-z]$/i) || [''])[0].toLowerCase();
+                            return suffA.localeCompare(suffB);
+                        });
+                    });
 
                     const detectedDefaultType = inferDefaultQuestionType(finalJson, info.time);
                     setGlobalType(detectedDefaultType);
@@ -1630,4 +1795,3 @@ Cấu trúc JSON Hợp lệ:
 </body>
 
 </html>
-
