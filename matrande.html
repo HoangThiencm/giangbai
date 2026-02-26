@@ -95,7 +95,10 @@
         };
 
         const tokenizeRichText = (raw) => {
-            const text = normalizeRichText(raw);
+            const text = normalizeRichText(raw)
+                // Hỗ trợ xử lý \text{...} 
+                .replace(/\\text\{([^}]+)\}/g, ' $1 ');
+
             return text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g).map(part => {
                 if (part.startsWith('$$') && part.endsWith('$$')) return { type: 'math', display: true, content: part.slice(2, -2).trim() };
                 else if (part.startsWith('$') && part.endsWith('$')) return { type: 'math', display: false, content: part.slice(1, -1).trim() };
@@ -130,6 +133,7 @@
                     return t.content.replace(/\$/g, '');
                 })()
                 : t.content
+                    .replace(/\\text\{([^}]+)\}/g, ' $1 ')
                     .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>')
                     .replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>')
                     .replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>')
@@ -158,12 +162,17 @@
             const s = (rawType || "").toString().trim().toUpperCase();
             const sec = (sectionName || "").toString().trim().toUpperCase();
 
+            // Ưu tiên cao nhất: Bắt "Trả lời ngắn" trước (Dù nằm trong phần Trắc nghiệm/TNKQ)
+            if (sec.includes("TRẢ LỜI NGẮN") || s.includes("NGẮN") || s.includes("TLN")) return "TLN";
+
+            // Dạng Tự luận truyền thống (Thường có nhiều ý a, b, c)
+            if (sec.includes("TỰ LUẬN") || s.includes("TỰ") || s === "TL") return "TL";
+
             // Dạng Đúng/Sai (TF)
             if (sec.includes("ĐÚNG SAI") || sec.includes("TRUE/FALSE") || s.includes("TF") || s.includes("Đ/S")) return "TF";
-            // Dạng Tự luận (TL)
-            if (sec.includes("TỰ LUẬN") || sec.includes("TU LUAN") || s.includes("TL") || s.includes("TỰ")) return "TL";
+
             // Dạng Nhiều lựa chọn (MC)
-            if (sec.includes("TRẮC NGHIỆM") || s.includes("TN") || s.includes("MC")) return "MC";
+            if (sec.includes("NHIỀU LỰA CHỌN") || sec.includes("TRẮC NGHIỆM") || sec.includes("TNKQ") || s.includes("TN") || s.includes("MC")) return "MC";
 
             return defaultType;
         };
@@ -324,14 +333,17 @@
 
                     const prompt = `Phân tích ảnh Ma trận và Bảng Đặc tả (theo chuẩn CV 7991).
                     Yêu cầu:
-                    1. Đọc và gom nhóm các dòng thành sections/questions. Đề thi theo CV 7991 có 3 phần: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn". Tên section (name) phải chứa chữ "PHẦN I", "PHẦN II" hoặc "PHẦN III" tương ứng.
+                    1. Đọc và gom nhóm các dòng thành sections/questions. Đề thi theo CV 7991 có 3 phần: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn". Tên section (name) phải chứa chữ "PHẦN I", "PHẦN II" hoặc "PHẦN III" tương ứng. (Lưu ý: Bảng đặc tả có thể gộp chung dưới tên gọi "TNKQ" nhưng phải tách ra đúng loại câu).
                     2. Chuẩn hóa mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
-                    3. Chuẩn hóa loại câu: 
-                       - PHẦN I -> MC
-                       - PHẦN II -> TF
-                       - PHẦN III -> TL (Tự luận / Trả lời ngắn)
+                    3. Chuẩn hóa loại câu (Tuyệt đối tuân thủ): 
+                       - PHẦN I (Nhiều lựa chọn) -> MC
+                       - PHẦN II (Đúng sai) -> TF
+                       - PHẦN III (Trả lời ngắn) -> TLN
+                       - PHẦN TỰ LUẬN TRUYỀN THỐNG -> TL
                     4. Trường 'level' (mức độ) phải là B, H, hoặc V.
                     5. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu hỏi và số lượng ý/mô tả trong cùng một ô ma trận. NẾU số câu bằng số ý, mỗi câu CHỈ lấy 1 ý duy nhất. NẾU số câu ít hơn số ý, chọn ngẫu nhiên các ý KHÔNG trùng lặp. NẾU số câu nhiều hơn số ý, phủ đều (mỗi câu 1 ý khác nhau) cho đến khi hết ý rồi mới lặp lại hoặc kết hợp. Tuyệt đối KHÔNG gộp chung tất cả các ý vào 1 câu nếu có nhiều câu. Cố gắng chia đều ý.
+                    6. QUAN TRỌNG VỀ TỰ LUẬN/CÂU CHÙM NHIỀU Ý: Nếu Bảng đặc tả miêu tả một bài Tự Luận hoặc bài lớn có nhiều ý phụ (Ví dụ: Bài 19 có 3 gạch đầu dòng tương ứng Câu a, b, c), yêu cầu BẮT BUỘC tách bài lớn ra thành các phần tử (object) con riêng biệt (vd "code": "Bài 19a", "code": "Bài 19b"). Mỗi câu phụ CHỈ nhận đúng 1 tiêu chí (spec) tương ứng trong ma trận. TUYỆT ĐỐI KHÔNG gộp chung tất cả tiêu chí của Bài 19 vào 1 object duy nhất.
+                    7. ÉP BUỘC KHÔNG BỎ CÂU KHÔNG SÓT CÂU: Kiểm tra tổng số câu ở từng phần và xuất đủ số JSON object tương ứng. Không được phép bỏ sót hoặc bỏ ngang phần cuối (Đặc biệt là những câu Trả lời ngắn / Tự luận), dẫu bảng có dài nhiều trang đi nữa.
                     
                     Trích JSON: { 
                         "exam_type": "...", 
@@ -431,8 +443,11 @@
                     2. Định dạng: Dùng LaTeX $...$ thay vì chữ viết thường. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
                     3. Nếu là Trắc nghiệm (MC - PHẦN I), chỉ 4 đáp án (A, B, C, D), chỉ rõ đáp án đúng (A/B/C/D).
                     4. NẾU LÀ ĐÚNG/SAI (TF - PHẦN II), BẮT BUỘC tạo 1 câu dẫn chung và 4 CÂU ĐỘC LẬP (a, b, c, d) dạng mệnh đề có tính Đúng hoặc Sai. CHỈ RÕ GIÁ TRỊ CHÂN LÝ.
-                    5. NẾU LÀ TRẢ LỜI NGẮN (TL - PHẦN III), KHÔNG cho đáp án trắc nghiệm. Soạn câu hỏi yêu cầu học sinh tính toán và điền KẾT QUẢ CUỐI CÙNG (một con số, biểu thức ngắn gọn).
-                    6. Output: CHỈ JSON THUẦN TÚY, KHÔNG GIẢI THÍCH, KHÔNG MARKDOWN.
+                    5. NẾU LÀ TRẢ LỜI NGẮN (TLN), KHÔNG cho đáp án trắc nghiệm. Học sinh chỉ cần điền KẾT QUẢ CUỐI CÙNG (một con số, biểu thức ngắn gọn).
+                    6. NẾU LÀ TỰ LUẬN (TL), yêu cầu học sinh trình bày lời giải chi tiết.
+                    7. CÂU HỎI CHÙM (BẢO TOÀN NGỮ CẢNH): Nếu câu hỏi hiện tại là một ý phụ (ví dụ mã câu là 19a, 19b...), bạn PHẢI tự động nhắc lại toàn bộ "Câu dẫn / Ngữ cảnh chung" của bài toán lớn lên đầu nội dung câu hỏi (Ví dụ: "Cho tứ giác ABCD... Phát biểu: Tính góc A"). Không được phép viết cụt lủn thân câu hỏi khiến người đọc không hiểu bài toán gốc.
+                    8. QUAN TRỌNG VỀ HÌNH VẼ: Tuyệt đối không được ra đề bằng những câu lệnh chung chung như "sử dụng hình vẽ sau đây" mà không có hình. Nếu đề bài cần hình vẽ minh hoạ, bạn BẮT BUỘC VÀ LUÔN LUÔN phải mô tả lại hình học đó dưới dạng CHỮ HOẶC KÍ HIỆU CHI TIẾT (Ví dụ: "Cho tam giác ABC vuông tại A, đường cao AH, trên cạnh BC lấy điểm D sao cho BD = 3cm") ngay trực tiếp vào nội dung câu dẫn, để người ra đề dễ dàng tự vẽ lại chính xác 100% bằng mắt.
+                    9. Output: CHỈ JSON THUẦN TÚY, KHÔNG GIẢI THÍCH, KHÔNG MARKDOWN.
 
                     // === CẤU TRÚC JSON THEO LOẠI (CHỈ TRẢ VỀ JSON) ===
                     ${qData.type === 'TF' ? `
@@ -446,12 +461,19 @@
                         ],
                         "c": "Lời giải/Giải thích chi tiết cho từng ý a, b, c, d"
                     }
-                    ` : qData.type === 'TL' ? `
+                    ` : qData.type === 'TLN' ? `
                     {
-                        "q": "Nội dung câu hỏi (đây là dạng câu trắc nghiệm trả lời ngắn, học sinh chỉ cần điền đáp án cuối cùng, hoặc tự luận ngắn)...",
+                        "q": "Nội dung câu hỏi (đây là câu trả lời ngắn, học sinh chỉ cần điền đáp án cuối)...",
                         "a": [],
                         "c": "Lời giải chi tiết...",
                         "correct_char": "Đáp án cuối cùng (ví dụ: 5, -1/2, ...)"
+                    }
+                    ` : qData.type === 'TL' ? `
+                    {
+                        "q": "Nội dung câu hỏi tự luận (có thể dài và có câu dẫn)...",
+                        "a": [],
+                        "c": "Lời giải chi tiết từng bước...",
+                        "correct_char": ""
                     }
                     ` : `
                     { 
@@ -507,10 +529,20 @@
                     target.status = 'done'; target.source = usedSource;
                     setBlueprint(finalBp);
                 } catch (e) {
+                    console.error("Lỗi khi tạo câu hỏi:", e);
                     const errBp = { ...blueprint };
                     errBp.sections[sIdx].questions[qIdx].status = 'error';
                     errBp.sections[sIdx].questions[qIdx].source = "ERR";
+
+                    // Ghi đè thông báo lỗi vào trường text để user bớt mù mờ
+                    errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
+
                     setBlueprint(errBp);
+
+                    // Có thể alert nếu gọi đơn lẻ
+                    if (!generatingState.isRunning) {
+                        alert(`Lỗi tạo câu hỏi: ${e.message}`);
+                    }
                 }
             };
 
@@ -577,9 +609,9 @@
             // --- EXPORT WORD (V28 - OMML NAMESPACE + GROUPING) ---
             const exportWord = () => {
                 let html = `
-                    < html xmlns: o = 'urn:schemas-microsoft-com:office:office' 
-                          xmlns: w = 'urn:schemas-microsoft-com:office:word'
-                          xmlns: m = 'http://schemas.openxmlformats.org/officeDocument/2006/math' >
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                          xmlns:w='urn:schemas-microsoft-com:office:word'
+                          xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
                         <style>
@@ -660,45 +692,45 @@
                             g.subs.sort((a, b) => a.subLabel.localeCompare(b.subLabel));
                             g.subs.forEach(sq => {
                                 if (sq.type === 'TF') {
-                                    html += `< div style = 'margin-left: 0.7cm; margin-bottom: 6pt;' > <b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div> `;
-                                    html += `< table border = '1' cellpadding = '5' cellspacing = '0' style = 'width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;' > `;
-                                    html += `< tr style = 'background-color:#f0f0f0' ><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr > `;
+                                    html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                    html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                    html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
                                     sq.parts.forEach(p => {
-                                        html += `< tr ><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr > `;
+                                        html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
                                     });
-                                    html += `</table > `;
+                                    html += `</table>`;
                                 } else { // MC/TL sub-question
-                                    html += `< div style = "margin-left: 0.7cm; margin-bottom: 6pt;" > <b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div > `;
+                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
                                     if (sq.type === 'MC' && sq.a?.length) {
-                                        html += `< table style = 'margin-left:1.2cm;margin-bottom:10px' > <tr>`;
+                                        html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
                                         sq.a.forEach((opt, k) => {
                                             const prefix = String.fromCharCode(65 + k);
                                             html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k % 2 !== 0 ? '</tr><tr>' : ''}`;
                                         });
-                                        html += `</tr></table > `;
+                                        html += `</tr></table>`;
                                     }
                                 }
                             });
                         }
 
-                        html += `</div > `;
+                        html += `</div>`;
                     });
                 });
 
                 // PHẦN ĐÁP ÁN
-                html += `< br clear = all style = 'page-break-before:always' > <h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
+                html += `<br clear="all" style="page-break-before:always" /><h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
 
                 // PHẦN I
                 const phan1 = blueprint.sections.find(s => s.name.toUpperCase().includes('PHẦN I'));
                 if (phan1) {
                     const mcQuestions = phan1.questions.filter(q => q.type === 'MC' && q.correct_char);
                     if (mcQuestions.length > 0) {
-                        html += `< h4 > PHẦN I.Câu trắc nghiệm nhiều phương án lựa chọn</h4 > `;
-                        html += `< table class="ans-key-table" cellpadding = "5" ><tr>`;
+                        html += `<h4>PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
                         mcQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
                         html += `</tr><tr>`;
                         mcQuestions.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`);
-                        html += `</tr></table > <br />`;
+                        html += `</tr></table><br/>`;
                     }
                 }
 
@@ -707,12 +739,12 @@
                 if (phan2) {
                     const tfQuestions = phan2.questions.filter(q => q.type === 'TF' && q.correct_char);
                     if (tfQuestions.length > 0) {
-                        html += `< h4 > PHẦN II.Câu trắc nghiệm đúng sai</h4 > `;
-                        html += `< table class="ans-key-table" cellpadding = "5" ><tr>`;
+                        html += `<h4>PHẦN II. Câu trắc nghiệm đúng sai</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
                         tfQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
                         html += `</tr><tr>`;
                         tfQuestions.forEach(q => html += `<td style="color:red; font-size: 10pt">${q.correct_char}</td>`);
-                        html += `</tr></table > <br />`;
+                        html += `</tr></table><br/>`;
                     }
                 }
 
@@ -721,27 +753,27 @@
                 if (phan3) {
                     const tlQuestions = phan3.questions.filter(q => q.type === 'TL' && q.correct_char);
                     if (tlQuestions.length > 0) {
-                        html += `< h4 > PHẦN III.Câu trắc nghiệm trả lời ngắn</h4 > `;
-                        html += `< table class="ans-key-table" cellpadding = "5" style = "width: auto;" > `;
-                        html += `< tr style = "background:#eee" ><td>Câu</td><td>Đáp án</td></tr > `;
+                        html += `<h4>PHẦN III. Câu trắc nghiệm trả lời ngắn</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5" style="width: auto;">`;
+                        html += `<tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`;
                         tlQuestions.forEach(q => {
-                            html += `< tr ><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr > `;
+                            html += `<tr><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr>`;
                         });
-                        html += `</table > <br />`;
+                        html += `</table><br/>`;
                     }
                 }
 
-                html += `< h4 > Lời giải chi tiết</h4 > `;
+                html += `<h4>Lời giải chi tiết</h4>`;
                 blueprint.sections.forEach(sec => {
                     sec.questions.forEach(q => {
                         const tokensAns = tokenizeRichText(q.c);
                         const displayCode = q.code;
-                        html += `< p > <b>${displayCode}:</b></p ><div>${renderToWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
+                        html += `<p><b>${displayCode}:</b></p><div>${renderToWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
                     });
                 });
 
-                html += `</body ></html > `;
-                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_9.doc`);
+                html += `</body></html>`;
+                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.doc`);
             };
 
             return (
@@ -763,7 +795,7 @@
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Môn học</label>
                                     <select className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" value={info.subject} onChange={e => setInfo({ ...info, subject: e.target.value })}>
-                                        {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Giáo dục Công dân", "Tin Học", "Công Nghệ", "Âm nhạc", "Mỹ thuật", "Nghệ thuật", "Khoa học Tự nhiên", "Lịch sử và Địa lý"].map(s => <option key={s} value={s}>{s}</option>)}
+                                        {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Giáo dục Công dân", "Tin Học", "Công Nghệ", "Khoa học Tự nhiên", "Lịch sử và Địa lý"].map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
@@ -815,7 +847,7 @@
                                     </div>
                                     <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
                                         <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">Kiểu đề mặc định:</span>
-                                        {['TL', 'MC', 'TF'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} className={`px - 3 py - 1 rounded - full border text - xs font - semibold transition - all ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TL' ? 'Tự luận / Trả lời ngắn' : 'Đúng/Sai'}</button>))}
+                                        {['MC', 'TF', 'TLN', 'TL'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}</button>))}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -841,9 +873,10 @@
                                                         <select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
                                                             <option value="MC">Trắc nghiệm</option>
                                                             <option value="TF">Đúng/Sai</option>
+                                                            <option value="TLN">Trả lời ngắn</option>
                                                             <option value="TL">Tự luận</option>
                                                         </select>
-                                                        <div className={`mt - 1 text - center text - [10px] uppercase font - bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
+                                                        <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
                                                         <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
                                                     </td>
                                                     <td className="p-2">
@@ -871,9 +904,9 @@
                                                             {(q.type === 'TF') && q.parts?.length && (
                                                                 <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
                                                                     {q.parts.map((p, k) => (
-                                                                        <div key={k} className={`flex gap - 1 items - center p - 1 rounded transition - colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
+                                                                        <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
                                                                             <span className="font-bold text-xs w-6">{p.label})</span>
-                                                                            <span className={`text - xs w - 8 font - bold text - center`}>{p.is_correct ? 'Đ' : 'S'}</span>
+                                                                            <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
                                                                             <input
                                                                                 className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
                                                                                 value={p.content}
@@ -911,4 +944,3 @@
 </body>
 
 </html>
-
