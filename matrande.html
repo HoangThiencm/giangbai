@@ -329,34 +329,57 @@
             const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
             const generateExpectedCodes = () => {
                 if (!matrixConfig.useConfig) return "";
-                let txt = "ĐỀ THI NÀY ĐÃ ĐƯỢC CHỐT TRƯỚC CẤU TRÚC VÀ ĐÁNH SỐ THỨ TỰ CÂU HỎI LIÊN TIẾP TỪ 1 ĐẾN HẾT NHƯ SAU:\n";
+                let txt = "⚠️ YÊU CẦU ĐẶC BIỆT TỪ NGƯỜI DÙNG: ĐỀ THI ĐÃ ĐƯỢC CHỐT TRƯỚC SỐ LƯỢNG JSON VÀ ĐÁNH SỐ THỨ TỰ NHƯ SAU. BẠN PHẢI TẠO RA ĐÚNG SỐ LƯỢNG OBJECT TRONG MẢNG QUESTIONS:\n";
                 let currentNum = 1;
 
-                const processSection = (configObj, title) => {
-                    let sectionTxt = "";
-                    const qCount = parseInt(configObj.q) || 0;
-                    const sCount = parseInt(configObj.s) || 0;
-
-                    if (qCount > 0) {
-                        sectionTxt += `- ${title}: Có ${qCount} câu, Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + qCount - 1}".\n`;
-                        if (qCount === sCount) {
-                            sectionTxt += `   -> QUY TẮC CỨNG (SỐ CÂU = SỐ Ý): Bắt buộc MỖI CÂU CHỈ ĐƯỢC NHẬN DUY NHẤT 1 Ý ĐẶC TẢ theo đúng thứ tự từ trên xuống dưới (Câu ${currentNum} nhận ý 1, Câu ${currentNum + 1} nhận ý 2...). Tuyệt đối không gộp chung nhiều ý vào 1 câu.\n`;
-                        } else if (qCount < sCount) {
-                            sectionTxt += `   -> QUY TẮC CỨNG (SỐ CÂU < SỐ Ý): Có ${qCount} câu nhưng tới ${sCount} ý. BẠN PHẢI CHỌN ĐÚNG ${qCount} Ý ĐẦU TIÊN TỪ TRÊN XUỐNG DƯỚI RẢI ĐỀU CHO ${qCount} CÂU (MỖI CÂU 1 Ý DUY NHẤT). Bỏ qua hoàn toàn các ý còn dư ở dưới cuối. Tuyệt đối không được gộp 2 ý vào 1 câu.\n`;
-                        } else {
-                            sectionTxt += `   -> Phần này có ${sCount} ý đặc tả. Hãy phân bổ đều ${sCount} ý này cho ${qCount} câu một cách hợp lý.\n`;
-                        }
-                        currentNum += qCount;
+                // MC process
+                const mcQ = parseInt(matrixConfig.mc.q) || 0;
+                const mcS = parseInt(matrixConfig.mc.s) || 0;
+                if (mcQ > 0) {
+                    txt += `- PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn: BẠN PHẢI TẠO ĐÚNG ${mcQ} OBJECTS (JSON items). Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + mcQ - 1}".\n`;
+                    if (mcS !== mcQ && mcS > 0) {
+                        txt += `   -> LƯU Ý CỰC KỲ QUAN TRỌNG: Phần này có ${mcS} ý đặc tả trong bảng nhưng chỉ làm thành ${mcQ} items. KHÔNG ĐƯỢC VỨT BỎ BẤT KỲ Ý NÀO. Bắt buộc phải GỘP CHUNG nhiều ý vào trường "spec" của các item nếu thiếu chỗ. (VD: Câu 1 chứa 2 ý).\n`;
                     }
-                    return sectionTxt;
-                };
+                    currentNum += mcQ;
+                }
 
-                txt += processSection(matrixConfig.mc, "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn");
-                txt += processSection(matrixConfig.tf, "PHẦN II. Câu trắc nghiệm đúng sai");
-                txt += processSection(matrixConfig.tln, "PHẦN III. Câu trắc nghiệm trả lời ngắn");
-                txt += processSection(matrixConfig.tl, "PHẦN TỰ LUẬN (Chia nhỏ từng ý thành từng câu riêng biệt)");
+                // TF process
+                const tfQ = parseInt(matrixConfig.tf.q) || 0;
+                const tfS = parseInt(matrixConfig.tf.s) || 0;
+                if (tfQ > 0) {
+                    txt += `- PHẦN II. Câu trắc nghiệm đúng sai: Gồm ${tfQ} đại câu (Từ Câu ${currentNum} đến Câu ${currentNum + tfQ - 1}).\n`;
+                    if (tfS > 0) {
+                        txt += `   -> YÊU CẦU BẮT BUỘC: Bạn phải chia nhỏ các đại câu này thành TỔNG CỘNG ${tfS} CÂU NHỎ và tạo ra đúng ${tfS} JSON OBJECTS ĐỘC LẬP! Ví dụ: Câu ${currentNum} sẽ sinh ra các object có mã "Câu ${currentNum}a", "Câu ${currentNum}b"... Hãy rải đều ${tfS} ý đặc tả vào đúng ${tfS} objects này, mỗi object 1 ý.\n`;
+                    } else {
+                        txt += `   -> YÊU CẦU TẠO ĐÚNG ${tfQ} JSON OBJECTS.\n`;
+                    }
+                    currentNum += tfQ;
+                }
 
-                txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH LẤY DỮ LIỆU, BẠN BẮT BUỘC PHẢI DÙNG DANH SÁCH MÃ CÂU NÀY LÀM CHUẨN ĐỂ NHẬN DIỆN VÀ RÁP NỘI DUNG MÀ KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI (NHƯ TN1, TL2...). NẾU THẤY CHỮ Ở VÙNG TỰ LUẬN, HÃY ÁP NÓ VÀO MÃ 'Câu X' TƯƠNG ỨNG TRONG DANH SÁCH TRÊN.\n";
+                // TLN process
+                const tlnQ = parseInt(matrixConfig.tln.q) || 0;
+                const tlnS = parseInt(matrixConfig.tln.s) || 0;
+                if (tlnQ > 0) {
+                    txt += `- PHẦN III. Câu trắc nghiệm trả lời ngắn: BẠN PHẢI TẠO ĐÚNG ${tlnQ} OBJECTS (JSON items). Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + tlnQ - 1}".\n`;
+                    if (tlnS !== tlnQ && tlnS > 0) {
+                        txt += `   -> LƯU Ý CỰC KỲ QUAN TRỌNG: Phần này có ${tlnS} ý đặc tả nhưng chỉ có ${tlnQ} items. KHÔNG ĐƯỢC VỨT BỎ BẤT KỲ Ý NÀO. Bắt buộc phải GỘP CHUNG nhiều ý vào trường "spec" nếu thiếu chỗ hệt như trên.\n`;
+                    }
+                    currentNum += tlnQ;
+                }
+
+                // TL process
+                const tlQ = parseInt(matrixConfig.tl.q) || 0;
+                const tlS = parseInt(matrixConfig.tl.s) || 0;
+                if (tlQ > 0) {
+                    txt += `- PHẦN TỰ LUẬN: Gồm ${tlQ} đại câu (Từ Câu ${currentNum} đến Câu ${currentNum + tlQ - 1}).\n`;
+                    if (tlS > 0) {
+                        txt += `   -> YÊU CẦU BẮT BUỘC: Phần này có ${tlS} ý đặc tả riêng biệt. Bạn phải xem MỖI Ý ĐÓ LÀ MỘT CÂU NHỎ (1 JSON ITEM). BẠN PHẢI TẠO RA TỔNG CỘNG ĐÚNG ${tlS} JSON OBJECTS! Các mã sinh ra phải là: "Câu ${currentNum}a", "Câu ${currentNum}b"... Mỗi object chỉ chứa đúng 1 ý đặc tả.\n`;
+                    } else {
+                        txt += `   -> YÊU CẦU TẠO ĐÚNG ${tlQ} JSON OBJECTS.\n`;
+                    }
+                }
+
+                txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH TRÍCH XUẤT, BẠN BẮT BUỘC PHẢI DỰA VÀO DANH SÁCH MÃ NÀY (CẢ NHỮNG MÃ CON A, B, C) ĐỂ LẬP RA SỐ LƯỢNG ITEM CHUẨN. KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI. TUYỆT ĐỐI KHÔNG BỎ XÓT Ý NÀO MÀ CẦN GỘP HOẶC TÁCH CHO KHỚP VỚI CẤU TRÚC!\n";
                 return txt;
             };
 
@@ -409,7 +432,9 @@ Quy tắc Bóc tách Định dạng chuẩn:
 2. Đối chiếu bằng mắt từ các cột tiêu đề của trang trước đó để biết câu đang xét thuộc mức độ nào: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
 3. Loai câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
 4. Xử lý gộp mã câu: Nếu ô Đặc tả ghi "TN1, 2, 3", phải tách thành 3 câu độc lập có mã "TN1", "TN2", "TN3". Nếu ghi "TL19a, b" tách thành 2 câu "TL19a", "TL19b". NẾU ĐÃ KHAI BÁO CẤU TRÚC Ở TRÊN, PHẢI THAY BẰNG MÃ "Câu X" NHƯ DANH SÁCH.
-5. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu hỏi và số lượng ý/mô tả trong cùng một ô ma trận. NẾU số câu bằng số ý, mỗi câu CHỈ lấy 1 ý duy nhất. NẾU số câu ít hơn số ý, chọn ngẫu nhiên các ý KHÔNG trùng lặp. NẾU số câu nhiều hơn số ý, phủ đều (mỗi câu 1 ý khác nhau) cho đến khi hết ý rồi mới lặp lại hoặc kết hợp. Tuyệt đối KHÔNG gộp chung tất cả các ý vào 1 câu nếu có nhiều câu. Cố gắng chia đều ý.
+5. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): 
+- NẾU BẠN NHẬN ĐƯỢC CẤU TRÚC YÊU CẦU BÊN TRÊN: Tuân thủ TÚYẾT ĐỐI THEO QUY TẮC Ở TRÊN (ví dụ: tách thành các JSON items độc lập dạng Câu 13a, 13b... đối với Đúng/Sai, Tự Luận; Hoặc gộp chung ý lại nếu số lượng câu hỏi ít hơn ý đối với Trắc Nghiệm). Tuyệt đối không vứt bỏ hay làm ngơ bất cứ ý nào.
+- NẾU KHÔNG CÓ CẤU TRÚC SẴN: Đếm số lượng câu và số ý. Nếu số câu = số ý -> mỗi câu 1 ý. Nếu số câu < ý -> HÃY GỘP CÁC Ý LẠI CHUNG VỚI NHAU. TUYỆT ĐỐI KHÔNG BỎ XÓT Ý.
 6. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}. Nếu đoạn này không có mã câu hỏi nào (chỉ có chữ lý thuyết hoặc nội dung rỗng), trả về mảng sections rỗng [].
 
 Cấu trúc JSON đầu ra Hợp lệ:
@@ -624,7 +649,7 @@ NẾU BẢN CẤU TRÚC Ở TRÊN CÓ KHAI BÁO SỐ LƯỢNG CÂU HỎI, BẠN 
 
 Quy tắc Bóc tách Định dạng chuẩn:
 1. Ghi đúng Mã câu có ghi trong bảng, HOẶC ÉP ĐÚNG MÃ TRONG KHUNG CẤU TRÚC (VD: Câu 1, Câu 2) tương ứng với vị trí xuất hiện.
-2. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu và ý trong bảng. Nếu 3 câu và 3 ý -> mỗi câu 1 ý độc lập. Nếu 3 câu 1 ý -> copy nguyên ý vào 3 câu. Rẽ nhỏ mã câu nếu bảng ghi gộp "TN1,2,3".
+2. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu dọc theo đặc tả. NẾU SỐ Ý > SỐ CÂU: Bắt buộc gom các dòng ý lại vào nhau (nối theo dòng mới \n) HOẶC Rẽ nhỏ mã câu thành a, b, c theo yêu cầu CẤU TRÚC CHỐT TRƯỚC. Tuyệt đối không drop/vứt bất cứ dòng text đặc tả nào.
 3. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}.
 
 Cấu trúc JSON Hợp lệ:
