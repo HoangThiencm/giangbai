@@ -339,79 +339,50 @@
                     }
                     setImages(imgs);
 
-                    // --- BƯỚC 1: ĐỌC TỔNG QUAN CẤU TRÚC MA TRẬN (GLOBAL SCHEMA EXTRACTION) ---
-                    setLoading(true);
-                    setLoadingMsg("Bước 1/2: Đang phân tích tổng quan cấu trúc Ma trận (Tìm Header)...");
-                    let globalSchemaText = "Chưa nhận diện được cấu trúc tổng thể.";
-                    try {
-                        // Gửi 3 trang đầu tiên (thường chứa Header của cả Bảng Ma Trận & Bảng Đặc Tả)
-                        const schemaImgs = imgs.slice(0, 3);
-                        const schemaPrompt = `Đóng vai là CHUYÊN GIA PHÂN TÍCH TÀI LIỆU giáo dục. Hãy đọc các trang này và LẬP BẢN ĐỒ CẤU TRÚC CỘT (Header Mapping).
-                        File này thường chứa 2 bảng có tính chất trộn cột (Merged Cells):
-                        1. BẢNG MA TRẬN: Cột "Mức độ đánh giá" nằm trên cùng, bên dưới chia thành "TNKQ" và "Tự luận", dưới nữa lại chia thành "Biết", "Hiểu", "Vận dụng". 
-                        2. BẢNG ĐẶC TẢ: Cột "Số câu hỏi ở các mức độ" nằm trên cùng, bên dưới chia thành "TNKQ" (nhiều lựa chọn, đúng sai, trả lời ngắn) và "Tự luận", dưới cùng là "Biết", "Hiểu", "Vận dụng...".
-                        
-                        NHIỆM VỤ CỦA BẠN LÀ ĐẾM VÀ ĐỊNH VỊ CÁC "CỘT LÁ" (Cột ở tầng thấp nhất, tương ứng với các ô dữ liệu thực tế):
-                        - KHÔNG đếm các ô tiêu đề gộp to tát ở trên. Hãy đếm các cột nhỏ nhất ở dưới cùng của phần Header dọc theo chiều ngang.
-                        - Lập Bản Đồ Ma Trận: Ví dụ "Cột 4: TNKQ - Nhiều lựa chọn - Biết; Cột 5: TNKQ - Nhiều lựa chọn - Hiểu; Cột 6: TNKQ - Vận dụng; Cột 7: Tự luận - Hiểu...".
-                        - Lập Bản Đồ Đặc Tả: Tương tự, đếm từ trái sang phải các cột lá để biết cột nào chứa số lượng câu hỏi/mã câu hỏi của loại nào. Cột "(n)[4]" nằm ở đâu?
-                        
-                        TUYỆT ĐỐI KHÔNG trích xuất nội dung chi tiết. Chỉ trả về một bản mô tả CHÍNH XÁC cấu trúc các cột lá (Leaf Columns) để làm Bản đồ Gióng Cột cho hệ thống AI đọc dữ liệu các trang sau bị mất Header. Nếu làm sai Bản đồ này, toàn bộ dữ liệu sẽ đọc sai cột!`;
-
-                        const schemaPayload = [{ text: schemaPrompt }];
-                        schemaImgs.forEach(d => schemaPayload.push({ inline_data: { mime_type: "image/jpeg", data: d } }));
-
-                        const schemaRes = await AIAdapter.callGemini(schemaPayload);
-                        globalSchemaText = schemaRes.trim();
-                        console.log("=== BẢN ĐỒ CẤU TRÚC TOÀN CỤC ===", globalSchemaText);
-                    } catch (err) {
-                        console.error("Lỗi trích xuất Schema:", err);
-                    }
-
-                    // --- BƯỚC 2: TRÍCH XUẤT NỘI DUNG THEO MẺ (BATCH PROCESSING) ---
                     let mergedSectionsMap = {};
-                    const batchSize = 3; // Chia mẻ 3 trang/lần gửi để tránh tràn băng thông JSON Output Tokens
+                    const batchSize = 3;
 
                     for (let i = 0; i < imgs.length; i += batchSize) {
-                        const batchImgs = imgs.slice(i, i + batchSize);
+                        const startPage = i + 1;
+                        const endPage = Math.min(imgs.length, i + batchSize);
+                        const contextImgs = imgs.slice(0, endPage);
 
-                        const prompt = `Bạn đang được giao Bản đồ Cấu trúc Cột do chính bạn lập ở Bước 1:
-                        === BẢN ĐỒ CẤU TRÚC CỘT (GLOBAL SCHEMA) ===
-                        ${globalSchemaText}
-                        ========================================
-                        
-                        Nhiệm vụ: Phân tích trang ${i + 1} đến ${i + batchImgs.length} của Ma trận Đề thi. ĐÂY LÀ MỘT PHẦN CỦA BẢNG DÀI NÊN CHỈ TRÍCH XUẤT NHỮNG CÂU HỎI THỰC SỰ CÓ MẶT TRONG CÁC ẢNH NÀY.
-                        YÊU CẦU BẮT BUỘC VỀ VIỆC NHỚ CẤU TRÚC BẢNG (TABLE STRUCTURE MEMORY):
-                        - HÃY ÁP DỤNG "BẢN ĐỒ CẤU TRÚC CỘT" Ở TRÊN để gióng hàng cực kỳ chính xác cho các trang này kể cả khi trang này BỊ MẤT DÒNG TIÊU ĐỀ (HEADER). Ví dụ Bản đồ chỉ định cột 4 là Trắc nghiệm, bạn hãy chắc chắn text ở cột 4 sẽ lưu vào loại câu Trắc nghiệm.
-                        - Nếu trang hiện tại bị mất dòng Tiêu Đề Cột (Header) do bị ngắt trang từ trang trước, bạn PHẢI TỰ SUY LUẬN lại các cột và gióng hàng dọc dựa trên nội dung các ô (Cell logic). Ví dụ: thấy ô ghi "Câu 19a", ô bên cạnh ghi mô tả "Tính góc...", ô tiếp theo ghi số "1" -> Đây là bảng Đặc tả, cột mã câu tương ứng với mô tả đó nằm ở bên trái.
-                        - BẢO TOÀN LƯỢNG LOẠI CÂU: Quan sát cột "Loại câu" hoặc "Phần" đang được hiển thị ở các hàng phía trên hoặc trang trước. Nếu nó đang nằm ở khu vực "TNKQ / Nhiều phương án" (hoặc "Đúng sai", "Trả lời ngắn") thì tất cả các dòng bên dưới chưa có tiêu đề mới cũng BẮT BUỘC vẫn thuộc loại đó. Giữ tính liên tục của cấu trúc bảng kéo dài!
-                        
-                        Yêu cầu trích xuất:
-                        1. Phân các câu nhận diện được vào sections tương ứng. Có 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", và "PHẦN TỰ LUẬN". Chú ý để gom các câu vào đúng loại section.
-                        2. Chuẩn hóa mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
-                        3. Chuẩn hóa loại câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
-                        4. ĐẾM SỐ LƯỢNG CÂU HỎI so với đặc tả: Nếu 1 ô có chứa câu hỏi chung quy nhiều ý (vd: Bài 1 Tự luận có ý a, b, c), BẮT BUỘC TÁCH THÀNH CÁC CÂU RIÊNG BIỆT (vd "code": "Bài 1a", "code": "Bài 1b") để mớm đặc tả tương ứng cho từng câu.
-                        5. KHÔNG bỏ sót câu hỏi nào trong các trang này. Nếu không có câu hỏi nào, mảng sections rỗng.
-                        
-                        Cấu trúc JSON đầu ra hợp lệ:
-                        {
-                            "sections": [
-                                {
-                                    "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
-                                    "questions": [
-                                        { "code": "Câu 1", "group": "", "topic": "Tên chủ đề", "level": "B", "type": "MC", "score": 0.25, "spec": "Yêu cầu cần đạt chi tiết...", "parts": [] }
-                                    ]
-                                }
-                            ]
-                        }`;
+                        const prompt = `Bạn là CHUYÊN GIA BIÊN TẬP MA TRẬN ĐỀ THI.
+TÔI VỪA GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA MỘT TÀI LIỆU MA TRẬN VÀ ĐẶC TẢ.
+(Sở dĩ tôi phải gửi từ đầu là để bạn TỰ đối chiếu mắt nhìn lại các trang trước xem "Tiêu đề cột của bảng hiện tại đang chạy ở trang này là gì", vì tài liệu thường có 2 bảng với tiêu đề cột khác nhau: Bảng Ma Trần và Bảng Đặc Tả).
+
+NHIỆM VỤ CỐT LÕI CỦA LẦN CHẠY NÀY:
+Bạn CHỈ ĐƯỢC PHÉP TRÍCH XUẤT các câu hỏi xuất hiện trong đoạn từ TRANG ${startPage} đến TRANG ${endPage}.
+TUYỆT ĐỐI KHÔNG trích xuất các câu ở các trang trước đó, vì chúng đã được xử lý xong rồi!
+
+Quy tắc Bóc tách Định dạng chuẩn:
+1. Phân các câu TRONG TRANG ${startPage}-${endPage} vào sections tương ứng. Có 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", và "PHẦN TỰ LUẬN".
+2. Đối chiếu bằng mắt từ các cột tiêu đề của trang trước đó để biết câu đang xét thuộc mức độ nào: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
+3. Loai câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
+4. Xử lý gộp mã câu: Nếu ô Đặc tả ghi "TN1, 2, 3", phải tách thành 3 câu độc lập có mã "TN1", "TN2", "TN3". Nếu ghi "TL19a, b" tách thành 2 câu "TL19a", "TL19b".
+5. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}. Nếu đoạn này không có mã câu hỏi nào (chỉ có chữ lý thuyết hoặc nội dung rỗng), trả về mảng sections rỗng [].
+
+Cấu trúc JSON đầu ra Hợp lệ:
+{
+    "sections": [
+        {
+            "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
+            "questions": [
+                { "code": "TN1", "group": "", "topic": "Tên chủ đề/Nội dung...", "level": "B", "type": "MC", "score": 0.25, "spec": "Nhận biết được khái niệm...", "parts": [] }
+            ]
+        }
+    ]
+}`;
 
                         let batchJson = null;
                         for (let attempt = 1; attempt <= 3; attempt++) {
                             setLoading(true);
-                            setLoadingMsg(`Đang phân tích trang ${i + 1}-${i + batchImgs.length} (Lần ${attempt}). Vui lòng chờ...`);
+                            setLoadingMsg(`Đang phân tích trang ${startPage}-${endPage} (Lần ${attempt}). Vui lòng chờ...`);
                             try {
                                 const payload = [{ text: prompt }];
-                                batchImgs.forEach(d => payload.push({ inline_data: { mime_type: "image/jpeg", data: d } }));
+
+                                // Gửi ẢNH TỪ TRANG 1 ĐÉN TRANG HIỆN TẠI ĐỂ AI CÓ ĐỦ BỐI CẢNH TIÊU ĐỀ CỘT TRƯỚC ĐÓ
+                                contextImgs.forEach(d => payload.push({ inline_data: { mime_type: "image/jpeg", data: d } }));
 
                                 const res = await AIAdapter.callGemini(payload);
                                 const jsonMatch = res.match(/\{[\s\S]*\}/);
