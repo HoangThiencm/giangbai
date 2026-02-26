@@ -904,7 +904,7 @@ LƯU Ý QUAN TRỌNG:
 
                     let specJson = null;
                     for (let attempt = 1; attempt <= 3; attempt++) {
-                        setLoadingMsg(`Đang đọc Bảng Đặc Tả theo cấu trúc 2D (Lần ${attempt})...`);
+                        setLoadingMsg(`Đang đọc Bảng Đặc Tả (Lần ${attempt})...`);
                         try {
                             const payload = [{ text: promptSpec }, ...specImgs.map(d => ({ inline_data: { mime_type: 'image/jpeg', data: d } }))];
                             const res = await AIAdapter.callGemini(payload);
@@ -1800,3 +1800,4 @@ LƯU Ý QUAN TRỌNG:
 </body>
 
 </html>
+
