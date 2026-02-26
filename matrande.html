@@ -95,10 +95,7 @@
         };
 
         const tokenizeRichText = (raw) => {
-            const text = normalizeRichText(raw)
-                // Hỗ trợ xử lý \text{...} 
-                .replace(/\\text\{([^}]+)\}/g, ' $1 ');
-
+            const text = normalizeRichText(raw);
             return text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g).map(part => {
                 if (part.startsWith('$$') && part.endsWith('$$')) return { type: 'math', display: true, content: part.slice(2, -2).trim() };
                 else if (part.startsWith('$') && part.endsWith('$')) return { type: 'math', display: false, content: part.slice(1, -1).trim() };
@@ -133,7 +130,6 @@
                     return t.content.replace(/\$/g, '');
                 })()
                 : t.content
-                    .replace(/\\text\{([^}]+)\}/g, ' $1 ')
                     .replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>')
                     .replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>')
                     .replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>')
@@ -162,17 +158,12 @@
             const s = (rawType || "").toString().trim().toUpperCase();
             const sec = (sectionName || "").toString().trim().toUpperCase();
 
-            // Ưu tiên cao nhất: Bắt "Trả lời ngắn" trước (Dù nằm trong phần Trắc nghiệm/TNKQ)
-            if (sec.includes("TRẢ LỜI NGẮN") || s.includes("NGẮN") || s.includes("TLN")) return "TLN";
-
-            // Dạng Tự luận truyền thống (Thường có nhiều ý a, b, c)
-            if (sec.includes("TỰ LUẬN") || s.includes("TỰ") || s === "TL") return "TL";
-
             // Dạng Đúng/Sai (TF)
             if (sec.includes("ĐÚNG SAI") || sec.includes("TRUE/FALSE") || s.includes("TF") || s.includes("Đ/S")) return "TF";
-
+            // Dạng Tự luận (TL)
+            if (sec.includes("TỰ LUẬN") || sec.includes("TU LUAN") || s.includes("TL") || s.includes("TỰ")) return "TL";
             // Dạng Nhiều lựa chọn (MC)
-            if (sec.includes("NHIỀU LỰA CHỌN") || sec.includes("TRẮC NGHIỆM") || sec.includes("TNKQ") || s.includes("TN") || s.includes("MC")) return "MC";
+            if (sec.includes("TRẮC NGHIỆM") || s.includes("TN") || s.includes("MC")) return "MC";
 
             return defaultType;
         };
@@ -322,148 +313,80 @@
                     const buffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(buffer).promise;
                     const imgs = [];
-                    // Giải pháp tối ưu: Giảm scale xuống 1.5 và vẽ phông trắng để nén ảnh JPEG nhẹ hơn
-                    // Tăng giới hạn số trang đọc lên 30 thay vì 15
-                    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+                    for (let i = 1; i <= Math.min(pdf.numPages, 15); i++) {
                         const page = await pdf.getPage(i);
-                        const vp = page.getViewport({ scale: 1.5 });
-                        const cvs = document.createElement('canvas');
-                        cvs.width = vp.width; cvs.height = vp.height;
-                        const ctx = cvs.getContext('2d');
-                        ctx.fillStyle = "white"; // Vẽ nền trắng tránh ảnh transparent lỗi đen
-                        ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-                        await page.render({ canvasContext: ctx, viewport: vp }).promise;
-                        // Dùng format jpeg nén 80% giảm dung lượng tối đa
-                        imgs.push(cvs.toDataURL('image/jpeg', 0.8).split(',')[1]);
+                        const vp = page.getViewport({ scale: 2 });
+                        const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
+                        await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+                        imgs.push(cvs.toDataURL('image/jpeg').split(',')[1]);
                     }
                     setImages(imgs);
 
-                    let mergedSectionsMap = {};
-                    const batchSize = 3;
+                    const prompt = `Phân tích ảnh Ma trận và Bảng Đặc tả (theo chuẩn CV 7991).
+                    Yêu cầu:
+                    1. Đọc và gom nhóm các dòng thành sections/questions. Đề thi theo CV 7991 có 3 phần: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn". Tên section (name) phải chứa chữ "PHẦN I", "PHẦN II" hoặc "PHẦN III" tương ứng.
+                    2. Chuẩn hóa mức độ: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
+                    3. Chuẩn hóa loại câu: 
+                       - PHẦN I -> MC
+                       - PHẦN II -> TF
+                       - PHẦN III -> TL (Tự luận / Trả lời ngắn)
+                    4. Trường 'level' (mức độ) phải là B, H, hoặc V.
+                    5. QUAN TRỌNG VỀ PHÂN BỔ ĐẶC TẢ (spec): Đếm số lượng câu hỏi và số lượng ý/mô tả trong cùng một ô ma trận. NẾU số câu bằng số ý, mỗi câu CHỈ lấy 1 ý duy nhất. NẾU số câu ít hơn số ý, chọn ngẫu nhiên các ý KHÔNG trùng lặp. NẾU số câu nhiều hơn số ý, phủ đều (mỗi câu 1 ý khác nhau) cho đến khi hết ý rồi mới lặp lại hoặc kết hợp. Tuyệt đối KHÔNG gộp chung tất cả các ý vào 1 câu nếu có nhiều câu. Cố gắng chia đều ý.
+                    
+                    Trích JSON: { 
+                        "exam_type": "...", 
+                        "sections": [ 
+                            { 
+                                "id": "part1", 
+                                "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", 
+                                "questions": [ 
+                                    { 
+                                        "code": "Câu 1", 
+                                        "group": "", 
+                                        "topic": "...", 
+                                        "level": "B", 
+                                        "type": "MC", 
+                                        "score": 0.25, 
+                                        "spec": "MỘT Yêu cầu cần đạt cụ thể...",
+                                        "parts": [] 
+                                    } 
+                                ] 
+                            } 
+                        ] 
+                    }. Quy tắc: Trả về JSON hợp lệ, phân chia đúng 3 phần nếu ma trận có đủ.`;
 
-                    for (let i = 0; i < imgs.length; i += batchSize) {
-                        const startPage = i + 1;
-                        const endPage = Math.min(imgs.length, i + batchSize);
-                        const contextImgs = imgs.slice(0, endPage);
+                    let finalJson = null;
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        setLoading(true); setLoadingMsg(`Đang phân tích Ma trận (Lần ${attempt})...`);
+                        try {
+                            const res = await AIAdapter.callGemini([{ text: prompt }, ...imgs.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))]);
+                            const jsonMatch = res.match(/\{[\s\S]*\}/);
+                            if (!jsonMatch) continue;
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            const detectedDefaultType = inferDefaultQuestionType(parsed, info.time);
+                            setGlobalType(detectedDefaultType);
 
-                        const prompt = `Bạn là CHUYÊN GIA BIÊN TẬP MA TRẬN ĐỀ THI.
-TÔI VỪA GỬI CHO BẠN TỪ TRANG 1 ĐẾN TRANG ${endPage} CỦA MỘT TÀI LIỆU MA TRẬN VÀ ĐẶC TẢ.
-(Sở dĩ tôi phải gửi từ đầu là để bạn TỰ đối chiếu mắt nhìn lại các trang trước xem "Tiêu đề cột của bảng hiện tại đang chạy ở trang này là gì", vì tài liệu thường có 2 bảng với tiêu đề cột khác nhau: Bảng Ma Trần và Bảng Đặc Tả).
-
-NHIỆM VỤ CỐT LÕI CỦA LẦN CHẠY NÀY:
-Bạn CHỈ ĐƯỢC PHÉP TRÍCH XUẤT các câu hỏi xuất hiện trong đoạn từ TRANG ${startPage} đến TRANG ${endPage}.
-TUYỆT ĐỐI KHÔNG trích xuất các câu ở các trang trước đó, vì chúng đã được xử lý xong rồi!
-
-Quy tắc Bóc tách Định dạng chuẩn:
-1. Phân các câu TRONG TRANG ${startPage}-${endPage} vào sections tương ứng. Có 4 phần chuẩn: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", và "PHẦN TỰ LUẬN".
-2. Đối chiếu bằng mắt từ các cột tiêu đề của trang trước đó để biết câu đang xét thuộc mức độ nào: "Nhận biết/Biết" -> B, "Thông hiểu/Hiểu" -> H, "Vận dụng/VD" -> V.
-3. Loai câu: PHẦN I -> MC, PHẦN II -> TF, PHẦN III -> TLN, TỰ LUẬN -> TL.
-4. Xử lý gộp mã câu: Nếu ô Đặc tả ghi "TN1, 2, 3", phải tách thành 3 câu độc lập có mã "TN1", "TN2", "TN3". Nếu ghi "TL19a, b" tách thành 2 câu "TL19a", "TL19b".
-5. Chỉ trích xuất nội dung của trang ${startPage} đến ${endPage}. Nếu đoạn này không có mã câu hỏi nào (chỉ có chữ lý thuyết hoặc nội dung rỗng), trả về mảng sections rỗng [].
-
-Cấu trúc JSON đầu ra Hợp lệ:
-{
-    "sections": [
-        {
-            "name": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
-            "questions": [
-                { "code": "TN1", "group": "", "topic": "Tên chủ đề/Nội dung...", "level": "B", "type": "MC", "score": 0.25, "spec": "Nhận biết được khái niệm...", "parts": [] }
-            ]
-        }
-    ]
-}`;
-
-                        let batchJson = null;
-                        for (let attempt = 1; attempt <= 3; attempt++) {
-                            setLoading(true);
-                            setLoadingMsg(`Đang phân tích trang ${startPage}-${endPage} (Lần ${attempt}). Vui lòng chờ...`);
-                            try {
-                                const payload = [{ text: prompt }];
-
-                                // Gửi ẢNH TỪ TRANG 1 ĐÉN TRANG HIỆN TẠI ĐỂ AI CÓ ĐỦ BỐI CẢNH TIÊU ĐỀ CỘT TRƯỚC ĐÓ
-                                contextImgs.forEach(d => payload.push({ inline_data: { mime_type: "image/jpeg", data: d } }));
-
-                                const res = await AIAdapter.callGemini(payload);
-                                const jsonMatch = res.match(/\{[\s\S]*\}/);
-                                if (!jsonMatch) continue;
-                                batchJson = JSON.parse(jsonMatch[0]);
-                                break; // Thành công thì thoát vòng lặp attempt
-                            } catch (err) {
-                                console.error(`Lỗi phân tích batch trang ${i + 1}:`, err);
-                                await new Promise(r => setTimeout(r, 2000));
-                            }
-                        }
-
-                        // Gộp dữ liệu từ batchJson vào cấu trúc map chung
-                        if (batchJson && batchJson.sections) {
-                            batchJson.sections.forEach(sec => {
-                                let normName = sec.name.toUpperCase();
-                                let targetName = sec.name;
-                                if (normName.includes("PHẦN I")) targetName = "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn";
-                                else if (normName.includes("PHẦN II")) targetName = "PHẦN II. Câu trắc nghiệm đúng sai";
-                                else if (normName.includes("PHẦN III")) targetName = "PHẦN III. Câu trắc nghiệm trả lời ngắn";
-                                else if (normName.includes("TỰ LUẬN")) targetName = "PHẦN TỰ LUẬN";
-
-                                if (!mergedSectionsMap[targetName]) {
-                                    mergedSectionsMap[targetName] = { id: 'sec_' + Object.keys(mergedSectionsMap).length, name: targetName, questions: [] };
-                                }
-
-                                // Đẩy thêm data vào section tương ứng
-                                (sec.questions || []).forEach(q => {
-                                    // Kiểm tra trùng lặp nhẹ để tránh một câu bị quét dở ở 2 trang
-                                    const exists = mergedSectionsMap[targetName].questions.some(eq => eq.code === q.code);
-                                    if (!exists) {
-                                        mergedSectionsMap[targetName].questions.push(q);
-                                    }
+                            parsed.sections.forEach(sec => {
+                                sec.questions = sec.questions || [];
+                                sec.questions.forEach(q => {
+                                    q.type = normalizeQuestionType(q.type, sec.name, detectedDefaultType);
+                                    // Chuẩn hóa mức độ theo 3 mức (B, H, V)
+                                    const rawLevel = (q.level || "").toUpperCase();
+                                    if (rawLevel.includes("N") || rawLevel.includes("B")) q.level = "B";
+                                    else if (rawLevel.includes("T") || rawLevel.includes("H")) q.level = "H";
+                                    else if (rawLevel.includes("V")) q.level = "V";
+                                    else q.level = "B"; // Mặc định
                                 });
                             });
-                        }
+                            const total = calcExamTotals(parsed);
+                            finalJson = parsed;
+                            if (Math.abs(total - 10.0) < 0.1) break;
+                        } catch (err) { console.error(err); }
                     }
-
-                    // Sắp xếp lại Sections theo thứ tự chuẩn
-                    const orderedSections = ["PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn", "PHẦN II. Câu trắc nghiệm đúng sai", "PHẦN III. Câu trắc nghiệm trả lời ngắn", "PHẦN TỰ LUẬN"];
-                    let finalSections = [];
-                    orderedSections.forEach(name => {
-                        if (mergedSectionsMap[name] && mergedSectionsMap[name].questions.length > 0) {
-                            finalSections.push(mergedSectionsMap[name]);
-                        }
-                    });
-
-                    // Thêm các phần khác nếu có phát sinh
-                    Object.values(mergedSectionsMap).forEach(sec => {
-                        if (!orderedSections.includes(sec.name) && sec.questions.length > 0) {
-                            finalSections.push(sec);
-                        }
-                    });
-
-                    let finalJson = { sections: finalSections };
-
-                    if (finalSections.length === 0) {
-                        throw new Error("Không lấy được dữ liệu. Bố cục file ma trận quá phức tạp hoặc bị lỗi cấu trúc.");
-                    }
-
-                    const detectedDefaultType = inferDefaultQuestionType(finalJson, info.time);
-                    setGlobalType(detectedDefaultType);
-
-                    finalJson.sections.forEach(sec => {
-                        sec.questions = sec.questions || [];
-                        sec.questions.forEach(q => {
-                            q.type = normalizeQuestionType(q.type, sec.name, detectedDefaultType);
-                            // Chuẩn hóa mức độ theo 3 mức (B, H, V)
-                            const rawLevel = (q.level || "").toUpperCase();
-                            if (rawLevel.includes("N") || rawLevel.includes("B")) q.level = "B";
-                            else if (rawLevel.includes("T") || rawLevel.includes("H")) q.level = "H";
-                            else if (rawLevel.includes("V")) q.level = "V";
-                            else q.level = "B"; // Mặc định
-                        });
-                    });
+                    if (!finalJson) throw new Error("Không đọc được cấu trúc ma trận.");
 
                     const finalTotal = calcExamTotals(finalJson);
-                    if (Math.abs(finalTotal - 10.0) >= 0.1) {
-                        setTotalScoreWarning(finalTotal);
-                    }
-
+                    if (Math.abs(finalTotal - 10.0) >= 0.1) { setTotalScoreWarning(finalTotal); alert(`⚠️ Tổng điểm là ${finalTotal}/10. Vui lòng kiểm tra lại.`); }
                     finalJson.sections.forEach(s => s.questions.forEach(q => {
                         q.status = 'pending'; q.q = ""; q.c = ""; q.correct_char = "";
                         if (q.type === 'MC') q.a = q.a || ['', '', '', ''];
@@ -508,11 +431,8 @@ Cấu trúc JSON đầu ra Hợp lệ:
                     2. Định dạng: Dùng LaTeX $...$ thay vì chữ viết thường. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
                     3. Nếu là Trắc nghiệm (MC - PHẦN I), chỉ 4 đáp án (A, B, C, D), chỉ rõ đáp án đúng (A/B/C/D).
                     4. NẾU LÀ ĐÚNG/SAI (TF - PHẦN II), BẮT BUỘC tạo 1 câu dẫn chung và 4 CÂU ĐỘC LẬP (a, b, c, d) dạng mệnh đề có tính Đúng hoặc Sai. CHỈ RÕ GIÁ TRỊ CHÂN LÝ.
-                    5. NẾU LÀ TRẢ LỜI NGẮN (TLN), KHÔNG cho đáp án trắc nghiệm. Học sinh chỉ cần điền KẾT QUẢ CUỐI CÙNG (một con số, biểu thức ngắn gọn).
-                    6. NẾU LÀ TỰ LUẬN (TL), yêu cầu học sinh trình bày lời giải chi tiết.
-                    7. CÂU HỎI CHÙM (BẢO TOÀN NGỮ CẢNH): Nếu câu hỏi hiện tại là một ý phụ (ví dụ mã câu là 19a, 19b...), bạn PHẢI tự động nhắc lại toàn bộ "Câu dẫn / Ngữ cảnh chung" của bài toán lớn lên đầu nội dung câu hỏi (Ví dụ: "Cho tứ giác ABCD... Phát biểu: Tính góc A"). Không được phép viết cụt lủn thân câu hỏi khiến người đọc không hiểu bài toán gốc.
-                    8. QUAN TRỌNG VỀ HÌNH VẼ: Tuyệt đối không được ra đề bằng những câu lệnh chung chung như "sử dụng hình vẽ sau đây" mà không có hình. Nếu đề bài cần hình vẽ minh hoạ, bạn BẮT BUỘC VÀ LUÔN LUÔN phải mô tả lại hình học đó dưới dạng CHỮ HOẶC KÍ HIỆU CHI TIẾT (Ví dụ: "Cho tam giác ABC vuông tại A, đường cao AH, trên cạnh BC lấy điểm D sao cho BD = 3cm") ngay trực tiếp vào nội dung câu dẫn, để người ra đề dễ dàng tự vẽ lại chính xác 100% bằng mắt.
-                    9. Output: CHỈ JSON THUẦN TÚY, KHÔNG GIẢI THÍCH, KHÔNG MARKDOWN.
+                    5. NẾU LÀ TRẢ LỜI NGẮN (TL - PHẦN III), KHÔNG cho đáp án trắc nghiệm. Soạn câu hỏi yêu cầu học sinh tính toán và điền KẾT QUẢ CUỐI CÙNG (một con số, biểu thức ngắn gọn).
+                    6. Output: CHỈ JSON THUẦN TÚY, KHÔNG GIẢI THÍCH, KHÔNG MARKDOWN.
 
                     // === CẤU TRÚC JSON THEO LOẠI (CHỈ TRẢ VỀ JSON) ===
                     ${qData.type === 'TF' ? `
@@ -526,19 +446,12 @@ Cấu trúc JSON đầu ra Hợp lệ:
                         ],
                         "c": "Lời giải/Giải thích chi tiết cho từng ý a, b, c, d"
                     }
-                    ` : qData.type === 'TLN' ? `
+                    ` : qData.type === 'TL' ? `
                     {
-                        "q": "Nội dung câu hỏi (đây là câu trả lời ngắn, học sinh chỉ cần điền đáp án cuối)...",
+                        "q": "Nội dung câu hỏi (đây là dạng câu trắc nghiệm trả lời ngắn, học sinh chỉ cần điền đáp án cuối cùng, hoặc tự luận ngắn)...",
                         "a": [],
                         "c": "Lời giải chi tiết...",
                         "correct_char": "Đáp án cuối cùng (ví dụ: 5, -1/2, ...)"
-                    }
-                    ` : qData.type === 'TL' ? `
-                    {
-                        "q": "Nội dung câu hỏi tự luận (có thể dài và có câu dẫn)...",
-                        "a": [],
-                        "c": "Lời giải chi tiết từng bước...",
-                        "correct_char": ""
                     }
                     ` : `
                     { 
@@ -594,20 +507,10 @@ Cấu trúc JSON đầu ra Hợp lệ:
                     target.status = 'done'; target.source = usedSource;
                     setBlueprint(finalBp);
                 } catch (e) {
-                    console.error("Lỗi khi tạo câu hỏi:", e);
                     const errBp = { ...blueprint };
                     errBp.sections[sIdx].questions[qIdx].status = 'error';
                     errBp.sections[sIdx].questions[qIdx].source = "ERR";
-
-                    // Ghi đè thông báo lỗi vào trường text để user bớt mù mờ
-                    errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
-
                     setBlueprint(errBp);
-
-                    // Có thể alert nếu gọi đơn lẻ
-                    if (!generatingState.isRunning) {
-                        alert(`Lỗi tạo câu hỏi: ${e.message}`);
-                    }
                 }
             };
 
@@ -674,9 +577,9 @@ Cấu trúc JSON đầu ra Hợp lệ:
             // --- EXPORT WORD (V28 - OMML NAMESPACE + GROUPING) ---
             const exportWord = () => {
                 let html = `
-                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
-                          xmlns:w='urn:schemas-microsoft-com:office:word'
-                          xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
+                    < html xmlns: o = 'urn:schemas-microsoft-com:office:office' 
+                          xmlns: w = 'urn:schemas-microsoft-com:office:word'
+                          xmlns: m = 'http://schemas.openxmlformats.org/officeDocument/2006/math' >
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
                         <style>
@@ -757,45 +660,45 @@ Cấu trúc JSON đầu ra Hợp lệ:
                             g.subs.sort((a, b) => a.subLabel.localeCompare(b.subLabel));
                             g.subs.forEach(sq => {
                                 if (sq.type === 'TF') {
-                                    html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
-                                    html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
-                                    html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                    html += `< div style = 'margin-left: 0.7cm; margin-bottom: 6pt;' > <b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div> `;
+                                    html += `< table border = '1' cellpadding = '5' cellspacing = '0' style = 'width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;' > `;
+                                    html += `< tr style = 'background-color:#f0f0f0' ><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr > `;
                                     sq.parts.forEach(p => {
-                                        html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                        html += `< tr ><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr > `;
                                     });
-                                    html += `</table>`;
+                                    html += `</table > `;
                                 } else { // MC/TL sub-question
-                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                    html += `< div style = "margin-left: 0.7cm; margin-bottom: 6pt;" > <b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div > `;
                                     if (sq.type === 'MC' && sq.a?.length) {
-                                        html += `<table style='margin-left:1.2cm;margin-bottom:10px'><tr>`;
+                                        html += `< table style = 'margin-left:1.2cm;margin-bottom:10px' > <tr>`;
                                         sq.a.forEach((opt, k) => {
                                             const prefix = String.fromCharCode(65 + k);
                                             html += `<td width="50%"><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</td>${k % 2 !== 0 ? '</tr><tr>' : ''}`;
                                         });
-                                        html += `</tr></table>`;
+                                        html += `</tr></table > `;
                                     }
                                 }
                             });
                         }
 
-                        html += `</div>`;
+                        html += `</div > `;
                     });
                 });
 
                 // PHẦN ĐÁP ÁN
-                html += `<br clear="all" style="page-break-before:always" /><h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
+                html += `< br clear = all style = 'page-break-before:always' > <h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
 
                 // PHẦN I
                 const phan1 = blueprint.sections.find(s => s.name.toUpperCase().includes('PHẦN I'));
                 if (phan1) {
                     const mcQuestions = phan1.questions.filter(q => q.type === 'MC' && q.correct_char);
                     if (mcQuestions.length > 0) {
-                        html += `<h4>PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn</h4>`;
-                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        html += `< h4 > PHẦN I.Câu trắc nghiệm nhiều phương án lựa chọn</h4 > `;
+                        html += `< table class="ans-key-table" cellpadding = "5" ><tr>`;
                         mcQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
                         html += `</tr><tr>`;
                         mcQuestions.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`);
-                        html += `</tr></table><br/>`;
+                        html += `</tr></table > <br />`;
                     }
                 }
 
@@ -804,12 +707,12 @@ Cấu trúc JSON đầu ra Hợp lệ:
                 if (phan2) {
                     const tfQuestions = phan2.questions.filter(q => q.type === 'TF' && q.correct_char);
                     if (tfQuestions.length > 0) {
-                        html += `<h4>PHẦN II. Câu trắc nghiệm đúng sai</h4>`;
-                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        html += `< h4 > PHẦN II.Câu trắc nghiệm đúng sai</h4 > `;
+                        html += `< table class="ans-key-table" cellpadding = "5" ><tr>`;
                         tfQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
                         html += `</tr><tr>`;
                         tfQuestions.forEach(q => html += `<td style="color:red; font-size: 10pt">${q.correct_char}</td>`);
-                        html += `</tr></table><br/>`;
+                        html += `</tr></table > <br />`;
                     }
                 }
 
@@ -818,55 +721,28 @@ Cấu trúc JSON đầu ra Hợp lệ:
                 if (phan3) {
                     const tlQuestions = phan3.questions.filter(q => q.type === 'TL' && q.correct_char);
                     if (tlQuestions.length > 0) {
-                        html += `<h4>PHẦN III. Câu trắc nghiệm trả lời ngắn</h4>`;
-                        html += `<table class="ans-key-table" cellpadding="5" style="width: auto;">`;
-                        html += `<tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`;
+                        html += `< h4 > PHẦN III.Câu trắc nghiệm trả lời ngắn</h4 > `;
+                        html += `< table class="ans-key-table" cellpadding = "5" style = "width: auto;" > `;
+                        html += `< tr style = "background:#eee" ><td>Câu</td><td>Đáp án</td></tr > `;
                         tlQuestions.forEach(q => {
-                            html += `<tr><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr>`;
+                            html += `< tr ><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr > `;
                         });
-                        html += `</table><br/>`;
+                        html += `</table > <br />`;
                     }
                 }
 
-                html += `<h4>Lời giải chi tiết</h4>`;
+                html += `< h4 > Lời giải chi tiết</h4 > `;
                 blueprint.sections.forEach(sec => {
                     sec.questions.forEach(q => {
                         const tokensAns = tokenizeRichText(q.c);
                         const displayCode = q.code;
-                        html += `<p><b>${displayCode}:</b></p><div>${renderToWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
+                        html += `< p > <b>${displayCode}:</b></p ><div>${renderToWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
                     });
                 });
 
-                html += `</body></html>`;
-                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.doc`);
+                html += `</body ></html > `;
+                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_9.doc`);
             };
-
-            // THỐNG KÊ BIẾN ĐỘNG THEO THỰC TẾ TRONG BẢNG (DYNAMIC)
-            const parsedStats = React.useMemo(() => {
-                let stats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [], totalQuestions: 0, totalParts: 0 };
-                if (blueprint && step === 2) {
-                    blueprint.sections.forEach(sec => {
-                        (sec.questions || []).forEach(q => {
-                            stats.totalParts++;
-                            if (q.type === 'MC') { stats.mc++; stats.totalQuestions++; }
-                            else if (q.type === 'TF') {
-                                const baseCode = (q.code || "Câu ?").replace(/(\s*[a-z])$/i, '').trim();
-                                stats.tfGroups[baseCode] = (stats.tfGroups[baseCode] || 0) + 1;
-                                stats.tf++;
-                            }
-                            else if (q.type === 'TLN') { stats.tln++; stats.totalQuestions++; }
-                            else if (q.type === 'TL') {
-                                const baseCode = (q.code || "Bài ?").replace(/(\s*[a-z])$/i, '').trim();
-                                stats.tlGroups[baseCode] = (stats.tlGroups[baseCode] || 0) + 1;
-                            }
-                        });
-                    });
-                    stats.tl = Object.entries(stats.tlGroups).map(([name, count]) => ({ name, count }));
-                    stats.tfList = Object.entries(stats.tfGroups).map(([name, count]) => ({ name, count }));
-                    stats.totalQuestions += stats.tl.length + stats.tfList.length;
-                }
-                return stats;
-            }, [blueprint, step]);
 
             return (
                 <div className="max-w-7xl mx-auto p-4 font-ui">
@@ -887,7 +763,7 @@ Cấu trúc JSON đầu ra Hợp lệ:
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Môn học</label>
                                     <select className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" value={info.subject} onChange={e => setInfo({ ...info, subject: e.target.value })}>
-                                        {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Giáo dục Công dân", "Tin Học", "Công Nghệ", "Khoa học Tự nhiên", "Lịch sử và Địa lý"].map(s => <option key={s} value={s}>{s}</option>)}
+                                        {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Giáo dục Công dân", "Tin Học", "Công Nghệ", "Âm nhạc", "Mỹ thuật", "Nghệ thuật", "Khoa học Tự nhiên", "Lịch sử và Địa lý"].map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
@@ -931,197 +807,95 @@ Cấu trúc JSON đầu ra Hợp lệ:
                                     </div>
                                 </div>
                             )}
-                            <div className="p-5 bg-white/80 backdrop-blur-md flex flex-col gap-4 shadow-sm z-10 pt-7">
-                                {parsedStats && (
-                                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex flex-wrap gap-6 text-sm">
-                                        <div className="flex border-r border-indigo-200 pr-6 mr-2 flex-col justify-center items-center">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Tổng cộng</span>
-                                            <span className="font-bold text-indigo-900 text-2xl">{parsedStats.totalQuestions} <span className="text-xs font-medium">câu</span> / {parsedStats.totalParts} <span className="text-xs font-medium">lệnh</span></span>
-                                        </div>
-                                        <div className="flex flex-col justify-center items-center">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Trắc nghiệm khách quan</span>
-                                            <span className="font-bold text-indigo-700 text-lg">{parsedStats.mc} <span className="text-xs">câu</span></span>
-                                        </div>
-                                        <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Đúng / Sai ({parsedStats.tfList.length} đại câu)</span>
-                                            <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
-                                                {parsedStats.tfList.map((t, i) => (
-                                                    <div key={i}>• {t.name} có <span className="font-bold text-teal-600">{t.count}</span> ý</div>
-                                                ))}
-                                                {parsedStats.tfList.length === 0 && <span className="italic text-gray-400">Không có câu Đúng/Sai</span>}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Trả lời ngắn</span>
-                                            <span className="font-bold text-orange-600 text-lg">{parsedStats.tln} <span className="text-xs">câu</span></span>
-                                        </div>
-                                        <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Tự luận ({parsedStats.tl.length} đại câu)</span>
-                                            <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
-                                                {parsedStats.tl.map((t, i) => (
-                                                    <div key={i}>• {t.name} có <span className="font-bold text-indigo-600">{t.count}</span> ý</div>
-                                                ))}
-                                                {parsedStats.tl.length === 0 && <span className="italic text-gray-400">Không có câu tự luận</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-center gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3">
-                                            <h2 className="font-heading font-bold text-gray-800 text-xl">{step === 2 ? 'Kiểm tra Cấu trúc Ma trận' : 'Biên soạn Nội dung Đề thi'}</h2>
-                                            {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
-                                        </div>
-                                        {step === 2 && (
-                                            <p className="text-sm text-gray-500 mt-1">Vui lòng kiểm tra lại số câu hỏi, mức độ, loại câu và điểm số. Bạn <b>phải đảm bảo tổng điểm là 10đ</b> trước khi sinh đề.</p>
-                                        )}
-                                        <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                                            <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">Kiểu đề mặc định:</span>
-                                            {['MC', 'TF', 'TLN', 'TL'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} disabled={step === 3} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} ${step === 3 ? 'opacity-50 cursor-not-allowed' : ''} `}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}</button>))}
-                                        </div>
-                                    </div>
+                            <div className="p-5 bg-white/80 backdrop-blur-md flex justify-between items-center gap-4 shadow-sm z-10 pt-7">
+                                <div className="flex-1">
                                     <div className="flex items-center gap-3">
-                                        {step === 2 && (
-                                            <button
-                                                onClick={() => {
-                                                    if (totalScoreWarning) {
-                                                        alert(`Tổng điểm hiện tại là ${totalScoreWarning}/10. Vui lòng thêm/bớt câu hỏi hoặc sửa lại cột điểm sao cho tổng bằng 10 tròn trước khi tiếp tục.`);
-                                                        return;
-                                                    }
-                                                    setStep(3);
-                                                }}
-                                                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center"
-                                            >
-                                                Chốt Ma trận <i className="fas fa-arrow-right ml-2"></i>
-                                            </button>
-                                        )}
-                                        {step === 3 && (
-                                            <>
-                                                <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
-                                                <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
-                                                <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
-                                            </>
-                                        )}
+                                        <h2 className="font-heading font-bold text-gray-800 text-xl">Biên soạn Đề thi</h2>
+                                        {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                                        <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">Kiểu đề mặc định:</span>
+                                        {['TL', 'MC', 'TF'].map(t => (<button key={t} onClick={() => forceUpdateGlobalType(t)} className={`px - 3 py - 1 rounded - full border text - xs font - semibold transition - all ${globalType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>{t === 'MC' ? 'Trắc nghiệm' : t === 'TL' ? 'Tự luận / Trả lời ngắn' : 'Đúng/Sai'}</button>))}
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-3">
+                                    <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'Trí tuệ nhân tạo biên soạn toàn bộ'}</button>
+                                    <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
+                                </div>
                             </div>
-
-                            <div className="flex-1 overflow-auto bg-gray-50 relative p-4" id="questions-container">
+                            <div className="flex-1 overflow-auto p-6 bg-slate-50/50">
                                 {blueprint.sections.map((sec, sIdx) => (
                                     <div key={sIdx} className="mb-8 bg-white rounded-2xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" disabled={step === 3} value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} />
-                                            <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span>
-                                        </div>
-                                        <table className="w-full text-sm text-left border-collapse">
-                                            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
-                                                <tr>
-                                                    <th className="p-2 w-24">Mã</th>
-                                                    <th className="p-2 w-24">Nhóm</th>
-                                                    <th className="p-2 w-16">Mức độ</th>
-                                                    <th className="p-2 w-20">Loại</th>
-                                                    <th className="p-2">Nội dung</th>
-                                                    {step === 3 && <th className="p-2 w-20 text-center">Tác vụ</th>}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {sec.questions.map((q, qIdx) => (
-                                                    <tr key={qIdx} className="group hover:bg-gray-50 align-top">
-                                                        <td className="p-2">
-                                                            <input disabled={step === 3} className={`w-full border rounded p-1 text-center font-bold mb-1 ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} />
-                                                            <input disabled={step === 3} className={`w-full border rounded p-1 text-center text-xs ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} type="number" step="0.25" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input disabled={step === 3} className={`w-full border rounded p-1 text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 border-dashed' : 'bg-yellow-50'}`} placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
-                                                                {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
-                                                            </select>
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
-                                                                <option value="MC">Trắc nghiệm</option>
-                                                                <option value="TF">Đúng/Sai</option>
-                                                                <option value="TLN">Trả lời ngắn</option>
-                                                                <option value="TL">Tự luận</option>
-                                                            </select>
-                                                            {step === 3 && (
-                                                                <>
-                                                                    <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
-                                                                    <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
-                                                                </>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <div className="mb-2 grid grid-cols-2 gap-2">
-                                                                <input disabled={step === 3} className={`border-b border-dashed text-xs text-blue-800 w-full bg-transparent font-medium ${step === 3 ? 'opacity-70' : ''}`} value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
-                                                                <textarea disabled={step === 3} className={`border border-dashed rounded p-1 text-xs text-gray-600 w-full resize-none bg-indigo-50/30 ${step === 3 ? 'opacity-70 bg-gray-50 text-gray-500 border-none h-8 overflow-hidden' : 'h-16'}`} value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
-                                                            </div>
+                                        <div className="flex items-center gap-2 mb-4"><input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} /><span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span></div>
+                                        <table className="w-full text-sm text-left border-collapse"><thead className="bg-gray-50 text-gray-600 font-bold border-b"><tr><th className="p-2 w-16">Mã</th><th className="p-2 w-24">Nhóm</th><th className="p-2 w-16">Mức độ</th> <th className="p-2 w-20">Loại</th><th className="p-2">Nội dung</th><th className="p-2 w-20 text-center">Tác vụ</th></tr></thead><tbody className="divide-y">
+                                            {sec.questions.map((q, qIdx) => (
+                                                <tr key={qIdx} className="group hover:bg-gray-50 align-top">
+                                                    <td className="p-2"><input className="w-full border rounded p-1 text-center font-bold mb-1" value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} /><input className="w-full border rounded p-1 text-center text-xs" type="number" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} /></td>
+                                                    <td className="p-2"><input className="w-full border rounded p-1 text-xs bg-yellow-50" placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} /></td>
+                                                    <td className="p-2">
+                                                        <select className="w-full border rounded p-1 font-bold text-xs" value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
+                                                            {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <select className="w-full border rounded p-1 font-bold text-xs" value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
+                                                            <option value="MC">Trắc nghiệm</option>
+                                                            <option value="TF">Đúng/Sai</option>
+                                                            <option value="TL">Tự luận</option>
+                                                        </select>
+                                                        <div className={`mt - 1 text - center text - [10px] uppercase font - bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
+                                                        <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <div className="mb-2 grid grid-cols-2 gap-2">
+                                                            <input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
+                                                            <input className="border-b border-dashed text-xs text-gray-500 w-full bg-transparent" value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
+                                                        </div>
 
-                                                            {step === 2 && (
-                                                                <div className="flex gap-2">
-                                                                    <button onClick={() => { if (confirm('Xóa câu này?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n) } }} className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded hover:bg-red-100 transition"><i className="fas fa-trash mr-1"></i> Xóa câu</button>
+                                                        <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100">
+                                                            <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between">
+                                                                <span>Câu hỏi:</span>
+                                                                <input className="text-xs border rounded px-1" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án đúng (A/B..)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} />
+                                                            </div>
+                                                            <textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} />
+                                                            <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
+
+                                                            {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
+                                                            {(q.type === 'MC') && q.a?.length && (
+                                                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">
+                                                                    {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{String.fromCharCode(65 + k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
                                                                 </div>
                                                             )}
 
-                                                            {step === 3 && (
-                                                                <>
-                                                                    <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100 mt-2">
-                                                                        <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between">
-                                                                            <span>Nội dung câu hỏi:</span>
-                                                                            <input className="text-xs border rounded px-1 w-20 text-center font-bold" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án (A/B)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} title="Đáp án đúng" />
+                                                            {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
+                                                            {(q.type === 'TF') && q.parts?.length && (
+                                                                <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
+                                                                    {q.parts.map((p, k) => (
+                                                                        <div key={k} className={`flex gap - 1 items - center p - 1 rounded transition - colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
+                                                                            <span className="font-bold text-xs w-6">{p.label})</span>
+                                                                            <span className={`text - xs w - 8 font - bold text - center`}>{p.is_correct ? 'Đ' : 'S'}</span>
+                                                                            <input
+                                                                                className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                value={p.content}
+                                                                                onChange={e => {
+                                                                                    const newParts = [...q.parts];
+                                                                                    newParts[k].content = e.target.value;
+                                                                                    updateData(sIdx, qIdx, 'parts', newParts);
+                                                                                }}
+                                                                            />
+                                                                            <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-xs text-blue-500 hover:text-blue-700 w-10 shrink-0">Toggle</button>
                                                                         </div>
-                                                                        <textarea className="w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px]" value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} />
-                                                                        <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
-
-                                                                        {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
-                                                                        {(q.type === 'MC') && q.a?.length > 0 && (
-                                                                            <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed">
-                                                                                {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-4">{String.fromCharCode(65 + k)}</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
-                                                                        {(q.type === 'TF') && q.parts?.length > 0 && (
-                                                                            <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
-                                                                                {q.parts.map((p, k) => (
-                                                                                    <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
-                                                                                        <span className="font-bold text-xs w-6">{p.label})</span>
-                                                                                        <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
-                                                                                        <input
-                                                                                            className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                            value={p.content}
-                                                                                            onChange={e => {
-                                                                                                const newParts = [...q.parts];
-                                                                                                newParts[k].content = e.target.value;
-                                                                                                updateData(sIdx, qIdx, 'parts', newParts);
-                                                                                            }}
-                                                                                        />
-                                                                                        <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-[10px] text-blue-600 font-bold px-1 py-1 w-12 shrink-0 bg-white border border-blue-200 rounded">Đổi Đ/S</button>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải chi tiết:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
-                                                                </>
+                                                                    ))}
+                                                                </div>
                                                             )}
-                                                        </td>
-                                                        {step === 3 && (
-                                                            <td className="p-2 text-center align-middle">
-                                                                <button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1.5 rounded text-xs font-bold shadow-sm flex flex-col items-center justify-center gap-1">
-                                                                    {q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <><i className="fas fa-magic"></i> Sinh lại</>}
-                                                                </button>
-                                                            </td>
-                                                        )}
-                                                    </tr>
-                                                ))}
-                                                {step === 2 && (
-                                                    <tr><td colSpan="5" className="p-3 text-center bg-gray-50 border-t border-dashed rounded-b-lg"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle mr-1"></i> Thêm thủ công 1 câu vào phần này</button></td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                        </div>
+                                                        <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
+                                                    </td>
+                                                    <td className="p-2 text-center align-middle"><button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1 rounded text-xs font-bold shadow-sm">{q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <i className="fas fa-magic"></i>}</button><button onClick={() => { if (confirm('Xóa?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); setBlueprint(n) } }} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button></td>
+                                                </tr>
+                                            ))}
+                                            <tr><td colSpan="6" className="p-2 text-center bg-gray-50 border-t border-dashed"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); setBlueprint(n); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle"></i> Thêm câu hỏi</button></td></tr>
+                                        </tbody></table>
                                     </div>
                                 ))}
                             </div>
@@ -1137,3 +911,4 @@ Cấu trúc JSON đầu ra Hợp lệ:
 </body>
 
 </html>
+
