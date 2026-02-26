@@ -354,7 +354,7 @@
                 txt += processSection(matrixConfig.mc, "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn");
                 txt += processSection(matrixConfig.tf, "PHẦN II. Câu trắc nghiệm đúng sai");
                 txt += processSection(matrixConfig.tln, "PHẦN III. Câu trắc nghiệm trả lời ngắn");
-                txt += processSection(matrixConfig.tl, "PHẦN TỰ LUẬN");
+                txt += processSection(matrixConfig.tl, "PHẦN TỰ LUẬN (Chia nhỏ từng ý thành từng câu riêng biệt)");
 
                 txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH LẤY DỮ LIỆU, BẠN BẮT BUỘC PHẢI DÙNG DANH SÁCH MÃ CÂU NÀY LÀM CHUẨN ĐỂ NHẬN DIỆN VÀ RÁP NỘI DUNG MÀ KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI (NHƯ TN1, TL2...). NẾU THẤY CHỮ Ở VÙNG TỰ LUẬN, HÃY ÁP NÓ VÀO MÃ 'Câu X' TƯƠNG ỨNG TRONG DANH SÁCH TRÊN.\n";
                 return txt;
@@ -1221,7 +1221,7 @@ Cấu trúc JSON Hợp lệ:
                                         checked={matrixConfig.useConfig}
                                         onChange={e => setMatrixConfig({ ...matrixConfig, useConfig: e.target.checked })}
                                     />
-                                    Khai báo thông số cấu trúc (Khuyên dùng để AI nhận diện chính xác hơn!)
+                                    Khai báo thông số cấu trúc (Khuyên dùng để AI đọc chính xác 100%)
                                 </label>
 
                                 {matrixConfig.useConfig && (
@@ -1263,10 +1263,10 @@ Cấu trúc JSON Hợp lệ:
                                         </div>
 
                                         <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
-                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN IV-TỰ LUẬN</div>
+                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN TỰ LUẬN (Tùy chọn)</div>
                                             <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số bài" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">bài</span>
+                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
+                                                <span className="text-xs text-gray-400" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)">Tổng câu nhỏ</span>
                                             </div>
                                             <div className="flex gap-2 items-center mt-2">
                                                 <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, s: e.target.value } })} />
@@ -1539,4 +1539,3 @@ Cấu trúc JSON Hợp lệ:
 </body>
 
 </html>
-
