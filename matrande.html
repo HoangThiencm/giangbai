@@ -420,12 +420,17 @@
                 const tfQ = parseInt(matrixConfig.tf.q) || 0;
                 const tfS = parseInt(matrixConfig.tf.s) || 0;
                 if (tfQ > 0) {
-                    txt += `- PHẦN II. Câu trắc nghiệm đúng sai: Gồm ${tfQ} đại câu (Từ Câu ${currentNum} đến Câu ${currentNum + tfQ - 1}).\n`;
-                    if (tfS > 0) {
-                        txt += `   -> YÊU CẦU BẮT BUỘC: Bạn phải chia nhỏ các đại câu này thành TỔNG CỘNG ${tfS} CÂU NHỎ và tạo ra đúng ${tfS} JSON OBJECTS ĐỘC LẬP! Ví dụ: Câu ${currentNum} sẽ sinh ra các object có mã "Câu ${currentNum}a", "Câu ${currentNum}b"... Hãy rải đều ${tfS} ý đặc tả vào đúng ${tfS} objects này, mỗi object 1 ý.\n`;
-                    } else {
-                        txt += `   -> YÊU CẦU TẠO ĐÚNG ${tfQ} JSON OBJECTS.\n`;
+                    const tfPerBig = tfS > 0 ? Math.ceil(tfS / tfQ) : 4;
+                    const tfLetters = ['a','b','c','d','e','f','g','h'].slice(0, tfPerBig);
+                    txt += `- PHẦN II. Câu trắc nghiệm đúng sai: Gồm ${tfQ} ĐẠI CÂU (mỗi đại câu có ĐÚNG ${tfPerBig} CÂU NHỎ: ${tfLetters.join(', ')}).\n`;
+                    txt += `   -> YÊU CẦU BẮT BUỘC: Tạo ra ĐÚNG ${tfS > 0 ? tfS : tfQ * 4} JSON OBJECTS. DANH SÁCH MÃ KÈM SỐ THỨ TỰ:\n`;
+                    let tfN = currentNum;
+                    for (let i = 0; i < tfQ; i++) {
+                        const codes = tfLetters.map(l => `"Câu ${tfN}${l}"`).join(', ');
+                        txt += `      Đại câu ${tfN}: ${codes}\n`;
+                        tfN++;
                     }
+                    txt += `   -> Rải đều ${tfS > 0 ? tfS : tfQ * 4} ý đặc tả vào đúng ${tfS > 0 ? tfS : tfQ * 4} objects này, mỗi object 1 ý.\n`;
                     currentNum += tfQ;
                 }
 
@@ -433,9 +438,9 @@
                 const tlnQ = parseInt(matrixConfig.tln.q) || 0;
                 const tlnS = parseInt(matrixConfig.tln.s) || 0;
                 if (tlnQ > 0) {
-                    txt += `- PHẦN III. Câu trắc nghiệm trả lời ngắn: BẠN PHẢI TẠO ĐÚNG ${tlnQ} OBJECTS (JSON items). Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + tlnQ - 1}".\n`;
+                    txt += `- PHẦN III. Câu trắc nghiệm trả lời ngắn: BẠN PHẢI TẠO ĐÚNG ${tlnQ} OBJECTS. Mã từ "Câu ${currentNum}" đến "Câu ${currentNum + tlnQ - 1}".\n`;
                     if (tlnS !== tlnQ && tlnS > 0) {
-                        txt += `   -> LƯU Ý CỰC KỲ QUAN TRỌNG: Phần này có ${tlnS} ý đặc tả nhưng chỉ có ${tlnQ} items. KHÔNG ĐƯỢC VỨT BỎ BẤT KỲ Ý NÀO. Bắt buộc phải GỘP CHUNG nhiều ý vào trường "spec" nếu thiếu chỗ hệt như trên.\n`;
+                        txt += `   -> LƯU Ý: Phần này có ${tlnS} ý nhưng chỉ có ${tlnQ} items. GỘP CHUNG nhiều ý vào trường "spec" nếu thiếu chỗ.\n`;
                     }
                     currentNum += tlnQ;
                 }
@@ -444,12 +449,17 @@
                 const tlQ = parseInt(matrixConfig.tl.q) || 0;
                 const tlS = parseInt(matrixConfig.tl.s) || 0;
                 if (tlQ > 0) {
-                    txt += `- PHẦN TỰ LUẬN: Gồm ${tlQ} đại câu (Từ Câu ${currentNum} đến Câu ${currentNum + tlQ - 1}).\n`;
-                    if (tlS > 0) {
-                        txt += `   -> YÊU CẦU BẮT BUỘC: Phần này có ${tlS} ý đặc tả riêng biệt. Bạn phải xem MỖI Ý ĐÓ LÀ MỘT CÂU NHỎ (1 JSON ITEM). BẠN PHẢI TẠO RA TỔNG CỘNG ĐÚNG ${tlS} JSON OBJECTS! Các mã sinh ra phải là: "Câu ${currentNum}a", "Câu ${currentNum}b"... Mỗi object chỉ chứa đúng 1 ý đặc tả.\n`;
-                    } else {
-                        txt += `   -> YÊU CẦU TẠO ĐÚNG ${tlQ} JSON OBJECTS.\n`;
+                    const tlPerBig = tlS > 0 ? Math.ceil(tlS / tlQ) : 1;
+                    const tlLetters = ['a','b','c','d','e','f','g','h'].slice(0, tlPerBig);
+                    txt += `- PHẦN TỰ LUẬN: Gồm ${tlQ} BÀI (mỗi bài có ĐÚNG ${tlPerBig} CÂU NHỎ: ${tlLetters.join(', ')}).\n`;
+                    txt += `   -> YÊU CẦU BẮT BUỘC: Tạo ra ĐÚNG ${tlS > 0 ? tlS : tlQ} JSON OBJECTS. DANH SÁCH MÃ:\n`;
+                    let tlN2 = currentNum;
+                    for (let i = 0; i < tlQ; i++) {
+                        const codes2 = tlLetters.map(l => `"Câu ${tlN2}${l}"`).join(', ');
+                        txt += `      Bài ${tlN2}: ${codes2}\n`;
+                        tlN2++;
                     }
+                    txt += `   -> Mỗi object chứa đúng 1 ý đặc tả riêng biệt.\n`;
                 }
 
                 txt += "\nTRONG TOÀN BỘ QUÁ TRÌNH TRÍCH XUẤT, BẠN BẮT BUỘC PHẢI DỰA VÀO DANH SÁCH MÃ NÀY (CẢ NHỮNG MÃ CON A, B, C) ĐỂ LẬP RA SỐ LƯỢNG ITEM CHUẨN. KHÔNG ĐƯỢC TỰ BỊA RA MÃ MỚI. TUYỆT ĐỐI KHÔNG BỎ XÓT Ý NÀO MÀ CẦN GỘP HOẶC TÁCH CHO KHỚP VỚI CẤU TRÚC!\n";
