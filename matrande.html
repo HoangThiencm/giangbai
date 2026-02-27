@@ -1528,25 +1528,55 @@ YÊU CẦU:
                         // 2. Render Subs (a, b, c) - Nếu có
                         if (g.subs.length > 0) {
                             g.subs.sort((a, b) => a.subLabel.localeCompare(b.subLabel));
-                            g.subs.forEach(sq => {
-                                if (sq.type === 'TF') {
-                                    html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                            const allTF = !g.stem && g.subs.every(s => s.type === 'TF');
+                            const allTL = !g.stem && g.subs.every(s => s.type === 'TL');
+
+                            if (allTF) {
+                                // TF GROUPED: Render 1 câu lớn "Câu N" với parts từ AI
+                                const rep = g.subs[0];
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(rep.q))}</div>`;
+                                if (rep.parts?.length > 0) {
                                     html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
                                     html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
-                                    sq.parts.forEach(p => {
+                                    rep.parts.forEach(p => {
                                         html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
                                     });
                                     html += `</table>`;
-                                } else { // MC/TL sub-question
-                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
-                                    if (sq.type === 'MC' && sq.a?.length) {
-                                        sq.a.forEach((opt, k) => {
-                                            const prefix = String.fromCharCode(65 + k);
-                                            html += `<p style='margin:2px 0 2px 1.2cm'><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`;
-                                        });
-                                    }
                                 }
-                            });
+                            } else if (allTL) {
+                                // TL GROUPED: Render "Câu N: [context]" rồi từng ý riêng
+                                const firstQ = g.subs[0].q || '';
+                                const splitIdx = firstQ.indexOf('\n\n');
+                                const commonCtx = splitIdx > 0 ? firstQ.substring(0, splitIdx) : firstQ;
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(commonCtx))}</div>`;
+                                g.subs.forEach(sq => {
+                                    const rawQ = sq.q || '';
+                                    const idx2 = rawQ.indexOf('\n\n');
+                                    const subQ = idx2 > 0 ? rawQ.substring(idx2 + 2) : rawQ;
+                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(subQ))}</div>`;
+                                });
+                            } else {
+                                // Regular subs (MC dưới 1 câu lớn khác, hoặc mix)
+                                g.subs.forEach(sq => {
+                                    if (sq.type === 'TF') {
+                                        html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                        html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                        html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                        sq.parts.forEach(p => {
+                                            html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                        });
+                                        html += `</table>`;
+                                    } else {
+                                        html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
+                                        if (sq.type === 'MC' && sq.a?.length) {
+                                            sq.a.forEach((opt, k) => {
+                                                const prefix = String.fromCharCode(65 + k);
+                                                html += `<p style='margin:2px 0 2px 1.2cm'><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`;
+                                            });
+                                        }
+                                    }
+                                });
+                            }
                         }
 
                         html += `</div>`;
@@ -1641,545 +1671,580 @@ YÊU CẦU:
 
             return (
                 <>
-                <div className="max-w-7xl mx-auto p-4 font-ui">
-                    <div className="flex justify-between items-end border-b border-indigo-100 pb-4 mb-6">
-                        <div>
-                            <h1 className="text-3xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-600 drop-shadow-sm">CÔNG CỤ TẠO ĐỀ THI TỪ MA TRẬN</h1>
-                            <p className="text-gray-500 font-medium mt-1">Chuẩn cấu trúc định dạng theo CV 7991</p>
-                            <p className="text-gray-400 text-xs mt-1">Engine: {hfStatus ? <span className="text-teal-500 font-bold">Hybrid</span> : <span className="text-blue-500 font-bold">Gemini</span>} | Mode: Smart Grouping + OMML Math</p>
-                        </div>
-                        <a href="index.html" className="text-indigo-500 hover:text-indigo-700 text-sm font-semibold transition-colors bg-indigo-50 px-3 py-1.5 rounded-full"><i className="fas fa-home mr-1"></i> Dashboard</a>
-                    </div>
-
-                    {!hasGemini && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-lg"></i> ⚠️ Chưa có thiết lập Gemini API Key. Vui lòng cấu hình ở Dashboard trước.</div>}
-
-                    {step === 1 && hasGemini && (
-                        <div className="glass-panel p-8 rounded-2xl border space-y-6 max-w-3xl mx-auto transition-all hover:shadow-lg">
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Môn học</label>
-                                    <select className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" value={info.subject} onChange={e => setInfo({ ...info, subject: e.target.value })}>
-                                        {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Giáo dục Công dân", "Tin Học", "Công Nghệ", "Khoa học Tự nhiên", "Lịch sử và Địa lý"].map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Lớp</label>
-                                    <select className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" value={info.grade} onChange={e => setInfo({ ...info, grade: e.target.value })}>
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Thời gian (phút)</label>
-                                    <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" type="number" placeholder="Thời gian (phút)" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sở / Phòng GD</label>
-                                    <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all" placeholder="Sở/Phòng" value={info.dept} onChange={e => setInfo({ ...info, dept: e.target.value })} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Trường</label>
-                                    <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all" placeholder="Trường" value={info.school} onChange={e => setInfo({ ...info, school: e.target.value })} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên kỳ thi</label>
-                                    <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all" placeholder="Tên kỳ thi" value={info.title} onChange={e => setInfo({ ...info, title: e.target.value })} />
-                                </div>
-                            </div>
-
-                            {/* BỘ CHỌN KHAI BÁO CẤU TRÚC (MANUAL CONFIG) */}
-                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 transition-all">
-                                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-blue-800 mb-3">
-                                    <input type="checkbox" className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-white border-blue-300"
-                                        checked={matrixConfig.useConfig}
-                                        onChange={e => setMatrixConfig({ ...matrixConfig, useConfig: e.target.checked })}
-                                    />
-                                    Khai báo thông số cấu trúc (Khuyên dùng nhận diện chính xác hơn.)
-                                </label>
-
-                                {matrixConfig.useConfig && (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
-                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN I: Trắc nghiệm</div>
-                                            <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, q: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">câu</span>
-                                            </div>
-                                            <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, s: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">ý (spec)</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
-                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN II: Đúng/Sai</div>
-                                            <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, q: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">câu</span>
-                                            </div>
-                                            <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, s: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">ý (spec)</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
-                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN III: Trả lời ngắn</div>
-                                            <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, q: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">câu</span>
-                                            </div>
-                                            <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, s: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">ý (spec)</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
-                                            <div className="text-xs font-bold text-gray-500 mb-2">PHẦN IV: TỰ LUẬN</div>
-                                            <div className="flex gap-2 items-center">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
-                                                <span className="text-xs text-gray-400" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)">Tổng câu nhỏ</span>
-                                            </div>
-                                            <div className="flex gap-2 items-center mt-2">
-                                                <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, s: e.target.value } })} />
-                                                <span className="text-xs text-gray-400">ý (spec)</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* UPLOAD HAI FILE TACH ROI */}
-
-                            <div className="space-y-4">
-
-                                <div className="text-center text-sm text-indigo-700 font-semibold bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">
-
-                                    <i className="fas fa-info-circle mr-1"></i> Vui lòng tải lên <b>2 file PDF riêng biệt</b>: Khung Ma Trận và Bảng Đặc Tả
-
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-
-                                    <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${matrixFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
-
-                                        <input type="file" className="hidden" accept=".pdf" onChange={e => setMatrixFile(e.target.files[0])} />
-
-                                        {matrixFile ? (
-
-                                            <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{matrixFile.name}</div>
-
-                                        ) : (
-
-                                            <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-table text-3xl mb-2"></i><br /><span className="font-bold text-base">I. Khung Ma Trận</span><p className="text-xs text-gray-400 mt-1">File chứa bảng phân bổ số câu</p></div>
-
-                                        )}
-
-                                    </label>
-
-                                    <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${specFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
-
-                                        <input type="file" className="hidden" accept=".pdf" onChange={e => setSpecFile(e.target.files[0])} />
-
-                                        {specFile ? (
-
-                                            <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{specFile.name}</div>
-
-                                        ) : (
-
-                                            <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-list-check text-3xl mb-2"></i><br /><span className="font-bold text-base">II. Bảng Đặc Tả</span><p className="text-xs text-gray-400 mt-1">File chứa mã câu &amp; Yêu cầu cần đạt</p></div>
-
-                                        )}
-
-                                    </label>
-
-                                </div>
-
-                                <div className="text-center">
-
-                                    <button
-
-                                        disabled={loading || (!matrixFile || !specFile)}
-
-                                        onClick={processSeparateFiles}
-
-                                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center mx-auto min-w-[200px]"
-
-                                    >
-
-                                        {loading ? <div className="flex items-center"><div className="loader mr-2 border-white"></div> {loadingMsg}</div> : <><i className="fas fa-cogs mr-2"></i> Phân tích 2 File</>}
-
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-                    )}
-
-                    {(step === 2 || step === 3) && blueprint && (
-                        <div className="flex flex-col h-[85vh] glass-panel rounded-2xl shadow-xl overflow-hidden border-0 relative">
-                            {generatingState.isRunning && (
-                                <div className="absolute top-0 left-0 w-full z-50">
-                                    <div className="bg-indigo-600 h-1.5 transition-all duration-300" style={{ width: `${(generatingState.current / generatingState.total) * 100}%` }}></div>
-                                    <div className="bg-indigo-50 text-indigo-700 text-xs py-1 px-4 font-bold flex justify-between shadow-sm border-b border-indigo-100">
-                                        <span className="animate-pulse"><i className="fas fa-cog fa-spin mr-1"></i> {generatingState.text}</span>
-                                        <span>{Math.round((generatingState.current / generatingState.total) * 100)}%</span>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="p-5 bg-white/80 backdrop-blur-md flex flex-col gap-4 shadow-sm z-10 pt-7">
-                                {step === 3 && (
-                                    <details className="bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 group">
-                                        <summary className="cursor-pointer px-4 py-2 font-bold flex items-center gap-2 select-none">
-                                            <i className="fas fa-lightbulb text-amber-500"></i>
-                                            Hướng dẫn chỉnh sửa & Dán ảnh câu hỏi
-                                            <i className="fas fa-chevron-down ml-auto text-amber-400 group-open:rotate-180 transition-transform"></i>
-                                        </summary>
-                                        <div className="px-4 pb-3 pt-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div>
-                                                <p className="font-bold text-amber-800 mb-1"><i className="fas fa-paste mr-1"></i>Dán ảnh câu hỏi (Ctrl+V)</p>
-                                                <ul className="space-y-1 text-amber-700 list-disc list-inside">
-                                                    <li>Chụp màn hình hoặc copy ảnh câu hỏi vào clipboard</li>
-                                                    <li>Click vào ô <b>"Nội dung câu hỏi"</b> của câu cần nhận diện</li>
-                                                    <li>Bấm <kbd className="bg-white border border-amber-300 px-1 rounded font-mono">Ctrl+V</kbd> để dán</li>
-                                                    <li>AI sẽ <b>tự nhận diện câu hỏi</b> và <b>sinh lời giải</b> luôn</li>
-                                                    <li>Hỗ trợ: MC (A/B/C/D), Đúng/Sai, Tự luận, Trả lời ngắn</li>
-                                                </ul>
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-amber-800 mb-1"><i className="fas fa-edit mr-1"></i>Chỉnh sửa thủ công</p>
-                                                <ul className="space-y-1 text-amber-700 list-disc list-inside">
-                                                    <li>Sửa trực tiếp vào ô nội dung câu hỏi và lời giải</li>
-                                                    <li>Công thức toán: dùng <code className="bg-white px-1 rounded border border-amber-200">$...$</code> (LaTeX sẽ render bên dưới)</li>
-                                                    <li>Bấm <b>Sinh lại</b> để AI viết lại câu hỏi theo đặc tả</li>
-                                                    <li>TF/TL: bấm Sinh lại trên bất kỳ sub nào → sinh cả nhóm 1 lần</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </details>
-                                )}
-                                {parsedStats && (
-                                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex flex-wrap gap-6 text-sm">
-                                        <div className="flex border-r border-indigo-200 pr-6 mr-2 flex-col justify-center items-center">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Tổng cộng</span>
-                                            <span className="font-bold text-indigo-900 text-2xl">{parsedStats.totalQuestions} <span className="text-xs font-medium">câu</span> / {parsedStats.totalParts} <span className="text-xs font-medium">lệnh</span></span>
-                                        </div>
-                                        <div className="flex flex-col justify-center items-center">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Trắc nghiệm khách quan</span>
-                                            <span className="font-bold text-indigo-700 text-lg">{parsedStats.mc} <span className="text-xs">câu</span></span>
-                                        </div>
-                                        <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Đúng / Sai ({parsedStats.tfList.length} đại câu)</span>
-                                            <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
-                                                {parsedStats.tfList.map((t, i) => (
-                                                    <div key={i}>• {t.name} có <span className="font-bold text-teal-600">{t.count}</span> ý</div>
-                                                ))}
-                                                {parsedStats.tfList.length === 0 && <span className="italic text-gray-400">Không có câu Đúng/Sai</span>}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Trả lời ngắn</span>
-                                            <span className="font-bold text-orange-600 text-lg">{parsedStats.tln} <span className="text-xs">câu</span></span>
-                                        </div>
-                                        <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
-                                            <span className="text-gray-500 font-bold uppercase text-[10px]">Tự luận ({parsedStats.tl.length} đại câu)</span>
-                                            <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
-                                                {parsedStats.tl.map((t, i) => (
-                                                    <div key={i}>• {t.name} có <span className="font-bold text-indigo-600">{t.count}</span> ý</div>
-                                                ))}
-                                                {parsedStats.tl.length === 0 && <span className="italic text-gray-400">Không có câu tự luận</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-center gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3">
-                                            <h2 className="font-heading font-bold text-gray-800 text-xl">{step === 2 ? 'Kiểm tra Cấu trúc Ma trận' : 'Biên soạn Nội dung Đề thi'}</h2>
-                                            {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
-                                        </div>
-                                        {step === 2 && (
-                                            <p className="text-sm text-gray-500 mt-1">Vui lòng kiểm tra lại số câu hỏi, mức độ, loại câu và điểm số. Bạn <b>phải đảm bảo tổng điểm là 10đ</b> trước khi sinh đề.</p>
-                                        )}
-                                        <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                                            <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">BỘ LỌC CÂU HỎI:</span>
-                                            {['ALL', 'MC', 'TF', 'TLN', 'TL'].map(t => (
-                                                <button key={t} onClick={() => setViewFilter(t)} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${viewFilter === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>
-                                                    {t === 'ALL' ? 'Tất cả' : t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {step === 2 && (
-                                            <button
-                                                onClick={() => {
-                                                    if (totalScoreWarning) {
-                                                        alert(`Tổng điểm hiện tại là ${totalScoreWarning}/10. Vui lòng thêm/bớt câu hỏi hoặc sửa lại cột điểm sao cho tổng bằng 10 tròn trước khi tiếp tục.`);
-                                                        return;
-                                                    }
-                                                    setStep(3);
-                                                }}
-                                                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center"
-                                            >
-                                                Chốt Ma trận <i className="fas fa-arrow-right ml-2"></i>
-                                            </button>
-                                        )}
-                                        {step === 3 && (
-                                            <>
-                                                <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
-                                                <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
-                                                <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
-                                                <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-auto bg-gray-50 relative p-4" id="questions-container">
-                                {blueprint.sections.map((sec, sIdx) => (
-                                    <div key={sIdx} className="mb-8 bg-white rounded-2xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" disabled={step === 3} value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} />
-                                            <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span>
-                                        </div>
-                                        <table className="w-full text-sm text-left border-collapse">
-                                            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
-                                                <tr>
-                                                    <th className="p-2 w-24">Mã</th>
-                                                    <th className="p-2 w-24">Nhóm</th>
-                                                    <th className="p-2 w-16">Mức độ</th>
-                                                    <th className="p-2 w-20">Loại</th>
-                                                    <th className="p-2">Nội dung</th>
-                                                    {step === 3 && <th className="p-2 w-20 text-center">Tác vụ</th>}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {sec.questions.map((q, qIdx) => ({ q, qIdx }))
-                                                    .filter(({ q }) => viewFilter === 'ALL' || q.type === viewFilter)
-                                                    .map(({ q, qIdx }) => (
-                                                        <tr key={qIdx} className="group hover:bg-gray-50 align-top">
-                                                            <td className="p-2">
-                                                                <input disabled={step === 3} className={`w-full border rounded p-1 text-center font-bold mb-1 ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} />
-                                                                <input disabled={step === 3} className={`w-full border rounded p-1 text-center text-xs ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} type="number" step="0.25" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} />
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <input disabled={step === 3} className={`w-full border rounded p-1 text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 border-dashed' : 'bg-yellow-50'}`} placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} />
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
-                                                                    {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
-                                                                </select>
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
-                                                                    <option value="MC">Trắc nghiệm</option>
-                                                                    <option value="TF">Đúng/Sai</option>
-                                                                    <option value="TLN">Trả lời ngắn</option>
-                                                                    <option value="TL">Tự luận</option>
-                                                                </select>
-                                                                {step === 3 && (
-                                                                    <>
-                                                                        <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
-                                                                        <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
-                                                                    </>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <div className="mb-2 grid grid-cols-2 gap-2">
-                                                                    <input disabled={step === 3} className={`border-b border-dashed text-xs text-blue-800 w-full bg-transparent font-medium ${step === 3 ? 'opacity-70' : ''}`} value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
-                                                                    <textarea disabled={step === 3} className={`border border-dashed rounded p-1 text-xs text-gray-600 w-full resize-none bg-indigo-50/30 ${step === 3 ? 'opacity-70 bg-gray-50 text-gray-500 border-none h-8 overflow-hidden' : 'h-16'}`} value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
-                                                                </div>
-
-                                                                {step === 2 && (
-                                                                    <div className="flex gap-2">
-                                                                        <button onClick={() => { if (confirm('Xóa câu này?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n) } }} className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded hover:bg-red-100 transition"><i className="fas fa-trash mr-1"></i> Xóa câu</button>
-                                                                    </div>
-                                                                )}
-
-                                                                {step === 3 && (
-                                                                    <>
-                                                                        <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100 mt-2">
-                                                                            <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between items-center">
-                                                                                <span>Nội dung câu hỏi: <span className="font-normal text-gray-400 text-[10px] ml-1"><i className="fas fa-clipboard mr-0.5"></i>Ctrl+V để dán ảnh nhận diện</span></span>
-                                                                                <input className="text-xs border rounded px-1 w-20 text-center font-bold" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án (A/B)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} title="Đáp án đúng" />
-                                                                            </div>
-                                                                            <textarea className={`w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px] ${q.status === 'generating' ? 'opacity-50 italic text-gray-400' : ''}`} value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} onPaste={e => handleQuestionPaste(e, sIdx, qIdx)} placeholder="Soạn nội dung hoặc Ctrl+V dán ảnh câu hỏi..." />
-                                                                            <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
-
-                                                                            {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
-                                                                            {(q.type === 'MC') && q.a?.length > 0 && (
-                                                                                <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
-                                                                                    {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-5 shrink-0">{String.fromCharCode(65 + k)}.</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
-                                                                                </div>
-                                                                            )}
-
-                                                                            {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
-                                                                            {(q.type === 'TF') && q.parts?.length > 0 && (
-                                                                                <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
-                                                                                    {q.parts.map((p, k) => (
-                                                                                        <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
-                                                                                            <span className="font-bold text-xs w-6">{p.label})</span>
-                                                                                            <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
-                                                                                            <input
-                                                                                                className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                                value={p.content}
-                                                                                                onChange={e => {
-                                                                                                    const newParts = [...q.parts];
-                                                                                                    newParts[k].content = e.target.value;
-                                                                                                    updateData(sIdx, qIdx, 'parts', newParts);
-                                                                                                }}
-                                                                                            />
-                                                                                            <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-[10px] text-blue-600 font-bold px-1 py-1 w-12 shrink-0 bg-white border border-blue-200 rounded">Đổi Đ/S</button>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải chi tiết:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
-                                                                    </>
-                                                                )}
-                                                            </td>
-                                                            {step === 3 && (
-                                                                <td className="p-2 text-center align-middle">
-                                                                    <button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1.5 rounded text-xs font-bold shadow-sm flex flex-col items-center justify-center gap-1">
-                                                                        {q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <><i className="fas fa-magic"></i> Sinh lại</>}
-                                                                    </button>
-                                                                </td>
-                                                            )}
-                                                        </tr>
-                                                    ))}
-                                                {step === 2 && (
-                                                    <tr><td colSpan="5" className="p-3 text-center bg-gray-50 border-t border-dashed rounded-b-lg"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); setViewFilter('ALL'); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle mr-1"></i> Thêm thủ công 1 câu vào phần này</button></td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-            {/* ── PREVIEW MODAL ── */}
-            {showPreview && blueprint && (
-                <div className="fixed inset-0 z-[999] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={e => { if (e.target === e.currentTarget) setShowPreview(false); }}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 flex justify-between items-center">
+                    <div className="max-w-7xl mx-auto p-4 font-ui">
+                        <div className="flex justify-between items-end border-b border-indigo-100 pb-4 mb-6">
                             <div>
-                                <h2 className="text-lg font-bold"><i className="fas fa-eye mr-2"></i>Xem trước đề thi</h2>
-                                <p className="text-emerald-100 text-xs">{info.title} — {info.subject} Lớp {info.grade} — {info.time} phút</p>
+                                <h1 className="text-3xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-600 drop-shadow-sm">CÔNG CỤ TẠO ĐỀ THI TỪ MA TRẬN</h1>
+                                <p className="text-gray-500 font-medium mt-1">Chuẩn cấu trúc định dạng theo CV 7991</p>
+                                <p className="text-gray-400 text-xs mt-1">Engine: {hfStatus ? <span className="text-teal-500 font-bold">Hybrid</span> : <span className="text-blue-500 font-bold">Gemini</span>} | Mode: Smart Grouping + OMML Math</p>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition flex items-center gap-1"><i className="fas fa-file-word"></i> Xuất Word</button>
-                                <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times"></i> Đóng</button>
-                            </div>
+                            <a href="index.html" className="text-indigo-500 hover:text-indigo-700 text-sm font-semibold transition-colors bg-indigo-50 px-3 py-1.5 rounded-full"><i className="fas fa-home mr-1"></i> Dashboard</a>
                         </div>
-                        {/* Exam content */}
-                        <div className="p-8 font-serif" style={{fontFamily: "'Times New Roman', serif", fontSize: '13pt', lineHeight: '1.6'}}>
-                            {/* Tiêu đề */}
-                            <div style={{textAlign:'center', fontWeight:'bold', marginBottom:'16px'}}>
-                                <div style={{fontSize:'11pt'}}>{info.dept.toUpperCase()}</div>
-                                <div style={{fontSize:'11pt'}}>{info.school.toUpperCase()}</div>
-                                <div style={{fontSize:'14pt', margin:'6px 0'}}>{info.title.toUpperCase()}</div>
-                                <div style={{fontSize:'11pt', fontStyle:'italic'}}>Môn: {info.subject.toUpperCase()} - Lớp {info.grade} — Thời gian: {info.time} phút</div>
-                            </div>
-                            <hr style={{borderTop:'2px solid #000', margin:'12px 0'}} />
-                            {/* Sections */}
-                            {blueprint.sections.map((sec, si) => {
-                                const groups = {};
-                                const groupOrder = [];
-                                sec.questions.forEach(q => {
-                                    const {main, sub} = parseQuestionCode(q.code);
-                                    if (!groups[main]) { groups[main] = {main, stem: null, subs: []}; groupOrder.push(main); }
-                                    if (sub) groups[main].subs.push({...q, subLabel: toChar(sub)});
-                                    else groups[main].stem = q;
-                                });
-                                return (
-                                    <div key={si} style={{marginBottom:'18px'}}>
-                                        <div style={{fontWeight:'bold', textTransform:'uppercase', marginBottom:'8px', borderBottom:'1px solid #ccc', paddingBottom:'4px'}}>{sec.name}</div>
-                                        {groupOrder.map(main => {
-                                            const g = groups[main];
-                                            return (
-                                                <div key={main} style={{marginBottom:'12px'}}>
-                                                    {/* Stem */}
-                                                    {g.stem && (
-                                                        <div>
-                                                            <div style={{marginBottom:'4px'}}><b>Câu {main}:</b> <MathRender text={g.stem.q} /></div>
-                                                            {g.stem.type === 'TF' && g.stem.parts?.length > 0 && (
-                                                                <div style={{marginLeft:'20px'}}>
-                                                                    {g.stem.parts.map((p, pi) => (
-                                                                        <div key={pi} style={{marginBottom:'3px'}}>
-                                                                            <b>{p.label})</b> <MathRender text={p.content} />
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            {g.stem.type === 'MC' && g.stem.a?.length > 0 && (
-                                                                <div style={{marginLeft:'20px'}}>
-                                                                    {g.stem.a.map((opt, ki) => (
-                                                                        <div key={ki} style={{marginBottom:'2px'}}><b>{String.fromCharCode(65+ki)}.</b> <MathRender text={opt} /></div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {/* Subs (TL) */}
-                                                    {g.subs.sort((a,b) => a.subLabel.localeCompare(b.subLabel)).map((sq, sqI) => (
-                                                        <div key={sqI} style={{marginLeft:'20px', marginBottom:'6px'}}>
-                                                            <b>{sq.subLabel})</b> <MathRender text={sq.q} />
-                                                            {sq.type === 'MC' && sq.a?.length > 0 && (
-                                                                <div style={{marginLeft:'20px'}}>
-                                                                    {sq.a.map((opt, ki) => (
-                                                                        <div key={ki}><b>{String.fromCharCode(65+ki)}.</b> <MathRender text={opt} /></div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
+
+                        {!hasGemini && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-lg"></i> ⚠️ Chưa có thiết lập Gemini API Key. Vui lòng cấu hình ở Dashboard trước.</div>}
+
+                        {step === 1 && hasGemini && (
+                            <div className="glass-panel p-8 rounded-2xl border space-y-6 max-w-3xl mx-auto transition-all hover:shadow-lg">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Môn học</label>
+                                        <select className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" value={info.subject} onChange={e => setInfo({ ...info, subject: e.target.value })}>
+                                            {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Giáo dục Công dân", "Tin Học", "Công Nghệ", "Khoa học Tự nhiên", "Lịch sử và Địa lý"].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Lớp</label>
+                                        <select className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" value={info.grade} onChange={e => setInfo({ ...info, grade: e.target.value })}>
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Thời gian (phút)</label>
+                                        <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all font-semibold text-gray-700" type="number" placeholder="Thời gian (phút)" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sở / Phòng GD</label>
+                                        <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all" placeholder="Sở/Phòng" value={info.dept} onChange={e => setInfo({ ...info, dept: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Trường</label>
+                                        <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all" placeholder="Trường" value={info.school} onChange={e => setInfo({ ...info, school: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên kỳ thi</label>
+                                        <input className="border border-gray-200 p-2.5 rounded-xl w-full bg-white/50 focus:bg-white focus:ring-2 focus:ring-indigo-300 outline-none transition-all" placeholder="Tên kỳ thi" value={info.title} onChange={e => setInfo({ ...info, title: e.target.value })} />
+                                    </div>
+                                </div>
+
+                                {/* BỘ CHỌN KHAI BÁO CẤU TRÚC (MANUAL CONFIG) */}
+                                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 transition-all">
+                                    <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-blue-800 mb-3">
+                                        <input type="checkbox" className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-white border-blue-300"
+                                            checked={matrixConfig.useConfig}
+                                            onChange={e => setMatrixConfig({ ...matrixConfig, useConfig: e.target.checked })}
+                                        />
+                                        Khai báo thông số cấu trúc (Khuyên dùng nhận diện chính xác hơn.)
+                                    </label>
+
+                                    {matrixConfig.useConfig && (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                                            <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                                <div className="text-xs font-bold text-gray-500 mb-2">PHẦN I: Trắc nghiệm</div>
+                                                <div className="flex gap-2 items-center">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.mc.q} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, q: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">câu</span>
                                                 </div>
-                                            );
-                                        })}
+                                                <div className="flex gap-2 items-center mt-2">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.mc.s} onChange={e => setMatrixConfig({ ...matrixConfig, mc: { ...matrixConfig.mc, s: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">ý (spec)</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                                <div className="text-xs font-bold text-gray-500 mb-2">PHẦN II: Đúng/Sai</div>
+                                                <div className="flex gap-2 items-center">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tf.q} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, q: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">câu</span>
+                                                </div>
+                                                <div className="flex gap-2 items-center mt-2">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tf.s} onChange={e => setMatrixConfig({ ...matrixConfig, tf: { ...matrixConfig.tf, s: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">ý (spec)</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                                <div className="text-xs font-bold text-gray-500 mb-2">PHẦN III: Trả lời ngắn</div>
+                                                <div className="flex gap-2 items-center">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số câu" value={matrixConfig.tln.q} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, q: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">câu</span>
+                                                </div>
+                                                <div className="flex gap-2 items-center mt-2">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tln.s} onChange={e => setMatrixConfig({ ...matrixConfig, tln: { ...matrixConfig.tln, s: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">ý (spec)</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                                <div className="text-xs font-bold text-gray-500 mb-2">PHẦN IV: TỰ LUẬN</div>
+                                                <div className="flex gap-2 items-center">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm font-semibold focus:ring-1 focus:ring-blue-400 outline-none" placeholder="VD: 6" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)" value={matrixConfig.tl.q} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, q: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400" title="Tổng số câu hỏi nhỏ (VD: 2 bài, mỗi bài 3 phần a,b,c -> Nhập 6)">Tổng câu nhỏ</span>
+                                                </div>
+                                                <div className="flex gap-2 items-center mt-2">
+                                                    <input type="number" min="0" className="w-full border rounded p-1 text-center text-sm focus:ring-1 focus:ring-blue-400 outline-none" placeholder="Số ý" value={matrixConfig.tl.s} onChange={e => setMatrixConfig({ ...matrixConfig, tl: { ...matrixConfig.tl, s: e.target.value } })} />
+                                                    <span className="text-xs text-gray-400">ý (spec)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* UPLOAD HAI FILE TACH ROI */}
+
+                                <div className="space-y-4">
+
+                                    <div className="text-center text-sm text-indigo-700 font-semibold bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">
+
+                                        <i className="fas fa-info-circle mr-1"></i> Vui lòng tải lên <b>2 file PDF riêng biệt</b>: Khung Ma Trận và Bảng Đặc Tả
+
                                     </div>
-                                );
-                            })}
-                            {/* Đáp án */}
-                            <hr style={{borderTop:'2px solid #000', margin:'16px 0'}} />
-                            <div style={{fontWeight:'bold', textAlign:'center', fontSize:'13pt', marginBottom:'12px'}}>HƯỚNG DẪN CHẤM & ĐÁP ÁN</div>
-                            {blueprint.sections.map((sec, si) => {
-                                const mcQs = sec.questions.filter(q => q.type === 'MC' && q.correct_char);
-                                const tfQs = sec.questions.filter(q => q.type === 'TF' && q.correct_char);
-                                const tlnQs = sec.questions.filter(q => q.type === 'TLN' && q.correct_char);
-                                if (!mcQs.length && !tfQs.length && !tlnQs.length) return null;
-                                return (
-                                    <div key={si} style={{marginBottom:'12px'}}>
-                                        <div style={{fontWeight:'bold'}}>{sec.name}</div>
-                                        {mcQs.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {mcQs.map((q,i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-red-600">{q.correct_char}</span></span>)}
-                                            </div>
-                                        )}
-                                        {tfQs.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {tfQs.map((q,i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-teal-600">{q.correct_char}</span></span>)}
-                                            </div>
-                                        )}
-                                        {tlnQs.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {tlnQs.map((q,i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-orange-600">{q.correct_char}</span></span>)}
-                                            </div>
-                                        )}
+
+                                    <div className="grid grid-cols-2 gap-4">
+
+                                        <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${matrixFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
+
+                                            <input type="file" className="hidden" accept=".pdf" onChange={e => setMatrixFile(e.target.files[0])} />
+
+                                            {matrixFile ? (
+
+                                                <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{matrixFile.name}</div>
+
+                                            ) : (
+
+                                                <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-table text-3xl mb-2"></i><br /><span className="font-bold text-base">I. Khung Ma Trận</span><p className="text-xs text-gray-400 mt-1">File chứa bảng phân bổ số câu</p></div>
+
+                                            )}
+
+                                        </label>
+
+                                        <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${specFile ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50' : 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50'} `}>
+
+                                            <input type="file" className="hidden" accept=".pdf" onChange={e => setSpecFile(e.target.files[0])} />
+
+                                            {specFile ? (
+
+                                                <div className="text-emerald-700 font-bold"><i className="fas fa-check-circle text-2xl mb-2 text-emerald-500"></i><br />{specFile.name}</div>
+
+                                            ) : (
+
+                                                <div className="text-indigo-500 group-hover:text-indigo-600"><i className="fas fa-list-check text-3xl mb-2"></i><br /><span className="font-bold text-base">II. Bảng Đặc Tả</span><p className="text-xs text-gray-400 mt-1">File chứa mã câu &amp; Yêu cầu cần đạt</p></div>
+
+                                            )}
+
+                                        </label>
+
                                     </div>
-                                );
-                            })}
-                        </div>
+
+                                    <div className="text-center">
+
+                                        <button
+
+                                            disabled={loading || (!matrixFile || !specFile)}
+
+                                            onClick={processSeparateFiles}
+
+                                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center mx-auto min-w-[200px]"
+
+                                        >
+
+                                            {loading ? <div className="flex items-center"><div className="loader mr-2 border-white"></div> {loadingMsg}</div> : <><i className="fas fa-cogs mr-2"></i> Phân tích 2 File</>}
+
+                                        </button>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        )}
+
+                        {(step === 2 || step === 3) && blueprint && (
+                            <div className="flex flex-col h-[85vh] glass-panel rounded-2xl shadow-xl overflow-hidden border-0 relative">
+                                {generatingState.isRunning && (
+                                    <div className="absolute top-0 left-0 w-full z-50">
+                                        <div className="bg-indigo-600 h-1.5 transition-all duration-300" style={{ width: `${(generatingState.current / generatingState.total) * 100}%` }}></div>
+                                        <div className="bg-indigo-50 text-indigo-700 text-xs py-1 px-4 font-bold flex justify-between shadow-sm border-b border-indigo-100">
+                                            <span className="animate-pulse"><i className="fas fa-cog fa-spin mr-1"></i> {generatingState.text}</span>
+                                            <span>{Math.round((generatingState.current / generatingState.total) * 100)}%</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="p-5 bg-white/80 backdrop-blur-md flex flex-col gap-4 shadow-sm z-10 pt-7">
+                                    {step === 3 && (
+                                        <details className="bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 group">
+                                            <summary className="cursor-pointer px-4 py-2 font-bold flex items-center gap-2 select-none">
+                                                <i className="fas fa-lightbulb text-amber-500"></i>
+                                                Hướng dẫn chỉnh sửa & Dán ảnh câu hỏi
+                                                <i className="fas fa-chevron-down ml-auto text-amber-400 group-open:rotate-180 transition-transform"></i>
+                                            </summary>
+                                            <div className="px-4 pb-3 pt-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                    <p className="font-bold text-amber-800 mb-1"><i className="fas fa-paste mr-1"></i>Dán ảnh câu hỏi (Ctrl+V)</p>
+                                                    <ul className="space-y-1 text-amber-700 list-disc list-inside">
+                                                        <li>Chụp màn hình hoặc copy ảnh câu hỏi vào clipboard</li>
+                                                        <li>Click vào ô <b>"Nội dung câu hỏi"</b> của câu cần nhận diện</li>
+                                                        <li>Bấm <kbd className="bg-white border border-amber-300 px-1 rounded font-mono">Ctrl+V</kbd> để dán</li>
+                                                        <li>AI sẽ <b>tự nhận diện câu hỏi</b> và <b>sinh lời giải</b> luôn</li>
+                                                        <li>Hỗ trợ: MC (A/B/C/D), Đúng/Sai, Tự luận, Trả lời ngắn</li>
+                                                    </ul>
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-amber-800 mb-1"><i className="fas fa-edit mr-1"></i>Chỉnh sửa thủ công</p>
+                                                    <ul className="space-y-1 text-amber-700 list-disc list-inside">
+                                                        <li>Sửa trực tiếp vào ô nội dung câu hỏi và lời giải</li>
+                                                        <li>Công thức toán: dùng <code className="bg-white px-1 rounded border border-amber-200">$...$</code> (LaTeX sẽ render bên dưới)</li>
+                                                        <li>Bấm <b>Sinh lại</b> để AI viết lại câu hỏi theo đặc tả</li>
+                                                        <li>TF/TL: bấm Sinh lại trên bất kỳ sub nào → sinh cả nhóm 1 lần</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    )}
+                                    {parsedStats && (
+                                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex flex-wrap gap-6 text-sm">
+                                            <div className="flex border-r border-indigo-200 pr-6 mr-2 flex-col justify-center items-center">
+                                                <span className="text-gray-500 font-bold uppercase text-[10px]">Tổng cộng</span>
+                                                <span className="font-bold text-indigo-900 text-2xl">{parsedStats.totalQuestions} <span className="text-xs font-medium">câu</span> / {parsedStats.totalParts} <span className="text-xs font-medium">lệnh</span></span>
+                                            </div>
+                                            <div className="flex flex-col justify-center items-center">
+                                                <span className="text-gray-500 font-bold uppercase text-[10px]">Trắc nghiệm khách quan</span>
+                                                <span className="font-bold text-indigo-700 text-lg">{parsedStats.mc} <span className="text-xs">câu</span></span>
+                                            </div>
+                                            <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
+                                                <span className="text-gray-500 font-bold uppercase text-[10px]">Đúng / Sai ({parsedStats.tfList.length} đại câu)</span>
+                                                <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
+                                                    {parsedStats.tfList.map((t, i) => (
+                                                        <div key={i}>• {t.name} có <span className="font-bold text-teal-600">{t.count}</span> ý</div>
+                                                    ))}
+                                                    {parsedStats.tfList.length === 0 && <span className="italic text-gray-400">Không có câu Đúng/Sai</span>}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-gray-500 font-bold uppercase text-[10px]">Trả lời ngắn</span>
+                                                <span className="font-bold text-orange-600 text-lg">{parsedStats.tln} <span className="text-xs">câu</span></span>
+                                            </div>
+                                            <div className="flex flex-col flex-1 min-w-[200px] border-l border-indigo-200 pl-6">
+                                                <span className="text-gray-500 font-bold uppercase text-[10px]">Tự luận ({parsedStats.tl.length} đại câu)</span>
+                                                <div className="text-gray-700 font-medium text-xs mt-1 space-y-1">
+                                                    {parsedStats.tl.map((t, i) => (
+                                                        <div key={i}>• {t.name} có <span className="font-bold text-indigo-600">{t.count}</span> ý</div>
+                                                    ))}
+                                                    {parsedStats.tl.length === 0 && <span className="italic text-gray-400">Không có câu tự luận</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3">
+                                                <h2 className="font-heading font-bold text-gray-800 text-xl">{step === 2 ? 'Kiểm tra Cấu trúc Ma trận' : 'Biên soạn Nội dung Đề thi'}</h2>
+                                                {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
+                                            </div>
+                                            {step === 2 && (
+                                                <p className="text-sm text-gray-500 mt-1">Vui lòng kiểm tra lại số câu hỏi, mức độ, loại câu và điểm số. Bạn <b>phải đảm bảo tổng điểm là 10đ</b> trước khi sinh đề.</p>
+                                            )}
+                                            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                                                <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">BỘ LỌC CÂU HỎI:</span>
+                                                {['ALL', 'MC', 'TF', 'TLN', 'TL'].map(t => (
+                                                    <button key={t} onClick={() => setViewFilter(t)} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${viewFilter === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>
+                                                        {t === 'ALL' ? 'Tất cả' : t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {step === 2 && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (totalScoreWarning) {
+                                                            alert(`Tổng điểm hiện tại là ${totalScoreWarning}/10. Vui lòng thêm/bớt câu hỏi hoặc sửa lại cột điểm sao cho tổng bằng 10 tròn trước khi tiếp tục.`);
+                                                            return;
+                                                        }
+                                                        setStep(3);
+                                                    }}
+                                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center"
+                                                >
+                                                    Chốt Ma trận <i className="fas fa-arrow-right ml-2"></i>
+                                                </button>
+                                            )}
+                                            {step === 3 && (
+                                                <>
+                                                    <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
+                                                    <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
+                                                    <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
+                                                    <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-auto bg-gray-50 relative p-4" id="questions-container">
+                                    {blueprint.sections.map((sec, sIdx) => (
+                                        <div key={sIdx} className="mb-8 bg-white rounded-2xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <input className="font-bold text-lg text-indigo-800 bg-transparent border-b border-dashed outline-none w-1/3" disabled={step === 3} value={sec.name} onChange={e => { const n = { ...blueprint }; n.sections[sIdx].name = e.target.value; setBlueprint(n) }} />
+                                                <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Tổng điểm: {sec.score}</span>
+                                            </div>
+                                            <table className="w-full text-sm text-left border-collapse">
+                                                <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                                                    <tr>
+                                                        <th className="p-2 w-24">Mã</th>
+                                                        <th className="p-2 w-24">Nhóm</th>
+                                                        <th className="p-2 w-16">Mức độ</th>
+                                                        <th className="p-2 w-20">Loại</th>
+                                                        <th className="p-2">Nội dung</th>
+                                                        {step === 3 && <th className="p-2 w-20 text-center">Tác vụ</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {sec.questions.map((q, qIdx) => ({ q, qIdx }))
+                                                        .filter(({ q }) => viewFilter === 'ALL' || q.type === viewFilter)
+                                                        .map(({ q, qIdx }) => (
+                                                            <tr key={qIdx} className="group hover:bg-gray-50 align-top">
+                                                                <td className="p-2">
+                                                                    <input disabled={step === 3} className={`w-full border rounded p-1 text-center font-bold mb-1 ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} value={q.code} onChange={e => updateData(sIdx, qIdx, 'code', e.target.value)} />
+                                                                    <input disabled={step === 3} className={`w-full border rounded p-1 text-center text-xs ${step === 3 ? 'bg-gray-50 text-gray-500' : ''}`} type="number" step="0.25" value={q.score} onChange={e => updateData(sIdx, qIdx, 'score', e.target.value)} />
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <input disabled={step === 3} className={`w-full border rounded p-1 text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 border-dashed' : 'bg-yellow-50'}`} placeholder="VD: Bài 1" value={q.group || ''} onChange={e => updateData(sIdx, qIdx, 'group', e.target.value)} />
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.level} onChange={e => updateData(sIdx, qIdx, 'level', e.target.value)}>
+                                                                        {LEVELS_7991.map(l => (<option key={l.code} value={l.code}>{l.name}</option>))}
+                                                                    </select>
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <select disabled={step === 3} className={`w-full border rounded p-1 font-bold text-xs ${step === 3 ? 'bg-gray-50 text-gray-500 appearance-none' : ''}`} value={q.type} onChange={e => updateData(sIdx, qIdx, 'type', e.target.value)}>
+                                                                        <option value="MC">Trắc nghiệm</option>
+                                                                        <option value="TF">Đúng/Sai</option>
+                                                                        <option value="TLN">Trả lời ngắn</option>
+                                                                        <option value="TL">Tự luận</option>
+                                                                    </select>
+                                                                    {step === 3 && (
+                                                                        <>
+                                                                            <div className={`mt-1 text-center text-[10px] uppercase font-bold rounded ${q.status === 'done' ? 'text-green-600 bg-green-50' : q.status === 'error' ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'} `}>{q.status}</div>
+                                                                            <div className="text-[9px] text-center text-gray-400 font-bold">{q.source}</div>
+                                                                        </>
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <div className="mb-2 grid grid-cols-2 gap-2">
+                                                                        <input disabled={step === 3} className={`border-b border-dashed text-xs text-blue-800 w-full bg-transparent font-medium ${step === 3 ? 'opacity-70' : ''}`} value={q.topic} onChange={e => updateData(sIdx, qIdx, 'topic', e.target.value)} placeholder="Chủ đề..." />
+                                                                        <textarea disabled={step === 3} className={`border border-dashed rounded p-1 text-xs text-gray-600 w-full resize-none bg-indigo-50/30 ${step === 3 ? 'opacity-70 bg-gray-50 text-gray-500 border-none h-8 overflow-hidden' : 'h-16'}`} value={q.spec} onChange={e => updateData(sIdx, qIdx, 'spec', e.target.value)} placeholder="Yêu cầu cần đạt (Đặc tả)..." />
+                                                                    </div>
+
+                                                                    {step === 2 && (
+                                                                        <div className="flex gap-2">
+                                                                            <button onClick={() => { if (confirm('Xóa câu này?')) { const n = { ...blueprint }; n.sections[sIdx].questions.splice(qIdx, 1); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n) } }} className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded hover:bg-red-100 transition"><i className="fas fa-trash mr-1"></i> Xóa câu</button>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {step === 3 && (
+                                                                        <>
+                                                                            <div className="bg-white border rounded p-2 focus-within:ring-2 ring-blue-100 mt-2">
+                                                                                <div className="text-xs font-bold text-indigo-600 mb-1 flex justify-between items-center">
+                                                                                    <span>Nội dung câu hỏi: <span className="font-normal text-gray-400 text-[10px] ml-1"><i className="fas fa-clipboard mr-0.5"></i>Ctrl+V để dán ảnh nhận diện</span></span>
+                                                                                    <input className="text-xs border rounded px-1 w-20 text-center font-bold" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án (A/B)'} value={q.correct_char || ''} onChange={e => updateData(sIdx, qIdx, 'correct_char', e.target.value)} title="Đáp án đúng" />
+                                                                                </div>
+                                                                                <textarea className={`w-full text-sm font-serif border-0 outline-none resize-y min-h-[60px] ${q.status === 'generating' ? 'opacity-50 italic text-gray-400' : ''}`} value={q.q} onChange={e => updateData(sIdx, qIdx, 'q', e.target.value)} onPaste={e => handleQuestionPaste(e, sIdx, qIdx)} placeholder="Soạn nội dung hoặc Ctrl+V dán ảnh câu hỏi..." />
+                                                                                <div className="p-2 bg-gray-50 rounded mt-1 border border-gray-100"><MathRender text={q.q} /></div>
+
+                                                                                {/* LOGIC HIỂN THỊ ĐÁP ÁN MC */}
+                                                                                {(q.type === 'MC') && q.a?.length > 0 && (
+                                                                                    <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
+                                                                                        {q.a.map((opt, k) => (<div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-5 shrink-0">{String.fromCharCode(65 + k)}.</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateData(sIdx, qIdx, 'a', na) }} /></div>))}
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* LOGIC HIỂN THỊ PHẦN TỬ TF */}
+                                                                                {(q.type === 'TF') && q.parts?.length > 0 && (
+                                                                                    <div className="space-y-1 mt-2 pt-2 border-t border-dashed">
+                                                                                        {q.parts.map((p, k) => (
+                                                                                            <div key={k} className={`flex gap-1 items-center p-1 rounded transition-colors ${p.is_correct ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'} `}>
+                                                                                                <span className="font-bold text-xs w-6">{p.label})</span>
+                                                                                                <span className={`text-xs w-8 font-bold text-center`}>{p.is_correct ? 'Đ' : 'S'}</span>
+                                                                                                <input
+                                                                                                    className="border rounded p-1 text-sm w-full font-serif bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                                    value={p.content}
+                                                                                                    onChange={e => {
+                                                                                                        const newParts = [...q.parts];
+                                                                                                        newParts[k].content = e.target.value;
+                                                                                                        updateData(sIdx, qIdx, 'parts', newParts);
+                                                                                                    }}
+                                                                                                />
+                                                                                                <button onClick={() => updateData(sIdx, qIdx, 'parts', true, k)} className="text-[10px] text-blue-600 font-bold px-1 py-1 w-12 shrink-0 bg-white border border-blue-200 rounded">Đổi Đ/S</button>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="mt-2 bg-green-50 border border-green-200 rounded p-2"><div className="text-xs font-bold text-green-700 mb-1">Lời giải chi tiết:</div><textarea className="w-full bg-transparent text-sm font-mono border-0 outline-none resize-y min-h-[40px]" value={q.c} onChange={e => updateData(sIdx, qIdx, 'c', e.target.value)} placeholder="Lời giải chi tiết..." /><div className="mt-1 pt-1 border-t border-green-200"><MathRender text={q.c} /></div></div>
+                                                                        </>
+                                                                    )}
+                                                                </td>
+                                                                {step === 3 && (
+                                                                    <td className="p-2 text-center align-middle">
+                                                                        <button onClick={() => generateQuestion(sIdx, qIdx)} className="w-full mb-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-1.5 rounded text-xs font-bold shadow-sm flex flex-col items-center justify-center gap-1">
+                                                                            {q.status === 'generating' ? <div className="loader w-3 h-3 mx-auto"></div> : <><i className="fas fa-magic"></i> Sinh lại</>}
+                                                                        </button>
+                                                                    </td>
+                                                                )}
+                                                            </tr>
+                                                        ))}
+                                                    {step === 2 && (
+                                                        <tr><td colSpan="5" className="p-3 text-center bg-gray-50 border-t border-dashed rounded-b-lg"><button onClick={() => { const n = { ...blueprint }; n.sections[sIdx].questions.push({ code: `C${n.sections[sIdx].questions.length + 1}`, group: '', topic: '', level: 'B', type: 'MC', score: 0.25, spec: '', status: 'pending', q: '', a: ['', '', '', ''], c: '', parts: [] }); const newTotal = calcExamTotals(n); setTotalScoreWarning(Math.abs(newTotal - 10) >= 0.1 ? newTotal : null); setBlueprint(n); setViewFilter('ALL'); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg border border-indigo-200 bg-white shadow-sm transition"><i className="fas fa-plus-circle mr-1"></i> Thêm thủ công 1 câu vào phần này</button></td></tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+
+                    {/* ── PREVIEW MODAL ── */}
+                    {showPreview && blueprint && (
+                        <div className="fixed inset-0 z-[999] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={e => { if (e.target === e.currentTarget) setShowPreview(false); }}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+                                {/* Header */}
+                                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-lg font-bold"><i className="fas fa-eye mr-2"></i>Xem trước đề thi</h2>
+                                        <p className="text-emerald-100 text-xs">{info.title} — {info.subject} Lớp {info.grade} — {info.time} phút</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition flex items-center gap-1"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                        <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times"></i> Đóng</button>
+                                    </div>
+                                </div>
+                                {/* Exam content */}
+                                <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', serif", fontSize: '13pt', lineHeight: '1.6' }}>
+                                    {/* Tiêu đề */}
+                                    <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '11pt' }}>{info.dept.toUpperCase()}</div>
+                                        <div style={{ fontSize: '11pt' }}>{info.school.toUpperCase()}</div>
+                                        <div style={{ fontSize: '14pt', margin: '6px 0' }}>{info.title.toUpperCase()}</div>
+                                        <div style={{ fontSize: '11pt', fontStyle: 'italic' }}>Môn: {info.subject.toUpperCase()} - Lớp {info.grade} — Thời gian: {info.time} phút</div>
+                                    </div>
+                                    <hr style={{ borderTop: '2px solid #000', margin: '12px 0' }} />
+                                    {/* Sections */}
+                                    {blueprint.sections.map((sec, si) => {
+                                        const groups = {};
+                                        const groupOrder = [];
+                                        sec.questions.forEach(q => {
+                                            const { main, sub } = parseQuestionCode(q.code);
+                                            if (!groups[main]) { groups[main] = { main, stem: null, subs: [] }; groupOrder.push(main); }
+                                            if (sub) groups[main].subs.push({ ...q, subLabel: toChar(sub) });
+                                            else groups[main].stem = q;
+                                        });
+                                        return (
+                                            <div key={si} style={{ marginBottom: '18px' }}>
+                                                <div style={{ fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #ccc', paddingBottom: '4px' }}>{sec.name}</div>
+                                                {groupOrder.map(main => {
+                                                    const g = groups[main];
+                                                    return (
+                                                        <div key={main} style={{ marginBottom: '12px' }}>
+                                                            {/* Stem */}
+                                                            {g.stem && (
+                                                                <div>
+                                                                    <div style={{ marginBottom: '4px' }}><b>Câu {main}:</b> <MathRender text={g.stem.q} /></div>
+                                                                    {g.stem.type === 'TF' && g.stem.parts?.length > 0 && (
+                                                                        <div style={{ marginLeft: '20px' }}>
+                                                                            {g.stem.parts.map((p, pi) => (
+                                                                                <div key={pi} style={{ marginBottom: '3px' }}>
+                                                                                    <b>{p.label})</b> <MathRender text={p.content} />
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {g.stem.type === 'MC' && g.stem.a?.length > 0 && (
+                                                                        <div style={{ marginLeft: '20px' }}>
+                                                                            {g.stem.a.map((opt, ki) => (
+                                                                                <div key={ki} style={{ marginBottom: '2px' }}><b>{String.fromCharCode(65 + ki)}.</b> <MathRender text={opt} /></div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                             {/* Subs */}
+                                                            {(() => {
+                                                                const sortedSubs = [...g.subs].sort((a, b) => a.subLabel.localeCompare(b.subLabel));
+                                                                const allTF = !g.stem && sortedSubs.every(s => s.type === 'TF');
+                                                                const allTL = !g.stem && sortedSubs.every(s => s.type === 'TL');
+                                                                if (allTF && sortedSubs.length > 0) {
+                                                                    const rep = sortedSubs[0];
+                                                                    return (
+                                                                        <div>
+                                                                            <div style={{marginBottom:'4px'}}><b>Câu {main}:</b> <MathRender text={rep.q} /></div>
+                                                                            {rep.parts && rep.parts.length > 0 && (
+                                                                                <table style={{width:'90%',borderCollapse:'collapse',margin:'8px 0'}}>
+                                                                                    <thead><tr style={{background:'#f0f0f0'}}><th style={{border:'1px solid #ccc',padding:'4px',width:'25px'}}></th><th style={{border:'1px solid #ccc',padding:'4px',textAlign:'left'}}>Nội dung</th><th style={{border:'1px solid #ccc',padding:'4px',width:'90px',textAlign:'center'}}>Đúng/Sai</th></tr></thead>
+                                                                                    <tbody>{rep.parts.map((p,pi) => (<tr key={pi}><td style={{border:'1px solid #ccc',padding:'4px',textAlign:'center'}}>{p.label})</td><td style={{border:'1px solid #ccc',padding:'4px'}}><MathRender text={p.content} /></td><td style={{border:'1px solid #ccc',padding:'4px'}}></td></tr>))}</tbody>
+                                                                                </table>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                if (allTL && sortedSubs.length > 0) {
+                                                                    const firstQ = sortedSubs[0].q || '';
+                                                                    const si2 = firstQ.indexOf('\n\n');
+                                                                    const ctx = si2 > 0 ? firstQ.substring(0, si2) : firstQ;
+                                                                    return (
+                                                                        <div>
+                                                                            <div style={{marginBottom:'6px'}}><b>Câu {main}:</b> <MathRender text={ctx} /></div>
+                                                                            {sortedSubs.map((sq,sqI) => {
+                                                                                const rq = sq.q || '';
+                                                                                const i2 = rq.indexOf('\n\n');
+                                                                                const subQ = i2 > 0 ? rq.substring(i2+2) : rq;
+                                                                                return <div key={sqI} style={{marginLeft:'20px',marginBottom:'5px'}}><b>{sq.subLabel})</b> <MathRender text={subQ} /></div>;
+                                                                            })}
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return sortedSubs.map((sq,sqI) => (
+                                                                    <div key={sqI} style={{marginLeft:'20px',marginBottom:'6px'}}>
+                                                                        <b>{sq.subLabel})</b> <MathRender text={sq.q} />
+                                                                        {sq.type === 'MC' && sq.a && sq.a.length > 0 && (
+                                                                            <div style={{marginLeft:'20px'}}>{sq.a.map((opt,ki) => (<div key={ki}><b>{String.fromCharCode(65+ki)}.</b> <MathRender text={opt} /></div>))}</div>
+                                                                        )}
+                                                                    </div>
+                                                                ));
+                                                            })()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })}
+                                    {/* Đáp án */}
+                                    <hr style={{ borderTop: '2px solid #000', margin: '16px 0' }} />
+                                    <div style={{ fontWeight: 'bold', textAlign: 'center', fontSize: '13pt', marginBottom: '12px' }}>HƯỚNG DẪN CHẤM & ĐÁP ÁN</div>
+                                    {blueprint.sections.map((sec, si) => {
+                                        const mcQs = sec.questions.filter(q => q.type === 'MC' && q.correct_char);
+                                        const tfQs = sec.questions.filter(q => q.type === 'TF' && q.correct_char);
+                                        const tlnQs = sec.questions.filter(q => q.type === 'TLN' && q.correct_char);
+                                        if (!mcQs.length && !tfQs.length && !tlnQs.length) return null;
+                                        return (
+                                            <div key={si} style={{ marginBottom: '12px' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{sec.name}</div>
+                                                {mcQs.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        {mcQs.map((q, i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-red-600">{q.correct_char}</span></span>)}
+                                                    </div>
+                                                )}
+                                                {tfQs.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        {tfQs.map((q, i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-teal-600">{q.correct_char}</span></span>)}
+                                                    </div>
+                                                )}
+                                                {tlnQs.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        {tlnQs.map((q, i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-orange-600">{q.correct_char}</span></span>)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </>
             );
         };
