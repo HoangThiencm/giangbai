@@ -312,6 +312,7 @@
             const [globalType, setGlobalType] = useState("MC");
             const [viewFilter, setViewFilter] = useState("ALL");
             const [generatingState, setGeneratingState] = useState({ isRunning: false, current: 0, total: 0, text: "" });
+            const [showPreview, setShowPreview] = React.useState(false);
 
             const [matrixFile, setMatrixFile] = useState(null);
             const [specFile, setSpecFile] = useState(null);
@@ -1165,6 +1166,7 @@ ${qData.type === 'TF' ? `{
 - Chủ đề: ${groupQs[0].topic} | Mức độ: ${levelData.prompt_key}
 - Yêu cầu từng ý:
 ${combinedSpecs}
+- LƯU Ý: TUYỆT ĐỐI KHÔNG viết câu chào hỏi hay lời dẫn nhập bài học. Câu dẫn (trường "q") phải bắt đầu thẳng vào bài toán.
 
 YÊU CẦU:
 1. Kiến thức KHÔNG vượt quá chương trình lớp ${info.grade}.
@@ -1185,6 +1187,7 @@ YÊU CẦU:
 ${combinedSpecs}
 
 YÊU CẦU:
+0. TUYỆT ĐỐI KHÔNG viết câu chào hỏi hay lời dẫn nhập bài học. Trường "q" phải bắt đầu thẳng vào bài toán/đề bài.
 1. Kiến thức KHÔNG vượt quá chương trình lớp ${info.grade}.
 2. Viết 1 bài toán/đề bài lớn (ngữ cảnh chung), rồi chia thành đúng ${nSubs} câu hỏi nhỏ (${subLabels.join(', ')}).
 3. Mỗi câu nhỏ phải phát biểu rõ ràng yêu cầu riêng.
@@ -1264,6 +1267,7 @@ YÊU CẦU:
                     Đóng vai Giáo viên môn ${info.subject} chuyên dạy lớp ${info.grade}. Soạn câu hỏi:
                     - Chủ đề: ${qData.topic} | Mức độ: ${levelPromptKey} | Loại: ${qData.type} | Đặc tả (mỗi câu một ý): ${qData.spec} ${qData.group ? `| Nhóm: ${qData.group}` : ""}
                     YÊU CẦU THEO CHUẨN ĐỀ THI BỘ GDĐT:
+                    0. TUYỆT ĐỐI KHÔNG viết câu chào hỏi ("Chào các em..."), lời dẫn nhập bài học, hay bất kỳ câu giới thiệu ngữ cảnh nào TRƯỚC câu hỏi. Nội dung trường "q" phải bắt đầu NGAY VÀO bài toán/đề bài.
                     1. RÀNG BUỘC KIẾN THỨC: Kiến thức sử dụng để ra đề và giải bài KHÔNG ĐƯỢC VƯỢT QUÁ chương trình giáo dục phổ thông hiện hành của môn ${info.subject} lớp ${info.grade}. TUYỆT ĐỐI KHÔNG dùng kiến thức hoặc phương pháp của lớp trên để giải cho lớp dưới (VD: Không dùng đạo hàm lớp 11/12 để giải bài lớp 9).
                     2. Định dạng: Dùng LaTeX $...$ thay vì chữ viết thường. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
                     3. Nếu là Trắc nghiệm (MC - PHẦN I), chỉ 4 đáp án (A, B, C, D), chỉ rõ đáp án đúng (A/B/C/D).
@@ -1926,6 +1930,7 @@ YÊU CẦU:
                                             <>
                                                 <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
                                                 <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
+                                                <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
                                                 <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
                                             </>
                                         )}
@@ -2057,6 +2062,123 @@ YÊU CẦU:
                         </div>
                     )}
                 </div>
+
+            {/* ── PREVIEW MODAL ── */}
+            {showPreview && blueprint && (
+                <div className="fixed inset-0 z-[999] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={e => { if (e.target === e.currentTarget) setShowPreview(false); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-bold"><i className="fas fa-eye mr-2"></i>Xem trước đề thi</h2>
+                                <p className="text-emerald-100 text-xs">{info.title} — {info.subject} Lớp {info.grade} — {info.time} phút</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition flex items-center gap-1"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times"></i> Đóng</button>
+                            </div>
+                        </div>
+                        {/* Exam content */}
+                        <div className="p-8 font-serif" style={{fontFamily: "'Times New Roman', serif", fontSize: '13pt', lineHeight: '1.6'}}>
+                            {/* Tiêu đề */}
+                            <div style={{textAlign:'center', fontWeight:'bold', marginBottom:'16px'}}>
+                                <div style={{fontSize:'11pt'}}>{info.dept.toUpperCase()}</div>
+                                <div style={{fontSize:'11pt'}}>{info.school.toUpperCase()}</div>
+                                <div style={{fontSize:'14pt', margin:'6px 0'}}>{info.title.toUpperCase()}</div>
+                                <div style={{fontSize:'11pt', fontStyle:'italic'}}>Môn: {info.subject.toUpperCase()} - Lớp {info.grade} — Thời gian: {info.time} phút</div>
+                            </div>
+                            <hr style={{borderTop:'2px solid #000', margin:'12px 0'}} />
+                            {/* Sections */}
+                            {blueprint.sections.map((sec, si) => {
+                                const groups = {};
+                                const groupOrder = [];
+                                sec.questions.forEach(q => {
+                                    const {main, sub} = parseQuestionCode(q.code);
+                                    if (!groups[main]) { groups[main] = {main, stem: null, subs: []}; groupOrder.push(main); }
+                                    if (sub) groups[main].subs.push({...q, subLabel: toChar(sub)});
+                                    else groups[main].stem = q;
+                                });
+                                return (
+                                    <div key={si} style={{marginBottom:'18px'}}>
+                                        <div style={{fontWeight:'bold', textTransform:'uppercase', marginBottom:'8px', borderBottom:'1px solid #ccc', paddingBottom:'4px'}}>{sec.name}</div>
+                                        {groupOrder.map(main => {
+                                            const g = groups[main];
+                                            return (
+                                                <div key={main} style={{marginBottom:'12px'}}>
+                                                    {/* Stem */}
+                                                    {g.stem && (
+                                                        <div>
+                                                            <div style={{marginBottom:'4px'}}><b>Câu {main}:</b> <MathRender text={g.stem.q} /></div>
+                                                            {g.stem.type === 'TF' && g.stem.parts?.length > 0 && (
+                                                                <div style={{marginLeft:'20px'}}>
+                                                                    {g.stem.parts.map((p, pi) => (
+                                                                        <div key={pi} style={{marginBottom:'3px'}}>
+                                                                            <b>{p.label})</b> <MathRender text={p.content} />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {g.stem.type === 'MC' && g.stem.a?.length > 0 && (
+                                                                <div style={{marginLeft:'20px'}}>
+                                                                    {g.stem.a.map((opt, ki) => (
+                                                                        <div key={ki} style={{marginBottom:'2px'}}><b>{String.fromCharCode(65+ki)}.</b> <MathRender text={opt} /></div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {/* Subs (TL) */}
+                                                    {g.subs.sort((a,b) => a.subLabel.localeCompare(b.subLabel)).map((sq, sqI) => (
+                                                        <div key={sqI} style={{marginLeft:'20px', marginBottom:'6px'}}>
+                                                            <b>{sq.subLabel})</b> <MathRender text={sq.q} />
+                                                            {sq.type === 'MC' && sq.a?.length > 0 && (
+                                                                <div style={{marginLeft:'20px'}}>
+                                                                    {sq.a.map((opt, ki) => (
+                                                                        <div key={ki}><b>{String.fromCharCode(65+ki)}.</b> <MathRender text={opt} /></div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
+                            {/* Đáp án */}
+                            <hr style={{borderTop:'2px solid #000', margin:'16px 0'}} />
+                            <div style={{fontWeight:'bold', textAlign:'center', fontSize:'13pt', marginBottom:'12px'}}>HƯỚNG DẪN CHẤM & ĐÁP ÁN</div>
+                            {blueprint.sections.map((sec, si) => {
+                                const mcQs = sec.questions.filter(q => q.type === 'MC' && q.correct_char);
+                                const tfQs = sec.questions.filter(q => q.type === 'TF' && q.correct_char);
+                                const tlnQs = sec.questions.filter(q => q.type === 'TLN' && q.correct_char);
+                                if (!mcQs.length && !tfQs.length && !tlnQs.length) return null;
+                                return (
+                                    <div key={si} style={{marginBottom:'12px'}}>
+                                        <div style={{fontWeight:'bold'}}>{sec.name}</div>
+                                        {mcQs.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {mcQs.map((q,i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-red-600">{q.correct_char}</span></span>)}
+                                            </div>
+                                        )}
+                                        {tfQs.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {tfQs.map((q,i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-teal-600">{q.correct_char}</span></span>)}
+                                            </div>
+                                        )}
+                                        {tlnQs.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {tlnQs.map((q,i) => <span key={i} className="inline-flex gap-1 text-xs border rounded px-2 py-0.5"><span className="text-gray-500">{q.code}</span><span className="font-bold text-orange-600">{q.correct_char}</span></span>)}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
             );
         };
 
