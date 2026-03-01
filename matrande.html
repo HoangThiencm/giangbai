@@ -1374,6 +1374,7 @@ YÊU CẦU:
                     }
 
                     target.status = 'done'; target.source = usedSource;
+                    console.log(`[DEBUG generateQuestion] SUCCESS qIdx=${qIdx} q_preview=${(target.q || '').substring(0, 60)}`);
                     setBlueprint(finalBp);
                 } catch (e) {
                     console.error("Lỗi khi tạo câu hỏi:", e);
@@ -1385,6 +1386,7 @@ YÊU CẦU:
                     errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
 
                     setBlueprint(errBp);
+
 
                     // Có thể alert nếu gửi đơn lẻ
                     if (!generatingState.isRunning) {
@@ -1398,6 +1400,7 @@ YÊU CẦU:
 
                 let totalQ = 0;
                 blueprint.sections.forEach(s => s.questions.forEach(q => { if (q.status !== 'done') totalQ++; }));
+
 
                 if (totalQ === 0) {
                     alert("Tất cả câu hỏi đã được tạo hoàn tất!");
@@ -1776,7 +1779,7 @@ YÊU CẦU:
                         a: q.options || [],
                         c: q.c || "",
                         correct_char: correctChar,
-                        status: "done",
+                        status: (q.question || "").trim() ? "done" : "pending",
                         source: "kho"
                     });
                 });
