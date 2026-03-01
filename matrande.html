@@ -257,7 +257,11 @@
 
                         const data = await res.json();
                         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                            return data.candidates[0].content.parts[0].text;
+                            // gemini-2.5-flash trả về nhiều parts: parts[0] là thinking, parts cuối là answer
+                            const parts = data.candidates[0].content.parts;
+                            // Tìm part cuối cùng KHÔNG phải thinking (thought !== true)
+                            const answerPart = [...parts].reverse().find(p => !p.thought && p.text) || parts[parts.length - 1];
+                            return answerPart.text;
                         }
                         throw new Error("Invalid Response Format from Gemini");
 
@@ -424,7 +428,7 @@
                 const tfS = parseInt(matrixConfig.tf.s) || 0;
                 if (tfQ > 0) {
                     const tfPerBig = tfS > 0 ? Math.ceil(tfS / tfQ) : 4;
-                    const tfLetters = ['a','b','c','d','e','f','g','h'].slice(0, tfPerBig);
+                    const tfLetters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].slice(0, tfPerBig);
                     txt += `- PHẦN II. Câu trắc nghiệm đúng sai: Gồm ${tfQ} ĐẠI CÂU (mỗi đại câu có ĐÚNG ${tfPerBig} CÂU NHỎ: ${tfLetters.join(', ')}).\n`;
                     txt += `   -> YÊU CẦU BẮT BUỘC: Tạo ra ĐÚNG ${tfS > 0 ? tfS : tfQ * 4} JSON OBJECTS. DANH SÁCH MÃ KÈM SỐ THỨ TỰ:\n`;
                     let tfN = currentNum;
@@ -453,7 +457,7 @@
                 const tlS = parseInt(matrixConfig.tl.s) || 0;
                 if (tlQ > 0) {
                     const tlPerBig = tlS > 0 ? Math.ceil(tlS / tlQ) : 1;
-                    const tlLetters = ['a','b','c','d','e','f','g','h'].slice(0, tlPerBig);
+                    const tlLetters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].slice(0, tlPerBig);
                     txt += `- PHẦN TỰ LUẬN: Gồm ${tlQ} BÀI (mỗi bài có ĐÚNG ${tlPerBig} CÂU NHỎ: ${tlLetters.join(', ')}).\n`;
                     txt += `   -> YÊU CẦU BẮT BUỘC: Tạo ra ĐÚNG ${tlS > 0 ? tlS : tlQ} JSON OBJECTS. DANH SÁCH MÃ:\n`;
                     let tlN2 = currentNum;
@@ -1156,11 +1160,9 @@ ${qData.type === 'TF' ? `{
                     if (!hasSubs) groupIndices.length = 0; // Treat as standalone
 
                     if (groupIndices.length > 1) {
-                        setBlueprint(prev => {
-                            const next = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
-                            groupIndices.forEach(idx => { next.sections[sIdx].questions[idx].status = 'generating'; });
-                            return next;
-                        });
+                        // Mark all as generating
+                        groupIndices.forEach(idx => { newBp.sections[sIdx].questions[idx].status = 'generating'; });
+                        setBlueprint({ ...newBp });
 
                         // Collect all specs/topics from the group
                         const groupQs = groupIndices.map(idx => newBp.sections[sIdx].questions[idx]);
@@ -1224,7 +1226,7 @@ YÊU CẦU:
                             if (!match) throw new Error("Invalid JSON");
                             const json = JSON.parse(match[0]);
 
-                            const finalBp2 = { ...blueprint, sections: blueprint.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                            const finalBp2 = { ...blueprint };
                             if (qData.type === 'TF') {
                                 const parts = (json.parts || []);
                                 groupIndices.forEach((idx, i) => {
@@ -1255,26 +1257,15 @@ YÊU CẦU:
                                     tgt.source = 'Gemini (grouped)';
                                 });
                             }
-                            setBlueprint(prev => {
-                                const next = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
-                                groupIndices.forEach((idx, i) => {
-                                    const tgt = next.sections[sIdx].questions[idx];
-                                    const src = finalBp2.sections[sIdx].questions[idx];
-                                    Object.assign(tgt, { q: src.q, c: src.c, correct_char: src.correct_char, status: src.status, source: src.source });
-                                    if (src.parts) tgt.parts = src.parts; else if (src.a) tgt.a = src.a;
-                                });
-                                return next;
-                            });
+                            setBlueprint(finalBp2);
                         } catch (e) {
                             console.error("Grouped generation error:", e);
-                            setBlueprint(prev => {
-                                const errBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
-                                groupIndices.forEach(idx => {
-                                    errBp.sections[sIdx].questions[idx].status = 'error';
-                                    errBp.sections[sIdx].questions[idx].q = `Lỗi: ${e.message}`;
-                                });
-                                return errBp;
+                            const errBp = { ...blueprint };
+                            groupIndices.forEach(idx => {
+                                errBp.sections[sIdx].questions[idx].status = 'error';
+                                errBp.sections[sIdx].questions[idx].q = `Lỗi: ${e.message}`;
                             });
+                            setBlueprint(errBp);
                             if (!generatingState.isRunning) alert(`Lỗi tạo câu hỏi nhóm: ${e.message}`);
                         }
                         return; // Done - grouped generation handled
@@ -1283,11 +1274,8 @@ YÊU CẦU:
 
                 // ── SINGLE GENERATION: MC, TLN, or standalone TF/TL ──
                 const selectedModel = AIAdapter.selectModel(qData.type, qData.level);
-                setBlueprint(prev => {
-                    const newBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
-                    newBp.sections[sIdx].questions[qIdx].status = 'generating';
-                    return newBp;
-                });
+                newBp.sections[sIdx].questions[qIdx].status = 'generating';
+                setBlueprint(newBp);
 
                 const levelData = LEVELS_7991.find(l => l.code === qData.level) || LEVELS_7991[0];
                 const levelPromptKey = levelData.prompt_key;
@@ -1365,37 +1353,40 @@ YÊU CẦU:
                     if (!jsonMatch) throw new Error("Invalid JSON");
                     const json = JSON.parse(jsonMatch[0]);
 
-                    setBlueprint(prev => {
-                        const finalBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
-                        const target = finalBp.sections[sIdx].questions[qIdx];
-                        if (qData.type === 'TF') {
-                            target.parts = json.parts?.map((p, i) => ({
-                                label: p.label || String.fromCharCode(97 + i),
-                                content: p.content,
-                                is_correct: p.is_correct
-                            })) || [];
-                            target.q = json.q;
-                            target.c = json.c;
-                            target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-');
-                        } else {
-                            target.q = json.q;
-                            target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
-                            target.c = json.c || "";
-                            target.correct_char = json.correct_char || "";
-                        }
-                        target.status = 'done';
-                        target.source = usedSource;
-                        return finalBp;
-                    });
+                    const finalBp = { ...blueprint };
+                    const target = finalBp.sections[sIdx].questions[qIdx];
+
+                    if (qData.type === 'TF') {
+                        target.parts = json.parts?.map((p, i) => ({
+                            label: p.label || String.fromCharCode(97 + i),
+                            content: p.content,
+                            is_correct: p.is_correct
+                        })) || [];
+                        target.q = json.q;
+                        target.c = json.c;
+                        target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-'); // Chuỗi Đ-S-S-Đ
+                    } else { // MC / TL
+                        target.q = json.q;
+                        // Strip leading "A. ", "B. " etc prefix if AI included it
+                        target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
+                        target.c = json.c || "";
+                        target.correct_char = json.correct_char || "";
+                    }
+
+                    target.status = 'done'; target.source = usedSource;
+                    setBlueprint(finalBp);
                 } catch (e) {
                     console.error("Lỗi khi tạo câu hỏi:", e);
-                    setBlueprint(prev => {
-                        const errBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
-                        errBp.sections[sIdx].questions[qIdx].status = 'error';
-                        errBp.sections[sIdx].questions[qIdx].source = "ERR";
-                        errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
-                        return errBp;
-                    });
+                    const errBp = { ...blueprint };
+                    errBp.sections[sIdx].questions[qIdx].status = 'error';
+                    errBp.sections[sIdx].questions[qIdx].source = "ERR";
+
+                    // Ghi đề thông báo lỗi vào trường text để user bớt mù mờ
+                    errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
+
+                    setBlueprint(errBp);
+
+                    // Có thể alert nếu gửi đơn lẻ
                     if (!generatingState.isRunning) {
                         alert(`Lỗi tạo câu hỏi: ${e.message}`);
                     }
@@ -2369,7 +2360,7 @@ YÊU CẦU:
                                                                     )}
                                                                 </div>
                                                             )}
-                                                             {/* Subs */}
+                                                            {/* Subs */}
                                                             {(() => {
                                                                 const sortedSubs = [...g.subs].sort((a, b) => a.subLabel.localeCompare(b.subLabel));
                                                                 const allTF = !g.stem && sortedSubs.every(s => s.type === 'TF');
@@ -2378,11 +2369,11 @@ YÊU CẦU:
                                                                     const rep = sortedSubs[0];
                                                                     return (
                                                                         <div>
-                                                                            <div style={{marginBottom:'4px'}}><b>Câu {main}:</b> <MathRender text={rep.q} /></div>
+                                                                            <div style={{ marginBottom: '4px' }}><b>Câu {main}:</b> <MathRender text={rep.q} /></div>
                                                                             {rep.parts && rep.parts.length > 0 && (
-                                                                                <table style={{width:'90%',borderCollapse:'collapse',margin:'8px 0'}}>
-                                                                                    <thead><tr style={{background:'#f0f0f0'}}><th style={{border:'1px solid #ccc',padding:'4px',width:'25px'}}></th><th style={{border:'1px solid #ccc',padding:'4px',textAlign:'left'}}>Nội dung</th><th style={{border:'1px solid #ccc',padding:'4px',width:'90px',textAlign:'center'}}>Đúng/Sai</th></tr></thead>
-                                                                                    <tbody>{rep.parts.map((p,pi) => (<tr key={pi}><td style={{border:'1px solid #ccc',padding:'4px',textAlign:'center'}}>{p.label})</td><td style={{border:'1px solid #ccc',padding:'4px'}}><MathRender text={p.content} /></td><td style={{border:'1px solid #ccc',padding:'4px'}}></td></tr>))}</tbody>
+                                                                                <table style={{ width: '90%', borderCollapse: 'collapse', margin: '8px 0' }}>
+                                                                                    <thead><tr style={{ background: '#f0f0f0' }}><th style={{ border: '1px solid #ccc', padding: '4px', width: '25px' }}></th><th style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'left' }}>Nội dung</th><th style={{ border: '1px solid #ccc', padding: '4px', width: '90px', textAlign: 'center' }}>Đúng/Sai</th></tr></thead>
+                                                                                    <tbody>{rep.parts.map((p, pi) => (<tr key={pi}><td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>{p.label})</td><td style={{ border: '1px solid #ccc', padding: '4px' }}><MathRender text={p.content} /></td><td style={{ border: '1px solid #ccc', padding: '4px' }}></td></tr>))}</tbody>
                                                                                 </table>
                                                                             )}
                                                                         </div>
@@ -2394,21 +2385,21 @@ YÊU CẦU:
                                                                     const ctx = si2 > 0 ? firstQ.substring(0, si2) : firstQ;
                                                                     return (
                                                                         <div>
-                                                                            <div style={{marginBottom:'6px'}}><b>Câu {main}:</b> <MathRender text={ctx} /></div>
-                                                                            {sortedSubs.map((sq,sqI) => {
+                                                                            <div style={{ marginBottom: '6px' }}><b>Câu {main}:</b> <MathRender text={ctx} /></div>
+                                                                            {sortedSubs.map((sq, sqI) => {
                                                                                 const rq = sq.q || '';
                                                                                 const i2 = rq.indexOf('\n\n');
-                                                                                const subQ = i2 > 0 ? rq.substring(i2+2) : rq;
-                                                                                return <div key={sqI} style={{marginLeft:'20px',marginBottom:'5px'}}><b>{sq.subLabel})</b> <MathRender text={subQ} /></div>;
+                                                                                const subQ = i2 > 0 ? rq.substring(i2 + 2) : rq;
+                                                                                return <div key={sqI} style={{ marginLeft: '20px', marginBottom: '5px' }}><b>{sq.subLabel})</b> <MathRender text={subQ} /></div>;
                                                                             })}
                                                                         </div>
                                                                     );
                                                                 }
-                                                                return sortedSubs.map((sq,sqI) => (
-                                                                    <div key={sqI} style={{marginLeft:'20px',marginBottom:'6px'}}>
+                                                                return sortedSubs.map((sq, sqI) => (
+                                                                    <div key={sqI} style={{ marginLeft: '20px', marginBottom: '6px' }}>
                                                                         <b>{sq.subLabel})</b> <MathRender text={sq.q} />
                                                                         {sq.type === 'MC' && sq.a && sq.a.length > 0 && (
-                                                                            <div style={{marginLeft:'20px'}}>{sq.a.map((opt,ki) => (<div key={ki}><b>{String.fromCharCode(65+ki)}.</b> <MathRender text={opt} /></div>))}</div>
+                                                                            <div style={{ marginLeft: '20px' }}>{sq.a.map((opt, ki) => (<div key={ki}><b>{String.fromCharCode(65 + ki)}.</b> <MathRender text={opt} /></div>))}</div>
                                                                         )}
                                                                     </div>
                                                                 ));
