@@ -1401,7 +1401,6 @@ YÊU CẦU:
                 let totalQ = 0;
                 blueprint.sections.forEach(s => s.questions.forEach(q => { if (q.status !== 'done') totalQ++; }));
 
-
                 if (totalQ === 0) {
                     alert("Tất cả câu hỏi đã được tạo hoàn tất!");
                     return;
@@ -1409,14 +1408,14 @@ YÊU CẦU:
 
                 setGeneratingState({ isRunning: true, current: 0, total: totalQ, text: "Đang khởi tạo..." });
                 let currentQ = 0;
-                const processedGroups = new Set(); // Track grouped TF/TL câu lớn already generated
+                const processedGroups = new Set();
 
+                // === LƯỢT 1: Tạo tuần tự tất cả câu hỏi ===
                 for (let s = 0; s < blueprint.sections.length; s++) {
                     for (let q = 0; q < blueprint.sections[s].questions.length; q++) {
                         const qObj = blueprint.sections[s].questions[q];
                         if (qObj.status === 'done') continue;
 
-                        // Skip siblings already handled by grouped generation
                         const parsed = parseQuestionCode(qObj.code);
                         if ((qObj.type === 'TF' || qObj.type === 'TL') && parsed.sub !== null) {
                             const groupKey = `${s}-${parsed.main}-${qObj.type}`;
@@ -1436,8 +1435,59 @@ YÊU CẦU:
                         }
                     }
                 }
+
+                // === LƯỢT RETRY: Thử lại các câu bị lỗi (quota/rate limit) ===
+                const MAX_RETRIES = 2;
+                for (let retry = 1; retry <= MAX_RETRIES; retry++) {
+                    // Thu thập câu hỏi bị lỗi
+                    const failedQuestions = [];
+                    blueprint.sections.forEach((sec, sIdx) => {
+                        sec.questions.forEach((q, qIdx) => {
+                            if (q.status === 'error') {
+                                failedQuestions.push({ sIdx, qIdx, code: q.code });
+                            }
+                        });
+                    });
+
+                    if (failedQuestions.length === 0) break; // Không còn lỗi → dừng
+
+                    setGeneratingState(prev => ({ ...prev, text: `Chờ 10 giây trước khi thử lại ${failedQuestions.length} câu lỗi (lần ${retry}/${MAX_RETRIES})...` }));
+                    await new Promise(r => setTimeout(r, 10000));
+
+                    for (let i = 0; i < failedQuestions.length; i++) {
+                        const { sIdx, qIdx, code } = failedQuestions[i];
+                        const qObj = blueprint.sections[sIdx].questions[qIdx];
+                        // Kiểm tra lại — có thể đã được xử lý bởi grouped generation
+                        if (qObj.status === 'done') continue;
+
+                        // Reset status về pending trước khi thử lại
+                        qObj.status = 'pending';
+                        qObj.q = '';
+
+                        setGeneratingState(prev => ({ ...prev, text: `Thử lại ${code} (${i + 1}/${failedQuestions.length}, lần ${retry})...` }));
+
+                        await generateQuestion(sIdx, qIdx);
+
+                        if (i < failedQuestions.length - 1) {
+                            await new Promise(r => setTimeout(r, 3000));
+                        }
+                    }
+                }
+
+                // === Thống kê kết quả ===
+                let doneCount = 0, errorCount = 0;
+                blueprint.sections.forEach(s => s.questions.forEach(q => {
+                    if (q.status === 'done') doneCount++;
+                    else if (q.status === 'error') errorCount++;
+                }));
+
                 setGeneratingState({ isRunning: false, current: 0, total: 0, text: "" });
-                alert("Hoàn tất tạo đề!");
+
+                if (errorCount > 0) {
+                    alert(`Hoàn tất! Đã tạo ${doneCount} câu thành công, ${errorCount} câu vẫn bị lỗi.\nBạn có thể bấm "Sinh lại" từng câu lỗi hoặc chạy lại "AI Sinh toàn bộ đề".`);
+                } else {
+                    alert(`Hoàn tất tạo đề! Tất cả ${doneCount} câu đã được tạo thành công.`);
+                }
             };
 
             const updateData = (sIdx, qIdx, field, val, pIdx = null, pField = null) => {
