@@ -1156,9 +1156,11 @@ ${qData.type === 'TF' ? `{
                     if (!hasSubs) groupIndices.length = 0; // Treat as standalone
 
                     if (groupIndices.length > 1) {
-                        // Mark all as generating
-                        groupIndices.forEach(idx => { newBp.sections[sIdx].questions[idx].status = 'generating'; });
-                        setBlueprint({ ...newBp });
+                        setBlueprint(prev => {
+                            const next = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                            groupIndices.forEach(idx => { next.sections[sIdx].questions[idx].status = 'generating'; });
+                            return next;
+                        });
 
                         // Collect all specs/topics from the group
                         const groupQs = groupIndices.map(idx => newBp.sections[sIdx].questions[idx]);
@@ -1222,7 +1224,7 @@ YÊU CẦU:
                             if (!match) throw new Error("Invalid JSON");
                             const json = JSON.parse(match[0]);
 
-                            const finalBp2 = { ...blueprint };
+                            const finalBp2 = { ...blueprint, sections: blueprint.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
                             if (qData.type === 'TF') {
                                 const parts = (json.parts || []);
                                 groupIndices.forEach((idx, i) => {
@@ -1253,15 +1255,26 @@ YÊU CẦU:
                                     tgt.source = 'Gemini (grouped)';
                                 });
                             }
-                            setBlueprint(finalBp2);
+                            setBlueprint(prev => {
+                                const next = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                                groupIndices.forEach((idx, i) => {
+                                    const tgt = next.sections[sIdx].questions[idx];
+                                    const src = finalBp2.sections[sIdx].questions[idx];
+                                    Object.assign(tgt, { q: src.q, c: src.c, correct_char: src.correct_char, status: src.status, source: src.source });
+                                    if (src.parts) tgt.parts = src.parts; else if (src.a) tgt.a = src.a;
+                                });
+                                return next;
+                            });
                         } catch (e) {
                             console.error("Grouped generation error:", e);
-                            const errBp = { ...blueprint };
-                            groupIndices.forEach(idx => {
-                                errBp.sections[sIdx].questions[idx].status = 'error';
-                                errBp.sections[sIdx].questions[idx].q = `Lỗi: ${e.message}`;
+                            setBlueprint(prev => {
+                                const errBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                                groupIndices.forEach(idx => {
+                                    errBp.sections[sIdx].questions[idx].status = 'error';
+                                    errBp.sections[sIdx].questions[idx].q = `Lỗi: ${e.message}`;
+                                });
+                                return errBp;
                             });
-                            setBlueprint(errBp);
                             if (!generatingState.isRunning) alert(`Lỗi tạo câu hỏi nhóm: ${e.message}`);
                         }
                         return; // Done - grouped generation handled
@@ -1270,8 +1283,11 @@ YÊU CẦU:
 
                 // ── SINGLE GENERATION: MC, TLN, or standalone TF/TL ──
                 const selectedModel = AIAdapter.selectModel(qData.type, qData.level);
-                newBp.sections[sIdx].questions[qIdx].status = 'generating';
-                setBlueprint(newBp);
+                setBlueprint(prev => {
+                    const newBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                    newBp.sections[sIdx].questions[qIdx].status = 'generating';
+                    return newBp;
+                });
 
                 const levelData = LEVELS_7991.find(l => l.code === qData.level) || LEVELS_7991[0];
                 const levelPromptKey = levelData.prompt_key;
@@ -1349,40 +1365,37 @@ YÊU CẦU:
                     if (!jsonMatch) throw new Error("Invalid JSON");
                     const json = JSON.parse(jsonMatch[0]);
 
-                    const finalBp = { ...blueprint };
-                    const target = finalBp.sections[sIdx].questions[qIdx];
-
-                    if (qData.type === 'TF') {
-                        target.parts = json.parts?.map((p, i) => ({
-                            label: p.label || String.fromCharCode(97 + i),
-                            content: p.content,
-                            is_correct: p.is_correct
-                        })) || [];
-                        target.q = json.q;
-                        target.c = json.c;
-                        target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-'); // Chuỗi Đ-S-S-Đ
-                    } else { // MC / TL
-                        target.q = json.q;
-                        // Strip leading "A. ", "B. " etc prefix if AI included it
-                        target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
-                        target.c = json.c || "";
-                        target.correct_char = json.correct_char || "";
-                    }
-
-                    target.status = 'done'; target.source = usedSource;
-                    setBlueprint(finalBp);
+                    setBlueprint(prev => {
+                        const finalBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                        const target = finalBp.sections[sIdx].questions[qIdx];
+                        if (qData.type === 'TF') {
+                            target.parts = json.parts?.map((p, i) => ({
+                                label: p.label || String.fromCharCode(97 + i),
+                                content: p.content,
+                                is_correct: p.is_correct
+                            })) || [];
+                            target.q = json.q;
+                            target.c = json.c;
+                            target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-');
+                        } else {
+                            target.q = json.q;
+                            target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
+                            target.c = json.c || "";
+                            target.correct_char = json.correct_char || "";
+                        }
+                        target.status = 'done';
+                        target.source = usedSource;
+                        return finalBp;
+                    });
                 } catch (e) {
                     console.error("Lỗi khi tạo câu hỏi:", e);
-                    const errBp = { ...blueprint };
-                    errBp.sections[sIdx].questions[qIdx].status = 'error';
-                    errBp.sections[sIdx].questions[qIdx].source = "ERR";
-
-                    // Ghi đè thông báo lỗi vào trường text để user bớt mù mờ
-                    errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
-
-                    setBlueprint(errBp);
-
-                    // Có thể alert nếu gọi đơn lẻ
+                    setBlueprint(prev => {
+                        const errBp = { ...prev, sections: prev.sections.map(sec => ({ ...sec, questions: sec.questions.map(q => ({ ...q })) })) };
+                        errBp.sections[sIdx].questions[qIdx].status = 'error';
+                        errBp.sections[sIdx].questions[qIdx].source = "ERR";
+                        errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
+                        return errBp;
+                    });
                     if (!generatingState.isRunning) {
                         alert(`Lỗi tạo câu hỏi: ${e.message}`);
                     }
