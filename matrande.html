@@ -1685,6 +1685,11 @@ YÊU CẦU:
                             type: q.type,
                             code: q.code,
                             topic: q.topic,
+                            spec: q.spec || '',
+                            group: q.group || '',
+                            level: q.level || 'B',
+                            score: parseFloat(q.score) || 0.25,
+                            parts: q.parts || [],
                             c: q.c
                         });
                     });
@@ -1755,7 +1760,7 @@ YÊU CẦU:
                         topic: q.topic || "",
                         level: q.level || "B",
                         type: type,
-                        score: 0.25,
+                        score: parseFloat(q.score) || 0.25,
                         spec: q.spec || "",
                         parts: q.parts || [],
                         q: q.question || "",
