@@ -1689,6 +1689,9 @@ YÊU CẦU:
                 const payload = {
                     id: null,
                     title: `${info.title} - ${info.subject} ${info.grade} (Ma trận)`,
+                    school: info.school || "TRƯỜNG THPT/THCS",
+                    subject: info.subject || "Toán",
+                    grade: String(info.grade || "9"),
                     duration: parseInt(info.time, 10) || 90,
                     start_time: null,
                     end_time: null,
