@@ -1807,6 +1807,17 @@ YÊU CẦU:
                 }
             };
 
+            const deleteExamFromKho = async (examId, exTitle) => {
+                if (!window.confirm(`Xóa đề "${exTitle}"?\n\nHành động này không thể hoàn tác.`)) return;
+                try {
+                    const res = await fetch(`${API_BASE}/api/exam/delete/${examId}`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error(await res.text());
+                    setSavedExamsList(prev => prev.filter(ex => ex.id !== examId));
+                } catch (e) {
+                    alert("Lỗi xóa đề: " + (e.message || e));
+                }
+            };
+
             // THỐNG KÊ BIẾN ĐỘNG THEO THỰC TẾ TRONG BẢNG (DYNAMIC)
             const parsedStats = React.useMemo(() => {
                 let stats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [], totalQuestions: 0, totalParts: 0 };
@@ -2438,7 +2449,10 @@ YÊU CẦU:
                                                         <div className="font-bold text-gray-800 truncate">{ex.title}</div>
                                                         <div className="text-xs text-gray-500 mt-0.5">{ex.school} · {ex.duration_mins} phút</div>
                                                     </div>
-                                                    <button onClick={() => loadExamFromKho(ex.id)} className="shrink-0 px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 transition"><i className="fas fa-external-link-alt mr-1"></i> Mở</button>
+                                                    <div className="shrink-0 flex gap-2">
+                                                        <button onClick={() => loadExamFromKho(ex.id)} className="px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 transition"><i className="fas fa-external-link-alt mr-1"></i> Mở</button>
+                                                        <button onClick={() => deleteExamFromKho(ex.id, ex.title)} className="px-4 py-2 bg-red-100 text-red-700 rounded-xl font-semibold text-sm hover:bg-red-200 transition" title="Xóa đề"><i className="fas fa-trash-alt"></i></button>
+                                                    </div>
                                                 </li>
                                             ))}
                                         </ul>
