@@ -1663,6 +1663,11 @@ YÊU CẦU:
                     alert("Chưa đăng nhập. Vui lòng đăng nhập (trang Thi trực tuyến) để lưu đề vào kho.");
                     return;
                 }
+                const defaultTitle = `${info.title} - ${info.subject} lớp ${info.grade} (Ma trận)`;
+                const customTitle = window.prompt("Đặt tên đề để dễ nhớ khi mở lại từ kho:", defaultTitle);
+                if (customTitle === null) return;
+                const titleToSave = (customTitle || "").trim() || defaultTitle;
+
                 const geminiKeys = JSON.parse(localStorage.getItem('global_gemini_keys') || '[]');
                 let globalIdx = 0;
                 const questions = [];
@@ -1696,7 +1701,7 @@ YÊU CẦU:
                 });
                 const payload = {
                     id: null,
-                    title: `${info.title} - ${info.subject} ${info.grade} (Ma trận)`,
+                    title: titleToSave,
                     school: info.school || "TRƯỜNG THPT/THCS",
                     subject: info.subject || "Toán",
                     grade: String(info.grade || "9"),
