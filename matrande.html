@@ -1825,27 +1825,34 @@ YÊU CẦU:
 
             // THỐNG KÊ BIẾN ĐỘNG THEO THỰC TẾ TRONG BẢNG (DYNAMIC)
             const parsedStats = React.useMemo(() => {
-                let stats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [], totalQuestions: 0, totalParts: 0 };
+                let stats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [], totalQuestions: 0, totalParts: 0, scoreMc: 0, scoreTf: 0, scoreTln: 0, scoreTl: 0 };
                 if (blueprint && (step === 2 || step === 3)) {
                     blueprint.sections.forEach(sec => {
                         (sec.questions || []).forEach(q => {
                             stats.totalParts++;
-                            if (q.type === 'MC') { stats.mc++; stats.totalQuestions++; }
+                            const sc = parseFloat(q.score) || 0;
+                            if (q.type === 'MC') { stats.mc++; stats.totalQuestions++; stats.scoreMc += sc; }
                             else if (q.type === 'TF') {
                                 const baseCode = (q.code || "Câu ?").replace(/(\s*[a-z])$/i, '').trim();
                                 stats.tfGroups[baseCode] = (stats.tfGroups[baseCode] || 0) + 1;
                                 stats.tf++;
+                                stats.scoreTf += sc;
                             }
-                            else if (q.type === 'TLN') { stats.tln++; stats.totalQuestions++; }
+                            else if (q.type === 'TLN') { stats.tln++; stats.totalQuestions++; stats.scoreTln += sc; }
                             else if (q.type === 'TL') {
                                 const baseCode = (q.code || "Bài ?").replace(/(\s*[a-z])$/i, '').trim();
                                 stats.tlGroups[baseCode] = (stats.tlGroups[baseCode] || 0) + 1;
+                                stats.scoreTl += sc;
                             }
                         });
                     });
                     stats.tl = Object.entries(stats.tlGroups).map(([name, count]) => ({ name, count }));
                     stats.tfList = Object.entries(stats.tfGroups).map(([name, count]) => ({ name, count }));
                     stats.totalQuestions += stats.tl.length + stats.tfList.length;
+                    stats.scoreMc = parseFloat(stats.scoreMc.toFixed(2));
+                    stats.scoreTf = parseFloat(stats.scoreTf.toFixed(2));
+                    stats.scoreTln = parseFloat(stats.scoreTln.toFixed(2));
+                    stats.scoreTl = parseFloat(stats.scoreTl.toFixed(2));
                 }
                 return stats;
             }, [blueprint, step]);
@@ -2115,11 +2122,15 @@ YÊU CẦU:
                                             {step === 2 && (
                                                 <p className="text-sm text-gray-500 mt-1">Vui lòng kiểm tra lại số câu hỏi, mức độ, loại câu và điểm số. Bạn <b>phải đảm bảo tổng điểm là 10đ</b> trước khi sinh đề.</p>
                                             )}
-                                            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                                            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 flex-wrap">
                                                 <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">BỘ LỌC CÂU HỎI:</span>
                                                 {['ALL', 'MC', 'TF', 'TLN', 'TL'].map(t => (
-                                                    <button key={t} onClick={() => setViewFilter(t)} className={`px-3 py-1 rounded-full border text-xs font-semibold transition-all ${viewFilter === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>
-                                                        {t === 'ALL' ? 'Tất cả' : t === 'MC' ? 'Trắc nghiệm' : t === 'TLN' ? 'Trả lời ngắn' : t === 'TL' ? 'Tự luận' : 'Đúng/Sai'}
+                                                    <button key={t} onClick={() => setViewFilter(t)} className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${viewFilter === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>
+                                                        {t === 'ALL' && <>Tất cả {parsedStats && <span className="opacity-90">({parsedStats.scoreMc + parsedStats.scoreTf + parsedStats.scoreTln + parsedStats.scoreTl}đ)</span>}</>}
+                                                        {t === 'MC' && <>Trắc nghiệm {parsedStats && parsedStats.mc > 0 && <span className="opacity-90">({parsedStats.scoreMc}đ)</span>}</>}
+                                                        {t === 'TF' && <>Đúng/Sai {parsedStats && parsedStats.tf > 0 && <span className="opacity-90">({parsedStats.scoreTf}đ)</span>}</>}
+                                                        {t === 'TLN' && <>Trả lời ngắn {parsedStats && parsedStats.tln > 0 && <span className="opacity-90">({parsedStats.scoreTln}đ)</span>}</>}
+                                                        {t === 'TL' && <>Tự luận {parsedStats && parsedStats.tl.length > 0 && <span className="opacity-90">({parsedStats.scoreTl}đ)</span>}</>}
                                                     </button>
                                                 ))}
                                             </div>
