@@ -313,6 +313,9 @@
             const [viewFilter, setViewFilter] = useState("ALL");
             const [generatingState, setGeneratingState] = useState({ isRunning: false, current: 0, total: 0, text: "" });
             const [showPreview, setShowPreview] = React.useState(false);
+            const [showKhoDeModal, setShowKhoDeModal] = useState(false);
+            const [savedExamsList, setSavedExamsList] = useState([]);
+            const [loadingKhoDe, setLoadingKhoDe] = useState(false);
 
             const [matrixFile, setMatrixFile] = useState(null);
             const [specFile, setSpecFile] = useState(null);
@@ -1712,6 +1715,93 @@ YÊU CẦU:
                 }
             };
 
+            // Mở modal kho đề và tải danh sách đề của giáo viên
+            const openKhoDeModal = async () => {
+                const userEmail = localStorage.getItem("userEmail");
+                if (!userEmail) {
+                    alert("Vui lòng đăng nhập (trang Thi trực tuyến) trước khi mở kho đề.");
+                    return;
+                }
+                setShowKhoDeModal(true);
+                setLoadingKhoDe(true);
+                try {
+                    const res = await fetch(`${API_BASE}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`);
+                    const data = await res.json();
+                    setSavedExamsList(Array.isArray(data) ? data : []);
+                } catch (e) {
+                    setSavedExamsList([]);
+                    console.error(e);
+                } finally {
+                    setLoadingKhoDe(false);
+                }
+            };
+
+            // Chuyển câu hỏi từ API (flat) sang blueprint có sections theo loại
+            const questionsToBlueprintSections = (questions, examInfo) => {
+                const sectionNames = {
+                    MC: "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
+                    TF: "PHẦN II. Câu trắc nghiệm đúng sai",
+                    TLN: "PHẦN III. Câu trắc nghiệm trả lời ngắn",
+                    TL: "PHẦN TỰ LUẬN"
+                };
+                const byType = { MC: [], TF: [], TLN: [], TL: [] };
+                (questions || []).forEach((q, idx) => {
+                    const type = (q.type || "MC").toUpperCase();
+                    const list = byType[type] || byType.MC;
+                    const correctChar = q.correct_char || (type === "MC" && q.options && q.correct_index >= 0 ? String.fromCharCode(65 + q.correct_index) : "");
+                    list.push({
+                        code: q.code || `Câu ${idx + 1}`,
+                        group: q.group || "",
+                        topic: q.topic || "",
+                        level: q.level || "B",
+                        type: type,
+                        score: 0.25,
+                        spec: q.spec || "",
+                        parts: q.parts || [],
+                        q: q.question || "",
+                        a: q.options || [],
+                        c: q.c || "",
+                        correct_char: correctChar,
+                        status: "done",
+                        source: "kho"
+                    });
+                });
+                const sections = [];
+                ["MC", "TF", "TLN", "TL"].forEach(t => {
+                    if (byType[t].length) {
+                        let score = 0;
+                        byType[t].forEach(q => { const s = parseFloat(q.score); if (!isNaN(s)) score += s; });
+                        sections.push({ name: sectionNames[t], questions: byType[t], score: parseFloat(score.toFixed(2)) });
+                    }
+                });
+                if (sections.length === 0 && questions && questions.length) {
+                    sections.push({ name: "Đề thi", questions: byType.MC.concat(byType.TF, byType.TLN, byType.TL).filter(Boolean), score: 0 });
+                }
+                return { sections };
+            };
+
+            const loadExamFromKho = async (examId) => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/exam/get/${examId}`);
+                    if (!res.ok) throw new Error("Không tìm thấy đề");
+                    const data = await res.json();
+                    const bp = questionsToBlueprintSections(data.questions || [], data.info);
+                    setInfo(prev => ({
+                        ...prev,
+                        title: (data.info && data.info.title) ? data.info.title.replace(/\s*\(Ma trận\)\s*$/, "").trim() : prev.title,
+                        school: (data.info && data.info.school) || prev.school,
+                        time: String((data.info && data.info.duration_mins) || prev.time),
+                        subject: prev.subject,
+                        grade: prev.grade
+                    }));
+                    setBlueprint(bp);
+                    setStep(2);
+                    setShowKhoDeModal(false);
+                } catch (e) {
+                    alert("Lỗi tải đề: " + (e.message || e));
+                }
+            };
+
             // THỐNG KÊ BIẾN ĐỘNG THEO THỰC TẾ TRONG BẢNG (DYNAMIC)
             const parsedStats = React.useMemo(() => {
                 let stats = { mc: 0, tf: 0, tln: 0, tlGroups: {}, tfGroups: {}, tl: [], tfList: [], totalQuestions: 0, totalParts: 0 };
@@ -1749,6 +1839,7 @@ YÊU CẦU:
                                 <p className="text-gray-400 text-xs mt-1">Engine: {hfStatus ? <span className="text-teal-500 font-bold">Hybrid</span> : <span className="text-blue-500 font-bold">Gemini</span>} | Mode: Smart Grouping + OMML Math</p>
                             </div>
                             <a href="index.html" className="text-indigo-500 hover:text-indigo-700 text-sm font-semibold transition-colors bg-indigo-50 px-3 py-1.5 rounded-full"><i className="fas fa-home mr-1"></i> Dashboard</a>
+                            <button type="button" onClick={openKhoDeModal} className="text-violet-600 hover:text-violet-800 text-sm font-semibold transition-colors bg-violet-50 px-3 py-1.5 rounded-full border border-violet-200"><i className="fas fa-folder-open mr-1"></i> Mở đề từ kho</button>
                         </div>
 
                         {!hasGemini && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-lg"></i> ⚠️ Chưa có thiết lập Gemini API Key. Vui lòng cấu hình ở Dashboard trước.</div>}
@@ -2312,6 +2403,44 @@ YÊU CẦU:
                                             </div>
                                         );
                                     })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── MODAL KHO ĐỀ (Đề đã lưu) ── */}
+                    {showKhoDeModal && (
+                        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setShowKhoDeModal(false); }}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                                <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-6 py-4 flex justify-between items-center">
+                                    <h2 className="text-lg font-bold"><i className="fas fa-folder-open mr-2"></i> Kho đề của tôi</h2>
+                                    <button onClick={() => setShowKhoDeModal(false)} className="p-2 hover:bg-white/20 rounded-full transition"><i className="fas fa-times"></i></button>
+                                </div>
+                                <div className="p-4 overflow-y-auto flex-1">
+                                    {loadingKhoDe ? (
+                                        <div className="text-center py-8 text-gray-500"><div className="loader w-8 h-8 border-violet-500 mx-auto mb-2"></div> Đang tải danh sách...</div>
+                                    ) : savedExamsList.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-500">
+                                            <i className="fas fa-inbox text-4xl mb-3 block text-gray-300"></i>
+                                            <p className="font-semibold">Chưa có đề nào trong kho.</p>
+                                            <p className="text-sm mt-1">Lưu ma trận từ trang này hoặc tạo đề từ trang <a href="thitructuyen.html" className="text-violet-600 underline">Thi trực tuyến</a>.</p>
+                                        </div>
+                                    ) : (
+                                        <ul className="space-y-2">
+                                            {savedExamsList.map((ex) => (
+                                                <li key={ex.id} className="border border-gray-200 rounded-xl p-4 hover:bg-violet-50/50 transition flex justify-between items-start gap-4">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="font-bold text-gray-800 truncate">{ex.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-0.5">{ex.school} · {ex.duration_mins} phút</div>
+                                                    </div>
+                                                    <button onClick={() => loadExamFromKho(ex.id)} className="shrink-0 px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 transition"><i className="fas fa-external-link-alt mr-1"></i> Mở</button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                                <div className="p-4 border-t bg-gray-50 text-center text-xs text-gray-500">
+                                    Đề lưu từ <b>Ma trận</b> và <b>Thi trực tuyến</b> dùng chung kho. Xem thêm tại <a href="thitructuyen.html" className="text-violet-600 font-semibold">Thi trực tuyến → Quản Lý Thi</a>.
                                 </div>
                             </div>
                         </div>
