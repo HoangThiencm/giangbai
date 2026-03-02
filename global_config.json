@@ -5,7 +5,7 @@
     "smartquiz": true,
     "matrande": true,
     "tronde": true,
-    "thitructuyen": true,
+    "thitructuyen": false,
     "kttx": true
   },
   "github_repo": "HoangThiencm/giangbai",
