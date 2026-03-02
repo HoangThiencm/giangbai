@@ -375,6 +375,156 @@ table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
                 html += `</body></html>`; saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `KiemTra_${info.subject}_${info.grade}_15phut.doc`);
             };
 
+            const exportMatrixToWord = () => {
+                const doneQs = questions.filter(q => q.status === 'done');
+                if (!doneQs.length) { alert('Chưa có câu hỏi nào để xuất ma trận!'); return; }
+
+                const pts = { MC: 0.25, TF: 1.0, TLN: 0.5, TL: 0 };
+                const counts = { MC: 0, TF: 0, TLN: 0, TL: 0 };
+                doneQs.forEach(q => counts[q.type]++);
+                const totalTN = counts.MC * pts.MC + counts.TF * pts.TF + counts.TLN * pts.TLN;
+                pts.TL = counts.TL > 0 ? ((10 - totalTN) / counts.TL) : 0;
+
+                const validTopics = topics.filter(t => t.name.trim()).length ? topics.filter(t => t.name.trim()) : [{ name: 'Chủ đề chung' }];
+                const matrix = validTopics.map(t => ({
+                    name: t.name,
+                    MC: { B: 0, H: 0, V: 0 },
+                    TF: { B: 0, H: 0, V: 0 },
+                    TLN: { B: 0, H: 0, V: 0 },
+                    TL: { B: 0, H: 0, V: 0 }
+                }));
+
+                let tIdx = 0;
+                doneQs.forEach(q => {
+                    matrix[tIdx][q.type][q.level]++;
+                    tIdx = (tIdx + 1) % matrix.length;
+                });
+
+                const formatCell = (count, pType) => {
+                    if (count === 0) return '';
+                    const pt = count * pts[pType];
+                    return `${count}<br/>(${Number(pt.toFixed(2))}đ)`;
+                };
+
+                const sumCol = (type, level) => matrix.reduce((sum, row) => sum + row[type][level], 0);
+
+                let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+                <head><meta charset='utf-8'><title>Ma Tran De</title>
+                <style>
+                    @page { size: landscape; margin: 1.5cm; }
+                    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: black; }
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { border: 1px solid black; padding: 4px; text-align: center; vertical-align: middle; }
+                    .header th, .header td { font-weight: bold; background-color: #f9f9f9; }
+                    .left { text-align: left; }
+                </style></head><body>
+                <div style="text-align:center;font-weight:bold;font-size:14pt;margin-bottom:15px;">KHUNG MA TRẬN ĐỀ KIỂM TRA</div>
+                <div style="text-align:center;font-weight:bold;margin-bottom:20px;">Môn: ${info.subject.toUpperCase()} ${info.grade} - Thời gian: ${info.time} phút</div>
+                <table>
+                    <tr class="header">
+                        <th rowspan="4" style="width:30px">TT</th>
+                        <th rowspan="4" style="width:120px">Chủ đề/<br/>Chương</th>
+                        <th rowspan="4" style="width:120px">Nội dung /<br/>Đơn vị kiến thức</th>
+                        <th colspan="12">Mức độ đánh giá</th>
+                        <th rowspan="2" colspan="3">Tổng</th>
+                        <th rowspan="4" style="width:50px">Tỉ lệ %<br/>điểm</th>
+                    </tr>
+                    <tr class="header">
+                        <th colspan="9">TNKQ</th>
+                        <th colspan="3" rowspan="2">Tự luận</th>
+                    </tr>
+                    <tr class="header">
+                        <th colspan="3">Nhiều lựa chọn</th>
+                        <th colspan="3">"Đúng - Sai"</th>
+                        <th colspan="3">Trả lời ngắn</th>
+                        <th rowspan="2">Biết</th><th rowspan="2">Hiểu</th><th rowspan="2">Vận<br/>dụng</th>
+                    </tr>
+                    <tr class="header">
+                        <th>Biết</th><th>Hiểu</th><th>Vận<br/>dụng</th>
+                        <th>Biết</th><th>Hiểu</th><th>Vận<br/>dụng</th>
+                        <th>Biết</th><th>Hiểu</th><th>Vận<br/>dụng</th>
+                        <th>Biết</th><th>Hiểu</th><th>Vận<br/>dụng</th>
+                    </tr>`;
+
+                let totalQ = 0, totalPt = 0;
+
+                matrix.forEach((row, i) => {
+                    let rowQ = 0, rowPt = 0, rowB_Q = 0, rowH_Q = 0, rowV_Q = 0;
+                    ['MC', 'TF', 'TLN', 'TL'].forEach(type => {
+                        ['B', 'H', 'V'].forEach(lvl => {
+                            const count = row[type][lvl];
+                            rowQ += count;
+                            rowPt += count * pts[type];
+                            if (lvl === 'B') rowB_Q += count;
+                            if (lvl === 'H') rowH_Q += count;
+                            if (lvl === 'V') rowV_Q += count;
+                        });
+                    });
+
+                    let rowB_Pt = row.MC.B * pts.MC + row.TF.B * pts.TF + row.TLN.B * pts.TLN + row.TL.B * pts.TL;
+                    let rowH_Pt = row.MC.H * pts.MC + row.TF.H * pts.TF + row.TLN.H * pts.TLN + row.TL.H * pts.TL;
+                    let rowV_Pt = row.MC.V * pts.MC + row.TF.V * pts.TF + row.TLN.V * pts.TLN + row.TL.V * pts.TL;
+
+                    html += `<tr>
+                        <td>${i + 1}</td>
+                        <td class="left"><b>${row.name}</b></td>
+                        <td></td>
+                        <td>${formatCell(row.MC.B, 'MC')}</td><td>${formatCell(row.MC.H, 'MC')}</td><td>${formatCell(row.MC.V, 'MC')}</td>
+                        <td>${formatCell(row.TF.B, 'TF')}</td><td>${formatCell(row.TF.H, 'TF')}</td><td>${formatCell(row.TF.V, 'TF')}</td>
+                        <td>${formatCell(row.TLN.B, 'TLN')}</td><td>${formatCell(row.TLN.H, 'TLN')}</td><td>${formatCell(row.TLN.V, 'TLN')}</td>
+                        <td>${formatCell(row.TL.B, 'TL')}</td><td>${formatCell(row.TL.H, 'TL')}</td><td>${formatCell(row.TL.V, 'TL')}</td>
+                        <td>${rowB_Q > 0 ? rowB_Q + '<br/>(' + Number(rowB_Pt.toFixed(2)) + 'đ)' : ''}</td>
+                        <td>${rowH_Q > 0 ? rowH_Q + '<br/>(' + Number(rowH_Pt.toFixed(2)) + 'đ)' : ''}</td>
+                        <td>${rowV_Q > 0 ? rowV_Q + '<br/>(' + Number(rowV_Pt.toFixed(2)) + 'đ)' : ''}</td>
+                        <td>${Number((rowPt / 10 * 100).toFixed(1))}%</td>
+                    </tr>`;
+                    totalQ += rowQ;
+                    totalPt += rowPt;
+                });
+
+                html += `<tr class="header">
+                    <td colspan="3" class="left">Tổng số câu</td>
+                    <td>${sumCol('MC', 'B') || ''}</td><td>${sumCol('MC', 'H') || ''}</td><td>${sumCol('MC', 'V') || ''}</td>
+                    <td>${sumCol('TF', 'B') || ''}</td><td>${sumCol('TF', 'H') || ''}</td><td>${sumCol('TF', 'V') || ''}</td>
+                    <td>${sumCol('TLN', 'B') || ''}</td><td>${sumCol('TLN', 'H') || ''}</td><td>${sumCol('TLN', 'V') || ''}</td>
+                    <td>${sumCol('TL', 'B') || ''}</td><td>${sumCol('TL', 'H') || ''}</td><td>${sumCol('TL', 'V') || ''}</td>
+                    <td colspan="3">${totalQ}</td>
+                    <td></td>
+                </tr>`;
+
+                const ptCol = (type, lvl) => Number((sumCol(type, lvl) * pts[type]).toFixed(2));
+                const totalB_Pt = ['MC', 'TF', 'TLN', 'TL'].reduce((s, t) => s + ptCol(t, 'B'), 0);
+                const totalH_Pt = ['MC', 'TF', 'TLN', 'TL'].reduce((s, t) => s + ptCol(t, 'H'), 0);
+                const totalV_Pt = ['MC', 'TF', 'TLN', 'TL'].reduce((s, t) => s + ptCol(t, 'V'), 0);
+
+                html += `<tr class="header">
+                    <td colspan="3" class="left">Tổng số điểm</td>
+                    <td colspan="3">${Number((ptCol('MC', 'B') + ptCol('MC', 'H') + ptCol('MC', 'V')).toFixed(2)) || ''}</td>
+                    <td colspan="3">${Number((ptCol('TF', 'B') + ptCol('TF', 'H') + ptCol('TF', 'V')).toFixed(2)) || ''}</td>
+                    <td colspan="3">${Number((ptCol('TLN', 'B') + ptCol('TLN', 'H') + ptCol('TLN', 'V')).toFixed(2)) || ''}</td>
+                    <td colspan="3">${Number((ptCol('TL', 'B') + ptCol('TL', 'H') + ptCol('TL', 'V')).toFixed(2)) || ''}</td>
+                    <td>${Number(totalB_Pt.toFixed(2))}</td>
+                    <td>${Number(totalH_Pt.toFixed(2))}</td>
+                    <td>${Number(totalV_Pt.toFixed(2))}</td>
+                    <td>10.0</td>
+                </tr>`;
+
+                html += `<tr class="header">
+                    <td colspan="3" class="left">Tỉ lệ %</td>
+                    <td colspan="3">${Number(((ptCol('MC', 'B') + ptCol('MC', 'H') + ptCol('MC', 'V')) * 10).toFixed(1)) || 0}%</td>
+                    <td colspan="3">${Number(((ptCol('TF', 'B') + ptCol('TF', 'H') + ptCol('TF', 'V')) * 10).toFixed(1)) || 0}%</td>
+                    <td colspan="3">${Number(((ptCol('TLN', 'B') + ptCol('TLN', 'H') + ptCol('TLN', 'V')) * 10).toFixed(1)) || 0}%</td>
+                    <td colspan="3">${Number(((ptCol('TL', 'B') + ptCol('TL', 'H') + ptCol('TL', 'V')) * 10).toFixed(1)) || 0}%</td>
+                    <td>${Number((totalB_Pt * 10).toFixed(1))}%</td>
+                    <td>${Number((totalH_Pt * 10).toFixed(1))}%</td>
+                    <td>${Number((totalV_Pt * 10).toFixed(1))}%</td>
+                    <td>100%</td>
+                </tr>`;
+
+                html += `</table></body></html>`;
+                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `MaTran_${info.subject}_${info.grade}_15phut.doc`);
+            };
+
             const generateSimilar = async () => {
                 const doneQs = questions.filter(q => q.status === 'done');
                 if (!doneQs.length) { alert('Chưa có câu hỏi nào hoàn chỉnh để tạo đề tương tự!'); return; }
@@ -714,6 +864,7 @@ Lưu ý:
                                 <button onClick={generateSimilar} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-clone mr-1"></i> Tạo đề tương tự</button>
                                 <button onClick={() => setShowPreview(true)} disabled={generating.active} className="px-4 py-2 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition disabled:opacity-50"><i className="fas fa-eye mr-1"></i> Xem trước</button>
                                 <button onClick={saveExam} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-save mr-1"></i> Lưu đề</button>
+                                <button onClick={exportMatrixToWord} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-table mr-1"></i> Xuất Ma Trận</button>
                                 <button onClick={exportWord} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-file-word mr-1"></i> Xuất Word</button></div></div>
 
                         <div className="p-4 overflow-auto max-h-[70vh] space-y-3">{questions.map((q, idx) => (
@@ -747,7 +898,9 @@ Lưu ý:
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
                         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 flex justify-between items-center">
                             <div><h2 className="text-lg font-bold"><i className="fas fa-eye mr-2"></i>Xem trước đề kiểm tra</h2><p className="text-emerald-100 text-xs">{info.title} — {info.subject} {info.grade} — {info.time} phút</p></div>
-                            <div className="flex gap-2"><button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition"><i className="fas fa-file-word mr-1"></i> Xuất Word</button>
+                            <div className="flex gap-2">
+                                <button onClick={exportMatrixToWord} className="px-4 py-2 bg-white text-violet-700 rounded-xl font-bold text-sm hover:bg-violet-50 transition border border-violet-200"><i className="fas fa-table mr-1"></i> Xuất Ma Trận</button>
+                                <button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition"><i className="fas fa-file-word mr-1"></i> Xuất Word</button>
                                 <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times mr-1"></i> Đóng</button></div></div>
                         <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman',serif", fontSize: '13pt', lineHeight: '1.6' }}>
                             <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '16px' }}>
