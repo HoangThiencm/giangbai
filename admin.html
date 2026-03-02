@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body class="bg-slate-100 p-6 font-sans">
 
     <div class="max-w-5xl mx-auto">
         <!-- Header -->
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-user-shield text-blue-600 mr-2"></i> Quản Trị Hệ Thống</h1>
+            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-user-shield text-blue-600 mr-2"></i> Quản Trị
+                Hệ Thống</h1>
             <a href="index.html" class="text-slate-600 hover:text-blue-600 font-medium transition-colors">
                 <i class="fas fa-home mr-1"></i> Về Trang chủ
             </a>
@@ -24,9 +27,12 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-600 mb-1">Mã bảo mật (Secret Key)</label>
-                    <input type="password" id="adminKey" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Nhập key (mặc định: admin123)...">
+                    <input type="password" id="adminKey"
+                        class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                        placeholder="Nhập key (mặc định: admin123)...">
                 </div>
-                <button onclick="loadUsers()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md transition-all transform active:scale-95">
+                <button onclick="loadUsers()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md transition-all transform active:scale-95">
                     Truy cập Dashboard
                 </button>
             </div>
@@ -34,7 +40,7 @@
 
         <!-- KHU VỰC DASHBOARD (ẨN KHI CHƯA ĐĂNG NHẬP) -->
         <div id="dashboardSection" class="hidden animate-fade-in-up">
-            
+
             <!-- 1. THỐNG KÊ (STATISTICS) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <!-- Card Tổng -->
@@ -77,7 +83,124 @@
                 </div>
             </div>
 
-            <!-- 2. DANH SÁCH CHI TIẾT -->
+            <!-- 2. CÀI ĐẶT ỨNG DỤNG CLIENT -->
+            <div class="bg-white rounded-xl shadow-lg border border-slate-200 mb-8 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700 text-lg"><i
+                            class="fas fa-satellite-dish text-green-500 mr-2"></i> Bật/Tắt Ứng Dụng Client</h3>
+                    <span class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full"><i
+                            class="fas fa-shield-alt mr-1"></i> Admin Global</span>
+                </div>
+                <p class="text-sm text-slate-500 mb-6">Cài đặt này áp dụng cho TẤT CẢ người dùng và được lưu trên kho
+                    lưu trữ GitHub.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                    <!-- Cards for features -->
+                    <!-- 1. Trình Chiếu Slides -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Trình Chiếu Slides</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_gslides"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 2. Vẽ Hình Học AI -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Vẽ Hình Học AI</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_vehinh"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 3. GAME DẠY HỌC -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Soạn Câu Hỏi/Game AI</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_smartquiz"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 4. Tạo Đề Từ Ma Trận -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Tạo Đề Từ Ma Trận</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_matrande"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 5. Trộn Đề Thi -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Trộn Đề Thi</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_tronde"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 6. Tổ Chức Thi Online -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Tổ Chức Thi Online</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_thitructuyen"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 7. Đề KTTX (15 phút) -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Đề Kiểm Tra Thường Xuyên</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_kttx"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                </div>
+
+                <!-- GitHub Config -->
+                <div class="space-y-4 pt-4 border-t border-slate-200 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">GitHub Token (Lưu trữ đám
+                            mây)</label>
+                        <input type="password" id="cfg_github_token"
+                            class="w-full p-2.5 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="ghp_................">
+                        <p class="text-xs text-slate-500 mt-1">Token cần quyền repo. Tạo tại <a
+                                href="https://github.com/settings/tokens" target="_blank"
+                                class="text-blue-500 hover:underline">github.com/settings/tokens</a></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">GitHub Repo</label>
+                        <input type="text" id="cfg_github_repo"
+                            class="w-full p-2.5 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="username/reponame">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-slate-200">
+                    <button onclick="loadGlobalConfig()"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded shadow-sm font-bold text-sm transition flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i> Nạp lại
+                    </button>
+                    <button onclick="saveGlobalConfig()" id="btnSaveConfig"
+                        class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded shadow text-sm font-bold transition flex items-center gap-2">
+                        <i class="fas fa-save"></i> Lưu cài đặt lên GitHub
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. DANH SÁCH CHI TIẾT -->
             <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                     <h3 class="font-bold text-slate-700">Danh sách tài khoản</h3>
@@ -85,14 +208,20 @@
                         <i class="fas fa-sync-alt mr-1"></i> Làm mới
                     </button>
                 </div>
-                
+
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200">
                         <thead class="bg-slate-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Email đăng ký</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Trạng thái</th>
-                                <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Hành động</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    Email đăng ký</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    Trạng thái</th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    Hành động</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody" class="bg-white divide-y divide-slate-200">
@@ -106,11 +235,11 @@
 
     <script>
         // === QUAN TRỌNG: Dán link Server Hugging Face của bạn vào đây ===
-        const HF_API_URL = "https://hoangthiencm-giangbai.hf.space"; 
+        const HF_API_URL = "https://hoangthiencm-giangbai.hf.space";
 
         async function loadUsers() {
             const key = document.getElementById('adminKey').value;
-            if(!key) return alert("Vui lòng nhập Admin Key!");
+            if (!key) return alert("Vui lòng nhập Admin Key!");
 
             // Hiệu ứng loading
             document.body.style.cursor = 'wait';
@@ -120,19 +249,22 @@
                     headers: { 'key': key }
                 });
 
-                if(!res.ok) throw new Error("Sai Key hoặc lỗi kết nối server!");
-                
+                if (!res.ok) throw new Error("Sai Key hoặc lỗi kết nối server!");
+
                 const users = await res.json();
-                
+
                 // Cập nhật thống kê
                 updateStats(users);
-                
+
                 // Vẽ bảng
                 renderTable(users, key);
-                
+
                 // Hiển thị giao diện Dashboard, ẩn Login
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
+
+                // Load config 
+                loadGlobalConfig();
 
             } catch (e) {
                 alert(e.message);
@@ -156,26 +288,26 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            if(users.length === 0) {
+            if (users.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-8 text-center text-slate-400 italic">Chưa có dữ liệu người dùng.</td></tr>';
                 return;
             }
 
             users.forEach(user => {
                 const isPending = user.status === 'pending';
-                
+
                 // Badge trạng thái
-                const statusBadge = isPending 
+                const statusBadge = isPending
                     ? '<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200"><i class="fas fa-hourglass-half mr-1"></i> Chờ duyệt</span>'
                     : '<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200"><i class="fas fa-check mr-1"></i> Hoạt động</span>';
-                
+
                 // Nút Duyệt (Chỉ hiện nếu đang Pending)
-                const approveBtn = isPending 
+                const approveBtn = isPending
                     ? `<button onclick="approveUser('${user.email}', '${key}')" class="text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2">
                         <i class="fas fa-check"></i> Duyệt
-                       </button>` 
+                       </button>`
                     : '';
-                
+
                 // Nút Xóa (Luôn hiện)
                 const deleteBtn = `<button onclick="deleteUser('${user.email}', '${key}')" class="text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold shadow transition">
                                     <i class="fas fa-trash-alt"></i> Xóa / Chặn
@@ -203,31 +335,31 @@
         }
 
         async function approveUser(email, key) {
-            if(!confirm(`Bạn muốn cấp quyền truy cập cho ${email}?`)) return;
+            if (!confirm(`Bạn muốn cấp quyền truy cập cho ${email}?`)) return;
             try {
                 const res = await fetch(`${HF_API_URL}/admin/approve`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, admin_key: key })
                 });
-                if(res.ok) {
+                if (res.ok) {
                     loadUsers(); // Tải lại để cập nhật số liệu
                 } else alert("Lỗi khi duyệt");
-            } catch(e) { alert("Lỗi kết nối"); }
+            } catch (e) { alert("Lỗi kết nối"); }
         }
 
         async function deleteUser(email, key) {
-            if(!confirm(`CẢNH BÁO: Hành động này sẽ XÓA TÀI KHOẢN của ${email}.\n\nNgười dùng này sẽ không thể đăng nhập được nữa.`)) return;
+            if (!confirm(`CẢNH BÁO: Hành động này sẽ XÓA TÀI KHOẢN của ${email}.\n\nNgười dùng này sẽ không thể đăng nhập được nữa.`)) return;
             try {
                 const res = await fetch(`${HF_API_URL}/admin/delete`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, admin_key: key })
                 });
-                if(res.ok) {
+                if (res.ok) {
                     loadUsers(); // Tải lại để cập nhật số liệu
                 } else alert("Lỗi khi xóa");
-            } catch(e) { alert("Lỗi kết nối"); }
+            } catch (e) { alert("Lỗi kết nối"); }
         }
 
         // Hiệu ứng con số chạy
@@ -238,7 +370,7 @@
             const increment = end > start ? 1 : -1;
             const stepTime = Math.abs(Math.floor(duration / range));
             const obj = document.getElementById(id);
-            const timer = setInterval(function() {
+            const timer = setInterval(function () {
                 current += increment;
                 obj.innerHTML = current;
                 if (current == end) {
@@ -246,6 +378,120 @@
                 }
             }, stepTime);
         }
+
+        // ==========================================
+        // GITHUB GLOBAL CONFIG LOGIC
+        // ==========================================
+        let currentConfigSha = null;
+
+        async function loadGlobalConfig() {
+            // First load from local storage if available
+            const sRepo = localStorage.getItem('admin_github_repo');
+            const sPat = localStorage.getItem('admin_github_pat');
+            if (sRepo) document.getElementById('cfg_github_repo').value = sRepo;
+            if (sPat) document.getElementById('cfg_github_token').value = sPat;
+
+            const reqRepo = document.getElementById('cfg_github_repo').value.trim();
+            const reqPat = document.getElementById('cfg_github_token').value.trim();
+            if (!reqRepo || !reqPat) return;
+
+            try {
+                const res = await fetch(`https://api.github.com/repos/${reqRepo}/contents/global_config.json`, {
+                    headers: { 'Authorization': `token ${reqPat}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    currentConfigSha = data.sha;
+                    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+                    // apply to UI
+                    const features = content.features || {};
+                    const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx'];
+                    checks.forEach(id => {
+                        const el = document.getElementById('cfg_' + id);
+                        if (el) el.checked = features[id] !== false; // default true if missing
+                    });
+
+                    if (content.github_pat) document.getElementById('cfg_github_token').value = content.github_pat;
+                    if (content.github_repo) document.getElementById('cfg_github_repo').value = content.github_repo;
+
+                    console.log("Loaded global config!");
+                }
+            } catch (e) {
+                console.warn("Lỗi đọc config:", e);
+            }
+        }
+
+        async function saveGlobalConfig() {
+            const pat = document.getElementById('cfg_github_token').value.trim();
+            const repo = document.getElementById('cfg_github_repo').value.trim();
+            if (!pat || !repo) return alert("Vui lòng nhập GitHub Token và Repo.");
+
+            const btn = document.getElementById('btnSaveConfig');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+            btn.disabled = true;
+
+            try {
+                let sha = currentConfigSha;
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${repo}/contents/global_config.json`, {
+                        headers: { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        sha = data.sha;
+                    }
+                } catch (e) { }
+
+                const features = {};
+                const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx'];
+                checks.forEach(id => {
+                    const el = document.getElementById('cfg_' + id);
+                    if (el) features[id] = el.checked;
+                });
+
+                const newConfig = {
+                    features: features,
+                    github_repo: repo,
+                    github_pat: pat
+                };
+
+                const payload = {
+                    message: "Admin: Cập nhật cấu hình Global Client",
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(newConfig, null, 2)))),
+                    branch: "main"
+                };
+                if (sha) payload.sha = sha;
+
+                const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/global_config.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!updateRes.ok) {
+                    const err = await updateRes.json();
+                    throw new Error(err.message || "Lỗi khi ghi lên GitHub");
+                }
+
+                const updateData = await updateRes.json();
+                currentConfigSha = updateData.content.sha;
+
+                localStorage.setItem('admin_github_repo', repo);
+                localStorage.setItem('admin_github_pat', pat);
+
+                alert("Đã lưu Cấu Hình lên GitHub thành công!");
+
+            } catch (e) {
+                alert("Lỗi lưu config: " + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save"></i> Lưu cài đặt lên GitHub';
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
+
 </html>

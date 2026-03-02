@@ -226,6 +226,42 @@
 
         // Auto check auth on load
         if (!localStorage.getItem('authToken')) window.location.href = 'login.html';
+
+        // Load Global Config from GitHub deployment
+        async function applyGlobalConfig() {
+            try {
+                const res = await fetch('global_config.json', { cache: 'no-store' });
+                if (res.ok) {
+                    const config = await res.json();
+
+                    if (config.github_repo) localStorage.setItem('github_repo', config.github_repo);
+                    if (config.github_pat) localStorage.setItem('github_pat', config.github_pat);
+
+                    const features = config.features || {};
+                    const links = {
+                        gslides: 'gslides.html',
+                        vehinh: 'vehinh.html',
+                        smartquiz: 'smartquiz.html',
+                        matrande: 'matrande.html',
+                        tronde: 'tronde.html',
+                        thitructuyen: 'thitructuyen.html',
+                        kttx: 'kttx.html'
+                    };
+
+                    Object.keys(links).forEach(key => {
+                        if (features[key] === false) {
+                            const card = document.querySelector(`a[href="${links[key]}"]`);
+                            if (card) card.style.display = 'none';
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn("Chưa cấu hình global_config.json hoặc có lỗi tải file.");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", applyGlobalConfig);
+
     </script>
 </head>
 
