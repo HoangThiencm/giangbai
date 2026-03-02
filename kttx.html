@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Đề Kiểm Tra Thường Xuyên (15 phút)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
+            min-height: 100vh
+        }
+
+        .font-ui {
+            font-family: 'Inter', system-ui, sans-serif
+        }
+
+        .font-heading {
+            font-family: 'Outfit', sans-serif
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, .9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, .5);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, .07)
+        }
+
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #059669;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        .step-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all .3s
+        }
+
+        .step-dot.active {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, .3)
+        }
+
+        .step-dot.done {
+            background: #059669;
+            color: #fff
+        }
+
+        .step-dot.pending {
+            background: #e5e7eb;
+            color: #9ca3af
+        }
+
+        .step-line {
+            height: 3px;
+            flex: 1;
+            border-radius: 2px;
+            transition: all .3s
+        }
+
+        .topic-card {
+            border: 2px dashed #d1d5db;
+            border-radius: 16px;
+            padding: 20px;
+            transition: all .3s;
+            position: relative
+        }
+
+        .topic-card:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, .02)
+        }
+
+        .topic-card.has-content {
+            border-color: #10b981;
+            border-style: solid;
+            background: rgba(16, 185, 129, .03)
+        }
+
+        .paste-zone {
+            min-height: 120px;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .3s;
+            position: relative;
+            overflow: hidden
+        }
+
+        .paste-zone:hover,
+        .paste-zone.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, .05)
+        }
+
+        .paste-zone.has-images {
+            border-color: #10b981;
+            border-style: solid;
+            min-height: auto;
+            padding: 8px
+        }
+
+        .check-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all .3s;
+            user-select: none
+        }
+
+        .check-card:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, .03)
+        }
+
+        .check-card.selected {
+            border-color: #059669;
+            background: linear-gradient(135deg, rgba(16, 185, 129, .08), rgba(5, 150, 105, .05));
+            box-shadow: 0 2px 8px rgba(5, 150, 105, .15)
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        const LEVELS = [{ code: 'B', name: 'Biết', prompt_key: 'Know', color: 'emerald' }, { code: 'H', name: 'Hiểu', prompt_key: 'Understand', color: 'blue' }, { code: 'V', name: 'Vận dụng', prompt_key: 'Apply', color: 'purple' }];
+        const normalizeRichText = (raw) => { if (!raw) return ""; return raw.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/\\\((.*?)\\\)/gs, '$$$1$$').replace(/\\\\+(?=\\begin\{cases\})/g, '\\').replace(/\\\\+(?=\\end\{cases\})/g, '\\').replace(/\\\\\\s*\\\\/g, '\\\\').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); };
+        const tokenizeRichText = (raw) => { const text = normalizeRichText(raw).replace(/\\text\{([^}]+)\}/g, ' $1 '); return text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g).map(part => { if (part.startsWith('$$') && part.endsWith('$$')) return { type: 'math', display: true, content: part.slice(2, -2).trim() }; else if (part.startsWith('$') && part.endsWith('$')) return { type: 'math', display: false, content: part.slice(1, -1).trim() }; else return { type: 'text', content: part }; }).filter(t => t.content !== ""); };
+        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }) } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>` } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+        const renderToWord = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { const m = katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'mathml' }).match(/<math[\s\S]*?<\/math>/); if (m) { return `<m:oMathPara><m:oMath>${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}</m:oMath></m:oMathPara>`; } } catch (e) { } return t.content.replace(/\$/g, ''); })() : t.content.replace(/\\text\{([^}]+)\}/g, ' $1 ').replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>').replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>').replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+        const MathRender = ({ text }) => { const ref = useRef(); useEffect(() => { if (!ref.current) return; ref.current.innerHTML = renderToWeb(tokenizeRichText(text || "")); }, [text]); return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>; };
+        const AIAdapter = {
+            getConfig: () => ({ geminiKeys: JSON.parse(localStorage.getItem('gemini_api_keys') || "[]"), geminiModel: localStorage.getItem('gemini_model') || 'gemini-2.5-flash' }),
+            callGemini: async (payloadParts) => { const { geminiKeys, geminiModel } = AIAdapter.getConfig(); if (!geminiKeys.length) throw new Error("Thiếu Gemini API Key!"); const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5); const maxAttempts = Math.max(shuffledKeys.length * 2, 3); for (let i = 0; i < maxAttempts; i++) { const currentKey = shuffledKeys[i % shuffledKeys.length]; try { const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: payloadParts }] }) }); if (!res.ok) { const errRaw = await res.json(); if (res.status === 429 || res.status >= 500) { await new Promise(r => setTimeout(r, 2000)); continue; } throw new Error(errRaw.error?.message || `HTTP ${res.status}`); } const data = await res.json(); if (data.candidates && data.candidates[0]?.content) { const parts = data.candidates[0].content.parts; const answerPart = [...parts].reverse().find(p => !p.thought && p.text) || parts[parts.length - 1]; return answerPart.text; } throw new Error("Invalid Response"); } catch (e) { await new Promise(r => setTimeout(r, 2000)); if (i === maxAttempts - 1) throw e; } } throw new Error("Tất cả API Keys đều báo lỗi."); }
+        };
+        const App = () => {
+            const [mode, setMode] = useState('create');
+            const [step, setStep] = useState(1);
+            const [info, setInfo] = useState({ dept: "SỞ GIÁO DỤC VÀ ĐÀO TẠO", school: "TRƯỜNG THPT/THCS", title: "KIỂM TRA THƯỜNG XUYÊN", time: "15", subject: "Toán", grade: "9" });
+            const [topics, setTopics] = useState([{ id: 1, name: '', images: [] }]);
+            const [simPdfImages, setSimPdfImages] = useState([]);
+            const [simStep, setSimStep] = useState(1);
+            const [selectedTypes, setSelectedTypes] = useState({ MC: false, TF: false, TLN: false, TL: false });
+            const [typeCounts, setTypeCounts] = useState({ MC: 4, TF: 1, TLN: 2, TL: 1 });
+            const [levelConfig, setLevelConfig] = useState({});
+            const [autoLevel, setAutoLevel] = useState(true);
+            const [questions, setQuestions] = useState([]);
+            const [generating, setGenerating] = useState({ active: false, progress: 0, total: 0, text: '' });
+            const [showPreview, setShowPreview] = useState(false);
+            const [showSavedModal, setShowSavedModal] = useState(false);
+            const [savedExams, setSavedExams] = useState(() => { try { return JSON.parse(localStorage.getItem('saved_exams') || '[]'); } catch { return []; } });
+            const [ghSyncing, setGhSyncing] = useState(false);
+            const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
+            let nextTopicId = useRef(2);
+            const GitHubStorage = {
+                getConfig: () => { let repo = localStorage.getItem('github_repo') || ''; repo = repo.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '').replace(/\.git$/, ''); return { pat: localStorage.getItem('github_pat'), repo }; },
+                isConfigured: () => { const c = GitHubStorage.getConfig(); return !!(c.pat && c.repo); },
+                readAll: async () => { const { pat, repo } = GitHubStorage.getConfig(); if (!pat || !repo) return []; const res = await fetch(`https://api.github.com/repos/${repo}/contents/data`, { headers: { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json' } }); if (res.status === 404) return []; if (!res.ok) throw new Error(`GitHub API: ${res.status}`); const files = await res.json(); const examFiles = files.filter(f => f.name.startsWith('exam_') && f.name.endsWith('.json')); const exams = []; for (const f of examFiles) { try { const r = await fetch(f.download_url); const exam = await r.json(); exam._sha = f.sha; exams.push(exam); } catch (e) { console.error('Read error:', f.name, e); } } return exams; },
+                writeOne: async (exam) => { const { pat, repo } = GitHubStorage.getConfig(); if (!pat || !repo) return; const body = { message: `Lưu đề: ${exam.name}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(exam, null, 2)))), branch: 'main' }; const res = await fetch(`https://api.github.com/repos/${repo}/contents/data/exam_${exam.id}.json`, { method: 'PUT', headers: { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify(body) }); if (!res.ok) { const err = await res.json(); throw new Error(err.message || `GitHub API: ${res.status}`); } },
+                deleteOne: async (examId) => { const { pat, repo } = GitHubStorage.getConfig(); if (!pat || !repo) return; const res = await fetch(`https://api.github.com/repos/${repo}/contents/data/exam_${examId}.json`, { headers: { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json' } }); if (res.status === 404) return; if (!res.ok) return; const file = await res.json(); await fetch(`https://api.github.com/repos/${repo}/contents/data/exam_${examId}.json`, { method: 'DELETE', headers: { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify({ message: `Xóa đề: exam_${examId}`, sha: file.sha, branch: 'main' }) }); }
+            };
+            useEffect(() => { if (!GitHubStorage.isConfigured()) return; (async () => { try { setGhSyncing(true); const ghExams = await GitHubStorage.readAll(); if (ghExams.length) { const merged = [...ghExams]; const localExams = JSON.parse(localStorage.getItem('saved_exams') || '[]'); localExams.forEach(le => { if (!merged.find(m => m.id === le.id)) merged.push(le); }); merged.sort((a, b) => new Date(b.date) - new Date(a.date)); setSavedExams(merged); localStorage.setItem('saved_exams', JSON.stringify(merged)); } } catch (e) { console.error('GitHub sync error:', e); } finally { setGhSyncing(false); } })(); }, []);
+            const saveExam = async () => { const doneQs = questions.filter(q => q.status === 'done'); if (!doneQs.length) { alert('Chưa có câu hỏi hoàn chỉnh để lưu!'); return; } const name = prompt('Đặt tên cho đề kiểm tra:', `${info.subject} ${info.grade} - ${new Date().toLocaleDateString('vi-VN')}`); if (!name) return; const exam = { id: Date.now(), name, date: new Date().toISOString(), info: { ...info }, questions: questions.map(q => ({ ...q })), topicNames: topics.map(t => t.name).filter(n => n) }; const updated = [exam, ...savedExams]; setSavedExams(updated); localStorage.setItem('saved_exams', JSON.stringify(updated)); if (GitHubStorage.isConfigured()) { try { setGhSyncing(true); await GitHubStorage.writeOne(exam); alert(`Đã lưu đề "${name}" (${doneQs.length} câu) + đồng bộ GitHub ✅`); } catch (e) { console.error('GitHub save error:', e); alert(`Đã lưu local! Lỗi GitHub: ${e.message}`); } finally { setGhSyncing(false); } } else { alert(`Đã lưu đề "${name}" (${doneQs.length} câu)!\nCấu hình GitHub ở Dashboard để đồng bộ đám mây.`); } };
+            const loadExam = (exam) => { setInfo(exam.info); setQuestions(exam.questions); setStep(4); setShowSavedModal(false); };
+            const deleteExam = async (id) => { if (!confirm('Xóa đề này?')) return; const updated = savedExams.filter(e => e.id !== id); setSavedExams(updated); localStorage.setItem('saved_exams', JSON.stringify(updated)); if (GitHubStorage.isConfigured()) { try { await GitHubStorage.deleteOne(id); } catch (e) { console.error('GitHub delete error:', e); } } };
+            const addTopic = () => { setTopics(prev => [...prev, { id: nextTopicId.current++, name: '', images: [] }]); };
+            const removeTopic = (id) => { if (topics.length <= 1) return; setTopics(prev => prev.filter(t => t.id !== id)); };
+            const updateTopic = (id, field, val) => { setTopics(prev => prev.map(t => t.id === id ? { ...t, [field]: val } : t)); };
+            const appendImages = (topicId, newImages) => { setTopics(prev => prev.map(t => t.id === topicId ? { ...t, images: [...t.images, ...newImages] } : t)); };
+            const renderPdfToImages = async (file) => { const arrayBuffer = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise; const images = []; for (let p = 1; p <= pdf.numPages; p++) { const page = await pdf.getPage(p); const scale = 2; const viewport = page.getViewport({ scale }); const canvas = document.createElement('canvas'); canvas.width = viewport.width; canvas.height = viewport.height; await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise; const dataUrl = canvas.toDataURL('image/png'); images.push({ base64: dataUrl.split(',')[1], mime: 'image/png', preview: dataUrl }); } return images; };
+            const handlePaste = (e, topicId) => { const items = Array.from(e.clipboardData?.items || []); const imgItem = items.find(it => it.type.startsWith('image/')); if (!imgItem) return; e.preventDefault(); const blob = imgItem.getAsFile(); const reader = new FileReader(); reader.onload = () => { const base64 = reader.result.split(',')[1]; const mime = blob.type || 'image/png'; appendImages(topicId, [{ base64, mime, preview: reader.result }]); }; reader.readAsDataURL(blob); };
+            const handleFileUpload = async (e, topicId) => { const files = Array.from(e.target.files || []); for (const file of files) { if (file.type === 'application/pdf') { try { const pdfImages = await renderPdfToImages(file); appendImages(topicId, pdfImages); } catch (err) { console.error('PDF error:', err); alert('Lỗi đọc PDF: ' + err.message); } } else { await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => { appendImages(topicId, [{ base64: reader.result.split(',')[1], mime: file.type || 'image/png', preview: reader.result }]); resolve(); }; reader.readAsDataURL(file); }); } } e.target.value = ''; };
+            const removeImage = (topicId, imgIdx) => { setTopics(prev => prev.map(t => t.id === topicId ? { ...t, images: t.images.filter((_, i) => i !== imgIdx) } : t)); };
+            const toggleType = (type) => { setSelectedTypes(prev => ({ ...prev, [type]: !prev[type] })); };
+            const canProceedStep1 = topics.some(t => t.name.trim() && t.images.length > 0);
+            const canProceedStep2 = Object.values(selectedTypes).some(v => v);
+            useEffect(() => { const cfg = {}; Object.entries(selectedTypes).forEach(([type, selected]) => { if (selected) { const count = typeCounts[type] || 1; cfg[type] = { B: Math.ceil(count / 3), H: Math.ceil(count / 3), V: count - Math.ceil(count / 3) * 2 }; if (cfg[type].V < 0) cfg[type].V = 0; const sum = cfg[type].B + cfg[type].H + cfg[type].V; if (sum < count) cfg[type].B += count - sum; if (sum > count) cfg[type].B = Math.max(0, cfg[type].B - (sum - count)); } }); setLevelConfig(cfg); }, [selectedTypes, typeCounts]);
+
+            const generateQuiz = async () => {
+                const activeTypes = Object.entries(selectedTypes).filter(([_, v]) => v).map(([k]) => k);
+                if (!activeTypes.length) return;
+                const allQuestions = []; let qNum = 1;
+                activeTypes.forEach(type => {
+                    const count = typeCounts[type] || 1; const levels = autoLevel ? null : levelConfig[type];
+                    for (let i = 0; i < count; i++) {
+                        let level = 'B'; if (levels) { if (i < levels.B) level = 'B'; else if (i < levels.B + levels.H) level = 'H'; else level = 'V'; }
+                        if (type === 'TF') { allQuestions.push({ code: `Câu ${qNum}`, type: 'TF', level, status: 'pending', q: '', parts: [{ label: 'a', content: '', is_correct: false }, { label: 'b', content: '', is_correct: false }, { label: 'c', content: '', is_correct: false }, { label: 'd', content: '', is_correct: false }], c: '', correct_char: '', a: [] }); }
+                        else { allQuestions.push({ code: `Câu ${qNum}`, type, level, status: 'pending', q: '', a: type === 'MC' ? ['', '', '', ''] : [], c: '', correct_char: '', parts: [] }); }
+                        qNum++;
+                    }
+                });
+
+                setQuestions(allQuestions); setStep(4); setGenerating({ active: true, progress: 0, total: allQuestions.length, text: 'Đang chuẩn bị...' });
+                const allImages = topics.flatMap(t => t.images); const topicText = topics.map(t => `- ${t.name}`).join('\n');
+                const typeLabels = { MC: 'Trắc nghiệm khách quan (4 đáp án A,B,C,D)', TF: 'Đúng/Sai (câu dẫn + 4 mệnh đề a,b,c,d)', TLN: 'Trả lời ngắn', TL: 'Tự luận' };
+                const updatedQs = [...allQuestions];
+                for (let i = 0; i < updatedQs.length; i++) {
+                    const q = updatedQs[i]; const levelData = LEVELS.find(l => l.code === q.level) || LEVELS[0];
+                    setGenerating(prev => ({ ...prev, progress: i + 1, text: `Đang tạo ${q.code} (${i + 1}/${updatedQs.length})...` }));
+                    const prompt = `Đóng vai Giáo viên môn ${info.subject} lớp ${info.grade}.
+Bạn đang soạn đề KIỂM TRA THƯỜNG XUYÊN (15 phút).
+
+NỘI DUNG SÁCH GIÁO KHOA (hình ảnh đính kèm) thuộc các chủ đề:
+${topicText}
+
+NHIỆM VỤ: Soạn 1 câu hỏi loại "${typeLabels[q.type]}" ở mức độ "${levelData.name}" (${levelData.prompt_key}).
+Đây là ${q.code} trong đề kiểm tra.
+
+YÊU CẦU:
+0. TUYỆT ĐỐI KHÔNG viết câu chào hỏi. Trường "q" bắt đầu thẳng vào đề bài.
+1. Kiến thức KHÔNG vượt chương trình lớp ${info.grade}.
+2. Dùng LaTeX $...$ cho công thức toán.
+3. Câu hỏi phải DỰA TRÊN NỘI DUNG SÁCH GIÁO KHOA trong ảnh đính kèm.
+4. Mỗi câu phải KHÁC BIỆT, không trùng lặp với các câu khác.
+${q.type === 'MC' ? '5. Trắc nghiệm: 4 đáp án A,B,C,D. Chỉ 1 đáp án đúng.' : ''}
+${q.type === 'TF' ? '5. Đúng/Sai: Viết 1 câu dẫn chung + 4 mệnh đề (a,b,c,d). Mỗi mệnh đề rõ Đúng hoặc Sai.' : ''}
+${q.type === 'TLN' ? '5. Trả lời ngắn: Học sinh chỉ điền KẾT QUẢ CUỐI (1 số hoặc biểu thức ngắn).' : ''}
+${q.type === 'TL' ? '5. Tự luận: Yêu cầu trình bày lời giải chi tiết.' : ''}
+6. Output CHỈ JSON thuần túy:
+${q.type === 'TF' ? `{"q":"Câu dẫn chung...","parts":[{"label":"a","content":"Mệnh đề a...","is_correct":true},{"label":"b","content":"Mệnh đề b...","is_correct":false},{"label":"c","content":"Mệnh đề c...","is_correct":false},{"label":"d","content":"Mệnh đề d...","is_correct":true}],"c":"Giải thích chi tiết từng ý..."}` : q.type === 'MC' ? `{"q":"Nội dung câu hỏi...","a":["Đáp án A","Đáp án B","Đáp án C","Đáp án D"],"c":"Lời giải chi tiết...","correct_char":"A"}` : q.type === 'TLN' ? `{"q":"Nội dung câu hỏi...","a":[],"c":"Lời giải chi tiết...","correct_char":"Đáp án cuối (VD: 5)"}` :
+                            `{"q":"Nội dung đề bài tự luận...","a":[],"c":"Lời giải chi tiết từng bước...","correct_char":""}`}`;
+                    try {
+                        const payload = [{ text: prompt }, ...allImages.map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
+                        const jsonStr = await AIAdapter.callGemini(payload); const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim(); const match = clean.match(/\{[\s\S]*\}/);
+                        if (!match) throw new Error("AI không trả về JSON"); const json = JSON.parse(match[0]);
+                        updatedQs[i] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
+                        if (q.type === 'MC') updatedQs[i].a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
+                        if (q.type === 'TF' && json.parts) { updatedQs[i].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[i].correct_char = updatedQs[i].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
+                        setQuestions([...updatedQs]);
+                    } catch (err) { console.error(`Error generating ${q.code}:`, err); updatedQs[i] = { ...q, status: 'error', q: `Lỗi: ${err.message}` }; setQuestions([...updatedQs]); }
+                    if (i < updatedQs.length - 1) { setGenerating(prev => ({ ...prev, text: `Nghỉ 3s chống quá tải...` })); await new Promise(r => setTimeout(r, 3000)); }
+                }
+                for (let retry = 0; retry < 2; retry++) {
+                    const errIdxs = updatedQs.map((q, i) => q.status === 'error' ? i : -1).filter(i => i >= 0); if (!errIdxs.length) break;
+                    setGenerating(prev => ({ ...prev, text: `Thử lại ${errIdxs.length} câu lỗi...` })); await new Promise(r => setTimeout(r, 5000));
+                    for (const idx of errIdxs) {
+                        const q = updatedQs[idx]; const levelData = LEVELS.find(l => l.code === q.level) || LEVELS[0];
+                        try {
+                            const prompt2 = `Soạn 1 câu hỏi ${q.type} mức ${levelData.name} cho kiểm tra 15 phút, môn ${info.subject} lớp ${info.grade}. Dựa trên nội dung SGK trong ảnh. Chủ đề: ${topicText}. Output CHỈ JSON: {"q":"...","a":[],"c":"...","correct_char":"..."}`;
+                            const payload = [{ text: prompt2 }, ...topics.flatMap(t => t.images).map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
+                            const jsonStr = await AIAdapter.callGemini(payload); const match = jsonStr.match(/\{[\s\S]*\}/);
+                            if (match) {
+                                const json = JSON.parse(match[0]); updatedQs[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', a: json.a || [], correct_char: json.correct_char || '' };
+                                if (q.type === 'TF' && json.parts) { updatedQs[idx].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[idx].correct_char = updatedQs[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
+                                setQuestions([...updatedQs]);
+                            }
+                        } catch (e) { } await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
+                setGenerating({ active: false, progress: 0, total: 0, text: '' });
+                const doneCount = updatedQs.filter(q => q.status === 'done').length; const errCount = updatedQs.filter(q => q.status === 'error').length;
+                if (errCount > 0) alert(`Hoàn tất! ${doneCount} câu OK, ${errCount} câu lỗi.`); else alert(`Hoàn tất tạo đề! ${doneCount} câu thành công.`);
+            };
+
+            const regenerateQuestion = async (idx) => {
+                const q = questions[idx]; const updated = [...questions]; updated[idx] = { ...q, status: 'generating', q: '⏳ Đang sinh lại...' }; setQuestions(updated);
+                const levelData = LEVELS.find(l => l.code === q.level) || LEVELS[0]; const tl = { MC: 'Trắc nghiệm', TF: 'Đúng/Sai', TLN: 'Trả lời ngắn', TL: 'Tự luận' };
+                try {
+                    const prompt = `Đóng vai GV ${info.subject} lớp ${info.grade}. Soạn 1 câu ${tl[q.type]} mức ${levelData.name}. Dựa trên SGK (ảnh kèm). Chủ đề: ${topics.map(t => t.name).join(', ')}. Kiểm tra 15 phút.
+0. KHÔNG viết lời chào. Trường "q" bắt đầu thẳng vào đề.
+1. Dùng LaTeX $...$ cho công thức.
+2. Output CHỈ JSON:
+${q.type === 'TF' ? '{"q":"...","parts":[{"label":"a","content":"...","is_correct":true},...],"c":"..."}' : q.type === 'MC' ? '{"q":"...","a":["A","B","C","D"],"c":"...","correct_char":"A"}' : '{"q":"...","a":[],"c":"...","correct_char":"..."}'}`;
+                    const allImages = topics.flatMap(t => t.images); const payload = [{ text: prompt }, ...allImages.map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
+                    const jsonStr = await AIAdapter.callGemini(payload); const match = jsonStr.replace(/```json/g, '').replace(/```/g, '').match(/\{[\s\S]*\}/); if (!match) throw new Error("Invalid JSON");
+                    const json = JSON.parse(match[0]); updated[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
+                    if (q.type === 'MC') updated[idx].a = (json.a || []).map(o => o.replace(/^[A-D][.)\s]\s*/, ''));
+                    if (q.type === 'TF' && json.parts) { updated[idx].parts = json.parts.map((p, i) => ({ label: p.label || String.fromCharCode(97 + i), content: p.content, is_correct: p.is_correct })); updated[idx].correct_char = updated[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
+                }
+                catch (e) { updated[idx] = { ...q, status: 'error', q: `Lỗi: ${e.message}` }; } setQuestions([...updated]);
+            };
+
+            const updateQ = (idx, field, val) => { const updated = [...questions]; updated[idx] = { ...updated[idx], [field]: val }; if (field === 'parts') updated[idx].correct_char = (val || []).map(p => p.is_correct ? 'Đ' : 'S').join('-'); setQuestions(updated); };
+
+            const handleQuestionPaste = async (e, idx) => {
+                const items = Array.from(e.clipboardData?.items || []); const imgItem = items.find(it => it.type.startsWith('image/')); if (!imgItem) return; e.preventDefault();
+                const q = questions[idx]; const updated = [...questions]; updated[idx] = { ...q, status: 'generating', q: '⏳ Đang nhận diện ảnh...' }; setQuestions(updated);
+                try {
+                    const blob = imgItem.getAsFile(); const base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
+                    const mime = blob.type || 'image/png'; const typeLabel = { MC: 'Trắc nghiệm', TF: 'Đúng/Sai', TLN: 'Trả lời ngắn', TL: 'Tự luận' }[q.type];
+                    const prompt = `Bạn là GV ${info.subject} lớp ${info.grade}. Ảnh chứa 1 câu hỏi "${typeLabel}".
+NHIỆM VỤ: 1) Trích xuất câu hỏi từ ảnh. 2) Giải chi tiết.
+Output CHỈ JSON: ${q.type === 'TF' ? '{"q":"...","parts":[{"label":"a","content":"...","is_correct":true},...],"c":"...","correct_char":"Đ-S-S-Đ"}' : q.type === 'MC' ? '{"q":"...","a":["A","B","C","D"],"c":"...","correct_char":"A"}' : '{"q":"...","a":[],"c":"...","correct_char":"..."}'}`;
+                    const payload = [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }]; const jsonStr = await AIAdapter.callGemini(payload);
+                    const match = jsonStr.replace(/```json/g, '').replace(/```/g, '').match(/\{[\s\S]*\}/); if (!match) throw new Error("Invalid JSON");
+                    const json = JSON.parse(match[0]); updated[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
+                    if (q.type === 'MC') updated[idx].a = (json.a || []).map(o => (o || '').replace(/^[A-D][.)\s]\s*/, ''));
+                    if (q.type === 'TF' && json.parts) { updated[idx].parts = json.parts.map((p, i) => ({ label: p.label || String.fromCharCode(97 + i), content: p.content, is_correct: p.is_correct })); updated[idx].correct_char = updated[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
+                }
+                catch (err) { updated[idx] = { ...q, status: 'error', q: `Lỗi: ${err.message}` }; } setQuestions([...updated]);
+            };
+            const exportWord = () => {
+                let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
+<head><meta charset='utf-8'><title>De Kiem Tra</title>
+<style>@page{size:21cm 29.7cm;margin:2cm 2cm 2cm 2.5cm;mso-page-orientation:portrait;}
+body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.3;text-align:justify;color:#000;}
+table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
+.question-block{margin-bottom:10pt;text-align:justify;}.ans-key-table td{border:1px solid black;text-align:center;font-weight:bold;}
+</style></head><body>
+<div style="text-align:center;font-weight:bold;margin-bottom:20px">
+<p style="margin:0">${info.dept.toUpperCase()}</p><p style="margin:0">${info.school.toUpperCase()}</p>
+<p style="margin:10px 0 5px 0;font-size:14pt">${info.title.toUpperCase()}</p>
+<p style="margin:0;font-style:italic">Môn: ${info.subject.toUpperCase()} ${info.grade} - Thời gian: ${info.time} phút</p></div><hr/>`;
+                const typeOrder = ['MC', 'TF', 'TLN', 'TL']; const typeNames = { MC: 'PHẦN TRẮC NGHIỆM KHÁCH QUAN', TF: 'PHẦN ĐÚNG/SAI', TLN: 'PHẦN TRẢ LỜI NGẮN', TL: 'PHẦN TỰ LUẬN' };
+                const grouped = {}; questions.forEach(q => { if (!grouped[q.type]) grouped[q.type] = []; grouped[q.type].push(q); });
+                typeOrder.forEach(type => {
+                    const qs = grouped[type]; if (!qs || !qs.length) return;
+                    html += `<p style='font-weight:bold;margin-top:15px;text-transform:uppercase'>${typeNames[type]}</p>`;
+                    qs.forEach(q => {
+                        html += `<div class='question-block'>`;
+                        if (q.type === 'TF') {
+                            html += `<div style='margin-bottom:6pt'><b>${q.code}:</b> ${renderToWord(tokenizeRichText(q.q))}</div>`;
+                            html += `<table border='1' cellpadding='5' cellspacing='0' style='width:90%;margin:10px auto 10px 0;border-collapse:collapse;font-size:11pt;'>`;
+                            html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width:100px;text-align:center'>Đúng/Sai</td></tr>`;
+                            (q.parts || []).forEach(p => { html += `<tr><td style='width:20px;text-align:center'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`; }); html += `</table>`;
+                        }
+                        else {
+                            html += `<p><b>${q.code}:</b> ${renderToWord(tokenizeRichText(q.q))}</p>`;
+                            if (q.type === 'MC' && q.a?.length) { q.a.forEach((opt, k) => { html += `<p style='margin:2px 0 2px 20px'><b>${String.fromCharCode(65 + k)}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`; }); }
+                        }
+                        html += `</div>`;
+                    });
+                });
+                html += `<br clear="all" style="page-break-before:always"/><h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
+                typeOrder.forEach(type => {
+                    const qs = grouped[type]; if (!qs || !qs.length) return; html += `<h4>${typeNames[type]}</h4>`;
+                    if (type === 'MC' || type === 'TF') { html += `<table class="ans-key-table" cellpadding="5"><tr>`; qs.forEach(q => html += `<td style="background:#eee">${q.code}</td>`); html += `</tr><tr>`; qs.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`); html += `</tr></table><br/>`; }
+                    else if (type === 'TLN') { html += `<table class="ans-key-table" cellpadding="5"><tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`; qs.forEach(q => html += `<tr><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr>`); html += `</table><br/>`; }
+                });
+                html += `<h4>Lời giải chi tiết</h4>`; questions.forEach(q => html += `<p><b>${q.code}:</b></p><div>${renderToWord(tokenizeRichText(q.c))}</div><hr style="border-top:1px dashed #ccc"/>`);
+                html += `</body></html>`; saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `KiemTra_${info.subject}_${info.grade}_15phut.doc`);
+            };
+
+            const generateSimilar = async () => {
+                const doneQs = questions.filter(q => q.status === 'done');
+                if (!doneQs.length) { alert('Chưa có câu hỏi nào hoàn chỉnh để tạo đề tương tự!'); return; }
+                if (!confirm(`Tạo đề tương tự từ ${doneQs.length} câu hỏi hiện tại?\nĐề mới sẽ giữ nguyên cấu trúc nhưng thay đổi số liệu và công thức.`)) return;
+                const updatedQs = questions.map(q => ({ ...q, status: q.status === 'done' ? 'pending' : q.status }));
+                setQuestions(updatedQs);
+                setGenerating({ active: true, progress: 0, total: doneQs.length, text: 'Đang tạo đề tương tự...' });
+                const typeLabels = { MC: 'Trắc nghiệm (4 đáp án A,B,C,D)', TF: 'Đúng/Sai (câu dẫn + 4 mệnh đề a,b,c,d)', TLN: 'Trả lời ngắn', TL: 'Tự luận' };
+                let progress = 0;
+                for (let i = 0; i < updatedQs.length; i++) {
+                    const q = updatedQs[i];
+                    if (q.status !== 'pending') continue;
+                    progress++;
+                    setGenerating(prev => ({ ...prev, progress, text: `Đang tạo ${q.code} tương tự (${progress}/${doneQs.length})...` }));
+                    const origQ = questions[i];
+                    const origContent = q.type === 'TF'
+                        ? `Câu dẫn: ${origQ.q}\nCác mệnh đề:\n${(origQ.parts || []).map(p => `${p.label}) ${p.content} → ${p.is_correct ? 'Đúng' : 'Sai'}`).join('\n')}\nLời giải: ${origQ.c}`
+                        : q.type === 'MC'
+                            ? `Câu hỏi: ${origQ.q}\nA. ${origQ.a[0]}\nB. ${origQ.a[1]}\nC. ${origQ.a[2]}\nD. ${origQ.a[3]}\nĐáp án đúng: ${origQ.correct_char}\nLời giải: ${origQ.c}`
+                            : `Câu hỏi: ${origQ.q}\nĐáp án: ${origQ.correct_char}\nLời giải: ${origQ.c}`;
+                    const prompt = `BẠN LÀ MÁY BIẾN ĐỔI SỐ LIỆU. Môn ${info.subject} lớp ${info.grade}.
+
+NGUYÊN TẮC TUYỆT ĐỐI — VI PHẠM BẤT KỲ ĐIỀU NÀO LÀ SAI:
+❌ KHÔNG ĐƯỢC thay đổi cấu trúc câu, cách diễn đạt, hay dạng bài.
+❌ KHÔNG ĐƯỢC sáng tạo câu hỏi mới hoàn toàn khác.
+❌ KHÔNG ĐƯỢC thêm/bớt ý, thêm điều kiện, thay đổi ngữ cảnh.
+❌ KHÔNG ĐƯỢC viết lời chào hỏi hay giải thích ngoài JSON.
+✅ CHỈ ĐƯỢC thay đổi: các CON SỐ, HỆ SỐ, GIÁ TRỊ CỤ THỂ, TÊN BIẾN (nếu cần).
+✅ PHẢI giữ nguyên: cấu trúc câu chữ, dạng toán, số lượng đáp án, mức độ khó.
+
+QUY TRÌNH BẮT BUỘC (PHẢI THỰC HIỆN THEO THỨ TỰ):
+Bước 1: Đọc kỹ câu hỏi gốc, hiểu dạng toán và phương pháp giải.
+Bước 2: Chọn số mới THÔNG MINH — số phải đảm bảo:
+  - Bài toán vẫn GIẢI ĐƯỢC (không tạo ra nghiệm vô tỉ xấu, chia cho 0, căn số âm...).
+  - Kết quả là số "đẹp" (số nguyên, phân số đơn giản, hoặc tương tự kết quả gốc).
+  - Nếu đề gốc có nghiệm nguyên → đề mới PHẢI có nghiệm nguyên.
+  - Nếu đề gốc có đáp án là số đẹp → đề mới cũng phải có đáp án đẹp.
+Bước 3: GIẢI HOÀN CHỈNH bài mới từng bước, kiểm tra kết quả.
+Bước 4: ĐỐI CHIẾU — đáp án trong "correct_char" có khớp với lời giải trong "c" không? Nếu sai, quay lại Bước 2 chọn số khác.
+Bước 5: Xuất JSON.
+
+VÍ DỤ MINH HỌA (CHỈ THAM KHẢO):
+- Gốc: "Giải phương trình $2x + 3 = 7$" (nghiệm $x=2$) → Mới: "Giải phương trình $3x + 5 = 14$" (nghiệm $x=3$) ✓ Nghiệm đẹp
+- Gốc: "Tính diện tích hình tròn bán kính $r = 5$ cm" → Mới: "Tính diện tích hình tròn bán kính $r = 8$ cm" ✓ Số đẹp
+- ❌ SAI: Gốc "$x^2 - 5x + 6 = 0$" (nghiệm 2,3) → Mới "$x^2 - 5x + 7 = 0$" (delta < 0, VÔ NGHIỆM!)
+Lưu ý: CÂU CHỮ giữ nguyên, CHỈ SỐ thay đổi, và KẾT QUẢ PHẢI ĐÚNG.
+
+CÂU HỎI GỐC (${q.code}, loại "${typeLabels[q.type]}", mức "${LEVELS.find(l => l.code === q.level)?.name || 'Biết'}"):
+═══════════════════════════════════
+${origContent}
+═══════════════════════════════════
+
+NHIỆM VỤ: Copy câu hỏi gốc, CHỈ thay các con số/hệ số/giá trị bằng số khác hợp lý. Giữ nguyên 100% cấu trúc câu.
+Dùng LaTeX $...$ cho công thức toán.
+Trường "c" PHẢI chứa lời giải CHI TIẾT TỪNG BƯỚC với số mới, chứng minh đáp án đúng.
+
+Output CHỈ JSON thuần túy:
+${q.type === 'TF' ? '{"q":"Câu dẫn (giữ cấu trúc, đổi số)...","parts":[{"label":"a","content":"Mệnh đề a (đổi số)...","is_correct":true},{"label":"b","content":"...","is_correct":false},{"label":"c","content":"...","is_correct":false},{"label":"d","content":"...","is_correct":true}],"c":"GIẢI CHI TIẾT TỪNG BƯỚC chứng minh mỗi mệnh đề đúng/sai..."}' : q.type === 'MC' ? '{"q":"Câu hỏi (giữ cấu trúc, đổi số)...","a":["Đáp án A","Đáp án B","Đáp án C","Đáp án D"],"c":"GIẢI CHI TIẾT TỪNG BƯỚC, suy ra đáp án đúng...","correct_char":"A"}' : q.type === 'TLN' ? '{"q":"Câu hỏi (giữ cấu trúc, đổi số)...","a":[],"c":"GIẢI CHI TIẾT TỪNG BƯỚC...","correct_char":"Đáp án số mới"}' : '{"q":"Đề bài (giữ cấu trúc, đổi số)...","a":[],"c":"GIẢI CHI TIẾT TỪNG BƯỚC với số MỚI...","correct_char":""}'}`;
+
+                    try {
+                        const payload = [{ text: prompt }];
+                        const jsonStr = await AIAdapter.callGemini(payload);
+                        const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const match = clean.match(/\{[\s\S]*\}/);
+                        if (!match) throw new Error('AI không trả về JSON');
+                        const json = JSON.parse(match[0]);
+                        updatedQs[i] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
+                        if (q.type === 'MC') updatedQs[i].a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
+                        if (q.type === 'TF' && json.parts) { updatedQs[i].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[i].correct_char = updatedQs[i].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
+                        setQuestions([...updatedQs]);
+                    } catch (err) {
+                        console.error(`Error similar ${q.code}:`, err);
+                        updatedQs[i] = { ...q, status: 'error', q: `Lỗi: ${err.message}` };
+                        setQuestions([...updatedQs]);
+                    }
+                    if (progress < doneQs.length) { setGenerating(prev => ({ ...prev, text: 'Nghỉ 3s chống quá tải...' })); await new Promise(r => setTimeout(r, 3000)); }
+                }
+                // Retry errors
+                for (let retry = 0; retry < 2; retry++) {
+                    const errIdxs = updatedQs.map((q, i) => q.status === 'error' ? i : -1).filter(i => i >= 0);
+                    if (!errIdxs.length) break;
+                    setGenerating(prev => ({ ...prev, text: `Thử lại ${errIdxs.length} câu lỗi...` }));
+                    await new Promise(r => setTimeout(r, 5000));
+                    for (const idx of errIdxs) {
+                        const q = updatedQs[idx];
+                        try {
+                            const retryPrompt = `Tạo 1 câu ${q.type} tương tự cho kiểm tra ${info.time} phút, môn ${info.subject} lớp ${info.grade}. Giữ cùng dạng bài nhưng đổi số liệu. Output CHỈ JSON: {"q":"...","a":[],"c":"...","correct_char":"..."}`;
+                            const jsonStr = await AIAdapter.callGemini([{ text: retryPrompt }]);
+                            const match = jsonStr.match(/\{[\s\S]*\}/);
+                            if (match) {
+                                const json = JSON.parse(match[0]);
+                                updatedQs[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', a: json.a || [], correct_char: json.correct_char || '' };
+                                if (q.type === 'TF' && json.parts) { updatedQs[idx].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[idx].correct_char = updatedQs[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
+                                setQuestions([...updatedQs]);
+                            }
+                        } catch (e) { }
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
+                setGenerating({ active: false, progress: 0, total: 0, text: '' });
+                const doneCount = updatedQs.filter(q => q.status === 'done').length;
+                const errCount = updatedQs.filter(q => q.status === 'error').length;
+                if (errCount > 0) alert(`Hoàn tất! ${doneCount} câu OK, ${errCount} câu lỗi.`);
+                else alert(`Hoàn tất tạo đề tương tự! ${doneCount} câu thành công.`);
+            };
+
+            const extractFromPdf = async () => {
+                if (!simPdfImages.length) { alert('Vui lòng upload file PDF đề kiểm tra!'); return; }
+                setGenerating({ active: true, progress: 0, total: 1, text: 'Đang trích xuất câu hỏi từ đề...' });
+                const prompt = `Bạn là GV môn ${info.subject} lớp ${info.grade}. Ảnh đính kèm là 1 ĐỀ KIỂM TRA.
+
+NHIỆM VỤ: Trích xuất TẤT CẢ câu hỏi trong đề kiểm tra.
+Với mỗi câu hỏi, xác định:
+- Loại: MC (trắc nghiệm 4 đáp án), TF (đúng/sai 4 mệnh đề), TLN (trả lời ngắn), TL (tự luận)
+- Mức độ: B (biết), H (hiểu), V (vận dụng)
+- Nội dung câu hỏi, đáp án, lời giải
+
+Dùng LaTeX $...$ cho công thức toán.
+TUYỆT ĐỐI KHÔNG viết lời chào hỏi.
+
+Output CHỈ JSON thuần túy - mảng các câu hỏi:
+[{"type":"MC","level":"B","q":"Câu hỏi...","a":["A","B","C","D"],"c":"Lời giải...","correct_char":"A","parts":[]},
+{"type":"TF","level":"H","q":"Câu dẫn...","a":[],"c":"Giải thích...","correct_char":"Đ-S-S-Đ","parts":[{"label":"a","content":"...","is_correct":true},...]}]
+
+Lưu ý:
+- Trích xuất ĐẦY ĐỦ, KHÔNG bỏ sót câu nào.
+- Nếu không rõ đáp án, để correct_char = "" và giải bài trong "c".
+- Giữ nguyên nội dung gốc, không sáng tạo thêm.`;
+                try {
+                    const payload = [{ text: prompt }, ...simPdfImages.map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
+                    const jsonStr = await AIAdapter.callGemini(payload);
+                    const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const match = clean.match(/\[[\s\S]*\]/);
+                    if (!match) throw new Error('AI không trả về JSON mảng');
+                    const arr = JSON.parse(match[0]);
+                    const qs = arr.map((item, i) => ({ code: `Câu ${i + 1}`, type: item.type || 'TL', level: item.level || 'B', status: 'done', q: item.q || '', a: item.a || [], c: item.c || '', correct_char: item.correct_char || '', parts: item.parts || [] }));
+                    setQuestions(qs); setStep(4);
+                    setGenerating({ active: false, progress: 0, total: 0, text: '' });
+                    alert(`Trích xuất thành công ${qs.length} câu hỏi!`);
+                } catch (err) {
+                    console.error('Extract error:', err);
+                    setGenerating({ active: false, progress: 0, total: 0, text: '' });
+                    alert('Lỗi trích xuất: ' + err.message);
+                }
+            };
+
+            const handleSimPdfUpload = async (e) => {
+                const files = Array.from(e.target.files || []);
+                for (const file of files) {
+                    if (file.type === 'application/pdf') {
+                        try { const imgs = await renderPdfToImages(file); setSimPdfImages(prev => [...prev, ...imgs]); } catch (err) { alert('Lỗi đọc PDF: ' + err.message); }
+                    } else if (file.type.startsWith('image/')) {
+                        await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => { setSimPdfImages(prev => [...prev, { base64: reader.result.split(',')[1], mime: file.type, preview: reader.result }]); resolve(); }; reader.readAsDataURL(file); });
+                    }
+                }
+                e.target.value = '';
+            };
+
+            const StepIndicator = () => {
+                if (mode === 'similar') return null;
+                const steps = [{ num: 1, label: 'Chủ đề & SGK', icon: 'fa-book' }, { num: 2, label: 'Hình thức', icon: 'fa-list-check' }, { num: 3, label: 'Mức độ', icon: 'fa-layer-group' }, { num: 4, label: 'AI Sinh đề', icon: 'fa-magic' }, { num: 5, label: 'Xuất đề', icon: 'fa-file-export' }];
+                return (<div className="flex items-center justify-center gap-0 mb-8">{steps.map((s, i) => (<React.Fragment key={s.num}><div className="flex flex-col items-center gap-1"><div className={`step-dot ${step === s.num ? 'active' : step > s.num ? 'done' : 'pending'}`}>{step > s.num ? <i className="fas fa-check text-xs"></i> : <i className={`fas ${s.icon} text-xs`}></i>}</div><span className={`text-[10px] font-bold ${step >= s.num ? 'text-emerald-700' : 'text-gray-400'}`}>{s.label}</span></div>{i < steps.length - 1 && <div className={`step-line mx-1 ${step > s.num ? 'bg-emerald-500' : 'bg-gray-200'}`} style={{ width: '60px' }}></div>}</React.Fragment>))}</div>);
+            };
+
+            const switchMode = (newMode) => { if (mode === newMode) return; setMode(newMode); setStep(1); setQuestions([]); setSimPdfImages([]); setSimStep(1); };
+
+            return (<>
+                <div className="max-w-5xl mx-auto p-4 font-ui">
+                    <div className="flex justify-between items-end border-b border-emerald-100 pb-4 mb-4"><div>
+                        <h1 className="text-3xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-teal-600 drop-shadow-sm">ĐỀ KIỂM TRA THƯỜNG XUYÊN</h1>
+                        <p className="text-gray-500 font-medium mt-1">Tạo đề mới hoặc tạo đề tương tự bằng AI</p></div>
+                        <div className="flex gap-2">
+                            {savedExams.length > 0 && <button onClick={() => setShowSavedModal(true)} className="text-blue-600 hover:text-blue-800 text-sm font-semibold bg-blue-50 px-3 py-1.5 rounded-full transition"><i className="fas fa-folder-open mr-1"></i> Đề đã lưu ({savedExams.length})</button>}
+                            <a href="index.html" className="text-emerald-600 hover:text-emerald-800 text-sm font-semibold bg-emerald-50 px-3 py-1.5 rounded-full"><i className="fas fa-home mr-1"></i> Dashboard</a></div></div>
+
+                    {/* TABS */}
+                    <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
+                        <button onClick={() => switchMode('create')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all ${mode === 'create' ? 'bg-white text-emerald-700 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><i className="fas fa-wand-magic-sparkles mr-2"></i>Tạo đề KTTX</button>
+                        <button onClick={() => switchMode('similar')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all ${mode === 'similar' ? 'bg-white text-amber-700 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><i className="fas fa-clone mr-2"></i>Tạo đề tương tự</button>
+                    </div>
+
+                    {!hasGemini && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold"><i className="fas fa-exclamation-triangle mr-2"></i>Chưa có Gemini API Key. Vui lòng cấu hình ở Dashboard.</div>}
+
+                    {/* TAB 1 STEPS */}
+                    {mode === 'create' && hasGemini && <StepIndicator />}
+
+                    {/* TAB 2: TẠO ĐỀ TƯƠNG TỰ */}
+                    {mode === 'similar' && hasGemini && step < 4 && (
+                        <div className="glass-panel p-8 rounded-2xl space-y-6">
+                            <div className="text-center mb-4">
+                                <h3 className="font-bold text-xl text-gray-800"><i className="fas fa-clone mr-2 text-amber-500"></i>Tạo đề tương tự từ đề gốc</h3>
+                                <p className="text-sm text-gray-500 mt-1">Upload PDF đề kiểm tra có sẵn → AI trích xuất → Tạo đề tương tự (đổi số)</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Môn học</label>
+                                    <select className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-amber-300 outline-none font-semibold text-gray-700" value={info.subject} onChange={e => setInfo({ ...info, subject: e.target.value })}>
+                                        {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "GDCD", "Tin Học", "KHTN", "LS&ĐL"].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Lớp</label>
+                                    <select className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-amber-300 outline-none font-semibold text-gray-700" value={info.grade} onChange={e => setInfo({ ...info, grade: e.target.value })}>
+                                        {[6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Thời gian</label>
+                                    <input className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-amber-300 outline-none font-semibold text-gray-700" type="number" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} /></div>
+                            </div>
+                            <div className="border-t border-gray-100 pt-6">
+                                <h3 className="font-bold text-lg text-gray-800 mb-4"><i className="fas fa-file-pdf mr-2 text-amber-500"></i>Upload đề kiểm tra gốc</h3>
+                                <div className={`paste-zone ${simPdfImages.length > 0 ? 'has-images' : ''}`}
+                                    onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); }}
+                                    onDragLeave={e => e.currentTarget.classList.remove('dragover')}
+                                    onDrop={async e => { e.preventDefault(); e.currentTarget.classList.remove('dragover'); const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.type.startsWith('image/')); for (const file of files) { if (file.type === 'application/pdf') { try { const imgs = await renderPdfToImages(file); setSimPdfImages(prev => [...prev, ...imgs]); } catch (err) { console.error(err); } } else { await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => { setSimPdfImages(prev => [...prev, { base64: reader.result.split(',')[1], mime: file.type, preview: reader.result }]); resolve(); }; reader.readAsDataURL(file); }); } } }}>
+                                    {simPdfImages.length === 0 ? (<div className="text-center p-6"><i className="fas fa-file-pdf text-4xl text-amber-300 mb-3"></i>
+                                        <p className="text-sm text-gray-500 font-semibold">Kéo thả file PDF đề kiểm tra vào đây</p>
+                                        <p className="text-xs text-gray-400 mt-1">Hoặc bấm nút bên dưới để chọn file</p></div>)
+                                        : (<div className="flex flex-wrap gap-2 p-2">{simPdfImages.map((img, i) => (
+                                            <div key={i} className="relative group"><img src={img.preview} className="h-28 rounded-lg border shadow-sm object-cover" />
+                                                <button onClick={() => setSimPdfImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><i className="fas fa-times"></i></button></div>))}</div>)}
+                                </div>
+                                <div className="mt-2 flex gap-2">
+                                    <label className="text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-amber-100 transition">
+                                        <i className="fas fa-file-pdf mr-1"></i> Chọn PDF<input type="file" className="hidden" accept="application/pdf" multiple onChange={handleSimPdfUpload} /></label>
+                                    <label className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-blue-100 transition">
+                                        <i className="fas fa-image mr-1"></i> Chọn ảnh<input type="file" className="hidden" accept="image/*" multiple onChange={handleSimPdfUpload} /></label>
+                                    <span className="text-xs text-gray-400 self-center">{simPdfImages.length} trang</span>
+                                </div>
+                            </div>
+                            <div className="text-center pt-4">
+                                <button onClick={extractFromPdf} disabled={!simPdfImages.length || generating.active} className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-40 transition text-base">
+                                    {generating.active ? <><i className="fas fa-cog fa-spin mr-2"></i>AI đang trích xuất...</> : <><i className="fas fa-search mr-2"></i>AI Trích xuất câu hỏi</>}</button>
+                                {!simPdfImages.length && <p className="text-xs text-amber-600 mt-2"><i className="fas fa-info-circle mr-1"></i>Cần upload ít nhất 1 file PDF đề kiểm tra</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 1 - TAB 1 ONLY */}
+                    {mode === 'create' && step === 1 && hasGemini && (<div className="glass-panel p-8 rounded-2xl space-y-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Môn học</label>
+                                <select className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-emerald-300 outline-none font-semibold text-gray-700" value={info.subject} onChange={e => setInfo({ ...info, subject: e.target.value })}>
+                                    {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "GDCD", "Tin Học", "KHTN", "LS&ĐL"].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                            <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Lớp</label>
+                                <select className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-emerald-300 outline-none font-semibold text-gray-700" value={info.grade} onChange={e => setInfo({ ...info, grade: e.target.value })}>
+                                    {[6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
+                            <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Thời gian</label>
+                                <input className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-emerald-300 outline-none font-semibold text-gray-700" type="number" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} /></div>
+                            <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Sở/Phòng GD</label>
+                                <input className="border p-2.5 rounded-xl w-full bg-white/50 outline-none" value={info.dept} onChange={e => setInfo({ ...info, dept: e.target.value })} /></div>
+                            <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Trường</label>
+                                <input className="border p-2.5 rounded-xl w-full bg-white/50 outline-none" value={info.school} onChange={e => setInfo({ ...info, school: e.target.value })} /></div>
+                            <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Tên đề kiểm tra</label>
+                                <input className="border p-2.5 rounded-xl w-full bg-white/50 outline-none" value={info.title} onChange={e => setInfo({ ...info, title: e.target.value })} /></div>
+                        </div>
+                        <div className="border-t border-gray-100 pt-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg text-gray-800"><i className="fas fa-book-open mr-2 text-emerald-600"></i>Chủ đề & Nội dung SGK</h3>
+                                <button onClick={addTopic} className="text-sm font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl hover:bg-emerald-100 transition"><i className="fas fa-plus mr-1"></i> Thêm chủ đề</button></div>
+                            <div className="space-y-4">{topics.map((topic, tIdx) => (
+                                <div key={topic.id} className={`topic-card ${topic.images.length > 0 ? 'has-content' : ''}`}>
+                                    {topics.length > 1 && <button onClick={() => removeTopic(topic.id)} className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-sm"><i className="fas fa-times-circle"></i></button>}
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className="bg-emerald-100 text-emerald-700 font-bold text-xs px-2.5 py-1 rounded-full">Chủ đề {tIdx + 1}</span>
+                                        <input className="flex-1 border-b-2 border-dashed border-gray-200 focus:border-emerald-500 outline-none py-1 font-semibold text-gray-800 bg-transparent" placeholder="Nhập tên chủ đề (VD: Hàm số bậc nhất, Phương trình bậc hai...)" value={topic.name} onChange={e => updateTopic(topic.id, 'name', e.target.value)} /></div>
+                                    <div className={`paste-zone ${topic.images.length > 0 ? 'has-images' : ''}`}
+                                        onPaste={e => handlePaste(e, topic.id)}
+                                        onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); }}
+                                        onDragLeave={e => e.currentTarget.classList.remove('dragover')}
+                                        onDrop={async e => { e.preventDefault(); e.currentTarget.classList.remove('dragover'); const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || f.type === 'application/pdf'); for (const file of files) { if (file.type === 'application/pdf') { try { const pdfImages = await renderPdfToImages(file); appendImages(topic.id, pdfImages); } catch (err) { console.error('PDF error:', err); } } else { await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => { appendImages(topic.id, [{ base64: reader.result.split(',')[1], mime: file.type, preview: reader.result }]); resolve(); }; reader.readAsDataURL(file); }); } } }}
+                                        tabIndex="0">
+                                        {topic.images.length === 0 ? (<div className="text-center p-4"><i className="fas fa-paste text-3xl text-gray-300 mb-2"></i>
+                                            <p className="text-sm text-gray-500 font-semibold">Ctrl+V dán ảnh SGK | Kéo thả ảnh/PDF vào đây</p>
+                                            <p className="text-xs text-gray-400 mt-1">Hoặc bấm nút bên dưới để chọn file ảnh/PDF</p></div>)
+                                            : (<div className="flex flex-wrap gap-2 p-2">{topic.images.map((img, imgIdx) => (
+                                                <div key={imgIdx} className="relative group"><img src={img.preview} className="h-24 rounded-lg border shadow-sm object-cover" />
+                                                    <button onClick={() => removeImage(topic.id, imgIdx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><i className="fas fa-times"></i></button></div>))}</div>)}</div>
+                                    <div className="mt-2 flex gap-2"><label className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-emerald-100 transition">
+                                        <i className="fas fa-image mr-1"></i> Chọn ảnh<input type="file" className="hidden" accept="image/*" multiple onChange={e => handleFileUpload(e, topic.id)} /></label>
+                                        <label className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-blue-100 transition">
+                                            <i className="fas fa-file-pdf mr-1"></i> Chọn PDF<input type="file" className="hidden" accept="application/pdf" multiple onChange={e => handleFileUpload(e, topic.id)} /></label>
+                                        <span className="text-xs text-gray-400 self-center">{topic.images.length} ảnh</span></div></div>))}</div></div>
+                        <div className="text-center pt-4">
+                            <button onClick={() => setStep(2)} disabled={!canProceedStep1} className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-40 transition text-base">Tiếp tục <i className="fas fa-arrow-right ml-2"></i></button>
+                            {!canProceedStep1 && <p className="text-xs text-amber-600 mt-2"><i className="fas fa-info-circle mr-1"></i>Cần nhập tên chủ đề và dán ít nhất 1 ảnh SGK</p>}</div></div>)}
+
+                    {/* STEP 2 */}
+                    {mode === 'create' && step === 2 && (<div className="glass-panel p-8 rounded-2xl space-y-6">
+                        <h3 className="font-bold text-lg text-gray-800 text-center"><i className="fas fa-list-check mr-2 text-emerald-600"></i>Chọn hình thức kiểm tra</h3>
+                        <p className="text-sm text-gray-500 text-center">Chọn ít nhất 1 hình thức và nhập số lượng câu</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[{ type: 'MC', label: 'Trắc nghiệm khách quan', desc: '4 đáp án A/B/C/D', icon: 'fa-circle-dot', color: 'blue' },
+                            { type: 'TF', label: 'Đúng / Sai', desc: 'Câu dẫn + 4 mệnh đề', icon: 'fa-check-double', color: 'teal' },
+                            { type: 'TLN', label: 'Trả lời ngắn', desc: 'Điền kết quả cuối', icon: 'fa-pen', color: 'orange' },
+                            { type: 'TL', label: 'Tự luận', desc: 'Trình bày lời giải', icon: 'fa-pencil-alt', color: 'purple' }
+                            ].map(item => (<div key={item.type} className={`check-card ${selectedTypes[item.type] ? 'selected' : ''}`} onClick={() => toggleType(item.type)}>
+                                <div className="flex items-center gap-3 mb-3"><div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${selectedTypes[item.type] ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>{selectedTypes[item.type] && <i className="fas fa-check text-white text-xs"></i>}</div>
+                                    <i className={`fas ${item.icon} text-${item.color}-500 text-lg`}></i></div>
+                                <div className="font-bold text-gray-800 text-sm">{item.label}</div><div className="text-xs text-gray-400 mt-1">{item.desc}</div>
+                                {selectedTypes[item.type] && (<div className="mt-3 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                    <label className="text-xs text-gray-500 font-semibold">Số câu:</label>
+                                    <input type="number" min="1" max="20" className="w-16 border rounded-lg p-1.5 text-center text-sm font-bold focus:ring-2 focus:ring-emerald-300 outline-none" value={typeCounts[item.type]} onChange={e => setTypeCounts(prev => ({ ...prev, [item.type]: parseInt(e.target.value) || 1 }))} /></div>)}</div>))}</div>
+                        <div className="flex justify-between pt-4">
+                            <button onClick={() => setStep(1)} className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                            <button onClick={() => setStep(3)} disabled={!canProceedStep2} className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-40 transition">Tiếp tục <i className="fas fa-arrow-right ml-2"></i></button></div></div>)}
+
+                    {/* STEP 3 */}
+                    {mode === 'create' && step === 3 && (<div className="glass-panel p-8 rounded-2xl space-y-6">
+                        <h3 className="font-bold text-lg text-gray-800 text-center"><i className="fas fa-layer-group mr-2 text-emerald-600"></i>Phân bổ mức độ nhận thức</h3>
+                        <div className="flex justify-center"><label className="flex items-center gap-2 cursor-pointer bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
+                            <input type="checkbox" className="w-4 h-4 rounded text-emerald-600" checked={autoLevel} onChange={e => setAutoLevel(e.target.checked)} />
+                            <span className="text-sm font-bold text-emerald-800">AI tự phân bổ mức độ</span></label></div>
+                        {!autoLevel && (<div className="space-y-4">
+                            <table className="w-full text-sm border-collapse"><thead><tr className="bg-gray-50">
+                                <th className="p-3 text-left font-bold text-gray-600">Hình thức</th><th className="p-3 text-center font-bold text-gray-600">Tổng câu</th>
+                                {LEVELS.map(l => <th key={l.code} className="p-3 text-center font-bold text-gray-600">{l.name}</th>)}</tr></thead>
+                                <tbody>{Object.entries(selectedTypes).filter(([_, v]) => v).map(([type]) => {
+                                    const total = typeCounts[type] || 1; const cfg = levelConfig[type] || { B: 0, H: 0, V: 0 }; const sum = cfg.B + cfg.H + cfg.V;
+                                    const labels = { MC: 'Trắc nghiệm', TF: 'Đúng/Sai', TLN: 'Trả lời ngắn', TL: 'Tự luận' };
+                                    return (<tr key={type} className="border-t"><td className="p-3 font-semibold text-gray-800">{labels[type]}</td>
+                                        <td className="p-3 text-center font-bold text-emerald-700">{total}</td>
+                                        {LEVELS.map(l => (<td key={l.code} className="p-3 text-center">
+                                            <input type="number" min="0" max={total} className="w-14 border rounded-lg p-1.5 text-center font-bold text-sm focus:ring-2 focus:ring-emerald-300 outline-none" value={cfg[l.code]} onChange={e => setLevelConfig(prev => ({ ...prev, [type]: { ...cfg, [l.code]: parseInt(e.target.value) || 0 } }))} /></td>))}
+                                        {sum !== total && <td className="text-xs text-red-500 font-bold">⚠ {sum}/{total}</td>}</tr>);
+                                })}</tbody></table>
+                            <p className="text-xs text-gray-400 text-center"><i className="fas fa-info-circle mr-1"></i>Tổng số mỗi hàng phải bằng số câu đã khai báo</p></div>)}
+                        <div className="flex justify-between pt-4">
+                            <button onClick={() => setStep(2)} className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition"><i className="fas fa-arrow-left mr-2"></i>Quay lại</button>
+                            <button onClick={generateQuiz} className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition text-base"><i className="fas fa-magic mr-2"></i>AI Sinh đề kiểm tra</button></div></div>)}
+
+                    {/* STEP 4 & 5 */}
+                    {step >= 4 && questions.length > 0 && (<div className="glass-panel rounded-2xl shadow-xl overflow-hidden">
+                        {generating.active && (<div><div className="bg-emerald-600 h-1.5 transition-all duration-300" style={{ width: `${(generating.progress / generating.total) * 100}%` }}></div>
+                            <div className="bg-emerald-50 text-emerald-700 text-xs py-1.5 px-4 font-bold flex justify-between border-b border-emerald-100">
+                                <span className="animate-pulse"><i className="fas fa-cog fa-spin mr-1"></i> {generating.text}</span><span>{Math.round((generating.progress / generating.total) * 100)}%</span></div></div>)}
+                        <div className="p-5 bg-white/80 flex justify-between items-center gap-4 border-b"><div>
+                            <h2 className="font-heading font-bold text-gray-800 text-lg">Đề kiểm tra ({questions.length} câu)</h2>
+                            <p className="text-xs text-gray-500">Chỉnh sửa nội dung hoặc Ctrl+V dán ảnh câu hỏi để nhận diện</p></div>
+                            <div className="flex gap-2">
+                                {mode === 'create' && <button onClick={() => setStep(3)} disabled={generating.active} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition disabled:opacity-50"><i className="fas fa-arrow-left mr-1"></i> Quay lại</button>}
+                                {mode === 'create' && <button onClick={() => { const pending = questions.filter(q => q.status !== 'done'); if (pending.length) { generateQuiz(); } else { alert('Tất cả câu hỏi đã được tạo!'); } }} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className={`fas fa-magic mr-1 ${generating.active ? 'fa-spin' : ''}`}></i> {generating.active ? 'Đang tạo...' : 'AI Sinh đề'}</button>}
+                                <button onClick={generateSimilar} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-clone mr-1"></i> Tạo đề tương tự</button>
+                                <button onClick={() => setShowPreview(true)} disabled={generating.active} className="px-4 py-2 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition disabled:opacity-50"><i className="fas fa-eye mr-1"></i> Xem trước</button>
+                                <button onClick={saveExam} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-save mr-1"></i> Lưu đề</button>
+                                <button onClick={exportWord} disabled={generating.active} className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"><i className="fas fa-file-word mr-1"></i> Xuất Word</button></div></div>
+
+                        <div className="p-4 overflow-auto max-h-[70vh] space-y-3">{questions.map((q, idx) => (
+                            <div key={idx} className={`bg-white rounded-xl border p-4 transition-shadow hover:shadow-md ${q.status === 'done' ? 'border-emerald-200' : 'border-gray-200'}`}>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <span className="font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full text-sm">{q.code}</span>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${q.type === 'MC' ? 'bg-blue-100 text-blue-700' : q.type === 'TF' ? 'bg-teal-100 text-teal-700' : q.type === 'TLN' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'}`}>{q.type === 'MC' ? 'Trắc nghiệm' : q.type === 'TF' ? 'Đúng/Sai' : q.type === 'TLN' ? 'Trả lời ngắn' : 'Tự luận'}</span>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${q.level === 'B' ? 'bg-emerald-100 text-emerald-700' : q.level === 'H' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{LEVELS.find(l => l.code === q.level)?.name || 'Biết'}</span>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${q.status === 'done' ? 'bg-green-100 text-green-600' : q.status === 'error' ? 'bg-red-100 text-red-600' : q.status === 'generating' ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'}`}>{q.status === 'done' ? '✓ OK' : q.status === 'error' ? '✕ Lỗi' : q.status === 'generating' ? '⏳' : 'Chờ'}</span>
+                                    <div className="flex-1"></div>
+                                    <input className="text-xs border rounded px-2 py-1 w-20 text-center font-bold" placeholder={q.type === 'TF' ? 'Đ-S-S-Đ' : 'Đáp án'} value={q.correct_char || ''} onChange={e => updateQ(idx, 'correct_char', e.target.value)} />
+                                    <button onClick={() => regenerateQuestion(idx)} disabled={generating.active} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition disabled:opacity-50"><i className={`fas fa-magic mr-1 ${q.status === 'generating' ? 'fa-spin' : ''}`}></i>Sinh lại</button></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-bold text-gray-500 flex items-center gap-1">Câu hỏi <span className="text-gray-400 font-normal text-[10px]"><i className="fas fa-clipboard mr-0.5"></i>Ctrl+V dán ảnh</span></div>
+                                        <textarea className={`w-full border rounded-lg p-2 text-sm font-serif resize-y min-h-[60px] outline-none focus:ring-2 focus:ring-emerald-200 ${q.status === 'generating' ? 'opacity-50 italic' : ''}`} value={q.q} onChange={e => updateQ(idx, 'q', e.target.value)} onPaste={e => handleQuestionPaste(e, idx)} placeholder="Nội dung câu hỏi hoặc Ctrl+V dán ảnh..." />
+                                        <div className="bg-gray-50 rounded-lg p-2 border"><MathRender text={q.q} /></div>
+                                        {q.type === 'MC' && q.a?.length > 0 && (<div className="space-y-1 pt-2 border-t border-dashed">
+                                            {q.a.map((opt, k) => <div key={k} className="flex gap-1 items-center"><span className="font-bold text-xs w-5">{String.fromCharCode(65 + k)}.</span><input className="border rounded p-1 text-sm w-full font-serif" value={opt} onChange={e => { const na = [...q.a]; na[k] = e.target.value; updateQ(idx, 'a', na); }} /></div>)}</div>)}
+                                        {q.type === 'TF' && q.parts?.length > 0 && (<div className="space-y-1 pt-2 border-t border-dashed">
+                                            {q.parts.map((p, k) => (<div key={k} className={`flex gap-1 items-center p-1 rounded ${p.is_correct ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                                                <span className="font-bold text-xs w-5">{p.label})</span><span className="text-xs w-6 font-bold text-center">{p.is_correct ? 'Đ' : 'S'}</span>
+                                                <input className="border rounded p-1 text-sm w-full font-serif bg-white" value={p.content} onChange={e => { const np = [...q.parts]; np[k] = { ...np[k], content: e.target.value }; updateQ(idx, 'parts', np); }} />
+                                                <button onClick={() => { const np = [...q.parts]; np[k] = { ...np[k], is_correct: !np[k].is_correct }; updateQ(idx, 'parts', np); }} className="text-[10px] text-blue-600 font-bold px-1 bg-white border rounded w-12 shrink-0">Đổi</button></div>))}</div>)}</div>
+                                    <div className="space-y-2"><div className="text-xs font-bold text-green-600">Lời giải chi tiết</div>
+                                        <textarea className="w-full border rounded-lg p-2 text-sm font-mono resize-y min-h-[60px] outline-none focus:ring-2 focus:ring-green-200 bg-green-50/50" value={q.c} onChange={e => updateQ(idx, 'c', e.target.value)} placeholder="Lời giải..." />
+                                        <div className="bg-green-50 rounded-lg p-2 border border-green-200"><MathRender text={q.c} /></div></div></div></div>))}</div></div>)}</div>
+
+                {/* PREVIEW MODAL */}
+                {showPreview && questions.length > 0 && (<div className="fixed inset-0 z-[999] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={e => { if (e.target === e.currentTarget) setShowPreview(false); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 flex justify-between items-center">
+                            <div><h2 className="text-lg font-bold"><i className="fas fa-eye mr-2"></i>Xem trước đề kiểm tra</h2><p className="text-emerald-100 text-xs">{info.title} — {info.subject} {info.grade} — {info.time} phút</p></div>
+                            <div className="flex gap-2"><button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition"><i className="fas fa-file-word mr-1"></i> Xuất Word</button>
+                                <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times mr-1"></i> Đóng</button></div></div>
+                        <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman',serif", fontSize: '13pt', lineHeight: '1.6' }}>
+                            <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '11pt' }}>{info.dept.toUpperCase()}</div><div style={{ fontSize: '11pt' }}>{info.school.toUpperCase()}</div>
+                                <div style={{ fontSize: '14pt', margin: '6px 0' }}>{info.title.toUpperCase()}</div>
+                                <div style={{ fontSize: '11pt', fontStyle: 'italic' }}>Môn: {info.subject.toUpperCase()} {info.grade} — Thời gian: {info.time} phút</div></div>
+                            <hr style={{ borderTop: '2px solid #000', margin: '12px 0' }} />
+                            {(() => {
+                                const typeOrder = ['MC', 'TF', 'TLN', 'TL']; const typeNames = { MC: 'PHẦN TRẮC NGHIỆM KHÁCH QUAN', TF: 'PHẦN ĐÚNG/SAI', TLN: 'PHẦN TRẢ LỜI NGẮN', TL: 'PHẦN TỰ LUẬN' };
+                                const grouped = {}; questions.forEach(q => { if (!grouped[q.type]) grouped[q.type] = []; grouped[q.type].push(q); });
+                                return typeOrder.map(type => {
+                                    const qs = grouped[type]; if (!qs || !qs.length) return null;
+                                    return (<div key={type} style={{ marginBottom: '18px' }}><div style={{ fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #ccc', paddingBottom: '4px' }}>{typeNames[type]}</div>
+                                        {qs.map((q, i) => (<div key={i} style={{ marginBottom: '12px' }}><div style={{ marginBottom: '4px' }}><b>{q.code}:</b> <MathRender text={q.q} /></div>
+                                            {q.type === 'MC' && q.a?.length > 0 && <div style={{ marginLeft: '20px' }}>{q.a.map((opt, k) => <div key={k} style={{ marginBottom: '2px' }}><b>{String.fromCharCode(65 + k)}.</b> <MathRender text={opt} /></div>)}</div>}
+                                            {q.type === 'TF' && q.parts?.length > 0 && (<table style={{ width: '90%', borderCollapse: 'collapse', margin: '8px 0' }}><thead><tr style={{ background: '#f0f0f0' }}><th style={{ border: '1px solid #ccc', padding: '4px', width: '25px' }}></th><th style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'left' }}>Nội dung</th><th style={{ border: '1px solid #ccc', padding: '4px', width: '90px', textAlign: 'center' }}>Đúng/Sai</th></tr></thead>
+                                                <tbody>{q.parts.map((p, pi) => <tr key={pi}><td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>{p.label})</td><td style={{ border: '1px solid #ccc', padding: '4px' }}><MathRender text={p.content} /></td><td style={{ border: '1px solid #ccc', padding: '4px' }}></td></tr>)}</tbody></table>)}</div>))}</div>);
+                                });
+                            })()}
+                            <hr style={{ borderTop: '2px solid #000', margin: '16px 0' }} />
+                            <div style={{ fontWeight: 'bold', textAlign: 'center', fontSize: '13pt', marginBottom: '12px' }}>ĐÁP ÁN</div>
+                            {questions.filter(q => q.correct_char).map((q, i) => <div key={i} className="flex gap-2 text-sm mb-1"><span className="font-bold text-gray-600">{q.code}:</span><span className="text-red-600 font-bold">{q.correct_char}</span></div>)}</div></div></div>)}
+
+                {/* SAVED EXAMS MODAL */}
+                {showSavedModal && (<div className="fixed inset-0 z-[999] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={e => { if (e.target === e.currentTarget) setShowSavedModal(false); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 flex justify-between items-center">
+                            <div><h2 className="text-lg font-bold"><i className="fas fa-folder-open mr-2"></i>Đề đã lưu</h2><p className="text-indigo-200 text-xs">{savedExams.length} đề kiểm tra</p></div>
+                            <button onClick={() => setShowSavedModal(false)} className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times mr-1"></i> Đóng</button></div>
+                        <div className="p-4 max-h-[70vh] overflow-y-auto space-y-3">
+                            {savedExams.length === 0 && <div className="text-center text-gray-400 py-8"><i className="fas fa-inbox text-4xl mb-2"></i><p className="font-semibold">Chưa có đề nào được lưu</p></div>}
+                            {savedExams.map(exam => (<div key={exam.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4 hover:border-indigo-300 hover:shadow-md transition">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-gray-800 text-base">{exam.name}</h3>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold"><i className="fas fa-calendar mr-1"></i>{new Date(exam.date).toLocaleDateString('vi-VN')} {new Date(exam.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">{exam.info.subject} {exam.info.grade}</span>
+                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{exam.questions.filter(q => q.status === 'done').length} câu</span>
+                                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-bold">{exam.info.time} phút</span>
+                                        </div>
+                                        {exam.topicNames?.length > 0 && <p className="text-xs text-gray-400 mt-1"><i className="fas fa-book mr-1"></i>{exam.topicNames.join(', ')}</p>}
+                                    </div>
+                                    <div className="flex gap-2 ml-3 shrink-0">
+                                        <button onClick={() => loadExam(exam)} className="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg font-bold text-xs shadow hover:shadow-md transition"><i className="fas fa-upload mr-1"></i>Tải lên</button>
+                                        <button onClick={() => deleteExam(exam.id)} className="px-3 py-2 bg-red-50 text-red-600 rounded-lg font-bold text-xs hover:bg-red-100 transition border border-red-200"><i className="fas fa-trash mr-1"></i>Xóa</button>
+                                    </div>
+                                </div>
+                            </div>))}
+                        </div>
+                    </div>
+                </div>)}
+            </>);
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+    </script>
+</body>
+
+</html>
