@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo Đề Kiểm Tra Thường Xuyên (15 phút)</title>
+    <title>Tạo Đề Kiểm Tra Thường Xuyên</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -174,7 +174,7 @@
         const renderToWord = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { const m = katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'mathml' }).match(/<math[\s\S]*?<\/math>/); if (m) { return `<m:oMathPara><m:oMath>${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}</m:oMath></m:oMathPara>`; } } catch (e) { } return t.content.replace(/\$/g, ''); })() : t.content.replace(/\\text\{([^}]+)\}/g, ' $1 ').replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>').replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>').replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
         const MathRender = ({ text }) => { const ref = useRef(); useEffect(() => { if (!ref.current) return; ref.current.innerHTML = renderToWeb(tokenizeRichText(text || "")); }, [text]); return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>; };
         const AIAdapter = {
-            getConfig: () => ({ geminiKeys: JSON.parse(localStorage.getItem('gemini_api_keys') || "[]"), geminiModel: localStorage.getItem('gemini_model') || 'gemini-2.5-flash' }),
+            getConfig: () => ({ geminiKeys: JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"), geminiModel: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash' }),
             callGemini: async (payloadParts) => { const { geminiKeys, geminiModel } = AIAdapter.getConfig(); if (!geminiKeys.length) throw new Error("Thiếu Gemini API Key!"); const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5); const maxAttempts = Math.max(shuffledKeys.length * 2, 3); for (let i = 0; i < maxAttempts; i++) { const currentKey = shuffledKeys[i % shuffledKeys.length]; try { const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: payloadParts }] }) }); if (!res.ok) { const errRaw = await res.json(); if (res.status === 429 || res.status >= 500) { await new Promise(r => setTimeout(r, 2000)); continue; } throw new Error(errRaw.error?.message || `HTTP ${res.status}`); } const data = await res.json(); if (data.candidates && data.candidates[0]?.content) { const parts = data.candidates[0].content.parts; const answerPart = [...parts].reverse().find(p => !p.thought && p.text) || parts[parts.length - 1]; return answerPart.text; } throw new Error("Invalid Response"); } catch (e) { await new Promise(r => setTimeout(r, 2000)); if (i === maxAttempts - 1) throw e; } } throw new Error("Tất cả API Keys đều báo lỗi."); }
         };
         const App = () => {
