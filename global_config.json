@@ -1,0 +1,13 @@
+{
+  "features": {
+    "gslides": true,
+    "vehinh": true,
+    "smartquiz": true,
+    "matrande": true,
+    "tronde": true,
+    "thitructuyen": true,
+    "kttx": true
+  },
+  "github_repo": "HoangThiencm/giangbai",
+  "github_pat": "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"
+}
