@@ -1090,10 +1090,10 @@ ${qData.type === 'TF' ? `{
   "c": "Lời giải chi tiết từng bước...",
   "correct_char": "A"
 }` : qData.type === 'TLN' ? `{
-  "q": "Nội dung câu hỏi trả lời ngắn...",
+  "q": "Nội dung câu hỏi trả lời ngắn (PHẢI diễn đạt dưới dạng yêu cầu tìm một ĐẠI LƯỢNG SỐ CỤ THỂ, VD: Tính diện tích, Tìm x)...",
   "a": [],
   "c": "Lời giải chi tiết từng bước dẫn đến đáp án cuối...",
-  "correct_char": "Đáp án cuối (VD: 5, -1/2, ...)"
+  "correct_char": "Chỉ đúng 1 con số cuối cùng, KHÔNG CÓ CÔNG THỨC HAY CHỮ DƯ THỪA (VD: 5, -1/2)"
 }` : `{
   "q": "Toàn bộ đề bài tự luận (câu dẫn + yêu cầu chi tiết từng phần a, b, c, d nếu có)...",
   "a": [],
@@ -1289,7 +1289,7 @@ YÊU CẦU:
                     2. Định dạng: Dùng LaTeX $...$ thay vì chữ viết thường. Hệ PT dùng \\begin{cases} ... \\\\ ... \\end{cases}.
                     3. Nếu là Trắc nghiệm (MC - PHẦN I), chỉ 4 đáp án (A, B, C, D), chỉ rõ đáp án đúng (A/B/C/D).
                     4. NẾU LÀ ĐÚNG/SAI (TF - PHẦN II), BẮT BUỘC tạo 1 câu dẫn chung và 4 CÂU ĐỘC LẬP (a, b, c, d) dạng mệnh đề có tính Đúng hoặc Sai. CHỈ RÕ GIÁ TRỊ CHÂN LÝ.
-                    5. NẾU LÀ TRẢ LỜI NGẮN (TLN), KHÔNG cho đáp án trắc nghiệm. Học sinh chỉ cần điền KẾT QUẢ CUỐI CÙNG (một con số, biểu thức ngắn gọn).
+                    5. NẾU LÀ TRẢ LỜI NGẮN (TLN), KHÔNG cho đáp án trắc nghiệm. BẮT BUỘC ĐỀ BÀI (TRƯỜNG 'q') PHẢI ĐƯỢC DIỄN ĐẠT SAO CHO KẾT QUẢ ĐẦU RA LÀ BẰNG SỐ CỤ THỂ HOẶC PHÂN SỐ. Học sinh chỉ cần điền KẾT QUẢ CUỐI CÙNG. CHÚ Ý: "correct_char" CHỈ ĐƯỢC CHỨA MỘT CON SỐ HOẶC PHÂN SỐ (VD: 5, -1/2, 3.14), TUYỆT ĐỐI KHÔNG GHI THÊM BAO GỒM CHỮ TỰ DO, KHÔNG CHỨA CÔNG THỨC DÀI DÒNG KÈM DẤU "=" NHƯ "x=5" HAY "S=5". CHỈ GHI SỐ CUỐI CÙNG!
                     6. NẾU LÀ TỰ LUẬN (TL), yêu cầu học sinh trình bày lời giải chi tiết.
                     7. CÂU HỎI CHÙM (BẢO TOÀN NGỮ CẢNH): Nếu câu hỏi hiện tại là một ý phụ (ví dụ mã câu là 19a, 19b...), bạn PHẢI tự động nhắc lại toàn bộ "Câu dẫn / Ngữ cảnh chung" của bài toán lớn lên đầu nội dung câu hỏi (Ví dụ: "Cho tứ giác ABCD... Phát biểu: Tính góc A"). Không được phép viết cụt lủn thân câu hỏi khiến người đọc không hiểu bài toán gốc.
                     8. QUAN TRỌNG VỀ HÌNH VẼ: Tuyệt đối không được ra đề bằng những câu lệnh chung chung như "sử dụng hình vẽ sau đây" mà không có hình. Nếu đề bài cần hình vẽ minh hoạ, bạn BẮT BUỘC VÀ LUÔN LUÔN phải mô tả lại hình học đó dưới dạng CHỮ HOẶC KÍ HIỆU CHI TIẾT (Ví dụ: "Cho tam giác ABC vuông tại A, đường cao AH, trên cạnh BC lấy điểm D sao cho BD = 3cm") ngay trực tiếp vào nội dung câu dẫn, để người ra đề dễ dàng tự vẽ lại chính xác 100% bằng mắt.
@@ -1309,10 +1309,10 @@ YÊU CẦU:
                     }
                     ` : qData.type === 'TLN' ? `
                     {
-                        "q": "Nội dung câu hỏi (đây là câu trả lời ngắn, học sinh chỉ cần điền đáp án cuối)...",
+                        "q": "Nội dung câu hỏi (Yêu cầu TÌM MỘT ĐẠI LƯỢNG SỐ CỤ THỂ, học sinh chỉ cần điền đáp án cuối)...",
                         "a": [],
                         "c": "Lời giải chi tiết...",
-                        "correct_char": "Đáp án cuối cùng (ví dụ: 5, -1/2, ...)"
+                        "correct_char": "Chỉ đúng 1 con số cuối cùng, KHÔNG CÓ CÔNG THỨC HAY CHỮ DƯ THỪA (VD: 5, -1/2)"
                     }
                     ` : qData.type === 'TL' ? `
                     {
@@ -1677,9 +1677,33 @@ YÊU CẦU:
                     if (tfQuestions.length > 0) {
                         html += `<h4>PHẦN II. Câu trắc nghiệm đúng sai</h4>`;
                         html += `<table class="ans-key-table" cellpadding="5"><tr>`;
-                        tfQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
+
+                        const renderedMains = new Set();
+                        const tfGroups = [];
+                        tfQuestions.forEach(q => {
+                            const { main, sub } = parseQuestionCode(q.code);
+                            if (sub) {
+                                if (!renderedMains.has(main)) {
+                                    renderedMains.add(main);
+                                    tfGroups.push({ ...q, parsedMain: main, parsedSub: sub });
+                                }
+                            } else {
+                                tfGroups.push({ ...q, parsedMain: main, parsedSub: sub });
+                            }
+                        });
+
+                        tfGroups.forEach(q => {
+                            if (q.parsedSub) {
+                                ['a', 'b', 'c', 'd'].forEach(p => html += `<td style="background:#eee">Câu ${q.parsedMain}${p}</td>`);
+                            } else {
+                                ['a', 'b', 'c', 'd'].forEach(p => html += `<td style="background:#eee">${q.code}${p}</td>`);
+                            }
+                        });
                         html += `</tr><tr>`;
-                        tfQuestions.forEach(q => html += `<td style="color:red; font-size: 10pt">${q.correct_char}</td>`);
+                        tfGroups.forEach(q => {
+                            const ansArr = (q.correct_char || 'Đ-S-Đ-S').split('-');
+                            ['a', 'b', 'c', 'd'].forEach((p, i) => html += `<td style="color:red; font-size: 10pt">${ansArr[i] || ''}</td>`);
+                        });
                         html += `</tr></table><br/>`;
                     }
                 }
