@@ -237,7 +237,14 @@
                     if (config.github_repo) localStorage.setItem('github_repo', config.github_repo);
                     if (config.github_pat) localStorage.setItem('github_pat', config.github_pat);
 
-                    const features = config.features || {};
+                    const userEmail = localStorage.getItem('userEmail') || "";
+                    let features = config.features || {};
+
+                    if (userEmail && config.user_features && config.user_features[userEmail]) {
+                        // Ghi đè cấu hình global bằng cấu hình riêng của user
+                        features = config.user_features[userEmail];
+                    }
+
                     const links = {
                         gslides: 'gslides.html',
                         vehinh: 'vehinh.html',
@@ -328,7 +335,8 @@
                                 nghiệm/tự luận.
                             </li>
                             <li><b>Trộn Đề Thi:</b> Upload file Word/PDF -> Xáo trộn câu hỏi thành nhiều mã đề.</li>
-                            <li><b>ĐỀ KIỂM TRA:</b> Sinh đề từ ảnh SGK hoặc tạo đề tương tự từ PDF, phục vụ cho định kỳ, thường xuyên.</li>
+                            <li><b>ĐỀ KIỂM TRA:</b> Sinh đề từ ảnh SGK hoặc tạo đề tương tự từ PDF, phục vụ cho định kỳ,
+                                thường xuyên.</li>
                             <li><b>Thi Online:</b> Tổ chức thi trắc nghiệm trên điện thoại, máy tính,... cho học sinh.
                             </li>
                         </ul>
@@ -447,7 +455,8 @@
                 <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">Đề Kiểm Tra
                     Thường Xuyên
                 </h3>
-                <p class="text-sm text-slate-500 mb-4">Tạo đề kiểm tra định kỳ, thường xuyên từ hình ảnh SGK hoặc tạo đề tương tự từ
+                <p class="text-sm text-slate-500 mb-4">Tạo đề kiểm tra định kỳ, thường xuyên từ hình ảnh SGK hoặc tạo đề
+                    tương tự từ
                     file PDF. Xuất ra ma trận và bản đặc tả</p>
                 <span
                     class="text-cyan-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử
@@ -522,4 +531,3 @@
 
 
 </html>
-

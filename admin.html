@@ -233,6 +233,37 @@
         </div>
     </div>
 
+    <!-- Modal Cấu Hình User -->
+    <div id="userConfigModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md animate-fade-in-up">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-slate-800"><i class="fas fa-user-cog text-blue-600 mr-2"></i>Cấu hình
+                    User</h3>
+                <button onclick="closeUserConfigModal()" class="text-slate-400 hover:text-red-500 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-sm text-slate-600 mb-4 bg-slate-50 p-2 rounded border border-slate-100">
+                Tài khoản: <span id="modalUserEmail" class="font-bold text-blue-600 break-all"></span>
+            </p>
+
+            <div class="space-y-2 mb-6 max-h-[60vh] overflow-y-auto pr-2" id="modalFeaturesList">
+                <!-- Checkboxes will be injected here -->
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button onclick="closeUserConfigModal()"
+                    class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 font-bold text-sm transition">
+                    Hủy
+                </button>
+                <button id="btnSaveUserConfig" onclick="saveUserConfig()"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-bold text-sm transition flex items-center gap-2">
+                    <i class="fas fa-save"></i> Lưu trên GitHub
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // === QUAN TRỌNG: Dán link Server Hugging Face của bạn vào đây ===
         const HF_API_URL = "https://hoangthiencm-giangbai.hf.space";
@@ -303,13 +334,20 @@
 
                 // Nút Duyệt (Chỉ hiện nếu đang Pending)
                 const approveBtn = isPending
-                    ? `<button onclick="approveUser('${user.email}', '${key}')" class="text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2">
+                    ? `<button onclick="approveUser('${user.email}', '${key}')" class="text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
                         <i class="fas fa-check"></i> Duyệt
                        </button>`
                     : '';
 
+                // Nút Cài đặt User (Chỉ hiện khi đã duyệt)
+                const configBtn = !isPending
+                    ? `<button onclick="openUserConfig('${user.email}')" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
+                        <i class="fas fa-cog"></i> Cài đặt
+                       </button>`
+                    : '';
+
                 // Nút Xóa (Luôn hiện)
-                const deleteBtn = `<button onclick="deleteUser('${user.email}', '${key}')" class="text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold shadow transition">
+                const deleteBtn = `<button onclick="deleteUser('${user.email}', '${key}')" class="text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mb-1 inline-block">
                                     <i class="fas fa-trash-alt"></i> Xóa / Chặn
                                    </button>`;
 
@@ -327,6 +365,7 @@
                     <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         ${approveBtn}
+                        ${configBtn}
                         ${deleteBtn}
                     </td>
                 `;
@@ -383,6 +422,17 @@
         // GITHUB GLOBAL CONFIG LOGIC
         // ==========================================
         let currentConfigSha = null;
+        let currentGlobalContent = { features: {}, user_features: {} };
+
+        const FEATURE_NAMES = {
+            gslides: "Trình Chiếu Slides",
+            vehinh: "Vẽ Hình Học AI",
+            smartquiz: "Soạn Câu Hỏi/Game AI",
+            matrande: "Tạo Đề Từ Ma Trận",
+            tronde: "Trộn Đề Thi",
+            thitructuyen: "Tổ Chức Thi Online",
+            kttx: "Đề Kiểm Tra Thường Xuyên"
+        };
 
         async function loadGlobalConfig() {
             // First load from local storage if available
@@ -405,6 +455,9 @@
                     currentConfigSha = data.sha;
                     const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
 
+                    currentGlobalContent = content;
+                    if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
+
                     // apply to UI
                     const features = content.features || {};
                     const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx'];
@@ -423,28 +476,54 @@
             }
         }
 
-        async function saveGlobalConfig() {
+        async function pushConfigToGitHub(newConfig, commitMessage) {
             const pat = document.getElementById('cfg_github_token').value.trim();
             const repo = document.getElementById('cfg_github_repo').value.trim();
-            if (!pat || !repo) return alert("Vui lòng nhập GitHub Token và Repo.");
+            if (!pat || !repo) throw new Error("Vui lòng nhập GitHub Token và Repo.");
 
+            let sha = currentConfigSha;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${repo}/contents/global_config.json`, {
+                    headers: { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    sha = data.sha;
+                }
+            } catch (e) { }
+
+            const payload = {
+                message: commitMessage,
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(newConfig, null, 2)))),
+                branch: "main"
+            };
+            if (sha) payload.sha = sha;
+
+            const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/global_config.json`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!updateRes.ok) {
+                const err = await updateRes.json();
+                throw new Error(err.message || "Lỗi khi ghi lên GitHub");
+            }
+
+            const updateData = await updateRes.json();
+            currentConfigSha = updateData.content.sha;
+
+            localStorage.setItem('admin_github_repo', repo);
+            localStorage.setItem('admin_github_pat', pat);
+        }
+
+        async function saveGlobalConfig() {
             const btn = document.getElementById('btnSaveConfig');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
             btn.disabled = true;
 
             try {
-                let sha = currentConfigSha;
-                try {
-                    const res = await fetch(`https://api.github.com/repos/${repo}/contents/global_config.json`, {
-                        headers: { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json' },
-                        cache: 'no-store'
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        sha = data.sha;
-                    }
-                } catch (e) { }
-
                 const features = {};
                 const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx'];
                 checks.forEach(id => {
@@ -452,35 +531,11 @@
                     if (el) features[id] = el.checked;
                 });
 
-                const newConfig = {
-                    features: features,
-                    github_repo: repo,
-                    github_pat: pat
-                };
+                currentGlobalContent.features = features;
+                currentGlobalContent.github_repo = document.getElementById('cfg_github_repo').value.trim();
+                currentGlobalContent.github_pat = document.getElementById('cfg_github_token').value.trim();
 
-                const payload = {
-                    message: "Admin: Cập nhật cấu hình Global Client",
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(newConfig, null, 2)))),
-                    branch: "main"
-                };
-                if (sha) payload.sha = sha;
-
-                const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/global_config.json`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!updateRes.ok) {
-                    const err = await updateRes.json();
-                    throw new Error(err.message || "Lỗi khi ghi lên GitHub");
-                }
-
-                const updateData = await updateRes.json();
-                currentConfigSha = updateData.content.sha;
-
-                localStorage.setItem('admin_github_repo', repo);
-                localStorage.setItem('admin_github_pat', pat);
+                await pushConfigToGitHub(currentGlobalContent, "Admin: Cập nhật cấu hình Global Client");
 
                 alert("Đã lưu Cấu Hình lên GitHub thành công!");
 
@@ -488,6 +543,68 @@
                 alert("Lỗi lưu config: " + e.message);
             } finally {
                 btn.innerHTML = '<i class="fas fa-save"></i> Lưu cài đặt lên GitHub';
+                btn.disabled = false;
+            }
+        }
+
+        let editingUserEmail = "";
+
+        function openUserConfig(email) {
+            editingUserEmail = email;
+            document.getElementById('modalUserEmail').textContent = email;
+
+            let userFeatures = currentGlobalContent.user_features[email];
+            if (!userFeatures) {
+                // Mặc định lấy theo cấu hình global hiện tại nếu user chưa có cấu hình riêng
+                userFeatures = currentGlobalContent.features || {};
+            }
+
+            let html = "";
+            Object.keys(FEATURE_NAMES).forEach(id => {
+                let isChecked = userFeatures[id] !== false;
+                html += `
+                <label class="flex items-center justify-between cursor-pointer p-3 mb-2 hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors">
+                    <span class="text-sm font-semibold text-slate-700"><i class="fas fa-cube text-blue-500 mr-2"></i>${FEATURE_NAMES[id]}</span>
+                    <input type="checkbox" id="ucfg_${id}" class="w-5 h-5 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500" ${isChecked ? 'checked' : ''}>
+                </label>
+                `;
+            });
+
+            document.getElementById('modalFeaturesList').innerHTML = html;
+            document.getElementById('userConfigModal').classList.remove('hidden');
+        }
+
+        function closeUserConfigModal() {
+            document.getElementById('userConfigModal').classList.add('hidden');
+            editingUserEmail = "";
+        }
+
+        async function saveUserConfig() {
+            if (!editingUserEmail) return;
+
+            const btn = document.getElementById('btnSaveUserConfig');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+            btn.disabled = true;
+
+            try {
+                const userFeatures = {};
+                Object.keys(FEATURE_NAMES).forEach(id => {
+                    const el = document.getElementById('ucfg_' + id);
+                    if (el) userFeatures[id] = el.checked;
+                });
+
+                if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
+                currentGlobalContent.user_features[editingUserEmail] = userFeatures;
+
+                await pushConfigToGitHub(currentGlobalContent, `Admin: Cập nhật cấu hình riêng cho ${editingUserEmail}`);
+
+                alert(`Đã lưu cấu hình riêng cho ${editingUserEmail} thành công!`);
+                closeUserConfigModal();
+            } catch (e) {
+                alert("Lỗi lưu cấu hình: " + e.message);
+            } finally {
+                btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
