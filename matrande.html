@@ -1712,16 +1712,18 @@ YÊU CẦU:
                 saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.doc`);
             };
 
-            // Lưu đề lên backend (cùng API với thitructuyen)
+            // Lưu đề/ma trận lên backend (cùng API với thitructuyen)
             const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
-            const saveExamToBackend = async () => {
+            const saveExamToBackend = async (isMatrixOnly = false) => {
                 const userEmail = localStorage.getItem("userEmail") || "";
                 if (!userEmail) {
-                    alert("Chưa đăng nhập. Vui lòng đăng nhập (trang Thi trực tuyến) để lưu đề vào kho.");
+                    alert("Chưa đăng nhập. Vui lòng đăng nhập (trang Thi trực tuyến) để lưu vào kho.");
                     return;
                 }
-                const defaultTitle = `${info.title} - ${info.subject} lớp ${info.grade} (Ma trận)`;
-                const customTitle = window.prompt("Đặt tên đề để dễ nhớ khi mở lại từ kho:", defaultTitle);
+                const titleSuffix = isMatrixOnly ? "(Ma trận)" : "(Đề thi)";
+                const defaultTitle = `${info.title} - ${info.subject} lớp ${info.grade} ${titleSuffix}`;
+                const promptMsg = isMatrixOnly ? "Đặt tên ma trận để dễ nhớ khi mở lại từ kho:" : "Đặt tên đề để dễ nhớ khi mở lại từ kho:";
+                const customTitle = window.prompt(promptMsg, defaultTitle);
                 if (customTitle === null) return;
                 const titleToSave = (customTitle || "").trim() || defaultTitle;
 
@@ -1767,7 +1769,8 @@ YÊU CẦU:
                     end_time: null,
                     questions,
                     teacher_email: userEmail,
-                    api_keys: geminiKeys
+                    api_keys: geminiKeys,
+                    matrixConfig: matrixConfig
                 };
                 try {
                     const res = await fetch(`${API_BASE}/api/exam/save`, {
@@ -1776,9 +1779,9 @@ YÊU CẦU:
                         body: JSON.stringify(payload)
                     });
                     if (!res.ok) throw new Error(await res.text());
-                    alert("Đã lưu đề vào kho thành công!");
+                    alert(isMatrixOnly ? "Đã lưu ma trận vào kho thành công!" : "Đã lưu đề vào kho thành công!");
                 } catch (e) {
-                    alert("Lỗi lưu đề: " + (e.message || e));
+                    alert("Lỗi lưu: " + (e.message || e));
                 }
             };
 
@@ -1855,12 +1858,17 @@ YÊU CẦU:
                     const bp = questionsToBlueprintSections(data.questions || [], data.info);
                     setInfo(prev => ({
                         ...prev,
-                        title: (data.info && data.info.title) ? data.info.title.replace(/\s*\(Ma trận\)\s*$/, "").trim() : prev.title,
+                        title: (data.info && data.info.title) ? data.info.title.replace(/\s*\(Ma trận\)\s*$/, "").replace(/\s*\(Đề thi\)\s*$/, "").trim() : prev.title,
                         school: (data.info && data.info.school) || prev.school,
                         time: String((data.info && data.info.duration_mins) || prev.time),
                         subject: prev.subject,
                         grade: prev.grade
                     }));
+                    if (data.info && data.info.matrixConfig) {
+                        setMatrixConfig(data.info.matrixConfig);
+                    } else if (data.matrixConfig) {
+                        setMatrixConfig(data.matrixConfig);
+                    }
                     setBlueprint(bp);
                     setStep(2);
                     setShowKhoDeModal(false);
@@ -1913,6 +1921,11 @@ YÊU CẦU:
                 }
                 return stats;
             }, [blueprint, step]);
+
+            const isExamGenerated = React.useMemo(() => {
+                if (!blueprint) return false;
+                return blueprint.sections.some(sec => (sec.questions || []).some(q => q.status === 'done'));
+            }, [blueprint]);
 
             return (
                 <>
@@ -2207,7 +2220,8 @@ YÊU CẦU:
                                                     >
                                                         Chốt Ma trận <i className="fas fa-arrow-right ml-2"></i>
                                                     </button>
-                                                    <button onClick={saveExamToBackend} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center"><i className="fas fa-save mr-2"></i> Lưu ma trận</button>
+                                                    <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-2"></i> Lưu ma trận</button>
+                                                    <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu đề</button>
                                                 </>
                                             )}
                                             {step === 3 && (
@@ -2216,7 +2230,8 @@ YÊU CẦU:
                                                     <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
                                                     <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
                                                     <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
-                                                    <button onClick={saveExamToBackend} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu ma trận</button>
+                                                    <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-2"></i> Lưu ma trận</button>
+                                                    <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu đề</button>
                                                 </>
                                             )}
                                         </div>
@@ -2360,7 +2375,8 @@ YÊU CẦU:
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition flex items-center gap-1"><i className="fas fa-file-word"></i> Xuất Word</button>
-                                        <button onClick={() => { saveExamToBackend(); }} className="px-4 py-2 bg-white text-violet-700 rounded-xl font-bold text-sm hover:bg-violet-50 transition flex items-center gap-1"><i className="fas fa-save"></i> Lưu ma trận</button>
+                                        <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated} className="px-4 py-2 bg-white text-violet-700 rounded-xl font-bold text-sm hover:bg-violet-50 transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table"></i> Lưu ma trận</button>
+                                        <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated} className="px-4 py-2 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save"></i> Lưu đề</button>
                                         <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times"></i> Đóng</button>
                                     </div>
                                 </div>
