@@ -1,0 +1,326 @@
+{
+  "id": 1772585373695,
+  "name": "Toán 8 - 4/3/2026",
+  "date": "2026-03-04T00:49:33.695Z",
+  "info": {
+    "dept": "SỞ GIÁO DỤC VÀ ĐÀO TẠO",
+    "school": "TRƯỜNG THPT/THCS",
+    "title": "KIỂM TRA THƯỜNG XUYÊN",
+    "time": "15",
+    "subject": "Toán",
+    "grade": "8"
+  },
+  "questions": [
+    {
+      "code": "Câu 1",
+      "type": "MC",
+      "level": "B",
+      "status": "done",
+      "q": "Cho $\\triangle ABC$ có $AD$ là đường phân giác của $\\widehat{BAC}$ ($D \\in BC$). Theo tính chất đường phân giác của tam giác, khẳng định nào sau đây là đúng?",
+      "a": [
+        "$\\frac{DB}{DC} = \\frac{AB}{AC}$",
+        "$\\frac{DB}{DC} = \\frac{AC}{AB}$",
+        "$\\frac{DB}{AB} = \\frac{AC}{DC}$",
+        "$\\frac{AD}{BC} = \\frac{AB}{AC}$"
+      ],
+      "c": "Dựa vào nội dung Định lí về tính chất đường phân giác của tam giác (Sách giáo khoa trang 55): 'Trong tam giác, đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy'. Do đó, với $AD$ là phân giác của góc $A$, ta có tỉ lệ thức $\\frac{DB}{DC} = \\frac{AB}{AC}$.",
+      "correct_char": "A",
+      "parts": []
+    },
+    {
+      "code": "Câu 2",
+      "type": "MC",
+      "level": "B",
+      "status": "done",
+      "q": "Trong các khẳng định sau, khẳng định nào đúng với định nghĩa đường trung bình của tam giác?",
+      "a": [
+        "Đường trung bình của tam giác là đoạn thẳng nối một đỉnh với trung điểm của cạnh đối diện.",
+        "Đường trung bình của tam giác là đoạn thẳng nối trung điểm hai cạnh của tam giác.",
+        "Đường trung bình của tam giác là đoạn thẳng kẻ từ một đỉnh và vuông góc với cạnh đối diện.",
+        "Đường trung bình của tam giác là đoạn thẳng nối trọng tâm với một đỉnh của tam giác."
+      ],
+      "c": "Dựa trên nội dung Sách giáo khoa (trang 52, mục 1): 'Đường trung bình của tam giác là đoạn thẳng nối trung điểm hai cạnh của tam giác'.",
+      "correct_char": "B",
+      "parts": []
+    },
+    {
+      "code": "Câu 3",
+      "type": "MC",
+      "level": "B",
+      "status": "done",
+      "q": "Cho tam giác $ABC$ có $M$ là trung điểm của $AB$ và $N$ là trung điểm của $AC$. Khẳng định nào sau đây đúng về tính chất của đoạn thẳng $MN$?",
+      "a": [
+        "$MN // BC$ và $MN = BC$",
+        "$MN // BC$ và $MN = \\frac{1}{2} BC$",
+        "$MN$ cắt $BC$ và $MN = \\frac{1}{2} BC$",
+        "$MN // BC$ và $MN = 2BC$"
+      ],
+      "c": "Dựa vào định nghĩa và tính chất đường trung bình của tam giác (Sách giáo khoa trang 52, 53): Đoạn thẳng nối trung điểm hai cạnh của tam giác là đường trung bình. Đường trung bình của tam giác thì song song với cạnh thứ ba và bằng nửa cạnh ấy. Do đó $MN // BC$ và $MN = \\frac{1}{2} BC$.",
+      "correct_char": "B",
+      "parts": []
+    },
+    {
+      "code": "Câu 4",
+      "type": "MC",
+      "level": "B",
+      "status": "done",
+      "q": "Cho $\\triangle ABC$, đoạn thẳng nối trung điểm của hai cạnh $AB$ và $AC$ được gọi là:",
+      "a": [
+        "Đường cao của $\\triangle ABC$",
+        "Đường trung bình của $\\triangle ABC$",
+        "Đường trung tuyến của $\\triangle ABC$",
+        "Đường phân giác của $\\triangle ABC$"
+      ],
+      "c": "Theo định nghĩa tại trang 52 sách giáo khoa: 'Đường trung bình của tam giác là đoạn thẳng nối trung điểm hai cạnh của tam giác'. Do đó, đoạn thẳng nối trung điểm của hai cạnh $AB$ và $AC$ chính là đường trung bình của $\\triangle ABC$.",
+      "correct_char": "B",
+      "parts": []
+    },
+    {
+      "code": "Câu 5",
+      "type": "MC",
+      "level": "H",
+      "status": "done",
+      "q": "Cho $\\triangle ABC$ có đường phân giác của góc $A$ cắt cạnh $BC$ tại $D$. Biết $AB = 6\\text{ cm}$ và $AC = 9\\text{ cm}$. Tỉ số $\\frac{DB}{DC}$ bằng:",
+      "a": [
+        "$\\frac{3}{2}$",
+        "$\\frac{2}{3}$",
+        "$\\frac{1}{3}$",
+        "$\\frac{1}{2}$"
+      ],
+      "c": "Dựa vào định lý về tính chất đường phân giác trong tam giác (trang 55 SGK Chân trời sáng tạo): Đường phân giác của một góc trong tam giác chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy. Ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{6}{9} = \\frac{2}{3}$.",
+      "correct_char": "B",
+      "parts": []
+    },
+    {
+      "code": "Câu 6",
+      "type": "MC",
+      "level": "H",
+      "status": "done",
+      "q": "Cho $\\Delta ABC$ có đường phân giác $AD$ ($D \\in BC$). Biết độ dài các cạnh $AB = 6 \\text{ cm}$ và $AC = 9 \\text{ cm}$. Tỉ số $\\frac{DB}{DC}$ bằng:",
+      "a": [
+        "$\\frac{2}{3}$",
+        "$\\frac{3}{2}$",
+        "$\\frac{2}{5}$",
+        "$\\frac{3}{5}$"
+      ],
+      "c": "Dựa vào tính chất đường phân giác của tam giác (Sách giáo khoa trang 55): Trong tam giác, đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy. Ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{6}{9} = \\frac{2}{3}$.",
+      "correct_char": "A",
+      "parts": []
+    },
+    {
+      "code": "Câu 7",
+      "type": "MC",
+      "level": "H",
+      "status": "done",
+      "q": "Câu 7. Cho $\\triangle ABC$ có $AD$ là đường phân giác của góc $A$ ($D \\in BC$). Biết độ dài các cạnh $AB = 6 \\text{ cm}$, $AC = 9 \\text{ cm}$ và đoạn thẳng $BD = 4 \\text{ cm}$. Tính độ dài đoạn thẳng $DC$.",
+      "a": [
+        "$DC = 4 \\text{ cm}$",
+        "$DC = 6 \\text{ cm}$",
+        "$DC = 2,6 \\text{ cm}$",
+        "$DC = 13,5 \\text{ cm}$"
+      ],
+      "c": "Dựa trên tính chất đường phân giác trong tam giác (trang 55 SGK): Trong một tam giác, đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy. Ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} \\Rightarrow \\frac{4}{DC} = \\frac{6}{9}$. Suy ra $DC = \\frac{4 \\cdot 9}{6} = 6 \\text{ (cm)}$.",
+      "correct_char": "B",
+      "parts": []
+    },
+    {
+      "code": "Câu 8",
+      "type": "MC",
+      "level": "H",
+      "status": "done",
+      "q": "Cho $\\Delta ABC$ có $AD$ là đường phân giác của góc $A$ ($D \\in BC$). Biết $AB = 8\\text{ cm}$, $AC = 12\\text{ cm}$ và $BD = 4\\text{ cm}$. Độ dài của đoạn thẳng $DC$ là:",
+      "a": [
+        "$6\\text{ cm}$",
+        "$4\\text{ cm}$",
+        "$2.6\\text{ cm}$",
+        "$8\\text{ cm}$"
+      ],
+      "c": "Dựa vào tính chất đường phân giác của tam giác (Sách giáo khoa trang 55), ta có: Trong tam giác, đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy. Với $AD$ là đường phân giác của $\\Delta ABC$, ta có tỉ lệ thức: $\\frac{DB}{DC} = \\frac{AB}{AC}$. Thay số vào ta được: $\\frac{4}{DC} = \\frac{8}{12} \\Rightarrow \\frac{4}{DC} = \\frac{2}{3} \\Rightarrow DC = \\frac{4 \\cdot 3}{2} = 6\\text{ cm}$.",
+      "correct_char": "A",
+      "parts": []
+    },
+    {
+      "code": "Câu 9",
+      "type": "MC",
+      "level": "V",
+      "status": "done",
+      "q": "Cho $\\Delta ABC$ có đường phân giác trong $AD$ ($D \\in BC$). Biết độ dài các cạnh $AB = 12$ cm, $AC = 18$ cm và cạnh $BC = 20$ cm. Tính độ dài đoạn thẳng $DC$.",
+      "a": [
+        "$DC = 8$ cm",
+        "$DC = 10$ cm",
+        "$DC = 12$ cm",
+        "$DC = 15$ cm"
+      ],
+      "c": "Áp dụng tính chất đường phân giác trong tam giác $ABC$, ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{12}{18} = \\frac{2}{3}$. Suy ra $\\frac{DB}{2} = \\frac{DC}{3}$. Áp dụng tính chất dãy tỉ số bằng nhau, ta có: $\\frac{DB}{2} = \\frac{DC}{3} = \\frac{DB + DC}{2 + 3} = \\frac{BC}{5} = \\frac{20}{5} = 4$. Từ đó tính được $DC = 3 \\cdot 4 = 12$ (cm).",
+      "correct_char": "C",
+      "parts": []
+    },
+    {
+      "code": "Câu 10",
+      "type": "MC",
+      "level": "V",
+      "status": "done",
+      "q": "Cho tam giác $ABC$ có độ dài các cạnh $AB = 12$ cm, $AC = 18$ cm và $BC = 20$ cm. Kẻ đường phân giác $AD$ của góc $A$ ($D \\in BC$). Độ dài của đoạn thẳng $DC$ là:",
+      "a": [
+        "8 cm",
+        "12 cm",
+        "10 cm",
+        "15 cm"
+      ],
+      "c": "Áp dụng tính chất đường phân giác trong tam giác $ABC$, ta có: $\\frac{DB}{DC} = \\frac{AB}{AC}$. Thay số vào ta được: $\\frac{DB}{DC} = \\frac{12}{18} = \\frac{2}{3}$. Suy ra $\\frac{DB}{2} = \\frac{DC}{3}$. Áp dụng tính chất dãy tỉ số bằng nhau, ta có: $\\frac{DB}{2} = \\frac{DC}{3} = \\frac{DB + DC}{2 + 3} = \\frac{BC}{5} = \\frac{20}{5} = 4$. Vậy độ dài đoạn thẳng $DC$ là: $DC = 3 \\cdot 4 = 12$ cm.",
+      "correct_char": "B",
+      "parts": []
+    },
+    {
+      "code": "Câu 11",
+      "type": "MC",
+      "level": "V",
+      "status": "done",
+      "q": "Cho $\\triangle ABC$ vuông tại $A$ có $AB = 6$ cm, $AC = 8$ cm. Đường phân giác của góc $A$ cắt cạnh $BC$ tại điểm $D$. Độ dài đoạn thẳng $BD$ là (làm tròn kết quả đến chữ số thập phân thứ nhất):",
+      "a": [
+        "$4,3$ cm",
+        "$5,7$ cm",
+        "$4,5$ cm",
+        "$7,5$ cm"
+      ],
+      "c": "Bước 1: Áp dụng định lý Pythagoras cho $\\triangle ABC$ vuông tại $A$, ta có: $BC = \\sqrt{AB^2 + AC^2} = \\sqrt{6^2 + 8^2} = 10$ cm.\nBước 2: Vì $AD$ là đường phân giác của góc $A$ trong $\\triangle ABC$, theo tính chất đường phân giác ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{6}{8} = \\frac{3}{4}$.\nBước 3: Sử dụng tính chất tỉ lệ thức: $\\frac{DB}{DB + DC} = \\frac{3}{3 + 4} \\Rightarrow \\frac{DB}{BC} = \\frac{3}{7}$.\nBước 4: Tính $BD = \\frac{3}{7} \\cdot BC = \\frac{3}{7} \\cdot 10 \\approx 4,285... \\approx 4,3$ cm.",
+      "correct_char": "A",
+      "parts": []
+    },
+    {
+      "code": "Câu 12",
+      "type": "MC",
+      "level": "V",
+      "status": "done",
+      "q": "Cho tam giác $ABC$ có $AB = 6$ cm, $AC = 9$ cm và $BC = 10$ cm. Đường phân giác trong của góc $A$ cắt $BC$ tại $D$. Qua $D$, vẽ đường thẳng song song với $AB$ cắt cạnh $AC$ tại $E$. Tính độ dài đoạn thẳng $AE$.",
+      "a": [
+        "$3,6$ cm",
+        "$5,4$ cm",
+        "$4,0$ cm",
+        "$2,4$ cm"
+      ],
+      "c": "1. Áp dụng tính chất đường phân giác vào tam giác $ABC$, ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{6}{9} = \\frac{2}{3}$.\n2. Từ $\\frac{DB}{DC} = \\frac{2}{3} \\Rightarrow \\frac{DB}{DB + DC} = \\frac{2}{2 + 3} \\Rightarrow \\frac{DB}{BC} = \\frac{2}{5}$.\n3. Vì $DE \\parallel AB$, theo định lý Thales trong tam giác $ABC$, ta có các đoạn thẳng tương ứng tỉ lệ: $\\frac{AE}{AC} = \\frac{BD}{BC}$.\n4. Thay số vào ta được: $\\frac{AE}{9} = \\frac{2}{5} \\Rightarrow AE = \\frac{9 \\cdot 2}{5} = 3,6$ cm.",
+      "correct_char": "A",
+      "parts": []
+    },
+    {
+      "code": "Câu 13",
+      "type": "TF",
+      "level": "B",
+      "status": "done",
+      "q": "Xét tính đúng hoặc sai của các khẳng định sau đây về định lý Thales, đường trung bình và tính chất đường phân giác trong tam giác:",
+      "parts": [
+        {
+          "label": "a",
+          "content": "Đường trung bình của tam giác là đoạn thẳng nối trung điểm hai cạnh của tam giác.",
+          "is_correct": true
+        },
+        {
+          "label": "b",
+          "content": "Nếu một đường thẳng song song với một cạnh của tam giác và cắt hai cạnh còn lại thì nó định ra trên hai cạnh đó các đoạn thẳng tương ứng tỉ lệ.",
+          "is_correct": true
+        },
+        {
+          "label": "c",
+          "content": "Trong một tam giác, đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ nghịch với hai cạnh kề hai đoạn ấy.",
+          "is_correct": false
+        },
+        {
+          "label": "d",
+          "content": "Đường trung bình của tam giác song song với cạnh thứ ba và có độ dài bằng cạnh đó.",
+          "is_correct": false
+        }
+      ],
+      "c": "Giải thích: \na) Đúng. Theo định nghĩa đường trung bình của tam giác (SGK trang 52). \nb) Đúng. Đây là nội dung phát biểu của định lý Thales thuận (SGK trang 46). \nc) Sai. Theo tính chất đường phân giác, chúng phải tỉ lệ thuận (tỉ lệ với) hai cạnh kề, không phải tỉ lệ nghịch (SGK trang 55). \nd) Sai. Đường trung bình của tam giác song song với cạnh thứ ba và bằng nửa cạnh ấy, không phải bằng cả cạnh ấy (SGK trang 53).",
+      "correct_char": "Đ-Đ-S-S",
+      "a": []
+    },
+    {
+      "code": "Câu 14",
+      "type": "TF",
+      "level": "H",
+      "status": "done",
+      "q": "Cho tam giác $ABC$ có $AB = 6$ cm, $AC = 9$ cm. Đường phân giác của góc $A$ cắt cạnh $BC$ tại điểm $D$. Trên cạnh $AB$ lấy điểm $M$ sao cho $AM = 2$ cm, trên cạnh $AC$ lấy điểm $N$ sao cho $AN = 3$ cm. Xét tính đúng/sai của các khẳng định sau:",
+      "parts": [
+        {
+          "label": "a",
+          "content": "Theo tính chất đường phân giác trong tam giác, ta có tỉ số $\\frac{DB}{DC} = \\frac{2}{3}$.",
+          "is_correct": true
+        },
+        {
+          "label": "b",
+          "content": "Tỉ số giữa hai đoạn thẳng $\\frac{AM}{AB}$ và $\\frac{AN}{AC}$ là bằng nhau.",
+          "is_correct": true
+        },
+        {
+          "label": "c",
+          "content": "Đường thẳng $MN$ cắt đường thẳng $BC$ tại một điểm nằm ngoài tam giác.",
+          "is_correct": false
+        },
+        {
+          "label": "d",
+          "content": "Nếu độ dài cạnh $BC = 12$ cm thì độ dài đoạn thẳng $MN = 6$ cm.",
+          "is_correct": false
+        }
+      ],
+      "c": "Giải thích chi tiết:\n- a) Đúng. Theo tính chất đường phân giác: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{6}{9} = \\frac{2}{3}$.\n- b) Đúng. Ta có $\\frac{AM}{AB} = \\frac{2}{6} = \\frac{1}{3}$ và $\\frac{AN}{AC} = \\frac{3}{9} = \\frac{1}{3}$. Vậy $\\frac{AM}{AB} = \\frac{AN}{AC}$.\n- c) Sai. Vì $\\frac{AM}{AB} = \\frac{AN}{AC} = \\frac{1}{3}$, theo định lí Thales đảo, $MN // BC$. Hai đường thẳng song song thì không cắt nhau.\n- d) Sai. Vì $MN // BC$, theo hệ quả của định lí Thales, ta có: $\\frac{MN}{BC} = \\frac{AM}{AB} = \\frac{1}{3}$. Nếu $BC = 12$ cm thì $MN = \\frac{1}{3} \\cdot 12 = 4$ cm, không phải $6$ cm.",
+      "correct_char": "Đ-Đ-S-S",
+      "a": []
+    },
+    {
+      "code": "Câu 15",
+      "type": "TLN",
+      "level": "H",
+      "status": "done",
+      "q": "Cho $\\triangle ABC$ có $BC = 12$ cm. Gọi $M$ và $N$ lần lượt là trung điểm của hai cạnh $AB$ và $AC$. Độ dài đoạn thẳng $MN$ là bao nhiêu xentimét?",
+      "a": [],
+      "c": "Vì $M$ là trung điểm của $AB$ và $N$ là trung điểm của $AC$ nên đoạn thẳng $MN$ là đường trung bình của $\\triangle ABC$. Theo tính chất đường trung bình của tam giác: $MN = \\frac{1}{2} BC$. Thay số ta có: $MN = \\frac{1}{2} \\cdot 12 = 6$ (cm).",
+      "correct_char": "6",
+      "parts": []
+    },
+    {
+      "code": "Câu 16",
+      "type": "TLN",
+      "level": "H",
+      "status": "done",
+      "q": "Cho tam giác ABC có AB = 6 cm, AC = 9 cm. AD là đường phân giác của góc A (D thuộc cạnh BC). Theo tính chất đường phân giác trong tam giác, tỉ số độ dài của hai đoạn thẳng DB và DC là:",
+      "a": [
+        "1/2",
+        "3/2",
+        "2/3",
+        "1/3"
+      ],
+      "c": "Dựa trên nội dung SGK trang 55: 'Trong tam giác, đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy'. Ta có tỉ lệ thức: DB/DC = AB/AC. Thay số vào ta được: DB/DC = 6/9 = 2/3.",
+      "correct_char": "C",
+      "parts": []
+    },
+    {
+      "code": "Câu 17",
+      "type": "TLN",
+      "level": "V",
+      "status": "done",
+      "q": "Cho tam giác $ABC$ có $AB = 15$ cm, $AC = 20$ cm và $BC = 21$ cm. Đường phân giác của góc $A$ cắt cạnh $BC$ tại điểm $D$. Tính độ dài đoạn thẳng $BD$ (đơn vị: cm).",
+      "a": [],
+      "c": "Dựa vào tính chất đường phân giác trong tam giác (trang 55 SGK), đường phân giác của một góc chia cạnh đối diện thành hai đoạn thẳng tỉ lệ với hai cạnh kề hai đoạn ấy. Ta có: $\\frac{DB}{DC} = \\frac{AB}{AC} = \\frac{15}{20} = \\frac{3}{4}$. Từ đó suy ra $\\frac{DB}{DB + DC} = \\frac{3}{3 + 4} \\Rightarrow \\frac{DB}{BC} = \\frac{3}{7}$. Thay $BC = 21$ cm vào, ta tính được: $DB = \\frac{3}{7} \\cdot 21 = 9$ cm.",
+      "correct_char": "9",
+      "parts": []
+    },
+    {
+      "code": "Câu 18",
+      "type": "TLN",
+      "level": "V",
+      "status": "done",
+      "q": "Cho $\\triangle ABC$ có $AB = 10\\text{ cm}$ và $AC = 15\\text{ cm}$. Trên cạnh $AB$ lấy điểm $M$ sao cho $AM = 4\\text{ cm}$. Qua $M$ kẻ đường thẳng song song với $BC$ cắt $AC$ tại $N$. Tính độ dài đoạn thẳng $NC$ (đơn vị: cm).",
+      "a": [],
+      "c": "Xét $\\triangle ABC$ có $MN // BC$ ($N \\in AC$), áp dụng định lý Thales ta có:\n$\\frac{AM}{AB} = \\frac{AN}{AC} \\Rightarrow \\frac{4}{10} = \\frac{AN}{15}$\n$\\Rightarrow AN = \\frac{4 \\cdot 15}{10} = 6$ (cm).\nVì $N$ nằm giữa $A$ và $C$ nên: $NC = AC - AN = 15 - 6 = 9$ (cm).",
+      "correct_char": "9",
+      "parts": []
+    }
+  ],
+  "topicNames": [
+    "Định lý thales trong tam giác",
+    "Đường trung bình của tam giác",
+    "Tính chất đường phân giác trong tam giác"
+  ],
+  "specData": null
+}
