@@ -300,15 +300,15 @@
                 // Cập nhật thống kê
                 updateStats(users);
 
-                // Vẽ bảng
-                renderTable(users, key);
-
                 // Hiển thị giao diện Dashboard, ẩn Login
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
 
-                // Load config 
-                loadGlobalConfig();
+                // Tải Global Config TRƯỚC ĐỂ có thông tin hạn dùng cho bước sau
+                await loadGlobalConfig();
+
+                // Vẽ bảng
+                renderTable(users, key);
 
             } catch (e) {
                 alert(e.message);
@@ -503,6 +503,10 @@
 
                     currentGlobalContent = content;
                     if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
+
+                    // Lưu lại cấu hình token vào localStorage để không bị mất khi F5
+                    localStorage.setItem('admin_github_repo', reqRepo);
+                    localStorage.setItem('admin_github_pat', reqPat);
 
                     // apply to UI
                     const features = content.features || {};
