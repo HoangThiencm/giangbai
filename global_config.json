@@ -8,6 +8,30 @@
     "thitructuyen": true,
     "kttx": true
   },
+  "user_features": {
+    "hoang3205@gmail.com": {
+      "gslides": true,
+      "vehinh": true,
+      "smartquiz": true,
+      "matrande": true,
+      "tronde": true,
+      "thitructuyen": true,
+      "kttx": true,
+      "durationOption": "6_months",
+      "expiry": "2026-09-04T11:06:37.515Z"
+    },
+    "thuylinh05101989@gmail.com": {
+      "gslides": true,
+      "vehinh": true,
+      "smartquiz": true,
+      "matrande": true,
+      "tronde": true,
+      "thitructuyen": true,
+      "kttx": true,
+      "durationOption": "9_months",
+      "expiry": "2026-12-04T11:07:18.914Z"
+    }
+  },
   "github_repo": "HoangThiencm/giangbai",
   "github_pat": "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"
 }
