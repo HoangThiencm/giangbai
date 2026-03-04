@@ -220,6 +220,9 @@
                                     class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                                     Trạng thái</th>
                                 <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    Ngày hết hạn</th>
+                                <th
                                     class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
                                     Hành động</th>
                             </tr>
@@ -247,7 +250,17 @@
                 Tài khoản: <span id="modalUserEmail" class="font-bold text-blue-600 break-all"></span>
             </p>
 
-            <div class="space-y-2 mb-6 max-h-[60vh] overflow-y-auto pr-2" id="modalFeaturesList">
+            <div class="space-y-4 mb-6" id="modalAccountConfig">
+                <!-- Account Duration Selection -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Thời hạn tài khoản</label>
+                    <select id="userConfigDuration"
+                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-2 mb-6 max-h-[40vh] overflow-y-auto pr-2" id="modalFeaturesList">
                 <!-- Checkboxes will be injected here -->
             </div>
 
@@ -351,6 +364,30 @@
                                     <i class="fas fa-trash-alt"></i> Xóa / Chặn
                                    </button>`;
 
+                // Lấy thông tin ngày hết hạn từ GlobalConfig (gọi trực tiếp)
+                let userFeatures = currentGlobalContent?.user_features?.[user.email] || {};
+                let expiryText = "Vĩnh viễn";
+                let expiryClass = "text-green-600";
+
+                if (userFeatures.expiry) {
+                    const expiryDate = new Date(userFeatures.expiry);
+                    expiryText = expiryDate.toLocaleDateString('vi-VN');
+
+                    // Kiểm tra hết hạn chưa
+                    if (expiryDate < new Date()) {
+                        expiryClass = "text-red-500 font-bold";
+                        expiryText += " (Hết hạn)";
+                    } else {
+                        expiryClass = "text-blue-600";
+                    }
+                }
+
+                // Nếu là pending thì chưa có hạn sử dụng
+                if (isPending) {
+                    expiryText = "Đang chờ duyệt";
+                    expiryClass = "text-slate-400 italic";
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
@@ -363,6 +400,7 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${expiryClass}">${expiryText}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         ${approveBtn}
                         ${configBtn}
@@ -432,6 +470,14 @@
             tronde: "Trộn Đề Thi",
             thitructuyen: "Tổ Chức Thi Online",
             kttx: "Đề Kiểm Tra Thường Xuyên"
+        };
+
+        const ACCOUNT_DURATION = {
+            "forever": "Vĩnh viễn",
+            "3_months": "3 tháng",
+            "6_months": "6 tháng",
+            "9_months": "9 tháng",
+            "1_year": "1 năm"
         };
 
         async function loadGlobalConfig() {
@@ -559,6 +605,20 @@
                 userFeatures = currentGlobalContent.features || {};
             }
 
+            // --- Render Thời Hạn Tài Khoản ---
+            const selectEl = document.getElementById('userConfigDuration');
+            selectEl.innerHTML = "";
+            let currentOption = userFeatures.durationOption || "forever";
+
+            Object.keys(ACCOUNT_DURATION).forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = ACCOUNT_DURATION[key];
+                if (key === currentOption) opt.selected = true;
+                selectEl.appendChild(opt);
+            });
+
+            // --- Render Tính Năng ---
             let html = "";
             Object.keys(FEATURE_NAMES).forEach(id => {
                 let isChecked = userFeatures[id] !== false;
@@ -594,13 +654,36 @@
                     if (el) userFeatures[id] = el.checked;
                 });
 
+                // Tính toán thời gian hết hạn dựa trên Option hiện đại 
+                const selectedDuration = document.getElementById('userConfigDuration').value;
+                userFeatures.durationOption = selectedDuration;
+
+                let expiryDate = null;
+                if (selectedDuration !== "forever") {
+                    expiryDate = new Date(); // Thời gian cập nhật / phê duyệt ngay hiện tại
+                    if (selectedDuration === "3_months") expiryDate.setMonth(expiryDate.getMonth() + 3);
+                    else if (selectedDuration === "6_months") expiryDate.setMonth(expiryDate.getMonth() + 6);
+                    else if (selectedDuration === "9_months") expiryDate.setMonth(expiryDate.getMonth() + 9);
+                    else if (selectedDuration === "1_year") expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+                    userFeatures.expiry = expiryDate.toISOString();
+                } else {
+                    userFeatures.expiry = null;
+                }
+
                 if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
-                currentGlobalContent.user_features[editingUserEmail] = userFeatures;
+
+                // Giữ lại các property ẩn khác của user nếu cần
+                currentGlobalContent.user_features[editingUserEmail] = {
+                    ...(currentGlobalContent.user_features[editingUserEmail] || {}),
+                    ...userFeatures
+                };
 
                 await pushConfigToGitHub(currentGlobalContent, `Admin: Cập nhật cấu hình riêng cho ${editingUserEmail}`);
 
                 alert(`Đã lưu cấu hình riêng cho ${editingUserEmail} thành công!`);
                 closeUserConfigModal();
+                loadUsers(); // Cập nhật lại list ở UI 
             } catch (e) {
                 alert("Lỗi lưu cấu hình: " + e.message);
             } finally {

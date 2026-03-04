@@ -243,6 +243,17 @@
                     if (userEmail && config.user_features && config.user_features[userEmail]) {
                         // Ghi đè cấu hình global bằng cấu hình riêng của user
                         features = config.user_features[userEmail];
+
+                        // Kiểm tra thời hạn tài khoản
+                        if (features.expiry) {
+                            const expiryDate = new Date(features.expiry);
+                            if (expiryDate < new Date()) {
+                                alert("Tài khoản của bạn đã hết hạn bảo trì, vui lòng liên hệ Admin để gia hạn.");
+                                localStorage.clear();
+                                window.location.href = 'login.html';
+                                return; // Block tiep tuc
+                            }
+                        }
                     }
 
                     const links = {
