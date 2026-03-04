@@ -795,7 +795,22 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                             if (rIdx === 0) {
                                 html += `<td rowspan="${rowsCount}">${tIdx + 1}</td><td rowspan="${rowsCount}" class="left"><b>${topic.name}</b></td>`;
                             }
-                            html += `<td class="left"><i>${row.knowledge || ''}</i></td>`;
+
+                            const currentKnowledge = row.knowledge || '';
+                            const prevKnowledge = rIdx > 0 ? (topic.rows[rIdx - 1].knowledge || '') : null;
+
+                            if (currentKnowledge !== prevKnowledge) {
+                                let span = 1;
+                                for (let i = rIdx + 1; i < topic.rows.length; i++) {
+                                    if ((topic.rows[i].knowledge || '') === currentKnowledge) {
+                                        span++;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                html += `<td rowspan="${span}" class="left"><i>${currentKnowledge}</i></td>`;
+                            }
+
                             html += `<td class="left"><b>– ${row.level}:</b><br/>${renderToWord(tokenizeRichText(row.req))}</td>`;
 
                             const formatCellQs = (qs) => qs && qs.length ? qs.map(q => q.replace('Câu ', '')).join(', ') : '';
