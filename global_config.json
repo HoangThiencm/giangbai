@@ -8,19 +8,7 @@
     "thitructuyen": true,
     "kttx": true
   },
+  "user_features": {},
   "github_repo": "HoangThiencm/giangbai",
-  "github_pat": "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",
-  "user_features": {
-    "hoangthiencm@gmail.com": {
-      "gslides": true,
-      "vehinh": true,
-      "smartquiz": true,
-      "matrande": true,
-      "tronde": true,
-      "thitructuyen": true,
-      "kttx": true,
-      "durationOption": "3_months",
-      "expiry": "2026-02-04T10:10:11.824Z"
-    }
-  }
+  "github_pat": "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"
 }
