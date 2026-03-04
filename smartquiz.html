@@ -9,6 +9,9 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
     <!-- KaTeX cho hiển thị toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -367,7 +370,7 @@
                     case "Enter":
                         if (!showAns) {
                             const q = shuffledQuestions[idx] || questions[idx];
-                            if (q.type === "fill-blank" && fillBlankAnswer.trim()) {
+                            if ((q.type === "fill-blank" || q.type === "short-answer") && fillBlankAnswer.toString().trim()) {
                                 handleFillBlankSubmit();
                             }
                         }
@@ -474,7 +477,7 @@
                                 </div>
                             )}
 
-                            {q.type === "fill-blank" && (
+                            {(q.type === "fill-blank" || q.type === "short-answer") && (
                                 <div className="z-10">
                                     <div className="bg-white border-2 border-gray-300 rounded-2xl p-8 mb-6">
                                         <div className="flex flex-wrap items-center gap-2 text-2xl mb-6">
@@ -482,7 +485,8 @@
                                         </div>
                                         <div className="flex gap-4 items-center">
                                             <input
-                                                type="text"
+                                                type={q.type === "short-answer" ? "number" : "text"}
+                                                step="any"
                                                 value={fillBlankAnswer}
                                                 onChange={(e) => setFillBlankAnswer(e.target.value)}
                                                 disabled={showAns}
@@ -769,6 +773,11 @@
                             ...prev,
                             { question: "Chủ đề nối mới", columnA: ["A1", "A2", "A3"], columnB: ["B1", "B2", "B3"], correctMatches: [0, 1, 2], type: quizType }
                         ]);
+                    } else if (quizType === 'short-answer') {
+                        setEditedData(prev => [
+                            ...prev,
+                            { question: "Câu hỏi trả lời ngắn mới...", correctAnswer: "", type: quizType }
+                        ]);
                     }
                 } else {
                     setEditedData(prev => [
@@ -793,9 +802,9 @@
                                 alert(`Vui lòng chọn đáp án đúng cho câu hỏi!`);
                                 return;
                             }
-                        } else if (q.type === 'fill-blank') {
-                            if (!q.correctAnswer || !q.correctAnswer.trim()) {
-                                alert(`Vui lòng nhập đáp án cho câu hỏi điền khuyết!`);
+                        } else if (q.type === 'fill-blank' || q.type === 'short-answer') {
+                            if (!q.correctAnswer || !q.correctAnswer.toString().trim()) {
+                                alert(`Vui lòng nhập đáp án cho câu hỏi ` + (q.type === 'fill-blank' ? `điền khuyết!` : `trả lời ngắn!`));
                                 return;
                             }
                         } else if (q.type === 'matching') {
@@ -885,11 +894,13 @@
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : item.type === 'fill-blank' ? (
-                                        /* FILL BLANK ANSWER */
+                                    ) : (item.type === 'fill-blank' || item.type === 'short-answer') ? (
+                                        /* FILL BLANK OR SHORT ANSWER */
                                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                            <label className="block text-sm font-bold text-blue-700 mb-2">Đáp án đúng:</label>
+                                            <label className="block text-sm font-bold text-blue-700 mb-2">Đáp án đúng {item.type === 'short-answer' ? '(kết quả số)' : ''}:</label>
                                             <input
+                                                type={item.type === 'short-answer' ? "number" : "text"}
+                                                step="any"
                                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 outline-none text-base"
                                                 value={item.correctAnswer || ""}
                                                 onChange={(e) => handleUpdate(i, 'correctAnswer', e.target.value)}
@@ -1029,6 +1040,67 @@
                 setTopics(topics.map(t => t.id === id ? { ...t, [field]: value } : t));
             };
 
+            const handleFileUpload = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                setLoading(true);
+                setRetryCount(0);
+                try {
+                    let extractedText = "";
+                    if (file.name.endsWith('.docx')) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const result = await mammoth.extractRawText({ arrayBuffer });
+                        extractedText = result.value;
+                    } else if (file.name.endsWith('.pdf')) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const strings = textContent.items.map(item => item.str);
+                            extractedText += strings.join(" ") + "\n";
+                        }
+                    } else {
+                        throw new Error("Vui lòng tải lên file .docx hoặc .pdf");
+                    }
+
+                    if (!extractedText.trim()) throw new Error("Không thể đọc được nội dung từ file.");
+
+                    const prompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các câu hỏi trắc nghiệm từ nội dung sau và trả về định dạng JSON mảng phẳng.
+                    NHIỆM VỤ:
+                    - Xác định loại câu hỏi: multiple-choice (4 đáp án A,B,C,D), true-false (Đúng/Sai), fill-blank (Điền khuyết), matching (Nối ô), short-answer (Trả lời ngắn bằng 1 con số).
+                    - Nhận diện đáp án đúng đi kèm câu hỏi nếu có.
+                    - QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức toán học.
+
+                    Định dạng JSON Output bắt buộc:
+                    - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
+                    - true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
+                    - fill-blank: {"question":"... có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
+                    - short-answer: {"question":"... (kết quả là số)","correctAnswer": "12.5","type":"short-answer"}
+                    - matching: {"question":"...","columnA":["A1","A2"],"columnB":["B1","B2"],"correctMatches":[0,1],"type":"matching"}
+                    
+                    Nội dung văn bản gốc:
+                    ${extractedText.substring(0, 30000)} // Giới hạn xử lý 30k ký tự
+                    `;
+
+                    const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
+                    const parsedData = GeminiModule.parseJSONResponse(response);
+
+                    if (!parsedData || parsedData.length === 0) throw new Error("Không nhận diện được câu hỏi nào từ file.");
+
+                    setMode("quiz");
+                    setQuestions(parsedData);
+                    setStep(2);
+
+                } catch (error) {
+                    alert(`Lỗi khi đọc file: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                    event.target.value = null;
+                }
+            };
+
             const generateContent = async () => {
                 const emptyTopics = topics.filter(t => !t.name.trim());
                 if (emptyTopics.length > 0) return alert("Vui lòng nhập tên cho tất cả các chủ đề!");
@@ -1052,6 +1124,8 @@
                             return `${basePrompt} - Loại: Điền khuyết (có chỗ trống ______)`;
                         } else if (t.quizType === "matching") {
                             return `${basePrompt} - Loại: Nối ô (2 cột A và B)`;
+                        } else if (t.quizType === "short-answer") {
+                            return `${basePrompt} - Loại: Trả lời ngắn (Trả về 1 con số duy nhất. Câu hỏi phải định hướng rõ để người dùng chỉ điền số kết quả)`;
                         }
                         return basePrompt;
                     }).join('\n');
@@ -1064,6 +1138,7 @@
                     - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
                     - true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
                     - fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
+                    - short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"12.5","type":"short-answer"}
                     - matching: {"question":"Chủ đề nối","columnA":["A1","A2","A3"],"columnB":["B1","B2","B3"],"correctMatches":[0,1,2],"type":"matching"}
 
                     Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi theo thứ tự các phần đã định.`;
@@ -1144,12 +1219,12 @@
                                     <tr><td width="50%"><b>A.</b> ${optA}</td><td width="50%"><b>B.</b> ${optB}</td></tr>
                                 </table>
                             </div>`;
-                        } else if (q.type === "fill-blank") {
+                        } else if (q.type === "fill-blank" || q.type === "short-answer") {
                             const answer = convertToMathML(q.correctAnswer);
 
                             bodyContent += `
                             <div class="question-block">
-                                <b>Câu ${i + 1} (Điền khuyết):</b> ${qText}
+                                <b>Câu ${i + 1} (${q.type === "fill-blank" ? "Điền khuyết" : "Trả lời ngắn"}):</b> ${qText}
                                 <div style="margin-top: 8px; padding: 8px; background-color: #f5f5f5; border-left: 4px solid #2196F3;">
                                     <b>Đáp án:</b> ${answer}
                                 </div>
@@ -1185,6 +1260,7 @@
                     const multipleChoiceQuestions = dataToExport.filter(q => q.type === "multiple-choice");
                     const trueFalseQuestions = dataToExport.filter(q => q.type === "true-false");
                     const fillBlankQuestions = dataToExport.filter(q => q.type === "fill-blank");
+                    const shortAnswerQuestions = dataToExport.filter(q => q.type === "short-answer");
                     const matchingQuestions = dataToExport.filter(q => q.type === "matching");
 
                     const createAnswerTable = (questions, title, getAnswer) => {
@@ -1207,6 +1283,7 @@
                     createAnswerTable(multipleChoiceQuestions, "Câu trắc nghiệm nhiều lựa chọn", q => String.fromCharCode(65 + q.correctAnswerIndex));
                     createAnswerTable(trueFalseQuestions, "Câu trắc nghiệm đúng/sai", q => q.correctAnswerIndex === 0 ? "Đúng" : "Sai");
                     createAnswerTable(fillBlankQuestions, "Câu điền khuyết", q => q.correctAnswer);
+                    createAnswerTable(shortAnswerQuestions, "Câu trả lời ngắn", q => q.correctAnswer);
                     createAnswerTable(matchingQuestions, "Câu nối", q => `Xem chi tiết`);
 
                     bodyContent += `</div>`;
@@ -1294,6 +1371,18 @@
                                 </div>
                             </div>
 
+                            {/* TẠO ĐỀ TỪ FILE */}
+                            <div className="mb-6">
+                                <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Tạo đề từ file (PDF/Word)</label>
+                                <div className="bg-slate-50 border-2 border-dashed border-indigo-200 p-6 rounded-xl text-center hover:bg-slate-100 transition">
+                                    <label className="cursor-pointer flex flex-col items-center justify-center h-full w-full">
+                                        <i className="fas fa-file-upload text-3xl text-indigo-400 mb-3"></i>
+                                        <span className="text-slate-600 font-medium mb-1">Nhấn để chọn file Word (.docx) hoặc PDF</span>
+                                        <span className="text-sm text-slate-400">Hệ thống sẽ tự nhận diện câu hỏi và đáp án</span>
+                                        <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} className="hidden" disabled={loading} />
+                                    </label>
+                                </div>
+                            </div>
 
                             {/* DANH SÁCH CHỦ ĐỀ */}
                             <div className="mb-6 space-y-4">
@@ -1349,6 +1438,7 @@
                                                     <option value="multiple-choice">🔤 Nhiều lựa chọn</option>
                                                     <option value="true-false">✅ Đúng/Sai</option>
                                                     <option value="fill-blank">📝 Điền khuyết</option>
+                                                    <option value="short-answer">🔢 Trả lời ngắn</option>
                                                     <option value="matching">🔗 Nối ô</option>
                                                 </select>
                                                 {mode === "essay" && (
@@ -1412,7 +1502,8 @@
                                                 ).map(([type, count]) => {
                                                     const typeName = type === 'multiple-choice' ? 'Nhiều lựa chọn' :
                                                         type === 'true-false' ? 'Đúng/Sai' :
-                                                            type === 'fill-blank' ? 'Điền khuyết' : 'Nối ô';
+                                                            type === 'fill-blank' ? 'Điền khuyết' :
+                                                                type === 'short-answer' ? 'Trả lời ngắn' : 'Nối ô';
                                                     return `${typeName}: ${count}`;
                                                 }).join(', ')}
                                             </span>
