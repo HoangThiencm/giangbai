@@ -193,6 +193,7 @@
             const [previewMode, setPreviewMode] = useState(null); // 'exam', 'matrix', 'spec'
             const [specData, setSpecData] = useState(null);
             const [showSavedModal, setShowSavedModal] = useState(false);
+            const [matrixConfig, setMatrixConfig] = useState({ option: 1, points: { MC: 3, TF: 2, TLN: 2, TL: 3 } });
             const [savedExams, setSavedExams] = useState(() => { try { return JSON.parse(localStorage.getItem('saved_exams') || '[]'); } catch { return []; } });
             const [ghSyncing, setGhSyncing] = useState(false);
             const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
@@ -380,11 +381,21 @@ table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
                 const doneQs = questions.filter(q => q.status === 'done');
                 if (!doneQs.length) { alert('Chưa có câu hỏi nào để xuất ma trận!'); return; }
 
-                const pts = { MC: 0.25, TF: 1.0, TLN: 0.5, TL: 0 };
                 const counts = { MC: 0, TF: 0, TLN: 0, TL: 0 };
                 doneQs.forEach(q => counts[q.type]++);
-                const totalTN = counts.MC * pts.MC + counts.TF * pts.TF + counts.TLN * pts.TLN;
-                pts.TL = counts.TL > 0 ? ((10 - totalTN) / counts.TL) : 0;
+
+                let pts = { MC: 0, TF: 0, TLN: 0, TL: 0 };
+                if (matrixConfig.option === 1) {
+                    pts.MC = counts.MC > 0 ? (3 / counts.MC) : 0;
+                    pts.TF = counts.TF > 0 ? (2 / counts.TF) : 0;
+                    pts.TLN = counts.TLN > 0 ? (2 / counts.TLN) : 0;
+                    pts.TL = counts.TL > 0 ? (3 / counts.TL) : 0;
+                } else {
+                    pts.MC = counts.MC > 0 ? (matrixConfig.points.MC / counts.MC) : 0;
+                    pts.TF = counts.TF > 0 ? (matrixConfig.points.TF / counts.TF) : 0;
+                    pts.TLN = counts.TLN > 0 ? (matrixConfig.points.TLN / counts.TLN) : 0;
+                    pts.TL = counts.TL > 0 ? (matrixConfig.points.TL / counts.TL) : 0;
+                }
 
                 const validTopics = topics.filter(t => t.name.trim()).length ? topics.filter(t => t.name.trim()) : [{ name: 'Chủ đề chung' }];
                 const matrix = validTopics.map(t => ({
@@ -1039,7 +1050,7 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                                     <button disabled={generating.active} className="px-3 py-1.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50 flex items-center"><i className="fas fa-download mr-1"></i> Xuất Word <i className="fas fa-chevron-down ml-2 text-[10px]"></i></button>
                                     <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-100 hidden group-hover:block z-10 overflow-hidden">
                                         <button onClick={exportWord} className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 font-bold border-b"><i className="fas fa-file-word w-5"></i> Đề & Đáp án</button>
-                                        <button onClick={exportMatrixToWord} className="w-full text-left px-4 py-2 text-sm text-violet-700 hover:bg-violet-50 font-bold border-b"><i className="fas fa-table w-5"></i> Ma trận</button>
+                                        <button onClick={() => setPreviewMode('matrix')} className="w-full text-left px-4 py-2 text-sm text-violet-700 hover:bg-violet-50 font-bold border-b"><i className="fas fa-table w-5"></i> Ma trận</button>
                                         <button onClick={handleSpecExport} className="w-full text-left px-4 py-2 text-sm text-pink-700 hover:bg-pink-50 font-bold"><i className="fas fa-list-check w-5"></i> Bản đặc tả</button>
                                     </div>
                                 </div>
@@ -1111,11 +1122,38 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                             )}
 
                             {previewMode === 'matrix' && (
-                                <div className="text-center font-bold text-lg text-gray-400 py-10">
-                                    <i className="fas fa-info-circle text-4xl mb-4 block"></i>
-                                    Bạn hãy trực tiếp xuất ra Word để xem Khung Ma Trận một cách chính xác nhất vì bảng trong Word hỗ trợ tốt rowspan/colspan!
-                                    <br /><br />
-                                    <button onClick={exportMatrixToWord} className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow mt-2 transition">Xuất Ma Trận Word ngay</button>
+                                <div className="p-6 bg-gray-50 rounded-xl">
+                                    <h3 className="font-bold text-lg text-violet-800 mb-4 border-b pb-2"><i className="fas fa-sliders-h mr-2"></i>Cấu hình phân bổ điểm Ma Trận</h3>
+                                    <div className="space-y-4">
+                                        <label className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-violet-300 transition">
+                                            <input type="radio" name="matrixOption" className="mt-1 w-4 h-4 text-violet-600 focus:ring-violet-500"
+                                                checked={matrixConfig.option === 1} onChange={() => setMatrixConfig({ ...matrixConfig, option: 1 })} />
+                                            <div>
+                                                <div className="font-bold text-gray-800">Cấu hình 1: Bám đúng cấu trúc chuẩn</div>
+                                                <div className="text-sm text-gray-500 mt-1">Trắc nghiệm: 3 điểm | Đúng/Sai: 2 điểm | Trả lời ngắn: 2 điểm | Tự luận: 3 điểm</div>
+                                            </div>
+                                        </label>
+                                        <label className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-violet-300 transition">
+                                            <input type="radio" name="matrixOption" className="mt-1 w-4 h-4 text-violet-600 focus:ring-violet-500"
+                                                checked={matrixConfig.option === 2} onChange={() => setMatrixConfig({ ...matrixConfig, option: 2 })} />
+                                            <div className="w-full">
+                                                <div className="font-bold text-gray-800">Cấu hình 2: Tự phân phối điểm tổng</div>
+                                                <div className="text-sm text-gray-500 mt-1 mb-3">Tùy chỉnh điểm tổng phân bổ của từng loại (điểm mỗi câu sẽ tự động chia đều).</div>
+                                                {matrixConfig.option === 2 && (
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 p-3 bg-violet-50 rounded-lg">
+                                                        <div><div className="text-xs font-bold text-gray-600 mb-1">Trắc nghiệm</div><input type="number" step="0.25" min="0" className="w-full border rounded p-1.5 font-bold text-center outline-none focus:ring-2 focus:ring-violet-300" value={matrixConfig.points.MC} onChange={e => setMatrixConfig({ ...matrixConfig, points: { ...matrixConfig.points, MC: parseFloat(e.target.value) || 0 } })} /></div>
+                                                        <div><div className="text-xs font-bold text-gray-600 mb-1">Đúng/Sai</div><input type="number" step="0.25" min="0" className="w-full border rounded p-1.5 font-bold text-center outline-none focus:ring-2 focus:ring-violet-300" value={matrixConfig.points.TF} onChange={e => setMatrixConfig({ ...matrixConfig, points: { ...matrixConfig.points, TF: parseFloat(e.target.value) || 0 } })} /></div>
+                                                        <div><div className="text-xs font-bold text-gray-600 mb-1">Trả lời ngắn</div><input type="number" step="0.25" min="0" className="w-full border rounded p-1.5 font-bold text-center outline-none focus:ring-2 focus:ring-violet-300" value={matrixConfig.points.TLN} onChange={e => setMatrixConfig({ ...matrixConfig, points: { ...matrixConfig.points, TLN: parseFloat(e.target.value) || 0 } })} /></div>
+                                                        <div><div className="text-xs font-bold text-gray-600 mb-1">Tự luận</div><input type="number" step="0.25" min="0" className="w-full border rounded p-1.5 font-bold text-center outline-none focus:ring-2 focus:ring-violet-300" value={matrixConfig.points.TL} onChange={e => setMatrixConfig({ ...matrixConfig, points: { ...matrixConfig.points, TL: parseFloat(e.target.value) || 0 } })} /></div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div className="text-center mt-6">
+                                        <button onClick={exportMatrixToWord} className="px-8 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white rounded-xl shadow-md font-bold text-base transition duration-300"><i className="fas fa-file-word mr-2"></i>Xuất Ma Trận Word ngay</button>
+                                        <div className="text-xs text-gray-500 mt-3 font-semibold w-full"><i className="fas fa-info-circle mr-1"></i>Hệ thống sẽ lấy cấu hình này để tính điểm và trình bày bảng ma trận vào Word do hỗ trợ cấu trúc tốt nhất.</div>
+                                    </div>
                                 </div>
                             )}
 
