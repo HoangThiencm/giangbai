@@ -9,17 +9,6 @@
     "kttx": true
   },
   "user_features": {
-    "hoangthiencm@gmail.com": {
-      "gslides": true,
-      "vehinh": true,
-      "smartquiz": true,
-      "matrande": true,
-      "tronde": true,
-      "thitructuyen": true,
-      "kttx": true,
-      "durationOption": "forever",
-      "expiry": null
-    },
     "hoang3205@gmail.com": {
       "gslides": true,
       "vehinh": true,
@@ -28,8 +17,8 @@
       "tronde": true,
       "thitructuyen": true,
       "kttx": true,
-      "durationOption": "1_year",
-      "expiry": "2027-03-04T10:14:31.748Z"
+      "durationOption": "6_months",
+      "expiry": "2026-09-04T11:06:37.515Z"
     }
   },
   "github_repo": "HoangThiencm/giangbai",
