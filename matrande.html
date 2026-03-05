@@ -109,12 +109,9 @@
         const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }); } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>`; } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
 
         // --- Render Word dùng MathML bọc trong OMML ---
-        const renderToWord = (tokens, latexMode = false) => tokens.map(t =>
+        const renderToWord = (tokens) => tokens.map(t =>
             t.type === 'math'
                 ? (() => {
-                    if (latexMode) {
-                        return t.display ? `$$${t.content}$$` : `$${t.content}$`;
-                    }
                     try {
                         const m = katex.renderToString(t.content, {
                             displayMode: t.display,
@@ -145,7 +142,6 @@
                     .replace(/\\n/g, '<br/>')
                     .replace(/\n/g, '<br/>')
         ).join('');
-
 
         const MathRender = ({ text }) => {
             const ref = useRef();
@@ -1521,10 +1517,7 @@ YÊU CẦU:
             };
 
             // --- EXPORT WORD (V28 - OMML NAMESPACE + GROUPING) ---
-            const exportWord = (format = 'equation') => {
-                const isLatex = format === 'latex';
-                const renderHTMLWord = (tokens) => renderToWord(tokens, isLatex);
-
+            const exportWord = () => {
                 let html = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' 
                           xmlns:w='urn:schemas-microsoft-com:office:word'
@@ -1580,22 +1573,23 @@ YÊU CẦU:
                         const g = groups[main];
                         html += `<div class='question-block'>`;
 
+                        // Render Stem (Câu dẫn) - Nếu có
                         if (g.stem) {
                             const stemQ = g.stem;
                             if (stemQ.type === 'TF') {
-                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderHTMLWord(tokenizeRichText(stemQ.q))}</div>`;
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(stemQ.q))}</div>`;
                                 html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
                                 html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
                                 stemQ.parts.forEach(p => {
-                                    html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderHTMLWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                    html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
                                 });
                                 html += `</table>`;
                             } else {
-                                html += `<p><b>Câu ${main}:</b> ${renderHTMLWord(tokenizeRichText(stemQ.q))}</p>`;
+                                html += `<p><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(stemQ.q))}</p>`;
                                 if (stemQ.type === 'MC' && stemQ.a?.length) {
                                     stemQ.a.forEach((opt, k) => {
                                         const prefix = String.fromCharCode(65 + k);
-                                        html += `<p style='margin:2px 0 2px 20px'><b>${prefix}.</b> ${renderHTMLWord(tokenizeRichText(opt))}</p>`;
+                                        html += `<p style='margin:2px 0 2px 20px'><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`;
                                     });
                                 }
                             }
@@ -1610,12 +1604,12 @@ YÊU CẦU:
                             if (allTF) {
                                 // TF GROUPED: Render 1 câu lớn "Câu N" với parts từ AI
                                 const rep = g.subs[0];
-                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderHTMLWord(tokenizeRichText(rep.q))}</div>`;
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(rep.q))}</div>`;
                                 if (rep.parts?.length > 0) {
                                     html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
                                     html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
                                     rep.parts.forEach(p => {
-                                        html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderHTMLWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                        html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
                                     });
                                     html += `</table>`;
                                 }
@@ -1624,30 +1618,30 @@ YÊU CẦU:
                                 const firstQ = g.subs[0].q || '';
                                 const splitIdx = firstQ.indexOf('\n\n');
                                 const commonCtx = splitIdx > 0 ? firstQ.substring(0, splitIdx) : firstQ;
-                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderHTMLWord(tokenizeRichText(commonCtx))}</div>`;
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderToWord(tokenizeRichText(commonCtx))}</div>`;
                                 g.subs.forEach(sq => {
                                     const rawQ = sq.q || '';
                                     const idx2 = rawQ.indexOf('\n\n');
                                     const subQ = idx2 > 0 ? rawQ.substring(idx2 + 2) : rawQ;
-                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderHTMLWord(tokenizeRichText(subQ))}</div>`;
+                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(subQ))}</div>`;
                                 });
                             } else {
                                 // Regular subs (MC dưới 1 câu lớn khác, hoặc mix)
                                 g.subs.forEach(sq => {
                                     if (sq.type === 'TF') {
-                                        html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderHTMLWord(tokenizeRichText(sq.q))}</div>`;
+                                        html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
                                         html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
                                         html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
                                         sq.parts.forEach(p => {
-                                            html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderHTMLWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
+                                            html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderToWord(tokenizeRichText(p.content))}</td><td></td></tr>`;
                                         });
                                         html += `</table>`;
                                     } else {
-                                        html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderHTMLWord(tokenizeRichText(sq.q))}</div>`;
+                                        html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderToWord(tokenizeRichText(sq.q))}</div>`;
                                         if (sq.type === 'MC' && sq.a?.length) {
                                             sq.a.forEach((opt, k) => {
                                                 const prefix = String.fromCharCode(65 + k);
-                                                html += `<p style='margin:2px 0 2px 1.2cm'><b>${prefix}.</b> ${renderHTMLWord(tokenizeRichText(opt))}</p>`;
+                                                html += `<p style='margin:2px 0 2px 1.2cm'><b>${prefix}.</b> ${renderToWord(tokenizeRichText(opt))}</p>`;
                                             });
                                         }
                                     }
@@ -1734,12 +1728,12 @@ YÊU CẦU:
                     sec.questions.forEach(q => {
                         const tokensAns = tokenizeRichText(q.c);
                         const displayCode = q.code;
-                        html += `<p><b>${displayCode}:</b></p><div>${renderHTMLWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
+                        html += `<p><b>${displayCode}:</b></p><div>${renderToWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
                     });
                 });
 
                 html += `</body></html>`;
-                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.docx`);
+                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.doc`);
             };
 
             // Lưu đề/ma trận lên backend (cùng API với thitructuyen)
@@ -2259,10 +2253,7 @@ YÊU CẦU:
                                                     <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
                                                     <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
                                                     <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
-                                                    <div className="flex bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-md hover:shadow-lg transition-all divide-x divide-emerald-400">
-                                                        <button onClick={() => exportWord('equation')} disabled={generatingState.isRunning} className="px-4 py-2.5 text-white font-bold text-sm flex items-center rounded-l-xl hover:bg-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word Equation</button>
-                                                        <button onClick={() => exportWord('latex')} disabled={generatingState.isRunning} className="px-4 py-2.5 text-white font-bold text-sm flex items-center rounded-r-xl hover:bg-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-code mr-2 text-lg"></i> Xuất Word LaTeX</button>
-                                                    </div>
+                                                    <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
                                                     <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-2"></i> Lưu ma trận</button>
                                                     <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu đề</button>
                                                 </>
