@@ -106,7 +106,7 @@
             }).filter(token => token.content !== "");
         };
 
-        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }); } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>`; } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: true, output: 'html' }); } catch (e) { const orig = t.display ? `$$${t.content}$$` : `$${t.content}$`; return `<span style="color:red;background:#fff0f0;border:1px solid #fca5a5;padding:1px 4px;border-radius:4px;font-size:11px;font-family:monospace" title="${e.message}">[LỖI: ${orig}]</span>`; } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
 
         // --- Render Word dùng MathML bọc trong OMML ---
         const renderToWord = (tokens, latexMode = false) => tokens.map(t =>
@@ -1529,9 +1529,7 @@ YÊU CẦU:
                 const renderHTMLWord = (tokens) => renderToWord(tokens, isLatex);
 
                 let html = `
-                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
-                          xmlns:w='urn:schemas-microsoft-com:office:word'
-                          xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
+                    <html ${isLatex ? '' : "xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'"}>
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
                         <style>
@@ -1663,19 +1661,19 @@ YÊU CẦU:
                 });
 
                 // PHẦN ĐÁP ÁN
-                html += `<br clear="all" style="page-break-before:always" /><h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
+                html += `< br clear = "all" style = "page-break-before:always" /> <h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
 
                 // PHẦN I
                 const phan1 = blueprint.sections.find(s => s.name.toUpperCase().includes('PHẦN I'));
                 if (phan1) {
                     const mcQuestions = phan1.questions.filter(q => q.type === 'MC' && q.correct_char);
                     if (mcQuestions.length > 0) {
-                        html += `<h4>PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn</h4>`;
-                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        html += `< h4 > PHẦN I.Câu trắc nghiệm nhiều phương án lựa chọn</h4 > `;
+                        html += `< table class="ans-key-table" cellpadding = "5" ><tr>`;
                         mcQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
                         html += `</tr><tr>`;
                         mcQuestions.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`);
-                        html += `</tr></table><br/>`;
+                        html += `</tr></table > <br />`;
                     }
                 }
 
@@ -1684,8 +1682,8 @@ YÊU CẦU:
                 if (phan2) {
                     const tfQuestions = phan2.questions.filter(q => q.type === 'TF' && q.correct_char);
                     if (tfQuestions.length > 0) {
-                        html += `<h4>PHẦN II. Câu trắc nghiệm đúng sai</h4>`;
-                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        html += `< h4 > PHẦN II.Câu trắc nghiệm đúng sai</h4 > `;
+                        html += `< table class="ans-key-table" cellpadding = "5" ><tr>`;
 
                         const renderedMains = new Set();
                         const tfGroups = [];
@@ -1713,7 +1711,7 @@ YÊU CẦU:
                             const ansArr = (q.correct_char || 'Đ-S-Đ-S').split('-');
                             ['a', 'b', 'c', 'd'].forEach((p, i) => html += `<td style="color:red; font-size: 10pt">${ansArr[i] || ''}</td>`);
                         });
-                        html += `</tr></table><br/>`;
+                        html += `</tr></table > <br />`;
                     }
                 }
 
@@ -1722,26 +1720,26 @@ YÊU CẦU:
                 if (phan3) {
                     const tlQuestions = phan3.questions.filter(q => q.type === 'TL' && q.correct_char);
                     if (tlQuestions.length > 0) {
-                        html += `<h4>PHẦN III. Câu trắc nghiệm trả lời ngắn</h4>`;
-                        html += `<table class="ans-key-table" cellpadding="5" style="width: auto;">`;
-                        html += `<tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`;
+                        html += `< h4 > PHẦN III.Câu trắc nghiệm trả lời ngắn</h4 > `;
+                        html += `< table class="ans-key-table" cellpadding = "5" style = "width: auto;" > `;
+                        html += `< tr style = "background:#eee" ><td>Câu</td><td>Đáp án</td></tr > `;
                         tlQuestions.forEach(q => {
-                            html += `<tr><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr>`;
+                            html += `< tr ><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr > `;
                         });
-                        html += `</table><br/>`;
+                        html += `</table > <br />`;
                     }
                 }
 
-                html += `<h4>Lời giải chi tiết</h4>`;
+                html += `< h4 > Lời giải chi tiết</h4 > `;
                 blueprint.sections.forEach(sec => {
                     sec.questions.forEach(q => {
                         const tokensAns = tokenizeRichText(q.c);
                         const displayCode = q.code;
-                        html += `<p><b>${displayCode}:</b></p><div>${renderHTMLWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
+                        html += `< p > <b>${displayCode}:</b></p ><div>${renderHTMLWord(tokensAns)}</div><hr style="border-top:1px dashed #ccc"/>`;
                     });
                 });
 
-                html += `</body></html>`;
+                html += `</body ></html > `;
                 saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.docx`);
             };
 
@@ -1754,7 +1752,7 @@ YÊU CẦU:
                     return;
                 }
                 const titleSuffix = isMatrixOnly ? "(Ma trận)" : "(Đề thi)";
-                const defaultTitle = `${info.title} - ${info.subject} lớp ${info.grade} ${titleSuffix}`;
+                const defaultTitle = `${info.title} - ${info.subject} lớp ${info.grade} ${titleSuffix} `;
                 const promptMsg = isMatrixOnly ? "Đặt tên ma trận để dễ nhớ khi mở lại từ kho:" : "Đặt tên đề để dễ nhớ khi mở lại từ kho:";
                 const customTitle = window.prompt(promptMsg, defaultTitle);
                 if (customTitle === null) return;
@@ -1806,7 +1804,7 @@ YÊU CẦU:
                     matrixConfig: matrixConfig
                 };
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/save`, {
+                    const res = await fetch(`${API_BASE} /api/exam / save`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -1828,7 +1826,7 @@ YÊU CẦU:
                 setShowKhoDeModal(true);
                 setLoadingKhoDe(true);
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`);
+                    const res = await fetch(`${API_BASE} /api/exam / my - exams ? email = ${encodeURIComponent(userEmail)} `);
                     const data = await res.json();
                     setSavedExamsList(Array.isArray(data) ? data : []);
                 } catch (e) {
@@ -1853,7 +1851,7 @@ YÊU CẦU:
                     const list = byType[type] || byType.MC;
                     const correctChar = q.correct_char || (type === "MC" && q.options && q.correct_index >= 0 ? String.fromCharCode(65 + q.correct_index) : "");
                     list.push({
-                        code: q.code || `Câu ${idx + 1}`,
+                        code: q.code || `Câu ${idx + 1} `,
                         group: q.group || "",
                         topic: q.topic || "",
                         level: q.level || "B",
@@ -1885,7 +1883,7 @@ YÊU CẦU:
 
             const loadExamFromKho = async (examId) => {
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/get/${examId}`);
+                    const res = await fetch(`${API_BASE} /api/exam / get / ${examId} `);
                     if (!res.ok) throw new Error("Không tìm thấy đề");
                     const data = await res.json();
                     const bp = questionsToBlueprintSections(data.questions || [], data.info);
@@ -1911,9 +1909,9 @@ YÊU CẦU:
             };
 
             const deleteExamFromKho = async (examId, exTitle) => {
-                if (!window.confirm(`Xóa đề "${exTitle}"?\n\nHành động này không thể hoàn tác.`)) return;
+                if (!window.confirm(`Xóa đề "${exTitle}" ?\n\nHành động này không thể hoàn tác.`)) return;
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/delete/${examId}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_BASE} /api/exam / delete/${examId}`, { method: 'DELETE' });
                     if (!res.ok) throw new Error(await res.text());
                     setSavedExamsList(prev => prev.filter(ex => ex.id !== examId));
                 } catch (e) {
