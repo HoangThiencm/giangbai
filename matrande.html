@@ -2213,8 +2213,8 @@ YÊU CẦU:
                                             </div>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center gap-4">
-                                        <div className="flex-1">
+                                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+                                        <div className="flex-1 w-full">
                                             <div className="flex items-center gap-3">
                                                 <h2 className="font-heading font-bold text-gray-800 text-xl">{step === 2 ? 'Kiểm tra Cấu trúc Ma trận' : 'Biên soạn Nội dung Đề thi'}</h2>
                                                 {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
@@ -2235,7 +2235,7 @@ YÊU CẦU:
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex flex-wrap justify-start xl:justify-end items-center gap-3 w-full xl:w-auto mt-2 xl:mt-0">
                                             {step === 2 && (
                                                 <>
                                                     <button
