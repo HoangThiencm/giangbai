@@ -281,6 +281,10 @@
         // === QUAN TRỌNG: Dán link Server Hugging Face của bạn vào đây ===
         const HF_API_URL = "https://hoangthiencm-giangbai.hf.space";
 
+        // Cache users/key để có thể re-render bảng sau khi loadGlobalConfig
+        let cachedUsers = [];
+        let cachedKey = '';
+
         async function loadUsers() {
             const key = document.getElementById('adminKey').value;
             if (!key) return alert("Vui lòng nhập Admin Key!");
@@ -303,6 +307,10 @@
                 // Hiển thị giao diện Dashboard, ẩn Login
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
+
+                // Lưu cache để loadGlobalConfig có thể re-render bảng
+                cachedUsers = users;
+                cachedKey = key;
 
                 // Tải Global Config TRƯỚC ĐỂ có thông tin hạn dùng cho bước sau
                 await loadGlobalConfig();
@@ -520,6 +528,12 @@
                     if (content.github_repo) document.getElementById('cfg_github_repo').value = content.github_repo;
 
                     console.log("Loaded global config!");
+
+                    // Re-render bảng user nếu đã có dữ liệu cached
+                    // (fix lỗi: sang máy khác, nhập token/repo rồi bấm Nạp lại → bảng vẫn hiện "Vĩnh viễn")
+                    if (cachedUsers.length > 0) {
+                        renderTable(cachedUsers, cachedKey);
+                    }
                 }
             } catch (e) {
                 console.warn("Lỗi đọc config:", e);
@@ -658,19 +672,28 @@
                     if (el) userFeatures[id] = el.checked;
                 });
 
-                // Tính toán thời gian hết hạn dựa trên Option hiện đại 
+                // Tính toán thời gian hết hạn dựa trên Option
                 const selectedDuration = document.getElementById('userConfigDuration').value;
                 userFeatures.durationOption = selectedDuration;
 
+                // So sánh với durationOption cũ đã lưu để quyết định có tính lại expiry không
+                const existingUserConfig = currentGlobalContent.user_features[editingUserEmail] || {};
+                const previousDurationOption = existingUserConfig.durationOption || "forever";
+
                 let expiryDate = null;
                 if (selectedDuration !== "forever") {
-                    expiryDate = new Date(); // Thời gian cập nhật / phê duyệt ngay hiện tại
-                    if (selectedDuration === "3_months") expiryDate.setMonth(expiryDate.getMonth() + 3);
-                    else if (selectedDuration === "6_months") expiryDate.setMonth(expiryDate.getMonth() + 6);
-                    else if (selectedDuration === "9_months") expiryDate.setMonth(expiryDate.getMonth() + 9);
-                    else if (selectedDuration === "1_year") expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-
-                    userFeatures.expiry = expiryDate.toISOString();
+                    if (selectedDuration === previousDurationOption && existingUserConfig.expiry) {
+                        // Không đổi option → giữ nguyên ngày hết hạn cũ
+                        userFeatures.expiry = existingUserConfig.expiry;
+                    } else {
+                        // Option thay đổi → tính lại từ thời điểm hiện tại
+                        expiryDate = new Date();
+                        if (selectedDuration === "3_months") expiryDate.setMonth(expiryDate.getMonth() + 3);
+                        else if (selectedDuration === "6_months") expiryDate.setMonth(expiryDate.getMonth() + 6);
+                        else if (selectedDuration === "9_months") expiryDate.setMonth(expiryDate.getMonth() + 9);
+                        else if (selectedDuration === "1_year") expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                        userFeatures.expiry = expiryDate.toISOString();
+                    }
                 } else {
                     userFeatures.expiry = null;
                 }
