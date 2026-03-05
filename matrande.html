@@ -2213,8 +2213,8 @@ YÊU CẦU:
                                             </div>
                                         </div>
                                     )}
-                                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-                                        <div className="flex-1 w-full">
+                                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                                        <div className="flex-1 w-full lg:w-auto">
                                             <div className="flex items-center gap-3">
                                                 <h2 className="font-heading font-bold text-gray-800 text-xl">{step === 2 ? 'Kiểm tra Cấu trúc Ma trận' : 'Biên soạn Nội dung Đề thi'}</h2>
                                                 {totalScoreWarning && <span className="text-xs font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 px-2.5 py-1 rounded-full shadow-sm animate-pulse"><i className="fas fa-exclamation-circle mr-1"></i> {totalScoreWarning}/10đ</span>}
@@ -2222,20 +2222,8 @@ YÊU CẦU:
                                             {step === 2 && (
                                                 <p className="text-sm text-gray-500 mt-1">Vui lòng kiểm tra lại số câu hỏi, mức độ, loại câu và điểm số. Bạn <b>phải đảm bảo tổng điểm là 10đ</b> trước khi sinh đề.</p>
                                             )}
-                                            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 flex-wrap">
-                                                <span className="font-medium text-xs text-gray-500 uppercase tracking-wider">BỘ LỌC CÂU HỎI:</span>
-                                                {['ALL', 'MC', 'TF', 'TLN', 'TL'].map(t => (
-                                                    <button key={t} onClick={() => setViewFilter(t)} className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${viewFilter === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>
-                                                        {t === 'ALL' && <>Tất cả {parsedStats && <span className="opacity-90">({parsedStats.scoreMc + parsedStats.scoreTf + parsedStats.scoreTln + parsedStats.scoreTl}đ)</span>}</>}
-                                                        {t === 'MC' && <>Trắc nghiệm {parsedStats && parsedStats.mc > 0 && <span className="opacity-90">({parsedStats.scoreMc}đ)</span>}</>}
-                                                        {t === 'TF' && <>Đúng/Sai {parsedStats && parsedStats.tf > 0 && <span className="opacity-90">({parsedStats.scoreTf}đ)</span>}</>}
-                                                        {t === 'TLN' && <>Trả lời ngắn {parsedStats && parsedStats.tln > 0 && <span className="opacity-90">({parsedStats.scoreTln}đ)</span>}</>}
-                                                        {t === 'TL' && <>Tự luận {parsedStats && parsedStats.tl.length > 0 && <span className="opacity-90">({parsedStats.scoreTl}đ)</span>}</>}
-                                                    </button>
-                                                ))}
-                                            </div>
                                         </div>
-                                        <div className="flex flex-wrap justify-start xl:justify-end items-center gap-3 w-full xl:w-auto mt-2 xl:mt-0">
+                                        <div className="flex flex-wrap justify-start lg:justify-end items-center gap-2 lg:gap-3 w-full lg:w-auto mt-2 lg:mt-0">
                                             {step === 2 && (
                                                 <>
                                                     <button
@@ -2246,28 +2234,41 @@ YÊU CẦU:
                                                             }
                                                             setStep(3);
                                                         }}
-                                                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center"
+                                                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md lg:rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm lg:shadow-md hover:shadow-lg text-xs lg:text-sm flex items-center"
                                                     >
                                                         Chốt Ma trận <i className="fas fa-arrow-right ml-2"></i>
                                                     </button>
-                                                    <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-2"></i> Lưu ma trận</button>
-                                                    <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu đề</button>
+                                                    <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated} className="px-4 lg:px-5 py-2 lg:py-2.5 bg-white border border-violet-500 text-violet-700 rounded-md lg:rounded-xl font-bold hover:bg-violet-50 transition-all shadow-sm hover:shadow-md text-xs lg:text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-1 lg:mr-2"></i> Lưu ma trận</button>
+                                                    <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated} className="px-4 lg:px-5 py-2 lg:py-2.5 bg-gray-800 text-white rounded-md lg:rounded-xl font-bold hover:bg-gray-900 transition-all shadow-sm hover:shadow-md text-xs lg:text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-1 lg:mr-2"></i> Lưu đề</button>
                                                 </>
                                             )}
                                             {step === 3 && (
                                                 <>
-                                                    <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all shadow-sm text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
-                                                    <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
-                                                    <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
-                                                    <div className="flex bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-md hover:shadow-lg transition-all divide-x divide-emerald-400">
-                                                        <button onClick={() => exportWord('equation')} disabled={generatingState.isRunning} className="px-4 py-2.5 text-white font-bold text-sm flex items-center rounded-l-xl hover:bg-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word Equation</button>
-                                                        <button onClick={() => exportWord('latex')} disabled={generatingState.isRunning} className="px-4 py-2.5 text-white font-bold text-sm flex items-center rounded-r-xl hover:bg-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-code mr-2 text-lg"></i> Xuất Word LaTeX</button>
+                                                    <button onClick={() => setStep(2)} disabled={generatingState.isRunning} className="px-3 lg:px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md lg:rounded-xl font-semibold transition-all shadow-sm text-xs lg:text-sm"><i className="fas fa-arrow-left mr-1"></i> Sửa Ma Trận</button>
+                                                    <button onClick={generateAll} disabled={generatingState.isRunning} className="px-4 lg:px-5 py-2 lg:py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md lg:rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm lg:shadow-md hover:shadow-lg text-xs flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-1 lg:mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ'}</button>
+                                                    <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-4 py-2 border lg:border-2 border-emerald-500 text-emerald-700 rounded-md lg:rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-sm hover:shadow-md text-xs flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-1 lg:mr-2"></i> Xem trước</button>
+                                                    <div className="flex bg-gradient-to-r from-emerald-500 to-teal-600 rounded-md lg:rounded-xl shadow-sm lg:shadow-md hover:shadow-lg transition-all divide-x divide-emerald-400">
+                                                        <button onClick={() => exportWord('equation')} disabled={generatingState.isRunning} className="px-3 lg:px-4 py-2 lg:py-2.5 text-white font-bold text-xs flex items-center rounded-l-md lg:rounded-l-xl hover:bg-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-1 lg:mr-2 lg:text-lg"></i> Equation</button>
+                                                        <button onClick={() => exportWord('latex')} disabled={generatingState.isRunning} className="px-3 lg:px-4 py-2 lg:py-2.5 text-white font-bold text-xs flex items-center rounded-r-md lg:rounded-r-xl hover:bg-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-code mr-1 lg:mr-2 lg:text-lg"></i> LaTeX</button>
                                                     </div>
-                                                    <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-2"></i> Lưu ma trận</button>
-                                                    <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu đề</button>
+                                                    <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated || generatingState.isRunning} className="px-3 lg:px-5 py-2 lg:py-2.5 bg-white border border-violet-500 text-violet-700 rounded-md lg:rounded-xl font-bold hover:bg-violet-50 transition-all shadow-sm hover:shadow-md text-xs lg:text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-1 lg:mr-2"></i> M.Trận</button>
+                                                    <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated || generatingState.isRunning} className="px-3 lg:px-5 py-2 lg:py-2.5 bg-gray-800 text-white rounded-md lg:rounded-xl font-bold hover:bg-gray-900 transition-all shadow-sm hover:shadow-md text-xs lg:text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-1 lg:mr-2"></i> Lưu đề</button>
                                                 </>
                                             )}
                                         </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-4 text-sm text-gray-600 flex-wrap border-t pt-4 border-indigo-50">
+                                        <span className="font-medium text-[10px] lg:text-xs text-indigo-500 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded">BỘ LỌC CÂU HỎI:</span>
+                                        {['ALL', 'MC', 'TF', 'TLN', 'TL'].map(t => (
+                                            <button key={t} onClick={() => setViewFilter(t)} className={`px-2 py-1 lg:px-3 lg:py-1.5 rounded-full border text-[10px] lg:text-xs font-semibold xl:min-w-[80px] transition-all ${viewFilter === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md transform scale-[1.02]' : 'bg-white text-gray-500 hover:bg-gray-50'} `}>
+                                                {t === 'ALL' && <>Tất cả {parsedStats && <span className="opacity-90">({parsedStats.scoreMc + parsedStats.scoreTf + parsedStats.scoreTln + parsedStats.scoreTl}đ)</span>}</>}
+                                                {t === 'MC' && <>Trắc nghiệm {parsedStats && parsedStats.mc > 0 && <span className="opacity-90">({parsedStats.scoreMc}đ)</span>}</>}
+                                                {t === 'TF' && <>Đúng/Sai {parsedStats && parsedStats.tf > 0 && <span className="opacity-90">({parsedStats.scoreTf}đ)</span>}</>}
+                                                {t === 'TLN' && <>Trả lời ngắn {parsedStats && parsedStats.tln > 0 && <span className="opacity-90">({parsedStats.scoreTln}đ)</span>}</>}
+                                                {t === 'TL' && <>Tự luận {parsedStats && parsedStats.tl.length > 0 && <span className="opacity-90">({parsedStats.scoreTl}đ)</span>}</>}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
