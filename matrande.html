@@ -81,9 +81,28 @@
             { code: 'V', name: 'Vận dụng', prompt_key: 'Apply' },
         ];
 
+        // AI đôi khi trả JSON với LaTeX chưa escape đúng (vd: ""\frac""), JSON.parse sẽ đổi ""\f"" thành ký tự điều khiển.
+        const restoreEscapedLatexControls = (raw) => {
+            if (typeof raw !== 'string') return raw;
+            return raw
+                .replace(/\u0008/g, '\\b')
+                .replace(/\u000c/g, '\\f');
+        };
+
+        const sanitizeAiJson = (value) => {
+            if (typeof value === 'string') return restoreEscapedLatexControls(value);
+            if (Array.isArray(value)) return value.map(sanitizeAiJson);
+            if (value && typeof value === 'object') {
+                const out = {};
+                Object.keys(value).forEach(k => out[k] = sanitizeAiJson(value[k]));
+                return out;
+            }
+            return value;
+        };
+
         const normalizeRichText = (raw) => {
             if (!raw) return "";
-            return raw
+            return restoreEscapedLatexControls(raw)
                 .replace(/`([^`]+)`/g, '$$$1$$')
                 .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
                 .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
@@ -544,7 +563,7 @@ Cấu trúc JSON đầu ra:
                     const payload = [{ text: retryPrompt }, ...imgs.map(d => ({ inline_data: { mime_type: 'image/jpeg', data: d } }))];
                     const res = await AIAdapter.callGemini(payload);
                     const jsonMatch = res.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) retryJson = JSON.parse(jsonMatch[0]);
+                    if (jsonMatch) retryJson = sanitizeAiJson(JSON.parse(jsonMatch[0]));
                 } catch (err) { console.error('Lỗi quét lại câu thiếu:', err); }
 
                 if (retryJson && retryJson.sections) {
@@ -664,7 +683,7 @@ Cấu trúc JSON đầu ra Hợp lệ:
                                 const res = await AIAdapter.callGemini(payload);
                                 const jsonMatch = res.match(/\{[\s\S]*\}/);
                                 if (!jsonMatch) continue;
-                                batchJson = JSON.parse(jsonMatch[0]);
+                                batchJson = sanitizeAiJson(JSON.parse(jsonMatch[0]));
                                 break; // Thành công thì thoát vòng lặp attempt
                             } catch (err) {
                                 console.error(`Lỗi phân tích batch trang ${i + 1}:`, err);
@@ -844,7 +863,7 @@ Cấu trúc JSON đầu ra Hợp lệ:
                             const payload = [{ text: promptMat }, ...matImgs.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
                             const res = await AIAdapter.callGemini(payload);
                             const jsonMatch = res.match(/\{[\s\S]*\}/);
-                            if (jsonMatch) { matJson = JSON.parse(jsonMatch[0]); break; }
+                            if (jsonMatch) { matJson = sanitizeAiJson(JSON.parse(jsonMatch[0])); break; }
                         } catch (err) { console.error('Lỗi Nhịp 1', err); await new Promise(r => setTimeout(r, 2000)); }
                     }
 
@@ -927,7 +946,7 @@ LƯU Ý QUAN TRỌNG:
                             const payload = [{ text: promptSpec }, ...specImgs.map(d => ({ inline_data: { mime_type: 'image/jpeg', data: d } }))];
                             const res = await AIAdapter.callGemini(payload);
                             const jsonMatch = res.match(/\{[\s\S]*\}/);
-                            if (jsonMatch) { specJson = JSON.parse(jsonMatch[0]); break; }
+                            if (jsonMatch) { specJson = sanitizeAiJson(JSON.parse(jsonMatch[0])); break; }
                         } catch (err) { console.error('Lỗi Nhịp 2', err); await new Promise(r => setTimeout(r, 2000)); }
                     }
 
@@ -1109,7 +1128,7 @@ ${qData.type === 'TF' ? `{
                     const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                     const match = clean.match(/\{[\s\S]*\}/);
                     if (!match) throw new Error("AI không trả về JSON hợp lệ");
-                    const json = JSON.parse(match[0]);
+                    const json = sanitizeAiJson(JSON.parse(match[0]));
 
                     const doneBp = { ...blueprint };
                     const tgt = doneBp.sections[sIdx].questions[qIdx];
@@ -1224,7 +1243,7 @@ YÊU CẦU:
                             const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                             const match = clean.match(/\{[\s\S]*\}/);
                             if (!match) throw new Error("Invalid JSON");
-                            const json = JSON.parse(match[0]);
+                            const json = sanitizeAiJson(JSON.parse(match[0]));
 
                             const finalBp2 = { ...blueprint };
                             if (qData.type === 'TF') {
@@ -1351,7 +1370,7 @@ YÊU CẦU:
                     const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                     const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
                     if (!jsonMatch) throw new Error("Invalid JSON");
-                    const json = JSON.parse(jsonMatch[0]);
+                    const json = sanitizeAiJson(JSON.parse(jsonMatch[0]));
 
                     const finalBp = { ...blueprint };
                     const target = finalBp.sections[sIdx].questions[qIdx];
