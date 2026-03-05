@@ -122,19 +122,18 @@
                             output: 'mathml',
                         });
                         const m = rendered.match(/<math[\s\S]*?<\/math>/);
-
                         if (m) {
-                            // Bọc MathML trong thẻ m:oMathPara (Office Math Paragraph) để Word nhận diện
-                            return `
-                                <m:oMathPara>
-                                    <m:oMath>
-                                        ${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}
-                                    </m:oMath>
-                                </m:oMathPara>
-                            `;
+                            // Dùng MathML inline -- Word 2016+ có thể đọc được
+                            const mathml = m[0]
+                                .replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"')
+                                .replace(/<annotation[\s\S]*?<\/annotation>/g, '')
+                                .replace(/<semantics>/g, '').replace(/<\/semantics>/g, '');
+                            return t.display
+                                ? `<p style="text-align:center;margin:4px 0">${mathml}</p>`
+                                : mathml;
                         }
                     } catch (e) { }
-                    // FALLBACK: LaTeX lỗi → hiển thị cảnh báo đỏ trong file Word kèm LaTeX gốc
+                    // FALLBACK: LaTeX lỗi → hiển thị cảnh báo đỏ kèm LaTeX gốc
                     const latexOriginal = t.display ? `$$${t.content}$$` : `$${t.content}$`;
                     return `<span style="color:red;font-weight:bold;background:#fff0f0;padding:2px 4px;border:1px solid red;font-size:10pt">[LỖI LATEX: ${latexOriginal}]</span>`;
                 })()
@@ -1529,7 +1528,7 @@ YÊU CẦU:
                 const renderHTMLWord = (tokens) => renderToWord(tokens, isLatex);
 
                 let html = `
-                    <html ${isLatex ? '' : "xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'"}>
+                    <html>
                     <head>
                         <meta charset='utf-8'><title>De Thi</title>
                         <style>
@@ -1739,7 +1738,7 @@ YÊU CẦU:
                     });
                 });
 
-                html += `</body ></html > `;
+                html += `</body></html>`;
                 saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.docx`);
             };
 
