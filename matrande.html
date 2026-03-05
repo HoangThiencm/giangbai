@@ -106,7 +106,15 @@
             }).filter(token => token.content !== "");
         };
 
-        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: true, output: 'html' }); } catch (e) { const orig = t.display ? `$$${t.content}$$` : `$${t.content}$`; return `<span style="color:red;background:#fff0f0;border:1px solid #fca5a5;padding:1px 4px;border-radius:4px;font-size:11px;font-family:monospace" title="${e.message}">[LỖI: ${orig}]</span>`; } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => {
+            try {
+                return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' });
+            } catch (e) {
+                const orig = t.display ? `$$${t.content}$$` : `$${t.content}$`;
+                const safe = orig.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                return `<span style="color:red;background:#fff0f0;border:1px solid #fca5a5;padding:1px 4px;border-radius:4px;font-size:11px;font-family:monospace">[LỖI: ${safe}]</span>`;
+            }
+        })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
 
         // --- Render Word dùng MathML bọc trong OMML ---
         const renderToWord = (tokens, latexMode = false) => tokens.map(t =>
