@@ -1804,7 +1804,7 @@ YÊU CẦU:
                     matrixConfig: matrixConfig
                 };
                 try {
-                    const res = await fetch(`${API_BASE} /api/exam / save`, {
+                    const res = await fetch(`${API_BASE}/api/exam/save`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -1826,7 +1826,7 @@ YÊU CẦU:
                 setShowKhoDeModal(true);
                 setLoadingKhoDe(true);
                 try {
-                    const res = await fetch(`${API_BASE} /api/exam / my - exams ? email = ${encodeURIComponent(userEmail)} `);
+                    const res = await fetch(`${API_BASE}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`);
                     const data = await res.json();
                     setSavedExamsList(Array.isArray(data) ? data : []);
                 } catch (e) {
@@ -1883,7 +1883,7 @@ YÊU CẦU:
 
             const loadExamFromKho = async (examId) => {
                 try {
-                    const res = await fetch(`${API_BASE} /api/exam / get / ${examId} `);
+                    const res = await fetch(`${API_BASE}/api/exam/get/${examId}`);
                     if (!res.ok) throw new Error("Không tìm thấy đề");
                     const data = await res.json();
                     const bp = questionsToBlueprintSections(data.questions || [], data.info);
@@ -1911,7 +1911,7 @@ YÊU CẦU:
             const deleteExamFromKho = async (examId, exTitle) => {
                 if (!window.confirm(`Xóa đề "${exTitle}" ?\n\nHành động này không thể hoàn tác.`)) return;
                 try {
-                    const res = await fetch(`${API_BASE} /api/exam / delete/${examId}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_BASE}/api/exam/delete/${examId}`, { method: 'DELETE' });
                     if (!res.ok) throw new Error(await res.text());
                     setSavedExamsList(prev => prev.filter(ex => ex.id !== examId));
                 } catch (e) {
