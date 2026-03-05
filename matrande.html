@@ -116,11 +116,12 @@
                         return t.display ? `$$${t.content}$$` : `$${t.content}$`;
                     }
                     try {
-                        const m = katex.renderToString(t.content, {
+                        const rendered = katex.renderToString(t.content, {
                             displayMode: t.display,
-                            throwOnError: false,
+                            throwOnError: true,
                             output: 'mathml',
-                        }).match(/<math[\s\S]*?<\/math>/);
+                        });
+                        const m = rendered.match(/<math[\s\S]*?<\/math>/);
 
                         if (m) {
                             // Bọc MathML trong thẻ m:oMathPara (Office Math Paragraph) để Word nhận diện
@@ -133,7 +134,9 @@
                             `;
                         }
                     } catch (e) { }
-                    return t.content.replace(/\$/g, '');
+                    // FALLBACK: LaTeX lỗi → hiển thị cảnh báo đỏ trong file Word kèm LaTeX gốc
+                    const latexOriginal = t.display ? `$$${t.content}$$` : `$${t.content}$`;
+                    return `<span style="color:red;font-weight:bold;background:#fff0f0;padding:2px 4px;border:1px solid red;font-size:10pt">[LỖI LATEX: ${latexOriginal}]</span>`;
                 })()
                 : t.content
                     .replace(/\\text\{([^}]+)\}/g, ' $1 ')

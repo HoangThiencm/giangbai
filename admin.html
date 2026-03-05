@@ -489,16 +489,43 @@
         };
 
         async function loadGlobalConfig() {
-            // First load from local storage if available
+            // 1. Đọc từ localStorage trước (nếu đã lưu từ lần trước)
             const sRepo = localStorage.getItem('admin_github_repo');
             const sPat = localStorage.getItem('admin_github_pat');
             if (sRepo) document.getElementById('cfg_github_repo').value = sRepo;
             if (sPat) document.getElementById('cfg_github_token').value = sPat;
 
-            const reqRepo = document.getElementById('cfg_github_repo').value.trim();
-            const reqPat = document.getElementById('cfg_github_token').value.trim();
+            let reqRepo = document.getElementById('cfg_github_repo').value.trim();
+            let reqPat = document.getElementById('cfg_github_token').value.trim();
+
+            // 2. NẾU CHƯA CÓ token/repo (máy mới, localStorage trống):
+            //    Bootstrap bằng cách fetch global_config.json từ relative path
+            //    (cùng pattern với index.html và login.html)
+            if (!reqRepo || !reqPat) {
+                try {
+                    const bootstrapRes = await fetch('global_config.json', { cache: 'no-store' });
+                    if (bootstrapRes.ok) {
+                        const bootstrapConfig = await bootstrapRes.json();
+                        if (bootstrapConfig.github_pat && bootstrapConfig.github_repo) {
+                            reqPat = bootstrapConfig.github_pat;
+                            reqRepo = bootstrapConfig.github_repo;
+                            document.getElementById('cfg_github_token').value = reqPat;
+                            document.getElementById('cfg_github_repo').value = reqRepo;
+                            // Lưu vào localStorage để lần sau không cần bootstrap
+                            localStorage.setItem('admin_github_repo', reqRepo);
+                            localStorage.setItem('admin_github_pat', reqPat);
+                            console.log("Bootstrapped config từ relative path.");
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Không thể bootstrap từ relative path:", e);
+                }
+            }
+
+            // Nếu vẫn không có → thoát
             if (!reqRepo || !reqPat) return;
 
+            // 3. Fetch từ GitHub API (dữ liệu mới nhất, có auth)
             try {
                 const res = await fetch(`https://api.github.com/repos/${reqRepo}/contents/global_config.json`, {
                     headers: { 'Authorization': `token ${reqPat}`, 'Accept': 'application/vnd.github.v3+json' },
@@ -512,25 +539,31 @@
                     currentGlobalContent = content;
                     if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
 
-                    // Lưu lại cấu hình token vào localStorage để không bị mất khi F5
+                    // Lưu lại cấu hình token vào localStorage
                     localStorage.setItem('admin_github_repo', reqRepo);
                     localStorage.setItem('admin_github_pat', reqPat);
 
-                    // apply to UI
+                    // Apply to UI
                     const features = content.features || {};
                     const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx'];
                     checks.forEach(id => {
                         const el = document.getElementById('cfg_' + id);
-                        if (el) el.checked = features[id] !== false; // default true if missing
+                        if (el) el.checked = features[id] !== false;
                     });
 
-                    if (content.github_pat) document.getElementById('cfg_github_token').value = content.github_pat;
-                    if (content.github_repo) document.getElementById('cfg_github_repo').value = content.github_repo;
+                    // Đồng bộ token/repo từ GitHub config (nguồn chính xác nhất)
+                    if (content.github_pat) {
+                        document.getElementById('cfg_github_token').value = content.github_pat;
+                        localStorage.setItem('admin_github_pat', content.github_pat);
+                    }
+                    if (content.github_repo) {
+                        document.getElementById('cfg_github_repo').value = content.github_repo;
+                        localStorage.setItem('admin_github_repo', content.github_repo);
+                    }
 
-                    console.log("Loaded global config!");
+                    console.log("Loaded global config from GitHub API!");
 
                     // Re-render bảng user nếu đã có dữ liệu cached
-                    // (fix lỗi: sang máy khác, nhập token/repo rồi bấm Nạp lại → bảng vẫn hiện "Vĩnh viễn")
                     if (cachedUsers.length > 0) {
                         renderTable(cachedUsers, cachedKey);
                     }
