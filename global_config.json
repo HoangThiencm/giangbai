@@ -30,6 +30,17 @@
       "kttx": true,
       "durationOption": "3_days",
       "expiry": "2026-03-05T20:13:14.389Z"
+    },
+    "hoangthihuong2398@gmail.com": {
+      "gslides": true,
+      "vehinh": true,
+      "smartquiz": true,
+      "matrande": true,
+      "tronde": true,
+      "thitructuyen": true,
+      "kttx": true,
+      "durationOption": "1_year",
+      "expiry": "2027-03-07T15:23:04.624Z"
     }
   },
   "github_repo": "HoangThiencm/giangbai",
