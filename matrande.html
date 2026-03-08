@@ -250,52 +250,60 @@
                 const { geminiKeys, geminiModel } = AIAdapter.getConfig();
                 if (!geminiKeys.length) throw new Error("Thiếu Gemini API Key!");
 
-                // Trộn danh sách key, thử tối đa = số lượng key * 2 (để quay vòng nếu cần) nhưng ít nhất 3 lần
-                const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
-                const maxAttempts = Math.max(shuffledKeys.length * 2, 3);
+                // Danh sách model: ưu tiên model user chọn, sau đó fallback xuống các model ổn định hơn
+                const fallbackModels = [geminiModel];
+                if (!fallbackModels.includes('gemini-2.5-flash')) fallbackModels.push('gemini-2.5-flash');
+                if (!fallbackModels.includes('gemini-2.0-flash')) fallbackModels.push('gemini-2.0-flash');
 
-                for (let i = 0; i < maxAttempts; i++) {
-                    const currentKey = shuffledKeys[i % shuffledKeys.length];
-                    try {
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: payloadParts }] }) });
+                for (const currentModel of fallbackModels) {
+                    const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
+                    const maxAttempts = Math.max(shuffledKeys.length, 3);
+                    let allFailed503 = true; // Theo dõi xem tất cả key đều lỗi 503 không
 
-                        if (!res.ok) {
-                            const errRaw = await res.json();
-                            const errMsg = errRaw.error?.message || `HTTP Lỗi ${res.status}`;
+                    for (let i = 0; i < maxAttempts; i++) {
+                        const currentKey = shuffledKeys[i % shuffledKeys.length];
+                        try {
+                            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: payloadParts }] }) });
 
-                            // Nếu lỗi do rate limit (429) hoặc server bận (503/500/502), nghỉ 2s rùi thử next key
-                            if (res.status === 429 || res.status >= 500) {
-                                console.warn(`Key ${currentKey.substring(0, 6)}... báo lỗi ${res.status}. Chuyển key...`);
-                                await new Promise(r => setTimeout(r, 2000));
-                                continue;
+                            if (!res.ok) {
+                                const errRaw = await res.json();
+                                const errMsg = errRaw.error?.message || `HTTP Lỗi ${res.status}`;
+
+                                if (res.status === 429 || res.status >= 500) {
+                                    console.warn(`[${currentModel}] Key ${currentKey.substring(0, 6)}... lỗi ${res.status}. Thử key/model tiếp...`);
+                                    await new Promise(r => setTimeout(r, 1500));
+                                    continue;
+                                }
+                                throw new Error(errMsg);
                             }
 
-                            // Các lỗi do định dạng, prompt... thì throw ngay lập tức
-                            throw new Error(errMsg);
-                        }
+                            allFailed503 = false;
+                            const data = await res.json();
+                            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                                const parts = data.candidates[0].content.parts;
+                                const answerPart = [...parts].reverse().find(p => !p.thought && p.text) || parts[parts.length - 1];
+                                if (currentModel !== geminiModel) {
+                                    console.log(`✅ Đã dùng model dự phòng: ${currentModel}`);
+                                }
+                                return answerPart.text;
+                            }
+                            throw new Error("Invalid Response Format from Gemini");
 
-                        const data = await res.json();
-                        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                            // gemini-2.5-flash trả về nhiều parts: parts[0] là thinking, parts cuối là answer
-                            const parts = data.candidates[0].content.parts;
-                            // Tìm part cuối cùng KHÔNG phải thinking (thought !== true)
-                            const answerPart = [...parts].reverse().find(p => !p.thought && p.text) || parts[parts.length - 1];
-                            return answerPart.text;
-                        }
-                        throw new Error("Invalid Response Format from Gemini");
-
-                    } catch (e) {
-                        // Bắt lỗi network
-                        if (!e.message.includes("HTTP Lỗi") && !e.message.includes("Invalid Response Format")) {
-                            await new Promise(r => setTimeout(r, 2000));
-                        } else {
-                            // Nghỉ 1 chút
-                            await new Promise(r => setTimeout(r, 1000));
-                            if (i === maxAttempts - 1) throw e;
+                        } catch (e) {
+                            if (!e.message.includes("HTTP Lỗi") && !e.message.includes("Invalid Response Format")) {
+                                await new Promise(r => setTimeout(r, 1500));
+                            } else {
+                                await new Promise(r => setTimeout(r, 1000));
+                                if (i === maxAttempts - 1) break; // Thoát vòng key, thử model tiếp
+                            }
                         }
                     }
+                    // Nếu model này hết key mà vẫn lỗi, chuyển sang model dự phòng
+                    if (currentModel !== fallbackModels[fallbackModels.length - 1]) {
+                        console.warn(`⚠️ Model ${currentModel} quá tải. Chuyển sang model dự phòng...`);
+                    }
                 }
-                throw new Error("Tất cả Gemini API Keys đều báo lỗi hoặc quá tải (Quota).");
+                throw new Error("Tất cả Gemini API Keys và Models đều báo lỗi hoặc quá tải (Quota).");
             },
 
             callHF: async (promptText, specificModel = null) => {
