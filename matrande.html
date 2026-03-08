@@ -1352,19 +1352,20 @@ YÊU CẦU:
 
                 try {
                     let jsonStr = "", usedSource = "Gemini";
+                    // Sinh câu hỏi CHỈ cần text prompt (topic + spec đã có trong prompt)
+                    // KHÔNG gửi kèm ảnh PDF - ảnh rất nặng và tốn quota rất nhiều token
+                    const textOnlyPayload = [{ text: promptText }];
                     if (AIAdapter.getConfig().hfTokens.length > 0) {
                         try {
                             jsonStr = await AIAdapter.callHF(promptText, selectedModel.id);
                             usedSource = selectedModel.name;
                         }
                         catch (hfErr) {
-                            const payload = [{ text: promptText }, ...images.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
-                            jsonStr = await AIAdapter.callGemini(payload);
+                            jsonStr = await AIAdapter.callGemini(textOnlyPayload);
                             usedSource = "Gemini (Backup)";
                         }
                     } else {
-                        const payload = [{ text: promptText }, ...images.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
-                        jsonStr = await AIAdapter.callGemini(payload);
+                        jsonStr = await AIAdapter.callGemini(textOnlyPayload);
                     }
 
                     const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
