@@ -1359,63 +1359,84 @@ YÊU CẦU:
 
                 try {
                     let jsonStr = "", usedSource = "Gemini";
-                    // Sinh câu hỏi CHỈ cần text prompt (topic + spec đã có trong prompt)
-                    // KHÔNG gửi kèm ảnh PDF - ảnh rất nặng và tốn quota rất nhiều token
-                    const textOnlyPayload = [{ text: promptText }];
-                    if (AIAdapter.getConfig().hfTokens.length > 0) {
+
+                    // Retry thông minh: thêm cụm nhắc nhở khác nhau mỗi lần để phá vòng lặp error
+                    const retryHints = [
+                        "", // Lần 1: prompt gốc
+                        "\n\n[QUAN TRỌNG: CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG CÓ BẤT KỲ TEXT NÀO KHÁC. KHÔNG DÙNG MARKDOWN.]",
+                        "\n\n[LƯU Ý: Hãy trả lời NGẮN GỌN hơn. Output CHỈ chứa 1 object JSON duy nhất, BẮT ĐẦU bằng { và KẾT THÚC bằng }.]"
+                    ];
+                    let lastError = null;
+                    let success = false;
+
+                    for (let retry = 0; retry < retryHints.length; retry++) {
                         try {
-                            jsonStr = await AIAdapter.callHF(promptText, selectedModel.id);
-                            usedSource = selectedModel.name;
+                            const currentPrompt = promptText + retryHints[retry];
+                            const textOnlyPayload = [{ text: currentPrompt }];
+                            if (AIAdapter.getConfig().hfTokens.length > 0) {
+                                try {
+                                    jsonStr = await AIAdapter.callHF(currentPrompt, selectedModel.id);
+                                    usedSource = selectedModel.name;
+                                } catch (hfErr) {
+                                    jsonStr = await AIAdapter.callGemini(textOnlyPayload);
+                                    usedSource = "Gemini (Backup)";
+                                }
+                            } else {
+                                jsonStr = await AIAdapter.callGemini(textOnlyPayload);
+                            }
+
+                            const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                            const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
+                            if (!jsonMatch) throw new Error("AI trả về không chứa JSON hợp lệ");
+                            const json = sanitizeAiJson(JSON.parse(jsonMatch[0]));
+
+                            const finalBp = { ...blueprint };
+                            const target = finalBp.sections[sIdx].questions[qIdx];
+
+                            if (qData.type === 'TF') {
+                                target.parts = json.parts?.map((p, i) => ({
+                                    label: p.label || String.fromCharCode(97 + i),
+                                    content: p.content,
+                                    is_correct: p.is_correct
+                                })) || [];
+                                target.q = json.q;
+                                target.c = json.c;
+                                target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-');
+                            } else {
+                                target.q = json.q;
+                                target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
+                                target.c = json.c || "";
+                                target.correct_char = json.correct_char || "";
+                            }
+
+                            target.status = 'done'; target.source = usedSource;
+                            console.log(`[DEBUG generateQuestion] SUCCESS qIdx=${qIdx} q_preview=${(target.q || '').substring(0, 60)}`);
+                            setBlueprint(finalBp);
+                            success = true;
+                            break; // Thoát vòng retry khi thành công
+
+                        } catch (retryErr) {
+                            lastError = retryErr;
+                            if (retry < retryHints.length - 1) {
+                                console.warn(`⚠️ Lần thử ${retry + 1} thất bại: ${retryErr.message}. Thử lại với prompt khác...`);
+                                await new Promise(r => setTimeout(r, 1000));
+                            }
                         }
-                        catch (hfErr) {
-                            jsonStr = await AIAdapter.callGemini(textOnlyPayload);
-                            usedSource = "Gemini (Backup)";
-                        }
-                    } else {
-                        jsonStr = await AIAdapter.callGemini(textOnlyPayload);
                     }
 
-                    const cleanJsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const jsonMatch = cleanJsonStr.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) throw new Error("Invalid JSON");
-                    const json = sanitizeAiJson(JSON.parse(jsonMatch[0]));
-
-                    const finalBp = { ...blueprint };
-                    const target = finalBp.sections[sIdx].questions[qIdx];
-
-                    if (qData.type === 'TF') {
-                        target.parts = json.parts?.map((p, i) => ({
-                            label: p.label || String.fromCharCode(97 + i),
-                            content: p.content,
-                            is_correct: p.is_correct
-                        })) || [];
-                        target.q = json.q;
-                        target.c = json.c;
-                        target.correct_char = (json.parts || []).map(p => p.is_correct ? 'Đ' : 'S').join('-'); // Chuỗi Đ-S-S-Đ
-                    } else { // MC / TL
-                        target.q = json.q;
-                        // Strip leading "A. ", "B. " etc prefix if AI included it
-                        target.a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
-                        target.c = json.c || "";
-                        target.correct_char = json.correct_char || "";
+                    // Nếu tất cả retry đều thất bại
+                    if (!success) {
+                        throw lastError || new Error("Không thể tạo câu hỏi sau nhiều lần thử");
                     }
 
-                    target.status = 'done'; target.source = usedSource;
-                    console.log(`[DEBUG generateQuestion] SUCCESS qIdx=${qIdx} q_preview=${(target.q || '').substring(0, 60)}`);
-                    setBlueprint(finalBp);
                 } catch (e) {
                     console.error("Lỗi khi tạo câu hỏi:", e);
                     const errBp = { ...blueprint };
                     errBp.sections[sIdx].questions[qIdx].status = 'error';
                     errBp.sections[sIdx].questions[qIdx].source = "ERR";
-
-                    // Ghi đề thông báo lỗi vào trường text để user bớt mù mờ
                     errBp.sections[sIdx].questions[qIdx].q = `Lỗi: ${e.message}`;
-
                     setBlueprint(errBp);
 
-
-                    // Có thể alert nếu gửi đơn lẻ
                     if (!generatingState.isRunning) {
                         alert(`Lỗi tạo câu hỏi: ${e.message}`);
                     }
