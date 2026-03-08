@@ -250,10 +250,9 @@
                 const { geminiKeys, geminiModel } = AIAdapter.getConfig();
                 if (!geminiKeys.length) throw new Error("Thiếu Gemini API Key!");
 
-                // Danh sách model: ưu tiên model user chọn, sau đó fallback xuống các model ổn định hơn
+                // Danh sách model: ưu tiên model user chọn, sau đó fallback xuống model ổn định hơn
                 const fallbackModels = [geminiModel];
                 if (!fallbackModels.includes('gemini-2.5-flash')) fallbackModels.push('gemini-2.5-flash');
-                if (!fallbackModels.includes('gemini-2.0-flash')) fallbackModels.push('gemini-2.0-flash');
 
                 for (const currentModel of fallbackModels) {
                     const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
