@@ -162,6 +162,24 @@
                     .replace(/\n/g, '<br/>')
         ).join('');
 
+        const escapeHtml = (raw) => String(raw || "")
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        // Xuất thô: giữ nguyên công thức $...$, chỉ đổi xuống dòng để Word hiển thị đúng.
+        const renderRawTextForWord = (raw) => {
+            const text = restoreEscapedLatexControls(String(raw || ""))
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>');
+            return escapeHtml(text)
+                .replace(/\\\\/g, '<br/>')
+                .replace(/\\n/g, '<br/>')
+                .replace(/\n/g, '<br/>');
+        };
+
         const MathRender = ({ text }) => {
             const ref = useRef();
             useEffect(() => { if (!ref.current) return; ref.current.innerHTML = renderToWeb(tokenizeRichText(text || "")); }, [text]);
@@ -1784,6 +1802,213 @@ YÊU CẦU:
                 saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}.doc`);
             };
 
+            const exportWordRaw = () => {
+                let html = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                          xmlns:w='urn:schemas-microsoft-com:office:word'
+                          xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
+                    <head>
+                        <meta charset='utf-8'><title>De Thi Raw</title>
+                        <style>
+                            @page {
+                                size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2.5cm; mso-page-orientation: portrait;
+                            }
+                            body {
+                                font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.3; text-align: justify; color: #000;
+                            }
+                            table { width: 100%; border-collapse: collapse; }
+                            td { vertical-align: top; padding: 4px; }
+                            .question-block { margin-bottom: 10pt; text-align: justify; }
+                            .ans-key-table td { border: 1px solid black; text-align: center; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                    <div style="text-align:center;font-weight:bold;margin-bottom:20px">
+                        <p style="margin:0">${info.dept.toUpperCase()}</p>
+                        <p style="margin:0">${info.school.toUpperCase()}</p>
+                        <p style="margin:10px 0 5px 0;font-size:14pt">${info.title.toUpperCase()}</p>
+                        <p style="margin:0;font-style:italic">Môn: TOÁN 9 - Thời gian: ${info.time} phút</p>
+                    </div>
+                    <hr/>
+                `;
+
+                blueprint.sections.forEach(sec => {
+                    html += `<p style='font-weight:bold;margin-top:15px;text-transform:uppercase'>${sec.name}</p>`;
+
+                    const groups = {};
+                    const groupOrder = [];
+
+                    sec.questions.forEach(q => {
+                        const { main, sub } = parseQuestionCode(q.code);
+                        if (!groups[main]) {
+                            groups[main] = { main, stem: null, subs: [] };
+                            groupOrder.push(main);
+                        }
+
+                        if (sub) {
+                            groups[main].subs.push({ ...q, subLabel: toChar(sub) });
+                        } else {
+                            groups[main].stem = q;
+                        }
+                    });
+
+                    groupOrder.forEach(main => {
+                        const g = groups[main];
+                        html += `<div class='question-block'>`;
+
+                        if (g.stem) {
+                            const stemQ = g.stem;
+                            if (stemQ.type === 'TF') {
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderRawTextForWord(stemQ.q)}</div>`;
+                                html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                stemQ.parts.forEach(p => {
+                                    html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderRawTextForWord(p.content)}</td><td></td></tr>`;
+                                });
+                                html += `</table>`;
+                            } else {
+                                html += `<p><b>Câu ${main}:</b> ${renderRawTextForWord(stemQ.q)}</p>`;
+                                if (stemQ.type === 'MC' && stemQ.a?.length) {
+                                    stemQ.a.forEach((opt, k) => {
+                                        const prefix = String.fromCharCode(65 + k);
+                                        html += `<p style='margin:2px 0 2px 20px'><b>${prefix}.</b> ${renderRawTextForWord(opt)}</p>`;
+                                    });
+                                }
+                            }
+                        }
+
+                        if (g.subs.length > 0) {
+                            g.subs.sort((a, b) => a.subLabel.localeCompare(b.subLabel));
+                            const allTF = !g.stem && g.subs.every(s => s.type === 'TF');
+                            const allTL = !g.stem && g.subs.every(s => s.type === 'TL');
+
+                            if (allTF) {
+                                const rep = g.subs[0];
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderRawTextForWord(rep.q)}</div>`;
+                                if (rep.parts?.length > 0) {
+                                    html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                    html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                    rep.parts.forEach(p => {
+                                        html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderRawTextForWord(p.content)}</td><td></td></tr>`;
+                                    });
+                                    html += `</table>`;
+                                }
+                            } else if (allTL) {
+                                const firstQ = g.subs[0].q || '';
+                                const splitIdx = firstQ.indexOf('\n\n');
+                                const commonCtx = splitIdx > 0 ? firstQ.substring(0, splitIdx) : firstQ;
+                                html += `<div style='margin-bottom: 6pt;'><b>Câu ${main}:</b> ${renderRawTextForWord(commonCtx)}</div>`;
+                                g.subs.forEach(sq => {
+                                    const rawQ = sq.q || '';
+                                    const idx2 = rawQ.indexOf('\n\n');
+                                    const subQ = idx2 > 0 ? rawQ.substring(idx2 + 2) : rawQ;
+                                    html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderRawTextForWord(subQ)}</div>`;
+                                });
+                            } else {
+                                g.subs.forEach(sq => {
+                                    if (sq.type === 'TF') {
+                                        html += `<div style='margin-left: 0.7cm; margin-bottom: 6pt;'><b>${sq.subLabel})</b> ${renderRawTextForWord(sq.q)}</div>`;
+                                        html += `<table border='1' cellpadding='5' cellspacing='0' style='width: 90%; margin: 10px auto 10px 0; border-collapse: collapse; font-size: 11pt;'>`;
+                                        html += `<tr style='background-color:#f0f0f0'><td></td><td>Nội dung</td><td style='width: 100px; text-align: center;'>Đúng/Sai</td></tr>`;
+                                        sq.parts.forEach(p => {
+                                            html += `<tr><td style='width: 20px; text-align: center;'>${p.label})</td><td>${renderRawTextForWord(p.content)}</td><td></td></tr>`;
+                                        });
+                                        html += `</table>`;
+                                    } else {
+                                        html += `<div style="margin-left: 0.7cm; margin-bottom: 6pt;"><b>${sq.subLabel})</b> ${renderRawTextForWord(sq.q)}</div>`;
+                                        if (sq.type === 'MC' && sq.a?.length) {
+                                            sq.a.forEach((opt, k) => {
+                                                const prefix = String.fromCharCode(65 + k);
+                                                html += `<p style='margin:2px 0 2px 1.2cm'><b>${prefix}.</b> ${renderRawTextForWord(opt)}</p>`;
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        }
+
+                        html += `</div>`;
+                    });
+                });
+
+                html += `<br clear="all" style="page-break-before:always" /><h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
+
+                const phan1 = blueprint.sections.find(s => s.name.toUpperCase().includes('PHẦN I'));
+                if (phan1) {
+                    const mcQuestions = phan1.questions.filter(q => q.type === 'MC' && q.correct_char);
+                    if (mcQuestions.length > 0) {
+                        html += `<h4>PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+                        mcQuestions.forEach(q => html += `<td style="background:#eee">${q.code}</td>`);
+                        html += `</tr><tr>`;
+                        mcQuestions.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`);
+                        html += `</tr></table><br/>`;
+                    }
+                }
+
+                const phan2 = blueprint.sections.find(s => s.name.toUpperCase().includes('PHẦN II'));
+                if (phan2) {
+                    const tfQuestions = phan2.questions.filter(q => q.type === 'TF' && q.correct_char);
+                    if (tfQuestions.length > 0) {
+                        html += `<h4>PHẦN II. Câu trắc nghiệm đúng sai</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5"><tr>`;
+
+                        const renderedMains = new Set();
+                        const tfGroups = [];
+                        tfQuestions.forEach(q => {
+                            const { main, sub } = parseQuestionCode(q.code);
+                            if (sub) {
+                                if (!renderedMains.has(main)) {
+                                    renderedMains.add(main);
+                                    tfGroups.push({ ...q, parsedMain: main, parsedSub: sub });
+                                }
+                            } else {
+                                tfGroups.push({ ...q, parsedMain: main, parsedSub: sub });
+                            }
+                        });
+
+                        tfGroups.forEach(q => {
+                            if (q.parsedSub) {
+                                ['a', 'b', 'c', 'd'].forEach(p => html += `<td style="background:#eee">Câu ${q.parsedMain}${p}</td>`);
+                            } else {
+                                ['a', 'b', 'c', 'd'].forEach(p => html += `<td style="background:#eee">${q.code}${p}</td>`);
+                            }
+                        });
+                        html += `</tr><tr>`;
+                        tfGroups.forEach(q => {
+                            const ansArr = (q.correct_char || 'Đ-S-Đ-S').split('-');
+                            ['a', 'b', 'c', 'd'].forEach((p, i) => html += `<td style="color:red; font-size: 10pt">${ansArr[i] || ''}</td>`);
+                        });
+                        html += `</tr></table><br/>`;
+                    }
+                }
+
+                const phan3 = blueprint.sections.find(s => s.name.toUpperCase().includes('PHẦN III'));
+                if (phan3) {
+                    const tlQuestions = phan3.questions.filter(q => q.type === 'TL' && q.correct_char);
+                    if (tlQuestions.length > 0) {
+                        html += `<h4>PHẦN III. Câu trắc nghiệm trả lời ngắn</h4>`;
+                        html += `<table class="ans-key-table" cellpadding="5" style="width: auto;">`;
+                        html += `<tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`;
+                        tlQuestions.forEach(q => {
+                            html += `<tr><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr>`;
+                        });
+                        html += `</table><br/>`;
+                    }
+                }
+
+                html += `<h4>Lời giải chi tiết</h4>`;
+                blueprint.sections.forEach(sec => {
+                    sec.questions.forEach(q => {
+                        const displayCode = q.code;
+                        html += `<p><b>${displayCode}:</b></p><div>${renderRawTextForWord(q.c)}</div><hr style="border-top:1px dashed #ccc"/>`;
+                    });
+                });
+
+                html += `</body></html>`;
+                saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}_raw.doc`);
+            };
+
             // Lưu đề/ma trận lên backend (cùng API với thitructuyen)
             const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
             const saveExamToBackend = async (isMatrixOnly = false) => {
@@ -2302,6 +2527,7 @@ YÊU CẦU:
                                                     <button onClick={generateAll} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className={`fas fa-magic mr-2 ${generatingState.isRunning ? 'fa-spin' : ''}`}></i> {generatingState.isRunning ? 'Đang tự động biên soạn...' : 'AI Sinh toàn bộ đề'}</button>
                                                     <button onClick={() => setShowPreview(true)} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-eye mr-2"></i> Xem trước</button>
                                                     <button onClick={exportWord} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-word mr-2 text-lg"></i> Xuất Word</button>
+                                                    <button onClick={exportWordRaw} disabled={generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-file-lines mr-2"></i> Xuất thô</button>
                                                     <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-white border-2 border-violet-500 text-violet-700 rounded-xl font-bold hover:bg-violet-50 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table mr-2"></i> Lưu ma trận</button>
                                                     <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated || generatingState.isRunning} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-md hover:shadow-lg text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save mr-2"></i> Lưu đề</button>
                                                 </>
@@ -2447,6 +2673,7 @@ YÊU CẦU:
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={exportWord} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition flex items-center gap-1"><i className="fas fa-file-word"></i> Xuất Word</button>
+                                        <button onClick={exportWordRaw} className="px-4 py-2 bg-white text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-50 transition flex items-center gap-1"><i className="fas fa-file-lines"></i> Xuất thô</button>
                                         <button onClick={() => saveExamToBackend(true)} disabled={isExamGenerated} className="px-4 py-2 bg-white text-violet-700 rounded-xl font-bold text-sm hover:bg-violet-50 transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-table"></i> Lưu ma trận</button>
                                         <button onClick={() => saveExamToBackend(false)} disabled={!isExamGenerated} className="px-4 py-2 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"><i className="fas fa-save"></i> Lưu đề</button>
                                         <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition"><i className="fas fa-times"></i> Đóng</button>
