@@ -1569,8 +1569,12 @@ YÊU CẦU:
                         await generateQuestion(s, q);
 
                         if (currentQ < totalQ) {
-                            setGeneratingState(prev => ({ ...prev, text: `Nghỉ 3 giây chống quá tải... (Đang tới câu ${currentQ}/${totalQ})` }));
-                            await new Promise(r => setTimeout(r, 3000));
+                            if (aiProvider === 'groq') {
+                                setGeneratingState(prev => ({ ...prev, text: `Đang tới câu ${currentQ}/${totalQ}...` }));
+                            } else {
+                                setGeneratingState(prev => ({ ...prev, text: `Nghỉ 3 giây chống quá tải... (Đang tới câu ${currentQ}/${totalQ})` }));
+                                await new Promise(r => setTimeout(r, 3000));
+                            }
                         }
                     }
                 }
@@ -1608,7 +1612,9 @@ YÊU CẦU:
                         await generateQuestion(sIdx, qIdx);
 
                         if (i < failedQuestions.length - 1) {
-                            await new Promise(r => setTimeout(r, 3000));
+                            if (aiProvider !== 'groq') {
+                                await new Promise(r => setTimeout(r, 3000));
+                            }
                         }
                     }
                 }
