@@ -45,6 +45,7 @@
             // --- GETTERS ---
             getApiKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),
             getHFTokens: () => JSON.parse(localStorage.getItem('hf_tokens') || "[]"),
+            getGroqKeys: () => JSON.parse(localStorage.getItem('global_groq_keys') || "[]"),
 
             // --- ACTIONS ---
             handleFile: (file, type) => {
@@ -54,7 +55,7 @@
                     const lines = content.split('\n').map(l => l.trim());
 
                     if (type === 'gemini') {
-                        const keys = lines.filter(l => l.length > 5 && !l.startsWith('hf_'));
+                        const keys = lines.filter(l => l.length > 5 && !l.startsWith('hf_') && !l.startsWith('gsk_'));
                         if (keys.length) {
                             localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
                             // Mặc định set model ưu tiên khi nạp key
@@ -69,6 +70,13 @@
                         } else {
                             alert("❌ Không tìm thấy token bắt đầu bằng 'hf_' trong file.");
                         }
+                    } else if (type === 'groq') {
+                        const keys = lines.filter(l => l.length > 5);
+                        if (keys.length) {
+                            localStorage.setItem('global_groq_keys', JSON.stringify(keys));
+                            localStorage.setItem('default_groq_model', 'llama-3.3-70b-versatile');
+                            alert(`✅ Đã nạp ${keys.length} Groq API Keys!`);
+                        } else alert("❌ Không tìm thấy Groq Key hợp lệ.");
                     }
                     SystemConfig.renderConfig();
                 };
@@ -161,6 +169,14 @@
                 alert(`✅ Đã chọn module: ${module}`);
             },
 
+            // --- GROQ MODULE ---
+            getGroqModule: () => localStorage.getItem('default_groq_model') || 'llama-3.3-70b-versatile',
+
+            saveGroqModule: (module) => {
+                localStorage.setItem('default_groq_model', module);
+                alert(`✅ Đã chọn model Groq: ${module}`);
+            },
+
             // --- UI RENDERER ---
             renderConfig: () => {
                 // 1. Render Gemini Status
@@ -208,6 +224,25 @@
                 const moduleSelect = document.getElementById('geminiModuleSelect');
                 if (moduleSelect) {
                     moduleSelect.value = SystemConfig.getModule();
+                }
+
+                // 4. Render Groq Status
+                const groqKeys = SystemConfig.getGroqKeys();
+                const groqStatus = document.getElementById('groqStatus');
+                if (groqStatus) {
+                    if (groqKeys.length > 0) {
+                        groqStatus.innerHTML = `<div class="flex justify-between items-center bg-orange-50 p-3 rounded border border-orange-200">
+                            <span class="text-orange-700 font-bold"><i class="fas fa-check-circle"></i> Đã nạp ${groqKeys.length} Groq API Keys</span>
+                            <span class="text-xs text-gray-500">Ưu tiên: Llama 3.3 70B</span>
+                        </div>`;
+                    } else {
+                        groqStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Chưa có Groq API Key nào.</div>`;
+                    }
+                }
+
+                const groqModuleSelect = document.getElementById('groqModuleSelect');
+                if (groqModuleSelect) {
+                    groqModuleSelect.value = SystemConfig.getGroqModule();
                 }
             },
 
@@ -513,6 +548,35 @@
                         <option value="gemini-2.5-flash">Gemini 2.5 Flash (Ổn định)</option>
                     </select>
                     <p class="text-xs text-gray-400 mt-1">Module này sẽ được dùng cho tất cả các trang.</p>
+                </div>
+
+                <hr class="border-slate-200" />
+
+                <!-- 1.5. GROQ CONFIG -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Groq AI (API Keys)</label>
+                    <div id="groqStatus" class="mb-3"></div>
+                    <div class="flex items-center gap-2">
+                        <label
+                            class="flex-1 cursor-pointer bg-slate-100 hover:bg-orange-50 text-slate-600 border border-slate-300 hover:border-orange-300 rounded px-4 py-2 text-sm font-medium transition text-center flex items-center justify-center gap-2">
+                            <i class="fas fa-file-upload text-orange-500"></i> Chọn file Groq Keys.txt
+                            <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'groq')"
+                                class="hidden" />
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Chọn Model Groq AI</label>
+                    <select id="groqModuleSelect" onchange="SystemConfig.saveGroqModule(this.value)"
+                        class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Khuyên dùng)</option>
+                        <option value="llama-3.1-8b-instant">Llama 3.1 8B (Nhanh)</option>
+                        <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+                        <option value="gemma2-9b-it">Gemma 2 9B</option>
+                        <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill Llama 70B (Toán học)</option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">Model này sẽ được ưu tiên khi sử dụng tính năng Groq AI.</p>
                 </div>
 
                 <hr class="border-slate-200" />
