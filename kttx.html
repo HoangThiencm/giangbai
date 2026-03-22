@@ -418,7 +418,6 @@ body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.3;text-ali
 table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
 .question-block{margin-bottom:10pt;text-align:justify;}.ans-key-table td{border:1px solid black;text-align:center;font-weight:bold;}
 </style></head><body>
-<div style="text-align:center;font-weight:bold;margin-bottom:20px">
 <p style="margin:0">${info.dept.toUpperCase()}</p><p style="margin:0">${info.school.toUpperCase()}</p>
 <p style="margin:10px 0 5px 0;font-size:14pt">${info.title.toUpperCase()}</p>
 <p style="margin:0;font-style:italic">Môn: ${info.subject.toUpperCase()} ${info.grade} - Thời gian: ${info.time} phút</p></div><hr/>`;
@@ -506,7 +505,7 @@ table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
                     .left { text-align: left; }
                 </style></head><body>
                 <div style="text-align:center;font-weight:bold;font-size:14pt;margin-bottom:15px;">KHUNG MA TRẬN ĐỀ KIỂM TRA</div>
-                <div style="text-align:center;font-weight:bold;margin-bottom:20px;">Môn: ${info.subject.toUpperCase()} ${info.grade} - Thời gian: ${info.time} phút</div>
+                <div style="text-align:center;font-weight:bold;margin-bottom:20px;">Môn: ${(info.subject || '').toUpperCase()} Lớp ${info.grade || ''} - Thời gian: ${info.time || ''} phút</div>
                 <table>
                     <tr class="header">
                         <th rowspan="4" style="width:30px">TT</th>
@@ -845,7 +844,7 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                     .left { text-align: left; }
                 </style></head><body>
                 <div style="text-align:center;font-weight:bold;font-size:14pt;margin-bottom:15px;">BẢN ĐẶC TẢ ĐỀ KIỂM TRA</div>
-                <div style="text-align:center;font-weight:bold;margin-bottom:20px;">Môn: ${info.subject.toUpperCase()} ${info.grade} - Thời gian: ${info.time} phút</div>
+                <div style="text-align:center;font-weight:bold;margin-bottom:20px;">Môn: ${(info.subject || '').toUpperCase()} Lớp ${info.grade || ''} - Thời gian: ${info.time || ''} phút</div>
                 <table>
                     <tr class="header">
                         <th rowspan="3" style="width:30px">TT</th>
@@ -1205,9 +1204,9 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                             {previewMode === 'exam' && (
                                 <>
                                     <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '16px' }}>
-                                        <div style={{ fontSize: '11pt' }}>{info.dept.toUpperCase()}</div><div style={{ fontSize: '11pt' }}>{info.school.toUpperCase()}</div>
-                                        <div style={{ fontSize: '14pt', margin: '6px 0' }}>{info.title.toUpperCase()}</div>
-                                        <div style={{ fontSize: '11pt', fontStyle: 'italic' }}>Môn: {info.subject.toUpperCase()} {info.grade} — Thời gian: {info.time} phút</div></div>
+                                        <div style={{ fontSize: '11pt' }}>{(info.dept || '').toUpperCase()}</div><div style={{ fontSize: '11pt' }}>{(info.school || '').toUpperCase()}</div>
+                                        <div style={{ fontSize: '14pt', margin: '6px 0' }}>{(info.title || '').toUpperCase()}</div>
+                                        <div style={{ fontSize: '11pt', fontStyle: 'italic' }}>Môn: {(info.subject || '').toUpperCase()} Lớp {info.grade} — Thời gian: {info.time} phút</div></div>
                                     <hr style={{ borderTop: '2px solid #000', margin: '12px 0' }} />
                                     {(() => {
                                         const typeOrder = ['MC', 'TF', 'TLN', 'TL']; const typeNames = { MC: 'PHẦN TRẮC NGHIỆM KHÁCH QUAN', TF: 'PHẦN ĐÚNG/SAI', TLN: 'PHẦN TRẢ LỜI NGẮN', TL: 'PHẦN TỰ LUẬN' };

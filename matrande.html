@@ -2771,10 +2771,10 @@ YÊU CẦU:
                                 <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', serif", fontSize: '13pt', lineHeight: '1.6' }}>
                                     {/* Tiêu đề */}
                                     <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '16px' }}>
-                                        <div style={{ fontSize: '11pt' }}>{info.dept.toUpperCase()}</div>
-                                        <div style={{ fontSize: '11pt' }}>{info.school.toUpperCase()}</div>
-                                        <div style={{ fontSize: '14pt', margin: '6px 0' }}>{info.title.toUpperCase()}</div>
-                                        <div style={{ fontSize: '11pt', fontStyle: 'italic' }}>Môn: {info.subject.toUpperCase()} - Lớp {info.grade} — Thời gian: {info.time} phút</div>
+                                        <div style={{ fontSize: '11pt' }}>{(info.dept || '').toUpperCase()}</div>
+                                        <div style={{ fontSize: '11pt' }}>{(info.school || '').toUpperCase()}</div>
+                                        <div style={{ fontSize: '14pt', margin: '6px 0' }}>{(info.title || '').toUpperCase()}</div>
+                                        <div style={{ fontSize: '11pt', fontStyle: 'italic' }}>Môn: {(info.subject || '').toUpperCase()} - Lớp {info.grade || ''} — Thời gian: {info.time || ''} phút</div>
                                     </div>
                                     <hr style={{ borderTop: '2px solid #000', margin: '12px 0' }} />
                                     {/* Sections */}
