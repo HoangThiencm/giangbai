@@ -172,6 +172,13 @@
         const tokenizeRichText = (raw) => { const text = normalizeRichText(raw).replace(/\\text\{([^}]+)\}/g, ' $1 '); return text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g).map(part => { if (part.startsWith('$$') && part.endsWith('$$')) return { type: 'math', display: true, content: part.slice(2, -2).trim() }; else if (part.startsWith('$') && part.endsWith('$')) return { type: 'math', display: false, content: part.slice(1, -1).trim() }; else return { type: 'text', content: part }; }).filter(t => t.content !== ""); };
         const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }) } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>` } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
         const renderToWord = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { const m = katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'mathml' }).match(/<math[\s\S]*?<\/math>/); if (m) { return `<m:oMathPara><m:oMath>${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}</m:oMath></m:oMathPara>`; } } catch (e) { } return t.content.replace(/\$/g, ''); })() : t.content.replace(/\\text\{([^}]+)\}/g, ' $1 ').replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>').replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>').replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+        const parseAIJson = (str) => {
+            try { return JSON.parse(str); } 
+            catch (e) {
+                try { return JSON.parse(str.replace(/\\+/g, '\\\\')); } 
+                catch (e2) { throw e; }
+            }
+        };
         const MathRender = ({ text }) => { const ref = useRef(); useEffect(() => { if (!ref.current) return; ref.current.innerHTML = renderToWeb(tokenizeRichText(text || "")); }, [text]); return <div ref={ref} className="font-serif text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></div>; };
         const AIAdapter = {
             getConfig: () => ({
@@ -334,7 +341,7 @@ ${q.type === 'TF' ? `{"q":"Câu dẫn chung...","parts":[{"label":"a","content":
                     try {
                         const payload = [{ text: prompt }, ...allImages.map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
                         const jsonStr = await callPrimaryAI(payload); const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim(); const match = clean.match(/\{[\s\S]*\}/);
-                        if (!match) throw new Error("AI không trả về JSON"); const json = JSON.parse(match[0]);
+                        if (!match) throw new Error("AI không trả về JSON"); const json = parseAIJson(match[0]);
                         updatedQs[i] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
                         if (q.type === 'MC') updatedQs[i].a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
                         if (q.type === 'TF' && json.parts) { updatedQs[i].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[i].correct_char = updatedQs[i].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
@@ -358,7 +365,7 @@ ${q.type === 'TF' ? `{"q":"Câu dẫn chung...","parts":[{"label":"a","content":
                             const payload = [{ text: prompt2 }, ...topics.flatMap(t => t.images).map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
                             const jsonStr = await callPrimaryAI(payload); const match = jsonStr.match(/\{[\s\S]*\}/);
                             if (match) {
-                                const json = JSON.parse(match[0]); updatedQs[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', a: json.a || [], correct_char: json.correct_char || '' };
+                                const json = parseAIJson(match[0]); updatedQs[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', a: json.a || [], correct_char: json.correct_char || '' };
                                 if (q.type === 'TF' && json.parts) { updatedQs[idx].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[idx].correct_char = updatedQs[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
                                 setQuestions([...updatedQs]);
                             }
@@ -384,7 +391,7 @@ ${q.type === 'TF' ? `{"q":"Câu dẫn chung...","parts":[{"label":"a","content":
 ${q.type === 'TF' ? '{"q":"...","parts":[{"label":"a","content":"...","is_correct":true},...],"c":"..."}' : q.type === 'MC' ? '{"q":"...","a":["A","B","C","D"],"c":"...","correct_char":"A"}' : '{"q":"...","a":[],"c":"...","correct_char":"..."}'}`;
                     const allImages = topics.flatMap(t => t.images); const payload = [{ text: prompt }, ...allImages.map(img => ({ inline_data: { mime_type: img.mime, data: img.base64 } }))];
                     const jsonStr = await callPrimaryAI(payload); const match = jsonStr.replace(/```json/g, '').replace(/```/g, '').match(/\{[\s\S]*\}/); if (!match) throw new Error("Invalid JSON");
-                    const json = JSON.parse(match[0]); updated[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
+                    const json = parseAIJson(match[0]); updated[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
                     if (q.type === 'MC') updated[idx].a = (json.a || []).map(o => o.replace(/^[A-D][.)\s]\s*/, ''));
                     if (q.type === 'TF' && json.parts) { updated[idx].parts = json.parts.map((p, i) => ({ label: p.label || String.fromCharCode(97 + i), content: p.content, is_correct: p.is_correct })); updated[idx].correct_char = updated[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
                 }
@@ -404,7 +411,7 @@ NHIỆM VỤ: 1) Trích xuất câu hỏi từ ảnh. 2) Giải chi tiết.
 Output CHỈ JSON: ${q.type === 'TF' ? '{"q":"...","parts":[{"label":"a","content":"...","is_correct":true},...],"c":"...","correct_char":"Đ-S-S-Đ"}' : q.type === 'MC' ? '{"q":"...","a":["A","B","C","D"],"c":"...","correct_char":"A"}' : '{"q":"...","a":[],"c":"...","correct_char":"..."}'}`;
                     const payload = [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }]; const jsonStr = await callPrimaryAI(payload);
                     const match = jsonStr.replace(/```json/g, '').replace(/```/g, '').match(/\{[\s\S]*\}/); if (!match) throw new Error("Invalid JSON");
-                    const json = JSON.parse(match[0]); updated[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
+                    const json = parseAIJson(match[0]); updated[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
                     if (q.type === 'MC') updated[idx].a = (json.a || []).map(o => (o || '').replace(/^[A-D][.)\s]\s*/, ''));
                     if (q.type === 'TF' && json.parts) { updated[idx].parts = json.parts.map((p, i) => ({ label: p.label || String.fromCharCode(97 + i), content: p.content, is_correct: p.is_correct })); updated[idx].correct_char = updated[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
                 }
@@ -676,7 +683,7 @@ ${q.type === 'TF' ? '{"q":"Câu dẫn (giữ cấu trúc, đổi số)...","part
                         const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                         const match = clean.match(/\{[\s\S]*\}/);
                         if (!match) throw new Error('AI không trả về JSON');
-                        const json = JSON.parse(match[0]);
+                        const json = parseAIJson(match[0]);
                         updatedQs[i] = { ...q, status: 'done', q: json.q || '', c: json.c || '', correct_char: json.correct_char || '' };
                         if (q.type === 'MC') updatedQs[i].a = (json.a || []).map(opt => (opt || '').replace(/^[A-Da-d][.)\s]\s*/, ''));
                         if (q.type === 'TF' && json.parts) { updatedQs[i].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[i].correct_char = updatedQs[i].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
@@ -707,7 +714,7 @@ ${q.type === 'TF' ? '{"q":"Câu dẫn (giữ cấu trúc, đổi số)...","part
                             const jsonStr = await callPrimaryAI([{ text: retryPrompt }]);
                             const match = jsonStr.match(/\{[\s\S]*\}/);
                             if (match) {
-                                const json = JSON.parse(match[0]);
+                                const json = parseAIJson(match[0]);
                                 updatedQs[idx] = { ...q, status: 'done', q: json.q || '', c: json.c || '', a: json.a || [], correct_char: json.correct_char || '' };
                                 if (q.type === 'TF' && json.parts) { updatedQs[idx].parts = json.parts.map((p, pi) => ({ label: p.label || String.fromCharCode(97 + pi), content: p.content, is_correct: p.is_correct })); updatedQs[idx].correct_char = updatedQs[idx].parts.map(p => p.is_correct ? 'Đ' : 'S').join('-'); }
                                 setQuestions([...updatedQs]);
@@ -753,7 +760,7 @@ Lưu ý:
                     const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                     const match = clean.match(/\[[\s\S]*\]/);
                     if (!match) throw new Error('AI không trả về JSON mảng');
-                    const arr = JSON.parse(match[0]);
+                    const arr = parseAIJson(match[0]);
                     const qs = arr.map((item, i) => ({ code: `Câu ${i + 1}`, type: item.type || 'TL', level: item.level || 'B', status: 'done', q: item.q || '', a: item.a || [], c: item.c || '', correct_char: item.correct_char || '', parts: item.parts || [] }));
                     setQuestions(qs); setSpecData(null); setStep(4);
                     setGenerating({ active: false, progress: 0, total: 0, text: '' });
@@ -820,7 +827,7 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                         const clean = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                         const match = clean.match(/\[[\s\S]*\]/);
                         if (!match) throw new Error('Invalid JSON');
-                        const arr = JSON.parse(match[0]);
+                        const arr = parseAIJson(match[0]);
                         finalSpec.push({ name: topicGroup.name, rows: arr });
                     } catch (e) {
                         console.error('Spec gen error:', e);
