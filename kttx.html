@@ -170,8 +170,39 @@
         const LEVELS = [{ code: 'B', name: 'Biết', prompt_key: 'Know', color: 'emerald' }, { code: 'H', name: 'Hiểu', prompt_key: 'Understand', color: 'blue' }, { code: 'V', name: 'Vận dụng', prompt_key: 'Apply', color: 'purple' }];
         const normalizeRichText = (raw) => { if (!raw) return ""; return raw.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.*?)\\\]/gs, '$$$1$$').replace(/\\\((.*?)\\\)/gs, '$$$1$$').replace(/\\\\+(?=\\begin\{cases\})/g, '\\').replace(/\\\\+(?=\\end\{cases\})/g, '\\').replace(/\\\\\\s*\\\\/g, '\\\\').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); };
         const tokenizeRichText = (raw) => { const text = normalizeRichText(raw).replace(/\\text\{([^}]+)\}/g, ' $1 '); return text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g).map(part => { if (part.startsWith('$$') && part.endsWith('$$')) return { type: 'math', display: true, content: part.slice(2, -2).trim() }; else if (part.startsWith('$') && part.endsWith('$')) return { type: 'math', display: false, content: part.slice(1, -1).trim() }; else return { type: 'text', content: part }; }).filter(t => t.content !== ""); };
-        const renderToWeb = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }) } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>` } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
-        const renderToWord = (tokens) => tokens.map(t => t.type === 'math' ? (() => { try { const m = katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'mathml' }).match(/<math[\s\S]*?<\/math>/); if (m) { return `<m:oMathPara><m:oMath>${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}</m:oMath></m:oMathPara>`; } } catch (e) { } return t.content.replace(/\$/g, ''); })() : t.content.replace(/\\text\{([^}]+)\}/g, ' $1 ').replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>').replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>').replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join('');
+        const renderMarkdownTable = (htmlStr) => {
+            let lines = htmlStr.split(/(?:<br\/>|\n)/); 
+            let out = []; let inTable = false; let tableLines = [];
+            for (let i=0; i<lines.length; i++) {
+                let line = lines[i].trim();
+                if (line.startsWith('|') && line.endsWith('|')) { 
+                    inTable = true; tableLines.push(line); 
+                } else {
+                    if (inTable) { out.push(renderHtmlTable(tableLines)); inTable = false; tableLines = []; }
+                    out.push(lines[i]); 
+                }
+            }
+            if (inTable) out.push(renderHtmlTable(tableLines));
+            return out.join('<br/>');
+            function renderHtmlTable(tLines) {
+                if (tLines.length < 2 || !tLines[1].replace(/ /g, '').match(/^\|[\-\:|]+\|$/)) return tLines.join('<br/>');
+                let tbl = '<table border="1" cellpadding="5" style="border-collapse:collapse;width:100%;margin:10pt 0;">';
+                tLines.forEach((l, idx) => {
+                    if (idx === 1) return; 
+                    let cells = l.substring(1, l.length-1).split('|');
+                    tbl += '<tr>';
+                    cells.forEach(cell => {
+                        let tag = idx === 0 ? 'th' : 'td';
+                        let style = idx === 0 ? 'background-color:#eee;font-weight:bold;text-align:center;border:1px solid #ccc;padding:5px;' : 'border:1px solid #ccc;padding:5px;';
+                        tbl += `<${tag} style="${style}">${cell.trim()}</${tag}>`;
+                    });
+                    tbl += '</tr>';
+                });
+                return tbl + '</table>';
+            }
+        };
+        const renderToWeb = (tokens) => renderMarkdownTable(tokens.map(t => t.type === 'math' ? (() => { try { return katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'html' }) } catch (e) { return `<span class="text-red-500 text-xs">${t.content}</span>` } })() : t.content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join(''));
+        const renderToWord = (tokens) => renderMarkdownTable(tokens.map(t => t.type === 'math' ? (() => { try { const m = katex.renderToString(t.content, { displayMode: t.display, throwOnError: false, output: 'mathml' }).match(/<math[\s\S]*?<\/math>/); if (m) { return `<m:oMathPara><m:oMath>${m[0].replace(/<math/g, '<math xmlns="http://www.w3.org/1998/Math/MathML"').replace(/<annotation[\s\S]*?<\/annotation>/g, '')}</m:oMath></m:oMathPara>`; } } catch (e) { } return t.content.replace(/\$/g, ''); })() : t.content.replace(/\\text\{([^}]+)\}/g, ' $1 ').replace(/\\textbf\{([^}]+)\}/g, '<b>$1</b>').replace(/\\textit\{([^}]+)\}/g, '<i>$1</i>').replace(/\\emph\{([^}]+)\}/g, '<i>$1</i>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\\\\/g, '<br/>').replace(/\\n/g, '<br/>').replace(/\n/g, '<br/>')).join(''));
         const parseAIJson = (str) => {
             try { return JSON.parse(str); } 
             catch (e) {
@@ -451,8 +482,8 @@ table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
                 html += `<br clear="all" style="page-break-before:always"/><h3 style='text-align:center'>HƯỚNG DẪN CHẤM & ĐÁP ÁN</h3>`;
                 typeOrder.forEach(type => {
                     const qs = grouped[type]; if (!qs || !qs.length) return; html += `<h4>${typeNames[type]}</h4>`;
-                    if (type === 'MC' || type === 'TF') { html += `<table class="ans-key-table" cellpadding="5"><tr>`; qs.forEach(q => html += `<td style="background:#eee">${q.code}</td>`); html += `</tr><tr>`; qs.forEach(q => html += `<td style="color:red">${q.correct_char}</td>`); html += `</tr></table><br/>`; }
-                    else if (type === 'TLN') { html += `<table class="ans-key-table" cellpadding="5"><tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`; qs.forEach(q => html += `<tr><td>${q.code}</td><td style="color:red">${q.correct_char}</td></tr>`); html += `</table><br/>`; }
+                    if (type === 'MC' || type === 'TF') { html += `<table class="ans-key-table" cellpadding="5"><tr>`; qs.forEach(q => html += `<td style="background:#eee">${q.code}</td>`); html += `</tr><tr>`; qs.forEach(q => html += `<td style="color:red">${renderToWord(tokenizeRichText(q.correct_char || ''))}</td>`); html += `</tr></table><br/>`; }
+                    else if (type === 'TLN') { html += `<table class="ans-key-table" cellpadding="5"><tr style="background:#eee"><td>Câu</td><td>Đáp án</td></tr>`; qs.forEach(q => html += `<tr><td>${q.code}</td><td style="color:red">${renderToWord(tokenizeRichText(q.correct_char || ''))}</td></tr>`); html += `</table><br/>`; }
                 });
                 html += `<h4>Lời giải chi tiết</h4>`; questions.forEach(q => html += `<p><b>${q.code}:</b></p><div>${renderToWord(tokenizeRichText(q.c))}</div><hr style="border-top:1px dashed #ccc"/>`);
                 html += `</body></html>`; saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `KiemTra_${info.subject}_${info.grade}_15phut.doc`);
