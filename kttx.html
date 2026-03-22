@@ -186,7 +186,7 @@
                 if (!groqKeys.length) throw new Error("Thiếu Groq API Key! Vui lòng cấu hình ở Dashboard.");
 
                 const hasImage = payloadParts.some(p => p.inline_data || p.inlineData);
-                const actualModel = hasImage ? 'llama-3.2-11b-vision-preview' : groqModel;
+                const actualModel = hasImage ? 'llama-3.2-90b-vision-preview' : groqModel;
 
                 const groqContent = payloadParts.map(p => {
                     if (p.text) return { type: "text", text: p.text };
