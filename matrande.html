@@ -334,9 +334,9 @@
 
                 const groqContent = payloadParts.map(p => {
                     if (p.text) return { type: "text", text: p.text };
-                    if (p.inlineData) return { 
-                        type: "image_url", 
-                        image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` } 
+                    if (p.inlineData) return {
+                        type: "image_url",
+                        image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` }
                     };
                     return { type: "text", text: "" };
                 });
@@ -435,8 +435,8 @@
                 tl: { q: 2, s: 2 }
             });
 
-            useEffect(() => { 
-                setHfStatus(AIAdapter.getConfig().hfTokens.length > 0); 
+            useEffect(() => {
+                setHfStatus(AIAdapter.getConfig().hfTokens.length > 0);
                 const config = AIAdapter.getConfig();
                 if (config.groqKeys.length > 0 && config.geminiKeys.length === 0) {
                     setAiProvider("groq");
