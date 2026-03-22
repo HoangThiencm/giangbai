@@ -1002,7 +1002,7 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                                         {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "GDCD", "Tin Học", "KHTN", "LS&ĐL"].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                                 <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Lớp</label>
                                     <select className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-amber-300 outline-none font-semibold text-gray-700" value={info.grade} onChange={e => setInfo({ ...info, grade: e.target.value })}>
-                                        {[6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
                                 <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Thời gian</label>
                                     <input className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-amber-300 outline-none font-semibold text-gray-700" type="number" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} /></div>
                             </div>
@@ -1043,7 +1043,7 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                                     {["Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "GDCD", "Tin Học", "KHTN", "LS&ĐL"].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                             <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Lớp</label>
                                 <select className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-emerald-300 outline-none font-semibold text-gray-700" value={info.grade} onChange={e => setInfo({ ...info, grade: e.target.value })}>
-                                    {[6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => <option key={g} value={g}>Lớp {g}</option>)}</select></div>
                             <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Thời gian</label>
                                 <input className="border p-2.5 rounded-xl w-full bg-white/50 focus:ring-2 focus:ring-emerald-300 outline-none font-semibold text-gray-700" type="number" value={info.time} onChange={e => setInfo({ ...info, time: e.target.value })} /></div>
                             <div className="space-y-1"><label className="text-xs font-semibold text-gray-500 uppercase">Sở/Phòng GD</label>
