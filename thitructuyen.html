@@ -1211,6 +1211,7 @@
             const [loading, setLoading] = useState(false);
             const [searchText, setSearchText] = useState("");
             const [groupFilter, setGroupFilter] = useState("all");
+            const [showLegacyExams, setShowLegacyExams] = useState(false);
             const [qrLink, setQrLink] = useState(null);
             const [showGuide, setShowGuide] = useState(false);
             const userEmail = localStorage.getItem('userEmail');
@@ -1218,32 +1219,55 @@
 
             useEffect(() => {
                 if (!userEmail) return;
+                let cancelled = false;
                 setLoading(true);
                 axios.get(`${API_BASE}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`)
-                    .then(res => {
+                    .then(async res => {
                         const data = Array.isArray(res.data) ? res.data : [];
-                        const hasOwnerInfo = data.some(ex => getExamOwnerEmail(ex));
-                        const visibleExams = hasOwnerInfo ? data.filter(ex => getExamOwnerEmail(ex) === normalizedUserEmail) : data;
-                        visibleExams.sort((a, b) => new Date(b.created_at || b.updated_at || b.start_time || 0) - new Date(a.created_at || a.updated_at || a.start_time || 0));
-                        setExams(visibleExams);
+                        const enriched = await Promise.all(data.map(async ex => {
+                            if (getExamOwnerEmail(ex) || !ex.id) return ex;
+                            try {
+                                const detailRes = await axios.get(`${API_BASE}/api/exam/get/${ex.id}`);
+                                const detail = detailRes.data || {};
+                                const info = detail.info || {};
+                                return {
+                                    ...ex,
+                                    teacher_email: detail.teacher_email || info.teacher_email || ex.teacher_email,
+                                    info: { ...(ex.info || {}), ...info }
+                                };
+                            } catch {
+                                return ex;
+                            }
+                        }));
+                        enriched.sort((a, b) => new Date(b.created_at || b.updated_at || b.start_time || 0) - new Date(a.created_at || a.updated_at || a.start_time || 0));
+                        if (!cancelled) setExams(enriched);
                     })
                     .catch(err => {
                         console.error("Load exams failed:", err);
-                        setExams([]);
+                        if (!cancelled) setExams([]);
                     })
-                    .finally(() => setLoading(false));
+                    .finally(() => { if (!cancelled) setLoading(false); });
+                return () => { cancelled = true; };
             }, [userEmail]);
 
-            const groups = useMemo(() => Array.from(new Set(exams.map(getExamGroupName))).sort((a, b) => a.localeCompare(b, "vi")), [exams]);
+            const visibleBaseExams = useMemo(() => {
+                return exams.filter(ex => {
+                    const ownerEmail = getExamOwnerEmail(ex);
+                    if (ownerEmail) return ownerEmail === normalizedUserEmail;
+                    return showLegacyExams;
+                });
+            }, [exams, normalizedUserEmail, showLegacyExams]);
+            const legacyExamCount = useMemo(() => exams.filter(ex => !getExamOwnerEmail(ex)).length, [exams]);
+            const groups = useMemo(() => Array.from(new Set(visibleBaseExams.map(getExamGroupName))).sort((a, b) => a.localeCompare(b, "vi")), [visibleBaseExams]);
             const filteredExams = useMemo(() => {
                 const keyword = searchText.trim().toLowerCase();
-                return exams.filter(ex => {
+                return visibleBaseExams.filter(ex => {
                     const groupName = getExamGroupName(ex);
                     if (groupFilter !== "all" && groupName !== groupFilter) return false;
                     if (!keyword) return true;
                     return [ex.title, ex.school, ex.id, ex.info?.title, ex.info?.school].some(value => String(value || "").toLowerCase().includes(keyword));
                 });
-            }, [exams, searchText, groupFilter]);
+            }, [visibleBaseExams, searchText, groupFilter]);
             const handleDelete = async (id) => { if (confirm("Xóa đề này?")) { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e => e.id !== id)); } };
             const handleDuplicate = async (id) => { await axios.post(`${API_BASE}/api/exam/duplicate/${id}`); window.location.reload(); };
 
@@ -1263,9 +1287,13 @@
                         <div className="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
                             <div>
                                 <div className="font-bold text-gray-800">Kho đề của tôi</div>
-                                <div className="text-xs text-gray-500">{filteredExams.length}/{exams.length} đề đang hiển thị</div>
+                                <div className="text-xs text-gray-500">{filteredExams.length}/{visibleBaseExams.length} đề đang hiển thị{legacyExamCount ? ` · ${legacyExamCount} đề cũ đang ẩn` : ""}</div>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-2">
+                                <label className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm bg-white text-gray-600">
+                                    <input type="checkbox" checked={showLegacyExams} onChange={e => setShowLegacyExams(e.target.checked)} />
+                                    Hiện đề cũ
+                                </label>
                                 <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white min-w-[180px]">
                                     <option value="all">Tất cả phân loại</option>
                                     {groups.map(group => <option key={group} value={group}>{group}</option>)}
