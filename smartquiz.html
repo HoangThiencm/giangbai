@@ -100,10 +100,12 @@
                 const apiKeys = GeminiModule.getApiKeys();
                 const defaultModule = GeminiModule.getDefaultModule();
                 const maxKeyAttempts = options.maxKeyAttempts || apiKeys.length;
+                const transientMaxAttempts = options.transientMaxAttempts || 2;
 
                 if (!apiKeys.length) throw new Error("Chưa nạp API Keys! Vui lòng cấu hình trong trang chủ.");
 
                 let finalError = "";
+                let transientAttempts = 0;
                 const shuffledKeys = [...apiKeys].sort(() => Math.random() - 0.5).slice(0, maxKeyAttempts);
 
                 for (let i = 0; i < shuffledKeys.length; i++) {
@@ -117,21 +119,43 @@
                             body: JSON.stringify({ contents: [{ parts }] })
                         });
 
-                        const data = await res.json();
-                        if (data.error) throw new Error(data.error.message);
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok || data.error) {
+                            const status = res.status || data.error?.code || 0;
+                            const message = data.error?.message || `HTTP ${status}`;
+                            const err = new Error(message);
+                            err.status = status;
+                            throw err;
+                        }
 
                         const txt = data.candidates[0].content.parts[0].text;
                         return txt;
 
                     } catch (e) {
                         finalError = e.message;
-                        console.error(`Key ${i + 1} lỗi:`, e.message);
+                        const isTransient = e.status >= 500 && e.status < 600;
+
+                        if (isTransient) {
+                            transientAttempts += 1;
+                            console.warn(`Gemini đang quá tải (${e.status}). Lần thử ${transientAttempts}/${transientMaxAttempts}:`, e.message);
+                            if (transientAttempts >= transientMaxAttempts) {
+                                throw new Error("Gemini đang quá tải (503/5xx), vui lòng thử lại sau ít phút. Đây không phải lỗi hết quota key.");
+                            }
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            continue;
+                        }
+
+                        if (e.status === 429) {
+                            console.warn(`Key ${i + 1} chạm giới hạn 429, thử key khác:`, e.message);
+                        } else {
+                            console.error(`Key ${i + 1} lỗi:`, e.message);
+                        }
                     }
                 }
                 throw new Error(`Tất cả keys đều lỗi: ${finalError}`);
             },
-            callGeminiAPI: async (prompt, onRetry = null) => {
-                return GeminiModule.callGeminiParts([{ text: prompt }], onRetry);
+            callGeminiAPI: async (prompt, onRetry = null, options = {}) => {
+                return GeminiModule.callGeminiParts([{ text: prompt }], onRetry, options);
             },
             parseJSONResponse: (text) => {
                 const startIdx = text.indexOf('[');
