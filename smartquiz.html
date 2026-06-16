@@ -96,7 +96,7 @@
             getDefaultModule: () => {
                 return localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
             },
-            callGeminiAPI: async (prompt, onRetry = null) => {
+            callGeminiParts: async (parts, onRetry = null) => {
                 const apiKeys = GeminiModule.getApiKeys();
                 const defaultModule = GeminiModule.getDefaultModule();
 
@@ -113,7 +113,7 @@
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${defaultModule}:generateContent?key=${currentKey}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                            body: JSON.stringify({ contents: [{ parts }] })
                         });
 
                         const data = await res.json();
@@ -129,6 +129,9 @@
                 }
                 throw new Error(`Tất cả keys đều lỗi: ${finalError}`);
             },
+            callGeminiAPI: async (prompt, onRetry = null) => {
+                return GeminiModule.callGeminiParts([{ text: prompt }], onRetry);
+            },
             parseJSONResponse: (text) => {
                 const startIdx = text.indexOf('[');
                 const endIdx = text.lastIndexOf(']');
@@ -143,6 +146,65 @@
         const cleanOptionText = (text) => {
             if (!text) return "";
             return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').trim();
+        };
+
+        const readTextFromDocumentFile = async (file) => {
+            let extractedText = "";
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.docx')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                extractedText = result.value;
+            } else if (fileName.endsWith('.pdf')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const strings = textContent.items.map(item => item.str);
+                    extractedText += strings.join(" ") + "\n";
+                }
+            }
+
+            return extractedText.trim();
+        };
+
+        const fileToBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result).split(',')[1]);
+                reader.onerror = () => reject(new Error("Không thể đọc file ảnh."));
+                reader.readAsDataURL(file);
+            });
+        };
+
+        const extractSourceTextFromFile = async (file, onRetry = null) => {
+            const fileName = file.name.toLowerCase();
+            const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+
+            if (fileName.endsWith('.pdf') || fileName.endsWith('.docx')) {
+                return readTextFromDocumentFile(file);
+            }
+
+            if (isImage) {
+                const base64Data = await fileToBase64(file);
+                const prompt = `Đọc toàn bộ nội dung chữ trong ảnh này để làm nguồn kiến thức cho giáo viên tạo bài tập.
+                Chỉ trả về phần văn bản/kiến thức đọc được. Giữ nguyên công thức, ký hiệu, bảng biểu quan trọng nếu có.
+                Nếu ảnh không có nội dung học tập rõ ràng, trả về chuỗi rỗng.`;
+
+                return GeminiModule.callGeminiParts([
+                    { text: prompt },
+                    {
+                        inline_data: {
+                            mime_type: file.type || 'image/png',
+                            data: base64Data
+                        }
+                    }
+                ], onRetry);
+            }
+
+            throw new Error("Chỉ hỗ trợ file .pdf, .docx hoặc ảnh .png/.jpg/.webp");
         };
 
         // --- HELPER: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD ---
@@ -993,6 +1055,9 @@
             const [questions, setQuestions] = useState([]);
             const [essays, setEssays] = useState([]);
             const [loading, setLoading] = useState(false);
+            const [sourceLoading, setSourceLoading] = useState(false);
+            const [sourceMaterials, setSourceMaterials] = useState([]);
+            const [sourceOnly, setSourceOnly] = useState(true);
             const [retryCount, setRetryCount] = useState(0);
             const [showSettings, setShowSettings] = useState(false);
             const [presentationSettings, setPresentationSettings] = useState({
@@ -1040,6 +1105,53 @@
                 setTopics(topics.map(t => t.id === id ? { ...t, [field]: value } : t));
             };
 
+            const handleSourceUpload = async (event) => {
+                const files = Array.from(event.target.files || []);
+                if (!files.length) return;
+
+                setSourceLoading(true);
+                setRetryCount(0);
+                try {
+                    const newMaterials = [];
+
+                    for (const file of files) {
+                        const text = await extractSourceTextFromFile(file, setRetryCount);
+                        if (!text.trim()) {
+                            throw new Error(`Không đọc được nội dung học tập từ file "${file.name}".`);
+                        }
+
+                        newMaterials.push({
+                            id: `${Date.now()}-${file.name}-${newMaterials.length}`,
+                            name: file.name,
+                            text: text.trim()
+                        });
+                    }
+
+                    setSourceMaterials(prev => [...prev, ...newMaterials]);
+                } catch (error) {
+                    alert(`Lỗi khi đọc nguồn kiến thức: ${error.message}`);
+                } finally {
+                    setSourceLoading(false);
+                    event.target.value = null;
+                }
+            };
+
+            const removeSourceMaterial = (id) => {
+                setSourceMaterials(sourceMaterials.filter(item => item.id !== id));
+            };
+
+            const updateSourceMaterialText = (id, text) => {
+                setSourceMaterials(sourceMaterials.map(item => item.id === id ? { ...item, text } : item));
+            };
+
+            const getSourceContext = () => {
+                return sourceMaterials
+                    .filter(item => item.text.trim())
+                    .map((item, index) => `Nguồn ${index + 1} - ${item.name}:\n${item.text.trim()}`)
+                    .join('\n\n---\n\n')
+                    .substring(0, 45000);
+            };
+
             const handleFileUpload = async (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1047,24 +1159,12 @@
                 setLoading(true);
                 setRetryCount(0);
                 try {
-                    let extractedText = "";
-                    if (file.name.endsWith('.docx')) {
-                        const arrayBuffer = await file.arrayBuffer();
-                        const result = await mammoth.extractRawText({ arrayBuffer });
-                        extractedText = result.value;
-                    } else if (file.name.endsWith('.pdf')) {
-                        const arrayBuffer = await file.arrayBuffer();
-                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            const strings = textContent.items.map(item => item.str);
-                            extractedText += strings.join(" ") + "\n";
-                        }
-                    } else {
+                    const fileName = file.name.toLowerCase();
+                    if (!fileName.endsWith('.docx') && !fileName.endsWith('.pdf')) {
                         throw new Error("Vui lòng tải lên file .docx hoặc .pdf");
                     }
 
+                    const extractedText = await readTextFromDocumentFile(file);
                     if (!extractedText.trim()) throw new Error("Không thể đọc được nội dung từ file.");
 
                     const prompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các câu hỏi trắc nghiệm từ nội dung sau và trả về định dạng JSON mảng phẳng.
@@ -1109,6 +1209,19 @@
                 setRetryCount(0);
 
                 const totalQuestions = topics.reduce((sum, t) => sum + t.count, 0);
+                const structurePrompt = topics.map((t, idx) => {
+                    return `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} câu/bài, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`;
+                }).join('\n');
+                const sourceContext = getSourceContext();
+                const sourceInstruction = sourceContext.trim()
+                    ? `NGUỒN KIẾN THỨC:
+                    ${sourceContext}
+
+                    QUY TẮC BÁM NGUỒN:
+                    - ${sourceOnly ? "Chỉ dùng kiến thức có trong NGUỒN KIẾN THỨC ở trên. Không tự thêm kiến thức ngoài nguồn." : "Ưu tiên kiến thức trong NGUỒN KIẾN THỨC; chỉ bổ sung kiến thức phổ thông khi thật cần thiết."}
+                    - Nếu một chủ đề không có đủ dữ liệu trong nguồn, hãy tạo ít câu hơn cho đúng phần có căn cứ, không bịa nội dung.
+                    - Câu hỏi phải khớp với chủ đề giáo viên nhập và không vượt ra ngoài phạm vi học liệu.`
+                    : `LƯU Ý: Giáo viên chưa nạp nguồn kiến thức. Hãy tạo câu hỏi theo kiến thức phổ thông của chủ đề, tránh mở rộng quá xa phạm vi chủ đề đã nhập.`;
 
                 let prompt = "";
                 if (mode === "quiz") {
@@ -1131,6 +1244,8 @@
                     }).join('\n');
 
                     prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi trắc nghiệm dựa trên cấu trúc sau:\n${topicPrompts}\n
+                    ${sourceInstruction}
+
                     QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
                     QUY TẮC OUTPUT: Trả về một mảng phẳng chứa tất cả câu hỏi. Mỗi câu hỏi phải có field "type" để chỉ loại trắc nghiệm.
 
@@ -1144,6 +1259,8 @@
                     Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi theo thứ tự các phần đã định.`;
                 } else {
                     prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} bài tập TỰ LUẬN dựa trên cấu trúc sau:\n${structurePrompt}\n
+                    ${sourceInstruction}
+
                     Mỗi bài tập bao gồm:
                     - "question": Đề bài (có thể chứa công thức toán học trong $...$)
                     - "solution": Lời giải chi tiết (có thể chứa công thức toán học trong $...$)
@@ -1353,7 +1470,7 @@
                         <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-indigo-50 relative overflow-hidden fade-in">
                             <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-100 to-transparent w-40 h-full opacity-50 pointer-events-none"></div>
                             <h2 className="text-2xl font-bold text-slate-800 mb-6">THIẾT LẬP YÊU CẦU</h2>
-                            <p className="text-slate-600 mb-6 text-sm">Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng: nhiều lựa chọn, đúng/sai, điền khuyết, hoặc nối ô.</p>
+                            <p className="text-slate-600 mb-6 text-sm">Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng; nếu nạp học liệu nguồn, AI sẽ tạo câu hỏi bám theo nội dung đó để tránh vượt phạm vi chương trình.</p>
 
                             {/* Chọn chế độ */}
                             <div className="mb-6">
@@ -1371,15 +1488,74 @@
                                 </div>
                             </div>
 
-                            {/* TẠO ĐỀ TỪ FILE */}
+                            {/* NGUỒN KIẾN THỨC */}
                             <div className="mb-6">
-                                <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Tạo đề từ file (PDF/Word)</label>
+                                <div className="flex justify-between items-center gap-3 mb-2">
+                                    <label className="block font-bold text-slate-700 text-sm uppercase tracking-wide">Nguồn kiến thức để sinh đề</label>
+                                    <label className={`flex items-center gap-2 text-xs font-bold ${sourceMaterials.length ? 'text-indigo-700' : 'text-slate-400'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={sourceOnly}
+                                            onChange={(e) => setSourceOnly(e.target.checked)}
+                                            disabled={!sourceMaterials.length}
+                                            className="w-4 h-4"
+                                        />
+                                        Chỉ dùng nguồn đã nạp
+                                    </label>
+                                </div>
+                                <div className="bg-emerald-50 border-2 border-dashed border-emerald-200 p-5 rounded-xl text-center hover:bg-emerald-100 transition">
+                                    <label className="cursor-pointer flex flex-col items-center justify-center h-full w-full">
+                                        <i className={`fas ${sourceLoading ? 'fa-circle-notch fa-spin' : 'fa-book-open'} text-3xl text-emerald-500 mb-3`}></i>
+                                        <span className="text-slate-700 font-medium mb-1">
+                                            {sourceLoading ? "Đang đọc nguồn kiến thức..." : "Chọn PDF, Word hoặc ảnh bài học"}
+                                        </span>
+                                        <span className="text-sm text-slate-500">AI sẽ dựa vào nội dung này khi tạo câu hỏi theo chủ đề</span>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
+                                            multiple
+                                            onChange={handleSourceUpload}
+                                            className="hidden"
+                                            disabled={loading || sourceLoading}
+                                        />
+                                    </label>
+                                </div>
+
+                                {sourceMaterials.length > 0 && (
+                                    <div className="mt-3 space-y-3">
+                                        {sourceMaterials.map((item) => (
+                                            <div key={item.id} className="bg-white border border-emerald-100 rounded-xl p-3 shadow-sm">
+                                                <div className="flex justify-between items-center gap-3 mb-2">
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-sm text-slate-700 truncate">
+                                                            <i className="fas fa-file-lines text-emerald-500 mr-2"></i>{item.name}
+                                                        </p>
+                                                        <p className="text-xs text-slate-400">{item.text.length.toLocaleString()} ký tự đã đọc</p>
+                                                    </div>
+                                                    <button onClick={() => removeSourceMaterial(item.id)} className="text-red-400 hover:text-red-600 transition" disabled={loading || sourceLoading}>
+                                                        <i className="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    value={item.text}
+                                                    onChange={(e) => updateSourceMaterialText(item.id, e.target.value)}
+                                                    className="w-full min-h-[88px] max-h-48 border border-gray-200 rounded-lg p-2 text-sm text-slate-600 focus:ring-2 focus:ring-emerald-300 outline-none resize-y"
+                                                ></textarea>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* NHẬP ĐỀ CÓ SẴN TỪ FILE */}
+                            <div className="mb-6">
+                                <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Nhập đề có sẵn từ file (PDF/Word)</label>
                                 <div className="bg-slate-50 border-2 border-dashed border-indigo-200 p-6 rounded-xl text-center hover:bg-slate-100 transition">
                                     <label className="cursor-pointer flex flex-col items-center justify-center h-full w-full">
                                         <i className="fas fa-file-upload text-3xl text-indigo-400 mb-3"></i>
                                         <span className="text-slate-600 font-medium mb-1">Nhấn để chọn file Word (.docx) hoặc PDF</span>
-                                        <span className="text-sm text-slate-400">Hệ thống sẽ tự nhận diện câu hỏi và đáp án</span>
-                                        <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} className="hidden" disabled={loading} />
+                                        <span className="text-sm text-slate-400">Dùng khi file đã có sẵn câu hỏi và đáp án để trích xuất</span>
+                                        <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} className="hidden" disabled={loading || sourceLoading} />
                                     </label>
                                 </div>
                             </div>
@@ -1463,7 +1639,8 @@
                                     {topics.map((t, idx) => {
                                         const typeName = t.quizType === 'multiple-choice' ? '🔤' :
                                             t.quizType === 'true-false' ? '✅' :
-                                                t.quizType === 'fill-blank' ? '📝' : '🔗';
+                                                t.quizType === 'fill-blank' ? '📝' :
+                                                    t.quizType === 'short-answer' ? '🔢' : '🔗';
                                         return `${typeName} ${idx + 1}: ${t.count}`;
                                     }).join(', ')}
                                 </div>
@@ -1471,10 +1648,12 @@
 
                             <button
                                 onClick={generateContent}
-                                disabled={loading}
+                                disabled={loading || sourceLoading}
                                 className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold hover:shadow-lg hover:scale-[1.01] transition disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center gap-3 text-lg"
                             >
-                                {loading ? (
+                                {sourceLoading ? (
+                                    <><i className="fas fa-circle-notch fa-spin"></i> Đang đọc nguồn...</>
+                                ) : loading ? (
                                     retryCount > 0 ? <><i className="fas fa-sync fa-spin"></i> Đổi Key khác ({retryCount})...</> : <><i className="fas fa-circle-notch fa-spin"></i> Đang suy nghĩ...</>
                                 ) : (
                                     <><i className="fas fa-magic"></i> TẠO {mode === "quiz" ? "ĐỀ" : "BÀI TẬP"} NGAY</>
