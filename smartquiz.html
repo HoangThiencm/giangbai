@@ -99,60 +99,83 @@
             callGeminiParts: async (parts, onRetry = null, options = {}) => {
                 const apiKeys = GeminiModule.getApiKeys();
                 const defaultModule = GeminiModule.getDefaultModule();
-                const maxKeyAttempts = options.maxKeyAttempts || apiKeys.length;
-                const transientMaxAttempts = options.transientMaxAttempts || 2;
+                const modelList = [...new Set([...(options.models || [defaultModule])].filter(Boolean))];
 
                 if (!apiKeys.length) throw new Error("Chưa nạp API Keys! Vui lòng cấu hình trong trang chủ.");
 
                 let finalError = "";
-                let transientAttempts = 0;
-                const shuffledKeys = [...apiKeys].sort(() => Math.random() - 0.5).slice(0, maxKeyAttempts);
+                const cursorKey = 'smartquiz_active_gemini_key_index';
+                const getActiveKeyIndex = () => {
+                    const savedIndex = parseInt(localStorage.getItem(cursorKey) || '0', 10);
+                    return Number.isFinite(savedIndex) && savedIndex >= 0 ? savedIndex % apiKeys.length : 0;
+                };
+                const setActiveKeyIndex = (index) => {
+                    localStorage.setItem(cursorKey, String(index % apiKeys.length));
+                };
+                const isQuotaError = (error) => {
+                    const message = String(error.message || '').toLowerCase();
+                    return error.status === 429 || message.includes('quota') || message.includes('rate limit');
+                };
 
-                for (let i = 0; i < shuffledKeys.length; i++) {
-                    const currentKey = shuffledKeys[i];
-                    try {
-                        if (onRetry && i > 0) onRetry(i);
+                const inlineImageCount = parts.filter(part => part.inline_data || part.inlineData).length;
+                const textChars = parts.reduce((sum, part) => sum + (part.text ? part.text.length : 0), 0);
+                console.info(`Gemini request: ${textChars.toLocaleString()} ký tự text, ${inlineImageCount} ảnh, dùng key hiện tại; chỉ đổi key khi 429/quota.`);
 
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${defaultModule}:generateContent?key=${currentKey}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts }] })
-                        });
+                const startingIndex = getActiveKeyIndex();
+                let currentKeyIndex = startingIndex;
+                let quotaSwitchCount = 0;
 
-                        const data = await res.json().catch(() => ({}));
-                        if (!res.ok || data.error) {
-                            const status = res.status || data.error?.code || 0;
-                            const message = data.error?.message || `HTTP ${status}`;
-                            const err = new Error(message);
-                            err.status = status;
-                            throw err;
-                        }
+                while (quotaSwitchCount < apiKeys.length) {
+                    const currentKey = apiKeys[currentKeyIndex];
 
-                        const txt = data.candidates[0].content.parts[0].text;
-                        return txt;
+                    for (const currentModel of modelList) {
+                        try {
+                            if (onRetry && quotaSwitchCount > 0) onRetry(quotaSwitchCount);
 
-                    } catch (e) {
-                        finalError = e.message;
-                        const isTransient = e.status >= 500 && e.status < 600;
+                            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentKey}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ contents: [{ parts }] })
+                            });
 
-                        if (isTransient) {
-                            transientAttempts += 1;
-                            console.warn(`Gemini đang quá tải (${e.status}). Lần thử ${transientAttempts}/${transientMaxAttempts}:`, e.message);
-                            if (transientAttempts >= transientMaxAttempts) {
-                                throw new Error("Gemini đang quá tải (503/5xx), vui lòng thử lại sau ít phút. Đây không phải lỗi hết quota key.");
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok || data.error) {
+                                const status = res.status || data.error?.code || 0;
+                                const message = data.error?.message || `HTTP ${status}`;
+                                const err = new Error(message);
+                                err.status = status;
+                                throw err;
                             }
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                            continue;
-                        }
 
-                        if (e.status === 429) {
-                            console.warn(`Key ${i + 1} chạm giới hạn 429, thử key khác:`, e.message);
-                        } else {
-                            console.error(`Key ${i + 1} lỗi:`, e.message);
+                            setActiveKeyIndex(currentKeyIndex);
+                            const txt = data.candidates[0].content.parts[0].text;
+                            return txt;
+
+                        } catch (e) {
+                            finalError = e.message;
+
+                            if (isQuotaError(e)) {
+                                console.warn(`Key ${currentKeyIndex + 1} chạm quota/rate limit, chuyển sang key kế tiếp:`, e.message);
+                                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+                                setActiveKeyIndex(currentKeyIndex);
+                                quotaSwitchCount += 1;
+                                break;
+                            }
+
+                            if (e.status >= 500 && e.status < 600) {
+                                throw new Error(`Gemini/model đang quá tải (${e.status}). Không đổi key vì đây không phải lỗi quota. Vui lòng thử lại sau ít phút.`);
+                            }
+
+                            if (modelList.length > 1 && currentModel !== modelList[modelList.length - 1]) {
+                                console.warn(`[${currentModel}] lỗi, thử model kế tiếp bằng cùng key:`, e.message);
+                            } else {
+                                throw e;
+                            }
                         }
                     }
                 }
-                throw new Error(`Tất cả keys đều lỗi: ${finalError}`);
+
+                throw new Error(`Tất cả ${apiKeys.length} key đều chạm quota/rate limit. Lỗi cuối: ${finalError}`);
             },
             callGeminiAPI: async (prompt, onRetry = null, options = {}) => {
                 return GeminiModule.callGeminiParts([{ text: prompt }], onRetry, options);
@@ -278,7 +301,7 @@
             return GeminiModule.callGeminiParts([
                 { text: prompt },
                 ...imageParts
-            ], onRetry, { maxKeyAttempts: 2 });
+            ], onRetry);
         };
 
         // --- HELPER: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD ---
@@ -1397,7 +1420,7 @@
                     .filter(item => item.text.trim())
                     .map((item, index) => `Nguồn ${index + 1} - ${item.name}:\n${item.text.trim()}`)
                     .join('\n\n---\n\n')
-                    .substring(0, 45000);
+                    .substring(0, 25000);
             };
 
             const handleFileUpload = async (event) => {
