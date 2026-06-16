@@ -99,8 +99,9 @@
             callGeminiParts: async (parts, onRetry = null, options = {}) => {
                 const apiKeys = GeminiModule.getApiKeys();
                 const defaultModule = GeminiModule.getDefaultModule();
-                const requestedModels = options.models || [defaultModule];
+                const requestedModels = options.models || [defaultModule, 'gemini-2.0-flash', 'gemini-2.5-flash'];
                 const modelList = requestedModels.filter((model, index) => model && requestedModels.indexOf(model) === index);
+                const transientRetries = Number.isFinite(options.transientRetries) ? options.transientRetries : 2;
 
                 if (!apiKeys.length) throw new Error("Chưa nạp API Keys! Vui lòng cấu hình trong trang chủ.");
 
@@ -121,58 +122,83 @@
                 const inlineImageCount = parts.filter(part => part.inline_data || part.inlineData).length;
                 const textChars = parts.reduce((sum, part) => sum + (part.text ? part.text.length : 0), 0);
                 console.info(`Gemini request: ${textChars.toLocaleString()} ký tự text, ${inlineImageCount} ảnh, dùng key hiện tại; chỉ đổi key khi 429/quota.`);
+                const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
                 const startingIndex = getActiveKeyIndex();
                 let currentKeyIndex = startingIndex;
                 let quotaSwitchCount = 0;
+                let retrySignal = 0;
 
                 while (quotaSwitchCount < apiKeys.length) {
                     const currentKey = apiKeys[currentKeyIndex];
 
                     for (const currentModel of modelList) {
-                        try {
-                            if (onRetry && quotaSwitchCount > 0) onRetry(quotaSwitchCount);
+                        const quotaSwitchCountBeforeModel = quotaSwitchCount;
 
-                            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentKey}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: [{ parts }] })
-                            });
+                        for (let transientAttempt = 0; transientAttempt <= transientRetries; transientAttempt++) {
+                            try {
+                                if (onRetry && retrySignal > 0) onRetry(retrySignal);
 
-                            const data = await res.json().catch(() => ({}));
-                            if (!res.ok || data.error) {
-                                const status = res.status || (data.error && data.error.code) || 0;
-                                const message = (data.error && data.error.message) || `HTTP ${status}`;
-                                const err = new Error(message);
-                                err.status = status;
-                                throw err;
-                            }
+                                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentKey}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contents: [{ parts }] })
+                                });
 
-                            setActiveKeyIndex(currentKeyIndex);
-                            const txt = data.candidates[0].content.parts[0].text;
-                            return txt;
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok || data.error) {
+                                    const status = res.status || (data.error && data.error.code) || 0;
+                                    const message = (data.error && data.error.message) || `HTTP ${status}`;
+                                    const err = new Error(message);
+                                    err.status = status;
+                                    throw err;
+                                }
 
-                        } catch (e) {
-                            finalError = e.message;
-
-                            if (isQuotaError(e)) {
-                                console.warn(`Key ${currentKeyIndex + 1} chạm quota/rate limit, chuyển sang key kế tiếp:`, e.message);
-                                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
                                 setActiveKeyIndex(currentKeyIndex);
-                                quotaSwitchCount += 1;
-                                break;
-                            }
+                                const txt = data.candidates[0].content.parts[0].text;
+                                return txt;
 
-                            if (e.status >= 500 && e.status < 600) {
-                                throw new Error(`Gemini/model đang quá tải (${e.status}). Không đổi key vì đây không phải lỗi quota. Vui lòng thử lại sau ít phút.`);
-                            }
+                            } catch (e) {
+                                finalError = e.message;
 
-                            if (modelList.length > 1 && currentModel !== modelList[modelList.length - 1]) {
-                                console.warn(`[${currentModel}] lỗi, thử model kế tiếp bằng cùng key:`, e.message);
-                            } else {
+                                if (isQuotaError(e)) {
+                                    console.warn(`Key ${currentKeyIndex + 1} chạm quota/rate limit, chuyển sang key kế tiếp:`, e.message);
+                                    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+                                    setActiveKeyIndex(currentKeyIndex);
+                                    quotaSwitchCount += 1;
+                                    retrySignal += 1;
+                                    break;
+                                }
+
+                                if (e.status >= 500 && e.status < 600) {
+                                    if (transientAttempt < transientRetries) {
+                                        retrySignal += 1;
+                                        const waitMs = 1200 * (transientAttempt + 1);
+                                        console.warn(`[${currentModel}] Gemini quá tải (${e.status}), thử lại cùng key sau ${waitMs}ms:`, e.message);
+                                        await sleep(waitMs);
+                                        continue;
+                                    }
+
+                                    if (modelList.length > 1 && currentModel !== modelList[modelList.length - 1]) {
+                                        retrySignal += 1;
+                                        console.warn(`[${currentModel}] vẫn quá tải, thử model kế tiếp bằng cùng key.`);
+                                        break;
+                                    }
+
+                                    throw new Error(`Gemini/model đang quá tải (${e.status}) sau ${transientRetries + 1} lần thử cùng key. Không đổi key vì đây không phải lỗi quota. Vui lòng thử lại sau ít phút.`);
+                                }
+
+                                if (modelList.length > 1 && currentModel !== modelList[modelList.length - 1]) {
+                                    retrySignal += 1;
+                                    console.warn(`[${currentModel}] lỗi, thử model kế tiếp bằng cùng key:`, e.message);
+                                    break;
+                                }
+
                                 throw e;
                             }
                         }
+
+                        if (quotaSwitchCount > quotaSwitchCountBeforeModel) break;
                     }
                 }
 
@@ -2043,7 +2069,7 @@
                                 ) : pendingSourceImages.length > 0 ? (
                                     <><i className="fas fa-images"></i> Cần nhận diện {pendingSourceImages.length} ảnh trước</>
                                 ) : loading ? (
-                                    retryCount > 0 ? <><i className="fas fa-sync fa-spin"></i> Đổi Key khác ({retryCount})...</> : <><i className="fas fa-circle-notch fa-spin"></i> Đang suy nghĩ...</>
+                                    retryCount > 0 ? <><i className="fas fa-sync fa-spin"></i> Đang thử lại ({retryCount})...</> : <><i className="fas fa-circle-notch fa-spin"></i> Đang suy nghĩ...</>
                                 ) : (
                                     <><i className="fas fa-magic"></i> TẠO {mode === "quiz" ? "ĐỀ" : "BÀI TẬP"} NGAY</>
                                 )}
