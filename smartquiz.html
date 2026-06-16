@@ -1105,8 +1105,7 @@
                 setTopics(topics.map(t => t.id === id ? { ...t, [field]: value } : t));
             };
 
-            const handleSourceUpload = async (event) => {
-                const files = Array.from(event.target.files || []);
+            const addSourceFiles = useCallback(async (files, sourceLabel = "file") => {
                 if (!files.length) return;
 
                 setSourceLoading(true);
@@ -1117,7 +1116,7 @@
                     for (const file of files) {
                         const text = await extractSourceTextFromFile(file, setRetryCount);
                         if (!text.trim()) {
-                            throw new Error(`Không đọc được nội dung học tập từ file "${file.name}".`);
+                            throw new Error(`Không đọc được nội dung học tập từ ${sourceLabel} "${file.name}".`);
                         }
 
                         newMaterials.push({
@@ -1132,7 +1131,79 @@
                     alert(`Lỗi khi đọc nguồn kiến thức: ${error.message}`);
                 } finally {
                     setSourceLoading(false);
+                }
+            }, []);
+
+            const handleSourceUpload = async (event) => {
+                const files = Array.from(event.target.files || []);
+                try {
+                    await addSourceFiles(files, "file");
+                } finally {
                     event.target.value = null;
+                }
+            };
+
+            const handleSourcePaste = useCallback(async (event) => {
+                if (sourceLoading || loading) return;
+
+                const pasteEvent = event.nativeEvent || event;
+                if (pasteEvent.__smartQuizPasteHandled) return;
+
+                const pastedFiles = Array.from(pasteEvent.clipboardData?.items || [])
+                    .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+                    .map((item, index) => {
+                        const file = item.getAsFile();
+                        if (!file) return null;
+                        const extension = item.type.split('/')[1] || 'png';
+                        return new File([file], `anh-dan-tu-clipboard-${Date.now()}-${index + 1}.${extension}`, { type: item.type });
+                    })
+                    .filter(Boolean);
+
+                if (!pastedFiles.length) return;
+
+                pasteEvent.__smartQuizPasteHandled = true;
+                event.preventDefault();
+                await addSourceFiles(pastedFiles, "ảnh clipboard");
+            }, [addSourceFiles, loading, sourceLoading]);
+
+            useEffect(() => {
+                if (step !== 1) return;
+
+                const onPaste = (event) => {
+                    handleSourcePaste(event);
+                };
+
+                document.addEventListener('paste', onPaste);
+                return () => document.removeEventListener('paste', onPaste);
+            }, [handleSourcePaste, step]);
+
+            const readImageFromClipboard = async () => {
+                if (!navigator.clipboard?.read) {
+                    alert("Trình duyệt chưa hỗ trợ đọc ảnh trực tiếp từ clipboard. Bạn có thể bấm vào vùng nguồn rồi nhấn Ctrl+V.");
+                    return;
+                }
+
+                try {
+                    const clipboardItems = await navigator.clipboard.read();
+                    const imageFiles = [];
+
+                    for (const item of clipboardItems) {
+                        const imageType = item.types.find(type => type.startsWith('image/'));
+                        if (!imageType) continue;
+
+                        const blob = await item.getType(imageType);
+                        const extension = imageType.split('/')[1] || 'png';
+                        imageFiles.push(new File([blob], `anh-dan-tu-clipboard-${Date.now()}-${imageFiles.length + 1}.${extension}`, { type: imageType }));
+                    }
+
+                    if (!imageFiles.length) {
+                        alert("Clipboard hiện không có ảnh. Hãy chụp màn hình/copy ảnh rồi thử lại.");
+                        return;
+                    }
+
+                    await addSourceFiles(imageFiles, "ảnh clipboard");
+                } catch (error) {
+                    alert(`Không đọc được ảnh từ clipboard: ${error.message}`);
                 }
             };
 
@@ -1503,11 +1574,15 @@
                                         Chỉ dùng nguồn đã nạp
                                     </label>
                                 </div>
-                                <div className="bg-emerald-50 border-2 border-dashed border-emerald-200 p-5 rounded-xl text-center hover:bg-emerald-100 transition">
+                                <div
+                                    className="bg-emerald-50 border-2 border-dashed border-emerald-200 p-5 rounded-xl text-center hover:bg-emerald-100 transition outline-none focus:ring-2 focus:ring-emerald-400"
+                                    onPaste={handleSourcePaste}
+                                    tabIndex="0"
+                                >
                                     <label className="cursor-pointer flex flex-col items-center justify-center h-full w-full">
                                         <i className={`fas ${sourceLoading ? 'fa-circle-notch fa-spin' : 'fa-book-open'} text-3xl text-emerald-500 mb-3`}></i>
                                         <span className="text-slate-700 font-medium mb-1">
-                                            {sourceLoading ? "Đang đọc nguồn kiến thức..." : "Chọn PDF, Word hoặc ảnh bài học"}
+                                            {sourceLoading ? "Đang đọc nguồn kiến thức..." : "Chọn PDF, Word, ảnh bài học hoặc dán ảnh Ctrl+V"}
                                         </span>
                                         <span className="text-sm text-slate-500">AI sẽ dựa vào nội dung này khi tạo câu hỏi theo chủ đề</span>
                                         <input
@@ -1519,6 +1594,14 @@
                                             disabled={loading || sourceLoading}
                                         />
                                     </label>
+                                    <button
+                                        type="button"
+                                        onClick={readImageFromClipboard}
+                                        disabled={loading || sourceLoading}
+                                        className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-emerald-200 text-emerald-700 rounded-lg font-bold text-sm hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                                    >
+                                        <i className="fas fa-paste"></i> Dán ảnh từ clipboard
+                                    </button>
                                 </div>
 
                                 {sourceMaterials.length > 0 && (
