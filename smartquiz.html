@@ -99,7 +99,8 @@
             callGeminiParts: async (parts, onRetry = null, options = {}) => {
                 const apiKeys = GeminiModule.getApiKeys();
                 const defaultModule = GeminiModule.getDefaultModule();
-                const modelList = [...new Set([...(options.models || [defaultModule])].filter(Boolean))];
+                const requestedModels = options.models || [defaultModule];
+                const modelList = requestedModels.filter((model, index) => model && requestedModels.indexOf(model) === index);
 
                 if (!apiKeys.length) throw new Error("Chưa nạp API Keys! Vui lòng cấu hình trong trang chủ.");
 
@@ -140,8 +141,8 @@
 
                             const data = await res.json().catch(() => ({}));
                             if (!res.ok || data.error) {
-                                const status = res.status || data.error?.code || 0;
-                                const message = data.error?.message || `HTTP ${status}`;
+                                const status = res.status || (data.error && data.error.code) || 0;
+                                const message = (data.error && data.error.message) || `HTTP ${status}`;
                                 const err = new Error(message);
                                 err.status = status;
                                 throw err;
@@ -269,11 +270,13 @@
 
             for (let i = 0; i < total; i++) {
                 const item = imageItems[i];
-                onProgress?.({
-                    phase: 'preparing',
-                    percent: Math.round(((i + 1) / total) * 35),
-                    message: `Đang chuẩn bị ảnh ${i + 1}/${total}: ${item.name}`
-                });
+                if (onProgress) {
+                    onProgress({
+                        phase: 'preparing',
+                        percent: Math.round(((i + 1) / total) * 35),
+                        message: `Đang chuẩn bị ảnh ${i + 1}/${total}: ${item.name}`
+                    });
+                }
 
                 imageParts.push({ text: `\n[Ảnh ${i + 1}: ${item.name}]\n` });
                 imageParts.push({
@@ -284,11 +287,13 @@
                 });
             }
 
-            onProgress?.({
-                phase: 'recognizing',
-                percent: 40,
-                message: `Đang nhận diện ${total} ảnh trong một lần gọi AI...`
-            });
+            if (onProgress) {
+                onProgress({
+                    phase: 'recognizing',
+                    percent: 40,
+                    message: `Đang nhận diện ${total} ảnh trong một lần gọi AI...`
+                });
+            }
 
             const prompt = `Đọc toàn bộ nội dung chữ trong các ảnh sau để làm nguồn kiến thức cho giáo viên tạo bài tập.
             NHIỆM VỤ:
@@ -1349,7 +1354,7 @@
                 const pasteEvent = event.nativeEvent || event;
                 if (pasteEvent.__smartQuizPasteHandled) return;
 
-                const pastedFiles = Array.from(pasteEvent.clipboardData?.items || [])
+                const pastedFiles = Array.from((pasteEvent.clipboardData && pasteEvent.clipboardData.items) || [])
                     .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
                     .map((item, index) => {
                         const file = item.getAsFile();
@@ -1378,7 +1383,7 @@
             }, [handleSourcePaste, step]);
 
             const readImageFromClipboard = async () => {
-                if (!navigator.clipboard?.read) {
+                if (!navigator.clipboard || !navigator.clipboard.read) {
                     alert("Trình duyệt chưa hỗ trợ đọc ảnh trực tiếp từ clipboard. Bạn có thể bấm vào vùng nguồn rồi nhấn Ctrl+V.");
                     return;
                 }
