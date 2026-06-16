@@ -181,13 +181,47 @@
             callGeminiAPI: async (prompt, onRetry = null, options = {}) => {
                 return GeminiModule.callGeminiParts([{ text: prompt }], onRetry, options);
             },
-            parseJSONResponse: (text) => {
+            extractJSONString: (text) => {
+                const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+                if (fencedMatch) return fencedMatch[1].trim();
+
                 const startIdx = text.indexOf('[');
                 const endIdx = text.lastIndexOf(']');
-                let jsonStr = (startIdx !== -1 && endIdx !== -1)
-                    ? text.substring(startIdx, endIdx + 1)
-                    : text.replace(/```json|```/g, '').trim();
-                return JSON.parse(jsonStr);
+                return (startIdx !== -1 && endIdx !== -1)
+                    ? text.substring(startIdx, endIdx + 1).trim()
+                    : text.trim();
+            },
+            sanitizeJSONText: (jsonStr) => {
+                return jsonStr
+                    .replace(/^\uFEFF/, '')
+                    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+                    .replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+            },
+            parseJSONResponse: (text) => {
+                const jsonStr = GeminiModule.extractJSONString(text);
+                try {
+                    return JSON.parse(jsonStr);
+                } catch (firstError) {
+                    try {
+                        return JSON.parse(GeminiModule.sanitizeJSONText(jsonStr));
+                    } catch (secondError) {
+                        secondError.rawJSON = jsonStr;
+                        throw secondError;
+                    }
+                }
+            },
+            repairJSONResponse: async (brokenText, errorMessage, onRetry = null) => {
+                const brokenJSON = GeminiModule.extractJSONString(brokenText).substring(0, 60000);
+                const prompt = `Sửa đoạn JSON sau thành JSON hợp lệ.
+                Chỉ trả về JSON mảng, không markdown, không giải thích.
+                Giữ nguyên nội dung, chỉ sửa lỗi dấu ngoặc kép, dấu gạch chéo escape, dấu phẩy và ký tự xuống dòng trong chuỗi.
+                Lỗi JSON.parse: ${errorMessage}
+
+                JSON cần sửa:
+                ${brokenJSON}`;
+
+                const repairedText = await GeminiModule.callGeminiAPI(prompt, onRetry);
+                return GeminiModule.parseJSONResponse(repairedText);
             }
         };
 
@@ -1461,7 +1495,12 @@
                     `;
 
                     const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
-                    const parsedData = GeminiModule.parseJSONResponse(response);
+                    let parsedData;
+                    try {
+                        parsedData = GeminiModule.parseJSONResponse(response);
+                    } catch (parseError) {
+                        parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
+                    }
 
                     if (!parsedData || parsedData.length === 0) throw new Error("Không nhận diện được câu hỏi nào từ file.");
 
@@ -1523,6 +1562,7 @@
                     ${sourceInstruction}
 
                     QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
+                    QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \ đơn lẻ; nếu cần ký hiệu toán học, viết bằng chữ/ký hiệu Unicode hoặc dùng dấu $...$.
                     QUY TẮC OUTPUT: Trả về một mảng phẳng chứa tất cả câu hỏi. Mỗi câu hỏi phải có field "type" để chỉ loại trắc nghiệm.
 
                     Chi tiết từng loại:
@@ -1540,12 +1580,18 @@
                     Mỗi bài tập bao gồm:
                     - "question": Đề bài (có thể chứa công thức toán học trong $...$)
                     - "solution": Lời giải chi tiết (có thể chứa công thức toán học trong $...$)
+                    QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \ đơn lẻ; nếu cần ký hiệu toán học, viết bằng chữ/ký hiệu Unicode hoặc dùng dấu $...$.
                     Output JSON Strict: Một mảng phẳng chứa tất cả bài tập: [{"question":"Đề bài...", "solution":"Lời giải chi tiết..."}, ...]`;
                 }
 
                 try {
                     const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
-                    const parsedData = GeminiModule.parseJSONResponse(response);
+                    let parsedData;
+                    try {
+                        parsedData = GeminiModule.parseJSONResponse(response);
+                    } catch (parseError) {
+                        parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
+                    }
 
                     if (mode === "quiz") {
                         setQuestions(parsedData);
