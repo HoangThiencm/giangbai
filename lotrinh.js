@@ -20,8 +20,16 @@
         tabs: Array.from(document.querySelectorAll('.tab-btn')),
     };
 
-    const LS_TAB_KEY = 'lotrinh_active_tab';
-    const LS_LESSON_KEY = 'lotrinh_selected_lesson';
+    const PAGE_SUBJECT = window.LOTRINH_SUBJECT || 'Toán 6';
+    const PAGE_TITLE = window.LOTRINH_PAGE_TITLE || `Lộ trình tự học ${PAGE_SUBJECT}`;
+    const PAGE_STORAGE_KEY = PAGE_SUBJECT.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/đ/g, 'd')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    const LS_TAB_KEY = `lotrinh_active_tab_${PAGE_STORAGE_KEY}`;
+    const LS_LESSON_KEY = `lotrinh_selected_lesson_${PAGE_STORAGE_KEY}`;
 
     const state = {
         user: null,
@@ -122,6 +130,8 @@
         const lesson = currentLesson();
         if (state.loading) {
             els.studentName.textContent = 'Đang tải...';
+            if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
+            if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
             els.lessonTitle.textContent = 'Đang tải dữ liệu';
             els.lessonGoal.textContent = '';
             els.lessonList.innerHTML = '<div class="text-sm text-slate-500">Đang tải bài học...</div>';
@@ -130,6 +140,8 @@
 
         if (state.error) {
             els.studentName.textContent = 'Lỗi tải dữ liệu';
+            if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
+            if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
             els.lessonTitle.textContent = 'Không thể mở lộ trình';
             els.lessonGoal.textContent = state.error;
             return;
@@ -205,16 +217,19 @@
 
     function renderHeader(lesson) {
         if (!lesson) {
+            if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
+            if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
+            if (els.routeChapter) els.routeChapter.textContent = 'Chưa có bài học được mở';
             els.lessonPath.textContent = '';
             els.lessonTitle.textContent = 'Chưa có bài học';
-            els.lessonGoal.textContent = 'Hãy vào phần quản trị để nhập nội dung bài học đầu tiên.';
+            els.lessonGoal.textContent = `Hãy vào phần quản trị để nhập hoặc mở bài học cho ${PAGE_SUBJECT}.`;
             els.lessonStatus.innerHTML = '';
             return;
         }
 
         const progress = currentLessonProgress(lesson);
         const status = statusInfo(progress.status);
-        if (els.routeTitle) els.routeTitle.textContent = `Lộ trình tự học ${lesson.subject || ''}`.trim();
+        if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
         if (els.routeSubject) els.routeSubject.textContent = lesson.subject || 'Lộ trình';
         if (els.routeChapter) els.routeChapter.textContent = lesson.chapter || 'Danh sách bài học';
         els.lessonPath.textContent = `${lesson.subject} · ${lesson.chapter}`;
@@ -413,7 +428,8 @@
 
             form.onsubmit = async event => {
                 event.preventDefault();
-                const scoreData = calculateScore(lesson, answers);
+                const submittedAnswers = collectFormAnswers(form, questions);
+                const scoreData = calculateScore(lesson, submittedAnswers);
                 const completedAt = new Date().toISOString();
                 const status = scoreData.score >= 80 ? 'mastered' : (scoreData.score >= 50 ? 'needs_practice' : 'in_progress');
                 await syncLessonState(lesson, {
@@ -421,7 +437,7 @@
                     practiceDone: true,
                     completedAt,
                     startedAt: ui.startedAt || completedAt,
-                    answers
+                    answers: submittedAnswers
                 }, {
                     status,
                     score: scoreData.score,
@@ -441,6 +457,16 @@
                 render();
             };
         }
+    }
+
+    function collectFormAnswers(form, questions) {
+        const result = {};
+        questions.forEach(question => {
+            const checked = Array.from(form.querySelectorAll("input[type='radio']:checked"))
+                .find(input => input.name === question.id);
+            if (checked) result[question.id] = Number(checked.value);
+        });
+        return result;
     }
 
     function renderAnswerMark(question, optionIndex, answers) {
@@ -603,7 +629,7 @@
     async function reloadLessons(reselect = true) {
         const data = await api('api/lessons.php?debug=1', { method: 'GET' });
         state.user = data.user;
-        state.lessons = data.lessons || [];
+        state.lessons = (data.lessons || []).filter(lesson => String(lesson.subject || '').trim() === PAGE_SUBJECT);
         state.progress = data.progress || {};
         if (reselect && !state.selectedLessonId && state.lessons[0]) {
             state.selectedLessonId = state.lessons[0].id;
@@ -629,6 +655,11 @@
     } catch (err) {
         state.error = err.message;
         if (err.message.toLowerCase().includes('chưa đăng nhập') || err.message.toLowerCase().includes('not logged in')) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('allowedPages');
             window.location.href = 'login.html';
             return;
         }

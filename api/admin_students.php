@@ -23,7 +23,7 @@ if ($action === 'create') {
     $fullName = trim($data['full_name'] ?? '');
     $role = ($data['role'] ?? 'student') === 'teacher' ? 'teacher' : 'student';
     $className = trim($data['class_name'] ?? '');
-    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinh']);
+    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
 
     if ($username === '' || $password === '' || $fullName === '') {
         respond(['error' => 'Thieu tai khoan, mat khau hoac ho ten.'], 422);
@@ -65,7 +65,7 @@ if ($action === 'update') {
     $className = trim($data['class_name'] ?? '');
     $role = ($data['role'] ?? 'student') === 'teacher' ? 'teacher' : 'student';
     $isActive = !empty($data['is_active']) ? 1 : 0;
-    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinh']);
+    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
 
     $stmt = $pdo->prepare('
         UPDATE users

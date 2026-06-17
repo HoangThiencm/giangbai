@@ -727,7 +727,10 @@
         // Hosting/MySQL student management mode.
         // Keeps the existing admin page, but uses local PHP APIs instead of public registration.
         let hostingPages = {
-            lotrinh: { title: 'Lộ trình tự học Toán 6', url: 'lotrinh.html' },
+            lotrinhtoan6: { title: 'Lộ trình tự học Toán 6', url: 'lotrinhtoan6.html' },
+            lotrinhtoan7: { title: 'Lộ trình tự học Toán 7', url: 'lotrinhtoan7.html' },
+            lotrinhtoan8: { title: 'Lộ trình tự học Toán 8', url: 'lotrinhtoan8.html' },
+            lotrinhtoan9: { title: 'Lộ trình tự học Toán 9', url: 'lotrinhtoan9.html' },
             gslides: { title: 'Trình chiếu Slides', url: 'gslides.html' },
             smartquiz: { title: 'Soạn câu hỏi/Game AI', url: 'smartquiz.html' },
             thitructuyen: { title: 'Thi Online', url: 'thitructuyen.html' },
@@ -786,12 +789,13 @@
             `;
             dashboard.insertBefore(panel, listCard);
 
-            renderPageChecks('createAllowedPages', ['lotrinh']);
+            renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
             document.getElementById('createStudentForm').addEventListener('submit', createStudentAccount);
         }
 
         function renderPageChecks(containerId, selectedPages) {
-            const selected = new Set(selectedPages || ['lotrinh']);
+            const normalizedPages = (selectedPages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
+            const selected = new Set(normalizedPages);
             document.getElementById(containerId).innerHTML = Object.entries(hostingPages).map(([id, page]) => `
                 <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
                     <input type="checkbox" value="${id}" ${selected.has(id) ? 'checked' : ''} class="allowed-page w-4 h-4 text-blue-600 rounded">
@@ -802,6 +806,37 @@
 
         function selectedPagesFrom(container) {
             return [...container.querySelectorAll('.allowed-page:checked')].map(input => input.value);
+        }
+
+        const mathRouteOrder = ['lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+
+        function normalizeAllowedPagesForAdmin(pages) {
+            return (pages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
+        }
+
+        function nextMathRouteFor(user) {
+            const pages = normalizeAllowedPagesForAdmin(user.allowed_pages);
+            const routeIndexes = pages.map(page => mathRouteOrder.indexOf(page)).filter(index => index >= 0);
+            if (!routeIndexes.length) return null;
+            const currentIndex = Math.max(...routeIndexes);
+            if (currentIndex >= mathRouteOrder.length - 1) return null;
+            return {
+                from: mathRouteOrder[currentIndex],
+                to: mathRouteOrder[currentIndex + 1],
+                nextLevel: currentIndex + 7
+            };
+        }
+
+        function promotedClassName(className, nextLevel) {
+            const current = String(className || '').trim();
+            if (!current) return `Toán ${nextLevel}`;
+            let next = current
+                .replace(/Toán\s*[6-9]/gi, `Toán ${nextLevel}`)
+                .replace(/Lớp\s*[6-9]/gi, `Lớp ${nextLevel}`);
+            if (next === current && /\b[6-9]\b/.test(next)) {
+                next = next.replace(/\b[6-9]\b/, String(nextLevel));
+            }
+            return next === current ? `${current} - Toán ${nextLevel}` : next;
         }
 
         window.loadUsers = async function () {
@@ -856,6 +891,7 @@
                 const pages = (user.allowed_pages || []).map(id => hostingPages[id]?.title || id).join(', ') || 'Chưa mở trang';
                 const className = user.class_name || 'Chưa xếp lớp';
                 const roleLabel = user.role === 'teacher' ? 'Giáo viên' : 'Học sinh';
+                const promotion = user.role === 'student' ? nextMathRouteFor(user) : null;
 
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
@@ -877,6 +913,11 @@
                             <button onclick="openStudentConfig(${user.id})" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
                                 <i class="fas fa-cog"></i> Cài đặt
                             </button>
+                            ${promotion ? `
+                                <button onclick="promoteStudent(${user.id})" class="text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
+                                    <i class="fas fa-arrow-up"></i> Lên Toán ${promotion.nextLevel}
+                                </button>
+                            ` : ''}
                             <button onclick="deleteStudent(${user.id})" class="text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mb-1 inline-block">
                                 <i class="fas fa-trash-alt"></i> Xóa
                             </button>
@@ -909,7 +950,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
                 form.reset();
-                renderPageChecks('createAllowedPages', ['lotrinh']);
+                renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
                 await loadUsers();
                 alert('Đã tạo tài khoản học sinh.');
             } catch (e) {
@@ -946,7 +987,7 @@
                 </label>
             `;
             document.getElementById('modalFeaturesList').innerHTML = '<div id="editAllowedPages" class="space-y-2"></div>';
-            renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinh']);
+            renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6']);
             document.getElementById('btnSaveUserConfig').innerHTML = '<i class="fas fa-save"></i> Lưu tài khoản';
             document.getElementById('userConfigModal').classList.remove('hidden');
         };
@@ -979,6 +1020,46 @@
             }
         };
 
+        window.promoteStudent = async function (id) {
+            const user = cachedUsers.find(item => item.id === id);
+            if (!user) return;
+            const promotion = nextMathRouteFor(user);
+            if (!promotion) {
+                alert('Học sinh này đã ở lộ trình cao nhất hoặc chưa có lộ trình Toán để lên lớp.');
+                return;
+            }
+
+            const nextClassName = promotedClassName(user.class_name, promotion.nextLevel);
+            const nextPages = normalizeAllowedPagesForAdmin(user.allowed_pages)
+                .filter(page => !mathRouteOrder.includes(page));
+            nextPages.unshift(promotion.to);
+
+            if (!confirm(`Chuyển ${user.full_name} lên ${hostingPages[promotion.to]?.title || promotion.to}?`)) return;
+
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                    body: JSON.stringify({
+                        action: 'update',
+                        id: user.id,
+                        full_name: user.full_name,
+                        class_name: nextClassName,
+                        role: user.role,
+                        password: '',
+                        is_active: user.is_active,
+                        allowed_pages: nextPages
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Không chuyển lớp được.');
+                await loadUsers();
+                alert(`Đã chuyển ${user.full_name} lên ${hostingPages[promotion.to]?.title || promotion.to}.`);
+            } catch (e) {
+                alert(e.message);
+            }
+        };
+
         window.deleteStudent = async function (id) {
             const user = cachedUsers.find(item => item.id === id);
             if (!user || !confirm(`Xóa tài khoản ${user.full_name} (${user.username})?`)) return;
@@ -997,8 +1078,8 @@
             }
         };
     </script>
-    <script src="admin-lesson-manager.js?v=20260617-tabs6"></script>
-    <script src="admin-progress.js?v=20260617-tabs6"></script>
+    <script src="admin-lesson-manager.js?v=20260618-promote1"></script>
+    <script src="admin-progress.js?v=20260618-promote1"></script>
     <script>
         (function () {
             const TAB_DEFS = [

@@ -77,7 +77,7 @@ Học sinh mở:
 login.html
 ```
 
-Đăng nhập bằng tài khoản giáo viên đã cấp. Nếu là học sinh, hệ thống chuyển vào `lotrinh.html`; nếu là giáo viên, chuyển vào `index.html`.
+Đăng nhập bằng tài khoản giáo viên đã cấp. Nếu là học sinh, hệ thống chuyển vào lộ trình được mở, ví dụ `lotrinhtoan6.html`, `lotrinhtoan7.html`, `lotrinhtoan8.html` hoặc `lotrinhtoan9.html`; nếu là giáo viên, chuyển vào `index.html`.
 
 ## 6. Tự động deploy bằng GitHub Actions FTP
 

@@ -27,7 +27,10 @@ function require_admin_key(): void
 function page_catalog(): array
 {
     return [
-        'lotrinh' => ['title' => 'Lộ trình tự học Toán 6', 'url' => 'lotrinh.html'],
+        'lotrinhtoan6' => ['title' => 'Lộ trình tự học Toán 6', 'url' => 'lotrinhtoan6.html'],
+        'lotrinhtoan7' => ['title' => 'Lộ trình tự học Toán 7', 'url' => 'lotrinhtoan7.html'],
+        'lotrinhtoan8' => ['title' => 'Lộ trình tự học Toán 8', 'url' => 'lotrinhtoan8.html'],
+        'lotrinhtoan9' => ['title' => 'Lộ trình tự học Toán 9', 'url' => 'lotrinhtoan9.html'],
         'gslides' => ['title' => 'Trình chiếu Slides', 'url' => 'gslides.html'],
         'smartquiz' => ['title' => 'Soạn câu hỏi/Game AI', 'url' => 'smartquiz.html'],
         'thitructuyen' => ['title' => 'Thi Online', 'url' => 'thitructuyen.html'],
@@ -38,12 +41,14 @@ function page_catalog(): array
 function normalize_pages($pages): array
 {
     $catalog = page_catalog();
-    if (!is_array($pages)) return ['lotrinh'];
+    $aliases = ['lotrinh' => 'lotrinhtoan6'];
+    if (!is_array($pages)) return ['lotrinhtoan6'];
     $clean = [];
     foreach ($pages as $page) {
+        $page = $aliases[$page] ?? $page;
         if (isset($catalog[$page])) $clean[] = $page;
     }
-    return array_values(array_unique($clean)) ?: ['lotrinh'];
+    return array_values(array_unique($clean)) ?: ['lotrinhtoan6'];
 }
 
 function public_user(array $user): array
