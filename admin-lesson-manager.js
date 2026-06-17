@@ -116,22 +116,43 @@
         }).filter(video => video.url);
     }
 
-    function parseQuestions(text) {
-        return parseLines(text).map((line, index) => {
-            const parts = line.split('|').map(part => part.trim());
-            if (parts.length < 8) {
-                throw new Error(`Câu hỏi dòng ${index + 1} chưa đúng mẫu: kỹ_năng | câu hỏi | A | B | C | D | đáp_án`);
-            }
-            const [skill, prompt, a, b, c, d, answer] = parts;
-            const answerIndex = Math.max(0, Math.min(3, Number(answer) - 1));
-            return {
-                id: `q${index + 1}`,
-                skill: slugify(skill),
-                prompt,
-                options: [a, b, c, d],
-                answer: Number.isFinite(answerIndex) ? answerIndex : 0
-            };
-        });
+    function answerToIndex(value, lineNumber) {
+        const raw = String(value || '').trim().toUpperCase();
+        const letter = raw.match(/[ABCD]/)?.[0];
+        if (letter) return letter.charCodeAt(0) - 65;
+        const number = raw.match(/[1-4]/)?.[0];
+        if (number) return Number(number) - 1;
+        throw new Error(`Câu hỏi dòng ${lineNumber} chưa có đáp án đúng. Nhập A/B/C/D hoặc 1/2/3/4.`);
+    }
+
+    function parseQuestionLine(line, index, fallbackSkill) {
+        const parts = (line.includes('||') ? line.split('||') : line.split('|')).map(part => part.trim()).filter(Boolean);
+        if (parts.length < 6) {
+            throw new Error(`Câu hỏi dòng ${index + 1} chưa đúng mẫu: Câu hỏi | A | B | C | D | đáp án`);
+        }
+
+        const hasSkill = parts.length >= 7;
+        const skill = hasSkill ? parts[0] : fallbackSkill;
+        const offset = hasSkill ? 1 : 0;
+        const prompt = parts[offset];
+        const options = parts.slice(offset + 1, offset + 5);
+        const answer = parts[offset + 5];
+        if (!prompt || options.length < 4 || options.some(option => !option)) {
+            throw new Error(`Câu hỏi dòng ${index + 1} còn thiếu nội dung hoặc lựa chọn A/B/C/D.`);
+        }
+
+        return {
+            id: `q${index + 1}`,
+            skill: slugify(skill || fallbackSkill || 'tong_hop'),
+            prompt,
+            options,
+            answer: answerToIndex(answer, index + 1)
+        };
+    }
+
+    function parseQuestions(text, skills = []) {
+        const fallbackSkill = skills[0]?.id || 'tong_hop';
+        return parseLines(text).map((line, index) => parseQuestionLine(line, index, fallbackSkill));
     }
 
     function formatExamples(items) {
@@ -149,16 +170,33 @@
     function formatQuestions(items) {
         return (items || []).map(item => {
             const options = item.options || [];
+            const answer = 'ABCD'[Number(item.answer || 0)] || 'A';
             return [
-                item.skill || '',
                 item.prompt || '',
                 options[0] || '',
                 options[1] || '',
                 options[2] || '',
                 options[3] || '',
-                Number(item.answer || 0) + 1
+                answer
             ].join(' | ');
         }).join('\n');
+    }
+
+    function setupEditorFieldShortcuts() {
+        document.querySelectorAll('#lessonEditorPanel input, #lessonEditorPanel textarea').forEach(field => {
+            if (field.dataset.editorShortcutsReady) return;
+            field.dataset.editorShortcutsReady = '1';
+            field.addEventListener('keydown', event => {
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    field.select();
+                }
+            });
+            ['copy', 'cut', 'paste'].forEach(type => {
+                field.addEventListener(type, event => event.stopPropagation());
+            });
+        });
     }
 
     function ensurePanel() {
@@ -257,8 +295,8 @@
                     </label>
 
                     <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: kỹ_năng | Câu hỏi | A | B | C | D | đáp_án_1_đến_4</span>
-                        <textarea id="lessonQuestions" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs"></textarea>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu hỏi | A | B | C | D | đáp án. Đáp án nhập A/B/C/D hoặc 1/2/3/4.</span>
+                        <textarea id="lessonQuestions" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tập hợp là gì? | Một nhóm đối tượng xác định rõ ràng | Một phép cộng | Một số bất kỳ | Một hình vẽ | A"></textarea>
                     </label>
 
                     <div id="lessonPreview" class="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"></div>
@@ -291,6 +329,7 @@
         ['lessonGoal', 'lessonTheory', 'lessonExamples', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
             el(id).addEventListener('input', renderPreview);
         });
+        setupEditorFieldShortcuts();
 
         renderSubjectPills();
     }
@@ -391,7 +430,7 @@
         const preview = el('lessonPreview');
         if (!preview) return;
         let questionCount = 0;
-        try { questionCount = parseQuestions(el('lessonQuestions').value).length; } catch { questionCount = 0; }
+        try { questionCount = parseQuestions(el('lessonQuestions').value, parseSkills(el('lessonSkills').value)).length; } catch { questionCount = 0; }
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><div class="text-xs text-slate-500">Lý thuyết</div><div class="font-bold">${parseLines(el('lessonTheory').value).length} ý</div></div>
@@ -405,6 +444,7 @@
     async function saveLesson(event) {
         event.preventDefault();
         suggestSlug();
+        const skills = parseSkills(el('lessonSkills').value);
         const payload = {
             action: 'save_content',
             slug: el('lessonSlug').value.trim(),
@@ -417,9 +457,9 @@
             theory: parseLines(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
             videos: parseVideos(el('lessonVideos').value),
-            skills: parseSkills(el('lessonSkills').value),
+            skills,
             tasks: parseLines(el('lessonTasks').value),
-            questions: parseQuestions(el('lessonQuestions').value)
+            questions: parseQuestions(el('lessonQuestions').value, skills)
         };
         if (!payload.slug || !payload.title) {
             alert('Cần nhập slug và tên bài.');
@@ -454,16 +494,8 @@
     async function refreshLessons() {
         const adminKey = getAdminKey();
         if (!adminKey) return;
-        try {
-            await fetch('api/migrate_lessons.php', {
-                method: 'POST',
-                headers: { 'X-Admin-Key': adminKey }
-            });
-        } catch (e) {
-            console.warn('Không đồng bộ được schema', e);
-        }
 
-        const res = await fetch('api/lessons.php?admin=1', {
+        const res = await fetch('api/lessons.php?admin=1&debug=1', {
             headers: { 'X-Admin-Key': adminKey },
             cache: 'no-store'
         });
