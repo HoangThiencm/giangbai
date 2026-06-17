@@ -184,6 +184,69 @@
             window.location.href = 'index.html';
         }
     </script>
+    <script>
+        // Hosting mode: student accounts are created by the teacher/admin only.
+        // This overrides the old public register flow that used the external HF API.
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabRegister = document.getElementById('tabRegister');
+            const tabLogin = document.getElementById('tabLogin');
+            const title = document.querySelector('h2');
+            const subtitle = document.querySelector('.text-slate-500.text-sm');
+            const emailLabel = document.querySelector('label[for="email"], label.block');
+            const emailInput = document.getElementById('email');
+
+            if (tabRegister) tabRegister.classList.add('hidden');
+            if (tabLogin) tabLogin.className = "flex-1 py-2 text-blue-600 font-bold border-b-2 border-blue-600";
+            if (title) title.textContent = "Đăng nhập học tập";
+            if (subtitle) subtitle.textContent = "Tài khoản do giáo viên cấp";
+            if (emailLabel) emailLabel.textContent = "Tài khoản";
+            if (emailInput) {
+                emailInput.type = "text";
+                emailInput.placeholder = "Ví dụ: HS001";
+                emailInput.autocomplete = "username";
+            }
+        });
+
+        window.switchTab = function () {
+            isLoginMode = true;
+        };
+
+        window.handleAuth = async function (e) {
+            e.preventDefault();
+            const username = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('message');
+            const btn = document.getElementById('submitBtn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            msg.classList.add('hidden');
+
+            try {
+                const response = await fetch('api/login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Không đăng nhập được.');
+
+                localStorage.setItem('authToken', 'php-session');
+                localStorage.setItem('userEmail', data.user.username);
+                localStorage.setItem('userName', data.user.full_name);
+                localStorage.setItem('userRole', data.user.role);
+                localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
+
+                window.location.href = data.user.role === 'student' ? 'lotrinh.html' : 'index.html';
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.className = "text-center text-sm mt-4 text-red-500 block";
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Đăng nhập</span>';
+            }
+        };
+    </script>
 </body>
 
 </html>

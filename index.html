@@ -346,6 +346,7 @@
 
         // Auto check auth on load
         if (!localStorage.getItem('authToken')) window.location.href = 'login.html';
+        if (localStorage.getItem('userRole') === 'student') window.location.href = 'lotrinh.html';
 
         // Load Global Config from GitHub deployment
         async function applyGlobalConfig() {
@@ -601,6 +602,21 @@
                 </div>
                 <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-teal-600 transition group-hover:translate-x-1">
                     Tạo báo cáo <i class="fas fa-arrow-right"></i>
+                </span>
+            </a>
+
+            <!-- 9. LO TRINH TU HOC -->
+            <a href="lotrinh.html"
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
+                <div class="tool-icon bg-lime-100 text-lime-700">
+                    <i class="fas fa-route"></i>
+                </div>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 6</h3>
+                    <p class="tool-desc mt-3">Thử nghiệm cá nhân hóa theo từng bài học: Bài 1 Tập hợp, luyện tập, chấm theo kỹ năng và gợi ý bước tiếp theo.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
+                    Mở lộ trình <i class="fas fa-arrow-right"></i>
                 </span>
             </a>
 

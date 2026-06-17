@@ -753,6 +753,266 @@
             }
         }
     </script>
+    <script>
+        // Hosting/MySQL student management mode.
+        // Keeps the existing admin page, but uses local PHP APIs instead of public registration.
+        let hostingPages = {
+            lotrinh: { title: 'Lộ trình tự học Toán 6', url: 'lotrinh.html' },
+            gslides: { title: 'Trình chiếu Slides', url: 'gslides.html' },
+            smartquiz: { title: 'Soạn câu hỏi/Game AI', url: 'smartquiz.html' },
+            thitructuyen: { title: 'Thi Online', url: 'thitructuyen.html' },
+            kttx: { title: 'Đề kiểm tra thường xuyên', url: 'kttx.html' }
+        };
+        let editingStudent = null;
+
+        function ensureStudentCreatePanel() {
+            if (document.getElementById('studentCreatePanel')) return;
+            const dashboard = document.getElementById('dashboardSection');
+            const listCard = dashboard.querySelector('.bg-white.rounded-xl.shadow-lg.overflow-hidden');
+            const panel = document.createElement('div');
+            panel.id = 'studentCreatePanel';
+            panel.className = 'bg-white rounded-xl shadow-lg border border-slate-200 mb-8 p-6';
+            panel.innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg"><i class="fas fa-user-plus text-blue-600 mr-2"></i>Cấp tài khoản học sinh</h3>
+                        <p class="text-sm text-slate-500 mt-1">Học sinh không tự đăng ký. Giáo viên tạo tài khoản và chọn trang được phép mở.</p>
+                    </div>
+                </div>
+                <form id="createStudentForm" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <label class="text-sm font-bold text-slate-700">
+                        Tài khoản
+                        <input name="username" required class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="HS001">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">
+                        Mật khẩu
+                        <input name="password" required class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="123456">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">
+                        Họ tên
+                        <input name="full_name" required class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nguyễn Văn An">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">
+                        Lớp/Nhóm
+                        <input name="class_name" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Toán 6 tối T3-T5">
+                    </label>
+                    <div class="md:col-span-2 xl:col-span-3">
+                        <p class="text-sm font-bold text-slate-700 mb-2">Trang mở cho học sinh</p>
+                        <div id="createAllowedPages" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+                    </div>
+                    <div class="flex items-end">
+                        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-bold shadow transition">
+                            <i class="fas fa-plus mr-1"></i> Tạo tài khoản
+                        </button>
+                    </div>
+                </form>
+            `;
+            dashboard.insertBefore(panel, listCard);
+
+            renderPageChecks('createAllowedPages', ['lotrinh']);
+            document.getElementById('createStudentForm').addEventListener('submit', createStudentAccount);
+        }
+
+        function renderPageChecks(containerId, selectedPages) {
+            const selected = new Set(selectedPages || ['lotrinh']);
+            document.getElementById(containerId).innerHTML = Object.entries(hostingPages).map(([id, page]) => `
+                <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <input type="checkbox" value="${id}" ${selected.has(id) ? 'checked' : ''} class="allowed-page w-4 h-4 text-blue-600 rounded">
+                    ${page.title}
+                </label>
+            `).join('');
+        }
+
+        function selectedPagesFrom(container) {
+            return [...container.querySelectorAll('.allowed-page:checked')].map(input => input.value);
+        }
+
+        window.loadUsers = async function () {
+            const key = document.getElementById('adminKey').value;
+            if (!key) return alert('Vui lòng nhập Admin Key!');
+            document.body.style.cursor = 'wait';
+
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    headers: { 'X-Admin-Key': key },
+                    cache: 'no-store'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Không tải được danh sách học sinh.');
+
+                hostingPages = data.pages || hostingPages;
+                cachedUsers = data.users || [];
+                cachedKey = key;
+
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                ensureStudentCreatePanel();
+                updateStats(cachedUsers);
+                renderTable(cachedUsers, key);
+            } catch (e) {
+                alert(e.message);
+            } finally {
+                document.body.style.cursor = 'default';
+            }
+        };
+
+        window.updateStats = function (users) {
+            const total = users.length;
+            const active = users.filter(user => user.is_active).length;
+            const inactive = total - active;
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statPending').textContent = inactive;
+            document.getElementById('statActive').textContent = active;
+        };
+
+        window.renderTable = function (users, key) {
+            const tbody = document.getElementById('tableBody');
+            if (!users.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-400 italic">Chưa có tài khoản học sinh.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                const statusBadge = user.is_active
+                    ? '<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200"><i class="fas fa-check mr-1"></i> Hoạt động</span>'
+                    : '<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-700 border border-red-200"><i class="fas fa-ban mr-1"></i> Đang khóa</span>';
+                const pages = (user.allowed_pages || []).map(id => hostingPages[id]?.title || id).join(', ') || 'Chưa mở trang';
+                const className = user.class_name || 'Chưa xếp lớp';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 text-sm text-slate-700">
+                            <div class="flex items-start gap-3">
+                                <div class="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <i class="fas fa-user-graduate"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-900">${user.full_name}</div>
+                                    <div class="text-xs text-slate-500">${user.username} · ${className}</div>
+                                    <div class="text-xs text-blue-600 mt-1">${pages}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${user.last_login_at || 'Chưa đăng nhập'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="openStudentConfig(${user.id})" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
+                                <i class="fas fa-cog"></i> Cài đặt
+                            </button>
+                            <button onclick="deleteStudent(${user.id})" class="text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mb-1 inline-block">
+                                <i class="fas fa-trash-alt"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        async function createStudentAccount(event) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const formData = new FormData(form);
+            const allowedPages = selectedPagesFrom(document.getElementById('createAllowedPages'));
+
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                    body: JSON.stringify({
+                        action: 'create',
+                        role: 'student',
+                        username: formData.get('username'),
+                        password: formData.get('password'),
+                        full_name: formData.get('full_name'),
+                        class_name: formData.get('class_name'),
+                        allowed_pages: allowedPages
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
+                form.reset();
+                renderPageChecks('createAllowedPages', ['lotrinh']);
+                await loadUsers();
+                alert('Đã tạo tài khoản học sinh.');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        window.openStudentConfig = function (id) {
+            editingStudent = cachedUsers.find(user => user.id === id);
+            if (!editingStudent) return;
+
+            document.getElementById('modalUserEmail').textContent = `${editingStudent.full_name} (${editingStudent.username})`;
+            document.getElementById('modalAccountConfig').innerHTML = `
+                <label class="block text-sm font-bold text-slate-700 mb-3">
+                    Họ tên
+                    <input id="editFullName" value="${editingStudent.full_name || ''}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </label>
+                <label class="block text-sm font-bold text-slate-700 mb-3">
+                    Lớp/Nhóm
+                    <input id="editClassName" value="${editingStudent.class_name || ''}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </label>
+                <label class="block text-sm font-bold text-slate-700 mb-3">
+                    Đổi mật khẩu mới
+                    <input id="editPassword" placeholder="Bỏ trống nếu không đổi" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </label>
+                <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <input id="editIsActive" type="checkbox" ${editingStudent.is_active ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                    Tài khoản đang hoạt động
+                </label>
+            `;
+            document.getElementById('modalFeaturesList').innerHTML = '<div id="editAllowedPages" class="space-y-2"></div>';
+            renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinh']);
+            document.getElementById('btnSaveUserConfig').innerHTML = '<i class="fas fa-save"></i> Lưu tài khoản';
+            document.getElementById('userConfigModal').classList.remove('hidden');
+        };
+
+        window.saveUserConfig = async function () {
+            if (!editingStudent) return;
+            const payload = {
+                action: 'update',
+                id: editingStudent.id,
+                full_name: document.getElementById('editFullName').value.trim(),
+                class_name: document.getElementById('editClassName').value.trim(),
+                password: document.getElementById('editPassword').value,
+                is_active: document.getElementById('editIsActive').checked,
+                allowed_pages: selectedPagesFrom(document.getElementById('editAllowedPages'))
+            };
+
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Không lưu được tài khoản.');
+                closeUserConfigModal();
+                await loadUsers();
+            } catch (e) {
+                alert(e.message);
+            }
+        };
+
+        window.deleteStudent = async function (id) {
+            const user = cachedUsers.find(item => item.id === id);
+            if (!user || !confirm(`Xóa tài khoản ${user.full_name} (${user.username})?`)) return;
+
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                    body: JSON.stringify({ action: 'delete', id })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Không xóa được tài khoản.');
+                await loadUsers();
+            } catch (e) {
+                alert(e.message);
+            }
+        };
+    </script>
 </body>
 
 </html>

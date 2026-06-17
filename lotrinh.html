@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lộ trình tự học - Toán 6</title>
+    <script src="access-control.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f6f8fb;
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            background:
+                linear-gradient(180deg, rgba(20, 184, 166, 0.08), transparent 280px),
+                linear-gradient(90deg, rgba(245, 158, 11, 0.08), transparent 460px),
+                #f6f8fb;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+        }
+
+        .lesson-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+        }
+
+        .lesson-item.active {
+            border-color: #0f766e;
+            box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .skill-bar {
+            height: 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .skill-bar span {
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #0f766e, #f59e0b);
+        }
+
+        .answer-option {
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
+        }
+
+        .answer-option:has(input:checked) {
+            border-color: #0f766e;
+            background: #f0fdfa;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-shell text-slate-900">
+        <header class="border-b border-slate-200 bg-white/90">
+            <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <a href="index.html" class="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-teal-700">
+                        <i class="fas fa-arrow-left"></i>
+                        Trang chính
+                    </a>
+                    <h1 class="text-2xl font-bold tracking-normal text-slate-950">Lộ trình tự học Toán 6</h1>
+                    <p class="mt-1 text-sm text-slate-600">Chạy thử theo từng bài học, chưa dùng AI.</p>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <label class="text-sm font-semibold text-slate-700">
+                        Học sinh
+                        <input id="studentName" type="text" value="Học sinh A"
+                            class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-600 sm:w-52">
+                    </label>
+                    <button id="saveStudentBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                        <i class="fas fa-floppy-disk"></i>
+                        Lưu
+                    </button>
+                    <button id="resetBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                        <i class="fas fa-rotate-left"></i>
+                        Làm lại
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[320px_1fr]">
+            <aside class="space-y-4">
+                <section class="panel p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Toán 6</p>
+                            <h2 class="mt-1 text-lg font-bold">Chương 1: Số tự nhiên</h2>
+                        </div>
+                        <i class="fas fa-route text-2xl text-amber-500"></i>
+                    </div>
+                    <div id="overallProgress" class="mt-4"></div>
+                </section>
+
+                <section class="panel p-4">
+                    <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-slate-500">Danh sách bài</h2>
+                    <div id="lessonList" class="space-y-2"></div>
+                </section>
+            </aside>
+
+            <div class="space-y-5">
+                <section class="panel p-5">
+                    <div class="grid gap-5 xl:grid-cols-[1fr_280px]">
+                        <div>
+                            <p id="lessonPath" class="text-sm font-semibold text-teal-700"></p>
+                            <h2 id="lessonTitle" class="mt-1 text-2xl font-bold"></h2>
+                            <p id="lessonGoal" class="mt-2 max-w-3xl text-sm leading-6 text-slate-600"></p>
+                        </div>
+                        <div class="rounded border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Trạng thái bài</p>
+                            <div id="lessonStatus" class="mt-3 space-y-2"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="grid gap-5 xl:grid-cols-[1fr_340px]">
+                    <div class="space-y-5">
+                        <section class="panel p-5">
+                            <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-4">
+                                <button data-tab="learn"
+                                    class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
+                                    <i class="fas fa-book-open mr-2"></i>Lý thuyết
+                                </button>
+                                <button data-tab="examples"
+                                    class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
+                                    <i class="fas fa-lightbulb mr-2"></i>Ví dụ
+                                </button>
+                                <button data-tab="practice"
+                                    class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
+                                    <i class="fas fa-pen-to-square mr-2"></i>Luyện tập
+                                </button>
+                            </div>
+
+                            <div id="tabContent" class="pt-5"></div>
+                        </section>
+
+                        <section class="panel p-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Gợi ý tiếp theo</p>
+                                    <h3 id="nextActionTitle" class="mt-1 text-lg font-bold"></h3>
+                                    <p id="nextActionBody" class="mt-2 text-sm leading-6 text-slate-600"></p>
+                                </div>
+                                <i class="fas fa-compass text-2xl text-teal-700"></i>
+                            </div>
+                        </section>
+                    </div>
+
+                    <aside class="space-y-5">
+                        <section class="panel p-5">
+                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">Kỹ năng của bài</h3>
+                            <div id="skillPanel" class="mt-4 space-y-4"></div>
+                        </section>
+
+                        <section class="panel p-5">
+                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">Nhiệm vụ hôm nay</h3>
+                            <div id="dailyTasks" class="mt-4 space-y-3"></div>
+                        </section>
+                    </aside>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "lotrinh_toan6_demo_v1";
+
+        const lessons = [
+            {
+                id: "math6-c1-b1-tap-hop",
+                subject: "Toán 6",
+                chapter: "Chương 1: Số tự nhiên",
+                title: "Bài 1: Tập hợp",
+                goal: "Học sinh hiểu tập hợp là gì, biết viết tập hợp bằng cách liệt kê phần tử và dùng đúng ký hiệu thuộc, không thuộc.",
+                statusLabel: "Đang thử nghiệm",
+                skills: [
+                    { id: "khai_niem", name: "Hiểu khái niệm tập hợp", target: 80 },
+                    { id: "liet_ke", name: "Liệt kê phần tử của tập hợp", target: 80 },
+                    { id: "ky_hieu", name: "Dùng ký hiệu ∈ và ∉", target: 80 },
+                    { id: "viet_tap_hop", name: "Viết tập hợp đúng quy ước", target: 80 }
+                ],
+                theory: [
+                    "Tập hợp là một nhóm các đối tượng được xác định rõ ràng.",
+                    "Mỗi đối tượng trong một tập hợp được gọi là một phần tử của tập hợp đó.",
+                    "Ta thường đặt tên tập hợp bằng chữ cái in hoa như A, B, C.",
+                    "Các phần tử được viết trong dấu ngoặc nhọn, ví dụ A = {1, 2, 3}."
+                ],
+                examples: [
+                    {
+                        title: "Ví dụ 1",
+                        body: "Gọi A là tập hợp các số tự nhiên nhỏ hơn 5. Ta viết A = {0, 1, 2, 3, 4}."
+                    },
+                    {
+                        title: "Ví dụ 2",
+                        body: "Nếu B = {a, b, c} thì a ∈ B, còn d ∉ B."
+                    },
+                    {
+                        title: "Ví dụ 3",
+                        body: "Tập hợp các chữ cái trong từ TOÁN có thể viết là C = {T, O, Á, N}."
+                    }
+                ],
+                questions: [
+                    {
+                        id: "q1",
+                        skill: "khai_niem",
+                        prompt: "Câu nào mô tả đúng nhất về tập hợp?",
+                        options: [
+                            "Một nhóm các đối tượng được xác định rõ ràng",
+                            "Một phép tính cộng nhiều số",
+                            "Một số tự nhiên bất kỳ",
+                            "Một hình vẽ trong vở"
+                        ],
+                        answer: 0
+                    },
+                    {
+                        id: "q2",
+                        skill: "viet_tap_hop",
+                        prompt: "Cách viết nào đúng cho tập hợp A gồm các số 1, 2, 3?",
+                        options: ["A = (1, 2, 3)", "A = {1, 2, 3}", "A = [1, 2, 3]", "A = 1 + 2 + 3"],
+                        answer: 1
+                    },
+                    {
+                        id: "q3",
+                        skill: "ky_hieu",
+                        prompt: "Cho B = {2, 4, 6, 8}. Khẳng định nào đúng?",
+                        options: ["3 ∈ B", "6 ∈ B", "8 ∉ B", "4 ∉ B"],
+                        answer: 1
+                    },
+                    {
+                        id: "q4",
+                        skill: "liet_ke",
+                        prompt: "Tập hợp các số tự nhiên nhỏ hơn 4 là:",
+                        options: ["{1, 2, 3, 4}", "{0, 1, 2, 3}", "{0, 1, 2, 3, 4}", "{2, 3, 4}"],
+                        answer: 1
+                    },
+                    {
+                        id: "q5",
+                        skill: "ky_hieu",
+                        prompt: "Cho C = {m, n, p}. Ký hiệu nào đúng?",
+                        options: ["m ∉ C", "q ∈ C", "p ∈ C", "n = C"],
+                        answer: 2
+                    },
+                    {
+                        id: "q6",
+                        skill: "viet_tap_hop",
+                        prompt: "Khi viết tập hợp bằng cách liệt kê, các phần tử thường được đặt trong:",
+                        options: ["Dấu ngoặc nhọn { }", "Dấu ngoặc tròn ( )", "Dấu gạch chéo / /", "Dấu ngoặc vuông [ ] luôn luôn"],
+                        answer: 0
+                    },
+                    {
+                        id: "q7",
+                        skill: "liet_ke",
+                        prompt: "D = {5, 6, 7, 8}. Tập hợp D có bao nhiêu phần tử?",
+                        options: ["2", "3", "4", "5"],
+                        answer: 2
+                    },
+                    {
+                        id: "q8",
+                        skill: "khai_niem",
+                        prompt: "Trong tập hợp học sinh của lớp 6A, mỗi học sinh được gọi là:",
+                        options: ["Một chương", "Một phần tử", "Một phép tính", "Một ký hiệu"],
+                        answer: 1
+                    }
+                ]
+            },
+            {
+                id: "math6-c1-b2-cach-ghi-so-tu-nhien",
+                subject: "Toán 6",
+                chapter: "Chương 1: Số tự nhiên",
+                title: "Bài 2: Cách ghi số tự nhiên",
+                goal: "Bài kế tiếp sẽ được mở khi mẫu Bài 1 ổn định.",
+                statusLabel: "Chuẩn bị thêm"
+            },
+            {
+                id: "math6-c1-b3-thu-tu",
+                subject: "Toán 6",
+                chapter: "Chương 1: Số tự nhiên",
+                title: "Bài 3: Thứ tự trong tập hợp số tự nhiên",
+                goal: "Bài kế tiếp sẽ được mở khi mẫu Bài 1 ổn định.",
+                statusLabel: "Chuẩn bị thêm"
+            }
+        ];
+
+        const defaultState = {
+            studentName: "Học sinh A",
+            selectedLessonId: "math6-c1-b1-tap-hop",
+            activeTab: "learn",
+            lessons: {
+                "math6-c1-b1-tap-hop": {
+                    theoryDone: false,
+                    examplesDone: false,
+                    practiceDone: false,
+                    answers: {},
+                    submitted: false,
+                    skillScores: {}
+                }
+            }
+        };
+
+        let state = loadState();
+
+        function loadState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                return saved ? mergeState(defaultState, saved) : structuredClone(defaultState);
+            } catch {
+                return structuredClone(defaultState);
+            }
+        }
+
+        function mergeState(base, saved) {
+            return {
+                ...structuredClone(base),
+                ...saved,
+                lessons: {
+                    ...structuredClone(base.lessons),
+                    ...(saved.lessons || {})
+                }
+            };
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function currentLesson() {
+            return lessons.find(lesson => lesson.id === state.selectedLessonId) || lessons[0];
+        }
+
+        function currentProgress() {
+            const lesson = currentLesson();
+            if (!state.lessons[lesson.id]) {
+                state.lessons[lesson.id] = { theoryDone: false, examplesDone: false, practiceDone: false, answers: {}, submitted: false, skillScores: {} };
+            }
+            return state.lessons[lesson.id];
+        }
+
+        function lessonScore(lesson, progress) {
+            if (!lesson.questions || !progress.submitted) return 0;
+            const correct = lesson.questions.filter(question => progress.answers[question.id] === question.answer).length;
+            return Math.round((correct / lesson.questions.length) * 100);
+        }
+
+        function lessonStatus(lesson, progress) {
+            if (!lesson.questions) return "locked";
+            if (!progress.submitted) return progress.theoryDone || progress.examplesDone ? "in_progress" : "not_started";
+            const score = lessonScore(lesson, progress);
+            if (score >= 80) return "mastered";
+            if (score >= 50) return "needs_practice";
+            return "review";
+        }
+
+        function statusView(status) {
+            const map = {
+                mastered: { text: "Đã vững", color: "bg-teal-600", tone: "text-teal-700" },
+                needs_practice: { text: "Cần luyện thêm", color: "bg-amber-500", tone: "text-amber-700" },
+                review: { text: "Nên học lại", color: "bg-rose-500", tone: "text-rose-700" },
+                in_progress: { text: "Đang học", color: "bg-sky-500", tone: "text-sky-700" },
+                not_started: { text: "Chưa bắt đầu", color: "bg-slate-400", tone: "text-slate-600" },
+                locked: { text: "Sắp mở", color: "bg-slate-300", tone: "text-slate-500" }
+            };
+            return map[status] || map.not_started;
+        }
+
+        function computeSkillScores() {
+            const lesson = currentLesson();
+            const progress = currentProgress();
+            if (!lesson.questions || !progress.submitted) return progress.skillScores || {};
+
+            const totals = {};
+            lesson.skills.forEach(skill => totals[skill.id] = { correct: 0, total: 0 });
+            lesson.questions.forEach(question => {
+                totals[question.skill].total += 1;
+                if (progress.answers[question.id] === question.answer) totals[question.skill].correct += 1;
+            });
+
+            const scores = {};
+            Object.entries(totals).forEach(([skillId, data]) => {
+                scores[skillId] = data.total ? Math.round((data.correct / data.total) * 100) : 0;
+            });
+            progress.skillScores = scores;
+            return scores;
+        }
+
+        function recommendation() {
+            const lesson = currentLesson();
+            const progress = currentProgress();
+            if (!lesson.questions) {
+                return {
+                    title: "Tiếp tục hoàn thiện nội dung",
+                    body: "Bài này đang là khung mở rộng. Sau khi chốt mẫu Bài 1, ta thêm lý thuyết, ví dụ và câu luyện theo cùng cấu trúc."
+                };
+            }
+            if (!progress.theoryDone) {
+                return {
+                    title: "Bắt đầu bằng phần lý thuyết ngắn",
+                    body: "Học sinh nên đọc các ý chính trước, sau đó xem ví dụ để hiểu cách viết tập hợp."
+                };
+            }
+            if (!progress.examplesDone) {
+                return {
+                    title: "Xem ví dụ trước khi luyện tập",
+                    body: "Ví dụ giúp học sinh nhìn thấy cách dùng ký hiệu ∈, ∉ và cách liệt kê phần tử."
+                };
+            }
+            if (!progress.submitted) {
+                return {
+                    title: "Làm bài luyện để hệ thống đo mức hiểu",
+                    body: "Sau khi nộp bài, hệ thống sẽ tính điểm theo từng kỹ năng nhỏ của Bài 1."
+                };
+            }
+
+            const scores = computeSkillScores();
+            const weakSkills = lesson.skills
+                .filter(skill => (scores[skill.id] || 0) < skill.target)
+                .sort((a, b) => (scores[a.id] || 0) - (scores[b.id] || 0));
+            const score = lessonScore(lesson, progress);
+
+            if (score >= 80 && weakSkills.length === 0) {
+                return {
+                    title: "Có thể chuyển sang Bài 2",
+                    body: "Học sinh đã đạt mục tiêu của Bài 1. Bước tiếp theo là thêm Bài 2: Cách ghi số tự nhiên vào lộ trình."
+                };
+            }
+
+            const weakest = weakSkills[0];
+            return {
+                title: `Luyện thêm: ${weakest.name}`,
+                body: `Điểm chung hiện tại là ${score}%. Hệ thống nên giao thêm 3-5 câu ngắn đúng kỹ năng này trước khi mở Bài 2.`
+            };
+        }
+
+        function render() {
+            document.getElementById("studentName").value = state.studentName;
+            renderLessonList();
+            renderOverallProgress();
+            renderHeader();
+            renderTabs();
+            renderSkills();
+            renderDailyTasks();
+            renderRecommendation();
+        }
+
+        function renderLessonList() {
+            const container = document.getElementById("lessonList");
+            container.innerHTML = lessons.map(lesson => {
+                const progress = state.lessons[lesson.id] || {};
+                const status = statusView(lessonStatus(lesson, progress));
+                const active = lesson.id === state.selectedLessonId;
+                return `
+                    <button class="lesson-item ${active ? "active" : ""} w-full bg-white p-3 text-left" data-lesson-id="${lesson.id}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-slate-900">${lesson.title}</p>
+                                <p class="mt-1 text-xs text-slate-500">${lesson.statusLabel}</p>
+                            </div>
+                            <span class="status-dot ${status.color} mt-1"></span>
+                        </div>
+                        <p class="mt-2 text-xs font-semibold ${status.tone}">${status.text}</p>
+                    </button>
+                `;
+            }).join("");
+
+            document.querySelectorAll("[data-lesson-id]").forEach(button => {
+                button.addEventListener("click", () => {
+                    state.selectedLessonId = button.dataset.lessonId;
+                    if (!state.lessons[state.selectedLessonId]) {
+                        state.lessons[state.selectedLessonId] = { theoryDone: false, examplesDone: false, practiceDone: false, answers: {}, submitted: false, skillScores: {} };
+                    }
+                    saveState();
+                    render();
+                });
+            });
+        }
+
+        function renderOverallProgress() {
+            const completed = lessons.filter(lesson => lessonStatus(lesson, state.lessons[lesson.id] || {}) === "mastered").length;
+            const total = lessons.filter(lesson => lesson.questions).length;
+            const percent = total ? Math.round((completed / total) * 100) : 0;
+            document.getElementById("overallProgress").innerHTML = `
+                <div class="flex items-center justify-between text-sm">
+                    <span class="font-semibold text-slate-600">Tiến độ chương</span>
+                    <span class="font-bold text-slate-900">${completed}/${total} bài mẫu</span>
+                </div>
+                <div class="skill-bar mt-3"><span style="width:${percent}%"></span></div>
+            `;
+        }
+
+        function renderHeader() {
+            const lesson = currentLesson();
+            const progress = currentProgress();
+            const status = statusView(lessonStatus(lesson, progress));
+            const score = lessonScore(lesson, progress);
+            document.getElementById("lessonPath").textContent = `${lesson.subject} · ${lesson.chapter}`;
+            document.getElementById("lessonTitle").textContent = lesson.title;
+            document.getElementById("lessonGoal").textContent = lesson.goal;
+            document.getElementById("lessonStatus").innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="inline-flex items-center gap-2 text-sm font-bold ${status.tone}">
+                        <span class="status-dot ${status.color}"></span>${status.text}
+                    </span>
+                    <span class="text-sm font-bold text-slate-900">${progress.submitted ? score + "%" : "Chưa có điểm"}</span>
+                </div>
+                <div class="skill-bar"><span style="width:${progress.submitted ? score : 12}%"></span></div>
+                <p class="text-xs leading-5 text-slate-500">Kết quả được lưu riêng cho ${state.studentName} trên trình duyệt này.</p>
+            `;
+        }
+
+        function renderTabs() {
+            document.querySelectorAll(".tab-btn").forEach(button => {
+                const active = button.dataset.tab === state.activeTab;
+                button.classList.toggle("bg-teal-700", active);
+                button.classList.toggle("text-white", active);
+                button.classList.toggle("text-slate-700", !active);
+                button.onclick = () => {
+                    state.activeTab = button.dataset.tab;
+                    saveState();
+                    renderTabs();
+                };
+            });
+
+            const content = document.getElementById("tabContent");
+            const lesson = currentLesson();
+            if (!lesson.questions) {
+                content.innerHTML = `
+                    <div class="rounded border border-dashed border-slate-300 bg-slate-50 p-5">
+                        <h3 class="text-lg font-bold">${lesson.title}</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Bài này đang để sẵn trong cây lộ trình. Khi mẫu Bài 1 ổn, ta thêm nội dung và câu hỏi theo đúng cấu trúc.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (state.activeTab === "learn") renderTheory(content, lesson);
+            if (state.activeTab === "examples") renderExamples(content, lesson);
+            if (state.activeTab === "practice") renderPractice(content, lesson);
+        }
+
+        function renderTheory(content, lesson) {
+            const progress = currentProgress();
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid gap-3">
+                        ${lesson.theory.map((line, index) => `
+                            <div class="rounded border border-slate-200 bg-white p-4">
+                                <p class="text-sm font-bold text-teal-700">Ý ${index + 1}</p>
+                                <p class="mt-1 text-base leading-7 text-slate-800">${line}</p>
+                            </div>
+                        `).join("")}
+                    </div>
+                    <button id="markTheoryDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                        <i class="fas fa-check"></i>${progress.theoryDone ? "Đã hoàn thành lý thuyết" : "Đánh dấu đã học"}
+                    </button>
+                </div>
+            `;
+            document.getElementById("markTheoryDone").onclick = () => {
+                progress.theoryDone = true;
+                state.activeTab = "examples";
+                saveState();
+                render();
+            };
+        }
+
+        function renderExamples(content, lesson) {
+            const progress = currentProgress();
+            content.innerHTML = `
+                <div class="space-y-4">
+                    ${lesson.examples.map(example => `
+                        <div class="rounded border border-slate-200 bg-white p-4">
+                            <h3 class="font-bold text-slate-900">${example.title}</h3>
+                            <p class="mt-2 text-base leading-7 text-slate-700">${example.body}</p>
+                        </div>
+                    `).join("")}
+                    <button id="markExamplesDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                        <i class="fas fa-check"></i>${progress.examplesDone ? "Đã xem ví dụ" : "Đánh dấu đã xem ví dụ"}
+                    </button>
+                </div>
+            `;
+            document.getElementById("markExamplesDone").onclick = () => {
+                progress.examplesDone = true;
+                state.activeTab = "practice";
+                saveState();
+                render();
+            };
+        }
+
+        function renderPractice(content, lesson) {
+            const progress = currentProgress();
+            content.innerHTML = `
+                <form id="practiceForm" class="space-y-5">
+                    ${lesson.questions.map((question, index) => `
+                        <fieldset class="rounded border border-slate-200 bg-white p-4">
+                            <legend class="px-1 text-sm font-bold text-slate-900">Câu ${index + 1}. ${question.prompt}</legend>
+                            <div class="mt-3 grid gap-2">
+                                ${question.options.map((option, optionIndex) => {
+                                    const checked = progress.answers[question.id] === optionIndex ? "checked" : "";
+                                    const resultMark = progress.submitted ? renderAnswerMark(question, optionIndex) : "";
+                                    return `
+                                        <label class="answer-option flex cursor-pointer items-start justify-between gap-3 px-3 py-2 text-sm">
+                                            <span class="flex items-start gap-2">
+                                                <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} class="mt-1">
+                                                <span>${option}</span>
+                                            </span>
+                                            ${resultMark}
+                                        </label>
+                                    `;
+                                }).join("")}
+                            </div>
+                        </fieldset>
+                    `).join("")}
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                            <i class="fas fa-paper-plane"></i>Nộp bài luyện
+                        </button>
+                        <button id="clearAnswersBtn" type="button" class="inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                            <i class="fas fa-eraser"></i>Xóa đáp án
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            document.querySelectorAll("#practiceForm input[type='radio']").forEach(input => {
+                input.addEventListener("change", event => {
+                    progress.answers[event.target.name] = Number(event.target.value);
+                    progress.submitted = false;
+                    saveState();
+                });
+            });
+
+            document.getElementById("practiceForm").onsubmit = event => {
+                event.preventDefault();
+                progress.practiceDone = true;
+                progress.submitted = true;
+                computeSkillScores();
+                saveState();
+                render();
+            };
+
+            document.getElementById("clearAnswersBtn").onclick = () => {
+                progress.answers = {};
+                progress.submitted = false;
+                progress.practiceDone = false;
+                progress.skillScores = {};
+                saveState();
+                render();
+            };
+        }
+
+        function renderAnswerMark(question, optionIndex) {
+            const progress = currentProgress();
+            const selected = progress.answers[question.id];
+            if (optionIndex === question.answer) return `<i class="fas fa-check text-teal-700"></i>`;
+            if (selected === optionIndex && selected !== question.answer) return `<i class="fas fa-xmark text-rose-600"></i>`;
+            return "";
+        }
+
+        function renderSkills() {
+            const lesson = currentLesson();
+            const panel = document.getElementById("skillPanel");
+            if (!lesson.skills) {
+                panel.innerHTML = `<p class="text-sm leading-6 text-slate-600">Chưa thêm kỹ năng cho bài này.</p>`;
+                return;
+            }
+
+            const progress = currentProgress();
+            const scores = computeSkillScores();
+            panel.innerHTML = lesson.skills.map(skill => {
+                const score = progress.submitted ? (scores[skill.id] || 0) : 0;
+                const muted = progress.submitted ? "" : "text-slate-400";
+                return `
+                    <div>
+                        <div class="flex items-start justify-between gap-3 text-sm">
+                            <span class="font-semibold text-slate-700">${skill.name}</span>
+                            <span class="font-bold ${muted}">${progress.submitted ? score + "%" : "--"}</span>
+                        </div>
+                        <div class="skill-bar mt-2"><span style="width:${score}%"></span></div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderDailyTasks() {
+            const progress = currentProgress();
+            const tasks = [
+                { done: progress.theoryDone, text: "Đọc lý thuyết ngắn" },
+                { done: progress.examplesDone, text: "Xem 3 ví dụ mẫu" },
+                { done: progress.submitted, text: "Làm 8 câu luyện tập" }
+            ];
+            document.getElementById("dailyTasks").innerHTML = tasks.map(task => `
+                <div class="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2">
+                    <span class="grid h-7 w-7 place-items-center rounded ${task.done ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-400"}">
+                        <i class="fas ${task.done ? "fa-check" : "fa-circle"} text-xs"></i>
+                    </span>
+                    <span class="text-sm font-semibold text-slate-700">${task.text}</span>
+                </div>
+            `).join("");
+        }
+
+        function renderRecommendation() {
+            const next = recommendation();
+            document.getElementById("nextActionTitle").textContent = next.title;
+            document.getElementById("nextActionBody").textContent = next.body;
+        }
+
+        document.getElementById("saveStudentBtn").onclick = () => {
+            state.studentName = document.getElementById("studentName").value.trim() || "Học sinh A";
+            saveState();
+            render();
+        };
+
+        document.getElementById("resetBtn").onclick = () => {
+            if (!confirm("Làm lại toàn bộ tiến độ thử nghiệm?")) return;
+            localStorage.removeItem(STORAGE_KEY);
+            state = loadState();
+            render();
+        };
+
+        render();
+    </script>
+</body>
+
+</html>
