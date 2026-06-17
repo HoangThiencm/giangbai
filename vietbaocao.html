@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viết Báo Cáo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg0: #0f1633;
+            --bg1: #141c43;
+            --card: rgba(20, 26, 61, 0.78);
+            --card-border: rgba(145, 160, 255, 0.22);
+            --text-main: #f4f7ff;
+            --text-sub: #8f98c7;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-main);
+            background:
+                radial-gradient(circle at top left, rgba(95, 116, 255, 0.18), transparent 26%),
+                radial-gradient(circle at 80% 20%, rgba(255, 102, 178, 0.12), transparent 18%),
+                radial-gradient(circle at 50% 95%, rgba(22, 214, 166, 0.12), transparent 20%),
+                linear-gradient(180deg, var(--bg1), var(--bg0));
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        }
+
+        .grain {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 54px 54px;
+            opacity: 0.28;
+            pointer-events: none;
+        }
+
+        .tool-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+            min-height: 300px;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(179, 190, 255, 0.4);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+        }
+
+        .icon-slab {
+            width: 72px;
+            height: 72px;
+            border-radius: 22px;
+            display: grid;
+            place-items: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 14px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        .icon-orange { background: linear-gradient(145deg, #ffb23b, #ff8f19); }
+        .icon-blue { background: linear-gradient(145deg, #5973ff, #3853f0); }
+        .icon-pink { background: linear-gradient(145deg, #f15cae, #bc3bd7); }
+        .icon-green { background: linear-gradient(145deg, #21c6a8, #14a57e); }
+    </style>
+</head>
+
+<body>
+    <div class="grain fixed inset-0"></div>
+
+    <main class="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header class="mb-8 pt-2">
+            <p class="text-xs uppercase tracking-[0.24em] text-indigo-300/80">Trang tác vụ</p>
+            <h1 class="mt-2 text-3xl font-extrabold text-white sm:text-4xl">VIẾT BÁO CÁO</h1>
+            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                Chọn đúng công cụ để mở ngay luồng làm việc phù hợp.
+            </p>
+        </header>
+
+        <section class="grid gap-6 sm:grid-cols-2 xl:grid-cols-2">
+            <a href="https://gemini.google.com/app/e6bf41201af60de3?hl=vi" target="_blank" rel="noopener noreferrer"
+                class="tool-card group rounded-[28px] p-6 sm:p-7">
+                <div class="flex h-full flex-col">
+                    <div class="icon-slab icon-orange">
+                        <i class="fa-solid fa-lightbulb text-3xl text-white"></i>
+                    </div>
+                    <div class="mt-8 flex-1">
+                        <h2 class="text-2xl font-extrabold text-white">Viết sáng kiến</h2>
+                        <p class="mt-4 max-w-sm text-sm leading-6 text-[var(--text-sub)]">
+                            Dẫn tới Gemini để hỗ trợ viết sáng kiến.
+                        </p>
+                    </div>
+                    <div class="mt-8 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-indigo-200">
+                        Mở ngay <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+
+            <a href="https://gemini.google.com/app/7bc03567b9f738fb?hl=vi" target="_blank" rel="noopener noreferrer"
+                class="tool-card group rounded-[28px] p-6 sm:p-7">
+                <div class="flex h-full flex-col">
+                    <div class="icon-slab icon-blue">
+                        <i class="fa-regular fa-file-lines text-3xl text-white"></i>
+                    </div>
+                    <div class="mt-8 flex-1">
+                        <h2 class="text-2xl font-extrabold text-white">Tạo báo cáo</h2>
+                        <p class="mt-4 max-w-sm text-sm leading-6 text-[var(--text-sub)]">
+                            Dẫn tới Gemini để tạo báo cáo.
+                        </p>
+                    </div>
+                    <div class="mt-8 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-indigo-200">
+                        Mở ngay <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+
+            <a href="https://gemini.google.com/app/621f8c0862062159?hl=vi" target="_blank" rel="noopener noreferrer"
+                class="tool-card group rounded-[28px] p-6 sm:p-7">
+                <div class="flex h-full flex-col">
+                    <div class="icon-slab icon-pink">
+                        <i class="fa-solid fa-file-arrow-down text-3xl text-white"></i>
+                    </div>
+                    <div class="mt-8 flex-1">
+                        <h2 class="text-2xl font-extrabold text-white">Chuyển PDF</h2>
+                        <p class="mt-4 max-w-sm text-sm leading-6 text-[var(--text-sub)]">
+                            Dẫn tới Gemini để xử lý và chuyển đổi PDF.
+                        </p>
+                    </div>
+                    <div class="mt-8 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-indigo-200">
+                        Mở ngay <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+
+            <a href="https://gemini.google.com/app/9a0ffa3b4b6a9f98?hl=vi" target="_blank" rel="noopener noreferrer"
+                class="tool-card group rounded-[28px] p-6 sm:p-7">
+                <div class="flex h-full flex-col">
+                    <div class="icon-slab icon-green">
+                        <i class="fa-solid fa-clipboard-check text-3xl text-white"></i>
+                    </div>
+                    <div class="mt-8 flex-1">
+                        <h2 class="text-2xl font-extrabold text-white">Tạo bài tập trắc nghiệm</h2>
+                        <p class="mt-4 max-w-sm text-sm leading-6 text-[var(--text-sub)]">
+                            Dẫn tới Gemini để sinh câu hỏi trắc nghiệm.
+                        </p>
+                    </div>
+                    <div class="mt-8 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-indigo-200">
+                        Mở ngay <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </section>
+    </main>
+</body>
+
+</html>
