@@ -997,9 +997,8 @@
             }
         };
     </script>
-    <script src="admin-lesson-manager.js?v=20260617-tabs2"></script>
-    <script src="admin-progress.js?v=20260617-tabs2"></script>
-    <script src="admin-tabs.js?v=20260617-tabs2"></script>
+    <script src="admin-lesson-manager.js?v=20260617-tabs3"></script>
+    <script src="admin-progress.js?v=20260617-tabs3"></script>
     <script>
         (function () {
             const TAB_DEFS = [
@@ -1055,6 +1054,7 @@
             }
 
             function activate(id) {
+                if (!TAB_DEFS.some(([tabId]) => tabId === id)) id = 'lessons';
                 document.querySelectorAll('.admin-tab-button').forEach(btn => {
                     const active = btn.dataset.tab === id;
                     btn.classList.toggle('bg-blue-600', active);
@@ -1069,6 +1069,7 @@
                 });
                 localStorage.setItem('admin_active_tab', id);
             }
+            window.activateAdminTab = activate;
 
             window.forceAdminTabs = function () {
                 const dashboard = $('dashboardSection');
@@ -1092,11 +1093,14 @@
                 const content = $('adminTabContent');
                 if (!nav || !content) return;
 
-                nav.innerHTML = TAB_DEFS.map(([id, label, icon]) => `
-                    <button type="button" data-tab="${id}" class="admin-tab-button inline-flex items-center gap-2 rounded border px-4 py-2 text-sm font-bold transition">
-                        <i class="fas ${icon}"></i>${label}
-                    </button>
-                `).join('');
+                if (!nav.dataset.ready) {
+                    nav.innerHTML = TAB_DEFS.map(([id, label, icon]) => `
+                        <button type="button" data-tab="${id}" class="admin-tab-button inline-flex items-center gap-2 rounded border px-4 py-2 text-sm font-bold transition">
+                            <i class="fas ${icon}"></i>${label}
+                        </button>
+                    `).join('');
+                    nav.dataset.ready = '1';
+                }
 
                 TAB_DEFS.forEach(([id]) => content.appendChild(panel(id)));
                 move(panel('lessons'), $('lessonEditorPanel'));
@@ -1112,6 +1116,14 @@
                 const saved = localStorage.getItem('admin_active_tab');
                 activate(TAB_DEFS.some(([id]) => id === saved) ? saved : 'lessons');
             };
+
+            document.addEventListener('click', event => {
+                const btn = event.target.closest('.admin-tab-button');
+                if (!btn) return;
+                event.preventDefault();
+                event.stopPropagation();
+                activate(btn.dataset.tab);
+            }, true);
 
             const oldLoadUsers = window.loadUsers;
             if (typeof oldLoadUsers === 'function' && !oldLoadUsers.__forceTabsWrapped) {
