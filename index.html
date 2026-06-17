@@ -41,6 +41,90 @@
             white-space: pre-wrap;
             line-height: 1.75;
         }
+
+        .page-shell {
+            background:
+                radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 30%),
+                radial-gradient(circle at 85% 0%, rgba(20, 184, 166, 0.10), transparent 22%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        }
+
+        .hero-panel {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94));
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            box-shadow: 0 22px 60px rgba(15, 23, 42, 0.16);
+        }
+
+        .section-kicker {
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            font-weight: 800;
+            font-size: 0.72rem;
+        }
+
+        .tool-card {
+            background: #ffffff;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            height: 100%;
+            min-height: 268px;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 42px rgba(15, 23, 42, 0.10);
+            border-color: rgba(99, 102, 241, 0.25);
+        }
+
+        .tool-icon {
+            width: 68px;
+            height: 68px;
+            border-radius: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 12px 20px rgba(0, 0, 0, 0.10);
+        }
+
+        .tool-title {
+            font-size: 1.05rem;
+            line-height: 1.25;
+            font-weight: 800;
+            color: #0f172a;
+            min-height: 2.6rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .tool-desc {
+            color: #64748b;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            min-height: 4.3rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .tool-link {
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+
+        .nav-chip {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+        }
+
+        .stat-chip {
+            border: 1px solid rgba(148, 163, 184, 0.20);
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(8px);
+        }
     </style>
     <script>
         const SystemConfig = {
@@ -324,218 +408,237 @@
     </script>
 </head>
 
-<body class="bg-slate-50 font-sans min-h-screen text-slate-800">
+<body class="page-shell font-sans min-h-screen text-slate-800">
 
-    <nav class="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
+    <nav class="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-center gap-3">
-                <div
-                    class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-200">
-                    AI</div>
+                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300">
+                    <i class="fas fa-robot text-lg"></i>
+                </div>
                 <div>
-                    <h1 class="font-bold text-lg text-slate-800">HỆ THỐNG TRỢ LÝ GIÁO VIÊN DẠY HỌC BẰNG AI</h1>
-                    <p class="text-xs text-slate-500 font-medium">Tác giả: Hoàng Tấn Thiên</p>
+                    <h1 class="text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">HỆ THỐNG TRỢ LÝ GIÁO VIÊN DẠY HỌC BẰNG AI</h1>
+                    <p class="text-xs font-medium text-slate-500">Tác giả: Hoàng Tấn Thiên</p>
                 </div>
             </div>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="nav-chip rounded-full px-3 py-2 text-xs font-semibold">
+                    <i class="fas fa-sparkles mr-1 text-indigo-300"></i> Cập nhật đồng bộ
+                </span>
                 <button onclick="SystemConfig.openModal()"
-                    class="text-slate-600 hover:text-indigo-600 font-bold text-sm px-3 py-2 rounded-lg hover:bg-slate-100 transition flex items-center gap-2 border border-slate-200">
-                    <i class="fas fa-cogs"></i> Cấu hình
+                    class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                    <i class="fas fa-cogs text-slate-500"></i> Cấu hình
                 </button>
                 <button onclick="SystemConfig.logout()"
-                    class="text-red-500 hover:text-red-700 font-bold text-sm px-3 py-2 rounded-lg hover:bg-red-50 transition border border-red-100">
-                    <i class="fas fa-power-off"></i>
+                    class="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-600 shadow-sm transition hover:bg-rose-50">
+                    <i class="fas fa-power-off"></i> Đăng xuất
                 </button>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto p-8">
-
-        <!-- HƯỚNG DẪN SỬ DỤNG (ACCORDION) -->
-        <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 mb-8 overflow-hidden">
-            <div class="p-4 bg-indigo-50 flex justify-between items-center cursor-pointer"
-                onclick="SystemConfig.toggleGuide('guideContent')">
-                <h3 class="font-bold text-indigo-800 flex items-center gap-2">
-                    <i class="fas fa-book-open"></i> Hướng Dẫn Sử Dụng Nhanh
-                </h3>
-                <i id="guideContent-icon"
-                    class="fas fa-chevron-down text-indigo-500 transition-transform duration-300"></i>
-            </div>
-            <div id="guideContent" class="accordion-content bg-white p-6 pt-2">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600">
-                    <div>
-                        <h4 class="font-bold text-slate-800 mb-2">1. Cấu hình AI (Bắt buộc)</h4>
-                        <p class="mb-2">Để hệ thống hoạt động, bạn cần nạp API Key:</p>
-                        <ul class="list-disc pl-5 space-y-1">
-                            <li>Bấm nút <b>Cấu hình</b> ở góc trên bên phải.</li>
-                            <li><b>Gemini Keys:</b> Nạp file <code>.txt</code> chứa danh sách API Key của Google (mỗi
-                                dòng 1 key).</li>
-                            <li><b>Hugging Face Token:</b> Nhập token (bắt đầu bằng <code>hf_</code>) để sử dụng model
-                                Qwen 2.5 miễn phí khi Gemini quá tải.</li>
-                        </ul>
+    <main class="mx-auto max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+        <section class="hero-panel overflow-hidden rounded-[28px] px-6 py-7 text-white sm:px-8 sm:py-8">
+            <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+                <div>
+                    <p class="section-kicker text-sky-300/90">Dashboard</p>
+                    <h2 class="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Chọn đúng công cụ, vào việc ngay.</h2>
+                    <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                        Giao diện này được dọn lại theo kiểu làm việc thực tế: rõ mục tiêu, ít nhiễu, đồng đều giữa các công cụ và dễ quét nhanh trên màn hình lớn lẫn điện thoại.
+                    </p>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                    <div class="stat-chip rounded-2xl px-4 py-3 text-slate-900">
+                        <div class="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Nhóm công cụ</div>
+                        <div class="mt-1 text-lg font-extrabold">7 + 1</div>
                     </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 mb-2">2. Các tính năng chính</h4>
-                        <ul class="list-disc pl-5 space-y-1">
-                            <li><b>Dạy học từ Google Slide:</b> Tích hợp Google Slides vào hệ thống để giảng dạy trực
-                                tiếp không cần chuyển tab.</li>
-                            <li><b>Dùng AI để vẽ hình học:</b> Nhập đề bài --> AI sẽ hỗ trợ vẽ hình.</li>
-                            <li><b>Tạo Đề Ma Trận:</b> Upload ảnh bảng ma trận -> AI tự động đọc -> Sinh đề thi chuẩn ->
-                                Xuất Word theo văn bản 7991 của Bộ Giáo dục và Đào tạo.</li>
-                            <li><b>GAME DẠY HỌC-SOẠN ĐỀ THEO CHỦ ĐỀ:</b> Nhập chủ đề bất kỳ -> AI soạn câu hỏi trắc
-                                nghiệm/tự luận.
-                            </li>
-                            <li><b>Trộn Đề Thi:</b> Upload file Word/PDF -> Xáo trộn câu hỏi thành nhiều mã đề.</li>
-                            <li><b>ĐỀ KIỂM TRA:</b> Sinh đề từ ảnh SGK hoặc tạo đề tương tự từ PDF, phục vụ cho định kỳ,
-                                thường xuyên.</li>
-                            <li><b>Viết báo cáo:</b> Nhập thông tin chính -> AI soạn báo cáo hành chính/giáo dục, có thể
-                                sao chép hoặc tải về Word.</li>
-                            <li><b>Thi Online:</b> Tổ chức thi trắc nghiệm trên điện thoại, máy tính,... cho học sinh.
-                            </li>
-                        </ul>
+                    <div class="stat-chip rounded-2xl px-4 py-3 text-slate-900">
+                        <div class="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Chế độ mở</div>
+                        <div class="mt-1 text-lg font-extrabold">1 click</div>
+                    </div>
+                    <div class="stat-chip rounded-2xl px-4 py-3 text-slate-900">
+                        <div class="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Tối ưu</div>
+                        <div class="mt-1 text-lg font-extrabold">Đồng đều</div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><i
-                class="fas fa-pen-nib text-indigo-500"></i> Công Cụ Giảng Dạy</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <section class="mt-6">
+            <div class="mb-5 flex items-center justify-between gap-3">
+                <div>
+                    <p class="section-kicker text-indigo-600">Công cụ</p>
+                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Công Cụ Giảng Dạy</h3>
+                </div>
+                <button onclick="SystemConfig.toggleGuide('guideContent')"
+                    class="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 md:inline-flex md:items-center md:gap-2">
+                    <i class="fas fa-book-open text-indigo-500"></i> Hướng dẫn
+                </button>
+            </div>
+
+            <!-- HƯỚNG DẪN SỬ DỤNG (ACCORDION) -->
+            <div class="mb-8 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                <div class="flex cursor-pointer items-center justify-between bg-slate-50 px-5 py-4"
+                    onclick="SystemConfig.toggleGuide('guideContent')">
+                    <h3 class="flex items-center gap-2 font-bold text-slate-800">
+                        <i class="fas fa-book-open text-indigo-500"></i> Hướng Dẫn Sử Dụng Nhanh
+                    </h3>
+                    <i id="guideContent-icon"
+                        class="fas fa-chevron-down text-slate-400 transition-transform duration-300"></i>
+                </div>
+                <div id="guideContent" class="accordion-content bg-white px-5 pb-5 pt-4">
+                    <div class="grid grid-cols-1 gap-6 text-sm text-slate-600 md:grid-cols-2">
+                        <div>
+                            <h4 class="mb-2 font-bold text-slate-900">1. Cấu hình AI (Bắt buộc)</h4>
+                            <p class="mb-2">Để hệ thống hoạt động, bạn cần nạp API Key:</p>
+                            <ul class="list-disc space-y-1 pl-5">
+                                <li>Bấm nút <b>Cấu hình</b> ở góc trên bên phải.</li>
+                                <li><b>Gemini Keys:</b> Nạp file <code>.txt</code> chứa danh sách API Key của Google (mỗi dòng 1 key).</li>
+                                <li><b>Hugging Face Token:</b> Nhập token (bắt đầu bằng <code>hf_</code>) để sử dụng model Qwen 2.5 miễn phí khi Gemini quá tải.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="mb-2 font-bold text-slate-900">2. Các tính năng chính</h4>
+                            <ul class="list-disc space-y-1 pl-5">
+                                <li><b>Dạy học từ Google Slide:</b> Tích hợp Google Slides vào hệ thống để giảng dạy trực tiếp không cần chuyển tab.</li>
+                                <li><b>Dùng AI để vẽ hình học:</b> Nhập đề bài, AI sẽ hỗ trợ vẽ hình.</li>
+                                <li><b>Tạo Đề Ma Trận:</b> Upload ảnh bảng ma trận, AI tự động đọc rồi sinh đề thi chuẩn.</li>
+                                <li><b>Trộn Đề Thi:</b> Upload file Word/PDF rồi xáo trộn câu hỏi thành nhiều mã đề.</li>
+                                <li><b>Đề Kiểm Tra:</b> Sinh đề từ ảnh SGK hoặc tạo đề tương tự từ PDF.</li>
+                                <li><b>Thi Online:</b> Tổ chức thi trắc nghiệm trên điện thoại, máy tính.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 mb-10">
 
             <!-- 1. TRÌNH CHIẾU SLIDES (ĐƯA LÊN ĐẦU) -->
             <a href="gslides.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer border-transparent hover:border-yellow-100">
-                <div
-                    class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-amber-200">
+                <div class="tool-icon bg-amber-100 text-amber-600">
                     <i class="fas fa-presentation-screen"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-amber-600 transition">Trình Chiếu
-                    Slides</h3>
-                <p class="text-sm text-slate-500 mb-4">Tích hợp Google Slides vào hệ thống để giảng dạy trực tiếp không
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-amber-600 transition">Trình Chiếu Slides</h3>
+                    <p class="tool-desc mt-3">Tích hợp Google Slides vào hệ thống để giảng dạy trực tiếp không
                     cần chuyển tab.</p>
-                <span
-                    class="text-amber-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Truy
-                    cập <i class="fas fa-arrow-right"></i></span>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-amber-600 transition group-hover:translate-x-1">
+                    Truy cập <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 2. VẼ HÌNH AI (ĐÃ BỎ CHỮ NEW) -->
             <a href="vehinh.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer border-transparent hover:border-indigo-100">
-                <div
-                    class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-indigo-200">
+                <div class="tool-icon bg-indigo-100 text-indigo-600">
                     <i class="fas fa-shapes"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition">Vẽ Hình Học AI
-                </h3>
-                <p class="text-sm text-slate-500 mb-4">Mô tả bằng lời hoặc vẽ tay, AI sẽ dựng hình học, đồ thị hàm số và
-                    biểu đồ chính xác vector.</p>
-                <span
-                    class="text-indigo-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử
-                    dụng ngay <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-indigo-600 transition">Vẽ Hình Học AI</h3>
+                    <p class="tool-desc mt-3">Mô tả bằng lời hoặc vẽ tay, AI sẽ dựng hình học, đồ thị hàm số và biểu đồ chính xác vector.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-indigo-600 transition group-hover:translate-x-1">
+                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 3. SOẠN ĐỀ AI -->
             <a href="smartquiz.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer border-transparent hover:border-blue-100">
-                <div
-                    class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-sky-200">
+                <div class="tool-icon bg-sky-100 text-sky-600">
                     <i class="fas fa-magic"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition">GAME DẠY HỌC - HỖ
-                    TRỢ SOẠN CÂU HỎI THEO CHỦ ĐỀ</h3>
-                <p class="text-sm text-slate-500 mb-4">Nhập chủ đề bất kỳ, AI sẽ soạn câu hỏi và tạo slide trình chiếu
-                    dạy học tức thì.</p>
-                <span
-                    class="text-blue-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử
-                    dụng ngay <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-sky-600 transition">GAME DẠY HỌC - HỖ TRỢ SOẠN CÂU HỎI THEO CHỦ ĐỀ</h3>
+                    <p class="tool-desc mt-3">Nhập chủ đề bất kỳ, AI sẽ soạn câu hỏi và tạo slide trình chiếu dạy học tức thì.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-sky-600 transition group-hover:translate-x-1">
+                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 4. MA TRẬN ĐỀ THI -->
             <a href="matrande.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer border-transparent hover:border-pink-100">
-                <div
-                    class="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-pink-200">
+                <div class="tool-icon bg-pink-100 text-pink-600">
                     <i class="fas fa-table"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-pink-600 transition">Tạo Đề Từ Ma Trận
-                    (theo CV 7991-BGDĐT)</h3>
-                <p class="text-sm text-slate-500 mb-4">Quét Ma trận / Bảng đặc tả -> Sinh đề thi Trắc nghiệm & Tự luận
-                    -> Xuất Word chuẩn.</p>
-                <span
-                    class="text-pink-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử
-                    dụng ngay <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-pink-600 transition">Tạo Đề Từ Ma Trận (theo CV 7991-BGDĐT)</h3>
+                    <p class="tool-desc mt-3">Quét Ma trận / Bảng đặc tả → Sinh đề thi Trắc nghiệm & Tự luận → Xuất Word chuẩn.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-pink-600 transition group-hover:translate-x-1">
+                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 5. TRỘN ĐỀ -->
             <a href="tronde.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer border-transparent hover:border-emerald-100">
-                <div
-                    class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-emerald-200">
+                <div class="tool-icon bg-emerald-100 text-emerald-600">
                     <i class="fas fa-random"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-emerald-600 transition">Trộn Đề Thi
-                </h3>
-                <p class="text-sm text-slate-500 mb-4">Xáo trộn câu hỏi từ file Word/PDF. Hỗ trợ giữ định dạng công thức
-                    Toán học.</p>
-                <span
-                    class="text-emerald-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử
-                    dụng ngay <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-emerald-600 transition">Trộn Đề Thi</h3>
+                    <p class="tool-desc mt-3">Xáo trộn câu hỏi từ file Word/PDF. Hỗ trợ giữ định dạng công thức Toán học.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-emerald-600 transition group-hover:translate-x-1">
+                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 6. THI ONLINE -->
             <a href="thitructuyen.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer border-transparent hover:border-orange-100">
-                <div
-                    class="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-orange-200">
+                <div class="tool-icon bg-orange-100 text-orange-600">
                     <i class="fas fa-laptop-code"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-orange-600 transition">Tổ Chức Thi
-                    Online</h3>
-                <p class="text-sm text-slate-500 mb-4">Tạo kỳ thi, cấp mã QR cho học sinh làm bài trên điện thoại. Chấm
-                    điểm tự động.</p>
-                <span
-                    class="text-orange-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Truy
-                    cập <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-orange-600 transition">Tổ Chức Thi Online</h3>
+                    <p class="tool-desc mt-3">Tạo kỳ thi, cấp mã QR cho học sinh làm bài trên điện thoại. Chấm điểm tự động.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-orange-600 transition group-hover:translate-x-1">
+                    Truy cập <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 7. KIỂM TRA THƯỜNG XUYÊN -->
             <a href="kttx.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer border-transparent hover:border-cyan-100">
-                <div
-                    class="w-14 h-14 bg-cyan-100 text-cyan-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-cyan-200">
+                <div class="tool-icon bg-cyan-100 text-cyan-600">
                     <i class="fas fa-stopwatch"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">Ra Đề Kiểm Tra có
-                    thể xuất ngược ma trận
-                </h3>
-                <p class="text-sm text-slate-500 mb-4">Tạo đề kiểm tra định kỳ, thường xuyên từ hình ảnh SGK hoặc tạo đề
-                    tương tự từ
-                    file PDF. Xuất ra ma trận và bản đặc tả</p>
-                <span
-                    class="text-cyan-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Sử
-                    dụng ngay <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-cyan-600 transition">Ra Đề Kiểm Tra có thể xuất ngược ma trận</h3>
+                    <p class="tool-desc mt-3">Tạo đề kiểm tra định kỳ, thường xuyên từ hình ảnh SGK hoặc tạo đề tương tự từ file PDF. Xuất ra ma trận và bản đặc tả.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-cyan-600 transition group-hover:translate-x-1">
+                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
             <!-- 8. VIẾT BÁO CÁO -->
             <a href="vietbaocao.html"
-                class="hover-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group cursor-pointer border-transparent hover:border-teal-100 text-left block">
-                <div
-                    class="w-14 h-14 bg-teal-100 text-teal-600 rounded-2xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-teal-200 text-left block">
+                <div class="tool-icon bg-teal-100 text-teal-600">
                     <i class="fas fa-file-signature"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-teal-600 transition">Viết Báo Cáo
-                </h3>
-                <p class="text-sm text-slate-500 mb-4">Nhập vài ý chính, AI sẽ soạn báo cáo giáo dục/hành chính đúng văn
-                    phong, có thể tải về Word.</p>
-                <span
-                    class="text-teal-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-2 transition-transform">Tạo
-                    báo cáo <i class="fas fa-arrow-right"></i></span>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-teal-600 transition">Viết Báo Cáo</h3>
+                    <p class="tool-desc mt-3">Nhập vài ý chính, AI sẽ soạn báo cáo giáo dục/hành chính đúng văn phong, có thể tải về Word.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-teal-600 transition group-hover:translate-x-1">
+                    Tạo báo cáo <i class="fas fa-arrow-right"></i>
+                </span>
             </a>
 
-        </div>
+            </div>
+        </section>
 
-    </div>
+    </main>
 
     <!-- CONFIG MODAL -->
     <div id="configModal"
@@ -560,6 +663,7 @@
                             <i class="fas fa-file-upload text-indigo-500"></i> Chọn file Keys.txt
                             <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'gemini')"
                                 class="hidden" />
+                        </label>
                     </div>
                 </div>
 
