@@ -168,36 +168,6 @@
                     </div>
                 </div>
 
-                <!-- GitHub Config -->
-                <div class="space-y-4 pt-4 border-t border-slate-200 mb-6">
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">GitHub Token (Lưu trữ đám
-                            mây)</label>
-                        <input type="password" id="cfg_github_token"
-                            class="w-full p-2.5 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="ghp_................">
-                        <p class="text-xs text-slate-500 mt-1">Token cần quyền repo. Tạo tại <a
-                                href="https://github.com/settings/tokens" target="_blank"
-                                class="text-blue-500 hover:underline">github.com/settings/tokens</a></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">GitHub Repo</label>
-                        <input type="text" id="cfg_github_repo"
-                            class="w-full p-2.5 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="username/reponame">
-                    </div>
-                </div>
-
-                <div class="flex gap-3 pt-4 border-t border-slate-200">
-                    <button onclick="loadGlobalConfig()"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded shadow-sm font-bold text-sm transition flex items-center gap-2">
-                        <i class="fas fa-sync-alt"></i> Nạp lại
-                    </button>
-                    <button onclick="saveGlobalConfig()" id="btnSaveConfig"
-                        class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded shadow text-sm font-bold transition flex items-center gap-2">
-                        <i class="fas fa-save"></i> Lưu cài đặt lên GitHub
-                    </button>
-                </div>
             </div>
 
             <!-- 3. DANH SÁCH CHI TIẾT -->
@@ -1027,9 +997,139 @@
             }
         };
     </script>
-    <script src="admin-lesson-manager.js"></script>
-    <script src="admin-progress.js"></script>
-    <script src="admin-tabs.js"></script>
+    <script src="admin-lesson-manager.js?v=20260617-tabs2"></script>
+    <script src="admin-progress.js?v=20260617-tabs2"></script>
+    <script src="admin-tabs.js?v=20260617-tabs2"></script>
+    <script>
+        (function () {
+            const TAB_DEFS = [
+                ['lessons', 'Tạo bài học', 'fa-book-open'],
+                ['accounts', 'Tạo tài khoản', 'fa-user-graduate'],
+                ['progress', 'Theo dõi tiến độ', 'fa-chart-line'],
+                ['settings', 'Cài đặt hệ thống', 'fa-sliders']
+            ];
+
+            function $(id) { return document.getElementById(id); }
+
+            function panel(id) {
+                let node = $(`adminTab_${id}`);
+                if (!node) {
+                    node = document.createElement('div');
+                    node.id = `adminTab_${id}`;
+                    node.className = 'admin-tab-panel space-y-6';
+                }
+                return node;
+            }
+
+            function move(panelNode, child) {
+                if (child && child.parentElement !== panelNode) panelNode.appendChild(child);
+            }
+
+            function cleanupLegacyGithubSettings() {
+                const token = $('cfg_github_token');
+                const repo = $('cfg_github_repo');
+                const card = token?.closest('.bg-white.rounded-xl') || repo?.closest('.bg-white.rounded-xl');
+                const title = card?.querySelector('h3');
+                const desc = card?.querySelector('p.text-sm');
+                if (title) title.innerHTML = '<i class="fas fa-sliders text-green-500 mr-2"></i> Cài đặt hệ thống';
+                if (desc) desc.textContent = 'Các cài đặt hệ thống sẽ được quản lý trực tiếp trên hosting/database.';
+                const tokenBlock = token?.closest('div');
+                const repoBlock = repo?.closest('div');
+                const wrapper = tokenBlock?.parentElement;
+                tokenBlock?.remove();
+                repoBlock?.remove();
+                if (wrapper && !wrapper.querySelector('input, select, textarea')) wrapper.remove();
+
+                document.querySelectorAll('[onclick="saveGlobalConfig()"], [onclick="loadGlobalConfig()"]').forEach(btn => btn.remove());
+                const saveUserBtn = $('btnSaveUserConfig');
+                if (saveUserBtn) saveUserBtn.innerHTML = '<i class="fas fa-save"></i> Lưu tài khoản';
+            }
+
+            function settingsCard() {
+                cleanupLegacyGithubSettings();
+                return $('cfg_gslides')?.closest('.bg-white.rounded-xl') || $('cfg_vehinh')?.closest('.bg-white.rounded-xl');
+            }
+
+            function accountsTable() {
+                return $('tableBody')?.closest('.bg-white.rounded-xl');
+            }
+
+            function activate(id) {
+                document.querySelectorAll('.admin-tab-button').forEach(btn => {
+                    const active = btn.dataset.tab === id;
+                    btn.classList.toggle('bg-blue-600', active);
+                    btn.classList.toggle('text-white', active);
+                    btn.classList.toggle('border-blue-600', active);
+                    btn.classList.toggle('bg-white', !active);
+                    btn.classList.toggle('text-slate-700', !active);
+                    btn.classList.toggle('border-slate-200', !active);
+                });
+                document.querySelectorAll('.admin-tab-panel').forEach(node => {
+                    node.classList.toggle('hidden', node.id !== `adminTab_${id}`);
+                });
+                localStorage.setItem('admin_active_tab', id);
+            }
+
+            window.forceAdminTabs = function () {
+                const dashboard = $('dashboardSection');
+                if (!dashboard || dashboard.classList.contains('hidden')) return;
+
+                let shell = $('adminTabsShell');
+                if (!shell) {
+                    shell = document.createElement('div');
+                    shell.id = 'adminTabsShell';
+                    shell.className = 'space-y-5 mb-8';
+                    shell.innerHTML = `
+                        <div class="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+                            <div id="adminTabNav" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div id="adminTabContent" class="space-y-6"></div>
+                    `;
+                    dashboard.prepend(shell);
+                }
+
+                const nav = $('adminTabNav');
+                const content = $('adminTabContent');
+                if (!nav || !content) return;
+
+                nav.innerHTML = TAB_DEFS.map(([id, label, icon]) => `
+                    <button type="button" data-tab="${id}" class="admin-tab-button inline-flex items-center gap-2 rounded border px-4 py-2 text-sm font-bold transition">
+                        <i class="fas ${icon}"></i>${label}
+                    </button>
+                `).join('');
+
+                TAB_DEFS.forEach(([id]) => content.appendChild(panel(id)));
+                move(panel('lessons'), $('lessonEditorPanel'));
+                move(panel('progress'), $('adminProgressPanel'));
+                move(panel('accounts'), $('studentCreatePanel'));
+                move(panel('accounts'), accountsTable());
+                move(panel('settings'), settingsCard());
+
+                nav.querySelectorAll('.admin-tab-button').forEach(btn => {
+                    btn.onclick = () => activate(btn.dataset.tab);
+                });
+
+                const saved = localStorage.getItem('admin_active_tab');
+                activate(TAB_DEFS.some(([id]) => id === saved) ? saved : 'lessons');
+            };
+
+            const oldLoadUsers = window.loadUsers;
+            if (typeof oldLoadUsers === 'function' && !oldLoadUsers.__forceTabsWrapped) {
+                window.loadUsers = async function (...args) {
+                    const result = await oldLoadUsers.apply(this, args);
+                    setTimeout(window.forceAdminTabs, 0);
+                    setTimeout(window.forceAdminTabs, 300);
+                    setTimeout(window.forceAdminTabs, 1200);
+                    return result;
+                };
+                window.loadUsers.__forceTabsWrapped = true;
+            }
+
+            setInterval(() => {
+                if (!$('dashboardSection')?.classList.contains('hidden')) window.forceAdminTabs();
+            }, 1500);
+        })();
+    </script>
 </body>
 
 </html>

@@ -17,23 +17,45 @@ function parse_json_or_default($value, $default)
     return is_array($decoded) ? $decoded : $default;
 }
 
+function table_exists(PDO $pdo, string $table): bool
+{
+    try {
+        $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
+        $stmt->execute([$table]);
+        return (bool)$stmt->fetch();
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function column_exists(PDO $pdo, string $table, string $column): bool
+{
+    try {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
+        $stmt->execute([$column]);
+        return (bool)$stmt->fetch();
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 function lesson_row_to_payload(array $row): array
 {
     return [
         'id' => (int)$row['id'],
-        'subject' => $row['subject'],
-        'chapter' => $row['chapter'],
-        'title' => $row['title'],
-        'slug' => $row['slug'],
-        'order_index' => (int)$row['order_index'],
-        'is_published' => (bool)$row['is_published'],
-        'goal' => $row['goal_text'] ?: '',
-        'theory' => parse_json_or_default($row['theory_json'], []),
-        'examples' => parse_json_or_default($row['examples_json'], []),
-        'questions' => parse_json_or_default($row['questions_json'], []),
+        'subject' => $row['subject'] ?? 'Toán 6',
+        'chapter' => $row['chapter'] ?? '',
+        'title' => $row['title'] ?? 'Bài học',
+        'slug' => $row['slug'] ?? '',
+        'order_index' => (int)($row['order_index'] ?? 0),
+        'is_published' => (bool)($row['is_published'] ?? 0),
+        'goal' => $row['goal_text'] ?? '',
+        'theory' => parse_json_or_default($row['theory_json'] ?? null, []),
+        'examples' => parse_json_or_default($row['examples_json'] ?? null, []),
+        'questions' => parse_json_or_default($row['questions_json'] ?? null, []),
         'videos' => parse_json_or_default($row['videos_json'] ?? null, []),
-        'tasks' => parse_json_or_default($row['tasks_json'], []),
-        'skills' => parse_json_or_default($row['skills_json'], []),
+        'tasks' => parse_json_or_default($row['tasks_json'] ?? null, []),
+        'skills' => parse_json_or_default($row['skills_json'] ?? null, []),
     ];
 }
 
@@ -53,40 +75,42 @@ function ensure_login(): array
 
 function ensure_lesson_schema(PDO $pdo): void
 {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS lessons (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        subject VARCHAR(80) NOT NULL,
-        chapter VARCHAR(160) NOT NULL,
-        title VARCHAR(180) NOT NULL,
-        slug VARCHAR(120) NOT NULL UNIQUE,
-        order_index INT NOT NULL DEFAULT 0,
-        is_published TINYINT(1) NOT NULL DEFAULT 0,
-        goal_text TEXT DEFAULT NULL,
-        theory_json LONGTEXT DEFAULT NULL,
-        examples_json LONGTEXT DEFAULT NULL,
-        questions_json LONGTEXT DEFAULT NULL,
-        videos_json LONGTEXT DEFAULT NULL,
-        tasks_json LONGTEXT DEFAULT NULL,
-        skills_json LONGTEXT DEFAULT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS lessons (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            subject VARCHAR(80) NOT NULL,
+            chapter VARCHAR(160) NOT NULL,
+            title VARCHAR(180) NOT NULL,
+            slug VARCHAR(120) NOT NULL UNIQUE,
+            order_index INT NOT NULL DEFAULT 0,
+            is_published TINYINT(1) NOT NULL DEFAULT 0,
+            goal_text TEXT DEFAULT NULL,
+            theory_json LONGTEXT DEFAULT NULL,
+            examples_json LONGTEXT DEFAULT NULL,
+            questions_json LONGTEXT DEFAULT NULL,
+            videos_json LONGTEXT DEFAULT NULL,
+            tasks_json LONGTEXT DEFAULT NULL,
+            skills_json LONGTEXT DEFAULT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-    $columns = [
-        'goal_text TEXT DEFAULT NULL',
-        'theory_json LONGTEXT DEFAULT NULL',
-        'examples_json LONGTEXT DEFAULT NULL',
-        'questions_json LONGTEXT DEFAULT NULL',
-        'videos_json LONGTEXT DEFAULT NULL',
-        'tasks_json LONGTEXT DEFAULT NULL',
-        'skills_json LONGTEXT DEFAULT NULL'
-    ];
-    foreach ($columns as $definition) {
-        $name = trim(strtok($definition, ' '));
-        $stmt = $pdo->prepare("SHOW COLUMNS FROM lessons LIKE ?");
-        $stmt->execute([$name]);
-        if (!$stmt->fetch()) {
-            $pdo->exec("ALTER TABLE lessons ADD COLUMN $definition");
+        $columns = [
+            'goal_text TEXT DEFAULT NULL',
+            'theory_json LONGTEXT DEFAULT NULL',
+            'examples_json LONGTEXT DEFAULT NULL',
+            'questions_json LONGTEXT DEFAULT NULL',
+            'videos_json LONGTEXT DEFAULT NULL',
+            'tasks_json LONGTEXT DEFAULT NULL',
+            'skills_json LONGTEXT DEFAULT NULL'
+        ];
+        foreach ($columns as $definition) {
+            $name = trim(strtok($definition, ' '));
+            if (!column_exists($pdo, 'lessons', $name)) {
+                $pdo->exec("ALTER TABLE lessons ADD COLUMN $definition");
+            }
         }
+    } catch (Throwable $e) {
+        // Student pages should still load if schema migration must be run from admin/setup.
     }
 }
 
@@ -94,24 +118,35 @@ ensure_lesson_schema($pdo);
 
 function ensure_progress_schema(PDO $pdo): void
 {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS student_lesson_progress (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id INT NOT NULL,
-        lesson_id INT NOT NULL,
-        status ENUM('not_started', 'in_progress', 'needs_practice', 'mastered') NOT NULL DEFAULT 'not_started',
-        score INT NOT NULL DEFAULT 0,
-        skill_scores_json TEXT DEFAULT NULL,
-        state_json TEXT DEFAULT NULL,
-        started_at DATETIME DEFAULT NULL,
-        completed_at DATETIME DEFAULT NULL,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uniq_student_lesson (student_id, lesson_id)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS student_lesson_progress (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            student_id INT NOT NULL,
+            lesson_id INT NOT NULL,
+            status ENUM('not_started', 'in_progress', 'needs_practice', 'mastered') NOT NULL DEFAULT 'not_started',
+            score INT NOT NULL DEFAULT 0,
+            skill_scores_json TEXT DEFAULT NULL,
+            state_json TEXT DEFAULT NULL,
+            started_at DATETIME DEFAULT NULL,
+            completed_at DATETIME DEFAULT NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_student_lesson (student_id, lesson_id)
+        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-    $stmt = $pdo->prepare("SHOW COLUMNS FROM student_lesson_progress LIKE ?");
-    $stmt->execute(['state_json']);
-    if (!$stmt->fetch()) {
-        $pdo->exec("ALTER TABLE student_lesson_progress ADD COLUMN state_json TEXT DEFAULT NULL");
+        $columns = [
+            'skill_scores_json TEXT DEFAULT NULL',
+            'state_json TEXT DEFAULT NULL',
+            'started_at DATETIME DEFAULT NULL',
+            'completed_at DATETIME DEFAULT NULL'
+        ];
+        foreach ($columns as $definition) {
+            $name = trim(strtok($definition, ' '));
+            if (!column_exists($pdo, 'student_lesson_progress', $name)) {
+                $pdo->exec("ALTER TABLE student_lesson_progress ADD COLUMN $definition");
+            }
+        }
+    } catch (Throwable $e) {
+        // Student pages can show lessons even before progress tracking is migrated.
     }
 }
 
@@ -136,19 +171,20 @@ if ($method === 'GET') {
         $lessons = array_values(array_filter($lessons, fn($lesson) => $lesson['is_published']));
     }
 
-    $progressStmt = $pdo->prepare('SELECT * FROM student_lesson_progress WHERE student_id = ?');
-    $progressStmt->execute([$user['id']]);
-    $progressRows = $progressStmt->fetchAll();
     $progressMap = [];
-    foreach ($progressRows as $row) {
-        $progressMap[(int)$row['lesson_id']] = [
-            'status' => $row['status'],
-            'score' => (int)$row['score'],
-            'skillScores' => parse_json_or_default($row['skill_scores_json'], []),
-            'state' => parse_json_or_default($row['state_json'], []),
-            'startedAt' => $row['started_at'],
-            'completedAt' => $row['completed_at'],
-        ];
+    if (table_exists($pdo, 'student_lesson_progress')) {
+        $progressStmt = $pdo->prepare('SELECT * FROM student_lesson_progress WHERE student_id = ?');
+        $progressStmt->execute([$user['id']]);
+        foreach ($progressStmt->fetchAll() as $row) {
+            $progressMap[(int)$row['lesson_id']] = [
+                'status' => $row['status'] ?? 'not_started',
+                'score' => (int)($row['score'] ?? 0),
+                'skillScores' => parse_json_or_default($row['skill_scores_json'] ?? null, []),
+                'state' => parse_json_or_default($row['state_json'] ?? null, []),
+                'startedAt' => $row['started_at'] ?? null,
+                'completedAt' => $row['completed_at'] ?? null,
+            ];
+        }
     }
 
     respond([
