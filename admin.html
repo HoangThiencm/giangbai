@@ -997,8 +997,8 @@
             }
         };
     </script>
-    <script src="admin-lesson-manager.js?v=20260617-tabs5"></script>
-    <script src="admin-progress.js?v=20260617-tabs5"></script>
+    <script src="admin-lesson-manager.js?v=20260617-tabs6"></script>
+    <script src="admin-progress.js?v=20260617-tabs6"></script>
     <script>
         (function () {
             const TAB_DEFS = [
@@ -1102,7 +1102,10 @@
                     nav.dataset.ready = '1';
                 }
 
-                TAB_DEFS.forEach(([id]) => content.appendChild(panel(id)));
+                TAB_DEFS.forEach(([id]) => {
+                    const tabPanel = panel(id);
+                    if (tabPanel.parentElement !== content) content.appendChild(tabPanel);
+                });
                 move(panel('lessons'), $('lessonEditorPanel'));
                 move(panel('progress'), $('adminProgressPanel'));
                 move(panel('accounts'), $('studentCreatePanel'));
@@ -1136,10 +1139,6 @@
                 };
                 window.loadUsers.__forceTabsWrapped = true;
             }
-
-            setInterval(() => {
-                if (!$('dashboardSection')?.classList.contains('hidden')) window.forceAdminTabs();
-            }, 1500);
         })();
     </script>
 </body>

@@ -237,9 +237,19 @@
                     event.stopPropagation();
                     field.select();
                 }
-            });
-            ['copy', 'cut', 'paste'].forEach(type => {
-                field.addEventListener(type, event => event.stopPropagation());
+            }, true);
+            field.addEventListener('paste', event => {
+                const text = event.clipboardData?.getData('text/plain');
+                if (typeof text !== 'string') return;
+                event.preventDefault();
+                event.stopPropagation();
+                const start = field.selectionStart ?? field.value.length;
+                const end = field.selectionEnd ?? start;
+                field.setRangeText(text, start, end, 'end');
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+            }, true);
+            ['copy', 'cut'].forEach(type => {
+                field.addEventListener(type, event => event.stopPropagation(), true);
             });
         });
     }
