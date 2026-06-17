@@ -117,18 +117,34 @@
     }
 
     function answerToIndex(value, lineNumber) {
-        const raw = String(value || '').trim().toUpperCase();
-        const letter = raw.match(/[ABCD]/)?.[0];
+        const raw = String(value || '').trim().toUpperCase().replace(/^ĐÁP\s*ÁN\s*[:：-]?\s*/, '');
+        const letter = raw.match(/^[ABCD]$/)?.[0] || raw.match(/(?:^|\s)([ABCD])(?:\s|$)/)?.[1];
         if (letter) return letter.charCodeAt(0) - 65;
-        const number = raw.match(/[1-4]/)?.[0];
+        const number = raw.match(/^[1-4]$/)?.[0] || raw.match(/(?:^|\s)([1-4])(?:\s|$)/)?.[1];
         if (number) return Number(number) - 1;
-        throw new Error(`Câu hỏi dòng ${lineNumber} chưa có đáp án đúng. Nhập A/B/C/D hoặc 1/2/3/4.`);
+        throw new Error(`Câu hỏi số ${lineNumber} chưa có đáp án đúng. Nhập A/B/C/D hoặc 1/2/3/4.`);
+    }
+
+    function decodePastedText(text) {
+        return String(text || '')
+            .replace(/\r/g, '')
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&nbsp;/g, ' ');
+    }
+
+    function splitQuestionParts(line) {
+        return (line.includes('||') ? line.split('||') : line.split('|'))
+            .map(part => part.trim())
+            .filter(Boolean);
     }
 
     function parseQuestionLine(line, index, fallbackSkill) {
-        const parts = (line.includes('||') ? line.split('||') : line.split('|')).map(part => part.trim()).filter(Boolean);
+        const parts = splitQuestionParts(line);
         if (parts.length < 6) {
-            throw new Error(`Câu hỏi dòng ${index + 1} chưa đúng mẫu: Câu hỏi | A | B | C | D | đáp án`);
+            throw new Error(`Câu hỏi số ${index + 1} chưa đúng mẫu: Câu hỏi | A | B | C | D | đáp án`);
         }
 
         const hasSkill = parts.length >= 7;
@@ -138,7 +154,7 @@
         const options = parts.slice(offset + 1, offset + 5);
         const answer = parts[offset + 5];
         if (!prompt || options.length < 4 || options.some(option => !option)) {
-            throw new Error(`Câu hỏi dòng ${index + 1} còn thiếu nội dung hoặc lựa chọn A/B/C/D.`);
+            throw new Error(`Câu hỏi số ${index + 1} còn thiếu nội dung hoặc lựa chọn A/B/C/D.`);
         }
 
         return {
@@ -150,9 +166,38 @@
         };
     }
 
+    function canParseQuestionBlock(block, fallbackSkill) {
+        try {
+            parseQuestionLine(block, 0, fallbackSkill);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function readQuestionBlocks(text, fallbackSkill) {
+        const lines = decodePastedText(text).split('\n').map(line => line.trim()).filter(Boolean);
+        const blocks = [];
+        let buffer = '';
+
+        lines.forEach(line => {
+            buffer = buffer ? `${buffer} ${line}` : line;
+            if (canParseQuestionBlock(buffer, fallbackSkill)) {
+                blocks.push(buffer);
+                buffer = '';
+            }
+        });
+
+        if (buffer.trim()) {
+            parseQuestionLine(buffer, blocks.length, fallbackSkill);
+        }
+
+        return blocks;
+    }
+
     function parseQuestions(text, skills = []) {
         const fallbackSkill = skills[0]?.id || 'tong_hop';
-        return parseLines(text).map((line, index) => parseQuestionLine(line, index, fallbackSkill));
+        return readQuestionBlocks(text, fallbackSkill).map((line, index) => parseQuestionLine(line, index, fallbackSkill));
     }
 
     function formatExamples(items) {

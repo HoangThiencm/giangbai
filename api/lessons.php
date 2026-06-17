@@ -153,7 +153,8 @@ function ensure_progress_schema(PDO $pdo): void
 ensure_progress_schema($pdo);
 
 $method = $_SERVER['REQUEST_METHOD'];
-$action = $_GET['action'] ?? ($_POST['action'] ?? '');
+$requestData = $method === 'POST' ? json_body() : [];
+$action = $_GET['action'] ?? ($_POST['action'] ?? ($requestData['action'] ?? ''));
 $adminKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
 $isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $adminKey);
 
@@ -197,7 +198,7 @@ if ($method === 'GET') {
 
 if ($method === 'POST' && $action === 'save_progress') {
     $user = ensure_login();
-    $data = json_body();
+    $data = $requestData;
     $lessonId = (int)($data['lesson_id'] ?? 0);
     if ($lessonId <= 0) respond(['error' => 'Thiếu lesson_id.'], 422);
 
@@ -238,7 +239,7 @@ if ($method === 'POST' && $action === 'save_progress') {
 
 if ($method === 'POST' && $action === 'reset_progress') {
     $user = ensure_login();
-    $data = json_body();
+    $data = $requestData;
     $lessonId = (int)($data['lesson_id'] ?? 0);
     if ($lessonId <= 0) respond(['error' => 'Thiếu lesson_id.'], 422);
 
@@ -249,7 +250,7 @@ if ($method === 'POST' && $action === 'reset_progress') {
 
 if ($method === 'POST' && $action === 'save_content') {
     if (!$isAdmin) respond(['error' => 'Sai Admin Key.'], 401);
-    $data = json_body();
+    $data = $requestData;
     $slug = trim($data['slug'] ?? '');
     if ($slug === '') respond(['error' => 'Thiếu slug.'], 422);
 
