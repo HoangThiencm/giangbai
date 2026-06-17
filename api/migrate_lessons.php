@@ -29,6 +29,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS lessons (
     theory_json LONGTEXT DEFAULT NULL,
     examples_json LONGTEXT DEFAULT NULL,
     questions_json LONGTEXT DEFAULT NULL,
+    videos_json LONGTEXT DEFAULT NULL,
     tasks_json LONGTEXT DEFAULT NULL,
     skills_json LONGTEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -54,6 +55,7 @@ add_column_if_missing($pdo, 'lessons', 'goal_text TEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'theory_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'examples_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'questions_json LONGTEXT DEFAULT NULL');
+add_column_if_missing($pdo, 'lessons', 'videos_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'tasks_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'skills_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'student_lesson_progress', 'state_json TEXT DEFAULT NULL');
@@ -87,14 +89,18 @@ $defaultQuestions = [
     ]
 ];
 
+$defaultVideos = [
+    ['title' => 'Bai giang on lai', 'url' => '']
+];
+
 $defaultSkills = [
     ['id' => 'khai_niem', 'name' => 'Hieu khai niem tap hop', 'target' => 80],
     ['id' => 'liet_ke', 'name' => 'Liet ke phan tu cua tap hop', 'target' => 80],
     ['id' => 'ky_hieu', 'name' => 'Dung ky hieu thuoc va khong thuoc', 'target' => 80],
 ];
 
-$stmt = $pdo->prepare("INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, tasks_json, skills_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+$stmt = $pdo->prepare("INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, videos_json, tasks_json, skills_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE slug = slug");
 
 $stmt->execute([
@@ -108,6 +114,7 @@ $stmt->execute([
     json_encode($defaultTheory, JSON_UNESCAPED_UNICODE),
     json_encode($defaultExamples, JSON_UNESCAPED_UNICODE),
     json_encode($defaultQuestions, JSON_UNESCAPED_UNICODE),
+    json_encode($defaultVideos, JSON_UNESCAPED_UNICODE),
     json_encode(['Doc ly thuyet ngan', 'Xem vi du mau', 'Lam bai luyen tap'], JSON_UNESCAPED_UNICODE),
     json_encode($defaultSkills, JSON_UNESCAPED_UNICODE)
 ]);
@@ -127,6 +134,7 @@ foreach ($draftLessons as $draft) {
         1,
         0,
         'Ban nhap. Giao vien nhap noi dung roi moi mo cho hoc sinh.',
+        json_encode([], JSON_UNESCAPED_UNICODE),
         json_encode([], JSON_UNESCAPED_UNICODE),
         json_encode([], JSON_UNESCAPED_UNICODE),
         json_encode([], JSON_UNESCAPED_UNICODE),

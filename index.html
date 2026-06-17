@@ -124,7 +124,12 @@
     <script>
         const SystemConfig = {
             checkAuth: () => { if (!localStorage.getItem('authToken')) { window.location.href = 'login.html'; return false; } return true; },
-            logout: () => { if (confirm("Đăng xuất?")) { localStorage.clear(); window.location.href = 'login.html'; } },
+            logout: async () => {
+                if (!confirm("Đăng xuất?")) return;
+                try { await fetch('api/logout.php', { method: 'POST', cache: 'no-store' }); } catch {}
+                localStorage.clear();
+                window.location.href = 'login.html';
+            },
 
             // --- GETTERS ---
             getApiKeys: () => JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"),

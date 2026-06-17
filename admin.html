@@ -781,6 +781,13 @@
                 </div>
                 <form id="createStudentForm" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <label class="text-sm font-bold text-slate-700">
+                        Vai trò
+                        <select name="role" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="student">Học sinh</option>
+                            <option value="teacher">Giáo viên</option>
+                        </select>
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">
                         Tài khoản
                         <input name="username" required class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="HS001">
                     </label>
@@ -920,7 +927,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
                     body: JSON.stringify({
                         action: 'create',
-                        role: 'student',
+                        role: formData.get('role') || 'student',
                         username: formData.get('username'),
                         password: formData.get('password'),
                         full_name: formData.get('full_name'),

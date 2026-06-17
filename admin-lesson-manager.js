@@ -24,6 +24,9 @@
             { title: 'Vi du 1', body: 'A = $\\{1,2,3,4\\}$ la tap hop cac so tu nhien nho hon 5.' },
             { title: 'Vi du 2', body: 'Neu B = $\\{a,b,c\\}$ thi $a \\in B$ va $d \\notin B$.' }
         ],
+        videos: [
+            { title: 'Bai giang on lai', url: '' }
+        ],
         skills: [
             { id: 'khai_niem', name: 'Hieu khai niem tap hop', target: 80 },
             { id: 'liet_ke', name: 'Liet ke phan tu cua tap hop', target: 80 },
@@ -105,6 +108,14 @@
         });
     }
 
+    function parseVideos(text) {
+        return parseLines(text).map(line => {
+            const parts = line.includes('||') ? line.split('||') : line.split('|');
+            const [title, ...urlParts] = parts;
+            return { title: (title || 'Video bai giang').trim(), url: urlParts.join('|').trim() };
+        }).filter(video => video.url);
+    }
+
     function parseQuestions(text) {
         return parseLines(text).map((line, index) => {
             const parts = line.split('|').map(part => part.trim());
@@ -129,6 +140,10 @@
 
     function formatSkills(items) {
         return (items || []).map(item => `${item.id || ''} | ${item.name || ''} | ${item.target || 80}`).join('\n');
+    }
+
+    function formatVideos(items) {
+        return (items || []).map(item => `${item.title || 'Video bai giang'} | ${item.url || ''}`).join('\n');
     }
 
     function formatQuestions(items) {
@@ -236,6 +251,11 @@
                         </label>
                     </div>
 
+                    <label class="block text-sm font-bold text-slate-700">Video YouTube bai giang
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong: Tieu de | Link YouTube. Co the de trong neu bai chua co video.</span>
+                        <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bai giang Tap hop | https://www.youtube.com/watch?v=..."></textarea>
+                    </label>
+
                     <label class="block text-sm font-bold text-slate-700">Cau hoi trac nghiem
                         <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong: ky_nang | Cau hoi | A | B | C | D | dap_an_1_den_4</span>
                         <textarea id="lessonQuestions" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs"></textarea>
@@ -268,7 +288,7 @@
             renderSubjectPills();
             suggestSlug();
         });
-        ['lessonGoal', 'lessonTheory', 'lessonExamples', 'lessonSkills', 'lessonTasks', 'lessonQuestions'].forEach(id => {
+        ['lessonGoal', 'lessonTheory', 'lessonExamples', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
             el(id).addEventListener('input', renderPreview);
         });
 
@@ -315,6 +335,7 @@
         el('lessonGoal').value = lesson.goal || lesson.goal_text || '';
         el('lessonTheory').value = Array.isArray(lesson.theory) ? lesson.theory.join('\n') : '';
         el('lessonExamples').value = formatExamples(lesson.examples);
+        el('lessonVideos').value = formatVideos(lesson.videos);
         el('lessonSkills').value = formatSkills(lesson.skills);
         el('lessonTasks').value = Array.isArray(lesson.tasks) ? lesson.tasks.join('\n') : '';
         el('lessonQuestions').value = formatQuestions(lesson.questions);
@@ -333,6 +354,7 @@
         el('lessonGoal').value = defaults.goal_text;
         el('lessonTheory').value = defaults.theory.join('\n');
         el('lessonExamples').value = formatExamples(defaults.examples);
+        el('lessonVideos').value = formatVideos(defaults.videos);
         el('lessonSkills').value = formatSkills(defaults.skills);
         el('lessonTasks').value = defaults.tasks.join('\n');
         el('lessonQuestions').value = formatQuestions(defaults.questions);
@@ -351,6 +373,7 @@
         el('lessonGoal').value = '';
         el('lessonTheory').value = '';
         el('lessonExamples').value = '';
+        el('lessonVideos').value = '';
         el('lessonSkills').value = 'nhan_biet | Nhan biet kien thuc | 80';
         el('lessonTasks').value = 'Doc ly thuyet\nXem vi du\nLam bai luyen tap';
         el('lessonQuestions').value = '';
@@ -374,7 +397,7 @@
                 <div><div class="text-xs text-slate-500">Ly thuyet</div><div class="font-bold">${parseLines(el('lessonTheory').value).length} y</div></div>
                 <div><div class="text-xs text-slate-500">Vi du</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} muc</div></div>
                 <div><div class="text-xs text-slate-500">Ky nang</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} ky nang</div></div>
-                <div><div class="text-xs text-slate-500">Trac nghiem</div><div class="font-bold">${questionCount} cau</div></div>
+                <div><div class="text-xs text-slate-500">Video / cau hoi</div><div class="font-bold">${parseVideos(el('lessonVideos').value).length} / ${questionCount}</div></div>
             </div>
         `;
     }
@@ -393,6 +416,7 @@
             goal_text: el('lessonGoal').value.trim(),
             theory: parseLines(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
+            videos: parseVideos(el('lessonVideos').value),
             skills: parseSkills(el('lessonSkills').value),
             tasks: parseLines(el('lessonTasks').value),
             questions: parseQuestions(el('lessonQuestions').value)

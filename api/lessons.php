@@ -23,6 +23,7 @@ function lesson_row_to_payload(array $row): array
         'theory' => parse_json_or_default($row['theory_json'], []),
         'examples' => parse_json_or_default($row['examples_json'], []),
         'questions' => parse_json_or_default($row['questions_json'], []),
+        'videos' => parse_json_or_default($row['videos_json'] ?? null, []),
         'tasks' => parse_json_or_default($row['tasks_json'], []),
         'skills' => parse_json_or_default($row['skills_json'], []),
     ];
@@ -44,11 +45,30 @@ function ensure_login(): array
 
 function ensure_lesson_schema(PDO $pdo): void
 {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS lessons (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        subject VARCHAR(80) NOT NULL,
+        chapter VARCHAR(160) NOT NULL,
+        title VARCHAR(180) NOT NULL,
+        slug VARCHAR(120) NOT NULL UNIQUE,
+        order_index INT NOT NULL DEFAULT 0,
+        is_published TINYINT(1) NOT NULL DEFAULT 0,
+        goal_text TEXT DEFAULT NULL,
+        theory_json LONGTEXT DEFAULT NULL,
+        examples_json LONGTEXT DEFAULT NULL,
+        questions_json LONGTEXT DEFAULT NULL,
+        videos_json LONGTEXT DEFAULT NULL,
+        tasks_json LONGTEXT DEFAULT NULL,
+        skills_json LONGTEXT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
     $columns = [
         'goal_text TEXT DEFAULT NULL',
         'theory_json LONGTEXT DEFAULT NULL',
         'examples_json LONGTEXT DEFAULT NULL',
         'questions_json LONGTEXT DEFAULT NULL',
+        'videos_json LONGTEXT DEFAULT NULL',
         'tasks_json LONGTEXT DEFAULT NULL',
         'skills_json LONGTEXT DEFAULT NULL'
     ];
@@ -66,6 +86,20 @@ ensure_lesson_schema($pdo);
 
 function ensure_progress_schema(PDO $pdo): void
 {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS student_lesson_progress (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        lesson_id INT NOT NULL,
+        status ENUM('not_started', 'in_progress', 'needs_practice', 'mastered') NOT NULL DEFAULT 'not_started',
+        score INT NOT NULL DEFAULT 0,
+        skill_scores_json TEXT DEFAULT NULL,
+        state_json TEXT DEFAULT NULL,
+        started_at DATETIME DEFAULT NULL,
+        completed_at DATETIME DEFAULT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_student_lesson (student_id, lesson_id)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
     $stmt = $pdo->prepare("SHOW COLUMNS FROM student_lesson_progress LIKE ?");
     $stmt->execute(['state_json']);
     if (!$stmt->fetch()) {
@@ -183,6 +217,7 @@ if ($method === 'POST' && $action === 'save_content') {
         'theory_json' => json_encode($data['theory'] ?? [], JSON_UNESCAPED_UNICODE),
         'examples_json' => json_encode($data['examples'] ?? [], JSON_UNESCAPED_UNICODE),
         'questions_json' => json_encode($data['questions'] ?? [], JSON_UNESCAPED_UNICODE),
+        'videos_json' => json_encode($data['videos'] ?? [], JSON_UNESCAPED_UNICODE),
         'tasks_json' => json_encode($data['tasks'] ?? [], JSON_UNESCAPED_UNICODE),
         'skills_json' => json_encode($data['skills'] ?? [], JSON_UNESCAPED_UNICODE),
         'order_index' => (int)($data['order_index'] ?? 0),
@@ -196,7 +231,7 @@ if ($method === 'POST' && $action === 'save_content') {
     if ($existing) {
         $update = $pdo->prepare('
             UPDATE lessons
-            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
             WHERE slug = ?
         ');
         $update->execute([
@@ -207,6 +242,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['theory_json'],
             $payload['examples_json'],
             $payload['questions_json'],
+            $payload['videos_json'],
             $payload['tasks_json'],
             $payload['skills_json'],
             $payload['order_index'],
@@ -215,8 +251,8 @@ if ($method === 'POST' && $action === 'save_content') {
         ]);
     } else {
         $insert = $pdo->prepare('
-            INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, tasks_json, skills_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, videos_json, tasks_json, skills_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
         $insert->execute([
             $payload['subject'],
@@ -229,6 +265,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['theory_json'],
             $payload['examples_json'],
             $payload['questions_json'],
+            $payload['videos_json'],
             $payload['tasks_json'],
             $payload['skills_json']
         ]);
