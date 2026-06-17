@@ -2,6 +2,14 @@
 require_once __DIR__ . '/helpers.php';
 session_start();
 
+set_exception_handler(function (Throwable $e) {
+    $payload = ['error' => 'Lỗi server khi tải lộ trình.'];
+    if (!empty($_GET['debug']) || (defined('APP_DEBUG') && APP_DEBUG)) {
+        $payload['detail'] = $e->getMessage();
+    }
+    respond($payload, 500);
+});
+
 function parse_json_or_default($value, $default)
 {
     if ($value === null || $value === '') return $default;

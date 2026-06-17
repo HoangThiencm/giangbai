@@ -552,7 +552,7 @@
     }
 
     async function reloadLessons(reselect = true) {
-        const data = await api('api/lessons.php', { method: 'GET' });
+        const data = await api('api/lessons.php?debug=1', { method: 'GET' });
         state.user = data.user;
         state.lessons = data.lessons || [];
         state.progress = data.progress || {};

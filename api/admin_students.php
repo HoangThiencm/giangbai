@@ -48,15 +48,16 @@ if ($action === 'update') {
 
     $fullName = trim($data['full_name'] ?? '');
     $className = trim($data['class_name'] ?? '');
+    $role = ($data['role'] ?? 'student') === 'teacher' ? 'teacher' : 'student';
     $isActive = !empty($data['is_active']) ? 1 : 0;
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinh']);
 
     $stmt = $pdo->prepare('
         UPDATE users
-        SET full_name = ?, class_name = ?, is_active = ?, allowed_pages_json = ?
+        SET full_name = ?, class_name = ?, role = ?, is_active = ?, allowed_pages_json = ?
         WHERE id = ?
     ');
-    $stmt->execute([$fullName, $className ?: null, $isActive, json_encode($allowedPages, JSON_UNESCAPED_UNICODE), $id]);
+    $stmt->execute([$fullName, $className ?: null, $role, $isActive, json_encode($allowedPages, JSON_UNESCAPED_UNICODE), $id]);
 
     if (!empty($data['password'])) {
         $hash = password_hash((string)$data['password'], PASSWORD_DEFAULT);
