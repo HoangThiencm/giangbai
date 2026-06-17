@@ -59,57 +59,80 @@ add_column_if_missing($pdo, 'lessons', 'skills_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'student_lesson_progress', 'state_json TEXT DEFAULT NULL');
 
 $defaultTheory = [
-    "Tập hợp là một nhóm các đối tượng được xác định rõ ràng.",
-    "Mỗi đối tượng trong một tập hợp được gọi là một phần tử.",
-    "Ta thường đặt tên tập hợp bằng các chữ cái in hoa.",
-    "Các phần tử thường được viết trong dấu ngoặc nhọn { }."
+    'Tap hop la mot nhom cac doi tuong duoc xac dinh ro rang.',
+    'Moi doi tuong trong mot tap hop duoc goi la mot phan tu.',
+    'Ta thuong dat ten tap hop bang chu cai in hoa.',
+    'Co the nhap cong thuc bang LaTeX, vi du: $A=\\{1,2,3\\}$.'
 ];
 
 $defaultExamples = [
-    ["title" => "Ví dụ 1", "body" => "A = {1, 2, 3, 4} là tập hợp các số tự nhiên nhỏ hơn 5."],
-    ["title" => "Ví dụ 2", "body" => "Nếu B = {a, b, c} thì a ∈ B và d ∉ B."],
-    ["title" => "Ví dụ 3", "body" => "C = {T, O, A, N} là tập hợp các chữ cái trong từ TOAN."]
+    ['title' => 'Vi du 1', 'body' => 'A = $\\{1,2,3,4\\}$ la tap hop cac so tu nhien nho hon 5.'],
+    ['title' => 'Vi du 2', 'body' => 'Neu B = $\\{a,b,c\\}$ thi $a \\in B$ va $d \\notin B$.']
 ];
 
 $defaultQuestions = [
-    ["id" => "q1", "skill" => "khai_niem", "prompt" => "Câu nào mô tả đúng nhất về tập hợp?", "options" => ["Một nhóm các đối tượng được xác định rõ ràng", "Một phép tính cộng nhiều số", "Một số tự nhiên bất kỳ", "Một hình vẽ trong vở"], "answer" => 0],
-    ["id" => "q2", "skill" => "viet_tap_hop", "prompt" => "Cách viết nào đúng cho tập hợp A gồm các số 1, 2, 3?", "options" => ["A = (1, 2, 3)", "A = {1, 2, 3}", "A = [1, 2, 3]", "A = 1 + 2 + 3"], "answer" => 1],
-    ["id" => "q3", "skill" => "ky_hieu", "prompt" => "Cho B = {2, 4, 6, 8}. Khẳng định nào đúng?", "options" => ["3 ∈ B", "6 ∈ B", "8 ∉ B", "4 ∉ B"], "answer" => 1]
+    [
+        'id' => 'q1',
+        'skill' => 'khai_niem',
+        'prompt' => 'Cau nao mo ta dung nhat ve tap hop?',
+        'options' => ['Mot nhom cac doi tuong duoc xac dinh ro rang', 'Mot phep tinh cong', 'Mot so tu nhien bat ky', 'Mot hinh ve'],
+        'answer' => 0
+    ],
+    [
+        'id' => 'q2',
+        'skill' => 'ky_hieu',
+        'prompt' => 'Cho $B=\\{2,4,6,8\\}$. Khang dinh nao dung?',
+        'options' => ['$3 \\in B$', '$6 \\in B$', '$8 \\notin B$', '$4 \\notin B$'],
+        'answer' => 1
+    ]
 ];
 
 $defaultSkills = [
-    ["id" => "khai_niem", "name" => "Hiểu khái niệm tập hợp", "target" => 80],
-    ["id" => "liet_ke", "name" => "Liệt kê phần tử của tập hợp", "target" => 80],
-    ["id" => "ky_hieu", "name" => "Dùng ký hiệu ∈ và ∉", "target" => 80],
-    ["id" => "viet_tap_hop", "name" => "Viết tập hợp đúng quy ước", "target" => 80]
+    ['id' => 'khai_niem', 'name' => 'Hieu khai niem tap hop', 'target' => 80],
+    ['id' => 'liet_ke', 'name' => 'Liet ke phan tu cua tap hop', 'target' => 80],
+    ['id' => 'ky_hieu', 'name' => 'Dung ky hieu thuoc va khong thuoc', 'target' => 80],
 ];
 
 $stmt = $pdo->prepare("INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, tasks_json, skills_json)
-    VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-        subject = VALUES(subject),
-        chapter = VALUES(chapter),
-        title = VALUES(title),
-        order_index = VALUES(order_index),
-        is_published = VALUES(is_published),
-        goal_text = VALUES(goal_text),
-        theory_json = VALUES(theory_json),
-        examples_json = VALUES(examples_json),
-        questions_json = VALUES(questions_json),
-        tasks_json = VALUES(tasks_json),
-        skills_json = VALUES(skills_json)");
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE slug = slug");
+
 $stmt->execute([
     'Toán 6',
     'Chương 1: Số tự nhiên',
     'Bài 1: Tập hợp',
     'math6-c1-b1-tap-hop',
     1,
-    'Học sinh hiểu tập hợp là gì, biết viết tập hợp bằng cách liệt kê phần tử và dùng đúng ký hiệu thuộc, không thuộc.',
+    1,
+    'Hoc sinh hieu tap hop la gi, biet viet tap hop bang cach liet ke phan tu va dung ky hieu thuoc, khong thuoc.',
     json_encode($defaultTheory, JSON_UNESCAPED_UNICODE),
     json_encode($defaultExamples, JSON_UNESCAPED_UNICODE),
     json_encode($defaultQuestions, JSON_UNESCAPED_UNICODE),
-    json_encode(["Đọc lý thuyết ngắn", "Xem 3 ví dụ mẫu", "Làm 8 câu luyện tập"], JSON_UNESCAPED_UNICODE),
+    json_encode(['Doc ly thuyet ngan', 'Xem vi du mau', 'Lam bai luyen tap'], JSON_UNESCAPED_UNICODE),
     json_encode($defaultSkills, JSON_UNESCAPED_UNICODE)
 ]);
 
-respond(['ok' => true, 'message' => 'Đã cập nhật schema bài học.']);
+$draftLessons = [
+    ['Toán 7', 'Chương 1', 'Bài 1: Nhập nội dung', 'math7-c1-b1-draft'],
+    ['Toán 8', 'Chương 1', 'Bài 1: Nhập nội dung', 'math8-c1-b1-draft'],
+    ['Toán 9', 'Chương 1', 'Bài 1: Nhập nội dung', 'math9-c1-b1-draft'],
+];
+
+foreach ($draftLessons as $draft) {
+    $stmt->execute([
+        $draft[0],
+        $draft[1],
+        $draft[2],
+        $draft[3],
+        1,
+        0,
+        'Ban nhap. Giao vien nhap noi dung roi moi mo cho hoc sinh.',
+        json_encode([], JSON_UNESCAPED_UNICODE),
+        json_encode([], JSON_UNESCAPED_UNICODE),
+        json_encode([], JSON_UNESCAPED_UNICODE),
+        json_encode([], JSON_UNESCAPED_UNICODE),
+        json_encode([], JSON_UNESCAPED_UNICODE)
+    ]);
+}
+
+respond(['ok' => true, 'message' => 'Da cap nhat schema bai hoc.']);

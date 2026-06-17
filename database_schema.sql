@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS student_lesson_progress (
     status ENUM('not_started', 'in_progress', 'needs_practice', 'mastered') NOT NULL DEFAULT 'not_started',
     score INT NOT NULL DEFAULT 0,
     skill_scores_json TEXT DEFAULT NULL,
+    state_json TEXT DEFAULT NULL,
     started_at DATETIME DEFAULT NULL,
     completed_at DATETIME DEFAULT NULL,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -46,5 +47,9 @@ CREATE TABLE IF NOT EXISTS student_lesson_progress (
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
-VALUES ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1)
-ON DUPLICATE KEY UPDATE title = VALUES(title), is_published = VALUES(is_published);
+VALUES
+    ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),
+    ('Toán 7', 'Chương 1', 'Bài 1: Nhập nội dung', 'math7-c1-b1-draft', 1, 0),
+    ('Toán 8', 'Chương 1', 'Bài 1: Nhập nội dung', 'math8-c1-b1-draft', 1, 0),
+    ('Toán 9', 'Chương 1', 'Bài 1: Nhập nội dung', 'math9-c1-b1-draft', 1, 0)
+ON DUPLICATE KEY UPDATE slug = VALUES(slug);

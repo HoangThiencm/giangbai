@@ -4,9 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lộ trình tự học - Toán 6</title>
+    <title>Lộ trình tự học</title>
     <script src="access-control.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { color-scheme: light; }
@@ -52,7 +59,7 @@
                         <i class="fas fa-arrow-left"></i>
                         Trang chính
                     </a>
-                    <h1 class="text-2xl font-bold tracking-normal text-slate-950">Lộ trình tự học Toán 6</h1>
+                    <h1 id="routeTitle" class="text-2xl font-bold tracking-normal text-slate-950">Lộ trình tự học</h1>
                     <p class="mt-1 text-sm text-slate-600">Chạy theo từng bài học, dữ liệu lưu trên database.</p>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -73,8 +80,8 @@
                 <section class="panel p-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Toán 6</p>
-                            <h2 class="mt-1 text-lg font-bold">Chương 1: Số tự nhiên</h2>
+                            <p id="routeSubject" class="text-xs font-bold uppercase tracking-widest text-teal-700">Lộ trình</p>
+                            <h2 id="routeChapter" class="mt-1 text-lg font-bold">Đang tải bài học</h2>
                         </div>
                         <i class="fas fa-route text-2xl text-amber-500"></i>
                     </div>

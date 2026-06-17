@@ -1,6 +1,9 @@
 (async function () {
     const els = {
         studentName: document.getElementById('studentNameDisplay'),
+        routeTitle: document.getElementById('routeTitle'),
+        routeSubject: document.getElementById('routeSubject'),
+        routeChapter: document.getElementById('routeChapter'),
         resetBtn: document.getElementById('resetBtn'),
         overallProgress: document.getElementById('overallProgress'),
         lessonList: document.getElementById('lessonList'),
@@ -34,6 +37,22 @@
             return value ? JSON.parse(value) : fallback;
         } catch {
             return fallback;
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+    }
+
+    function typesetMath() {
+        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+            window.MathJax.typesetPromise([document.body]).catch(() => {});
         }
     }
 
@@ -96,6 +115,7 @@
         renderSkills(lesson);
         renderTasks(lesson);
         renderNextAction(lesson);
+        typesetMath();
     }
 
     function renderOverallProgress() {
@@ -165,6 +185,9 @@
 
         const progress = currentLessonProgress(lesson);
         const status = statusInfo(progress.status);
+        if (els.routeTitle) els.routeTitle.textContent = `Lộ trình tự học ${lesson.subject || ''}`.trim();
+        if (els.routeSubject) els.routeSubject.textContent = lesson.subject || 'Lộ trình';
+        if (els.routeChapter) els.routeChapter.textContent = lesson.chapter || 'Danh sách bài học';
         els.lessonPath.textContent = `${lesson.subject} · ${lesson.chapter}`;
         els.lessonTitle.textContent = lesson.title;
         els.lessonGoal.textContent = lesson.goal || '';
@@ -204,6 +227,7 @@
         if (state.activeTab === 'learn') renderTheory(lesson);
         if (state.activeTab === 'examples') renderExamples(lesson);
         if (state.activeTab === 'practice') renderPractice(lesson);
+        typesetMath();
     }
 
     function renderTheory(lesson) {
