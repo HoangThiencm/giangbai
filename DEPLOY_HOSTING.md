@@ -109,3 +109,6 @@ hoặc nếu domain nằm trong thư mục riêng:
 ```
 
 Workflow sẽ không upload `api/config.php`, nên cấu hình database thật trên hosting không bị ghi đè.
+
+
+test deploy
