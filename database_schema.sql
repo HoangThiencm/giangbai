@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS lessons (
     slug VARCHAR(120) NOT NULL UNIQUE,
     order_index INT NOT NULL DEFAULT 0,
     is_published TINYINT(1) NOT NULL DEFAULT 0,
+    goal_text TEXT DEFAULT NULL,
+    theory_json LONGTEXT DEFAULT NULL,
+    examples_json LONGTEXT DEFAULT NULL,
+    questions_json LONGTEXT DEFAULT NULL,
+    tasks_json LONGTEXT DEFAULT NULL,
+    skills_json LONGTEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
