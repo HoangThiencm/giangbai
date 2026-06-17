@@ -51,6 +51,17 @@
         }[ch]));
     }
 
+    function normalizeDisplayText(value) {
+        return String(value ?? '')
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     function typesetMath() {
         if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
             window.MathJax.typesetPromise([document.body]).catch(() => {});
@@ -183,10 +194,11 @@
         }).join('');
 
         els.lessonList.querySelectorAll('[data-lesson-id]').forEach(button => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', async () => {
                 state.selectedLessonId = button.getAttribute('data-lesson-id');
                 localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
                 render();
+                await markLessonStarted(currentLesson());
             });
         });
     }
@@ -344,24 +356,29 @@
         els.tabContent.innerHTML = `
             <form id="practiceForm" class="space-y-5">
                 ${questions.length ? questions.map((question, index) => `
-                    <fieldset class="rounded border border-slate-200 bg-white p-4">
-                        <legend class="px-1 text-sm font-bold text-slate-900">Câu ${index + 1}. ${question.prompt || ''}</legend>
-                        <div class="mt-3 grid gap-2">
+                    <article class="practice-card">
+                        <div class="question-head">
+                            <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
+                            <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(question.prompt))}</h3>
+                        </div>
+                        <div class="answer-grid">
                             ${(question.options || []).map((option, optionIndex) => {
                                 const checked = answers[question.id] === optionIndex ? 'checked' : '';
                                 const mark = progress.status !== 'not_started' ? renderAnswerMark(question, optionIndex, answers) : '';
+                                const letter = 'ABCD'[optionIndex] || '';
                                 return `
-                                    <label class="answer-option flex cursor-pointer items-start justify-between gap-3 px-3 py-2 text-sm">
-                                        <span class="flex items-start gap-2">
-                                            <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} class="mt-1">
-                                            <span>${option}</span>
+                                    <label class="answer-option flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                                        <span class="flex min-w-0 items-center gap-3">
+                                            <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} class="sr-only">
+                                            <span class="answer-letter">${letter}</span>
+                                            <span class="min-w-0 flex-1 leading-7 text-slate-800">${escapeHtml(normalizeDisplayText(option))}</span>
                                         </span>
                                         ${mark}
                                     </label>
                                 `;
                             }).join('')}
                         </div>
-                    </fieldset>
+                    </article>
                 `).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập câu hỏi trắc nghiệm cho bài này.</div>'}
                 <div class="flex flex-wrap gap-3">
                     <button type="submit" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
@@ -543,6 +560,38 @@
         });
     }
 
+    async function markLessonStarted(lesson) {
+        if (!lesson) return;
+        const progress = currentLessonProgress(lesson);
+        if (progress.status !== 'not_started') return;
+
+        const startedAt = new Date().toISOString();
+        const nextState = {
+            ...(progress.state || {}),
+            startedAt: progress.startedAt || startedAt
+        };
+        state.progress[lesson.id] = {
+            ...progress,
+            status: 'in_progress',
+            state: nextState,
+            startedAt: nextState.startedAt
+        };
+        render();
+
+        try {
+            await syncLessonState(lesson, nextState, {
+                status: 'in_progress',
+                score: progress.score || 0,
+                skillScores: progress.skillScores || {},
+                startedAt: nextState.startedAt
+            });
+            await reloadLessons(false);
+            render();
+        } catch (err) {
+            console.warn('Không lưu được trạng thái bắt đầu bài học', err);
+        }
+    }
+
     async function resetLesson(lesson) {
         await api('api/lessons.php', {
             method: 'POST',
@@ -576,6 +625,7 @@
             els.studentName.textContent = state.user.full_name;
         }
         if (!state.selectedLessonId && state.lessons[0]) state.selectedLessonId = state.lessons[0].id;
+        await markLessonStarted(currentLesson());
     } catch (err) {
         state.error = err.message;
         if (err.message.toLowerCase().includes('chưa đăng nhập') || err.message.toLowerCase().includes('not logged in')) {

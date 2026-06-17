@@ -43,8 +43,62 @@
         }
         .skill-bar { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
         .skill-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0f766e, #f59e0b); }
-        .answer-option { border: 1px solid #dbe3ef; border-radius: 8px; }
-        .answer-option:has(input:checked) { border-color: #0f766e; background: #f0fdfa; }
+        .practice-card {
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+        .question-head {
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+            padding: 14px 16px;
+        }
+        .question-text {
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.75;
+        }
+        .question-text mjx-container,
+        .answer-option mjx-container {
+            display: inline-block;
+            vertical-align: -0.15em;
+        }
+        .answer-grid {
+            display: grid;
+            gap: 10px;
+            padding: 14px 16px 16px;
+        }
+        .answer-option {
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
+            background: #ffffff;
+            min-height: 46px;
+            transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+        }
+        .answer-option:hover { border-color: #94a3b8; background: #f8fafc; }
+        .answer-option:has(input:checked) {
+            border-color: #0f766e;
+            background: #f0fdfa;
+            box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.08);
+        }
+        .answer-letter {
+            display: grid;
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            place-items: center;
+            border-radius: 999px;
+            background: #eef2f7;
+            color: #334155;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        .answer-option:has(input:checked) .answer-letter {
+            background: #0f766e;
+            color: #ffffff;
+        }
         .status-dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
         .muted-note { color: #64748b; font-size: 0.875rem; line-height: 1.6; }
     </style>
@@ -161,7 +215,7 @@
         </main>
     </div>
 
-    <script src="lotrinh.js"></script>
+    <script src="lotrinh.js?v=20260617-practice1"></script>
 </body>
 
 </html>
