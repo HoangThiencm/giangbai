@@ -25,10 +25,10 @@
 
     function statusLabel(status) {
         const map = {
-            not_started: ['Chua bat dau', 'bg-slate-100 text-slate-700'],
-            in_progress: ['Dang hoc', 'bg-sky-100 text-sky-700'],
-            needs_practice: ['Can luyen them', 'bg-amber-100 text-amber-800'],
-            mastered: ['Da vung', 'bg-teal-100 text-teal-800']
+            not_started: ['Chưa bắt đầu', 'bg-slate-100 text-slate-700'],
+            in_progress: ['Đang học', 'bg-sky-100 text-sky-700'],
+            needs_practice: ['Cần luyện thêm', 'bg-amber-100 text-amber-800'],
+            mastered: ['Đã vững', 'bg-teal-100 text-teal-800']
         };
         return map[status] || map.not_started;
     }
@@ -45,28 +45,28 @@
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h3 class="font-bold text-slate-800 text-lg">
-                        <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo doi tien do hoc sinh
+                        <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo dõi tiến độ học sinh
                     </h3>
-                    <p class="text-sm text-slate-500 mt-1">Xem hoc sinh nao da lam bai, diem hien tai va ai can luyen them.</p>
+                    <p class="text-sm text-slate-500 mt-1">Xem học sinh nào đã làm bài, điểm hiện tại và ai cần luyện thêm.</p>
                 </div>
                 <button id="progressReloadBtn" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
-                    <i class="fas fa-rotate-right mr-1"></i>Tai lai
+                    <i class="fas fa-rotate-right mr-1"></i>Tải lại
                 </button>
             </div>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-[1fr_180px_180px] gap-3">
-                <label class="block text-sm font-bold text-slate-700">Bai hoc
+                <label class="block text-sm font-bold text-slate-700">Bài học
                     <select id="progressLessonSelect" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none"></select>
                 </label>
-                <label class="block text-sm font-bold text-slate-700">Loc trang thai
+                <label class="block text-sm font-bold text-slate-700">Lọc trạng thái
                     <select id="progressStatusFilter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none">
-                        <option value="">Tat ca</option>
-                        <option value="needs">Can luyen them</option>
-                        <option value="mastered">Da vung</option>
-                        <option value="not_started">Chua bat dau</option>
+                        <option value="">Tất cả</option>
+                        <option value="needs">Cần luyện thêm</option>
+                        <option value="mastered">Đã vững</option>
+                        <option value="not_started">Chưa bắt đầu</option>
                     </select>
                 </label>
-                <label class="block text-sm font-bold text-slate-700">Tim hoc sinh
-                    <input id="progressSearch" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Ten, lop...">
+                <label class="block text-sm font-bold text-slate-700">Tìm học sinh
+                    <input id="progressSearch" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Tên, lớp...">
                 </label>
             </div>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3"></div>
@@ -74,11 +74,11 @@
                 <table class="min-w-full divide-y divide-slate-200">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Hoc sinh</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Trang thai</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Diem</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Can luu y</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cap nhat</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Trạng thái</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Điểm</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cần lưu ý</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cập nhật</th>
                         </tr>
                     </thead>
                     <tbody id="progressTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
@@ -109,9 +109,9 @@
         const lesson = lessons.find(item => String(item.id) === String(selectedLessonId)) || lessons[0];
         const skills = lesson?.skills || [];
         const weak = skills.filter(skill => Number(row.skill_scores?.[skill.id] || 0) < Number(skill.target || 80));
-        if (row.status === 'not_started') return 'Chua vao lam bai';
-        if (!weak.length && !row.needs_practice) return 'Dat muc tieu';
-        return weak.map(skill => skill.name || skill.id).join(', ') || 'Nen luyen them';
+        if (row.status === 'not_started') return 'Chưa vào làm bài';
+        if (!weak.length && !row.needs_practice) return 'Đạt mục tiêu';
+        return weak.map(skill => skill.name || skill.id).join(', ') || 'Nên luyện thêm';
     }
 
     function renderSummary(filteredRows) {
@@ -120,10 +120,10 @@
         const mastered = rows.filter(row => row.status === 'mastered').length;
         const needs = rows.filter(row => row.needs_practice).length;
         const cards = [
-            ['Tong hoc sinh', total, 'text-slate-900'],
-            ['Da nop bai', done, 'text-sky-700'],
-            ['Da vung', mastered, 'text-teal-700'],
-            ['Can luyen them', needs, 'text-amber-700']
+            ['Tổng học sinh', total, 'text-slate-900'],
+            ['Đã nộp bài', done, 'text-sky-700'],
+            ['Đã vững', mastered, 'text-teal-700'],
+            ['Cần luyện thêm', needs, 'text-amber-700']
         ];
         el('progressSummary').innerHTML = cards.map(card => `
             <div class="rounded border border-slate-200 bg-slate-50 p-4">
@@ -149,7 +149,7 @@
         renderSummary(filtered);
 
         if (!filtered.length) {
-            body.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400 italic">Chua co du lieu phu hop.</td></tr>';
+            body.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400 italic">Chưa có dữ liệu phù hợp.</td></tr>';
             return;
         }
 
@@ -160,14 +160,14 @@
                 <tr class="hover:bg-slate-50">
                     <td class="px-4 py-3 text-sm">
                         <div class="font-bold text-slate-900">${escapeHtml(row.full_name)}</div>
-                        <div class="text-xs text-slate-500">${escapeHtml(row.username)} · ${escapeHtml(row.class_name || 'Chua xep lop')}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(row.username)} · ${escapeHtml(row.class_name || 'Chưa xếp lớp')}</div>
                     </td>
                     <td class="px-4 py-3 text-sm">
                         <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
                     </td>
                     <td class="px-4 py-3 text-sm font-bold ${scoreTone}">${row.score}%</td>
                     <td class="px-4 py-3 text-sm text-slate-700">${escapeHtml(weakSkillText(row))}</td>
-                    <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chua co')}</td>
+                    <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>
                 </tr>
             `;
         }).join('');
@@ -183,7 +183,7 @@
             cache: 'no-store'
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Khong tai duoc tien do.');
+        if (!res.ok) throw new Error(data.error || 'Không tải được tiến độ.');
         lessons = data.lessons || [];
         rows = data.rows || [];
         selectedLessonId = String(data.lesson_id || lessons[0]?.id || '');

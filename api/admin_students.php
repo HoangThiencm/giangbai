@@ -26,25 +26,40 @@ if ($action === 'create') {
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinh']);
 
     if ($username === '' || $password === '' || $fullName === '') {
-        respond(['error' => 'Thiếu tài khoản, mật khẩu hoặc họ tên.'], 422);
+        respond(['error' => 'Thieu tai khoan, mat khau hoac ho ten.'], 422);
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
+
     try {
         $stmt = $pdo->prepare('
             INSERT INTO users (username, password_hash, full_name, role, class_name, allowed_pages_json, is_active)
             VALUES (?, ?, ?, ?, ?, ?, 1)
         ');
         $stmt->execute([$username, $hash, $fullName, $role, $className ?: null, json_encode($allowedPages, JSON_UNESCAPED_UNICODE)]);
-        respond(['ok' => true, 'id' => (int)$pdo->lastInsertId()]);
+        respond(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'mode' => 'created']);
     } catch (PDOException $e) {
-        respond(['error' => 'Tài khoản đã tồn tại hoặc dữ liệu không hợp lệ.'], 409);
+        $existing = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
+        $existing->execute([$username]);
+        $user = $existing->fetch();
+
+        if (!$user) {
+            respond(['error' => 'Tai khoan da ton tai hoac du lieu khong hop le.'], 409);
+        }
+
+        $update = $pdo->prepare('
+            UPDATE users
+            SET password_hash = ?, full_name = ?, role = ?, class_name = ?, allowed_pages_json = ?, is_active = 1
+            WHERE id = ?
+        ');
+        $update->execute([$hash, $fullName, $role, $className ?: null, json_encode($allowedPages, JSON_UNESCAPED_UNICODE), $user['id']]);
+        respond(['ok' => true, 'id' => (int)$user['id'], 'mode' => 'updated']);
     }
 }
 
 if ($action === 'update') {
     $id = (int)($data['id'] ?? 0);
-    if ($id <= 0) respond(['error' => 'Thiếu ID tài khoản.'], 422);
+    if ($id <= 0) respond(['error' => 'Thieu ID tai khoan.'], 422);
 
     $fullName = trim($data['full_name'] ?? '');
     $className = trim($data['class_name'] ?? '');
@@ -69,9 +84,9 @@ if ($action === 'update') {
 
 if ($action === 'delete') {
     $id = (int)($data['id'] ?? 0);
-    if ($id <= 0) respond(['error' => 'Thiếu ID tài khoản.'], 422);
+    if ($id <= 0) respond(['error' => 'Thieu ID tai khoan.'], 422);
     $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
     respond(['ok' => true]);
 }
 
-respond(['error' => 'Action không hợp lệ.'], 400);
+respond(['error' => 'Action khong hop le.'], 400);

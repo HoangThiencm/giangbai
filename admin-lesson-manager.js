@@ -9,42 +9,42 @@
     const defaults = {
         slug: 'math6-c1-b1-tap-hop',
         subject: 'Toán 6',
-        chapter: 'Chuong 1: So tu nhien',
-        title: 'Bai 1: Tap hop',
+        chapter: 'Chương 1: Số tự nhiên',
+        title: 'Bài 1: Tập hợp',
         order_index: 1,
         is_published: true,
-        goal_text: 'Hoc sinh hieu tap hop la gi, biet viet tap hop bang cach liet ke phan tu va dung ky hieu thuoc, khong thuoc.',
+        goal_text: 'Học sinh hiểu tập hợp là gì, biết viết tập hợp bằng cách liệt kê phần tử và dùng ký hiệu thuộc, không thuộc.',
         theory: [
-            'Tap hop la mot nhom cac doi tuong duoc xac dinh ro rang.',
-            'Moi doi tuong trong mot tap hop duoc goi la mot phan tu.',
-            'Ta thuong dat ten tap hop bang chu cai in hoa.',
-            'Co the nhap cong thuc bang LaTeX, vi du: $A=\\{1,2,3\\}$.'
+            'Tập hợp là một nhóm các đối tượng được xác định rõ ràng.',
+            'Mỗi đối tượng trong một tập hợp được gọi là một phần tử.',
+            'Ta thường đặt tên tập hợp bằng chữ cái in hoa.',
+            'Có thể nhập công thức bằng LaTeX, ví dụ: $A=\\{1,2,3\\}$.'
         ],
         examples: [
-            { title: 'Vi du 1', body: 'A = $\\{1,2,3,4\\}$ la tap hop cac so tu nhien nho hon 5.' },
-            { title: 'Vi du 2', body: 'Neu B = $\\{a,b,c\\}$ thi $a \\in B$ va $d \\notin B$.' }
+            { title: 'Ví dụ 1', body: 'A = $\\{1,2,3,4\\}$ là tập hợp các số tự nhiên nhỏ hơn 5.' },
+            { title: 'Ví dụ 2', body: 'Nếu B = $\\{a,b,c\\}$ thì $a \\in B$ và $d \\notin B$.' }
         ],
         videos: [
-            { title: 'Bai giang on lai', url: '' }
+            { title: 'Bài giảng ôn lại', url: '' }
         ],
         skills: [
-            { id: 'khai_niem', name: 'Hieu khai niem tap hop', target: 80 },
-            { id: 'liet_ke', name: 'Liet ke phan tu cua tap hop', target: 80 },
-            { id: 'ky_hieu', name: 'Dung ky hieu thuoc va khong thuoc', target: 80 }
+            { id: 'khai_niem', name: 'Hiểu khái niệm tập hợp', target: 80 },
+            { id: 'liet_ke', name: 'Liệt kê phần tử của tập hợp', target: 80 },
+            { id: 'ky_hieu', name: 'Dùng ký hiệu thuộc và không thuộc', target: 80 }
         ],
-        tasks: ['Doc ly thuyet ngan', 'Xem vi du mau', 'Lam bai luyen tap'],
+        tasks: ['Đọc lý thuyết ngắn', 'Xem ví dụ mẫu', 'Làm bài luyện tập'],
         questions: [
             {
                 id: 'q1',
                 skill: 'khai_niem',
-                prompt: 'Cau nao mo ta dung nhat ve tap hop?',
-                options: ['Mot nhom cac doi tuong duoc xac dinh ro rang', 'Mot phep tinh cong', 'Mot so tu nhien bat ky', 'Mot hinh ve'],
+                prompt: 'Câu nào mô tả đúng nhất về tập hợp?',
+                options: ['Một nhóm các đối tượng được xác định rõ ràng', 'Một phép tính cộng', 'Một số tự nhiên bất kỳ', 'Một hình vẽ'],
                 answer: 0
             },
             {
                 id: 'q2',
                 skill: 'ky_hieu',
-                prompt: 'Cho $B=\\{2,4,6,8\\}$. Khang dinh nao dung?',
+                prompt: 'Cho $B=\\{2,4,6,8\\}$. Khẳng định nào đúng?',
                 options: ['$3 \\in B$', '$6 \\in B$', '$8 \\notin B$', '$4 \\notin B$'],
                 answer: 1
             }
@@ -102,7 +102,7 @@
             const [id, name, target] = line.split('|').map(part => part.trim());
             return {
                 id: slugify(id || name || `skill-${index + 1}`),
-                name: name || id || `Ky nang ${index + 1}`,
+                name: name || id || `Kỹ năng ${index + 1}`,
                 target: Number(target) || 80
             };
         });
@@ -112,7 +112,7 @@
         return parseLines(text).map(line => {
             const parts = line.includes('||') ? line.split('||') : line.split('|');
             const [title, ...urlParts] = parts;
-            return { title: (title || 'Video bai giang').trim(), url: urlParts.join('|').trim() };
+            return { title: (title || 'Video bài giảng').trim(), url: urlParts.join('|').trim() };
         }).filter(video => video.url);
     }
 
@@ -120,7 +120,7 @@
         return parseLines(text).map((line, index) => {
             const parts = line.split('|').map(part => part.trim());
             if (parts.length < 8) {
-                throw new Error(`Cau hoi dong ${index + 1} chua dung mau: ky_nang | cau hoi | A | B | C | D | dap_an`);
+                throw new Error(`Câu hỏi dòng ${index + 1} chưa đúng mẫu: kỹ_năng | câu hỏi | A | B | C | D | đáp_án`);
             }
             const [skill, prompt, a, b, c, d, answer] = parts;
             const answerIndex = Math.max(0, Math.min(3, Number(answer) - 1));
@@ -143,7 +143,7 @@
     }
 
     function formatVideos(items) {
-        return (items || []).map(item => `${item.title || 'Video bai giang'} | ${item.url || ''}`).join('\n');
+        return (items || []).map(item => `${item.title || 'Video bài giảng'} | ${item.url || ''}`).join('\n');
     }
 
     function formatQuestions(items) {
@@ -173,9 +173,9 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h3 class="font-bold text-slate-800 text-lg">
-                        <i class="fas fa-book-open text-teal-600 mr-2"></i>Tao bai hoc cho lo trinh
+                        <i class="fas fa-book-open text-teal-600 mr-2"></i>Tạo bài học cho lộ trình
                     </h3>
-                    <p class="text-sm text-slate-500 mt-1">Nhap noi dung theo tung muc. Cong thuc viet bang LaTeX trong dau <code>$...$</code>.</p>
+                    <p class="text-sm text-slate-500 mt-1">Nhập nội dung theo từng mục. Công thức viết bằng LaTeX trong dấu <code>$...$</code>.</p>
                 </div>
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
@@ -183,38 +183,38 @@
             <div class="mt-5 grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-5">
                 <aside class="space-y-4">
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Chon bai hoc</label>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Chọn bài học</label>
                         <select id="lessonSelect" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></select>
                     </div>
                     <button id="newLessonBtn" type="button" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-plus mr-1"></i>Tao bai moi
+                        <i class="fas fa-plus mr-1"></i>Tạo bài mới
                     </button>
                     <button id="lessonReloadBtn" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-rotate-right mr-1"></i>Tai lai du lieu
+                        <i class="fas fa-rotate-right mr-1"></i>Tải lại dữ liệu
                     </button>
                     <div class="rounded border border-teal-100 bg-teal-50 p-3 text-sm leading-6 text-teal-900">
-                        Vi du cong thuc: <code>$A=\\{1,2,3\\}$</code>, <code>$x \\in A$</code>. Hoc sinh se nhin thay cong thuc da render.
+                        Ví dụ công thức: <code>$A=\\{1,2,3\\}$</code>, <code>$x \\in A$</code>. Học sinh sẽ nhìn thấy công thức đã render.
                     </div>
                 </aside>
 
                 <form id="lessonForm" class="space-y-5">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Mon hoc
+                        <label class="block text-sm font-bold text-slate-700">Môn học
                             <select id="lessonSubject" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none">
                                 ${SUBJECTS.map(item => `<option value="${item.title}">${item.label}</option>`).join('')}
                             </select>
                         </label>
-                        <label class="block text-sm font-bold text-slate-700">Chuong
-                            <input id="lessonChapter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Chuong 1: So tu nhien">
+                        <label class="block text-sm font-bold text-slate-700">Chương
+                            <input id="lessonChapter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Chương 1: Số tự nhiên">
                         </label>
-                        <label class="block text-sm font-bold text-slate-700">Ten bai
-                            <input id="lessonTitleInput" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bai 1: Tap hop">
+                        <label class="block text-sm font-bold text-slate-700">Tên bài
+                            <input id="lessonTitleInput" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1: Tập hợp">
                         </label>
                         <div class="grid grid-cols-[1fr_110px] gap-3">
                             <label class="block text-sm font-bold text-slate-700">Slug
                                 <input id="lessonSlug" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="math6-c1-b1-tap-hop">
                             </label>
-                            <label class="block text-sm font-bold text-slate-700">Thu tu
+                            <label class="block text-sm font-bold text-slate-700">Thứ tự
                                 <input id="lessonOrder" type="number" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" value="1">
                             </label>
                         </div>
@@ -222,42 +222,42 @@
 
                     <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
                         <input id="lessonPublished" type="checkbox" class="w-4 h-4 text-teal-600 rounded">
-                        Mo bai nay cho hoc sinh
+                        Mở bài này cho học sinh
                     </label>
 
-                    <label class="block text-sm font-bold text-slate-700">Muc tieu bai hoc
-                        <textarea id="lessonGoal" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bai nay hoc sinh can nam duoc..."></textarea>
+                    <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
+                        <textarea id="lessonGoal" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
                     </label>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Ly thuyet
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong la mot y. Co the dung $...$.</span>
+                        <label class="block text-sm font-bold text-slate-700">Lý thuyết
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng là một ý. Có thể dùng $...$.</span>
                             <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                         </label>
-                        <label class="block text-sm font-bold text-slate-700">Vi du
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong: Tieu de | Noi dung</span>
+                        <label class="block text-sm font-bold text-slate-700">Ví dụ
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Tiêu đề | Nội dung</span>
                             <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                         </label>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Ky nang can dat
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong: id | Ten ky nang | target</span>
+                        <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: id | Tên kỹ năng | target</span>
                             <textarea id="lessonSkills" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                         </label>
-                        <label class="block text-sm font-bold text-slate-700">Nhiem vu hoc sinh
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong la mot viec can lam.</span>
+                        <label class="block text-sm font-bold text-slate-700">Nhiệm vụ học sinh
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng là một việc cần làm.</span>
                             <textarea id="lessonTasks" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                         </label>
                     </div>
 
-                    <label class="block text-sm font-bold text-slate-700">Video YouTube bai giang
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong: Tieu de | Link YouTube. Co the de trong neu bai chua co video.</span>
-                        <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bai giang Tap hop | https://www.youtube.com/watch?v=..."></textarea>
+                    <label class="block text-sm font-bold text-slate-700">Video YouTube bài giảng
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Tiêu đề | Link YouTube. Có thể để trống nếu bài chưa có video.</span>
+                        <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài giảng Tập hợp | https://www.youtube.com/watch?v=..."></textarea>
                     </label>
 
-                    <label class="block text-sm font-bold text-slate-700">Cau hoi trac nghiem
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Moi dong: ky_nang | Cau hoi | A | B | C | D | dap_an_1_den_4</span>
+                    <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: kỹ_năng | Câu hỏi | A | B | C | D | đáp_án_1_đến_4</span>
                         <textarea id="lessonQuestions" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs"></textarea>
                     </label>
 
@@ -265,10 +265,10 @@
 
                     <div class="flex flex-wrap gap-3">
                         <button id="saveLessonBtn" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded shadow font-bold text-sm transition flex items-center gap-2">
-                            <i class="fas fa-save"></i>Luu bai hoc
+                            <i class="fas fa-save"></i>Lưu bài học
                         </button>
                         <button id="seedLessonBtn" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded shadow-sm font-bold text-sm transition">
-                            Dien mau Bai 1
+                            Điền mẫu Bài 1
                         </button>
                     </div>
                 </form>
@@ -375,7 +375,7 @@
         el('lessonExamples').value = '';
         el('lessonVideos').value = '';
         el('lessonSkills').value = 'nhan_biet | Nhan biet kien thuc | 80';
-        el('lessonTasks').value = 'Doc ly thuyet\nXem vi du\nLam bai luyen tap';
+        el('lessonTasks').value = 'Đọc lý thuyết\nXem ví dụ\nLàm bài luyện tập';
         el('lessonQuestions').value = '';
         renderPreview();
     }
@@ -394,10 +394,10 @@
         try { questionCount = parseQuestions(el('lessonQuestions').value).length; } catch { questionCount = 0; }
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><div class="text-xs text-slate-500">Ly thuyet</div><div class="font-bold">${parseLines(el('lessonTheory').value).length} y</div></div>
-                <div><div class="text-xs text-slate-500">Vi du</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} muc</div></div>
-                <div><div class="text-xs text-slate-500">Ky nang</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} ky nang</div></div>
-                <div><div class="text-xs text-slate-500">Video / cau hoi</div><div class="font-bold">${parseVideos(el('lessonVideos').value).length} / ${questionCount}</div></div>
+                <div><div class="text-xs text-slate-500">Lý thuyết</div><div class="font-bold">${parseLines(el('lessonTheory').value).length} ý</div></div>
+                <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
+                <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
+                <div><div class="text-xs text-slate-500">Video / câu hỏi</div><div class="font-bold">${parseVideos(el('lessonVideos').value).length} / ${questionCount}</div></div>
             </div>
         `;
     }
@@ -422,14 +422,14 @@
             questions: parseQuestions(el('lessonQuestions').value)
         };
         if (!payload.slug || !payload.title) {
-            alert('Can nhap slug va ten bai.');
+            alert('Cần nhập slug và tên bài.');
             return;
         }
 
         const btn = el('saveLessonBtn');
         const old = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Dang luu...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Đang lưu...';
         try {
             const res = await fetch('api/lessons.php', {
                 method: 'POST',
@@ -437,14 +437,14 @@
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Khong luu duoc bai hoc.');
+            if (!res.ok) throw new Error(data.error || 'Không lưu được bài học.');
             currentSlug = payload.slug;
             selectedSubject = payload.subject;
             await refreshLessons();
             if (typeof window.refreshAdminProgress === 'function') window.refreshAdminProgress();
-            alert('Da luu bai hoc.');
+            alert('Đã lưu bài học.');
         } catch (e) {
-            alert(e.message || 'Khong luu duoc bai hoc.');
+            alert(e.message || 'Không lưu được bài học.');
         } finally {
             btn.disabled = false;
             btn.innerHTML = old;
@@ -460,7 +460,7 @@
                 headers: { 'X-Admin-Key': adminKey }
             });
         } catch (e) {
-            console.warn('Schema sync failed', e);
+            console.warn('Không đồng bộ được schema', e);
         }
 
         const res = await fetch('api/lessons.php?admin=1', {
@@ -468,7 +468,7 @@
             cache: 'no-store'
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Khong tai duoc bai hoc.');
+        if (!res.ok) throw new Error(data.error || 'Không tải được bài học.');
         lessons = data.lessons || [];
         if (!lessons.some(item => item.slug === currentSlug)) {
             currentSlug = lessons.find(item => item.subject === selectedSubject)?.slug || lessons[0]?.slug || defaults.slug;
