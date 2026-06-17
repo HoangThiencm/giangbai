@@ -15,19 +15,33 @@ Vào **phpMyAdmin**, chọn database vừa tạo, mở tab **SQL**, dán nội d
 
 ## 3. Tạo cấu hình PHP
 
-Copy file:
+Có 2 cách.
+
+### Cách A: Dùng setup.php
 
 ```text
-api/config.sample.php
+setup.php
 ```
 
-thành:
+Upload `setup.php`, thư mục `api/`, và `database_schema.sql` lên hosting. Sau đó mở:
+
+```text
+https://ten-mien-cua-thay/setup.php
+```
+
+Nhập DB_HOST, DB_NAME, DB_USER, DB_PASS và ADMIN_KEY. Trang này sẽ tự tạo:
 
 ```text
 api/config.php
 ```
 
-Sau đó điền thông tin thật:
+Nếu chọn tùy chọn tạo bảng, `setup.php` cũng sẽ tự chạy `database_schema.sql`.
+
+Sau khi cài xong nên xóa hoặc đổi tên `setup.php`.
+
+### Cách B: Tạo thủ công
+
+Copy file `api/config.sample.php` thành `api/config.php`, sau đó điền thông tin thật:
 
 ```php
 define('DB_HOST', 'localhost');
@@ -64,3 +78,34 @@ login.html
 ```
 
 Đăng nhập bằng tài khoản giáo viên đã cấp. Nếu là học sinh, hệ thống chuyển vào `lotrinh.html`; nếu là giáo viên, chuyển vào `index.html`.
+
+## 6. Tự động deploy bằng GitHub Actions FTP
+
+Workflow đã có ở:
+
+```text
+.github/workflows/ftp-deploy.yml
+```
+
+Vào GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, tạo các secret:
+
+```text
+FTP_SERVER
+FTP_USERNAME
+FTP_PASSWORD
+FTP_SERVER_DIR
+```
+
+Ví dụ `FTP_SERVER_DIR` thường là:
+
+```text
+/public_html/
+```
+
+hoặc nếu domain nằm trong thư mục riêng:
+
+```text
+/public_html/hoangthiencm.id.vn/
+```
+
+Workflow sẽ không upload `api/config.php`, nên cấu hình database thật trên hosting không bị ghi đè.
