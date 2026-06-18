@@ -132,6 +132,40 @@
         return mathText(cleanAiAnswer(value));
     }
 
+    function practiceItems(lesson) {
+        return [
+            ...(Array.isArray(lesson.questions) ? lesson.questions.map(item => ({ type: 'choice', item })) : []),
+            ...(Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises.map((item, index) => ({ type: 'essay', item, index })) : []),
+            ...(Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises.map((item, index) => ({ type: 'fill', item, index })) : []),
+            ...(Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises.map((item, index) => ({ type: 'drag', item, index })) : []),
+        ];
+    }
+
+    function practiceProgress(lesson, ui = currentUiState(lesson)) {
+        const items = practiceItems(lesson);
+        if (!items.length) return { answered: 0, total: 0, percent: 0 };
+        const answered = items.filter(({ type, item, index }) => {
+            if (type === 'choice') return ui.answers?.[item.id] !== undefined && ui.answers?.[item.id] !== null;
+            const key = item.id || `${type}_${index + 1}`;
+            if (type === 'essay') return String(ui.essayAnswers?.[key] || '').trim() !== '';
+            if (type === 'fill') return String(ui.fillAnswers?.[key] || '').trim() !== '';
+            if (type === 'drag') return Array.isArray(ui.dragAnswers?.[key]) && ui.dragAnswers[key].length > 0;
+            return false;
+        }).length;
+        return { answered, total: items.length, percent: Math.round((answered / items.length) * 100) };
+    }
+
+    function lessonCompletionPercent(lesson) {
+        const progress = currentLessonProgress(lesson);
+        const ui = currentUiState(lesson);
+        if (progress.status === 'mastered') return 100;
+        const practice = practiceProgress(lesson, ui);
+        const theory = ui.theoryDone ? 30 : 0;
+        const examples = ui.examplesDone ? 20 : 0;
+        const practicePart = ui.practiceDone ? 50 : Math.round(practice.percent * 0.5);
+        return Math.max(0, Math.min(100, theory + examples + practicePart));
+    }
+
     function renderParagraphs(items, emptyText, aiType = 'theory') {
         const parts = (Array.isArray(items) ? items : [])
             .map(normalizeMathContent)
@@ -310,12 +344,19 @@
         const masteredCount = state.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered').length;
         const total = state.lessons.filter(lesson => lesson.is_published).length || state.lessons.length;
         const percent = total ? Math.round((masteredCount / total) * 100) : 0;
+        const lesson = currentLesson();
+        const currentPercent = lesson ? lessonCompletionPercent(lesson) : 0;
         els.overallProgress.innerHTML = `
             <div class="flex items-center justify-between text-sm">
                 <span class="font-semibold text-slate-600">Tiến độ chương</span>
                 <span class="font-bold text-slate-900">${masteredCount}/${total} bài đã vững</span>
             </div>
             <div class="skill-bar mt-3"><span style="width:${percent}%"></span></div>
+            <div class="mt-4 flex items-center justify-between text-sm">
+                <span class="font-semibold text-slate-600">Tiến độ bài hiện tại</span>
+                <span class="font-bold text-teal-700">${currentPercent}%</span>
+            </div>
+            <div class="skill-bar mt-2"><span style="width:${currentPercent}%"></span></div>
         `;
     }
 
@@ -377,6 +418,7 @@
 
         const progress = currentLessonProgress(lesson);
         const status = statusInfo(progress.status);
+        const lessonPercent = lessonCompletionPercent(lesson);
         if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
         if (els.routeSubject) els.routeSubject.textContent = lesson.subject || 'Lộ trình';
         if (els.routeChapter) els.routeChapter.textContent = lesson.chapter || 'Danh sách bài học';
@@ -392,7 +434,11 @@
                     <i class="fas fa-check"></i>Đã học
                 </button>
             </div>
-            <div class="skill-bar mt-2"><span style="width:${progress.score || 0}%"></span></div>
+            <div class="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
+                <span>Tiến trình học</span>
+                <span>${lessonPercent}%</span>
+            </div>
+            <div class="skill-bar mt-2"><span style="width:${lessonPercent}%"></span></div>
         `;
         const markBtn = document.getElementById('markLessonDoneBtn');
         if (markBtn) {
@@ -948,15 +994,17 @@
 
     function renderSkills(lesson) {
         const progress = currentLessonProgress(lesson);
-        const scores = progress.skillScores || {};
+        const ui = currentUiState(lesson);
+        const liveScoreData = calculateScore(lesson, ui.answers || {});
+        const scores = Object.keys(progress.skillScores || {}).length ? progress.skillScores : liveScoreData.skillScores;
         const skills = Array.isArray(lesson.skills) ? lesson.skills : [];
         els.skillPanel.innerHTML = skills.length ? skills.map(skill => {
-            const score = progress.status === 'not_started' ? 0 : (scores[skill.id] || 0);
+            const score = scores[skill.id] || 0;
             return `
                 <div>
                     <div class="flex items-start justify-between gap-3 text-sm">
                         <span class="font-semibold text-slate-700">${skill.name || skill.id}</span>
-                        <span class="font-bold">${progress.status === 'not_started' ? '--' : `${score}%`}</span>
+                        <span class="font-bold">${score}%</span>
                     </div>
                     <div class="skill-bar mt-2"><span style="width:${score}%"></span></div>
                 </div>

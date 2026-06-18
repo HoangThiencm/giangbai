@@ -63,20 +63,30 @@ if ($lastUsedKey !== '') {
     $keys = array_merge(array_values(array_filter($keys, fn($key) => $key !== $lastUsedKey)), [$lastUsedKey]);
 }
 
-$prompt = "Ban la tro ly hoc Toan cho hoc sinh THCS. Nhiem vu duy nhat: tra loi dung phan hoc sinh vua hoi trong muc NOI DUNG CAN GIAI THICH, khong tu y chuyen sang chu de khac, khong tom tat ca bai, khong them loi chao, khong noi 'thay se giup', khong dung Markdown, khong dung **, khong dung gach ngang ---.\n\nQuy tac bat buoc:\n- Neu noi dung la mot khai niem/cau/cum tu: giai thich truc tiep khai niem/cau/cum tu do.\n- Neu noi dung la mot cong thuc: giai thich tung ky hieu va y nghia cong thuc do, giu nguyen ky hieu Toan.\n- Neu noi dung la mot bai tap: chi goi y cach lam va diem can chu y, khong lam thay tron ven neu khong duoc yeu cau.\n- Chi dua vi du khi vi du giup lam ro dung noi dung dang hoi; neu dua vi du thi that ngan.\n- Neu noi dung hoi khong ro, noi ro can them thong tin nao, khong bịa.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNOI DUNG CAN GIAI THICH:\n{$text}\n\nTra loi bang 2-5 cau ngan, bam sat noi dung tren.";
+$prompt = "Ban la tro ly hoc Toan cho hoc sinh THCS. Nhiem vu duy nhat: tra loi dung phan hoc sinh vua hoi trong muc NOI DUNG CAN GIAI THICH, khong tu y chuyen sang chu de khac, khong tom tat ca bai, khong them loi chao, khong noi 'thay se giup', khong dung Markdown, khong dung **, khong dung gach ngang ---.\n\nQuy tac bat buoc:\n- Neu noi dung la mot khai niem/cau/cum tu: giai thich truc tiep khai niem/cau/cum tu do.\n- Neu noi dung la mot cong thuc: giai thich tung ky hieu va y nghia cong thuc do, giu nguyen ky hieu Toan.\n- Neu noi dung la mot bai tap: chi goi y cach lam va diem can chu y, khong lam thay tron ven neu khong duoc yeu cau.\n- Chi dua vi du khi vi du giup lam ro dung noi dung dang hoi; neu dua vi du thi that ngan.\n- Neu noi dung hoi khong ro, noi ro can them thong tin nao, khong bịa.\n- Cau cuoi cung phai ket thuc tron ven bang dau cham, dau hoi hoac dau cham than; khong dung lai giua tu.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNOI DUNG CAN GIAI THICH:\n{$text}\n\nTra loi bang 2-5 cau ngan, bam sat noi dung tren.";
 
-$payload = json_encode([
-    'contents' => [[
-        'parts' => [[ 'text' => $prompt ]]
-    ]],
-    'generationConfig' => [
-        'temperature' => 0.2,
-        'maxOutputTokens' => 450,
-    ],
-], JSON_UNESCAPED_UNICODE);
+function gemini_payload(string $prompt, int $maxTokens = 900): string
+{
+    return json_encode([
+        'contents' => [[
+            'parts' => [[ 'text' => $prompt ]]
+        ]],
+        'generationConfig' => [
+            'temperature' => 0.2,
+            'maxOutputTokens' => $maxTokens,
+        ],
+    ], JSON_UNESCAPED_UNICODE);
+}
 
-$lastError = 'Khong goi duoc AI.';
-foreach ($keys as $key) {
+function answer_looks_complete(string $answer): bool
+{
+    $answer = trim($answer);
+    if ($answer === '') return false;
+    return (bool)preg_match('/[.!?。！？…]$/u', $answer);
+}
+
+function call_gemini(string $model, string $key, string $payload): array
+{
     $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -84,12 +94,18 @@ foreach ($keys as $key) {
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT => 25,
+        CURLOPT_TIMEOUT => 30,
     ]);
     $raw = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
+    return [$raw, $status, $curlError];
+}
+
+$lastError = 'Khong goi duoc AI.';
+foreach ($keys as $key) {
+    [$raw, $status, $curlError] = call_gemini($model, $key, gemini_payload($prompt));
 
     if ($raw === false || $raw === '') {
         $lastError = $curlError ?: 'AI khong phan hoi.';
@@ -104,8 +120,26 @@ foreach ($keys as $key) {
             if (!empty($part['text'])) $answer .= $part['text'];
         }
         if (trim($answer) !== '') {
+            $finishReason = $response['candidates'][0]['finishReason'] ?? '';
+            if (($finishReason === 'MAX_TOKENS' || !answer_looks_complete($answer)) && strlen($answer) < 3600) {
+                $continuePrompt = "Day la cau tra loi dang bi ngat giua chung. Hay viet tiep phan con thieu de ket thuc tron ven 1-2 cau, khong lap lai phan da co, khong Markdown.\n\nPhan da co:\n{$answer}";
+                [$raw2, $status2, $curlError2] = call_gemini($model, $key, gemini_payload($continuePrompt, 300));
+                if ($raw2 !== false && $raw2 !== '' && $status2 >= 200 && $status2 < 300) {
+                    $response2 = json_decode($raw2, true);
+                    $parts2 = $response2['candidates'][0]['content']['parts'] ?? [];
+                    $more = '';
+                    foreach ($parts2 as $part2) {
+                        if (!empty($part2['text'])) $more .= $part2['text'];
+                    }
+                    if (trim($more) !== '') {
+                        $answer = rtrim($answer) . ' ' . ltrim($more);
+                    }
+                } elseif ($curlError2) {
+                    $lastError = $curlError2;
+                }
+            }
             @file_put_contents($lastKeyFile, $key, LOCK_EX);
-            respond(['ok' => true, 'answer' => trim($answer)]);
+            respond(['ok' => true, 'answer' => trim($answer), 'complete' => answer_looks_complete($answer)]);
         }
         $lastError = 'AI tra ve noi dung rong.';
         continue;
