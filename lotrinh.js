@@ -482,7 +482,6 @@
                     skillScores: lessonProgressSkillScores(lesson, nextPercent),
                     completedAt
                 });
-                await reloadLessons();
                 render();
             };
         }
@@ -560,25 +559,29 @@
         if (!items.length) {
             return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài tập tự luận cho bài này.</div>';
         }
+        const practiceDone = !!currentUiState(lesson).practiceDone;
         return items.map((item, index) => {
             const key = item.id || `essay_${index + 1}`;
             const saved = currentUiState(lesson).essayAnswers?.[key] || '';
+            const ok = practiceDone && normalizeAnswerText(saved) === normalizeAnswerText(item.answer || '');
+            const feedback = practiceDone
+                ? (ok
+                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item.hint || 'Hãy thử so sánh với đáp án mẫu.')}`)
+                : '';
             return `
                 <article class="practice-card">
                     <div class="question-head">
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Tự luận ${index + 1}</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
-                    <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em...">${escapeHtml(saved)}</textarea>
+                    <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em..." ${practiceDone ? 'disabled' : ''}>${escapeHtml(saved)}</textarea>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" class="essay-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-essay-key="${escapeHtml(key)}">
-                            <i class="fas fa-check"></i>Kiểm tra
-                        </button>
                         <button type="button" class="essay-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
                     </div>
-                    <div class="essay-feedback mt-3 hidden rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7"></div>
+                    <div class="essay-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
                 </article>
             `;
         }).join('');
@@ -589,25 +592,34 @@
         if (!items.length) {
             return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài điền khuyết cho bài này.</div>';
         }
-        const savedAnswers = currentUiState(lesson).fillAnswers || {};
-        return items.map((item, index) => `
-            <article class="practice-card">
-                <div class="question-head">
-                    <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
-                    <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
-                </div>
-                <input class="fill-input" type="text" data-fill-key="${escapeHtml(item.id || `fill_${index + 1}`)}" value="${escapeHtml(savedAnswers[item.id || `fill_${index + 1}`] || '')}" placeholder="Nhập đáp án...">
-                <div class="mt-3 flex flex-wrap gap-2">
-                    <button type="button" class="fill-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-fill-key="${escapeHtml(item.id || `fill_${index + 1}`)}">
-                        <i class="fas fa-check"></i>Kiểm tra
-                    </button>
-                    <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
-                        <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
-                    </button>
-                </div>
-                <div class="fill-feedback mt-3 hidden rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7"></div>
-            </article>
-        `).join('');
+        const ui = currentUiState(lesson);
+        const practiceDone = !!ui.practiceDone;
+        const savedAnswers = ui.fillAnswers || {};
+        return items.map((item, index) => {
+            const key = item.id || `fill_${index + 1}`;
+            const saved = savedAnswers[key] || '';
+            const ok = practiceDone && normalizeAnswerText(saved) === normalizeAnswerText(item.answer || '');
+            const feedback = practiceDone
+                ? (ok
+                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã điền khớp đáp án.'
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${escapeHtml(item.answer || '')}`)
+                : '';
+            return `
+                <article class="practice-card">
+                    <div class="question-head">
+                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
+                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
+                    </div>
+                    <input class="fill-input" type="text" data-fill-key="${escapeHtml(key)}" value="${escapeHtml(saved)}" placeholder="Nhập đáp án..." ${practiceDone ? 'disabled' : ''}>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
+                            <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
+                        </button>
+                    </div>
+                    <div class="fill-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
+                </article>
+            `;
+        }).join('');
     }
 
     function renderDragExercises(lesson) {
@@ -615,33 +627,38 @@
         if (!items.length) {
             return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài kéo thả cho bài này.</div>';
         }
+        const practiceDone = !!currentUiState(lesson).practiceDone;
         return items.map((item, index) => {
             const dragItems = Array.isArray(item.items) ? item.items : [];
             const answer = Array.isArray(item.answer) ? item.answer : [];
             const key = item.id || `drag_${index + 1}`;
             const savedOrder = currentUiState(lesson).dragAnswers?.[key] || [];
             const poolItems = dragItems.filter(piece => !savedOrder.includes(piece));
+            const ok = practiceDone && savedOrder.map(normalizeAnswerText).join('|') === answer.map(normalizeAnswerText).join('|');
+            const feedback = practiceDone
+                ? (ok
+                    ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml(answer.join(' → '))}`)
+                : '';
+            const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
             return `
-                <article class="practice-card" data-drag-key="${escapeHtml(key)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
+                <article class="practice-card ${dragDisabled}" data-drag-key="${escapeHtml(key)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
                     <div class="question-head">
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Kéo thả ${index + 1}</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
                     <div class="drag-pool" data-drag-pool="${escapeHtml(key)}">
-                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
+                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-piece="${pieceIndex}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
                     <div class="drag-slot-row" data-drop-zone="${escapeHtml(key)}">
-                        ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="saved-${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
+                        ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-piece="saved-${pieceIndex}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" class="drag-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-drag-key="${escapeHtml(key)}">
-                            <i class="fas fa-check"></i>Kiểm tra
-                        </button>
                         <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
                     </div>
-                    <div class="drag-feedback mt-3 hidden rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7"></div>
+                    <div class="drag-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
                 </article>
             `;
         }).join('');
@@ -785,14 +802,22 @@
     function renderPractice(lesson) {
         const progress = currentLessonProgress(lesson);
         const ui = currentUiState(lesson);
+        const practiceDone = !!ui.practiceDone;
         const questions = Array.isArray(lesson.questions) ? lesson.questions : [];
         const essayExercises = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
         const fillExercises = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
         const dragExercises = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
         const answers = ui.answers || {};
+        const practiceScore = typeof progress.score === 'number' ? progress.score : null;
 
         els.tabContent.innerHTML = `
             <form id="practiceForm" class="space-y-5">
+                ${practiceDone ? `
+                    <div class="rounded border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-900">
+                        <p class="font-bold">Đã nộp bài luyện tập.</p>
+                        <p class="mt-1">${practiceScore !== null ? `Điểm luyện tập: <strong>${practiceScore}%</strong>. ` : ''}Các đáp án đúng/sai được hiển thị bên dưới. Bấm <strong>Làm lại bài luyện</strong> nếu muốn làm vòng mới.</p>
+                    </div>
+                ` : ''}
                 ${essayExercises.length ? `<section class="space-y-4">${renderEssayExercises(lesson)}</section>` : ''}
                 ${fillExercises.length ? `<section class="space-y-4">${renderFillExercises(lesson)}</section>` : ''}
                 ${dragExercises.length ? `<section class="space-y-4">${renderDragExercises(lesson)}</section>` : ''}
@@ -805,12 +830,13 @@
                         <div class="answer-grid">
                             ${(question.options || []).map((option, optionIndex) => {
                                 const checked = normalizeOptionIndex(answers[question.id]) === normalizeOptionIndex(optionIndex) ? 'checked' : '';
-                                const mark = renderAnswerMark(question, optionIndex, answers);
+                                const mark = renderAnswerMark(question, optionIndex, answers, practiceDone);
                                 const letter = 'ABCD'[optionIndex] || '';
+                                const disabled = practiceDone ? 'disabled' : '';
                                 return `
-                                    <label class="answer-option flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                                    <label class="answer-option flex items-center justify-between gap-3 px-3 py-2.5 text-sm ${practiceDone ? 'cursor-default' : 'cursor-pointer'}">
                                         <span class="flex min-w-0 items-center gap-3">
-                                            <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} class="sr-only">
+                                            <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} ${disabled} class="sr-only">
                                             <span class="answer-letter">${letter}</span>
                                             <span class="min-w-0 flex-1 leading-7 text-slate-800">${mathText(option)}</span>
                                         </span>
@@ -822,18 +848,22 @@
                     </article>
                 `).join('')}</section>` : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập câu hỏi trắc nghiệm cho bài này.</div>'}
                 <div class="flex flex-wrap gap-3">
-                    <button type="submit" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
-                        <i class="fas fa-paper-plane"></i>Nộp bài luyện
-                    </button>
-                    <button id="clearAnswersBtn" type="button" class="inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                        <i class="fas fa-rotate-left"></i>Làm lại bài luyện
-                    </button>
+                    ${practiceDone ? '' : `
+                        <button type="submit" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                            <i class="fas fa-paper-plane"></i>Nộp bài luyện
+                        </button>
+                    `}
+                    ${practiceDone ? `
+                        <button id="clearAnswersBtn" type="button" class="inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                            <i class="fas fa-rotate-left"></i>Làm lại bài luyện
+                        </button>
+                    ` : ''}
                 </div>
             </form>
         `;
 
         const form = document.getElementById('practiceForm');
-        if (form) {
+        if (form && !practiceDone) {
             form.querySelectorAll("input[type='radio']").forEach(input => {
                 input.addEventListener('change', async event => {
                     const nextAnswers = { ...answers, [event.target.name]: Number(event.target.value) };
@@ -868,7 +898,7 @@
                 const completedAt = new Date().toISOString();
                 const status = mergedScore >= 80 ? 'mastered' : (mergedScore >= 50 ? 'needs_practice' : 'in_progress');
                 try {
-                    await syncLessonState(lesson, {
+                    const nextUi = {
                         ...ui,
                         practiceDone: true,
                         completedAt,
@@ -877,13 +907,13 @@
                         essayAnswers: essayData.answers,
                         fillAnswers: fillData.answers,
                         dragAnswers: dragData.answers
-                    }, {
+                    };
+                    await syncLessonState(lesson, nextUi, {
                         status,
                         score: mergedScore,
                         skillScores: scoreData.skillScores,
                         completedAt
                     });
-                    await reloadLessons(false).catch(err => console.warn('Không tải lại được tiến trình sau khi nộp bài', err));
                     render();
                 } catch (err) {
                     console.error('submit practice error:', err);
@@ -895,21 +925,23 @@
         const clearBtn = document.getElementById('clearAnswersBtn');
         if (clearBtn) {
             clearBtn.onclick = async () => {
+                const baseUi = currentUiState(lesson);
                 const nextState = {
-                    ...currentUiState(lesson),
+                    ...baseUi,
                     answers: {},
                     essayAnswers: {},
                     fillAnswers: {},
                     dragAnswers: {},
                     practiceDone: false,
                     completedAt: null,
-                    startedAt: currentUiState(lesson).startedAt || new Date().toISOString()
+                    startedAt: baseUi.startedAt || new Date().toISOString()
                 };
+                const nextPercent = lessonCompletionPercent(lesson, nextState, 'in_progress');
                 try {
                     await syncLessonState(lesson, nextState, {
                         status: 'in_progress',
-                        score: 0,
-                        skillScores: {},
+                        score: nextPercent,
+                        skillScores: lessonProgressSkillScores(lesson, nextPercent),
                         startedAt: nextState.startedAt
                     });
                     render();
@@ -993,7 +1025,8 @@
         return Number.isFinite(index) ? index : -1;
     }
 
-    function renderAnswerMark(question, optionIndexValue, answers) {
+    function renderAnswerMark(question, optionIndexValue, answers, practiceDone = false) {
+        if (!practiceDone) return '';
         const selected = answers[question.id];
         if (selected === undefined || selected === null) return '';
         const selectedIndex = normalizeOptionIndex(selected);
@@ -1055,7 +1088,7 @@
         const statusList = [
             { done: ui.theoryDone, text: tasks[0] || 'Đọc lý thuyết ngắn' },
             { done: ui.examplesDone, text: tasks[1] || 'Xem ví dụ mẫu' },
-            { done: currentLessonProgress(lesson).status === 'mastered' || currentLessonProgress(lesson).status === 'needs_practice', text: tasks[2] || 'Làm bài luyện tập' }
+            { done: ui.practiceDone, text: tasks[2] || 'Làm bài luyện tập' }
         ];
         els.dailyTasks.innerHTML = statusList.map(task => `
             <div class="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2">
