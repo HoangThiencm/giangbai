@@ -212,6 +212,7 @@
         renderSkills(lesson);
         renderTasks(lesson);
         renderNextAction(lesson);
+        bindPracticeInteractions(lesson);
         typesetMath();
     }
 
@@ -382,6 +383,91 @@
         bindAiExplainButtons(lesson);
     }
 
+    function renderEssayExercises(lesson) {
+        const items = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
+        if (!items.length) {
+            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài tập tự luận cho bài này.</div>';
+        }
+        return items.map((item, index) => {
+            const key = `essay_${item.id || index}`;
+            return `
+                <article class="practice-card">
+                    <div class="question-head">
+                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Tự luận ${index + 1}</p>
+                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
+                    </div>
+                    <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em..."></textarea>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" class="essay-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-essay-key="${escapeHtml(key)}">
+                            <i class="fas fa-check"></i>Kiểm tra
+                        </button>
+                        <button type="button" class="essay-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
+                            <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
+                        </button>
+                    </div>
+                    <div class="essay-feedback mt-3 hidden rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7"></div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderFillExercises(lesson) {
+        const items = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
+        if (!items.length) {
+            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài điền khuyết cho bài này.</div>';
+        }
+        return items.map((item, index) => `
+            <article class="practice-card">
+                <div class="question-head">
+                    <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
+                    <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
+                </div>
+                <input class="fill-input" type="text" data-fill-key="${escapeHtml(item.id || `f${index + 1}`)}" placeholder="Nhập đáp án...">
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" class="fill-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-fill-key="${escapeHtml(item.id || `f${index + 1}`)}">
+                        <i class="fas fa-check"></i>Kiểm tra
+                    </button>
+                    <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
+                        <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
+                    </button>
+                </div>
+                <div class="fill-feedback mt-3 hidden rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7"></div>
+            </article>
+        `).join('');
+    }
+
+    function renderDragExercises(lesson) {
+        const items = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
+        if (!items.length) {
+            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài kéo thả cho bài này.</div>';
+        }
+        return items.map((item, index) => {
+            const dragItems = Array.isArray(item.items) ? item.items : [];
+            const answer = Array.isArray(item.answer) ? item.answer : [];
+            return `
+                <article class="practice-card" data-drag-key="${escapeHtml(item.id || `d${index + 1}`)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
+                    <div class="question-head">
+                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Kéo thả ${index + 1}</p>
+                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
+                    </div>
+                    <div class="drag-pool" data-drag-pool="${escapeHtml(item.id || `d${index + 1}`)}">
+                        ${dragItems.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
+                    </div>
+                    <div class="drag-slot-row" data-drop-zone="${escapeHtml(item.id || `d${index + 1}`)}"></div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" class="drag-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-drag-key="${escapeHtml(item.id || `d${index + 1}`)}">
+                            <i class="fas fa-check"></i>Kiểm tra
+                        </button>
+                        <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
+                            <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
+                        </button>
+                    </div>
+                    <div class="drag-feedback mt-3 hidden rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7"></div>
+                </article>
+            `;
+        }).join('');
+    }
+
     function renderExamples(lesson) {
         const ui = currentUiState(lesson);
         const examples = Array.isArray(lesson.examples) ? lesson.examples : [];
@@ -493,11 +579,17 @@
         const progress = currentLessonProgress(lesson);
         const ui = currentUiState(lesson);
         const questions = Array.isArray(lesson.questions) ? lesson.questions : [];
+        const essayExercises = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
+        const fillExercises = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
+        const dragExercises = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
         const answers = ui.answers || {};
 
         els.tabContent.innerHTML = `
             <form id="practiceForm" class="space-y-5">
-                ${questions.length ? questions.map((question, index) => `
+                ${essayExercises.length ? `<section class="space-y-4">${renderEssayExercises(lesson)}</section>` : ''}
+                ${fillExercises.length ? `<section class="space-y-4">${renderFillExercises(lesson)}</section>` : ''}
+                ${dragExercises.length ? `<section class="space-y-4">${renderDragExercises(lesson)}</section>` : ''}
+                ${questions.length ? `<section class="space-y-4">${questions.map((question, index) => `
                     <article class="practice-card">
                         <div class="question-head">
                             <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
@@ -521,7 +613,7 @@
                             }).join('')}
                         </div>
                     </article>
-                `).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập câu hỏi trắc nghiệm cho bài này.</div>'}
+                `).join('')}</section>` : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập câu hỏi trắc nghiệm cho bài này.</div>'}
                 <div class="flex flex-wrap gap-3">
                     <button type="submit" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
                         <i class="fas fa-paper-plane"></i>Nộp bài luyện
@@ -557,17 +649,25 @@
                 event.preventDefault();
                 const submittedAnswers = collectFormAnswers(form, questions);
                 const scoreData = calculateScore(lesson, submittedAnswers);
+                const essayData = evaluateEssayExercises(lesson);
+                const fillData = evaluateFillExercises(lesson);
+                const dragData = evaluateDragExercises(lesson);
+                const parts = [scoreData.score, essayData.score, fillData.score, dragData.score].filter(score => score !== null);
+                const mergedScore = parts.length ? Math.round(parts.reduce((sum, value) => sum + value, 0) / parts.length) : 0;
                 const completedAt = new Date().toISOString();
-                const status = scoreData.score >= 80 ? 'mastered' : (scoreData.score >= 50 ? 'needs_practice' : 'in_progress');
+                const status = mergedScore >= 80 ? 'mastered' : (mergedScore >= 50 ? 'needs_practice' : 'in_progress');
                 await syncLessonState(lesson, {
                     ...ui,
                     practiceDone: true,
                     completedAt,
                     startedAt: ui.startedAt || completedAt,
-                    answers: submittedAnswers
+                    answers: submittedAnswers,
+                    essayAnswers: essayData.answers,
+                    fillAnswers: fillData.answers,
+                    dragAnswers: dragData.answers
                 }, {
                     status,
-                    score: scoreData.score,
+                    score: mergedScore,
                     skillScores: scoreData.skillScores,
                     completedAt
                 });
@@ -594,6 +694,60 @@
             if (checked) result[question.id] = Number(checked.value);
         });
         return result;
+    }
+
+    function normalizeAnswerText(value) {
+        return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function evaluateEssayExercises(lesson) {
+        const items = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
+        if (!items.length) return { score: 100, answers: {} };
+        const answers = {};
+        let correct = 0;
+        items.forEach(item => {
+            const field = document.querySelector(`[data-essay-key="${escapeSelector(item.id || '')}"]`);
+            const value = normalizeAnswerText(field?.value || '');
+            answers[item.id || ''] = field?.value || '';
+            const expected = normalizeAnswerText(item.answer || '');
+            if (expected && value === expected) correct += 1;
+        });
+        return { score: Math.round((correct / items.length) * 100), answers };
+    }
+
+    function evaluateFillExercises(lesson) {
+        const items = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
+        if (!items.length) return { score: 100, answers: {} };
+        const answers = {};
+        let correct = 0;
+        items.forEach(item => {
+            const field = document.querySelector(`[data-fill-key="${escapeSelector(item.id || '')}"]`);
+            const value = normalizeAnswerText(field?.value || '');
+            answers[item.id || ''] = field?.value || '';
+            const expected = normalizeAnswerText(item.answer || '');
+            if (expected && value === expected) correct += 1;
+        });
+        return { score: Math.round((correct / items.length) * 100), answers };
+    }
+
+    function evaluateDragExercises(lesson) {
+        const items = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
+        if (!items.length) return { score: 100, answers: {} };
+        const answers = {};
+        let correct = 0;
+        items.forEach(item => {
+            const zone = document.querySelector(`[data-drop-zone="${escapeSelector(item.id || '')}"]`);
+            const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.textContent || '');
+            answers[item.id || ''] = current;
+            const expected = (item.answer || []).map(normalizeAnswerText);
+            const given = current.map(normalizeAnswerText);
+            if (expected.length && expected.join('|') === given.join('|')) correct += 1;
+        });
+        return { score: Math.round((correct / items.length) * 100), answers };
+    }
+
+    function escapeSelector(value) {
+        return String(value ?? '').replace(/["\\]/g, '\\$&');
     }
 
     function renderAnswerMark(question, optionIndex, answers) {
@@ -766,6 +920,128 @@
             state.selectedLessonId = state.lessons[0]?.id || '';
             if (state.selectedLessonId) localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
         }
+    }
+
+    function bindPracticeInteractions(lesson) {
+        document.querySelectorAll('[data-ai-text]').forEach(button => {
+            if (button.dataset.boundAi === '1') return;
+            button.dataset.boundAi = '1';
+            button.onclick = async () => {
+                const text = button.dataset.aiText || '';
+                const block = button.closest('.practice-card, .lesson-explain-block, article, div') || button.parentElement;
+                let output = block.querySelector('.ai-output');
+                if (!output) {
+                    output = document.createElement('div');
+                    output.className = 'ai-output mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm leading-7 text-slate-800';
+                    block.appendChild(output);
+                }
+                const old = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
+                output.textContent = 'Đang gọi AI...';
+                try {
+                    const data = await api('api/ai_explain.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            subject: lesson.subject || PAGE_SUBJECT,
+                            lesson_title: lesson.title || PAGE_TITLE,
+                            text
+                        })
+                    });
+                    output.innerHTML = escapeHtml(data.answer || '').replace(/\n/g, '<br>');
+                } catch (err) {
+                    output.textContent = err.message || 'Chưa gọi được AI.';
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = old;
+                }
+            };
+        });
+
+        document.querySelectorAll('.drag-pool').forEach(pool => {
+            if (pool.dataset.boundDrag === '1') return;
+            pool.dataset.boundDrag = '1';
+            const zoneId = pool.dataset.dragPool;
+            const zone = document.querySelector(`[data-drop-zone="${escapeSelector(zoneId)}"]`);
+            if (!zone) return;
+
+            pool.querySelectorAll('.drag-chip').forEach(chip => {
+                chip.addEventListener('dragstart', e => {
+                    e.dataTransfer?.setData('text/plain', chip.dataset.piece || '');
+                    chip.classList.add('opacity-60');
+                });
+                chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
+                chip.addEventListener('click', () => {
+                    zone.appendChild(chip);
+                });
+            });
+
+            zone.addEventListener('dragover', e => e.preventDefault());
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                const pieceIndex = e.dataTransfer?.getData('text/plain');
+                const chip = pool.querySelector(`.drag-chip[data-piece="${pieceIndex}"]`);
+                if (chip) zone.appendChild(chip);
+            });
+        });
+
+        document.querySelectorAll('.essay-check-btn').forEach(button => {
+            if (button.dataset.boundEssay === '1') return;
+            button.dataset.boundEssay = '1';
+            button.onclick = () => {
+                const key = button.dataset.essayKey || '';
+                const card = button.closest('.practice-card');
+                const input = card?.querySelector(`[data-essay-key="${escapeSelector(key)}"]`);
+                const feedback = card?.querySelector('.essay-feedback');
+                if (!feedback) return;
+                const item = (lesson.essay_exercises || []).find(entry => String(entry.id || '') === key.replace('essay_', ''));
+                const ok = normalizeAnswerText(input?.value || '') === normalizeAnswerText(item?.answer || '');
+                feedback.classList.remove('hidden');
+                feedback.innerHTML = ok
+                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item?.hint || 'Hãy thử so sánh với đáp án mẫu.')}`;
+            };
+        });
+
+        document.querySelectorAll('.fill-check-btn').forEach(button => {
+            if (button.dataset.boundFill === '1') return;
+            button.dataset.boundFill = '1';
+            button.onclick = () => {
+                const key = button.dataset.fillKey || '';
+                const card = button.closest('.practice-card');
+                const input = card?.querySelector(`[data-fill-key="${escapeSelector(key)}"]`);
+                const feedback = card?.querySelector('.fill-feedback');
+                const item = (lesson.fill_exercises || []).find(entry => String(entry.id || '') === key);
+                const ok = normalizeAnswerText(input?.value || '') === normalizeAnswerText(item?.answer || '');
+                if (feedback) {
+                    feedback.classList.remove('hidden');
+                    feedback.innerHTML = ok
+                        ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã điền khớp đáp án.'
+                        : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${escapeHtml(item?.answer || '')}`;
+                }
+            };
+        });
+
+        document.querySelectorAll('.drag-check-btn').forEach(button => {
+            if (button.dataset.boundDragCheck === '1') return;
+            button.dataset.boundDragCheck = '1';
+            button.onclick = () => {
+                const key = button.dataset.dragKey || '';
+                const card = button.closest('.practice-card');
+                const zone = card?.querySelector(`[data-drop-zone="${escapeSelector(key)}"]`);
+                const feedback = card?.querySelector('.drag-feedback');
+                const item = (lesson.drag_exercises || []).find(entry => String(entry.id || '') === key);
+                const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.textContent || '');
+                const ok = current.map(normalizeAnswerText).join('|') === (item?.answer || []).map(normalizeAnswerText).join('|');
+                if (feedback) {
+                    feedback.classList.remove('hidden');
+                    feedback.innerHTML = ok
+                        ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
+                        : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml((item?.answer || []).join(' → '))}`;
+                }
+            };
+        });
     }
 
     try {
