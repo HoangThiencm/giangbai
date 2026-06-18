@@ -189,6 +189,62 @@
         }
         .ai-explain-btn:hover { background: #fde68a; border-color: #f59e0b; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(245,158,11,0.2); }
         .ai-explain-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
+        .ai-chat-bubble {
+            position: relative;
+            margin-top: 12px;
+            max-width: min(640px, 100%);
+            border: 1px solid #fbbf24;
+            border-radius: 14px;
+            background: #fffbeb;
+            box-shadow: 0 16px 34px rgba(146,64,14,0.14);
+            overflow: visible;
+            animation: aiBubbleIn 0.18s ease;
+        }
+        .ai-chat-bubble::before {
+            content: "";
+            position: absolute;
+            top: -8px;
+            left: 28px;
+            width: 14px;
+            height: 14px;
+            border-left: 1px solid #fbbf24;
+            border-top: 1px solid #fbbf24;
+            background: #fffbeb;
+            transform: rotate(45deg);
+        }
+        .ai-chat-bubble-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            color: #92400e;
+            font-size: 0.86rem;
+            font-weight: 800;
+        }
+        .ai-chat-bubble-head span { display: inline-flex; align-items: center; gap: 8px; }
+        .ai-chat-bubble-close {
+            display: grid;
+            width: 26px;
+            height: 26px;
+            place-items: center;
+            border: 0;
+            border-radius: 999px;
+            background: #fde68a;
+            color: #78350f;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .ai-chat-bubble-close:hover { background: #fcd34d; }
+        .ai-chat-bubble-body {
+            padding: 0 14px 14px;
+            color: #334155;
+            font-size: 0.95rem;
+            line-height: 1.85;
+        }
+        .ai-chat-bubble-body mjx-container svg { display: inline !important; }
+        @keyframes aiBubbleIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         /* AI giải thích - Modal popup */
         .ai-modal-overlay {
             position: fixed; inset: 0; z-index: 9999;
@@ -340,7 +396,7 @@
         </main>
     </div>
 
-    <script src="lotrinh.js?v=20260618-route-teacher1"></script>
+    <script src="lotrinh.js?v=20260618-progress-bubble1"></script>
     <script src="admin-lesson-manager.js?v=20260618-route-teacher1"></script>
 </body>
 

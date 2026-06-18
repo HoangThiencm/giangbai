@@ -609,30 +609,27 @@
         bindAiExplainButtons(lesson);
     }
 
-    function showAiModal(htmlContent) {
-        // Xóa modal cũ nếu đang mở
-        const existing = document.getElementById('aiExplainModal');
-        if (existing) existing.remove();
+    function showAiModal(htmlContent, anchorButton = null) {
+        document.getElementById('aiExplainBubble')?.remove();
 
-        const modal = document.createElement('div');
-        modal.id = 'aiExplainModal';
-        modal.innerHTML = `
-            <div class="ai-modal-overlay" onclick="document.getElementById('aiExplainModal')?.remove()">
-                <div class="ai-modal-card" onclick="event.stopPropagation()">
-                    <div class="ai-modal-header">
-                        <span><i class="fas fa-wand-magic-sparkles" style="color:#f59e0b"></i> AI giải thích</span>
-                        <button class="ai-modal-close" onclick="document.getElementById('aiExplainModal')?.remove()">&times;</button>
-                    </div>
-                    <div class="ai-modal-body">${htmlContent}</div>
-                    <div class="ai-modal-footer">
-                        <button class="ai-modal-close-btn" onclick="document.getElementById('aiExplainModal')?.remove()">
-                            <i class="fas fa-check"></i> Đã hiểu
-                        </button>
-                    </div>
-                </div>
+        const bubble = document.createElement('div');
+        bubble.id = 'aiExplainBubble';
+        bubble.className = 'ai-chat-bubble';
+        bubble.innerHTML = `
+            <div class="ai-chat-bubble-head">
+                <span><i class="fas fa-wand-magic-sparkles"></i> AI giải thích</span>
+                <button type="button" class="ai-chat-bubble-close" aria-label="Đóng">&times;</button>
             </div>
+            <div class="ai-chat-bubble-body">${htmlContent}</div>
         `;
-        document.body.appendChild(modal);
+        bubble.querySelector('.ai-chat-bubble-close').onclick = () => bubble.remove();
+
+        const host = anchorButton?.closest('.lesson-explain-block, .practice-card, .lesson-document') || anchorButton?.parentElement;
+        if (host) {
+            host.appendChild(bubble);
+        } else {
+            document.body.appendChild(bubble);
+        }
         typesetMath();
     }
 
@@ -653,9 +650,9 @@
                             text
                         })
                     });
-                    showAiModal(renderAiAnswer(data.answer || ''));
+                    showAiModal(renderAiAnswer(data.answer || ''), button);
                 } catch (err) {
-                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`);
+                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, button);
                 } finally {
                     button.disabled = false;
                     button.innerHTML = old;
@@ -725,8 +722,8 @@
                         </div>
                         <div class="answer-grid">
                             ${(question.options || []).map((option, optionIndex) => {
-                                const checked = answers[question.id] === optionIndex ? 'checked' : '';
-                                const mark = progress.status !== 'not_started' ? renderAnswerMark(question, optionIndex, answers) : '';
+                                const checked = normalizeOptionIndex(answers[question.id]) === normalizeOptionIndex(optionIndex) ? 'checked' : '';
+                                const mark = renderAnswerMark(question, optionIndex, answers);
                                 const letter = 'ABCD'[optionIndex] || '';
                                 return `
                                     <label class="answer-option flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm">
@@ -747,7 +744,7 @@
                         <i class="fas fa-paper-plane"></i>Nộp bài luyện
                     </button>
                     <button id="clearAnswersBtn" type="button" class="inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                        <i class="fas fa-eraser"></i>Xóa đáp án nháp
+                        <i class="fas fa-rotate-left"></i>Làm lại bài luyện
                     </button>
                 </div>
             </form>
@@ -758,18 +755,22 @@
             form.querySelectorAll("input[type='radio']").forEach(input => {
                 input.addEventListener('change', async event => {
                     const nextAnswers = { ...answers, [event.target.name]: Number(event.target.value) };
-                    await syncLessonState(lesson, {
-                        ...ui,
-                        answers: nextAnswers,
-                        practiceDone: false,
-                        startedAt: ui.startedAt || new Date().toISOString()
-                    }, {
-                        status: 'in_progress',
-                        score: progress.score || 0,
-                        skillScores: progress.skillScores || {}
-                    });
-                    await reloadLessons(false);
-                    render();
+                    try {
+                        await syncLessonState(lesson, {
+                            ...ui,
+                            answers: nextAnswers,
+                            practiceDone: false,
+                            startedAt: ui.startedAt || new Date().toISOString()
+                        }, {
+                            status: 'in_progress',
+                            score: progress.score || 0,
+                            skillScores: progress.skillScores || {}
+                        });
+                        render();
+                    } catch (err) {
+                        console.error('save answer error:', err);
+                        alert('Không lưu được câu trả lời: ' + (err.message || 'Lỗi không xác định'));
+                    }
                 });
             });
 
@@ -784,32 +785,56 @@
                 const mergedScore = parts.length ? Math.round(parts.reduce((sum, value) => sum + value, 0) / parts.length) : 0;
                 const completedAt = new Date().toISOString();
                 const status = mergedScore >= 80 ? 'mastered' : (mergedScore >= 50 ? 'needs_practice' : 'in_progress');
-                await syncLessonState(lesson, {
-                    ...ui,
-                    practiceDone: true,
-                    completedAt,
-                    startedAt: ui.startedAt || completedAt,
-                    answers: submittedAnswers,
-                    essayAnswers: essayData.answers,
-                    fillAnswers: fillData.answers,
-                    dragAnswers: dragData.answers
-                }, {
-                    status,
-                    score: mergedScore,
-                    skillScores: scoreData.skillScores,
-                    completedAt
-                });
-                await reloadLessons();
-                render();
+                try {
+                    await syncLessonState(lesson, {
+                        ...ui,
+                        practiceDone: true,
+                        completedAt,
+                        startedAt: ui.startedAt || completedAt,
+                        answers: submittedAnswers,
+                        essayAnswers: essayData.answers,
+                        fillAnswers: fillData.answers,
+                        dragAnswers: dragData.answers
+                    }, {
+                        status,
+                        score: mergedScore,
+                        skillScores: scoreData.skillScores,
+                        completedAt
+                    });
+                    await reloadLessons(false).catch(err => console.warn('Không tải lại được tiến trình sau khi nộp bài', err));
+                    render();
+                } catch (err) {
+                    console.error('submit practice error:', err);
+                    alert('Không nộp được bài luyện tập: ' + (err.message || 'Lỗi không xác định'));
+                }
             };
         }
 
         const clearBtn = document.getElementById('clearAnswersBtn');
         if (clearBtn) {
             clearBtn.onclick = async () => {
-                await resetLesson(lesson);
-                await reloadLessons();
-                render();
+                const nextState = {
+                    ...currentUiState(lesson),
+                    answers: {},
+                    essayAnswers: {},
+                    fillAnswers: {},
+                    dragAnswers: {},
+                    practiceDone: false,
+                    completedAt: null,
+                    startedAt: currentUiState(lesson).startedAt || new Date().toISOString()
+                };
+                try {
+                    await syncLessonState(lesson, nextState, {
+                        status: 'in_progress',
+                        score: 0,
+                        skillScores: {},
+                        startedAt: nextState.startedAt
+                    });
+                    render();
+                } catch (err) {
+                    console.error('clear practice error:', err);
+                    alert('Không xóa được đáp án nháp: ' + (err.message || 'Lỗi không xác định'));
+                }
             };
         }
     }
@@ -881,10 +906,19 @@
         return String(value ?? '').replace(/["\\]/g, '\\$&');
     }
 
-    function renderAnswerMark(question, optionIndex, answers) {
+    function normalizeOptionIndex(value) {
+        const index = Number(value);
+        return Number.isFinite(index) ? index : -1;
+    }
+
+    function renderAnswerMark(question, optionIndexValue, answers) {
         const selected = answers[question.id];
-        if (optionIndex === question.answer) return '<i class="fas fa-check text-teal-700"></i>';
-        if (selected === optionIndex && selected !== question.answer) return '<i class="fas fa-xmark text-rose-600"></i>';
+        if (selected === undefined || selected === null) return '';
+        const selectedIndex = normalizeOptionIndex(selected);
+        const correctIndex = normalizeOptionIndex(question.answer);
+        const currentIndex = normalizeOptionIndex(optionIndexValue);
+        if (currentIndex === correctIndex) return '<i class="fas fa-check text-teal-700"></i>';
+        if (selectedIndex === currentIndex && selectedIndex !== correctIndex) return '<i class="fas fa-xmark text-rose-600"></i>';
         return '';
     }
 
@@ -892,7 +926,7 @@
         const questions = Array.isArray(lesson.questions) ? lesson.questions : [];
         if (!questions.length) return { score: null, skillScores: {} };
 
-        const correct = questions.filter(question => answers[question.id] === question.answer).length;
+        const correct = questions.filter(question => normalizeOptionIndex(answers[question.id]) === normalizeOptionIndex(question.answer)).length;
         const score = Math.round((correct / questions.length) * 100);
 
         const totals = {};
@@ -902,7 +936,7 @@
         questions.forEach(question => {
             if (!totals[question.skill]) totals[question.skill] = { correct: 0, total: 0 };
             totals[question.skill].total += 1;
-            if (answers[question.id] === question.answer) totals[question.skill].correct += 1;
+            if (normalizeOptionIndex(answers[question.id]) === normalizeOptionIndex(question.answer)) totals[question.skill].correct += 1;
         });
 
         const skillScores = {};
@@ -981,12 +1015,13 @@
     }
 
     async function syncLessonState(lesson, uiState, extra = {}) {
+        const current = currentLessonProgress(lesson);
         const payload = {
             action: 'save_progress',
             lesson_id: lesson.id,
-            status: extra.status || currentLessonProgress(lesson).status || 'in_progress',
-            score: typeof extra.score === 'number' ? extra.score : currentLessonProgress(lesson).score || 0,
-            skill_scores: extra.skillScores || currentLessonProgress(lesson).skillScores || {},
+            status: extra.status || current.status || 'in_progress',
+            score: typeof extra.score === 'number' ? extra.score : current.score || 0,
+            skill_scores: extra.skillScores || current.skillScores || {},
             state: uiState,
             started_at: extra.startedAt || uiState.startedAt || null,
             completed_at: extra.completedAt || uiState.completedAt || null,
@@ -996,6 +1031,16 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+        state.progress[lesson.id] = {
+            ...current,
+            status: payload.status,
+            score: payload.score,
+            skillScores: payload.skill_scores,
+            state: uiState,
+            startedAt: payload.started_at || current.startedAt || null,
+            completedAt: payload.completed_at || null,
+        };
+        return state.progress[lesson.id];
     }
 
     async function markLessonStarted(lesson) {
@@ -1072,9 +1117,9 @@
                             text
                         })
                     });
-                    showAiModal(renderAiAnswer(data.answer || ''));
+                    showAiModal(renderAiAnswer(data.answer || ''), button);
                 } catch (err) {
-                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`);
+                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, button);
                 } finally {
                     button.disabled = false;
                     button.innerHTML = old;
