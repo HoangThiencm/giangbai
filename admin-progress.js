@@ -1,7 +1,9 @@
 (function () {
     let lessons = [];
     let rows = [];
+    let classes = [];
     let selectedLessonId = '';
+    let selectedClassName = localStorage.getItem('progress_class_filter') || '';
 
     function el(id) { return document.getElementById(id); }
 
@@ -82,15 +84,20 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo dõi tiến độ học sinh
                     </h3>
-                    <p class="text-sm text-slate-500 mt-1">Xem học sinh nào đã làm bài, điểm hiện tại và ai cần luyện thêm.</p>
+                    <p class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp — hoặc xem tất cả lớp được nhóm theo tên lớp.</p>
                 </div>
                 <button id="progressReloadBtn" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
                     <i class="fas fa-rotate-right mr-1"></i>Tải lại
                 </button>
             </div>
-            <div class="mt-5 grid grid-cols-1 md:grid-cols-[1fr_180px_180px] gap-3">
+            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 <label class="block text-sm font-bold text-slate-700">Bài học
                     <select id="progressLessonSelect" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none"></select>
+                </label>
+                <label class="block text-sm font-bold text-slate-700">Lớp
+                    <select id="progressClassFilter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="">Tất cả lớp</option>
+                    </select>
                 </label>
                 <label class="block text-sm font-bold text-slate-700">Lọc trạng thái
                     <select id="progressStatusFilter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none">
@@ -101,7 +108,7 @@
                     </select>
                 </label>
                 <label class="block text-sm font-bold text-slate-700">Tìm học sinh
-                    <input id="progressSearch" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Tên, lớp...">
+                    <input id="progressSearch" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Tên, tài khoản...">
                 </label>
             </div>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3"></div>
@@ -109,7 +116,7 @@
                 <table class="min-w-full divide-y divide-slate-200">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh / Lớp</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Trạng thái</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Điểm</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cần lưu ý</th>
@@ -127,8 +134,45 @@
             selectedLessonId = event.target.value;
             refresh();
         };
+        el('progressClassFilter').onchange = event => {
+            selectedClassName = event.target.value || '';
+            localStorage.setItem('progress_class_filter', selectedClassName);
+            render();
+        };
         el('progressStatusFilter').onchange = render;
         el('progressSearch').oninput = render;
+    }
+
+    function normalizeClassName(value) {
+        return String(value || '').trim();
+    }
+
+    function renderClasses() {
+        const select = el('progressClassFilter');
+        if (!select) return;
+        const options = ['<option value="">Tất cả lớp</option>']
+            .concat(classes.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`));
+        select.innerHTML = options.join('');
+        if (selectedClassName && classes.includes(selectedClassName)) {
+            select.value = selectedClassName;
+        } else {
+            selectedClassName = '';
+            select.value = '';
+            localStorage.setItem('progress_class_filter', '');
+        }
+    }
+
+    function filteredRows() {
+        const statusFilter = el('progressStatusFilter')?.value || '';
+        const search = (el('progressSearch')?.value || '').toLowerCase();
+        return rows.filter(row => {
+            if (selectedClassName && normalizeClassName(row.class_name) !== selectedClassName) return false;
+            const haystack = `${row.full_name} ${row.username} ${row.class_name}`.toLowerCase();
+            if (search && !haystack.includes(search)) return false;
+            if (statusFilter === 'needs') return row.needs_practice;
+            if (statusFilter) return row.status === statusFilter;
+            return true;
+        });
     }
 
     function renderLessons() {
@@ -149,13 +193,14 @@
         return weak.map(skill => skill.name || skill.id).join(', ') || 'Nên luyện thêm';
     }
 
-    function renderSummary(filteredRows) {
-        const total = rows.length;
-        const done = rows.filter(row => ['needs_practice', 'mastered'].includes(row.status)).length;
-        const mastered = rows.filter(row => row.status === 'mastered').length;
-        const needs = rows.filter(row => row.needs_practice).length;
+    function renderSummary(viewRows) {
+        const total = viewRows.length;
+        const done = viewRows.filter(row => ['needs_practice', 'mastered'].includes(row.status)).length;
+        const mastered = viewRows.filter(row => row.status === 'mastered').length;
+        const needs = viewRows.filter(row => row.needs_practice).length;
+        const scope = selectedClassName ? `Lớp ${selectedClassName}` : 'Tất cả lớp';
         const cards = [
-            ['Tổng học sinh', total, 'text-slate-900'],
+            [`Học sinh (${scope})`, total, 'text-slate-900'],
             ['Đã nộp bài', done, 'text-sky-700'],
             ['Đã học xong', mastered, 'text-teal-700'],
             ['Cần luyện thêm', needs, 'text-amber-700']
@@ -168,18 +213,64 @@
         `).join('');
     }
 
+    function compareClassNames(a, b) {
+        const left = normalizeClassName(a) || '\uffff';
+        const right = normalizeClassName(b) || '\uffff';
+        return left.localeCompare(right, 'vi', { numeric: true, sensitivity: 'base' });
+    }
+
+    function sortRowsForView(viewRows) {
+        const sorted = viewRows.slice();
+        sorted.sort((a, b) => {
+            if (!selectedClassName) {
+                const byClass = compareClassNames(a.class_name, b.class_name);
+                if (byClass !== 0) return byClass;
+            }
+            return String(a.full_name || '').localeCompare(String(b.full_name || ''), 'vi', { sensitivity: 'base' });
+        });
+        return sorted;
+    }
+
+    function renderRow(row) {
+        const [label, tone] = statusLabel(row.status);
+        const scoreTone = row.score >= 80 ? 'text-teal-700' : (row.score >= 50 ? 'text-amber-700' : 'text-rose-700');
+        return `
+            <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-sm">
+                    <div class="font-bold text-slate-900">${escapeHtml(row.full_name)}</div>
+                    <div class="text-xs text-slate-500">${escapeHtml(row.username)}${selectedClassName ? '' : ` · ${escapeHtml(row.class_name || 'Chưa xếp lớp')}`}</div>
+                </td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
+                </td>
+                <td class="px-4 py-3 text-sm font-bold ${scoreTone}">${row.score}%</td>
+                <td class="px-4 py-3 text-sm text-slate-700 leading-6">${mathText(weakSkillText(row))}</td>
+                <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>
+            </tr>
+        `;
+    }
+
+    function renderClassGroupHeader(className, groupRows) {
+        const needs = groupRows.filter(row => row.needs_practice).length;
+        const mastered = groupRows.filter(row => row.status === 'mastered').length;
+        return `
+            <tr class="bg-amber-50 border-t border-amber-100">
+                <td colspan="5" class="px-4 py-2.5">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <span class="font-bold text-amber-900">Lớp ${escapeHtml(className)}</span>
+                        <span class="text-amber-800">${groupRows.length} học sinh</span>
+                        <span class="text-teal-700">${mastered} đã học xong</span>
+                        <span class="text-amber-700">${needs} cần luyện</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
     function render() {
         const body = el('progressTableBody');
         if (!body) return;
-        const statusFilter = el('progressStatusFilter')?.value || '';
-        const search = (el('progressSearch')?.value || '').toLowerCase();
-        let filtered = rows.filter(row => {
-            const haystack = `${row.full_name} ${row.username} ${row.class_name}`.toLowerCase();
-            if (search && !haystack.includes(search)) return false;
-            if (statusFilter === 'needs') return row.needs_practice;
-            if (statusFilter) return row.status === statusFilter;
-            return true;
-        });
+        const filtered = sortRowsForView(filteredRows());
 
         renderSummary(filtered);
 
@@ -188,24 +279,19 @@
             return;
         }
 
-        body.innerHTML = filtered.map(row => {
-            const [label, tone] = statusLabel(row.status);
-            const scoreTone = row.score >= 80 ? 'text-teal-700' : (row.score >= 50 ? 'text-amber-700' : 'text-rose-700');
-            return `
-                <tr class="hover:bg-slate-50">
-                    <td class="px-4 py-3 text-sm">
-                        <div class="font-bold text-slate-900">${escapeHtml(row.full_name)}</div>
-                        <div class="text-xs text-slate-500">${escapeHtml(row.username)} · ${escapeHtml(row.class_name || 'Chưa xếp lớp')}</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm">
-                        <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
-                    </td>
-                    <td class="px-4 py-3 text-sm font-bold ${scoreTone}">${row.score}%</td>
-                    <td class="px-4 py-3 text-sm text-slate-700 leading-6">${mathText(weakSkillText(row))}</td>
-                    <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>
-                </tr>
-            `;
-        }).join('');
+        if (!selectedClassName) {
+            const groups = new Map();
+            filtered.forEach(row => {
+                const key = normalizeClassName(row.class_name) || 'Chưa xếp lớp';
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(row);
+            });
+            body.innerHTML = [...groups.entries()].map(([className, groupRows]) => (
+                renderClassGroupHeader(className, groupRows) + groupRows.map(renderRow).join('')
+            )).join('');
+        } else {
+            body.innerHTML = filtered.map(renderRow).join('');
+        }
         typesetMath();
     }
 
@@ -223,8 +309,10 @@
         if (!res.ok) throw new Error(data.error || 'Không tải được tiến độ.');
         lessons = data.lessons || [];
         rows = data.rows || [];
+        classes = Array.isArray(data.classes) ? data.classes : [];
         selectedLessonId = String(data.lesson_id || lessons[0]?.id || '');
         renderLessons();
+        renderClasses();
         render();
         if (typeof window.ensureAdminTabs === 'function') window.ensureAdminTabs();
     }

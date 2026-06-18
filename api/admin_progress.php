@@ -72,9 +72,20 @@ foreach ($students as $student) {
     ];
 }
 
+$classNames = [];
+foreach ($students as $student) {
+    $className = trim((string)($student['class_name'] ?? ''));
+    if ($className !== '') {
+        $classNames[$className] = true;
+    }
+}
+$classes = array_keys($classNames);
+sort($classes, SORT_NATURAL | SORT_FLAG_CASE);
+
 respond([
     'ok' => true,
     'lesson_id' => $lessonId,
+    'classes' => $classes,
     'lessons' => array_map(function ($lesson) {
         return [
             'id' => (int)$lesson['id'],

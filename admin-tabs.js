@@ -1,6 +1,5 @@
 (function () {
     const tabs = [
-        { id: 'lessons', label: 'Tạo bài học', icon: 'fa-book-open' },
         { id: 'accounts', label: 'Tạo tài khoản', icon: 'fa-user-graduate' },
         { id: 'settings', label: 'Cài đặt hệ thống', icon: 'fa-sliders' }
     ];
@@ -42,7 +41,8 @@
 
     function activeTabId() {
         const saved = localStorage.getItem('admin_active_tab');
-        return tabs.some(tab => tab.id === saved) ? saved : 'lessons';
+        if (saved === 'lessons') return 'accounts';
+        return tabs.some(tab => tab.id === saved) ? saved : 'accounts';
     }
 
     function activateTab(id) {
@@ -101,7 +101,6 @@
 
             tabs.forEach(tab => content.appendChild(makePanel(tab.id)));
 
-            moveInto(makePanel('lessons'), el('lessonEditorPanel'));
             moveInto(makePanel('accounts'), el('studentCreatePanel'));
             moveInto(makePanel('accounts'), findAccountsTable());
             moveInto(makePanel('settings'), findSettingsCard());

@@ -1482,11 +1482,9 @@
             }
         };
     </script>
-    <script src="admin-lesson-manager.js?v=20260618-rich-content1"></script>
     <script>
         (function () {
             const TAB_DEFS = [
-                ['lessons', 'Tạo bài học', 'fa-book-open'],
                 ['accounts', 'Tạo tài khoản', 'fa-user-graduate'],
                 ['settings', 'Cài đặt hệ thống', 'fa-sliders']
             ];
@@ -1537,7 +1535,7 @@
             }
 
             function activate(id) {
-                if (!TAB_DEFS.some(([tabId]) => tabId === id)) id = 'lessons';
+                if (!TAB_DEFS.some(([tabId]) => tabId === id)) id = 'accounts';
                 document.querySelectorAll('.admin-tab-button').forEach(btn => {
                     const active = btn.dataset.tab === id;
                     btn.classList.toggle('bg-blue-600', active);
@@ -1589,7 +1587,6 @@
                     const tabPanel = panel(id);
                     if (tabPanel.parentElement !== content) content.appendChild(tabPanel);
                 });
-                move(panel('lessons'), $('lessonEditorPanel'));
                 move(panel('accounts'), $('studentCreatePanel'));
                 move(panel('accounts'), accountsTable());
                 move(panel('settings'), settingsCard());
@@ -1599,7 +1596,8 @@
                 });
 
                 const saved = localStorage.getItem('admin_active_tab');
-                activate(TAB_DEFS.some(([id]) => id === saved) ? saved : 'lessons');
+                const fallbackTab = saved === 'lessons' ? 'accounts' : saved;
+                activate(TAB_DEFS.some(([id]) => id === fallbackTab) ? fallbackTab : 'accounts');
             };
 
             document.addEventListener('click', event => {

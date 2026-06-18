@@ -34,6 +34,7 @@
     const LS_TAB_KEY = `lotrinh_active_tab_${PAGE_STORAGE_KEY}`;
     const LS_LESSON_KEY = `lotrinh_selected_lesson_${PAGE_STORAGE_KEY}`;
     const LS_TEACHER_PREVIEW_KEY = `lotrinh_teacher_preview_${PAGE_STORAGE_KEY}`;
+    const LS_STUDY_MINUTES_KEY = `lotrinh_study_minutes_${PAGE_STORAGE_KEY}`;
 
     const state = {
         user: null,
@@ -41,6 +42,7 @@
         progress: {},
         selectedLessonId: localStorage.getItem(LS_LESSON_KEY) || '',
         activeTab: localStorage.getItem(LS_TAB_KEY) || 'learn',
+        studyMinutes: Number(localStorage.getItem(LS_STUDY_MINUTES_KEY)) || 30,
         teacherPreviewUi: { answers: {}, essayAnswers: {}, practiceDone: false },
         loading: true,
         error: ''
@@ -428,6 +430,7 @@
 
         renderTeacherPreviewBanner();
         renderOverallProgress();
+        renderStudyPlanner();
         renderLessonList();
         renderHeader(lesson);
         renderTabs();
@@ -463,6 +466,187 @@
             localStorage.removeItem(LS_TEACHER_PREVIEW_KEY);
             window.location.reload();
         };
+    }
+
+    function ensureStudyPlannerPanel() {
+        let panel = document.getElementById('studyPlannerPanel');
+        if (panel) return panel;
+
+        const aside = document.querySelector('#studentLearningMain > aside');
+        if (!aside) return null;
+
+        panel = document.createElement('section');
+        panel.id = 'studyPlannerPanel';
+        panel.className = 'panel p-4';
+        const lessonPanel = document.getElementById('lessonList')?.closest('section');
+        aside.insertBefore(panel, lessonPanel || null);
+        return panel;
+    }
+
+    function lessonStudyTasks(lesson, includeReview = false) {
+        if (!lesson) return [];
+        const progress = currentLessonProgress(lesson);
+        const ui = currentUiState(lesson);
+        const tasks = [];
+
+        if (!ui.theoryDone) {
+            tasks.push({
+                lesson,
+                tab: 'learn',
+                minutes: 10,
+                title: 'Đọc lý thuyết',
+                body: 'Nắm khái niệm và công thức cốt lõi.'
+            });
+        }
+        if (ui.theoryDone && !ui.examplesDone) {
+            tasks.push({
+                lesson,
+                tab: 'examples',
+                minutes: 8,
+                title: 'Xem ví dụ mẫu',
+                body: 'Theo dõi cách biến đổi từng bước.'
+            });
+        }
+        if (ui.theoryDone && ui.examplesDone && !ui.practiceDone) {
+            const practice = practiceProgress(lesson, ui);
+            tasks.push({
+                lesson,
+                tab: 'practice',
+                minutes: practice.total > 8 ? 20 : 15,
+                title: practice.answered ? 'Làm tiếp bài luyện' : 'Làm bài luyện tập',
+                body: practice.total
+                    ? `${practice.answered}/${practice.total} câu đã có đáp án.`
+                    : 'Kiểm tra lại kiến thức vừa học.'
+            });
+        }
+        if (progress.status === 'needs_practice') {
+            tasks.push({
+                lesson,
+                tab: 'practice',
+                minutes: 15,
+                title: 'Luyện lại phần còn yếu',
+                body: `Điểm hiện tại ${progress.score || 0}%, mục tiêu là 80%.`
+            });
+        }
+        if (!tasks.length && includeReview) {
+            tasks.push({
+                lesson,
+                tab: 'practice',
+                minutes: 8,
+                title: 'Ôn nhanh',
+                body: 'Đọc lại lời giải hoặc làm lại vài câu khó.'
+            });
+        }
+
+        return tasks;
+    }
+
+    function orderedStudyLessons() {
+        const current = currentLesson();
+        const seen = new Set();
+        const buckets = [
+            current ? [current] : [],
+            state.lessons.filter(lesson => currentLessonProgress(lesson).status === 'needs_practice'),
+            state.lessons.filter(lesson => {
+                const status = currentLessonProgress(lesson).status;
+                return status === 'in_progress' || lessonCompletionPercent(lesson) > 0;
+            }),
+            state.lessons.filter(lesson => currentLessonProgress(lesson).status === 'not_started'),
+            state.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered'),
+        ];
+
+        return buckets.flat().filter(lesson => {
+            const id = String(lesson.id);
+            if (!id || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+        });
+    }
+
+    function buildStudyPlan(minutes) {
+        const budget = Math.max(10, Number(minutes) || 30);
+        const lessons = orderedStudyLessons();
+        const primaryTasks = lessons.flatMap(lesson => lessonStudyTasks(lesson, false));
+        const reviewTasks = lessons.flatMap(lesson => lessonStudyTasks(lesson, true))
+            .filter(task => !primaryTasks.some(item => String(item.lesson.id) === String(task.lesson.id) && item.tab === task.tab));
+        const candidates = [...primaryTasks, ...reviewTasks];
+        const plan = [];
+        let total = 0;
+
+        candidates.some(task => {
+            if (plan.length >= 5) return true;
+            if (total + task.minutes <= budget || !plan.length) {
+                plan.push(task);
+                total += task.minutes;
+            }
+            return total >= budget;
+        });
+
+        return { plan, total, budget };
+    }
+
+    function renderStudyPlanner() {
+        const panel = ensureStudyPlannerPanel();
+        if (!panel) return;
+
+        if (!state.lessons.length) {
+            panel.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-500">Kế hoạch tự học</h2>
+                    <i class="fas fa-calendar-check text-xl text-teal-700"></i>
+                </div>
+                <p class="mt-3 text-sm leading-6 text-slate-500">Chưa có bài học để lập kế hoạch.</p>
+            `;
+            return;
+        }
+
+        const { plan, total, budget } = buildStudyPlan(state.studyMinutes);
+        panel.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-500">Kế hoạch tự học</h2>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">${total}/${budget} phút dự kiến</p>
+                </div>
+                <select id="studyMinutesSelect" class="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-bold text-slate-700">
+                    ${[15, 30, 45, 60].map(value => `<option value="${value}" ${Number(state.studyMinutes) === value ? 'selected' : ''}>${value} phút</option>`).join('')}
+                </select>
+            </div>
+            <div class="mt-4 space-y-2">
+                ${plan.length ? plan.map((task, index) => `
+                    <button type="button" class="study-plan-item w-full rounded border border-slate-200 bg-white p-3 text-left hover:border-teal-300 hover:bg-teal-50" data-study-lesson-id="${escapeHtml(task.lesson.id)}" data-study-tab="${escapeHtml(task.tab)}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Bước ${index + 1} - ${task.minutes} phút</p>
+                                <p class="mt-1 text-sm font-bold text-slate-900">${escapeHtml(task.title)}</p>
+                                <p class="mt-1 truncate text-xs font-semibold text-slate-500">${escapeHtml(task.lesson.title)}</p>
+                                <p class="mt-1 text-xs leading-5 text-slate-600">${escapeHtml(task.body)}</p>
+                            </div>
+                            <i class="fas fa-arrow-right mt-1 text-slate-400"></i>
+                        </div>
+                    </button>
+                `).join('') : '<p class="rounded border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-500">Tất cả bài học đã hoàn thành. Hãy chọn 15 phút ôn nhanh để giữ nhịp.</p>'}
+            </div>
+        `;
+
+        const select = document.getElementById('studyMinutesSelect');
+        if (select) {
+            select.onchange = () => {
+                state.studyMinutes = Number(select.value) || 30;
+                localStorage.setItem(LS_STUDY_MINUTES_KEY, String(state.studyMinutes));
+                renderStudyPlanner();
+            };
+        }
+
+        panel.querySelectorAll('[data-study-lesson-id]').forEach(button => {
+            button.onclick = async () => {
+                state.selectedLessonId = button.getAttribute('data-study-lesson-id') || state.selectedLessonId;
+                state.activeTab = button.getAttribute('data-study-tab') || state.activeTab;
+                localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
+                localStorage.setItem(LS_TAB_KEY, state.activeTab);
+                render();
+                if (!isTeacher()) await markLessonStarted(currentLesson());
+            };
+        });
     }
 
     function renderOverallProgress() {

@@ -439,9 +439,9 @@
     function ensurePanel() {
         if (el('lessonEditorPanel')) return;
         const teacherMount = el('lessonDesignerMount');
-        if (teacherMount && localStorage.getItem('userRole') !== 'teacher') return;
-        const dashboard = teacherMount || el('dashboardSection');
-        if (!dashboard) return;
+        if (!teacherMount) return;
+        if (localStorage.getItem('userRole') !== 'teacher') return;
+        const dashboard = teacherMount;
 
         const panel = document.createElement('section');
         panel.id = 'lessonEditorPanel';
