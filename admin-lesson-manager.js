@@ -89,38 +89,45 @@
         return String(text || '').split('\n').map(line => line.trim()).filter(Boolean);
     }
 
-    const THEORY_AI_MARKER = '[[AI]]';
-    const THEORY_AI_MARKER_RE = /^\s*\[\[AI\]\]\s*$/i;
+    const AI_MARKER = '[AI]';
+    const AI_MARKER_LINE_RE = /^\s*(\[\[AI\]\]|\[AI\])\s*$/i;
+    const AI_MARKER_INLINE_RE = /\s*(\[\[AI\]\]|\[AI\])\s*$/i;
+
+    function parseContentWithAiMarker(text) {
+        let ai = false;
+        const lines = String(text || '').replace(/\r/g, '').split('\n');
+        while (lines.length && AI_MARKER_LINE_RE.test(lines[lines.length - 1])) {
+            ai = true;
+            lines.pop();
+        }
+        const cleaned = lines
+            .map(line => line.replace(/[ \t]+$/g, '').replace(AI_MARKER_INLINE_RE, () => {
+                ai = true;
+                return '';
+            }))
+            .join('\n')
+            .trim();
+        return { text: cleaned, ai };
+    }
 
     function normalizeTheoryItem(item) {
+        let text = '';
+        let ai = false;
         if (typeof item === 'string') {
-            return { text: item.trim(), ai: false };
+            text = item.trim();
+        } else if (item && typeof item === 'object') {
+            text = String(item.text ?? item.content ?? '').trim();
+            ai = !!item.ai;
         }
-        if (item && typeof item === 'object') {
-            return {
-                text: String(item.text ?? item.content ?? '').trim(),
-                ai: !!item.ai
-            };
-        }
-        return { text: '', ai: false };
+        const parsed = parseContentWithAiMarker(text);
+        return { text: parsed.text, ai: ai || parsed.ai };
     }
 
     function parseTheoryBlocks(text) {
         return String(text || '')
             .replace(/\r/g, '')
             .split(/\n\s*\n+/)
-            .map(block => {
-                const lines = block.split('\n');
-                let ai = false;
-                while (lines.length && THEORY_AI_MARKER_RE.test(lines[lines.length - 1].trim())) {
-                    ai = true;
-                    lines.pop();
-                }
-                return {
-                    text: lines.map(line => line.replace(/[ \t]+$/g, '')).join('\n').trim(),
-                    ai
-                };
-            })
+            .map(block => parseContentWithAiMarker(block))
             .filter(block => block.text);
     }
 
@@ -129,10 +136,21 @@
             .map(item => {
                 const block = normalizeTheoryItem(item);
                 if (!block.text) return '';
-                return block.ai ? `${block.text}\n${THEORY_AI_MARKER}` : block.text;
+                return block.ai ? `${block.text}\n${AI_MARKER}` : block.text;
             })
             .filter(Boolean)
             .join('\n\n');
+    }
+
+    function normalizeExampleItem(item) {
+        const title = String(item?.title ?? '').trim();
+        const parsed = parseContentWithAiMarker(String(item?.body ?? ''));
+        const hasAiField = item && typeof item === 'object' && Object.prototype.hasOwnProperty.call(item, 'ai');
+        return {
+            title: title || 'Ví dụ',
+            body: parsed.text,
+            ai: hasAiField ? !!item.ai : (parsed.ai || true)
+        };
     }
 
     function parseExamples(text) {
@@ -142,14 +160,20 @@
             const parts = block.includes('||') ? block.split('||') : block.split('|');
             if (parts.length >= 2) {
                 const [title, ...bodyParts] = parts;
-                return { title: (title || `Ví dụ ${index + 1}`).trim(), body: bodyParts.join(parts.length > 2 ? '|' : '').trim() };
+                const parsed = parseContentWithAiMarker(bodyParts.join(parts.length > 2 ? '|' : '').trim());
+                return {
+                    title: (title || `Ví dụ ${index + 1}`).trim(),
+                    body: parsed.text,
+                    ai: parsed.ai
+                };
             }
             const lines = block.split('\n').map(line => line.replace(/[ \t]+$/g, ''));
             const title = (lines[0] || '').trim();
-            const body = lines.slice(1).join('\n').trim();
+            const parsed = parseContentWithAiMarker(lines.slice(1).join('\n').trim());
             return {
                 title: title || `Ví dụ ${index + 1}`,
-                body
+                body: parsed.text,
+                ai: parsed.ai
             };
         }).filter(example => example.title || example.body);
     }
@@ -281,7 +305,11 @@
     }
 
     function formatExamples(items) {
-        return (items || []).map(item => `${item.title || ''}\n${item.body || ''}`.trim()).join('\n\n');
+        return (items || []).map(item => {
+            const normalized = normalizeExampleItem(item);
+            const body = normalized.ai ? `${normalized.body}\n${AI_MARKER}` : normalized.body;
+            return `${normalized.title}\n${body}`.trim();
+        }).join('\n\n');
     }
 
     function formatSkills(items) {
@@ -418,11 +446,11 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <label class="block text-sm font-bold text-slate-700">Nội dung bài học
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần (dòng trống) = ngắt đoạn. Enter 1 lần = xuống dòng trong cùng đoạn (như Shift+Enter). Công thức viết bằng $...$. Thêm dòng <code class="font-mono text-[11px]">[[AI]]</code> ở cuối đoạn cần nút AI giải thích.</span>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần (dòng trống) = ngắt đoạn. Enter 1 lần = xuống dòng trong cùng đoạn (như Shift+Enter). Công thức viết bằng $...$. Thêm <code class="font-mono text-[11px]">[AI]</code> ở cuối đoạn cần nút AI giải thích (học sinh không thấy chữ này).</span>
                         <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     <label class="block text-sm font-bold text-slate-700">Ví dụ
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần = tách ví dụ. Dòng đầu là tiêu đề; Enter 1 lần trong phần lời giải = xuống dòng (như Shift+Enter).</span>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần = tách ví dụ. Dòng đầu là tiêu đề; Enter 1 lần trong lời giải = xuống dòng. Thêm <code class="font-mono text-[11px]">[AI]</code> ở cuối lời giải để bật nút AI (không hiển thị ra ngoài).</span>
                         <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     </div>

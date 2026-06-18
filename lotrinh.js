@@ -176,17 +176,48 @@
         return scores;
     }
 
+    const AI_MARKER_LINE_RE = /^\s*(\[\[AI\]\]|\[AI\])\s*$/i;
+    const AI_MARKER_INLINE_RE = /\s*(\[\[AI\]\]|\[AI\])\s*$/i;
+
+    function parseContentWithAiMarker(text) {
+        let ai = false;
+        const lines = String(text || '').replace(/\r/g, '').split('\n');
+        while (lines.length && AI_MARKER_LINE_RE.test(lines[lines.length - 1])) {
+            ai = true;
+            lines.pop();
+        }
+        const cleaned = lines
+            .map(line => line.replace(/[ \t]+$/g, '').replace(AI_MARKER_INLINE_RE, () => {
+                ai = true;
+                return '';
+            }))
+            .join('\n')
+            .trim();
+        return { text: cleaned, ai };
+    }
+
     function normalizeTheoryItem(item) {
+        let text = '';
+        let ai = false;
         if (typeof item === 'string') {
-            return { text: item.trim(), ai: false };
+            text = item.trim();
+        } else if (item && typeof item === 'object') {
+            text = String(item.text ?? item.content ?? '').trim();
+            ai = !!item.ai;
         }
-        if (item && typeof item === 'object') {
-            return {
-                text: String(item.text ?? item.content ?? '').trim(),
-                ai: !!item.ai
-            };
-        }
-        return { text: '', ai: false };
+        const parsed = parseContentWithAiMarker(text);
+        return { text: parsed.text, ai: ai || parsed.ai };
+    }
+
+    function normalizeExampleItem(item) {
+        const title = String(item?.title ?? '').trim();
+        const parsed = parseContentWithAiMarker(String(item?.body ?? ''));
+        const hasAiField = item && typeof item === 'object' && Object.prototype.hasOwnProperty.call(item, 'ai');
+        return {
+            title: title || 'Ví dụ',
+            body: parsed.text,
+            ai: hasAiField ? !!item.ai : (parsed.ai || true)
+        };
     }
 
     function renderParagraphs(items, emptyText, aiType = 'theory') {
@@ -723,15 +754,20 @@
         const examples = Array.isArray(lesson.examples) ? lesson.examples : [];
         els.tabContent.innerHTML = `
             <div class="space-y-4">
-                ${examples.length ? examples.map(example => `
+                ${examples.length ? examples.map((example, index) => {
+                    const item = normalizeExampleItem(example);
+                    return `
                     <div class="lesson-document rounded border border-slate-200 bg-white p-4">
-                        <h3 class="font-bold text-slate-900">${richText(example.title || 'Ví dụ')}</h3>
-                        <div class="lesson-paragraph mt-2 text-base leading-7 text-slate-700">${richText(example.body || '')}</div>
-                        <button type="button" class="ai-explain-btn mt-3" data-ai-type="example" data-ai-index="0" data-ai-text="${escapeHtml(`${example.title || 'Ví dụ'}\n${example.body || ''}`)}">
+                        <h3 class="font-bold text-slate-900">${richText(item.title)}</h3>
+                        <div class="lesson-paragraph mt-2 text-base leading-7 text-slate-700">${richText(item.body)}</div>
+                        ${item.ai ? `
+                        <button type="button" class="ai-explain-btn mt-3" data-ai-type="example" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(`${item.title}\n${item.body}`))}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
+                        ` : ''}
                     </div>
-                `).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập ví dụ cho bài này.</div>'}
+                `;
+                }).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập ví dụ cho bài này.</div>'}
                 <button id="markExamplesDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
                     <i class="fas fa-check"></i>${ui.examplesDone ? 'Đã xem ví dụ' : 'Đánh dấu đã xem ví dụ'}
                 </button>
