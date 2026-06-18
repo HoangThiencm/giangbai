@@ -217,6 +217,29 @@
         return readQuestionBlocks(text, fallbackSkill).map((line, index) => parseQuestionLine(line, index, fallbackSkill));
     }
 
+    function parseEssayExercises(text) {
+        return parseLines(text).map((line, index) => {
+            const parts = splitQuestionParts(line);
+            return { id: `essay_${index + 1}`, prompt: parts[0] || '', answer: parts[1] || '', hint: parts[2] || '' };
+        }).filter(item => item.prompt);
+    }
+
+    function parseFillExercises(text) {
+        return parseLines(text).map((line, index) => {
+            const parts = splitQuestionParts(line);
+            return { id: `fill_${index + 1}`, prompt: parts[0] || '', answer: parts[1] || '', hint: parts[2] || '' };
+        }).filter(item => item.prompt && item.answer);
+    }
+
+    function parseDragExercises(text) {
+        return parseLines(text).map((line, index) => {
+            const parts = splitQuestionParts(line);
+            const items = String(parts[1] || '').split('>').map(item => item.trim()).filter(Boolean);
+            const answer = String(parts[2] || parts[1] || '').split('>').map(item => item.trim()).filter(Boolean);
+            return { id: `drag_${index + 1}`, prompt: parts[0] || '', items, answer, hint: parts[3] || '' };
+        }).filter(item => item.prompt && item.items.length && item.answer.length);
+    }
+
     function formatExamples(items) {
         return (items || []).map(item => `${item.title || ''}\n${item.body || ''}`.trim()).join('\n\n');
     }
@@ -242,6 +265,18 @@
                 answer
             ].join(' | ');
         }).join('\n');
+    }
+
+    function formatEssayExercises(items) {
+        return (items || []).map(item => [item.prompt || '', item.answer || '', item.hint || ''].join(' | ')).join('\n');
+    }
+
+    function formatFillExercises(items) {
+        return (items || []).map(item => [item.prompt || '', item.answer || '', item.hint || ''].join(' | ')).join('\n');
+    }
+
+    function formatDragExercises(items) {
+        return (items || []).map(item => [item.prompt || '', (item.items || []).join(' > '), (item.answer || []).join(' > '), item.hint || ''].join(' | ')).join('\n');
     }
 
     function setupEditorFieldShortcuts() {
@@ -352,6 +387,21 @@
                     </label>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <label class="block text-sm font-bold text-slate-700">Bài tập tự luận
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Đề bài | Đáp án mẫu | Gợi ý.</span>
+                            <textarea id="lessonEssay" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tính 2 + 3 | 5 | Có thể đếm thêm 3 đơn vị sau số 2."></textarea>
+                        </label>
+                        <label class="block text-sm font-bold text-slate-700">Bài tập điền khuyết
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu hỏi có chỗ trống | Đáp án | Gợi ý.</span>
+                            <textarea id="lessonFill" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Số liền sau của 7 là ___ | 8 | Thêm 1 vào 7."></textarea>
+                        </label>
+                        <label class="block text-sm font-bold text-slate-700">Bài tập kéo thả
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Yêu cầu | Mảnh 1 > Mảnh 2 | Thứ tự đúng | Gợi ý.</span>
+                            <textarea id="lessonDrag" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Sắp xếp tăng dần | 3 > 1 > 2 | 1 > 2 > 3 | Số nhỏ hơn đặt trước."></textarea>
+                        </label>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
                             <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: id | Tên kỹ năng | target</span>
@@ -400,7 +450,7 @@
             renderSubjectPills();
             suggestSlug();
         });
-        ['lessonGoal', 'lessonTheory', 'lessonExamples', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
+        ['lessonGoal', 'lessonTheory', 'lessonExamples', 'lessonEssay', 'lessonFill', 'lessonDrag', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
             el(id).addEventListener('input', renderPreview);
         });
         setupEditorFieldShortcuts();
@@ -448,6 +498,9 @@
         el('lessonGoal').value = lesson.goal || lesson.goal_text || '';
         el('lessonTheory').value = Array.isArray(lesson.theory) ? lesson.theory.join('\n\n') : '';
         el('lessonExamples').value = formatExamples(lesson.examples);
+        el('lessonEssay').value = formatEssayExercises(lesson.essay_exercises);
+        el('lessonFill').value = formatFillExercises(lesson.fill_exercises);
+        el('lessonDrag').value = formatDragExercises(lesson.drag_exercises);
         el('lessonVideos').value = formatVideos(lesson.videos);
         el('lessonSkills').value = formatSkills(lesson.skills);
         el('lessonTasks').value = Array.isArray(lesson.tasks) ? lesson.tasks.join('\n') : '';
@@ -467,6 +520,9 @@
         el('lessonGoal').value = defaults.goal_text;
         el('lessonTheory').value = defaults.theory.join('\n\n');
         el('lessonExamples').value = formatExamples(defaults.examples);
+        el('lessonEssay').value = 'Viết tập hợp A gồm các số tự nhiên nhỏ hơn 4 | A={0,1,2,3} | Các số tự nhiên bắt đầu từ 0.';
+        el('lessonFill').value = 'Nếu A={1,2,3} thì 2 ___ A | thuộc | 2 là phần tử của A.';
+        el('lessonDrag').value = 'Sắp xếp các số theo thứ tự tăng dần | 3 > 1 > 2 | 1 > 2 > 3 | Số nhỏ hơn đứng trước.';
         el('lessonVideos').value = formatVideos(defaults.videos);
         el('lessonSkills').value = formatSkills(defaults.skills);
         el('lessonTasks').value = defaults.tasks.join('\n');
@@ -486,6 +542,9 @@
         el('lessonGoal').value = '';
         el('lessonTheory').value = '';
         el('lessonExamples').value = '';
+        el('lessonEssay').value = '';
+        el('lessonFill').value = '';
+        el('lessonDrag').value = '';
         el('lessonVideos').value = '';
         el('lessonSkills').value = 'nhan_biet | Nhan biet kien thuc | 80';
         el('lessonTasks').value = 'Đọc lý thuyết\nXem ví dụ\nLàm bài luyện tập';
@@ -505,12 +564,15 @@
         if (!preview) return;
         let questionCount = 0;
         try { questionCount = parseQuestions(el('lessonQuestions').value, parseSkills(el('lessonSkills').value)).length; } catch { questionCount = 0; }
+        const essayCount = parseEssayExercises(el('lessonEssay').value).length;
+        const fillCount = parseFillExercises(el('lessonFill').value).length;
+        const dragCount = parseDragExercises(el('lessonDrag').value).length;
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${parseParagraphs(el('lessonTheory').value).length} đoạn</div></div>
                 <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
                 <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
-                <div><div class="text-xs text-slate-500">Video / câu hỏi</div><div class="font-bold">${parseVideos(el('lessonVideos').value).length} / ${questionCount}</div></div>
+                <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${essayCount + fillCount + dragCount + questionCount}</div></div>
             </div>
         `;
     }
@@ -530,6 +592,9 @@
             goal_text: el('lessonGoal').value.trim(),
             theory: parseParagraphs(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
+            essay_exercises: parseEssayExercises(el('lessonEssay').value),
+            fill_exercises: parseFillExercises(el('lessonFill').value),
+            drag_exercises: parseDragExercises(el('lessonDrag').value),
             videos: parseVideos(el('lessonVideos').value),
             skills,
             tasks: parseLines(el('lessonTasks').value),

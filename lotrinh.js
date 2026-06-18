@@ -153,6 +153,8 @@
             practiceDone: !!ui.practiceDone,
             answers: ui.answers || {},
             essayAnswers: ui.essayAnswers || {},
+            fillAnswers: ui.fillAnswers || {},
+            dragAnswers: ui.dragAnswers || {},
             startedAt: ui.startedAt || progress.startedAt || null,
             completedAt: ui.completedAt || progress.completedAt || null,
         };
@@ -355,7 +357,10 @@
         if (state.activeTab === 'learn') renderTheory(lesson);
         if (state.activeTab === 'examples') renderExamples(lesson);
         if (state.activeTab === 'videos') renderVideos(lesson);
-        if (state.activeTab === 'practice') renderPractice(lesson);
+        if (state.activeTab === 'practice') {
+            renderPractice(lesson);
+            bindPracticeInteractions(lesson);
+        }
         typesetMath();
     }
 
@@ -389,14 +394,15 @@
             return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài tập tự luận cho bài này.</div>';
         }
         return items.map((item, index) => {
-            const key = `essay_${item.id || index}`;
+            const key = item.id || `essay_${index + 1}`;
+            const saved = currentUiState(lesson).essayAnswers?.[key] || '';
             return `
                 <article class="practice-card">
                     <div class="question-head">
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Tự luận ${index + 1}</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
                     </div>
-                    <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em..."></textarea>
+                    <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em...">${escapeHtml(saved)}</textarea>
                     <div class="mt-3 flex flex-wrap gap-2">
                         <button type="button" class="essay-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-essay-key="${escapeHtml(key)}">
                             <i class="fas fa-check"></i>Kiểm tra
@@ -416,15 +422,16 @@
         if (!items.length) {
             return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài điền khuyết cho bài này.</div>';
         }
+        const savedAnswers = currentUiState(lesson).fillAnswers || {};
         return items.map((item, index) => `
             <article class="practice-card">
                 <div class="question-head">
                     <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
                     <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
                 </div>
-                <input class="fill-input" type="text" data-fill-key="${escapeHtml(item.id || `f${index + 1}`)}" placeholder="Nhập đáp án...">
+                <input class="fill-input" type="text" data-fill-key="${escapeHtml(item.id || `fill_${index + 1}`)}" value="${escapeHtml(savedAnswers[item.id || `fill_${index + 1}`] || '')}" placeholder="Nhập đáp án...">
                 <div class="mt-3 flex flex-wrap gap-2">
-                    <button type="button" class="fill-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-fill-key="${escapeHtml(item.id || `f${index + 1}`)}">
+                    <button type="button" class="fill-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-fill-key="${escapeHtml(item.id || `fill_${index + 1}`)}">
                         <i class="fas fa-check"></i>Kiểm tra
                     </button>
                     <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
@@ -444,18 +451,23 @@
         return items.map((item, index) => {
             const dragItems = Array.isArray(item.items) ? item.items : [];
             const answer = Array.isArray(item.answer) ? item.answer : [];
+            const key = item.id || `drag_${index + 1}`;
+            const savedOrder = currentUiState(lesson).dragAnswers?.[key] || [];
+            const poolItems = dragItems.filter(piece => !savedOrder.includes(piece));
             return `
-                <article class="practice-card" data-drag-key="${escapeHtml(item.id || `d${index + 1}`)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
+                <article class="practice-card" data-drag-key="${escapeHtml(key)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
                     <div class="question-head">
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Kéo thả ${index + 1}</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
                     </div>
-                    <div class="drag-pool" data-drag-pool="${escapeHtml(item.id || `d${index + 1}`)}">
-                        ${dragItems.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
+                    <div class="drag-pool" data-drag-pool="${escapeHtml(key)}">
+                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
                     </div>
-                    <div class="drag-slot-row" data-drop-zone="${escapeHtml(item.id || `d${index + 1}`)}"></div>
+                    <div class="drag-slot-row" data-drop-zone="${escapeHtml(key)}">
+                        ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="saved-${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
+                    </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" class="drag-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-drag-key="${escapeHtml(item.id || `d${index + 1}`)}">
+                        <button type="button" class="drag-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-drag-key="${escapeHtml(key)}">
                             <i class="fas fa-check"></i>Kiểm tra
                         </button>
                         <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
@@ -702,13 +714,14 @@
 
     function evaluateEssayExercises(lesson) {
         const items = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
-        if (!items.length) return { score: 100, answers: {} };
+        if (!items.length) return { score: null, answers: {} };
         const answers = {};
         let correct = 0;
         items.forEach(item => {
-            const field = document.querySelector(`[data-essay-key="${escapeSelector(item.id || '')}"]`);
+            const key = item.id || `essay_${items.indexOf(item) + 1}`;
+            const field = document.querySelector(`[data-essay-key="${escapeSelector(key)}"]`);
             const value = normalizeAnswerText(field?.value || '');
-            answers[item.id || ''] = field?.value || '';
+            answers[key] = field?.value || '';
             const expected = normalizeAnswerText(item.answer || '');
             if (expected && value === expected) correct += 1;
         });
@@ -717,13 +730,14 @@
 
     function evaluateFillExercises(lesson) {
         const items = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
-        if (!items.length) return { score: 100, answers: {} };
+        if (!items.length) return { score: null, answers: {} };
         const answers = {};
         let correct = 0;
         items.forEach(item => {
-            const field = document.querySelector(`[data-fill-key="${escapeSelector(item.id || '')}"]`);
+            const key = item.id || `fill_${items.indexOf(item) + 1}`;
+            const field = document.querySelector(`[data-fill-key="${escapeSelector(key)}"]`);
             const value = normalizeAnswerText(field?.value || '');
-            answers[item.id || ''] = field?.value || '';
+            answers[key] = field?.value || '';
             const expected = normalizeAnswerText(item.answer || '');
             if (expected && value === expected) correct += 1;
         });
@@ -732,13 +746,14 @@
 
     function evaluateDragExercises(lesson) {
         const items = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
-        if (!items.length) return { score: 100, answers: {} };
+        if (!items.length) return { score: null, answers: {} };
         const answers = {};
         let correct = 0;
         items.forEach(item => {
-            const zone = document.querySelector(`[data-drop-zone="${escapeSelector(item.id || '')}"]`);
+            const key = item.id || `drag_${items.indexOf(item) + 1}`;
+            const zone = document.querySelector(`[data-drop-zone="${escapeSelector(key)}"]`);
             const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.textContent || '');
-            answers[item.id || ''] = current;
+            answers[key] = current;
             const expected = (item.answer || []).map(normalizeAnswerText);
             const given = current.map(normalizeAnswerText);
             if (expected.length && expected.join('|') === given.join('|')) correct += 1;
@@ -759,7 +774,7 @@
 
     function calculateScore(lesson, answers) {
         const questions = Array.isArray(lesson.questions) ? lesson.questions : [];
-        if (!questions.length) return { score: 0, skillScores: {} };
+        if (!questions.length) return { score: null, skillScores: {} };
 
         const correct = questions.filter(question => answers[question.id] === question.answer).length;
         const score = Math.round((correct / questions.length) * 100);
@@ -966,23 +981,37 @@
             const zone = document.querySelector(`[data-drop-zone="${escapeSelector(zoneId)}"]`);
             if (!zone) return;
 
-            pool.querySelectorAll('.drag-chip').forEach(chip => {
+            const bindChip = chip => {
                 chip.addEventListener('dragstart', e => {
-                    e.dataTransfer?.setData('text/plain', chip.dataset.piece || '');
+                    e.dataTransfer?.setData('text/plain', chip.textContent || '');
+                    e.dataTransfer?.setData('source', chip.parentElement === zone ? 'zone' : 'pool');
                     chip.classList.add('opacity-60');
                 });
                 chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
                 chip.addEventListener('click', () => {
-                    zone.appendChild(chip);
+                    if (chip.parentElement === zone) {
+                        pool.appendChild(chip);
+                    } else {
+                        zone.appendChild(chip);
+                    }
                 });
-            });
+            };
+
+            pool.querySelectorAll('.drag-chip').forEach(bindChip);
+            zone.querySelectorAll('.drag-chip').forEach(bindChip);
 
             zone.addEventListener('dragover', e => e.preventDefault());
             zone.addEventListener('drop', e => {
                 e.preventDefault();
-                const pieceIndex = e.dataTransfer?.getData('text/plain');
-                const chip = pool.querySelector(`.drag-chip[data-piece="${pieceIndex}"]`);
-                if (chip) zone.appendChild(chip);
+                const text = e.dataTransfer?.getData('text/plain');
+                const chip = Array.from(document.querySelectorAll('.drag-chip')).find(node => node.classList.contains('opacity-60') && node.textContent === text);
+                if (!chip) return;
+                const target = e.target.closest('.drag-chip');
+                if (target && target.parentElement === zone && target !== chip) {
+                    zone.insertBefore(chip, target);
+                } else {
+                    zone.appendChild(chip);
+                }
             });
         });
 
@@ -995,7 +1024,7 @@
                 const input = card?.querySelector(`[data-essay-key="${escapeSelector(key)}"]`);
                 const feedback = card?.querySelector('.essay-feedback');
                 if (!feedback) return;
-                const item = (lesson.essay_exercises || []).find(entry => String(entry.id || '') === key.replace('essay_', ''));
+                const item = (lesson.essay_exercises || []).find((entry, index) => String(entry.id || `essay_${index + 1}`) === key);
                 const ok = normalizeAnswerText(input?.value || '') === normalizeAnswerText(item?.answer || '');
                 feedback.classList.remove('hidden');
                 feedback.innerHTML = ok
@@ -1012,7 +1041,7 @@
                 const card = button.closest('.practice-card');
                 const input = card?.querySelector(`[data-fill-key="${escapeSelector(key)}"]`);
                 const feedback = card?.querySelector('.fill-feedback');
-                const item = (lesson.fill_exercises || []).find(entry => String(entry.id || '') === key);
+                const item = (lesson.fill_exercises || []).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
                 const ok = normalizeAnswerText(input?.value || '') === normalizeAnswerText(item?.answer || '');
                 if (feedback) {
                     feedback.classList.remove('hidden');
@@ -1031,7 +1060,7 @@
                 const card = button.closest('.practice-card');
                 const zone = card?.querySelector(`[data-drop-zone="${escapeSelector(key)}"]`);
                 const feedback = card?.querySelector('.drag-feedback');
-                const item = (lesson.drag_exercises || []).find(entry => String(entry.id || '') === key);
+                const item = (lesson.drag_exercises || []).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
                 const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.textContent || '');
                 const ok = current.map(normalizeAnswerText).join('|') === (item?.answer || []).map(normalizeAnswerText).join('|');
                 if (feedback) {

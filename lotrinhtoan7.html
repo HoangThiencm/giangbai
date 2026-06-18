@@ -88,6 +88,44 @@
             background: #f0fdfa;
             box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.08);
         }
+        .essay-input,
+        .fill-input {
+            width: calc(100% - 32px);
+            margin: 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: #0f172a;
+            outline: none;
+        }
+        .essay-input:focus,
+        .fill-input:focus {
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+        }
+        .drag-pool,
+        .drag-slot-row {
+            margin: 16px;
+            display: flex;
+            min-height: 52px;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-radius: 8px;
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
+            padding: 12px;
+        }
+        .drag-slot-row { background: #f0fdfa; border-color: #5eead4; }
+        .drag-chip {
+            border: 1px solid #99f6e4;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #0f172a;
+            cursor: grab;
+            font-weight: 700;
+            padding: 8px 12px;
+        }
+        .drag-chip:active { cursor: grabbing; }
         .answer-letter {
             display: grid;
             width: 28px;
