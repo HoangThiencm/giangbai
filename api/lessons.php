@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/helpers.php';
-session_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 set_exception_handler(function (Throwable $e) {
     $payload = ['error' => 'Lỗi server khi tải lộ trình.'];
@@ -37,8 +40,9 @@ function mysql_datetime_or_null($value): ?string
 function table_exists(PDO $pdo, string $table): bool
 {
     try {
-        $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
-        $stmt->execute([$table]);
+        $safeTable = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+        if ($safeTable === '') return false;
+        $stmt = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote($safeTable));
         return (bool)$stmt->fetch();
     } catch (Throwable $e) {
         return false;
@@ -48,8 +52,10 @@ function table_exists(PDO $pdo, string $table): bool
 function column_exists(PDO $pdo, string $table, string $column): bool
 {
     try {
-        $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
-        $stmt->execute([$column]);
+        $safeTable = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+        $safeColumn = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+        if ($safeTable === '' || $safeColumn === '') return false;
+        $stmt = $pdo->query("SHOW COLUMNS FROM `{$safeTable}` LIKE " . $pdo->quote($safeColumn));
         return (bool)$stmt->fetch();
     } catch (Throwable $e) {
         return false;
@@ -208,6 +214,12 @@ if ($method === 'GET' && $canManageLessons && !empty($_GET['admin'])) {
 
 if ($method === 'GET') {
     $user = ensure_login();
+    if (!table_exists($pdo, 'lessons')) {
+        respond([
+            'error' => 'Chưa có bảng lessons trên database.',
+            'detail' => 'Chạy api/migrate_lessons.php một lần để tạo bảng và dữ liệu mẫu.'
+        ], 500);
+    }
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
     $lessons = array_map('lesson_row_to_payload', $stmt->fetchAll());
 

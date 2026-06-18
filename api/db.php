@@ -1,9 +1,8 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-
 $configPath = __DIR__ . '/config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'error' => 'Missing api/config.php. Copy api/config.sample.php to api/config.php and fill database credentials.'
     ], JSON_UNESCAPED_UNICODE);
@@ -14,6 +13,9 @@ require_once $configPath;
 
 if (defined('APP_SESSION_NAME')) {
     session_name(APP_SESSION_NAME);
+}
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
 try {
@@ -29,6 +31,7 @@ try {
     );
 } catch (Throwable $e) {
     http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['error' => 'Database connection failed.'], JSON_UNESCAPED_UNICODE);
     exit;
 }

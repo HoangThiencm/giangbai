@@ -232,7 +232,9 @@
         let data = null;
         try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
         if (!res.ok) {
-            const message = data && (data.detail || data.error || data.message) ? (data.detail || data.error || data.message) : `HTTP ${res.status}`;
+            const base = data && (data.error || data.message) ? (data.error || data.message) : `HTTP ${res.status}`;
+            const detail = data && data.detail ? String(data.detail) : '';
+            const message = detail && detail !== base ? `${base} (${detail})` : (detail || base);
             throw new Error(message);
         }
         return data;
