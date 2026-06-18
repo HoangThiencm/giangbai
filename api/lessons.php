@@ -17,6 +17,23 @@ function parse_json_or_default($value, $default)
     return is_array($decoded) ? $decoded : $default;
 }
 
+function mysql_datetime_or_null($value): ?string
+{
+    $value = trim((string)($value ?? ''));
+    if ($value === '') return null;
+
+    try {
+        $date = new DateTime($value);
+        $date->setTimezone(new DateTimeZone('UTC'));
+        return $date->format('Y-m-d H:i:s');
+    } catch (Throwable $e) {
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
+            return $value;
+        }
+        return null;
+    }
+}
+
 function table_exists(PDO $pdo, string $table): bool
 {
     try {
@@ -233,8 +250,8 @@ if ($method === 'POST' && $action === 'save_progress') {
     $state = $data['state'] ?? [];
     if (!is_array($state)) $state = [];
 
-    $startedAt = !empty($data['started_at']) ? $data['started_at'] : null;
-    $completedAt = !empty($data['completed_at']) ? $data['completed_at'] : null;
+    $startedAt = mysql_datetime_or_null($data['started_at'] ?? null);
+    $completedAt = mysql_datetime_or_null($data['completed_at'] ?? null);
 
     $stmt = $pdo->prepare('SELECT id FROM student_lesson_progress WHERE student_id = ? AND lesson_id = ? LIMIT 1');
     $stmt->execute([$user['id'], $lessonId]);

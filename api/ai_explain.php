@@ -63,15 +63,15 @@ if ($lastUsedKey !== '') {
     $keys = array_merge(array_values(array_filter($keys, fn($key) => $key !== $lastUsedKey)), [$lastUsedKey]);
 }
 
-$prompt = "Ban la tro ly hoc Toan cho hoc sinh THCS. Hay giai thich that de hieu, ngan gon, dung tieng Viet, khong lam thay toan bo bai neu la bai tap.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNoi dung hoc sinh chua hieu:\n{$text}\n\nTra loi theo 3 phan ngan: Y chinh, Giai thich de hieu, Vi du nho.";
+$prompt = "Ban la tro ly hoc Toan cho hoc sinh THCS. Nhiem vu duy nhat: tra loi dung phan hoc sinh vua hoi trong muc NOI DUNG CAN GIAI THICH, khong tu y chuyen sang chu de khac, khong tom tat ca bai, khong them loi chao, khong noi 'thay se giup', khong dung Markdown, khong dung **, khong dung gach ngang ---.\n\nQuy tac bat buoc:\n- Neu noi dung la mot khai niem/cau/cum tu: giai thich truc tiep khai niem/cau/cum tu do.\n- Neu noi dung la mot cong thuc: giai thich tung ky hieu va y nghia cong thuc do, giu nguyen ky hieu Toan.\n- Neu noi dung la mot bai tap: chi goi y cach lam va diem can chu y, khong lam thay tron ven neu khong duoc yeu cau.\n- Chi dua vi du khi vi du giup lam ro dung noi dung dang hoi; neu dua vi du thi that ngan.\n- Neu noi dung hoi khong ro, noi ro can them thong tin nao, khong bịa.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNOI DUNG CAN GIAI THICH:\n{$text}\n\nTra loi bang 2-5 cau ngan, bam sat noi dung tren.";
 
 $payload = json_encode([
     'contents' => [[
         'parts' => [[ 'text' => $prompt ]]
     ]],
     'generationConfig' => [
-        'temperature' => 0.35,
-        'maxOutputTokens' => 700,
+        'temperature' => 0.2,
+        'maxOutputTokens' => 450,
     ],
 ], JSON_UNESCAPED_UNICODE);
 

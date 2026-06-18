@@ -95,12 +95,41 @@
     }
 
     function mathText(value) {
-        return escapeHtml(normalizeMathContent(value))
-            .replace(/\n/g, '<br>');
+        const source = normalizeMathContent(value);
+        const parts = source.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\n$]*?\$|\\\([\s\S]*?\\\))/g);
+        return parts.map(part => {
+            if (!part) return '';
+            const isMath = (
+                (part.startsWith('$$') && part.endsWith('$$')) ||
+                (part.startsWith('\\[') && part.endsWith('\\]')) ||
+                (part.startsWith('\\(') && part.endsWith('\\)')) ||
+                (part.startsWith('$') && part.endsWith('$'))
+            );
+            if (isMath) {
+                return escapeHtml(part.replace(/[ \t]*\n[ \t]*/g, ' '));
+            }
+            return escapeHtml(part).replace(/\n/g, '<br>');
+        }).join('');
     }
 
     function richText(value) {
         return mathText(value);
+    }
+
+    function cleanAiAnswer(value) {
+        return String(value ?? '')
+            .replace(/\r\n?/g, '\n')
+            .replace(/^\s*[-*_]{3,}\s*$/gm, '')
+            .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+            .replace(/__([^_\n]+)__/g, '$1')
+            .replace(/^\s*#{1,6}\s+/gm, '')
+            .replace(/^\s*[-*]\s+/gm, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    function renderAiAnswer(value) {
+        return mathText(cleanAiAnswer(value));
     }
 
     function renderParagraphs(items, emptyText, aiType = 'theory') {
@@ -593,7 +622,8 @@
                             text
                         })
                     });
-                    output.innerHTML = escapeHtml(data.answer || '').replace(/\n/g, '<br>');
+                    output.innerHTML = renderAiAnswer(data.answer || '');
+                    typesetMath();
                 } catch (err) {
                     output.textContent = err.message || 'Chưa gọi được AI.';
                 } finally {
@@ -1020,7 +1050,8 @@
                             text
                         })
                     });
-                    output.innerHTML = escapeHtml(data.answer || '').replace(/\n/g, '<br>');
+                    output.innerHTML = renderAiAnswer(data.answer || '');
+                    typesetMath();
                 } catch (err) {
                     output.textContent = err.message || 'Chưa gọi được AI.';
                 } finally {
