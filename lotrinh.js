@@ -578,6 +578,7 @@
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
                     <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em..." ${practiceDone ? 'disabled' : ''}>${escapeHtml(saved)}</textarea>
+                    ${practiceDone ? '' : renderMathSymbolToolbar('essay', key)}
                     <div class="mt-3 flex flex-wrap gap-2">
                         <button type="button" class="essay-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
@@ -604,7 +605,7 @@
             const feedback = practiceDone
                 ? (ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã điền khớp đáp án.'
-                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${escapeHtml(item.answer || '')}`)
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${mathText(item.answer || '')}`)
                 : '';
             return `
                 <article class="practice-card">
@@ -612,7 +613,8 @@
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
-                    <input class="fill-input" type="text" data-fill-key="${escapeHtml(key)}" value="${escapeHtml(saved)}" placeholder="Nhập đáp án..." ${practiceDone ? 'disabled' : ''}>
+                    <input class="fill-input" type="text" data-fill-key="${escapeHtml(key)}" value="${escapeHtml(saved)}" placeholder="Nhập đáp án hoặc bấm ký hiệu bên dưới..." ${practiceDone ? 'disabled' : ''}>
+                    ${practiceDone ? '' : renderMathSymbolToolbar('fill', key)}
                     <div class="mt-3 flex flex-wrap gap-2">
                         <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
@@ -965,8 +967,127 @@
         return result;
     }
 
+    const MATH_SYMBOL_GROUPS = [
+        {
+            title: 'Tập hợp',
+            symbols: [
+                { label: '∈', insert: '\\in', title: 'Thuộc' },
+                { label: '∉', insert: '\\notin', title: 'Không thuộc' },
+                { label: '⊂', insert: '\\subset', title: 'Tập con' },
+                { label: '⊆', insert: '\\subseteq', title: 'Tập con hoặc bằng' },
+                { label: '∪', insert: '\\cup', title: 'Hợp' },
+                { label: '∩', insert: '\\cap', title: 'Giao' },
+                { label: '∅', insert: '\\emptyset', title: 'Tập rỗng' },
+            ]
+        },
+        {
+            title: 'Phép tính',
+            symbols: [
+                { label: '+', insert: '+', title: 'Cộng' },
+                { label: '−', insert: '-', title: 'Trừ' },
+                { label: '×', insert: '\\times', title: 'Nhân' },
+                { label: '÷', insert: '\\div', title: 'Chia' },
+                { label: '=', insert: '=', title: 'Bằng' },
+                { label: '≠', insert: '\\neq', title: 'Khác' },
+                { label: '<', insert: '<', title: 'Nhỏ hơn' },
+                { label: '>', insert: '>', title: 'Lớn hơn' },
+                { label: '≤', insert: '\\leq', title: 'Nhỏ hơn hoặc bằng' },
+                { label: '≥', insert: '\\geq', title: 'Lớn hơn hoặc bằng' },
+            ]
+        },
+        {
+            title: 'Công thức',
+            symbols: [
+                { label: '√', insert: '\\sqrt{}', title: 'Căn bậc hai' },
+                { label: 'x²', insert: '^2', title: 'Bình phương' },
+                { label: 'x³', insert: '^3', title: 'Lập phương' },
+                { label: 'a/b', insert: '\\frac{}{}', title: 'Phân số' },
+                { label: '|x|', insert: '\\left| \\right|', title: 'Giá trị tuyệt đối' },
+                { label: 'π', insert: '\\pi', title: 'Pi' },
+                { label: '∞', insert: '\\infty', title: 'Vô cực' },
+            ]
+        }
+    ];
+
+    const ANSWER_ALIASES = {
+        'thuoc': '\\in',
+        'thuộc': '\\in',
+        'khong thuoc': '\\notin',
+        'không thuộc': '\\notin',
+        'tap rong': '\\emptyset',
+        'tập rỗng': '\\emptyset',
+        'khac': '\\neq',
+        'khác': '\\neq',
+        'nho hon hoac bang': '\\leq',
+        'nhỏ hơn hoặc bằng': '\\leq',
+        'lon hon hoac bang': '\\geq',
+        'lớn hơn hoặc bằng': '\\geq',
+    };
+
     function normalizeAnswerText(value) {
-        return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+        let text = String(value ?? '').trim();
+        text = text
+            .replace(/∈/g, '\\in')
+            .replace(/∉/g, '\\notin')
+            .replace(/⊂/g, '\\subset')
+            .replace(/⊆/g, '\\subseteq')
+            .replace(/∪/g, '\\cup')
+            .replace(/∩/g, '\\cap')
+            .replace(/∅/g, '\\emptyset')
+            .replace(/×/g, '\\times')
+            .replace(/÷/g, '\\div')
+            .replace(/≤/g, '\\leq')
+            .replace(/≥/g, '\\geq')
+            .replace(/≠/g, '\\neq')
+            .replace(/π/g, '\\pi')
+            .replace(/∞/g, '\\infty')
+            .replace(/√/g, '\\sqrt');
+        text = text.toLowerCase().replace(/\s+/g, ' ');
+        if (ANSWER_ALIASES[text]) text = ANSWER_ALIASES[text];
+        return text.replace(/\s+/g, '');
+    }
+
+    function renderMathSymbolToolbar(inputKind, inputKey) {
+        return `
+            <div class="math-symbol-toolbar" data-input-kind="${escapeHtml(inputKind)}" data-input-key="${escapeHtml(inputKey)}">
+                <p class="math-symbol-toolbar-title">Chèn ký hiệu toán (bấm để thêm vào ô đáp án):</p>
+                ${MATH_SYMBOL_GROUPS.map(group => `
+                    <div class="math-symbol-group">
+                        <span class="math-symbol-group-label">${escapeHtml(group.title)}</span>
+                        <div class="math-symbol-row">
+                            ${group.symbols.map(symbol => `
+                                <button type="button" class="math-symbol-btn" data-insert="${escapeHtml(symbol.insert)}" title="${escapeHtml(symbol.title)}">${escapeHtml(symbol.label)}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function insertIntoInput(input, text) {
+        if (!input || input.disabled) return;
+        const start = typeof input.selectionStart === 'number' ? input.selectionStart : input.value.length;
+        const end = typeof input.selectionEnd === 'number' ? input.selectionEnd : input.value.length;
+        input.value = `${input.value.slice(0, start)}${text}${input.value.slice(end)}`;
+        const pos = start + text.length;
+        input.setSelectionRange(pos, pos);
+        input.focus();
+    }
+
+    function bindMathSymbolToolbars(root = document) {
+        root.querySelectorAll('.math-symbol-toolbar').forEach(toolbar => {
+            if (toolbar.dataset.boundMathToolbar === '1') return;
+            toolbar.dataset.boundMathToolbar = '1';
+            const kind = toolbar.dataset.inputKind || '';
+            const key = toolbar.dataset.inputKey || '';
+            const attr = kind === 'essay' ? 'data-essay-key' : 'data-fill-key';
+            const input = key ? root.querySelector(`[${attr}="${escapeSelector(key)}"]`) : null;
+            if (!input) return;
+            toolbar.querySelectorAll('.math-symbol-btn').forEach(button => {
+                button.onclick = () => insertIntoInput(input, button.dataset.insert || '');
+            });
+        });
     }
 
     function evaluateEssayExercises(lesson) {
@@ -1343,6 +1464,8 @@
                 }
             };
         });
+
+        bindMathSymbolToolbars();
     }
 
     try {

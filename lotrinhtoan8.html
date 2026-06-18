@@ -105,6 +105,51 @@
             border-color: #0f766e;
             box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
         }
+        .math-symbol-toolbar {
+            margin: 0 16px 12px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+        .math-symbol-toolbar-title {
+            margin: 0 0 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #475569;
+        }
+        .math-symbol-group + .math-symbol-group { margin-top: 10px; }
+        .math-symbol-group-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .math-symbol-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .math-symbol-btn {
+            min-width: 36px;
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            color: #0f172a;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+        .math-symbol-btn:hover {
+            border-color: #0f766e;
+            background: #ecfdf5;
+            color: #0f766e;
+        }
         .drag-pool,
         .drag-slot-row {
             margin: 16px;
@@ -398,7 +443,7 @@
         </main>
     </div>
 
-    <script src="lotrinh.js?v=20260618-lessons-fix1"></script>
+    <script src="lotrinh.js?v=20260618-math-toolbar1"></script>
     <script src="admin-lesson-manager.js?v=20260618-route-teacher2"></script>
     <script src="admin-progress.js?v=20260618-teacher-progress1"></script>
 </body>
