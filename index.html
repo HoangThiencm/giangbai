@@ -681,6 +681,10 @@
             </div>
         </section>
 
+        <section id="lessonDesignerSection" class="mt-8 hidden">
+            <div id="lessonDesignerMount"></div>
+        </section>
+
     </main>
 
     <!-- CONFIG MODAL -->
@@ -769,7 +773,11 @@
     <script>
         // Init UI
         SystemConfig.renderConfig();
+        if (localStorage.getItem('userRole') === 'teacher') {
+            document.getElementById('lessonDesignerSection')?.classList.remove('hidden');
+        }
     </script>
+    <script src="admin-lesson-manager.js?v=20260618-teacher1"></script>
 
 </body>
 

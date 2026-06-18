@@ -59,9 +59,9 @@
 
     function getAdminKey() {
         try {
-            return typeof cachedKey !== 'undefined' ? cachedKey : window.cachedKey;
+            return typeof cachedKey !== 'undefined' ? cachedKey : (window.cachedKey || '');
         } catch {
-            return window.cachedKey;
+            return window.cachedKey || '';
         }
     }
 
@@ -256,7 +256,9 @@
 
     function ensurePanel() {
         if (el('lessonEditorPanel')) return;
-        const dashboard = el('dashboardSection');
+        const teacherMount = el('lessonDesignerMount');
+        if (teacherMount && localStorage.getItem('userRole') !== 'teacher') return;
+        const dashboard = teacherMount || el('dashboardSection');
         if (!dashboard) return;
 
         const panel = document.createElement('section');
@@ -528,7 +530,7 @@
         try {
             const res = await fetch('api/lessons.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': getAdminKey() },
+                headers: lessonRequestHeaders(),
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
@@ -547,11 +549,8 @@
     }
 
     async function refreshLessons() {
-        const adminKey = getAdminKey();
-        if (!adminKey) return;
-
         const res = await fetch('api/lessons.php?admin=1&debug=1', {
-            headers: { 'X-Admin-Key': adminKey },
+            headers: lessonRequestHeaders(false),
             cache: 'no-store'
         });
         const data = await res.json();
@@ -564,6 +563,13 @@
         renderSelect();
         fillForm(currentSlug);
         document.dispatchEvent(new CustomEvent('adminLessonsChanged', { detail: { lessons } }));
+    }
+
+    function lessonRequestHeaders(hasBody = true) {
+        const headers = hasBody ? { 'Content-Type': 'application/json' } : {};
+        const adminKey = getAdminKey();
+        if (adminKey) headers['X-Admin-Key'] = adminKey;
+        return headers;
     }
 
     function wrapLoadUsers() {
@@ -583,7 +589,8 @@
     function bootIfReady() {
         ensurePanel();
         wrapLoadUsers();
-        if (getAdminKey()) refreshLessons().catch(console.warn);
+        const canLoadFromTeacherPage = !!el('lessonDesignerMount') && localStorage.getItem('userRole') === 'teacher';
+        if (getAdminKey() || canLoadFromTeacherPage) refreshLessons().catch(console.warn);
     }
 
     if (document.readyState === 'loading') {

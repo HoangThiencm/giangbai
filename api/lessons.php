@@ -73,6 +73,16 @@ function ensure_login(): array
     return $user;
 }
 
+function current_session_user(PDO $pdo): ?array
+{
+    if (empty($_SESSION['user_id'])) return null;
+    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch();
+    if (!$user || !(bool)$user['is_active']) return null;
+    return $user;
+}
+
 function ensure_lesson_schema(PDO $pdo): void
 {
     try {
@@ -157,8 +167,10 @@ $requestData = $method === 'POST' ? json_body() : [];
 $action = $_GET['action'] ?? ($_POST['action'] ?? ($requestData['action'] ?? ''));
 $adminKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
 $isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $adminKey);
+$sessionUser = current_session_user($pdo);
+$canManageLessons = $isAdmin || (($sessionUser['role'] ?? '') === 'teacher');
 
-if ($method === 'GET' && $isAdmin && !empty($_GET['admin'])) {
+if ($method === 'GET' && $canManageLessons && !empty($_GET['admin'])) {
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
     respond(['ok' => true, 'lessons' => array_map('lesson_row_to_payload', $stmt->fetchAll())]);
 }
@@ -249,7 +261,7 @@ if ($method === 'POST' && $action === 'reset_progress') {
 }
 
 if ($method === 'POST' && $action === 'save_content') {
-    if (!$isAdmin) respond(['error' => 'Sai Admin Key.'], 401);
+    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
     $data = $requestData;
     $slug = trim($data['slug'] ?? '');
     if ($slug === '') respond(['error' => 'Thiếu slug.'], 422);

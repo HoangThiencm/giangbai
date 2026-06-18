@@ -1,6 +1,7 @@
 (async function () {
     const els = {
         studentName: document.getElementById('studentNameDisplay'),
+        accountRoleLabel: document.getElementById('accountRoleLabel'),
         routeTitle: document.getElementById('routeTitle'),
         routeSubject: document.getElementById('routeSubject'),
         routeChapter: document.getElementById('routeChapter'),
@@ -147,7 +148,10 @@
             return;
         }
 
-        els.studentName.textContent = state.user?.full_name || state.user?.username || 'Học sinh';
+        els.studentName.textContent = state.user?.full_name || state.user?.username || 'Tài khoản';
+        if (els.accountRoleLabel) {
+            els.accountRoleLabel.textContent = state.user?.role === 'teacher' ? 'Giáo viên' : 'Học sinh';
+        }
         renderOverallProgress();
         renderLessonList();
         renderHeader(lesson);
@@ -243,7 +247,6 @@
                 <span class="text-sm font-bold text-slate-900">${progress.score || 0}%</span>
             </div>
             <div class="skill-bar"><span style="width:${progress.score || 0}%"></span></div>
-            <p class="text-xs leading-5 text-slate-500">Kết quả và trạng thái bài được lưu trong database.</p>
         `;
     }
 
@@ -544,7 +547,7 @@
 
         if (!ui.theoryDone) {
             els.nextActionTitle.textContent = 'Bắt đầu bằng lý thuyết ngắn';
-            els.nextActionBody.textContent = 'Học sinh nên đọc phần lý thuyết trước để nắm khái niệm và ký hiệu của bài.';
+            els.nextActionBody.textContent = 'Đọc phần lý thuyết trước để nắm khái niệm và ký hiệu của bài.';
             return;
         }
         if (!ui.examplesDone) {
@@ -554,18 +557,18 @@
         }
         if (progress.status === 'not_started') {
             els.nextActionTitle.textContent = 'Làm bài luyện để hệ thống chấm tự động';
-            els.nextActionBody.textContent = 'Sau khi nộp, điểm và mức độ theo từng kỹ năng sẽ được lưu vào database.';
+            els.nextActionBody.textContent = 'Sau khi nộp, hệ thống sẽ chấm điểm và gợi ý phần cần luyện thêm.';
             return;
         }
         if (progress.status === 'mastered' && weakSkills.length === 0) {
             els.nextActionTitle.textContent = 'Có thể chuyển sang bài tiếp theo';
-            els.nextActionBody.textContent = 'Học sinh đã đạt mục tiêu của bài này. Giáo viên có thể mở Bài 2 trong lộ trình.';
+            els.nextActionBody.textContent = 'Đã đạt mục tiêu của bài này.';
             return;
         }
 
         const weakest = weakSkills[0];
         els.nextActionTitle.textContent = weakest ? `Luyện thêm: ${weakest.name}` : 'Luyện thêm một vòng nữa';
-        els.nextActionBody.textContent = weakest ? `Kỹ năng này hiện chưa chạm mốc mục tiêu. Có thể giao thêm 3-5 câu cùng dạng.` : 'Học sinh nên làm lại bài luyện để ổn định kết quả.';
+        els.nextActionBody.textContent = weakest ? `Kỹ năng này hiện chưa chạm mốc mục tiêu. Có thể luyện thêm 3-5 câu cùng dạng.` : 'Nên làm lại bài luyện để ổn định kết quả.';
     }
 
     async function syncLessonState(lesson, uiState, extra = {}) {

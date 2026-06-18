@@ -752,6 +752,28 @@
                         <p class="text-sm text-slate-500 mt-1">Học sinh không tự đăng ký. Giáo viên tạo tài khoản và chọn trang được phép mở.</p>
                     </div>
                 </div>
+                <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h4 class="font-bold text-emerald-900"><i class="fas fa-arrow-up-wide-short mr-2"></i>Lên lớp hàng loạt</h4>
+                            <p class="mt-1 text-sm text-emerald-800">Chọn một đợt chuyển lớp, hệ thống tự chuyển các học sinh đang có lộ trình tương ứng.</p>
+                        </div>
+                        <div class="grid gap-3 sm:grid-cols-[220px_180px]">
+                            <label class="text-sm font-bold text-emerald-900">
+                                Đợt chuyển
+                                <select id="bulkPromoteRoute" class="mt-1 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500">
+                                    <option value="lotrinhtoan6">Toán 6 lên Toán 7</option>
+                                    <option value="lotrinhtoan7">Toán 7 lên Toán 8</option>
+                                    <option value="lotrinhtoan8">Toán 8 lên Toán 9</option>
+                                </select>
+                            </label>
+                            <button type="button" id="bulkPromoteBtn" class="rounded bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white shadow hover:bg-emerald-800">
+                                <i class="fas fa-users mr-1"></i> Lên lớp hàng loạt
+                            </button>
+                        </div>
+                    </div>
+                    <p id="bulkPromoteHint" class="mt-2 text-sm font-semibold text-emerald-900"></p>
+                </div>
                 <form id="createStudentForm" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <label class="text-sm font-bold text-slate-700">
                         Vai trò
@@ -791,6 +813,9 @@
 
             renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
             document.getElementById('createStudentForm').addEventListener('submit', createStudentAccount);
+            document.getElementById('bulkPromoteRoute').addEventListener('change', updateBulkPromoteHint);
+            document.getElementById('bulkPromoteBtn').addEventListener('click', bulkPromoteStudents);
+            updateBulkPromoteHint();
         }
 
         function renderPageChecks(containerId, selectedPages) {
@@ -839,6 +864,44 @@
             return next === current ? `${current} - Toán ${nextLevel}` : next;
         }
 
+        function promotionPayloadFor(user, promotion) {
+            const nextClassName = promotedClassName(user.class_name, promotion.nextLevel);
+            const nextPages = normalizeAllowedPagesForAdmin(user.allowed_pages)
+                .filter(page => !mathRouteOrder.includes(page));
+            nextPages.unshift(promotion.to);
+            return {
+                action: 'update',
+                id: user.id,
+                full_name: user.full_name,
+                class_name: nextClassName,
+                role: user.role,
+                password: '',
+                is_active: user.is_active,
+                allowed_pages: nextPages
+            };
+        }
+
+        function studentsForBulkPromotion(fromRoute) {
+            const fromIndex = mathRouteOrder.indexOf(fromRoute);
+            if (fromIndex < 0 || fromIndex >= mathRouteOrder.length - 1) return [];
+            return cachedUsers.filter(user => {
+                if (user.role !== 'student' || !user.is_active) return false;
+                const pages = normalizeAllowedPagesForAdmin(user.allowed_pages);
+                return pages.includes(fromRoute) && !pages.some(page => mathRouteOrder.indexOf(page) > fromIndex);
+            });
+        }
+
+        function updateBulkPromoteHint() {
+            const select = document.getElementById('bulkPromoteRoute');
+            const hint = document.getElementById('bulkPromoteHint');
+            if (!select || !hint) return;
+            const fromRoute = select.value;
+            const fromIndex = mathRouteOrder.indexOf(fromRoute);
+            const toRoute = mathRouteOrder[fromIndex + 1];
+            const students = studentsForBulkPromotion(fromRoute);
+            hint.textContent = `${students.length} học sinh đang phù hợp để chuyển từ ${hostingPages[fromRoute]?.title || fromRoute} sang ${hostingPages[toRoute]?.title || toRoute}.`;
+        }
+
         window.loadUsers = async function () {
             const key = document.getElementById('adminKey').value;
             if (!key) return alert('Vui lòng nhập Admin Key!');
@@ -861,6 +924,7 @@
                 ensureStudentCreatePanel();
                 updateStats(cachedUsers);
                 renderTable(cachedUsers, key);
+                updateBulkPromoteHint();
             } catch (e) {
                 alert(e.message);
             } finally {
@@ -1029,27 +1093,13 @@
                 return;
             }
 
-            const nextClassName = promotedClassName(user.class_name, promotion.nextLevel);
-            const nextPages = normalizeAllowedPagesForAdmin(user.allowed_pages)
-                .filter(page => !mathRouteOrder.includes(page));
-            nextPages.unshift(promotion.to);
-
             if (!confirm(`Chuyển ${user.full_name} lên ${hostingPages[promotion.to]?.title || promotion.to}?`)) return;
 
             try {
                 const res = await fetch('api/admin_students.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
-                    body: JSON.stringify({
-                        action: 'update',
-                        id: user.id,
-                        full_name: user.full_name,
-                        class_name: nextClassName,
-                        role: user.role,
-                        password: '',
-                        is_active: user.is_active,
-                        allowed_pages: nextPages
-                    })
+                    body: JSON.stringify(promotionPayloadFor(user, promotion))
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không chuyển lớp được.');
@@ -1057,6 +1107,60 @@
                 alert(`Đã chuyển ${user.full_name} lên ${hostingPages[promotion.to]?.title || promotion.to}.`);
             } catch (e) {
                 alert(e.message);
+            }
+        };
+
+        window.bulkPromoteStudents = async function () {
+            const select = document.getElementById('bulkPromoteRoute');
+            const fromRoute = select?.value;
+            const fromIndex = mathRouteOrder.indexOf(fromRoute);
+            const toRoute = mathRouteOrder[fromIndex + 1];
+            const students = studentsForBulkPromotion(fromRoute);
+
+            if (!students.length) {
+                alert('Không có học sinh phù hợp để chuyển trong đợt này.');
+                return;
+            }
+
+            const preview = students.slice(0, 8).map(user => `- ${user.full_name} (${user.class_name || 'chưa xếp lớp'})`).join('\n');
+            const more = students.length > 8 ? `\n... và ${students.length - 8} học sinh khác` : '';
+            if (!confirm(`Chuyển ${students.length} học sinh từ ${hostingPages[fromRoute]?.title || fromRoute} sang ${hostingPages[toRoute]?.title || toRoute}?\n\n${preview}${more}`)) return;
+
+            const button = document.getElementById('bulkPromoteBtn');
+            const oldText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Đang chuyển...';
+
+            let success = 0;
+            const failures = [];
+            try {
+                for (const user of students) {
+                    const promotion = {
+                        from: fromRoute,
+                        to: toRoute,
+                        nextLevel: fromIndex + 7
+                    };
+                    try {
+                        const res = await fetch('api/admin_students.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                            body: JSON.stringify(promotionPayloadFor(user, promotion))
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Không chuyển lớp được.');
+                        success += 1;
+                    } catch (e) {
+                        failures.push(`${user.full_name}: ${e.message}`);
+                    }
+                }
+                await loadUsers();
+                alert(failures.length
+                    ? `Đã chuyển ${success}/${students.length} học sinh.\n\nLỗi:\n${failures.join('\n')}`
+                    : `Đã chuyển ${success} học sinh lên ${hostingPages[toRoute]?.title || toRoute}.`);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = oldText;
+                updateBulkPromoteHint();
             }
         };
 
@@ -1078,8 +1182,8 @@
             }
         };
     </script>
-    <script src="admin-lesson-manager.js?v=20260618-promote1"></script>
-    <script src="admin-progress.js?v=20260618-promote1"></script>
+    <script src="admin-lesson-manager.js?v=20260618-bulkpromote1"></script>
+    <script src="admin-progress.js?v=20260618-bulkpromote1"></script>
     <script>
         (function () {
             const TAB_DEFS = [
