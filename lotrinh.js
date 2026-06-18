@@ -155,15 +155,24 @@
         return { answered, total: items.length, percent: Math.round((answered / items.length) * 100) };
     }
 
-    function lessonCompletionPercent(lesson) {
+    function lessonCompletionPercent(lesson, uiOverride = null, statusOverride = null) {
         const progress = currentLessonProgress(lesson);
-        const ui = currentUiState(lesson);
-        if (progress.status === 'mastered') return 100;
+        const ui = uiOverride || currentUiState(lesson);
+        const status = statusOverride || progress.status;
+        if (status === 'mastered') return 100;
         const practice = practiceProgress(lesson, ui);
         const theory = ui.theoryDone ? 30 : 0;
         const examples = ui.examplesDone ? 20 : 0;
         const practicePart = ui.practiceDone ? 50 : Math.round(practice.percent * 0.5);
         return Math.max(0, Math.min(100, theory + examples + practicePart));
+    }
+
+    function lessonProgressSkillScores(lesson, percent) {
+        const scores = {};
+        (lesson.skills || []).forEach(skill => {
+            scores[skill.id] = percent;
+        });
+        return scores;
     }
 
     function renderParagraphs(items, emptyText, aiType = 'theory') {
@@ -342,16 +351,19 @@
 
     function renderOverallProgress() {
         const masteredCount = state.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered').length;
-        const total = state.lessons.filter(lesson => lesson.is_published).length || state.lessons.length;
-        const percent = total ? Math.round((masteredCount / total) * 100) : 0;
+        const publishedLessons = state.lessons.filter(lesson => lesson.is_published);
+        const visibleLessons = publishedLessons.length ? publishedLessons : state.lessons;
+        const total = visibleLessons.length || state.lessons.length;
+        const percent = total ? Math.round(visibleLessons.reduce((sum, lesson) => sum + lessonCompletionPercent(lesson), 0) / total) : 0;
         const lesson = currentLesson();
         const currentPercent = lesson ? lessonCompletionPercent(lesson) : 0;
         els.overallProgress.innerHTML = `
             <div class="flex items-center justify-between text-sm">
                 <span class="font-semibold text-slate-600">Tiến độ chương</span>
-                <span class="font-bold text-slate-900">${masteredCount}/${total} bài đã vững</span>
+                <span class="font-bold text-slate-900">${percent}%</span>
             </div>
             <div class="skill-bar mt-3"><span style="width:${percent}%"></span></div>
+            <p class="mt-2 text-xs font-semibold text-slate-500">${masteredCount}/${total} bài đã học xong</p>
             <div class="mt-4 flex items-center justify-between text-sm">
                 <span class="font-semibold text-slate-600">Tiến độ bài hiện tại</span>
                 <span class="font-bold text-teal-700">${currentPercent}%</span>
@@ -362,7 +374,7 @@
 
     function statusInfo(status) {
         const map = {
-            mastered: { text: 'Đã vững', color: 'bg-teal-600', tone: 'text-teal-700' },
+            mastered: { text: 'Đã học xong', color: 'bg-teal-600', tone: 'text-teal-700' },
             needs_practice: { text: 'Cần luyện thêm', color: 'bg-amber-500', tone: 'text-amber-700' },
             in_progress: { text: 'Đang học', color: 'bg-sky-500', tone: 'text-sky-700' },
             not_started: { text: 'Chưa bắt đầu', color: 'bg-slate-400', tone: 'text-slate-600' },
@@ -445,17 +457,21 @@
             markBtn.onclick = async () => {
                 const ui = currentUiState(lesson);
                 const completedAt = new Date().toISOString();
-                await syncLessonState(lesson, {
+                const nextUi = {
                     ...ui,
                     theoryDone: true,
                     examplesDone: true,
                     practiceDone: true,
                     completedAt,
                     startedAt: ui.startedAt || completedAt
+                };
+                const nextPercent = lessonCompletionPercent(lesson, nextUi, 'mastered');
+                await syncLessonState(lesson, {
+                    ...nextUi
                 }, {
                     status: 'mastered',
-                    score: Math.max(progress.score || 0, 80),
-                    skillScores: progress.skillScores || {},
+                    score: nextPercent,
+                    skillScores: lessonProgressSkillScores(lesson, nextPercent),
                     completedAt
                 });
                 await reloadLessons();
@@ -513,7 +529,13 @@
                 return;
             }
             try {
-                await syncLessonState(lesson, { ...ui, theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
+                const nextUi = { ...ui, theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() };
+                const nextPercent = lessonCompletionPercent(lesson, nextUi, 'in_progress');
+                await syncLessonState(lesson, nextUi, {
+                    status: 'in_progress',
+                    score: nextPercent,
+                    skillScores: lessonProgressSkillScores(lesson, nextPercent)
+                });
                 await reloadLessons();
                 state.activeTab = 'examples';
                 render();
@@ -643,7 +665,13 @@
                 return;
             }
             try {
-                await syncLessonState(lesson, { ...ui, examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
+                const nextUi = { ...ui, examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() };
+                const nextPercent = lessonCompletionPercent(lesson, nextUi, 'in_progress');
+                await syncLessonState(lesson, nextUi, {
+                    status: 'in_progress',
+                    score: nextPercent,
+                    skillScores: lessonProgressSkillScores(lesson, nextPercent)
+                });
                 await reloadLessons();
                 state.activeTab = 'practice';
                 render();
@@ -997,9 +1025,10 @@
         const ui = currentUiState(lesson);
         const liveScoreData = calculateScore(lesson, ui.answers || {});
         const scores = Object.keys(progress.skillScores || {}).length ? progress.skillScores : liveScoreData.skillScores;
+        const completionPercent = lessonCompletionPercent(lesson);
         const skills = Array.isArray(lesson.skills) ? lesson.skills : [];
         els.skillPanel.innerHTML = skills.length ? skills.map(skill => {
-            const score = scores[skill.id] || 0;
+            const score = Math.max(scores[skill.id] || 0, completionPercent);
             return `
                 <div>
                     <div class="flex items-start justify-between gap-3 text-sm">

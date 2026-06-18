@@ -12,11 +12,16 @@
 - [x] Bổ sung hiển thị phần trăm tiến trình rõ ràng: sidebar có "Tiến độ bài hiện tại", header bài học có "Tiến trình học", và bảng "Kỹ năng của bài" hiển thị `0%`, `50%`, ... thay vì `--`.
 - [x] Gia cố AI giải thích để tránh câu trả lời bị cụt giữa chừng: tăng `maxOutputTokens`, yêu cầu AI kết thúc câu trọn vẹn, nếu phản hồi có dấu hiệu bị ngắt thì gọi tiếp một lượt để nối phần thiếu.
 - [x] Cập nhật bong bóng AI: phần thân bong bóng có `max-height: 320px` và cuộn dọc, để nội dung dài không bị tràn hoặc tạo cảm giác mất nội dung.
+- [x] Sửa lại cách tính "Tiến độ chương": trước đây chỉ tăng khi bài đạt `mastered`, giờ tính trung bình phần trăm hoàn thành của các bài nên đánh dấu lý thuyết/ví dụ/luyện tập sẽ làm tiến trình tăng ngay.
+- [x] Đổi nhãn trạng thái hoàn tất bài từ "Đã vững" sang "Đã học xong" để khớp với hành động người dùng bấm nút "Đã học".
+- [x] Sửa bảng "Kỹ năng của bài" để phản ánh tiến độ học của chính bài: đánh dấu lý thuyết hiển thị tối thiểu 30%, đánh dấu ví dụ tối thiểu 50%, bấm "Đã học" toàn bài hiển thị 100% thay vì đứng yên 0%.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
 - [ ] Vào tab Luyện tập khi chưa chọn đáp án: kiểm tra sidebar/header đã hiện phần trăm tiến trình bài học và bảng kỹ năng không còn `--`.
 - [ ] Chọn từng đáp án trắc nghiệm: kiểm tra phần trăm tiến trình bài hiện tại tăng theo số câu đã làm, dấu đúng/sai hiện ngay, và kỹ năng đổi phần trăm tương ứng.
+- [ ] Bấm "Đánh dấu đã học" ở lý thuyết hoặc "Đánh dấu đã xem ví dụ": kiểm tra "Tiến độ chương" và "Tiến độ bài hiện tại" tăng ngay sau khi lưu.
+- [ ] Bấm nút "Đã học" trên header bài học: kiểm tra trạng thái chuyển "Đã học xong" và các thanh trong "Kỹ năng của bài" lên 100%.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
