@@ -24,8 +24,14 @@
 
     const fileName = window.location.pathname.split('/').pop() || 'index.html';
     const pageKey = pageKeys[fileName];
+    const params = new URLSearchParams(window.location.search);
+    const isOpenExamLink = pageKey === 'thitructuyen' && params.get('mode') === 'student' && !!params.get('examId');
     const token = localStorage.getItem('authToken');
     const role = localStorage.getItem('userRole');
+
+    if (isOpenExamLink) {
+        return;
+    }
 
     if (!token) {
         window.location.href = 'login.html';
