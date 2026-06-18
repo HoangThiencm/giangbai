@@ -533,7 +533,8 @@
         document.getElementById('markTheoryDone').onclick = async () => {
             if (isTeacherPreview()) {
                 state.teacherPreviewUi = { ...state.teacherPreviewUi, theoryDone: true };
-                setActiveTab('examples');
+                state.activeTab = 'examples';
+                render();
                 return;
             }
             try {
@@ -544,7 +545,6 @@
                     score: nextPercent,
                     skillScores: lessonProgressSkillScores(lesson, nextPercent)
                 });
-                await reloadLessons();
                 state.activeTab = 'examples';
                 render();
             } catch (err) {
@@ -669,7 +669,8 @@
         document.getElementById('markExamplesDone').onclick = async () => {
             if (isTeacherPreview()) {
                 state.teacherPreviewUi = { ...state.teacherPreviewUi, examplesDone: true };
-                setActiveTab('practice');
+                state.activeTab = 'practice';
+                render();
                 return;
             }
             try {
@@ -680,7 +681,6 @@
                     score: nextPercent,
                     skillScores: lessonProgressSkillScores(lesson, nextPercent)
                 });
-                await reloadLessons();
                 state.activeTab = 'practice';
                 render();
             } catch (err) {
@@ -1153,7 +1153,6 @@
                 skillScores: progress.skillScores || {},
                 startedAt: nextState.startedAt
             });
-            await reloadLessons(false);
             render();
         } catch (err) {
             console.warn('Không lưu được trạng thái bắt đầu bài học', err);
