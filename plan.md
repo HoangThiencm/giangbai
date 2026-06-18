@@ -20,6 +20,12 @@
 - [x] Mở API `api/admin_progress.php` cho giáo viên đang đăng nhập, ngoài admin key, để nhiều giáo viên có thể theo dõi tiến độ trong phạm vi giao diện giáo viên.
 - [x] Render công thức Toán trong bảng theo dõi tiến độ của giáo viên: `admin-progress.js` xử lý LaTeX trong cột "Cần lưu ý", `index.html` và các trang lộ trình Toán đã có/nạp MathJax để không còn hiện raw như `$\mathbb{N}$`.
 - [x] Gỡ "Theo dõi tiến độ" khỏi `admin.html` và tab admin; admin chỉ giữ các việc tổng quát như tạo bài học, tạo tài khoản và cài đặt hệ thống.
+- [x] Theo dõi tiến độ **theo lớp** cho giáo viên: dropdown **Lớp** trong `admin-progress.js`, API `admin_progress.php` trả thêm mảng `classes`, thống kê và bảng lọc theo `class_name`; khi chọn "Tất cả lớp" thì bảng nhóm theo tên lớp kèm tóm tắt (số HS, đã học xong, cần luyện). Lựa chọn lớp được nhớ qua `localStorage.progress_class_filter`.
+- [x] Gỡ soạn bài khỏi `admin.html`; `admin-lesson-manager.js` chỉ mount vào `#lessonDesignerMount` khi `userRole === 'teacher'` trên `index.html` và các trang `lotrinhtoan6–9.html`.
+- [x] Marker thủ công cho nút **AI giải thích**: chỉ hiện nút khi nội dung có `[AI]` hoặc `[[AI]]` (ẩn marker khi hiển thị).
+- [x] Quy ước soạn nội dung bài học: Enter 1 lần = xuống dòng, Enter 2 lần = tách đoạn; hỗ trợ `**đậm**`, `*nghiêng*`, `++gạch chân++`, ảnh `![mô tả](url)`; render qua `lessonRichText()` trong `lotrinh.js`.
+- [x] Gợi ý hành động tiếp theo (`renderNextAction`) cập nhật theo tab và tiến độ; ô gợi ý có thể bấm để chuyển tab.
+- [x] Fallback AI: `api/ai_explain.php` thử Gemini trước, hết quota/lỗi thì gọi ShopAIKey (DeepSeek); cấu hình `shopaikey_api_key`, `shopaikey_model` trong `admin.html` / `global_config.json`.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -30,9 +36,12 @@
 - [ ] Đăng nhập bằng tài khoản giáo viên, vào giao diện soạn bài: kiểm tra có panel "Theo dõi tiến độ học sinh" ngay trong trang giáo viên và công thức trong cột "Cần lưu ý" được render.
 - [ ] Đăng nhập admin: kiểm tra không còn tab/panel "Theo dõi tiến độ" trong admin.
 - [ ] Với bài đã học xong, kiểm tra nút hiển thị "Học lại"; bấm vào thì bài quay về trạng thái đang học và tiến trình được reset.
+- [ ] Tạo/sửa học sinh trong admin với tên lớp rõ (vd. `6A`, `6B`, `6C`): đăng nhập giáo viên → mở trang lộ trình Toán 6 → panel tiến độ có dropdown **Lớp**; chọn từng lớp và lọc **Cần luyện thêm** để xem danh sách cần hỗ trợ.
+- [ ] Chọn "Tất cả lớp" trong panel tiến độ: kiểm tra bảng được nhóm theo lớp, mỗi nhóm có dòng tóm tắt số học sinh / đã học xong / cần luyện.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
 - [ ] Kiểm tra thực tế phần tính điểm (`score`) và các chỉ số kỹ năng (`skill_scores_json`) trên dữ liệu nhiều bài học/học sinh để đảm bảo báo cáo giáo viên khớp UI học sinh.
 - [ ] Mở rộng tính năng dùng module Gemini tự nhập key của riêng người dùng quản trị (bổ sung giao diện vào trang `admin.html`).
 - [ ] Chăm chút thêm cho giao diện di động (Responsive) của các trang lộ trình.
+- [ ] (Tùy chọn) Xuất nhanh báo cáo tiến độ theo lớp (CSV/in) hoặc lọc theo môn + lớp trên một màn hình tổng hợp.

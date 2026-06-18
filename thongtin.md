@@ -20,12 +20,21 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Tiến độ chương được tính bằng trung bình phần trăm hoàn thành của các bài trong lộ trình, không chỉ dựa vào số bài `mastered`; vì vậy đánh dấu đã học từng phần sẽ làm thanh tiến trình chương thay đổi.
    - Bảng kỹ năng không còn hiển thị `--` khi học sinh vào luyện tập; mặc định hiển thị `0%`, lấy tiến độ hoàn thành bài làm mức tối thiểu, và cập nhật theo thao tác đánh dấu/nộp bài.
    - Khi bài đã học xong (`mastered`), nút trên header bài học đổi thành "Học lại"; bấm nút này sẽ reset tiến trình bài hiện tại để học sinh làm lại.
-   - Giao diện giáo viên (`lessonDesignerMount`) hiện có thêm panel theo dõi tiến độ học sinh. Trang admin không hiển thị panel này để giữ vai trò quản trị tổng quát.
+   - Giao diện giáo viên (`lessonDesignerMount`) có panel soạn bài (`admin-lesson-manager.js`, chỉ khi `userRole === 'teacher'`) và panel theo dõi tiến độ (`admin-progress.js`). Trang `admin.html` không mount hai panel này — admin chỉ quản lý tài khoản và cài đặt hệ thống.
+   - Marker `[AI]` / `[[AI]]` trong nội dung lý thuyết quyết định vị trí nút **AI giải thích**; không tự gắn theo ngắt đoạn.
+   - `lessonRichText()` render định dạng soạn bài: xuống dòng, đoạn, đậm/nghiêng/gạch chân, ảnh.
+   - `renderNextAction()` gợi ý bước tiếp theo theo tab (lý thuyết / ví dụ / luyện tập) và tiến độ hiện tại.
 
-3. **Backend API (`api/`)**
+3. **Theo dõi tiến độ giáo viên (`admin-progress.js`)**
+   - Mount vào `#lessonDesignerMount` khi đăng nhập vai trò `teacher`.
+   - Dropdown bài học, **lớp**, trạng thái, ô tìm kiếm; thẻ thống kê và bảng HS.
+   - Gọi `api/admin_progress.php`; nhóm bảng theo lớp khi xem "Tất cả lớp".
+
+4. **Backend API (`api/`)**
    - `lessons.php`: Quản lý lấy danh sách bài học, và **lưu tiến độ** (trạng thái `started_at`, `completed_at`, `state_json`, ...). Đã có cơ chế auto-migrate cột database độc lập (`ensure_progress_schema`) sử dụng từng khối try-catch riêng.
-   - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh. Hiện cho phép session giáo viên đang hoạt động; admin key vẫn dùng được ở API nhưng UI admin không còn hiển thị panel tiến độ.
-   - `ai_explain.php`: Chịu trách nhiệm gọi API LLM (Gemini) để sinh text giải thích dựa trên nội dung và ngữ cảnh. Trả về định dạng JSON súc tích. Đã tăng giới hạn token, yêu cầu câu cuối kết thúc trọn vẹn và tự gọi tiếp một lượt nếu phản hồi có dấu hiệu bị ngắt.
+   - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh theo `lesson_id`. Mỗi row gồm `class_name` (từ `users.class_name`); response thêm mảng `classes` (danh sách lớp distinct, đã sort). Cho phép session giáo viên đang hoạt động; admin key vẫn dùng được ở API nhưng UI admin không hiển thị panel tiến độ.
+   - `admin_students.php`: Tạo/sửa học sinh kèm trường `class_name` — dùng để nhóm và lọc tiến độ theo lớp (vd. `6A`, `6B`, `6C` hoặc `Toán 6 tối T3`).
+   - `ai_explain.php`: Gọi Gemini trước; nếu hết quota hoặc lỗi thì fallback ShopAIKey (`https://api.shopaikey.com/v1/chat/completions`, mặc định model `deepseek-v4-flash`). Cấu hình key/model trong `admin.html` → `global_config.json`. Trả JSON súc tích; đã tăng giới hạn token và nối tiếp khi câu trả lời bị ngắt.
    - `helpers.php`: Gồm các hàm tiện ích chung (`respond()`, `column_exists()`, `mysql_datetime_or_null()`).
 
 ## Vấn đề cần lưu ý (Notes)
@@ -41,6 +50,8 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Kỹ năng của bài:** `renderSkills()` hiện hiển thị tối thiểu bằng `lessonCompletionPercent()`, nên học sinh đánh dấu đã học lý thuyết/ví dụ/toàn bài sẽ thấy thanh kỹ năng của bài thay đổi ngay, không đứng yên 0%.
 - **Học lại:** Khi bài ở trạng thái `mastered`, nút hành động chuyển thành "Học lại". Nút này gọi `resetLesson()`, xóa tiến trình bài đó và đánh dấu lại trạng thái bắt đầu để học sinh học lại.
 - **Theo dõi tiến độ cho giáo viên:** `admin-progress.js` chỉ mount vào `lessonDesignerMount` khi `localStorage.userRole === 'teacher'`; không mount vào admin dashboard. Nếu không có admin key, request API vẫn chạy bằng session giáo viên.
+- **Theo dõi tiến độ theo lớp:** Tiến độ lưu theo từng học sinh trong `student_lesson_progress`; UI nhóm/lọc qua `users.class_name`. Panel có dropdown **Lớp** (`#progressClassFilter`), lọc trạng thái, tìm kiếm; thống kê (tổng HS, đã nộp, đã học xong, cần luyện) tính theo phạm vi lớp đang chọn. Chọn "Tất cả lớp" → bảng nhóm theo lớp, mỗi nhóm có dòng tóm tắt. Lựa chọn lớp lưu `localStorage.progress_class_filter`. Cache script: `admin-progress.js?v=20260619-class-filter1`.
+- **Quy trình quản lý nhiều lớp (vd. Toán 6 có 3 lớp):** (1) Gắn `class_name` khi tạo/sửa HS trong admin; (2) Mở trang lộ trình tương ứng; (3) Chọn bài học + lớp; (4) Lọc "Cần luyện thêm" để xem HS cần hỗ trợ trong lớp đó.
 - **Render công thức trong theo dõi tiến độ:** `admin-progress.js` có hàm `mathText()` và gọi `MathJax.typesetPromise()` sau khi render bảng. `index.html` và các trang lộ trình Toán nạp MathJax để công thức trong dữ liệu kỹ năng/cần lưu ý hiển thị đúng.
 - **Bài luyện tập:** Trắc nghiệm đã có phản hồi đúng/sai sau khi chọn đáp án; thao tác nộp bài cập nhật điểm, kỹ năng và trạng thái (`in_progress`, `needs_practice`, `mastered`). Nút "Làm lại bài luyện" reset đáp án/điểm luyện tập về trạng thái đang học để học sinh có thể làm lại.
 - **Cần phản biện sau sửa:** Người dùng nên kiểm tra lại 3 điểm trên UI: AI có còn trả câu cụt không, tab Luyện tập có hiện phần trăm thay vì `--` không, và phần trăm có tăng khi chọn đáp án không.
