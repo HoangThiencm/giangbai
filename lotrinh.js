@@ -33,6 +33,7 @@
         .replace(/^-+|-+$/g, '');
     const LS_TAB_KEY = `lotrinh_active_tab_${PAGE_STORAGE_KEY}`;
     const LS_LESSON_KEY = `lotrinh_selected_lesson_${PAGE_STORAGE_KEY}`;
+    const LS_TEACHER_PREVIEW_KEY = `lotrinh_teacher_preview_${PAGE_STORAGE_KEY}`;
 
     const state = {
         user: null,
@@ -40,6 +41,7 @@
         progress: {},
         selectedLessonId: localStorage.getItem(LS_LESSON_KEY) || '',
         activeTab: localStorage.getItem(LS_TAB_KEY) || 'learn',
+        teacherPreviewUi: { answers: {}, essayAnswers: {}, practiceDone: false },
         loading: true,
         error: ''
     };
@@ -77,7 +79,7 @@
         return escapeHtml(normalizeDisplayText(value));
     }
 
-    function renderParagraphs(items, emptyText) {
+    function renderParagraphs(items, emptyText, aiType = 'theory') {
         const parts = (Array.isArray(items) ? items : [])
             .map(normalizeDisplayText)
             .filter(Boolean);
@@ -86,7 +88,14 @@
         }
         return `
             <article class="lesson-document rounded border border-slate-200 bg-white p-5">
-                ${parts.map(part => `<p>${escapeHtml(part)}</p>`).join('')}
+                ${parts.map((part, index) => `
+                    <section class="lesson-explain-block">
+                        <p>${escapeHtml(part)}</p>
+                        <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(part)}">
+                            <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
+                        </button>
+                    </section>
+                `).join('')}
             </article>
         `;
     }
@@ -130,6 +139,7 @@
     }
 
     function currentLessonProgress(lesson) {
+        if (isTeacherPreview()) return { status: 'not_started', score: 0, skillScores: {}, state: state.teacherPreviewUi };
         if (!lesson) return { status: 'not_started', score: 0, skillScores: {}, state: {} };
         return state.progress[lesson.id] || { status: 'not_started', score: 0, skillScores: {}, state: {} };
     }
@@ -142,6 +152,7 @@
             examplesDone: !!ui.examplesDone,
             practiceDone: !!ui.practiceDone,
             answers: ui.answers || {},
+            essayAnswers: ui.essayAnswers || {},
             startedAt: ui.startedAt || progress.startedAt || null,
             completedAt: ui.completedAt || progress.completedAt || null,
         };
@@ -151,10 +162,16 @@
         return state.user?.role === 'teacher';
     }
 
+    function isTeacherPreview() {
+        return isTeacher() && localStorage.getItem(LS_TEACHER_PREVIEW_KEY) === '1';
+    }
+
     function applyRoleView() {
         const teacher = isTeacher();
-        els.studentLearningMain?.classList.toggle('hidden', teacher);
-        els.teacherLessonDesigner?.classList.toggle('hidden', !teacher);
+        const preview = isTeacherPreview();
+        els.studentLearningMain?.classList.toggle('hidden', teacher && !preview);
+        els.teacherLessonDesigner?.classList.toggle('hidden', !teacher || preview);
+        els.resetBtn?.classList.toggle('hidden', preview);
         if (els.accountRoleLabel) {
             els.accountRoleLabel.textContent = teacher ? 'Giáo viên' : 'Học sinh';
         }
@@ -185,8 +202,9 @@
 
         els.studentName.textContent = state.user?.full_name || state.user?.username || 'Tài khoản';
         applyRoleView();
-        if (isTeacher()) return;
+        if (isTeacher() && !isTeacherPreview()) return;
 
+        renderTeacherPreviewBanner();
         renderOverallProgress();
         renderLessonList();
         renderHeader(lesson);
@@ -195,6 +213,33 @@
         renderTasks(lesson);
         renderNextAction(lesson);
         typesetMath();
+    }
+
+    function renderTeacherPreviewBanner() {
+        if (!els.studentLearningMain) return;
+        const existing = document.getElementById('teacherPreviewBanner');
+        if (!isTeacherPreview()) {
+            existing?.remove();
+            return;
+        }
+        if (existing) return;
+        const banner = document.createElement('section');
+        banner.id = 'teacherPreviewBanner';
+        banner.className = 'panel p-4 lg:col-span-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between';
+        banner.innerHTML = `
+            <div>
+                <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Giáo viên đang xem thử</p>
+                <h2 class="text-lg font-bold text-slate-950">Giao diện bên dưới là cách học sinh nhìn thấy lộ trình.</h2>
+            </div>
+            <button id="backToLessonEditorBtn" type="button" class="inline-flex items-center justify-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                <i class="fas fa-pen-to-square"></i> Quay lại soạn bài
+            </button>
+        `;
+        els.studentLearningMain.prepend(banner);
+        document.getElementById('backToLessonEditorBtn').onclick = () => {
+            localStorage.removeItem(LS_TEACHER_PREVIEW_KEY);
+            window.location.reload();
+        };
     }
 
     function renderOverallProgress() {
@@ -325,10 +370,16 @@
             </div>
         `;
         document.getElementById('markTheoryDone').onclick = async () => {
+            if (isTeacherPreview()) {
+                state.teacherPreviewUi = { ...state.teacherPreviewUi, theoryDone: true };
+                setActiveTab('examples');
+                return;
+            }
             await syncLessonState(lesson, { ...ui, theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
             await reloadLessons();
             setActiveTab('examples');
         };
+        bindAiExplainButtons(lesson);
     }
 
     function renderExamples(lesson) {
@@ -340,6 +391,9 @@
                     <div class="rounded border border-slate-200 bg-white p-4">
                         <h3 class="font-bold text-slate-900">${richText(example.title || 'Ví dụ')}</h3>
                         <p class="mt-2 text-base leading-7 text-slate-700">${richText(example.body || '')}</p>
+                        <button type="button" class="ai-explain-btn mt-3" data-ai-type="example" data-ai-index="0" data-ai-text="${escapeHtml(`${example.title || 'Ví dụ'}\n${example.body || ''}`)}">
+                            <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
+                        </button>
                     </div>
                 `).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập ví dụ cho bài này.</div>'}
                 <button id="markExamplesDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
@@ -348,10 +402,52 @@
             </div>
         `;
         document.getElementById('markExamplesDone').onclick = async () => {
+            if (isTeacherPreview()) {
+                state.teacherPreviewUi = { ...state.teacherPreviewUi, examplesDone: true };
+                setActiveTab('practice');
+                return;
+            }
             await syncLessonState(lesson, { ...ui, examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
             await reloadLessons();
             setActiveTab('practice');
         };
+        bindAiExplainButtons(lesson);
+    }
+
+    function bindAiExplainButtons(lesson) {
+        document.querySelectorAll('.ai-explain-btn').forEach(button => {
+            button.onclick = async () => {
+                const text = button.dataset.aiText || '';
+                const block = button.closest('.lesson-explain-block') || button.parentElement;
+                let output = block.querySelector('.ai-explain-output');
+                if (!output) {
+                    output = document.createElement('div');
+                    output.className = 'ai-explain-output mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm leading-7 text-slate-800';
+                    block.appendChild(output);
+                }
+                const old = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
+                output.textContent = 'Đang gọi AI...';
+                try {
+                    const data = await api('api/ai_explain.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            subject: lesson.subject || PAGE_SUBJECT,
+                            lesson_title: lesson.title || PAGE_TITLE,
+                            text
+                        })
+                    });
+                    output.innerHTML = escapeHtml(data.answer || '').replace(/\n/g, '<br>');
+                } catch (err) {
+                    output.textContent = err.message || 'Chưa gọi được AI.';
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = old;
+                }
+            };
+        });
     }
 
     function renderVideos(lesson) {

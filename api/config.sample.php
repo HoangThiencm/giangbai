@@ -12,3 +12,8 @@ define('ADMIN_KEY', 'change-this-admin-key');
 
 // Session cookie name for this app.
 define('APP_SESSION_NAME', 'giangbai_session');
+
+// Optional Gemini AI support for lesson explanations.
+// You can set one key as a string or multiple keys as an array.
+define('GEMINI_API_KEYS', []);
+define('GEMINI_MODEL', 'gemini-2.5-flash');

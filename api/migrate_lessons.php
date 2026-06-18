@@ -29,6 +29,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS lessons (
     theory_json LONGTEXT DEFAULT NULL,
     examples_json LONGTEXT DEFAULT NULL,
     questions_json LONGTEXT DEFAULT NULL,
+    essay_json LONGTEXT DEFAULT NULL,
     videos_json LONGTEXT DEFAULT NULL,
     tasks_json LONGTEXT DEFAULT NULL,
     skills_json LONGTEXT DEFAULT NULL,
@@ -55,6 +56,7 @@ add_column_if_missing($pdo, 'lessons', 'goal_text TEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'theory_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'examples_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'questions_json LONGTEXT DEFAULT NULL');
+add_column_if_missing($pdo, 'lessons', 'essay_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'videos_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'tasks_json LONGTEXT DEFAULT NULL');
 add_column_if_missing($pdo, 'lessons', 'skills_json LONGTEXT DEFAULT NULL');
@@ -89,6 +91,16 @@ $defaultQuestions = [
     ]
 ];
 
+$defaultEssay = [
+    [
+        'id' => 'tl1',
+        'title' => 'Bài tự luận 1',
+        'prompt' => 'Viết tập hợp A các số tự nhiên lớn hơn 5 và nhỏ hơn 10 bằng cách liệt kê các phần tử.',
+        'hint' => 'Các phần tử cần lớn hơn 5 và nhỏ hơn 10.',
+        'sample_answer' => 'A = {6; 7; 8; 9}'
+    ]
+];
+
 $defaultVideos = [
     ['title' => 'Bai giang on lai', 'url' => '']
 ];
@@ -99,8 +111,8 @@ $defaultSkills = [
     ['id' => 'ky_hieu', 'name' => 'Dung ky hieu thuoc va khong thuoc', 'target' => 80],
 ];
 
-$stmt = $pdo->prepare("INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, videos_json, tasks_json, skills_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+$stmt = $pdo->prepare("INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, videos_json, tasks_json, skills_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE slug = slug");
 
 $stmt->execute([
@@ -114,6 +126,7 @@ $stmt->execute([
     json_encode($defaultTheory, JSON_UNESCAPED_UNICODE),
     json_encode($defaultExamples, JSON_UNESCAPED_UNICODE),
     json_encode($defaultQuestions, JSON_UNESCAPED_UNICODE),
+    json_encode($defaultEssay, JSON_UNESCAPED_UNICODE),
     json_encode($defaultVideos, JSON_UNESCAPED_UNICODE),
     json_encode(['Doc ly thuyet ngan', 'Xem vi du mau', 'Lam bai luyen tap'], JSON_UNESCAPED_UNICODE),
     json_encode($defaultSkills, JSON_UNESCAPED_UNICODE)
@@ -134,6 +147,7 @@ foreach ($draftLessons as $draft) {
         1,
         0,
         'Ban nhap. Giao vien nhap noi dung roi moi mo cho hoc sinh.',
+        json_encode([], JSON_UNESCAPED_UNICODE),
         json_encode([], JSON_UNESCAPED_UNICODE),
         json_encode([], JSON_UNESCAPED_UNICODE),
         json_encode([], JSON_UNESCAPED_UNICODE),

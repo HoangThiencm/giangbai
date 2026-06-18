@@ -53,6 +53,7 @@ function lesson_row_to_payload(array $row): array
         'theory' => parse_json_or_default($row['theory_json'] ?? null, []),
         'examples' => parse_json_or_default($row['examples_json'] ?? null, []),
         'questions' => parse_json_or_default($row['questions_json'] ?? null, []),
+        'essay_exercises' => parse_json_or_default($row['essay_json'] ?? null, []),
         'videos' => parse_json_or_default($row['videos_json'] ?? null, []),
         'tasks' => parse_json_or_default($row['tasks_json'] ?? null, []),
         'skills' => parse_json_or_default($row['skills_json'] ?? null, []),
@@ -98,6 +99,7 @@ function ensure_lesson_schema(PDO $pdo): void
             theory_json LONGTEXT DEFAULT NULL,
             examples_json LONGTEXT DEFAULT NULL,
             questions_json LONGTEXT DEFAULT NULL,
+            essay_json LONGTEXT DEFAULT NULL,
             videos_json LONGTEXT DEFAULT NULL,
             tasks_json LONGTEXT DEFAULT NULL,
             skills_json LONGTEXT DEFAULT NULL,
@@ -109,6 +111,7 @@ function ensure_lesson_schema(PDO $pdo): void
             'theory_json LONGTEXT DEFAULT NULL',
             'examples_json LONGTEXT DEFAULT NULL',
             'questions_json LONGTEXT DEFAULT NULL',
+            'essay_json LONGTEXT DEFAULT NULL',
             'videos_json LONGTEXT DEFAULT NULL',
             'tasks_json LONGTEXT DEFAULT NULL',
             'skills_json LONGTEXT DEFAULT NULL'
@@ -274,6 +277,7 @@ if ($method === 'POST' && $action === 'save_content') {
         'theory_json' => json_encode($data['theory'] ?? [], JSON_UNESCAPED_UNICODE),
         'examples_json' => json_encode($data['examples'] ?? [], JSON_UNESCAPED_UNICODE),
         'questions_json' => json_encode($data['questions'] ?? [], JSON_UNESCAPED_UNICODE),
+        'essay_json' => json_encode($data['essay_exercises'] ?? [], JSON_UNESCAPED_UNICODE),
         'videos_json' => json_encode($data['videos'] ?? [], JSON_UNESCAPED_UNICODE),
         'tasks_json' => json_encode($data['tasks'] ?? [], JSON_UNESCAPED_UNICODE),
         'skills_json' => json_encode($data['skills'] ?? [], JSON_UNESCAPED_UNICODE),
@@ -288,7 +292,7 @@ if ($method === 'POST' && $action === 'save_content') {
     if ($existing) {
         $update = $pdo->prepare('
             UPDATE lessons
-            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, essay_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
             WHERE slug = ?
         ');
         $update->execute([
@@ -299,6 +303,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['theory_json'],
             $payload['examples_json'],
             $payload['questions_json'],
+            $payload['essay_json'],
             $payload['videos_json'],
             $payload['tasks_json'],
             $payload['skills_json'],
@@ -308,8 +313,8 @@ if ($method === 'POST' && $action === 'save_content') {
         ]);
     } else {
         $insert = $pdo->prepare('
-            INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, videos_json, tasks_json, skills_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, videos_json, tasks_json, skills_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
         $insert->execute([
             $payload['subject'],
@@ -322,6 +327,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['theory_json'],
             $payload['examples_json'],
             $payload['questions_json'],
+            $payload['essay_json'],
             $payload['videos_json'],
             $payload['tasks_json'],
             $payload['skills_json']
