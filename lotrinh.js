@@ -2,6 +2,8 @@
     const els = {
         studentName: document.getElementById('studentNameDisplay'),
         accountRoleLabel: document.getElementById('accountRoleLabel'),
+        studentLearningMain: document.getElementById('studentLearningMain'),
+        teacherLessonDesigner: document.getElementById('teacherLessonDesigner'),
         routeTitle: document.getElementById('routeTitle'),
         routeSubject: document.getElementById('routeSubject'),
         routeChapter: document.getElementById('routeChapter'),
@@ -127,6 +129,21 @@
         };
     }
 
+    function isTeacher() {
+        return state.user?.role === 'teacher';
+    }
+
+    function applyRoleView() {
+        const teacher = isTeacher();
+        els.studentLearningMain?.classList.toggle('hidden', teacher);
+        els.teacherLessonDesigner?.classList.toggle('hidden', !teacher);
+        if (els.accountRoleLabel) {
+            els.accountRoleLabel.textContent = teacher ? 'Giáo viên' : 'Học sinh';
+        }
+        if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
+        if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
+    }
+
     function render() {
         const lesson = currentLesson();
         if (state.loading) {
@@ -149,9 +166,9 @@
         }
 
         els.studentName.textContent = state.user?.full_name || state.user?.username || 'Tài khoản';
-        if (els.accountRoleLabel) {
-            els.accountRoleLabel.textContent = state.user?.role === 'teacher' ? 'Giáo viên' : 'Học sinh';
-        }
+        applyRoleView();
+        if (isTeacher()) return;
+
         renderOverallProgress();
         renderLessonList();
         renderHeader(lesson);
@@ -214,7 +231,7 @@
                 state.selectedLessonId = button.getAttribute('data-lesson-id');
                 localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
                 render();
-                await markLessonStarted(currentLesson());
+                if (!isTeacher()) await markLessonStarted(currentLesson());
             });
         });
     }
@@ -226,7 +243,7 @@
             if (els.routeChapter) els.routeChapter.textContent = 'Chưa có bài học được mở';
             els.lessonPath.textContent = '';
             els.lessonTitle.textContent = 'Chưa có bài học';
-            els.lessonGoal.textContent = `Hãy vào phần quản trị để nhập hoặc mở bài học cho ${PAGE_SUBJECT}.`;
+            els.lessonGoal.textContent = '';
             els.lessonStatus.innerHTML = '';
             return;
         }
@@ -654,7 +671,7 @@
             els.studentName.textContent = state.user.full_name;
         }
         if (!state.selectedLessonId && state.lessons[0]) state.selectedLessonId = state.lessons[0].id;
-        await markLessonStarted(currentLesson());
+        if (!isTeacher()) await markLessonStarted(currentLesson());
     } catch (err) {
         state.error = err.message;
         if (err.message.toLowerCase().includes('chưa đăng nhập') || err.message.toLowerCase().includes('not logged in')) {
