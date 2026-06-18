@@ -17,3 +17,7 @@ define('APP_SESSION_NAME', 'giangbai_session');
 // You can set one key as a string or multiple keys as an array.
 define('GEMINI_API_KEYS', []);
 define('GEMINI_MODEL', 'gemini-2.5-flash');
+
+// Optional fallback via ShopAIKey (OpenAI-compatible API).
+define('SHOPAIKEY_API_KEY', '');
+define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');

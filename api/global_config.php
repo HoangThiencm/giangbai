@@ -44,6 +44,12 @@ if (isset($nextConfig['gemini_keys'])) {
 if (isset($nextConfig['gemini_model'])) {
     $nextConfig['gemini_model'] = trim((string)$nextConfig['gemini_model']) ?: 'gemini-2.5-flash';
 }
+if (isset($nextConfig['shopaikey_api_key'])) {
+    $nextConfig['shopaikey_api_key'] = trim((string)$nextConfig['shopaikey_api_key']);
+}
+if (isset($nextConfig['shopaikey_model'])) {
+    $nextConfig['shopaikey_model'] = trim((string)$nextConfig['shopaikey_model']) ?: 'deepseek-v4-flash';
+}
 
 $json = json_encode($nextConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if ($json === false) {

@@ -202,6 +202,41 @@
                     </div>
                 </div>
 
+                <!-- ShopAIKey FALLBACK -->
+                <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h4 class="font-bold text-indigo-900 text-sm">ShopAIKey Fallback</h4>
+                            <p class="text-xs text-indigo-800 mt-1">Khi Gemini hết lượt hoặc lỗi, AI giải thích trong lộ trình sẽ tự chuyển sang DeepSeek qua <code>https://api.shopaikey.com/v1</code>.</p>
+                        </div>
+                        <span id="adminShopaikeyStatus" class="text-xs font-semibold text-indigo-700"></span>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-900 mb-2">ShopAIKey API Key</label>
+                            <input id="adminShopaikeyKeyInput" type="password" class="w-full rounded border border-indigo-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="sk-... hoac key tu ShopAIKey">
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-indigo-900">Model fallback</label>
+                            <select id="adminShopaikeyModuleSelect" class="w-full rounded border border-indigo-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                                <option value="deepseek-chat">deepseek-chat</option>
+                                <option value="deepseek-reasoner">deepseek-reasoner</option>
+                            </select>
+                            <input id="adminShopaikeyModuleCustom" type="text" class="w-full rounded border border-indigo-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Hoac nhap ten model khac">
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <button type="button" id="btnSaveShopaikeyConfig" onclick="saveShopaikeyAdminConfig()" class="rounded bg-indigo-700 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-800">
+                                    <i class="fas fa-save mr-1"></i> Lưu Fallback
+                                </button>
+                                <button type="button" id="btnClearShopaikeyConfig" onclick="clearShopaikeyAdminConfig()" class="rounded border border-indigo-300 bg-white px-4 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-100">
+                                    <i class="fas fa-trash mr-1"></i> Xóa
+                                </button>
+                            </div>
+                            <p class="text-xs text-indigo-800">Chi dung cho AI giai thich trong lop trinh. Gemini van la uu tien so 1.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- 3. DANH SÁCH CHI TIẾT -->
@@ -494,6 +529,7 @@
         };
 
         const GEMINI_MODEL_OPTIONS = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'];
+        const SHOPAIKEY_MODEL_OPTIONS = ['deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner'];
 
         function parseGeminiKeys(text) {
             return Array.from(new Set(
@@ -514,6 +550,26 @@
             if (keyInput) keyInput.value = keys.join('\n');
             if (modelSelect) modelSelect.value = GEMINI_MODEL_OPTIONS.includes(model) ? model : 'gemini-2.5-flash';
             if (status) status.textContent = keys.length ? `Da nap ${keys.length} key` : 'Chua co key';
+        }
+
+        function readShopaikeyModelFromUI() {
+            const custom = document.getElementById('adminShopaikeyModuleCustom')?.value?.trim() || '';
+            if (custom) return custom;
+            return document.getElementById('adminShopaikeyModuleSelect')?.value || 'deepseek-v4-flash';
+        }
+
+        function syncShopaikeyAdminUI(content) {
+            const apiKey = typeof content?.shopaikey_api_key === 'string' ? content.shopaikey_api_key : '';
+            const model = typeof content?.shopaikey_model === 'string' ? content.shopaikey_model : 'deepseek-v4-flash';
+            const keyInput = document.getElementById('adminShopaikeyKeyInput');
+            const modelSelect = document.getElementById('adminShopaikeyModuleSelect');
+            const modelCustom = document.getElementById('adminShopaikeyModuleCustom');
+            const status = document.getElementById('adminShopaikeyStatus');
+
+            if (keyInput) keyInput.value = apiKey;
+            if (modelSelect) modelSelect.value = SHOPAIKEY_MODEL_OPTIONS.includes(model) ? model : 'deepseek-v4-flash';
+            if (modelCustom) modelCustom.value = SHOPAIKEY_MODEL_OPTIONS.includes(model) ? '' : model;
+            if (status) status.textContent = apiKey ? `Fallback: ${model}` : 'Chua bat fallback';
         }
 
         function adminHeaders(extra = {}) {
@@ -538,6 +594,7 @@
                 localStorage.setItem('admin_github_repo', content.github_repo);
             }
             syncGeminiAdminUI(content);
+            syncShopaikeyAdminUI(content);
             if (cachedUsers.length > 0) renderTable(cachedUsers, cachedKey);
         }
 
@@ -724,6 +781,8 @@
                 currentGlobalContent.github_pat = document.getElementById('cfg_github_token').value.trim();
                 currentGlobalContent.gemini_keys = parseGeminiKeys(document.getElementById('adminGeminiKeysInput')?.value || '');
                 currentGlobalContent.gemini_model = document.getElementById('adminGeminiModuleSelect')?.value || 'gemini-2.5-flash';
+                currentGlobalContent.shopaikey_api_key = document.getElementById('adminShopaikeyKeyInput')?.value?.trim() || '';
+                currentGlobalContent.shopaikey_model = readShopaikeyModelFromUI();
 
                 try {
                     await saveConfigToLocalApi(currentGlobalContent);
@@ -765,6 +824,63 @@
             } finally {
                 if (btn) {
                     btn.innerHTML = originalText || '<i class="fas fa-save"></i> Lưu cài đặt lên GitHub';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function saveShopaikeyAdminConfig() {
+            const btn = document.getElementById('btnSaveShopaikeyConfig');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dang luu fallback...';
+                btn.disabled = true;
+            }
+            try {
+                currentGlobalContent.shopaikey_api_key = document.getElementById('adminShopaikeyKeyInput')?.value?.trim() || '';
+                currentGlobalContent.shopaikey_model = readShopaikeyModelFromUI();
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback luu ShopAIKey len GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Cap nhat cau hinh ShopAIKey fallback');
+                }
+                syncShopaikeyAdminUI(currentGlobalContent);
+                alert(`Da luu ShopAIKey fallback, model ${currentGlobalContent.shopaikey_model}`);
+            } catch (e) {
+                alert('Loi luu ShopAIKey: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText || '<i class="fas fa-save mr-1"></i> Luu Fallback';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function clearShopaikeyAdminConfig() {
+            if (!confirm('Xoa API key va model ShopAIKey fallback?')) return;
+            const btn = document.getElementById('btnClearShopaikeyConfig');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dang xoa...';
+                btn.disabled = true;
+            }
+            try {
+                currentGlobalContent.shopaikey_api_key = '';
+                currentGlobalContent.shopaikey_model = 'deepseek-v4-flash';
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback xoa ShopAIKey tren GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Xoa cau hinh ShopAIKey fallback');
+                }
+                syncShopaikeyAdminUI(currentGlobalContent);
+                alert('Da xoa cau hinh ShopAIKey fallback.');
+            } catch (e) {
+                alert('Loi xoa ShopAIKey: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText || '<i class="fas fa-trash mr-1"></i> Xoa';
                     btn.disabled = false;
                 }
             }

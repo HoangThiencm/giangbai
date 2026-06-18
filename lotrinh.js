@@ -638,6 +638,8 @@
         state.activeTab = tab;
         localStorage.setItem(LS_TAB_KEY, tab);
         renderTabs();
+        renderNextAction(currentLesson());
+        renderTasks(currentLesson());
     }
 
     function renderTabs() {
@@ -1373,36 +1375,156 @@
         `).join('');
     }
 
+    function nextLessonAfter(lesson) {
+        if (!lesson) return null;
+        const index = state.lessons.findIndex(item => String(item.id) === String(lesson.id));
+        return index >= 0 ? state.lessons[index + 1] || null : null;
+    }
+
+    function lessonHasVideos(lesson) {
+        return Array.isArray(lesson?.videos) && lesson.videos.some(video => String(video.url || '').trim());
+    }
+
+    function applyNextActionSuggestion({ title, body, tab = null }) {
+        if (!els.nextActionTitle || !els.nextActionBody) return;
+        els.nextActionTitle.textContent = title;
+        els.nextActionBody.textContent = body;
+        const panel = els.nextActionTitle.closest('section.panel');
+        if (!panel) return;
+        panel.classList.toggle('next-action-clickable', !!tab);
+        panel.onclick = tab ? () => setActiveTab(tab) : null;
+    }
+
     function renderNextAction(lesson) {
+        if (!lesson) {
+            applyNextActionSuggestion({
+                title: 'Chọn bài học',
+                body: 'Chọn một bài trong danh sách bên trái để bắt đầu.'
+            });
+            return;
+        }
+
         const progress = currentLessonProgress(lesson);
         const ui = currentUiState(lesson);
+        const tab = state.activeTab;
+        const practice = practiceProgress(lesson, ui);
+        const tasks = Array.isArray(lesson.tasks) && lesson.tasks.length ? lesson.tasks : [
+            'Đọc lý thuyết ngắn',
+            'Xem ví dụ mẫu',
+            'Làm bài luyện tập'
+        ];
         const scoreData = calculateScore(lesson, ui.answers || {});
         const weakSkills = (lesson.skills || []).filter(skill => (scoreData.skillScores[skill.id] || 0) < (skill.target || 80));
+        const nextLesson = nextLessonAfter(lesson);
+
+        if (progress.status === 'mastered' && weakSkills.length === 0) {
+            applyNextActionSuggestion({
+                title: 'Đã hoàn thành bài này',
+                body: nextLesson
+                    ? `Có thể chuyển sang "${nextLesson.title}".`
+                    : 'Đã đạt mục tiêu của bài này.'
+            });
+            return;
+        }
 
         if (!ui.theoryDone) {
-            els.nextActionTitle.textContent = 'Bắt đầu bằng lý thuyết ngắn';
-            els.nextActionBody.textContent = 'Đọc phần lý thuyết trước để nắm khái niệm và ký hiệu của bài.';
-            return;
-        }
-        if (!ui.examplesDone) {
-            els.nextActionTitle.textContent = 'Xem ví dụ mẫu';
-            els.nextActionBody.textContent = 'Ví dụ giúp học sinh nhận ra cách áp dụng lý thuyết vào bài cụ thể.';
-            return;
-        }
-        if (progress.status === 'not_started') {
-            els.nextActionTitle.textContent = 'Làm bài luyện để hệ thống chấm tự động';
-            els.nextActionBody.textContent = 'Sau khi nộp, hệ thống sẽ chấm điểm và gợi ý phần cần luyện thêm.';
-            return;
-        }
-        if (progress.status === 'mastered' && weakSkills.length === 0) {
-            els.nextActionTitle.textContent = 'Có thể chuyển sang bài tiếp theo';
-            els.nextActionBody.textContent = 'Đã đạt mục tiêu của bài này.';
+            if (tab === 'learn') {
+                applyNextActionSuggestion({
+                    title: 'Đang đọc lý thuyết',
+                    body: 'Đọc xong thì bấm "Đánh dấu đã học" để mở phần ví dụ.'
+                });
+                return;
+            }
+            applyNextActionSuggestion({
+                title: tasks[0] || 'Bắt đầu bằng lý thuyết',
+                body: 'Quay lại tab Lý thuyết để nắm khái niệm và ký hiệu của bài.',
+                tab: 'learn'
+            });
             return;
         }
 
-        const weakest = weakSkills[0];
-        els.nextActionTitle.textContent = weakest ? `Luyện thêm: ${weakest.name}` : 'Luyện thêm một vòng nữa';
-        els.nextActionBody.textContent = weakest ? `Kỹ năng này hiện chưa chạm mốc mục tiêu. Có thể luyện thêm 3-5 câu cùng dạng.` : 'Nên làm lại bài luyện để ổn định kết quả.';
+        if (!ui.examplesDone) {
+            if (tab === 'examples') {
+                applyNextActionSuggestion({
+                    title: 'Đang xem ví dụ',
+                    body: 'Xem xong thì bấm "Đánh dấu đã xem ví dụ" để sang luyện tập.'
+                });
+                return;
+            }
+            if (tab === 'videos') {
+                applyNextActionSuggestion({
+                    title: lessonHasVideos(lesson) ? 'Đang xem bài giảng' : 'Bài chưa có video',
+                    body: lessonHasVideos(lesson)
+                        ? 'Sau video, chuyển sang tab Ví dụ rồi làm luyện tập.'
+                        : 'Chuyển sang tab Ví dụ để xem cách giải mẫu.',
+                    tab: lessonHasVideos(lesson) ? null : 'examples'
+                });
+                return;
+            }
+            applyNextActionSuggestion({
+                title: tasks[1] || 'Xem ví dụ mẫu',
+                body: 'Ví dụ giúp em thấy cách áp dụng lý thuyết vào bài cụ thể.',
+                tab: 'examples'
+            });
+            return;
+        }
+
+        if (!ui.practiceDone) {
+            if (tab === 'practice') {
+                if (!practice.total) {
+                    applyNextActionSuggestion({
+                        title: 'Chưa có bài luyện tập',
+                        body: 'Giáo viên chưa thêm câu hỏi cho bài này.'
+                    });
+                    return;
+                }
+                if (!practice.answered) {
+                    applyNextActionSuggestion({
+                        title: 'Làm bài luyện tập',
+                        body: `Có ${practice.total} câu/bài. Làm xong rồi bấm "Nộp bài" để nhận điểm.`
+                    });
+                    return;
+                }
+                if (practice.answered < practice.total) {
+                    applyNextActionSuggestion({
+                        title: `Tiếp tục luyện tập (${practice.answered}/${practice.total})`,
+                        body: 'Hoàn thành các câu còn lại, sau đó nộp bài.'
+                    });
+                    return;
+                }
+                applyNextActionSuggestion({
+                    title: 'Sẵn sàng nộp bài',
+                    body: 'Đã làm hết — bấm "Nộp bài" để hệ thống chấm điểm.'
+                });
+                return;
+            }
+            applyNextActionSuggestion({
+                title: tasks[2] || 'Làm bài luyện tập',
+                body: practice.total
+                    ? `Chuyển sang tab Luyện tập — còn ${Math.max(practice.total - practice.answered, practice.total)} bài cần làm.`
+                    : 'Chuyển sang tab Luyện tập để kiểm tra kiến thức.',
+                tab: 'practice'
+            });
+            return;
+        }
+
+        if (weakSkills.length) {
+            const weakest = weakSkills[0];
+            const weakestScore = scoreData.skillScores[weakest.id] || progress.score || 0;
+            applyNextActionSuggestion({
+                title: `Luyện thêm: ${weakest.name}`,
+                body: `Hiện ${weakestScore}% — mục tiêu ${weakest.target || 80}%. Làm lại bài luyện để cải thiện.`,
+                tab: 'practice'
+            });
+            return;
+        }
+
+        applyNextActionSuggestion({
+            title: 'Đã làm xong các bước học',
+            body: nextLesson
+                ? `Có thể chuyển sang bài "${nextLesson.title}" hoặc ôn lại phần luyện tập.`
+                : 'Có thể ôn lại lý thuyết hoặc làm thêm bài luyện.'
+        });
     }
 
     async function syncLessonState(lesson, uiState, extra = {}) {
