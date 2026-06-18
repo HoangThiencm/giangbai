@@ -516,12 +516,73 @@
             if (status) status.textContent = keys.length ? `Da nap ${keys.length} key` : 'Chua co key';
         }
 
+        function adminHeaders(extra = {}) {
+            const key = document.getElementById('adminKey')?.value || '';
+            return { 'X-Admin-Key': key, ...extra };
+        }
+
+        function applyGlobalConfigToAdminUI(content) {
+            if (!content.user_features) content.user_features = {};
+            const features = content.features || {};
+            const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx'];
+            checks.forEach(id => {
+                const el = document.getElementById('cfg_' + id);
+                if (el) el.checked = features[id] !== false;
+            });
+            if (content.github_pat) {
+                document.getElementById('cfg_github_token').value = content.github_pat;
+                localStorage.setItem('admin_github_pat', content.github_pat);
+            }
+            if (content.github_repo) {
+                document.getElementById('cfg_github_repo').value = content.github_repo;
+                localStorage.setItem('admin_github_repo', content.github_repo);
+            }
+            syncGeminiAdminUI(content);
+            if (cachedUsers.length > 0) renderTable(cachedUsers, cachedKey);
+        }
+
+        async function loadConfigFromLocalApi() {
+            const key = document.getElementById('adminKey')?.value || '';
+            if (!key) return false;
+            try {
+                const res = await fetch('api/global_config.php', {
+                    headers: adminHeaders(),
+                    cache: 'no-store'
+                });
+                if (!res.ok) return false;
+                const data = await res.json();
+                if (!data.ok || !data.config) return false;
+                currentGlobalContent = data.config;
+                applyGlobalConfigToAdminUI(currentGlobalContent);
+                return true;
+            } catch (e) {
+                console.warn('Khong doc duoc global_config qua API noi bo:', e);
+                return false;
+            }
+        }
+
+        async function saveConfigToLocalApi(newConfig) {
+            const res = await fetch('api/global_config.php', {
+                method: 'POST',
+                headers: adminHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ config: newConfig })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'Khong luu duoc global_config.json qua API noi bo.');
+            }
+            currentGlobalContent = data.config || newConfig;
+            applyGlobalConfigToAdminUI(currentGlobalContent);
+        }
+
         async function loadGlobalConfig() {
             // 1. Đọc từ localStorage trước (nếu đã lưu từ lần trước)
             const sRepo = localStorage.getItem('admin_github_repo');
             const sPat = localStorage.getItem('admin_github_pat');
             if (sRepo) document.getElementById('cfg_github_repo').value = sRepo;
             if (sPat) document.getElementById('cfg_github_token').value = sPat;
+
+            if (await loadConfigFromLocalApi()) return;
 
             let reqRepo = document.getElementById('cfg_github_repo').value.trim();
             let reqPat = document.getElementById('cfg_github_token').value.trim();
@@ -664,9 +725,14 @@
                 currentGlobalContent.gemini_keys = parseGeminiKeys(document.getElementById('adminGeminiKeysInput')?.value || '');
                 currentGlobalContent.gemini_model = document.getElementById('adminGeminiModuleSelect')?.value || 'gemini-2.5-flash';
 
-                await pushConfigToGitHub(currentGlobalContent, "Admin: Cập nhật cấu hình Global Client");
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback luu GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, "Admin: Cập nhật cấu hình Global Client");
+                }
 
-                alert("Đã lưu Cấu Hình lên GitHub thành công!");
+                alert("Da luu cau hinh thanh cong!");
 
             } catch (e) {
                 alert("Lỗi lưu config: " + e.message);
@@ -686,7 +752,12 @@
             try {
                 currentGlobalContent.gemini_keys = parseGeminiKeys(document.getElementById('adminGeminiKeysInput')?.value || '');
                 currentGlobalContent.gemini_model = document.getElementById('adminGeminiModuleSelect')?.value || 'gemini-2.5-flash';
-                await pushConfigToGitHub(currentGlobalContent, 'Admin: Cap nhat cau hinh Gemini');
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback luu Gemini len GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Cap nhat cau hinh Gemini');
+                }
                 syncGeminiAdminUI(currentGlobalContent);
                 alert(`Đã lưu Gemini: ${currentGlobalContent.gemini_keys.length} key, model ${currentGlobalContent.gemini_model}`);
             } catch (e) {
@@ -710,7 +781,12 @@
             try {
                 currentGlobalContent.gemini_keys = [];
                 currentGlobalContent.gemini_model = 'gemini-2.5-flash';
-                await pushConfigToGitHub(currentGlobalContent, 'Admin: Xoa cau hinh Gemini');
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback xoa Gemini tren GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Xoa cau hinh Gemini');
+                }
                 syncGeminiAdminUI(currentGlobalContent);
                 alert('Đã xóa cấu hình Gemini.');
             } catch (e) {
@@ -822,7 +898,7 @@
 
                 alert(`Đã lưu cấu hình riêng cho ${editingUserEmail} thành công!`);
                 closeUserConfigModal();
-                loadUsers(); // Cập nhật lại list ở UI 
+                loadUsers(); // Cập nhật lại list ở UI
             } catch (e) {
                 alert("Lỗi lưu cấu hình: " + e.message);
             } finally {

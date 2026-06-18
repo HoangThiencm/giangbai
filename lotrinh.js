@@ -75,27 +75,32 @@
             .trim();
     }
 
-    function preserveMathSegments(value) {
+    function decodeBasicEntities(value) {
         return String(value ?? '')
-            .replace(/\r/g, '')
-            .replace(/\$\$(.+?)\$\$/gs, (_, expr) => `\n$${expr.trim()}$\n`)
-            .replace(/\$(.+?)\$/g, (_, expr) => ` $${expr.trim()} `)
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&nbsp;/g, ' ');
+    }
+
+    function normalizeMathContent(value) {
+        return decodeBasicEntities(value)
+            .replace(/\r\n?/g, '\n')
+            .split('\n')
+            .map(line => line.replace(/[ \t]+$/g, ''))
+            .join('\n')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
     }
 
-    function normalizeMathContent(value) {
-        return preserveMathSegments(value)
-            .replace(/\n{2,}/g, '\n')
-            .replace(/([^\n])\n([^\n])/g, '$1 $2')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+    function mathText(value) {
+        return escapeHtml(normalizeMathContent(value))
+            .replace(/\n/g, '<br>');
     }
 
     function richText(value) {
-        return escapeHtml(normalizeMathContent(value))
-            .replace(/\n/g, '<br>')
-            .replace(/ {2,}/g, ' ');
+        return mathText(value);
     }
 
     function renderParagraphs(items, emptyText, aiType = 'theory') {
@@ -109,7 +114,7 @@
             <article class="lesson-document rounded border border-slate-200 bg-white p-5">
                 ${parts.map((part, index) => `
                     <section class="lesson-explain-block">
-                        <p class="lesson-paragraph">${escapeHtml(part).replace(/\n/g, '<br>')}</p>
+                        <div class="lesson-paragraph">${mathText(part)}</div>
                         <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(part))}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
@@ -451,7 +456,7 @@
                 <article class="practice-card">
                     <div class="question-head">
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Tự luận ${index + 1}</p>
-                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
+                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
                     <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em...">${escapeHtml(saved)}</textarea>
                     <div class="mt-3 flex flex-wrap gap-2">
@@ -478,7 +483,7 @@
             <article class="practice-card">
                 <div class="question-head">
                     <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
-                    <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
+                    <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                 </div>
                 <input class="fill-input" type="text" data-fill-key="${escapeHtml(item.id || `fill_${index + 1}`)}" value="${escapeHtml(savedAnswers[item.id || `fill_${index + 1}`] || '')}" placeholder="Nhập đáp án...">
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -509,7 +514,7 @@
                 <article class="practice-card" data-drag-key="${escapeHtml(key)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
                     <div class="question-head">
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Kéo thả ${index + 1}</p>
-                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(item.prompt || ''))}</h3>
+                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
                     <div class="drag-pool" data-drag-pool="${escapeHtml(key)}">
                         ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="true" class="drag-chip" data-piece="${pieceIndex}">${escapeHtml(piece)}</button>`).join('')}
@@ -537,9 +542,9 @@
         els.tabContent.innerHTML = `
             <div class="space-y-4">
                 ${examples.length ? examples.map(example => `
-                    <div class="rounded border border-slate-200 bg-white p-4">
+                    <div class="lesson-document rounded border border-slate-200 bg-white p-4">
                         <h3 class="font-bold text-slate-900">${richText(example.title || 'Ví dụ')}</h3>
-                        <p class="mt-2 text-base leading-7 text-slate-700">${richText(example.body || '')}</p>
+                        <div class="lesson-paragraph mt-2 text-base leading-7 text-slate-700">${richText(example.body || '')}</div>
                         <button type="button" class="ai-explain-btn mt-3" data-ai-type="example" data-ai-index="0" data-ai-text="${escapeHtml(`${example.title || 'Ví dụ'}\n${example.body || ''}`)}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
@@ -656,7 +661,7 @@
                     <article class="practice-card">
                         <div class="question-head">
                             <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
-                            <h3 class="question-text mt-1 text-base font-bold text-slate-950">${escapeHtml(normalizeDisplayText(question.prompt))}</h3>
+                            <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(question.prompt)}</h3>
                         </div>
                         <div class="answer-grid">
                             ${(question.options || []).map((option, optionIndex) => {
@@ -668,7 +673,7 @@
                                         <span class="flex min-w-0 items-center gap-3">
                                             <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} class="sr-only">
                                             <span class="answer-letter">${letter}</span>
-                                            <span class="min-w-0 flex-1 leading-7 text-slate-800">${escapeHtml(normalizeDisplayText(option))}</span>
+                                            <span class="min-w-0 flex-1 leading-7 text-slate-800">${mathText(option)}</span>
                                         </span>
                                         ${mark}
                                     </label>

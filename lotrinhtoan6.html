@@ -161,8 +161,20 @@
             display: inline;
             vertical-align: -0.12em;
         }
-        .lesson-document mjx-container {
+        .lesson-document mjx-container[jax="SVG"] {
+            max-width: 100%;
+        }
+        .lesson-document mjx-container[display="true"] {
+            display: block;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.35rem 0;
+        }
+        .lesson-document mjx-container:not([display="true"]),
+        .question-text mjx-container:not([display="true"]),
+        .answer-option mjx-container:not([display="true"]) {
             display: inline;
+            vertical-align: -0.12em;
             overflow-wrap: normal;
             word-break: keep-all;
         }

@@ -1,15 +1,15 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lộ trình tự học Toán 7</title>
+    <title>L? tr�nh t? h?c To�n 7</title>
     <script src="access-control.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        window.LOTRINH_SUBJECT = 'Toán 7';
-        window.LOTRINH_PAGE_TITLE = 'Lộ trình tự học Toán 7';
+        window.LOTRINH_SUBJECT = 'To�n 7';
+        window.LOTRINH_PAGE_TITLE = 'L? tr�nh t? h?c To�n 7';
     </script>
     <script>
         window.MathJax = {
@@ -161,8 +161,20 @@
             display: inline;
             vertical-align: -0.12em;
         }
-        .lesson-document mjx-container {
+        .lesson-document mjx-container[jax="SVG"] {
+            max-width: 100%;
+        }
+        .lesson-document mjx-container[display="true"] {
+            display: block;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.35rem 0;
+        }
+        .lesson-document mjx-container:not([display="true"]),
+        .question-text mjx-container:not([display="true"]),
+        .answer-option mjx-container:not([display="true"]) {
             display: inline;
+            vertical-align: -0.12em;
             overflow-wrap: normal;
             word-break: keep-all;
         }
@@ -176,22 +188,22 @@
                 <div>
                     <a href="index.html" class="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-teal-700">
                         <i class="fas fa-arrow-left"></i>
-                        Trang chính
+                        Trang ch�nh
                     </a>
-                    <h1 id="routeTitle" class="text-2xl font-bold tracking-normal text-slate-950">Lộ trình tự học</h1>
+                    <h1 id="routeTitle" class="text-2xl font-bold tracking-normal text-slate-950">L? tr�nh t? h?c</h1>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div>
-                        <div id="accountRoleLabel" class="text-sm font-semibold text-slate-700">Tài khoản</div>
-                        <div id="studentNameDisplay" class="mt-1 min-w-[220px] rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 sm:w-52">Đang tải...</div>
+                        <div id="accountRoleLabel" class="text-sm font-semibold text-slate-700">T�i kho?n</div>
+                        <div id="studentNameDisplay" class="mt-1 min-w-[220px] rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 sm:w-52">�ang t?i...</div>
                     </div>
                     <button id="resetBtn" class="inline-flex items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
                         <i class="fas fa-rotate-left"></i>
-                        Làm lại
+                        L�m l?i
                     </button>
                     <button id="logoutBtn" class="inline-flex items-center justify-center gap-2 rounded border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50">
                         <i class="fas fa-right-from-bracket"></i>
-                        Đăng xuất
+                        �ang xu?t
                     </button>
                 </div>
             </div>
@@ -202,8 +214,8 @@
                 <section class="panel p-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p id="routeSubject" class="text-xs font-bold uppercase tracking-widest text-teal-700">Lộ trình</p>
-                            <h2 id="routeChapter" class="mt-1 text-lg font-bold">Đang tải bài học</h2>
+                            <p id="routeSubject" class="text-xs font-bold uppercase tracking-widest text-teal-700">L? tr�nh</p>
+                            <h2 id="routeChapter" class="mt-1 text-lg font-bold">�ang t?i b�i h?c</h2>
                         </div>
                         <i class="fas fa-route text-2xl text-amber-500"></i>
                     </div>
@@ -211,7 +223,7 @@
                 </section>
 
                 <section class="panel p-4">
-                    <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-slate-500">Danh sách bài</h2>
+                    <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-slate-500">Danh s�ch b�i</h2>
                     <div id="lessonList" class="space-y-2"></div>
                 </section>
             </aside>
@@ -225,7 +237,7 @@
                             <p id="lessonGoal" class="mt-2 max-w-3xl text-sm leading-6 text-slate-600"></p>
                         </div>
                         <div class="rounded border border-slate-200 bg-slate-50 p-4">
-                            <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Trạng thái bài</p>
+                            <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Tr?ng th�i b�i</p>
                             <div id="lessonStatus" class="mt-3 space-y-2"></div>
                         </div>
                     </div>
@@ -236,16 +248,16 @@
                         <section class="panel p-5">
                             <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-4">
                                 <button data-tab="learn" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                    <i class="fas fa-book-open mr-2"></i>Lý thuyết
+                                    <i class="fas fa-book-open mr-2"></i>L� thuy?t
                                 </button>
                                 <button data-tab="examples" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                    <i class="fas fa-lightbulb mr-2"></i>Ví dụ
+                                    <i class="fas fa-lightbulb mr-2"></i>V� d?
                                 </button>
                                 <button data-tab="videos" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                    <i class="fas fa-circle-play mr-2"></i>Bài giảng
+                                    <i class="fas fa-circle-play mr-2"></i>B�i gi?ng
                                 </button>
                                 <button data-tab="practice" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                    <i class="fas fa-pen-to-square mr-2"></i>Luyện tập
+                                    <i class="fas fa-pen-to-square mr-2"></i>Luy?n t?p
                                 </button>
                             </div>
                             <div id="tabContent" class="pt-5"></div>
@@ -254,7 +266,7 @@
                         <section class="panel p-5">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Gợi ý tiếp theo</p>
+                                    <p class="text-xs font-bold uppercase tracking-widest text-amber-600">G?i � ti?p theo</p>
                                     <h3 id="nextActionTitle" class="mt-1 text-lg font-bold"></h3>
                                     <p id="nextActionBody" class="mt-2 text-sm leading-6 text-slate-600"></p>
                                 </div>
@@ -265,12 +277,12 @@
 
                     <aside class="space-y-5">
                         <section class="panel p-5">
-                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">Kỹ năng của bài</h3>
+                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">K? nang c?a b�i</h3>
                             <div id="skillPanel" class="mt-4 space-y-4"></div>
                         </section>
 
                         <section class="panel p-5">
-                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">Nhiệm vụ hôm nay</h3>
+                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">Nhi?m v? h�m nay</h3>
                             <div id="dailyTasks" class="mt-4 space-y-3"></div>
                         </section>
                     </aside>
