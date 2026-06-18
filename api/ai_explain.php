@@ -8,27 +8,62 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_body();
 $text = trim($data['text'] ?? '');
-$lessonTitle = trim($data['lesson_title'] ?? 'bài học');
-$subject = trim($data['subject'] ?? 'Toán');
+$lessonTitle = trim($data['lesson_title'] ?? 'bai hoc');
+$subject = trim($data['subject'] ?? 'Toan');
 
 if ($text === '') {
-    respond(['error' => 'Thiếu nội dung cần giải thích.'], 422);
+    respond(['error' => 'Thieu noi dung can giai thich.'], 422);
 }
 
-if (!defined('GEMINI_API_KEYS') || empty(GEMINI_API_KEYS)) {
-    respond(['error' => 'AI chưa được cấu hình trên hosting.'], 503);
+function normalize_gemini_keys($value): array
+{
+    if (is_string($value)) {
+        $value = preg_split('/[\s,]+/', $value) ?: [];
+    }
+    if (!is_array($value)) return [];
+    return array_values(array_unique(array_filter(array_map('trim', $value))));
 }
 
-$keys = GEMINI_API_KEYS;
-if (is_string($keys)) {
-    $keys = array_filter(array_map('trim', explode(',', $keys)));
+$keys = [];
+$model = 'gemini-2.5-flash';
+
+if (defined('GEMINI_API_KEYS')) {
+    $keys = normalize_gemini_keys(GEMINI_API_KEYS);
 }
-if (!is_array($keys) || empty($keys)) {
-    respond(['error' => 'AI chưa có Gemini API key hợp lệ.'], 503);
+if (defined('GEMINI_MODEL') && is_string(GEMINI_MODEL) && trim(GEMINI_MODEL) !== '') {
+    $model = trim(GEMINI_MODEL);
 }
 
-$model = defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash';
-$prompt = "Bạn là trợ lý học Toán cho học sinh THCS. Hãy giải thích thật dễ hiểu, ngắn gọn, dùng tiếng Việt, không làm thay toàn bộ bài nếu là bài tập.\n\nMôn: {$subject}\nBài: {$lessonTitle}\nNội dung học sinh chưa hiểu:\n{$text}\n\nTrả lời theo 3 phần ngắn: Ý chính, Giải thích dễ hiểu, Ví dụ nhỏ.";
+$globalConfigFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'global_config.json';
+if (is_file($globalConfigFile)) {
+    $globalConfig = json_decode((string)@file_get_contents($globalConfigFile), true);
+    if (is_array($globalConfig)) {
+        $fileKeys = [];
+        if (array_key_exists('gemini_keys', $globalConfig)) {
+            $fileKeys = normalize_gemini_keys($globalConfig['gemini_keys']);
+        } elseif (array_key_exists('global_gemini_keys', $globalConfig)) {
+            $fileKeys = normalize_gemini_keys($globalConfig['global_gemini_keys']);
+        }
+        if (!empty($fileKeys)) {
+            $keys = $fileKeys;
+        }
+        if (!empty($globalConfig['gemini_model']) && is_string($globalConfig['gemini_model'])) {
+            $model = trim($globalConfig['gemini_model']);
+        }
+    }
+}
+
+if (empty($keys)) {
+    respond(['error' => 'AI chua co Gemini API key hop le.'], 503);
+}
+
+$lastKeyFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'giangbai_gemini_last_key.txt';
+$lastUsedKey = is_file($lastKeyFile) ? trim((string)@file_get_contents($lastKeyFile)) : '';
+if ($lastUsedKey !== '') {
+    $keys = array_merge(array_values(array_filter($keys, fn($key) => $key !== $lastUsedKey)), [$lastUsedKey]);
+}
+
+$prompt = "Ban la tro ly hoc Toan cho hoc sinh THCS. Hay giai thich that de hieu, ngan gon, dung tieng Viet, khong lam thay toan bo bai neu la bai tap.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNoi dung hoc sinh chua hieu:\n{$text}\n\nTra loi theo 3 phan ngan: Y chinh, Giai thich de hieu, Vi du nho.";
 
 $payload = json_encode([
     'contents' => [[
@@ -40,7 +75,7 @@ $payload = json_encode([
     ],
 ], JSON_UNESCAPED_UNICODE);
 
-$lastError = 'Không gọi được AI.';
+$lastError = 'Khong goi duoc AI.';
 foreach ($keys as $key) {
     $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
     $ch = curl_init($url);
@@ -57,7 +92,7 @@ foreach ($keys as $key) {
     curl_close($ch);
 
     if ($raw === false || $raw === '') {
-        $lastError = $curlError ?: 'AI không phản hồi.';
+        $lastError = $curlError ?: 'AI khong phan hoi.';
         continue;
     }
 
@@ -69,13 +104,17 @@ foreach ($keys as $key) {
             if (!empty($part['text'])) $answer .= $part['text'];
         }
         if (trim($answer) !== '') {
+            @file_put_contents($lastKeyFile, $key, LOCK_EX);
             respond(['ok' => true, 'answer' => trim($answer)]);
         }
-        $lastError = 'AI trả về nội dung rỗng.';
+        $lastError = 'AI tra ve noi dung rong.';
         continue;
     }
 
-    $lastError = $response['error']['message'] ?? ('AI lỗi HTTP ' . $status);
+    $lastError = $response['error']['message'] ?? ('AI loi HTTP ' . $status);
+    if ($status === 429 || $status >= 500) {
+        continue;
+    }
 }
 
 respond(['error' => $lastError], 502);

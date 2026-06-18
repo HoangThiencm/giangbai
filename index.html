@@ -373,6 +373,18 @@
 
                     if (config.github_repo) localStorage.setItem('github_repo', config.github_repo);
                     if (config.github_pat) localStorage.setItem('github_pat', config.github_pat);
+                    if (Array.isArray(config.gemini_keys)) {
+                        localStorage.setItem('global_gemini_keys', JSON.stringify(config.gemini_keys.filter(Boolean)));
+                    }
+                    if (config.gemini_model) {
+                        localStorage.setItem('default_gemini_module', config.gemini_model);
+                    }
+                    if (Array.isArray(config.groq_keys)) {
+                        localStorage.setItem('global_groq_keys', JSON.stringify(config.groq_keys.filter(Boolean)));
+                    }
+                    if (config.groq_model) {
+                        localStorage.setItem('default_groq_model', config.groq_model);
+                    }
 
                     const userEmail = localStorage.getItem('userEmail') || "";
                     let features = config.features || {};

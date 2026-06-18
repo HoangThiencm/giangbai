@@ -75,13 +75,24 @@
             .trim();
     }
 
+    function preserveMathSegments(value) {
+        return String(value ?? '')
+            .replace(/\r/g, '')
+            .replace(/\$\$(.+?)\$\$/gs, (_, expr) => `\n$${expr.trim()}$\n`)
+            .replace(/\$(.+?)\$/g, (_, expr) => ` $${expr.trim()} `)
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
     function richText(value) {
-        return escapeHtml(normalizeDisplayText(value));
+        return escapeHtml(preserveMathSegments(value))
+            .replace(/\n/g, '<br>')
+            .replace(/ {2,}/g, ' ');
     }
 
     function renderParagraphs(items, emptyText, aiType = 'theory') {
         const parts = (Array.isArray(items) ? items : [])
-            .map(normalizeDisplayText)
+            .map(preserveMathSegments)
             .filter(Boolean);
         if (!parts.length) {
             return `<div class="rounded border border-slate-200 bg-white p-4 muted-note">${emptyText}</div>`;
@@ -90,8 +101,8 @@
             <article class="lesson-document rounded border border-slate-200 bg-white p-5">
                 ${parts.map((part, index) => `
                     <section class="lesson-explain-block">
-                        <p>${escapeHtml(part)}</p>
-                        <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(part)}">
+                        <p>${escapeHtml(part).replace(/\n/g, '<br>')}</p>
+                        <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(part))}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
                     </section>
@@ -110,6 +121,9 @@
         const value = String(url || '').trim();
         if (!value) return '';
         const patterns = [
+            /drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/,
+            /drive\.google\.com\/open\?id=([A-Za-z0-9_-]+)/,
+            /docs\.google\.com\/uc\?id=([A-Za-z0-9_-]+)/,
             /youtu\.be\/([A-Za-z0-9_-]{6,})/,
             /youtube\.com\/watch\?v=([A-Za-z0-9_-]{6,})/,
             /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
@@ -117,7 +131,12 @@
         ];
         for (const pattern of patterns) {
             const match = value.match(pattern);
-            if (match) return `https://www.youtube.com/embed/${match[1]}`;
+            if (match) {
+                if (pattern.source.includes('drive\\.google\\.com') || pattern.source.includes('docs\\.google\\.com')) {
+                    return `https://drive.google.com/file/d/${match[1]}/preview`;
+                }
+                return `https://www.youtube.com/embed/${match[1]}`;
+            }
         }
         return '';
     }
@@ -323,14 +342,38 @@
         els.lessonTitle.textContent = lesson.title;
         els.lessonGoal.textContent = lesson.goal || '';
         els.lessonStatus.innerHTML = `
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-3">
                 <span class="inline-flex items-center gap-2 text-sm font-bold ${status.tone}">
                     <span class="status-dot ${status.color}"></span>${status.text}
                 </span>
-                <span class="text-sm font-bold text-slate-900">${progress.score || 0}%</span>
+                <button type="button" id="markLessonDoneBtn" class="inline-flex items-center gap-2 rounded border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100">
+                    <i class="fas fa-check"></i>Đã học
+                </button>
             </div>
-            <div class="skill-bar"><span style="width:${progress.score || 0}%"></span></div>
+            <div class="skill-bar mt-2"><span style="width:${progress.score || 0}%"></span></div>
         `;
+        const markBtn = document.getElementById('markLessonDoneBtn');
+        if (markBtn) {
+            markBtn.onclick = async () => {
+                const ui = currentUiState(lesson);
+                const completedAt = new Date().toISOString();
+                await syncLessonState(lesson, {
+                    ...ui,
+                    theoryDone: true,
+                    examplesDone: true,
+                    practiceDone: true,
+                    completedAt,
+                    startedAt: ui.startedAt || completedAt
+                }, {
+                    status: 'mastered',
+                    score: Math.max(progress.score || 0, 80),
+                    skillScores: progress.skillScores || {},
+                    completedAt
+                });
+                await reloadLessons();
+                render();
+            };
+        }
     }
 
     function setActiveTab(tab) {
