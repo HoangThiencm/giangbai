@@ -95,26 +95,83 @@
             .trim();
     }
 
+    function isMathPart(part) {
+        return (
+            (part.startsWith('$$') && part.endsWith('$$')) ||
+            (part.startsWith('\\[') && part.endsWith('\\]')) ||
+            (part.startsWith('\\(') && part.endsWith('\\)')) ||
+            (part.startsWith('$') && part.endsWith('$'))
+        );
+    }
+
     function mathText(value) {
         const source = normalizeMathContent(value);
         const parts = source.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\n$]*?\$|\\\([\s\S]*?\\\))/g);
         return parts.map(part => {
             if (!part) return '';
-            const isMath = (
-                (part.startsWith('$$') && part.endsWith('$$')) ||
-                (part.startsWith('\\[') && part.endsWith('\\]')) ||
-                (part.startsWith('\\(') && part.endsWith('\\)')) ||
-                (part.startsWith('$') && part.endsWith('$'))
-            );
-            if (isMath) {
+            if (isMathPart(part)) {
                 return escapeHtml(part.replace(/[ \t]*\n[ \t]*/g, ' '));
             }
             return escapeHtml(part).replace(/\n/g, '<br>');
         }).join('');
     }
 
+    function sanitizeLessonImageUrl(url) {
+        const value = String(url || '').trim();
+        if (!/^https?:\/\//i.test(value)) return '';
+        return value.replace(/[\s"'<>]/g, '');
+    }
+
+    function applyLessonInlineMarkup(text) {
+        return escapeHtml(text)
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+            .replace(/\+\+([^+]+)\+\+/g, '<u>$1</u>');
+    }
+
+    function formatLessonTextBlock(text) {
+        const parts = text.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\n$]*?\$|\\\([\s\S]*?\\\))/g);
+        return parts.map(part => {
+            if (!part) return '';
+            if (isMathPart(part)) {
+                return escapeHtml(part.replace(/[ \t]*\n[ \t]*/g, ' '));
+            }
+            return applyLessonInlineMarkup(part).replace(/\n/g, '<br>');
+        }).join('');
+    }
+
+    function lessonRichText(value) {
+        const source = normalizeMathContent(value);
+        const lines = source.split('\n');
+        const chunks = [];
+        let textBuffer = [];
+
+        const flushText = () => {
+            if (!textBuffer.length) return;
+            chunks.push(formatLessonTextBlock(textBuffer.join('\n')));
+            textBuffer = [];
+        };
+
+        lines.forEach(line => {
+            const img = line.trim().match(/^!\[([^\]]*)\]\((\S+)\)$/);
+            if (img) {
+                flushText();
+                const url = sanitizeLessonImageUrl(img[2]);
+                if (!url) return;
+                const alt = escapeHtml(img[1]);
+                chunks.push(
+                    `<figure class="lesson-inline-image"><img src="${escapeHtml(url)}" alt="${alt}" loading="lazy">${img[1] ? `<figcaption>${alt}</figcaption>` : ''}</figure>`
+                );
+                return;
+            }
+            textBuffer.push(line);
+        });
+        flushText();
+        return chunks.join('<br>');
+    }
+
     function richText(value) {
-        return mathText(value);
+        return lessonRichText(value);
     }
 
     function cleanAiAnswer(value) {
@@ -230,18 +287,25 @@
         if (!parts.length) {
             return `<div class="rounded border border-slate-200 bg-white p-4 muted-note">${emptyText}</div>`;
         }
+        if (parts.length === 1 && !parts[0].ai) {
+            return `
+                <article class="lesson-document rounded border border-slate-200 bg-white p-5">
+                    <div class="lesson-theory-flow lesson-paragraph">${lessonRichText(parts[0].text)}</div>
+                </article>
+            `;
+        }
         return `
             <article class="lesson-document rounded border border-slate-200 bg-white p-5">
-                ${parts.map((part, index) => `
-                    <section class="lesson-explain-block">
-                        <div class="lesson-paragraph">${mathText(part.text)}</div>
+                <div class="lesson-theory-flow">
+                    ${parts.map((part, index) => `
+                        <div class="lesson-paragraph">${lessonRichText(part.text)}</div>
                         ${part.ai ? `
                         <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(part.text))}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
                         ` : ''}
-                    </section>
-                `).join('')}
+                    `).join('')}
+                </div>
             </article>
         `;
     }
@@ -813,7 +877,7 @@
         `;
         bubble.querySelector('.ai-chat-bubble-close').onclick = () => bubble.remove();
 
-        const host = anchorButton?.closest('.lesson-explain-block, .practice-card, .lesson-document') || anchorButton?.parentElement;
+        const host = anchorButton?.closest('.lesson-theory-flow, .lesson-explain-block, .practice-card, .lesson-document') || anchorButton?.parentElement;
         if (host) {
             host.appendChild(bubble);
         } else {

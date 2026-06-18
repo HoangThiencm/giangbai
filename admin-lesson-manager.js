@@ -347,6 +347,68 @@
         return (items || []).map(item => [item.prompt || '', (item.items || []).join(' > '), (item.answer || []).join(' > '), item.hint || ''].join(' | ')).join('\n');
     }
 
+    function richToolbarHtml(targetId) {
+        return `
+            <div class="lesson-rich-toolbar" data-target="${targetId}">
+                <button type="button" data-wrap="**" title="In đậm"><i class="fas fa-bold"></i></button>
+                <button type="button" data-wrap="*" title="In nghiêng"><i class="fas fa-italic"></i></button>
+                <button type="button" data-wrap="++" title="Gạch chân"><i class="fas fa-underline"></i></button>
+                <button type="button" data-action="image" title="Chèn ảnh"><i class="fas fa-image"></i></button>
+                <button type="button" data-action="ai" title="Thêm [AI] cho đoạn này"><i class="fas fa-wand-magic-sparkles"></i> [AI]</button>
+            </div>
+        `;
+    }
+
+    function insertEditorWrap(targetId, marker, placeholder = 'nội dung') {
+        const field = el(targetId);
+        if (!field) return;
+        const start = field.selectionStart ?? 0;
+        const end = field.selectionEnd ?? start;
+        const selected = field.value.slice(start, end) || placeholder;
+        const next = `${marker}${selected}${marker}`;
+        field.setRangeText(next, start, end, 'end');
+        const cursor = start + marker.length + selected.length + marker.length;
+        field.setSelectionRange(cursor, cursor);
+        field.focus();
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function insertEditorImage(targetId) {
+        const field = el(targetId);
+        if (!field) return;
+        const url = window.prompt('Dán link ảnh (https://...)');
+        if (!url) return;
+        const alt = window.prompt('Mô tả ảnh (có thể để trống)', '') || '';
+        const insert = `\n![${alt}](${url.trim()})\n`;
+        const start = field.selectionStart ?? field.value.length;
+        field.setRangeText(insert, start, start, 'end');
+        field.focus();
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function insertEditorAiMarker(targetId) {
+        const field = el(targetId);
+        if (!field) return;
+        const insert = `\n${AI_MARKER}\n`;
+        const start = field.selectionStart ?? field.value.length;
+        field.setRangeText(insert, start, start, 'end');
+        field.focus();
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function setupRichToolbars() {
+        document.querySelectorAll('.lesson-rich-toolbar').forEach(toolbar => {
+            if (toolbar.dataset.ready) return;
+            toolbar.dataset.ready = '1';
+            const targetId = toolbar.dataset.target;
+            toolbar.querySelectorAll('button[data-wrap]').forEach(button => {
+                button.onclick = () => insertEditorWrap(targetId, button.dataset.wrap || '');
+            });
+            toolbar.querySelector('[data-action="image"]').onclick = () => insertEditorImage(targetId);
+            toolbar.querySelector('[data-action="ai"]').onclick = () => insertEditorAiMarker(targetId);
+        });
+    }
+
     function setupEditorFieldShortcuts() {
         document.querySelectorAll('#lessonEditorPanel input, #lessonEditorPanel textarea').forEach(field => {
             if (field.dataset.editorShortcutsReady) return;
@@ -446,11 +508,13 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <label class="block text-sm font-bold text-slate-700">Nội dung bài học
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần (dòng trống) = ngắt đoạn. Enter 1 lần = xuống dòng trong cùng đoạn (như Shift+Enter). Công thức viết bằng $...$. Thêm <code class="font-mono text-[11px]">[AI]</code> ở cuối đoạn cần nút AI giải thích (học sinh không thấy chữ này).</span>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn (dùng với <code class="font-mono text-[11px]">[AI]</code>). Định dạng: <code class="font-mono text-[11px]">**đậm**</code>, <code class="font-mono text-[11px]">*nghiêng*</code>, <code class="font-mono text-[11px]">++gạch chân++</code>, ảnh: <code class="font-mono text-[11px]">![mô tả](link)</code>. Công thức: <code class="font-mono text-[11px]">$...$</code>.</span>
+                        ${richToolbarHtml('lessonTheory')}
                         <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     <label class="block text-sm font-bold text-slate-700">Ví dụ
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần = tách ví dụ. Dòng đầu là tiêu đề; Enter 1 lần trong lời giải = xuống dòng. Thêm <code class="font-mono text-[11px]">[AI]</code> ở cuối lời giải để bật nút AI (không hiển thị ra ngoài).</span>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần = tách ví dụ. Dòng đầu là tiêu đề; Enter 1 lần trong lời giải = xuống dòng. Cùng quy tắc định dạng và <code class="font-mono text-[11px]">[AI]</code> như nội dung bài học.</span>
+                        ${richToolbarHtml('lessonExamples')}
                         <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     </div>
@@ -522,8 +586,26 @@
             el(id).addEventListener('input', renderPreview);
         });
         setupEditorFieldShortcuts();
+        setupRichToolbars();
+        injectLessonEditorStyles();
 
         renderSubjectPills();
+    }
+
+    function injectLessonEditorStyles() {
+        if (document.getElementById('lessonEditorStyles')) return;
+        const style = document.createElement('style');
+        style.id = 'lessonEditorStyles';
+        style.textContent = `
+            .lesson-rich-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+            .lesson-rich-toolbar button {
+                display: inline-flex; align-items: center; gap: 4px;
+                padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+                background: #fff; color: #334155; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+            }
+            .lesson-rich-toolbar button:hover { background: #f8fafc; border-color: #94a3b8; }
+        `;
+        document.head.appendChild(style);
     }
 
     function renderSubjectPills() {
