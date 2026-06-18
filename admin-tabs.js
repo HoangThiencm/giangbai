@@ -2,7 +2,6 @@
     const tabs = [
         { id: 'lessons', label: 'Tạo bài học', icon: 'fa-book-open' },
         { id: 'accounts', label: 'Tạo tài khoản', icon: 'fa-user-graduate' },
-        { id: 'progress', label: 'Theo dõi tiến độ', icon: 'fa-chart-line' },
         { id: 'settings', label: 'Cài đặt hệ thống', icon: 'fa-sliders' }
     ];
 
@@ -62,9 +61,6 @@
         });
 
         localStorage.setItem('admin_active_tab', id);
-        if (id === 'progress' && typeof window.refreshAdminProgress === 'function') {
-            window.refreshAdminProgress().catch?.(() => {});
-        }
     }
 
     window.ensureAdminTabs = function () {
@@ -108,7 +104,6 @@
             moveInto(makePanel('lessons'), el('lessonEditorPanel'));
             moveInto(makePanel('accounts'), el('studentCreatePanel'));
             moveInto(makePanel('accounts'), findAccountsTable());
-            moveInto(makePanel('progress'), el('adminProgressPanel'));
             moveInto(makePanel('settings'), findSettingsCard());
 
             nav.querySelectorAll('.admin-tab-button').forEach(button => {

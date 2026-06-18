@@ -15,6 +15,11 @@
 - [x] Sửa lại cách tính "Tiến độ chương": trước đây chỉ tăng khi bài đạt `mastered`, giờ tính trung bình phần trăm hoàn thành của các bài nên đánh dấu lý thuyết/ví dụ/luyện tập sẽ làm tiến trình tăng ngay.
 - [x] Đổi nhãn trạng thái hoàn tất bài từ "Đã vững" sang "Đã học xong" để khớp với hành động người dùng bấm nút "Đã học".
 - [x] Sửa bảng "Kỹ năng của bài" để phản ánh tiến độ học của chính bài: đánh dấu lý thuyết hiển thị tối thiểu 30%, đánh dấu ví dụ tối thiểu 50%, bấm "Đã học" toàn bài hiển thị 100% thay vì đứng yên 0%.
+- [x] Sửa hành vi bài đã học xong: nếu tài khoản đã học xong bài thì UI hiển thị trạng thái "Đã học xong" và nút "Học lại"; bấm "Học lại" sẽ reset tiến trình bài đó để học sinh học lại từ đầu.
+- [x] Đưa panel "Theo dõi tiến độ học sinh" vào giao diện giáo viên soạn bài (`lessonDesignerMount`) để giáo viên được cấp quyền dạy vẫn xem tiến độ mà không cần vào trang admin.
+- [x] Mở API `api/admin_progress.php` cho giáo viên đang đăng nhập, ngoài admin key, để nhiều giáo viên có thể theo dõi tiến độ trong phạm vi giao diện giáo viên.
+- [x] Render công thức Toán trong bảng theo dõi tiến độ của giáo viên: `admin-progress.js` xử lý LaTeX trong cột "Cần lưu ý", `index.html` và các trang lộ trình Toán đã có/nạp MathJax để không còn hiện raw như `$\mathbb{N}$`.
+- [x] Gỡ "Theo dõi tiến độ" khỏi `admin.html` và tab admin; admin chỉ giữ các việc tổng quát như tạo bài học, tạo tài khoản và cài đặt hệ thống.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -22,6 +27,9 @@
 - [ ] Chọn từng đáp án trắc nghiệm: kiểm tra phần trăm tiến trình bài hiện tại tăng theo số câu đã làm, dấu đúng/sai hiện ngay, và kỹ năng đổi phần trăm tương ứng.
 - [ ] Bấm "Đánh dấu đã học" ở lý thuyết hoặc "Đánh dấu đã xem ví dụ": kiểm tra "Tiến độ chương" và "Tiến độ bài hiện tại" tăng ngay sau khi lưu.
 - [ ] Bấm nút "Đã học" trên header bài học: kiểm tra trạng thái chuyển "Đã học xong" và các thanh trong "Kỹ năng của bài" lên 100%.
+- [ ] Đăng nhập bằng tài khoản giáo viên, vào giao diện soạn bài: kiểm tra có panel "Theo dõi tiến độ học sinh" ngay trong trang giáo viên và công thức trong cột "Cần lưu ý" được render.
+- [ ] Đăng nhập admin: kiểm tra không còn tab/panel "Theo dõi tiến độ" trong admin.
+- [ ] Với bài đã học xong, kiểm tra nút hiển thị "Học lại"; bấm vào thì bài quay về trạng thái đang học và tiến trình được reset.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.

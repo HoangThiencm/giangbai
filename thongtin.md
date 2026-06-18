@@ -19,9 +19,12 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Tiến trình bài hiện tại được tính theo các mốc: lý thuyết 30%, ví dụ 20%, luyện tập 50% theo tỷ lệ số câu đã làm. Giá trị này hiển thị ở sidebar và header bài học.
    - Tiến độ chương được tính bằng trung bình phần trăm hoàn thành của các bài trong lộ trình, không chỉ dựa vào số bài `mastered`; vì vậy đánh dấu đã học từng phần sẽ làm thanh tiến trình chương thay đổi.
    - Bảng kỹ năng không còn hiển thị `--` khi học sinh vào luyện tập; mặc định hiển thị `0%`, lấy tiến độ hoàn thành bài làm mức tối thiểu, và cập nhật theo thao tác đánh dấu/nộp bài.
+   - Khi bài đã học xong (`mastered`), nút trên header bài học đổi thành "Học lại"; bấm nút này sẽ reset tiến trình bài hiện tại để học sinh làm lại.
+   - Giao diện giáo viên (`lessonDesignerMount`) hiện có thêm panel theo dõi tiến độ học sinh. Trang admin không hiển thị panel này để giữ vai trò quản trị tổng quát.
 
 3. **Backend API (`api/`)**
    - `lessons.php`: Quản lý lấy danh sách bài học, và **lưu tiến độ** (trạng thái `started_at`, `completed_at`, `state_json`, ...). Đã có cơ chế auto-migrate cột database độc lập (`ensure_progress_schema`) sử dụng từng khối try-catch riêng.
+   - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh. Hiện cho phép session giáo viên đang hoạt động; admin key vẫn dùng được ở API nhưng UI admin không còn hiển thị panel tiến độ.
    - `ai_explain.php`: Chịu trách nhiệm gọi API LLM (Gemini) để sinh text giải thích dựa trên nội dung và ngữ cảnh. Trả về định dạng JSON súc tích. Đã tăng giới hạn token, yêu cầu câu cuối kết thúc trọn vẹn và tự gọi tiếp một lượt nếu phản hồi có dấu hiệu bị ngắt.
    - `helpers.php`: Gồm các hàm tiện ích chung (`respond()`, `column_exists()`, `mysql_datetime_or_null()`).
 
@@ -36,6 +39,9 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Tiến độ chương:** `renderOverallProgress()` hiện lấy trung bình `lessonCompletionPercent()` của các bài đang hiển thị. Dòng phụ vẫn cho biết số bài đã học xong trên tổng số bài.
 - **Trạng thái hoàn tất:** Trạng thái `mastered` trên UI được hiển thị là "Đã học xong" để phản hồi đúng hành động bấm nút "Đã học".
 - **Kỹ năng của bài:** `renderSkills()` hiện hiển thị tối thiểu bằng `lessonCompletionPercent()`, nên học sinh đánh dấu đã học lý thuyết/ví dụ/toàn bài sẽ thấy thanh kỹ năng của bài thay đổi ngay, không đứng yên 0%.
+- **Học lại:** Khi bài ở trạng thái `mastered`, nút hành động chuyển thành "Học lại". Nút này gọi `resetLesson()`, xóa tiến trình bài đó và đánh dấu lại trạng thái bắt đầu để học sinh học lại.
+- **Theo dõi tiến độ cho giáo viên:** `admin-progress.js` chỉ mount vào `lessonDesignerMount` khi `localStorage.userRole === 'teacher'`; không mount vào admin dashboard. Nếu không có admin key, request API vẫn chạy bằng session giáo viên.
+- **Render công thức trong theo dõi tiến độ:** `admin-progress.js` có hàm `mathText()` và gọi `MathJax.typesetPromise()` sau khi render bảng. `index.html` và các trang lộ trình Toán nạp MathJax để công thức trong dữ liệu kỹ năng/cần lưu ý hiển thị đúng.
 - **Bài luyện tập:** Trắc nghiệm đã có phản hồi đúng/sai sau khi chọn đáp án; thao tác nộp bài cập nhật điểm, kỹ năng và trạng thái (`in_progress`, `needs_practice`, `mastered`). Nút "Làm lại bài luyện" reset đáp án/điểm luyện tập về trạng thái đang học để học sinh có thể làm lại.
 - **Cần phản biện sau sửa:** Người dùng nên kiểm tra lại 3 điểm trên UI: AI có còn trả câu cụt không, tab Luyện tập có hiện phần trăm thay vì `--` không, và phần trăm có tăng khi chọn đáp án không.
 

@@ -13,6 +13,10 @@
         }
     }
 
+    function isTeacherUser() {
+        return localStorage.getItem('userRole') === 'teacher';
+    }
+
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, ch => ({
             '&': '&amp;',
@@ -23,19 +27,50 @@
         }[ch]));
     }
 
+    function decodeBasicEntities(value) {
+        return String(value ?? '')
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&nbsp;/g, ' ');
+    }
+
+    function mathText(value) {
+        const source = decodeBasicEntities(value).replace(/\r\n?/g, '\n').trim();
+        const parts = source.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\n$]*?\$|\\\([\s\S]*?\\\))/g);
+        return parts.map(part => {
+            if (!part) return '';
+            const isMath = (
+                (part.startsWith('$$') && part.endsWith('$$')) ||
+                (part.startsWith('\\[') && part.endsWith('\\]')) ||
+                (part.startsWith('\\(') && part.endsWith('\\)')) ||
+                (part.startsWith('$') && part.endsWith('$'))
+            );
+            if (isMath) return escapeHtml(part.replace(/[ \t]*\n[ \t]*/g, ' '));
+            return escapeHtml(part).replace(/\n/g, '<br>');
+        }).join('');
+    }
+
+    function typesetMath() {
+        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+            window.MathJax.typesetPromise([el('adminProgressPanel') || document.body]).catch(() => {});
+        }
+    }
+
     function statusLabel(status) {
         const map = {
             not_started: ['Chưa bắt đầu', 'bg-slate-100 text-slate-700'],
             in_progress: ['Đang học', 'bg-sky-100 text-sky-700'],
             needs_practice: ['Cần luyện thêm', 'bg-amber-100 text-amber-800'],
-            mastered: ['Đã vững', 'bg-teal-100 text-teal-800']
+            mastered: ['Đã học xong', 'bg-teal-100 text-teal-800']
         };
         return map[status] || map.not_started;
     }
 
     function ensurePanel() {
         if (el('adminProgressPanel')) return;
-        const dashboard = el('dashboardSection');
+        const dashboard = isTeacherUser() ? el('lessonDesignerMount') : null;
         if (!dashboard) return;
 
         const panel = document.createElement('section');
@@ -61,7 +96,7 @@
                     <select id="progressStatusFilter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none">
                         <option value="">Tất cả</option>
                         <option value="needs">Cần luyện thêm</option>
-                        <option value="mastered">Đã vững</option>
+                        <option value="mastered">Đã học xong</option>
                         <option value="not_started">Chưa bắt đầu</option>
                     </select>
                 </label>
@@ -122,7 +157,7 @@
         const cards = [
             ['Tổng học sinh', total, 'text-slate-900'],
             ['Đã nộp bài', done, 'text-sky-700'],
-            ['Đã vững', mastered, 'text-teal-700'],
+            ['Đã học xong', mastered, 'text-teal-700'],
             ['Cần luyện thêm', needs, 'text-amber-700']
         ];
         el('progressSummary').innerHTML = cards.map(card => `
@@ -166,20 +201,22 @@
                         <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
                     </td>
                     <td class="px-4 py-3 text-sm font-bold ${scoreTone}">${row.score}%</td>
-                    <td class="px-4 py-3 text-sm text-slate-700">${escapeHtml(weakSkillText(row))}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 leading-6">${mathText(weakSkillText(row))}</td>
                     <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>
                 </tr>
             `;
         }).join('');
+        typesetMath();
     }
 
     async function refresh() {
         const key = getAdminKey();
-        if (!key) return;
+        if (!key && !isTeacherUser()) return;
         ensurePanel();
         const qs = selectedLessonId ? `?lesson_id=${encodeURIComponent(selectedLessonId)}` : '';
+        const headers = key ? { 'X-Admin-Key': key } : {};
         const res = await fetch(`api/admin_progress.php${qs}`, {
-            headers: { 'X-Admin-Key': key },
+            headers,
             cache: 'no-store'
         });
         const data = await res.json();
@@ -209,7 +246,7 @@
     function boot() {
         ensurePanel();
         wrapLoadUsers();
-        if (getAdminKey()) refresh().catch(console.warn);
+        if (isTeacherUser()) refresh().catch(console.warn);
     }
 
     document.addEventListener('adminLessonsChanged', () => refresh().catch(console.warn));

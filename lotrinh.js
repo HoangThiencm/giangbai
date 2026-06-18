@@ -443,7 +443,7 @@
                     <span class="status-dot ${status.color}"></span>${status.text}
                 </span>
                 <button type="button" id="markLessonDoneBtn" class="inline-flex items-center gap-2 rounded border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100">
-                    <i class="fas fa-check"></i>Đã học
+                    <i class="fas ${progress.status === 'mastered' ? 'fa-rotate-left' : 'fa-check'}"></i>${progress.status === 'mastered' ? 'Học lại' : 'Đã học'}
                 </button>
             </div>
             <div class="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
@@ -455,6 +455,14 @@
         const markBtn = document.getElementById('markLessonDoneBtn');
         if (markBtn) {
             markBtn.onclick = async () => {
+                if (progress.status === 'mastered') {
+                    await resetLesson(lesson);
+                    delete state.progress[lesson.id];
+                    await markLessonStarted(lesson);
+                    state.activeTab = 'learn';
+                    render();
+                    return;
+                }
                 const ui = currentUiState(lesson);
                 const completedAt = new Date().toISOString();
                 const nextUi = {

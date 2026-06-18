@@ -1,6 +1,19 @@
 <?php
 require_once __DIR__ . '/helpers.php';
-require_admin_key();
+session_start();
+
+$key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
+$isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $key);
+$isTeacher = false;
+if (!$isAdmin && !empty($_SESSION['user_id'])) {
+    $userStmt = $pdo->prepare('SELECT role, is_active FROM users WHERE id = ? LIMIT 1');
+    $userStmt->execute([$_SESSION['user_id']]);
+    $user = $userStmt->fetch();
+    $isTeacher = $user && (bool)$user['is_active'] && ($user['role'] ?? '') === 'teacher';
+}
+if (!$isAdmin && !$isTeacher) {
+    respond(['error' => 'Tài khoản không có quyền xem tiến độ học sinh.'], 403);
+}
 
 function decode_json_array($value): array
 {

@@ -1367,13 +1367,11 @@
         };
     </script>
     <script src="admin-lesson-manager.js?v=20260618-bulkpromote1"></script>
-    <script src="admin-progress.js?v=20260618-bulkpromote1"></script>
     <script>
         (function () {
             const TAB_DEFS = [
                 ['lessons', 'Tạo bài học', 'fa-book-open'],
                 ['accounts', 'Tạo tài khoản', 'fa-user-graduate'],
-                ['progress', 'Theo dõi tiến độ', 'fa-chart-line'],
                 ['settings', 'Cài đặt hệ thống', 'fa-sliders']
             ];
 
@@ -1476,7 +1474,6 @@
                     if (tabPanel.parentElement !== content) content.appendChild(tabPanel);
                 });
                 move(panel('lessons'), $('lessonEditorPanel'));
-                move(panel('progress'), $('adminProgressPanel'));
                 move(panel('accounts'), $('studentCreatePanel'));
                 move(panel('accounts'), accountsTable());
                 move(panel('settings'), settingsCard());
