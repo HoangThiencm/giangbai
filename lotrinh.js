@@ -466,9 +466,15 @@
                 setActiveTab('examples');
                 return;
             }
-            await syncLessonState(lesson, { ...ui, theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
-            await reloadLessons();
-            setActiveTab('examples');
+            try {
+                await syncLessonState(lesson, { ...ui, theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
+                await reloadLessons();
+                state.activeTab = 'examples';
+                render();
+            } catch (err) {
+                console.error('markTheoryDone error:', err);
+                alert('Không lưu được tiến độ: ' + (err.message || 'Lỗi không xác định'));
+            }
         };
         bindAiExplainButtons(lesson);
     }
@@ -590,9 +596,15 @@
                 setActiveTab('practice');
                 return;
             }
-            await syncLessonState(lesson, { ...ui, examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
-            await reloadLessons();
-            setActiveTab('practice');
+            try {
+                await syncLessonState(lesson, { ...ui, examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
+                await reloadLessons();
+                state.activeTab = 'practice';
+                render();
+            } catch (err) {
+                console.error('markExamplesDone error:', err);
+                alert('Không lưu được tiến độ: ' + (err.message || 'Lỗi không xác định'));
+            }
         };
         bindAiExplainButtons(lesson);
     }
@@ -961,7 +973,7 @@
             started_at: extra.startedAt || uiState.startedAt || null,
             completed_at: extra.completedAt || uiState.completedAt || null,
         };
-        await api('api/lessons.php', {
+        await api('api/lessons.php?action=save_progress&debug=1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
