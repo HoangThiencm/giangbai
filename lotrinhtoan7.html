@@ -21,6 +21,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { color-scheme: light; }
+        /* Fix Tailwind Preflight: svg{display:block} phá vỡ MathJax inline */
+        mjx-container svg { display: inline !important; }
         html { font-size: 18px; }
         body { font-family: "Segoe UI", Arial, sans-serif; background: #f6f8fb; }
         .app-shell {
