@@ -48,6 +48,39 @@
             box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
             transform: translateY(-1px);
         }
+        .lesson-chapter-group {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+        .lesson-chapter-group + .lesson-chapter-group { margin-top: 10px; }
+        .lesson-chapter-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            list-style: none;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #334155;
+        }
+        .lesson-chapter-head::-webkit-details-marker { display: none; }
+        .lesson-chapter-title {
+            min-width: 0;
+            line-height: 1.4;
+        }
+        .lesson-chapter-meta {
+            flex-shrink: 0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
+        }
+        .lesson-chapter-items {
+            padding: 0 8px 8px;
+        }
         .skill-bar { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
         .skill-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0f766e, #f59e0b); }
         .practice-card {
@@ -523,8 +556,8 @@
         </main>
     </div>
 
-    <script src="lotrinh.js?v=20260618-math-toolbar1"></script>
-    <script src="admin-lesson-manager.js?v=20260618-route-teacher2"></script>
+    <script src="lotrinh.js?v=20260618-linebreak1"></script>
+    <script src="admin-lesson-manager.js?v=20260618-linebreak1"></script>
     <script src="admin-progress.js?v=20260618-teacher-progress1"></script>
 </body>
 

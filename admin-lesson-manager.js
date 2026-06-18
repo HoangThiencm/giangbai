@@ -89,12 +89,50 @@
         return String(text || '').split('\n').map(line => line.trim()).filter(Boolean);
     }
 
-    function parseParagraphs(text) {
+    const THEORY_AI_MARKER = '[[AI]]';
+    const THEORY_AI_MARKER_RE = /^\s*\[\[AI\]\]\s*$/i;
+
+    function normalizeTheoryItem(item) {
+        if (typeof item === 'string') {
+            return { text: item.trim(), ai: false };
+        }
+        if (item && typeof item === 'object') {
+            return {
+                text: String(item.text ?? item.content ?? '').trim(),
+                ai: !!item.ai
+            };
+        }
+        return { text: '', ai: false };
+    }
+
+    function parseTheoryBlocks(text) {
         return String(text || '')
             .replace(/\r/g, '')
             .split(/\n\s*\n+/)
-            .map(block => block.replace(/\s*\n\s*/g, ' ').trim())
-            .filter(Boolean);
+            .map(block => {
+                const lines = block.split('\n');
+                let ai = false;
+                while (lines.length && THEORY_AI_MARKER_RE.test(lines[lines.length - 1].trim())) {
+                    ai = true;
+                    lines.pop();
+                }
+                return {
+                    text: lines.map(line => line.replace(/[ \t]+$/g, '')).join('\n').trim(),
+                    ai
+                };
+            })
+            .filter(block => block.text);
+    }
+
+    function formatTheoryBlocks(blocks) {
+        return (Array.isArray(blocks) ? blocks : [])
+            .map(item => {
+                const block = normalizeTheoryItem(item);
+                if (!block.text) return '';
+                return block.ai ? `${block.text}\n${THEORY_AI_MARKER}` : block.text;
+            })
+            .filter(Boolean)
+            .join('\n\n');
     }
 
     function parseExamples(text) {
@@ -104,12 +142,14 @@
             const parts = block.includes('||') ? block.split('||') : block.split('|');
             if (parts.length >= 2) {
                 const [title, ...bodyParts] = parts;
-                return { title: (title || `Ví dụ ${index + 1}`).trim(), body: bodyParts.join(parts.length > 2 ? '|' : '').replace(/\s*\n\s*/g, ' ').trim() };
+                return { title: (title || `Ví dụ ${index + 1}`).trim(), body: bodyParts.join(parts.length > 2 ? '|' : '').trim() };
             }
-            const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+            const lines = block.split('\n').map(line => line.replace(/[ \t]+$/g, ''));
+            const title = (lines[0] || '').trim();
+            const body = lines.slice(1).join('\n').trim();
             return {
-                title: lines[0] || `Ví dụ ${index + 1}`,
-                body: lines.slice(1).join(' ').trim()
+                title: title || `Ví dụ ${index + 1}`,
+                body
             };
         }).filter(example => example.title || example.body);
     }
@@ -378,11 +418,11 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <label class="block text-sm font-bold text-slate-700">Nội dung bài học
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Soạn như tài liệu ngắn. Mỗi đoạn cách nhau một dòng trống, công thức viết bằng $...$.</span>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần (dòng trống) = ngắt đoạn. Enter 1 lần = xuống dòng trong cùng đoạn (như Shift+Enter). Công thức viết bằng $...$. Thêm dòng <code class="font-mono text-[11px]">[[AI]]</code> ở cuối đoạn cần nút AI giải thích.</span>
                         <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     <label class="block text-sm font-bold text-slate-700">Ví dụ
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi ví dụ cách nhau một dòng trống. Dòng đầu là tiêu đề, các dòng sau là lời giải.</span>
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần = tách ví dụ. Dòng đầu là tiêu đề; Enter 1 lần trong phần lời giải = xuống dòng (như Shift+Enter).</span>
                         <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     </div>
@@ -496,7 +536,7 @@
         el('lessonOrder').value = lesson.order_index || 1;
         el('lessonPublished').checked = !!lesson.is_published;
         el('lessonGoal').value = lesson.goal || lesson.goal_text || '';
-        el('lessonTheory').value = Array.isArray(lesson.theory) ? lesson.theory.join('\n\n') : '';
+        el('lessonTheory').value = formatTheoryBlocks(lesson.theory);
         el('lessonExamples').value = formatExamples(lesson.examples);
         el('lessonEssay').value = formatEssayExercises(lesson.essay_exercises);
         el('lessonFill').value = formatFillExercises(lesson.fill_exercises);
@@ -518,7 +558,9 @@
         el('lessonOrder').value = defaults.order_index;
         el('lessonPublished').checked = true;
         el('lessonGoal').value = defaults.goal_text;
-        el('lessonTheory').value = defaults.theory.join('\n\n');
+        el('lessonTheory').value = formatTheoryBlocks(defaults.theory.map((text, index) => (
+            index === 1 ? { text, ai: true } : text
+        )));
         el('lessonExamples').value = formatExamples(defaults.examples);
         el('lessonEssay').value = 'Viết tập hợp A gồm các số tự nhiên nhỏ hơn 4 | A={0,1,2,3} | Các số tự nhiên bắt đầu từ 0.';
         el('lessonFill').value = 'Nếu A={1,2,3} thì 2 ___ A | thuộc | 2 là phần tử của A.';
@@ -569,7 +611,7 @@
         const dragCount = parseDragExercises(el('lessonDrag').value).length;
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${parseParagraphs(el('lessonTheory').value).length} đoạn</div></div>
+                <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn · ${blocks.filter(block => block.ai).length} có AI`; })()}</div></div>
                 <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
                 <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
                 <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${essayCount + fillCount + dragCount + questionCount}</div></div>
@@ -590,7 +632,7 @@
             order_index: Number(el('lessonOrder').value) || 0,
             is_published: el('lessonPublished').checked,
             goal_text: el('lessonGoal').value.trim(),
-            theory: parseParagraphs(el('lessonTheory').value),
+            theory: parseTheoryBlocks(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
             essay_exercises: parseEssayExercises(el('lessonEssay').value),
             fill_exercises: parseFillExercises(el('lessonFill').value),

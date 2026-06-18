@@ -71,7 +71,8 @@
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
             .replace(/&nbsp;/g, ' ')
-            .replace(/\s+/g, ' ')
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
             .trim();
     }
 
@@ -175,10 +176,26 @@
         return scores;
     }
 
+    function normalizeTheoryItem(item) {
+        if (typeof item === 'string') {
+            return { text: item.trim(), ai: false };
+        }
+        if (item && typeof item === 'object') {
+            return {
+                text: String(item.text ?? item.content ?? '').trim(),
+                ai: !!item.ai
+            };
+        }
+        return { text: '', ai: false };
+    }
+
     function renderParagraphs(items, emptyText, aiType = 'theory') {
         const parts = (Array.isArray(items) ? items : [])
-            .map(normalizeMathContent)
-            .filter(Boolean);
+            .map(item => {
+                const block = normalizeTheoryItem(item);
+                return { ...block, text: normalizeMathContent(block.text) };
+            })
+            .filter(part => part.text);
         if (!parts.length) {
             return `<div class="rounded border border-slate-200 bg-white p-4 muted-note">${emptyText}</div>`;
         }
@@ -186,10 +203,12 @@
             <article class="lesson-document rounded border border-slate-200 bg-white p-5">
                 ${parts.map((part, index) => `
                     <section class="lesson-explain-block">
-                        <div class="lesson-paragraph">${mathText(part)}</div>
-                        <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(part))}">
+                        <div class="lesson-paragraph">${mathText(part.text)}</div>
+                        ${part.ai ? `
+                        <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(part.text))}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
+                        ` : ''}
                     </section>
                 `).join('')}
             </article>
@@ -384,27 +403,58 @@
         return map[status] || map.not_started;
     }
 
+    function groupLessonsByChapter(lessons) {
+        const groups = [];
+        const indexByChapter = new Map();
+        lessons.forEach(lesson => {
+            const chapter = String(lesson.chapter || '').trim() || 'Chưa phân chương';
+            if (!indexByChapter.has(chapter)) {
+                indexByChapter.set(chapter, groups.length);
+                groups.push({ chapter, lessons: [] });
+            }
+            groups[indexByChapter.get(chapter)].lessons.push(lesson);
+        });
+        return groups;
+    }
+
     function renderLessonList() {
         if (!state.lessons.length) {
             els.lessonList.innerHTML = '<div class="text-sm text-slate-500">Chưa có bài học nào được giáo viên mở.</div>';
             return;
         }
 
-        els.lessonList.innerHTML = state.lessons.map(lesson => {
-            const progress = currentLessonProgress(lesson);
-            const active = String(lesson.id) === String(state.selectedLessonId) || (!state.selectedLessonId && lesson === state.lessons[0]);
-            const status = statusInfo(progress.status);
+        const activeLessonId = String(state.selectedLessonId || state.lessons[0]?.id || '');
+        const chapterGroups = groupLessonsByChapter(state.lessons);
+
+        els.lessonList.innerHTML = chapterGroups.map(group => {
+            const containsActive = group.lessons.some(lesson => String(lesson.id) === activeLessonId);
+            const masteredCount = group.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered').length;
             return `
-                <button class="lesson-item ${active ? 'active' : ''} w-full bg-white p-3 text-left" data-lesson-id="${lesson.id}">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-sm font-bold text-slate-900">${lesson.title}</p>
-                            <p class="mt-1 text-xs text-slate-500">${lesson.subject} · ${lesson.chapter}</p>
-                        </div>
-                        <span class="status-dot ${status.color} mt-1"></span>
+                <details class="lesson-chapter-group" ${containsActive ? 'open' : ''}>
+                    <summary class="lesson-chapter-head">
+                        <span class="lesson-chapter-title">${escapeHtml(group.chapter)}</span>
+                        <span class="lesson-chapter-meta">${masteredCount}/${group.lessons.length} bài</span>
+                    </summary>
+                    <div class="lesson-chapter-items space-y-2">
+                        ${group.lessons.map(lesson => {
+                            const progress = currentLessonProgress(lesson);
+                            const active = String(lesson.id) === activeLessonId;
+                            const status = statusInfo(progress.status);
+                            return `
+                                <button class="lesson-item ${active ? 'active' : ''} w-full bg-white p-3 text-left" data-lesson-id="${lesson.id}">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-900">${escapeHtml(lesson.title)}</p>
+                                            <p class="mt-1 text-xs text-slate-500">${lessonCompletionPercent(lesson)}% hoàn thành</p>
+                                        </div>
+                                        <span class="status-dot ${status.color} mt-1"></span>
+                                    </div>
+                                    <p class="mt-2 text-xs font-semibold ${status.tone}">${status.text}</p>
+                                </button>
+                            `;
+                        }).join('')}
                     </div>
-                    <p class="mt-2 text-xs font-semibold ${status.tone}">${status.text}</p>
-                </button>
+                </details>
             `;
         }).join('');
 
