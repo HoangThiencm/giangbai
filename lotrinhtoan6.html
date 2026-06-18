@@ -62,12 +62,12 @@
         .question-text {
             white-space: normal;
             word-break: normal;
-            overflow-wrap: anywhere;
+            overflow-wrap: break-word;
             line-height: 1.75;
         }
         .question-text mjx-container,
         .answer-option mjx-container {
-            display: inline-block;
+            display: inline;
             vertical-align: -0.15em;
         }
         .answer-grid {
@@ -106,6 +106,17 @@
         }
         .status-dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
         .muted-note { color: #64748b; font-size: 0.875rem; line-height: 1.6; }
+        .lesson-document {
+            color: #1e293b;
+            font-size: 1.05rem;
+            line-height: 1.85;
+        }
+        .lesson-document p + p { margin-top: 0.85rem; }
+        .lesson-document mjx-container {
+            display: inline;
+            overflow-wrap: normal;
+            word-break: keep-all;
+        }
     </style>
 </head>
 

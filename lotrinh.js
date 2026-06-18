@@ -73,6 +73,24 @@
             .trim();
     }
 
+    function richText(value) {
+        return escapeHtml(normalizeDisplayText(value));
+    }
+
+    function renderParagraphs(items, emptyText) {
+        const parts = (Array.isArray(items) ? items : [])
+            .map(normalizeDisplayText)
+            .filter(Boolean);
+        if (!parts.length) {
+            return `<div class="rounded border border-slate-200 bg-white p-4 muted-note">${emptyText}</div>`;
+        }
+        return `
+            <article class="lesson-document rounded border border-slate-200 bg-white p-5">
+                ${parts.map(part => `<p>${escapeHtml(part)}</p>`).join('')}
+            </article>
+        `;
+    }
+
     function typesetMath() {
         if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
             window.MathJax.typesetPromise([document.body]).catch(() => {});
@@ -300,21 +318,14 @@
         const theory = Array.isArray(lesson.theory) ? lesson.theory : [];
         els.tabContent.innerHTML = `
             <div class="space-y-4">
-                <div class="grid gap-3">
-                    ${theory.length ? theory.map((line, index) => `
-                        <div class="rounded border border-slate-200 bg-white p-4">
-                            <p class="text-sm font-bold text-teal-700">Ý ${index + 1}</p>
-                            <p class="mt-1 text-base leading-7 text-slate-800">${line}</p>
-                        </div>
-                    `).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập lý thuyết cho bài này.</div>'}
-                </div>
+                ${renderParagraphs(theory, 'Giáo viên chưa nhập lý thuyết cho bài này.')}
                 <button id="markTheoryDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
                     <i class="fas fa-check"></i>${ui.theoryDone ? 'Đã hoàn thành lý thuyết' : 'Đánh dấu đã học'}
                 </button>
             </div>
         `;
         document.getElementById('markTheoryDone').onclick = async () => {
-            await syncLessonState(lesson, { theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
+            await syncLessonState(lesson, { ...ui, theoryDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
             await reloadLessons();
             setActiveTab('examples');
         };
@@ -327,8 +338,8 @@
             <div class="space-y-4">
                 ${examples.length ? examples.map(example => `
                     <div class="rounded border border-slate-200 bg-white p-4">
-                        <h3 class="font-bold text-slate-900">${example.title || 'Ví dụ'}</h3>
-                        <p class="mt-2 text-base leading-7 text-slate-700">${example.body || ''}</p>
+                        <h3 class="font-bold text-slate-900">${richText(example.title || 'Ví dụ')}</h3>
+                        <p class="mt-2 text-base leading-7 text-slate-700">${richText(example.body || '')}</p>
                     </div>
                 `).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập ví dụ cho bài này.</div>'}
                 <button id="markExamplesDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
@@ -337,7 +348,7 @@
             </div>
         `;
         document.getElementById('markExamplesDone').onclick = async () => {
-            await syncLessonState(lesson, { examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
+            await syncLessonState(lesson, { ...ui, examplesDone: true, startedAt: ui.startedAt || new Date().toISOString() }, { status: 'in_progress' });
             await reloadLessons();
             setActiveTab('practice');
         };

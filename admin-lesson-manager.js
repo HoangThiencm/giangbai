@@ -53,7 +53,7 @@
 
     let lessons = [];
     let currentSlug = defaults.slug;
-    let selectedSubject = 'Toán 6';
+    let selectedSubject = window.LOTRINH_SUBJECT || 'Toán 6';
 
     function el(id) { return document.getElementById(id); }
 
@@ -89,12 +89,29 @@
         return String(text || '').split('\n').map(line => line.trim()).filter(Boolean);
     }
 
+    function parseParagraphs(text) {
+        return String(text || '')
+            .replace(/\r/g, '')
+            .split(/\n\s*\n+/)
+            .map(block => block.replace(/\s*\n\s*/g, ' ').trim())
+            .filter(Boolean);
+    }
+
     function parseExamples(text) {
-        return parseLines(text).map(line => {
-            const parts = line.includes('||') ? line.split('||') : line.split('|');
-            const [title, ...bodyParts] = parts;
-            return { title: (title || '').trim(), body: bodyParts.join(parts.length > 2 ? '|' : '').trim() };
-        });
+        const blocks = String(text || '').replace(/\r/g, '').split(/\n\s*\n+/).map(block => block.trim()).filter(Boolean);
+        const source = blocks.length > 1 || !String(text || '').includes('|') ? blocks : parseLines(text);
+        return source.map((block, index) => {
+            const parts = block.includes('||') ? block.split('||') : block.split('|');
+            if (parts.length >= 2) {
+                const [title, ...bodyParts] = parts;
+                return { title: (title || `Ví dụ ${index + 1}`).trim(), body: bodyParts.join(parts.length > 2 ? '|' : '').replace(/\s*\n\s*/g, ' ').trim() };
+            }
+            const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+            return {
+                title: lines[0] || `Ví dụ ${index + 1}`,
+                body: lines.slice(1).join(' ').trim()
+            };
+        }).filter(example => example.title || example.body);
     }
 
     function parseSkills(text) {
@@ -201,7 +218,7 @@
     }
 
     function formatExamples(items) {
-        return (items || []).map(item => `${item.title || ''} | ${item.body || ''}`).join('\n');
+        return (items || []).map(item => `${item.title || ''}\n${item.body || ''}`.trim()).join('\n\n');
     }
 
     function formatSkills(items) {
@@ -325,14 +342,14 @@
                     </label>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Lý thuyết
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng là một ý. Có thể dùng $...$.</span>
-                            <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">Ví dụ
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Tiêu đề | Nội dung</span>
-                            <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                        </label>
+                    <label class="block text-sm font-bold text-slate-700">Nội dung bài học
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Soạn như tài liệu ngắn. Mỗi đoạn cách nhau một dòng trống, công thức viết bằng $...$.</span>
+                        <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    </label>
+                    <label class="block text-sm font-bold text-slate-700">Ví dụ
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi ví dụ cách nhau một dòng trống. Dòng đầu là tiêu đề, các dòng sau là lời giải.</span>
+                        <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    </label>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -429,7 +446,7 @@
         el('lessonOrder').value = lesson.order_index || 1;
         el('lessonPublished').checked = !!lesson.is_published;
         el('lessonGoal').value = lesson.goal || lesson.goal_text || '';
-        el('lessonTheory').value = Array.isArray(lesson.theory) ? lesson.theory.join('\n') : '';
+        el('lessonTheory').value = Array.isArray(lesson.theory) ? lesson.theory.join('\n\n') : '';
         el('lessonExamples').value = formatExamples(lesson.examples);
         el('lessonVideos').value = formatVideos(lesson.videos);
         el('lessonSkills').value = formatSkills(lesson.skills);
@@ -448,7 +465,7 @@
         el('lessonOrder').value = defaults.order_index;
         el('lessonPublished').checked = true;
         el('lessonGoal').value = defaults.goal_text;
-        el('lessonTheory').value = defaults.theory.join('\n');
+        el('lessonTheory').value = defaults.theory.join('\n\n');
         el('lessonExamples').value = formatExamples(defaults.examples);
         el('lessonVideos').value = formatVideos(defaults.videos);
         el('lessonSkills').value = formatSkills(defaults.skills);
@@ -490,7 +507,7 @@
         try { questionCount = parseQuestions(el('lessonQuestions').value, parseSkills(el('lessonSkills').value)).length; } catch { questionCount = 0; }
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><div class="text-xs text-slate-500">Lý thuyết</div><div class="font-bold">${parseLines(el('lessonTheory').value).length} ý</div></div>
+                <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${parseParagraphs(el('lessonTheory').value).length} đoạn</div></div>
                 <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
                 <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
                 <div><div class="text-xs text-slate-500">Video / câu hỏi</div><div class="font-bold">${parseVideos(el('lessonVideos').value).length} / ${questionCount}</div></div>
@@ -511,7 +528,7 @@
             order_index: Number(el('lessonOrder').value) || 0,
             is_published: el('lessonPublished').checked,
             goal_text: el('lessonGoal').value.trim(),
-            theory: parseLines(el('lessonTheory').value),
+            theory: parseParagraphs(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
             videos: parseVideos(el('lessonVideos').value),
             skills,
