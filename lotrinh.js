@@ -609,21 +609,40 @@
         bindAiExplainButtons(lesson);
     }
 
+    function showAiModal(htmlContent) {
+        // Xóa modal cũ nếu đang mở
+        const existing = document.getElementById('aiExplainModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'aiExplainModal';
+        modal.innerHTML = `
+            <div class="ai-modal-overlay" onclick="document.getElementById('aiExplainModal')?.remove()">
+                <div class="ai-modal-card" onclick="event.stopPropagation()">
+                    <div class="ai-modal-header">
+                        <span><i class="fas fa-wand-magic-sparkles" style="color:#f59e0b"></i> AI giải thích</span>
+                        <button class="ai-modal-close" onclick="document.getElementById('aiExplainModal')?.remove()">&times;</button>
+                    </div>
+                    <div class="ai-modal-body">${htmlContent}</div>
+                    <div class="ai-modal-footer">
+                        <button class="ai-modal-close-btn" onclick="document.getElementById('aiExplainModal')?.remove()">
+                            <i class="fas fa-check"></i> Đã hiểu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        typesetMath();
+    }
+
     function bindAiExplainButtons(lesson) {
         document.querySelectorAll('.ai-explain-btn').forEach(button => {
             button.onclick = async () => {
                 const text = button.dataset.aiText || '';
-                const block = button.closest('.lesson-explain-block') || button.parentElement;
-                let output = block.querySelector('.ai-explain-output');
-                if (!output) {
-                    output = document.createElement('div');
-                    output.className = 'ai-explain-output mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm leading-7 text-slate-800';
-                    block.appendChild(output);
-                }
                 const old = button.innerHTML;
                 button.disabled = true;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
-                output.textContent = 'Đang gọi AI...';
                 try {
                     const data = await api('api/ai_explain.php', {
                         method: 'POST',
@@ -634,10 +653,9 @@
                             text
                         })
                     });
-                    output.innerHTML = renderAiAnswer(data.answer || '');
-                    typesetMath();
+                    showAiModal(renderAiAnswer(data.answer || ''));
                 } catch (err) {
-                    output.textContent = err.message || 'Chưa gọi được AI.';
+                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`);
                 } finally {
                     button.disabled = false;
                     button.innerHTML = old;
@@ -1041,17 +1059,9 @@
             button.dataset.boundAi = '1';
             button.onclick = async () => {
                 const text = button.dataset.aiText || '';
-                const block = button.closest('.practice-card, .lesson-explain-block, article, div') || button.parentElement;
-                let output = block.querySelector('.ai-output');
-                if (!output) {
-                    output = document.createElement('div');
-                    output.className = 'ai-output mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm leading-7 text-slate-800';
-                    block.appendChild(output);
-                }
                 const old = button.innerHTML;
                 button.disabled = true;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
-                output.textContent = 'Đang gọi AI...';
                 try {
                     const data = await api('api/ai_explain.php', {
                         method: 'POST',
@@ -1062,10 +1072,9 @@
                             text
                         })
                     });
-                    output.innerHTML = renderAiAnswer(data.answer || '');
-                    typesetMath();
+                    showAiModal(renderAiAnswer(data.answer || ''));
                 } catch (err) {
-                    output.textContent = err.message || 'Chưa gọi được AI.';
+                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`);
                 } finally {
                     button.disabled = false;
                     button.innerHTML = old;

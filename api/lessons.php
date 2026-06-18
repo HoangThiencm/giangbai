@@ -168,21 +168,26 @@ function ensure_progress_schema(PDO $pdo): void
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uniq_student_lesson (student_id, lesson_id)
         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    } catch (Throwable $e) {
+        // Table creation may fail if DB credentials are wrong; student pages still load.
+    }
 
-        $columns = [
-            'skill_scores_json TEXT DEFAULT NULL',
-            'state_json TEXT DEFAULT NULL',
-            'started_at DATETIME DEFAULT NULL',
-            'completed_at DATETIME DEFAULT NULL'
-        ];
-        foreach ($columns as $definition) {
+    // Each column migration runs independently so one failure does not block others
+    $columns = [
+        'skill_scores_json TEXT DEFAULT NULL',
+        'state_json TEXT DEFAULT NULL',
+        'started_at DATETIME DEFAULT NULL',
+        'completed_at DATETIME DEFAULT NULL'
+    ];
+    foreach ($columns as $definition) {
+        try {
             $name = trim(strtok($definition, ' '));
             if (!column_exists($pdo, 'student_lesson_progress', $name)) {
                 $pdo->exec("ALTER TABLE student_lesson_progress ADD COLUMN $definition");
             }
+        } catch (Throwable $e) {
+            // Column may already exist or table not ready yet; continue with next column
         }
-    } catch (Throwable $e) {
-        // Student pages can show lessons even before progress tracking is migrated.
     }
 }
 

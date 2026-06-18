@@ -180,7 +180,7 @@
             overflow-wrap: normal;
             word-break: keep-all;
         }
-        /* AI giải thích */
+        /* AI giải thích - Nút */
         .ai-explain-btn {
             display: inline-flex;
             align-items: center;
@@ -207,24 +207,94 @@
             cursor: wait;
             transform: none;
         }
-        .ai-explain-output {
-            margin-top: 10px;
-            padding: 14px 16px;
-            font-size: 0.92rem;
-            line-height: 1.8;
-            color: #1e293b;
-            background: linear-gradient(135deg, #fffbeb 0%, #fef9e7 100%);
-            border: 1px solid #fcd34d;
-            border-left: 4px solid #f59e0b;
-            border-radius: 8px;
-            animation: fadeSlideIn 0.3s ease;
-            overflow-wrap: break-word;
-            word-break: normal;
+        /* AI giải thích - Modal popup */
+        .ai-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            animation: aiModalFadeIn 0.25s ease;
+            padding: 16px;
         }
-        .ai-explain-output mjx-container svg { display: inline !important; }
-        @keyframes fadeSlideIn {
-            from { opacity: 0; transform: translateY(-6px); }
-            to   { opacity: 1; transform: translateY(0); }
+        .ai-modal-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            max-width: 560px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: aiModalSlideUp 0.3s ease;
+            overflow: hidden;
+        }
+        .ai-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1e293b;
+        }
+        .ai-modal-close {
+            width: 32px;
+            height: 32px;
+            display: grid;
+            place-items: center;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .ai-modal-close:hover { background: #e2e8f0; color: #0f172a; }
+        .ai-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: #334155;
+        }
+        .ai-modal-body mjx-container svg { display: inline !important; }
+        .ai-modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .ai-modal-close-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #0f766e, #14b8a6);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ai-modal-close-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+        }
+        @keyframes aiModalFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        @keyframes aiModalSlideUp {
+            from { opacity: 0; transform: translateY(20px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
     </style>
 </head>
