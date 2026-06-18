@@ -84,15 +84,23 @@
             .trim();
     }
 
+    function normalizeMathContent(value) {
+        return preserveMathSegments(value)
+            .replace(/\n{2,}/g, '\n')
+            .replace(/([^\n])\n([^\n])/g, '$1 $2')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
     function richText(value) {
-        return escapeHtml(preserveMathSegments(value))
+        return escapeHtml(normalizeMathContent(value))
             .replace(/\n/g, '<br>')
             .replace(/ {2,}/g, ' ');
     }
 
     function renderParagraphs(items, emptyText, aiType = 'theory') {
         const parts = (Array.isArray(items) ? items : [])
-            .map(preserveMathSegments)
+            .map(normalizeMathContent)
             .filter(Boolean);
         if (!parts.length) {
             return `<div class="rounded border border-slate-200 bg-white p-4 muted-note">${emptyText}</div>`;
@@ -101,7 +109,7 @@
             <article class="lesson-document rounded border border-slate-200 bg-white p-5">
                 ${parts.map((part, index) => `
                     <section class="lesson-explain-block">
-                        <p>${escapeHtml(part).replace(/\n/g, '<br>')}</p>
+                        <p class="lesson-paragraph">${escapeHtml(part).replace(/\n/g, '<br>')}</p>
                         <button type="button" class="ai-explain-btn" data-ai-type="${aiType}" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(part))}">
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>

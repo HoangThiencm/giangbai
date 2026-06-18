@@ -149,7 +149,18 @@
             font-size: 1.05rem;
             line-height: 1.85;
         }
-        .lesson-document p + p { margin-top: 0.85rem; }
+        .lesson-document .lesson-explain-block + .lesson-explain-block { margin-top: 1rem; }
+        .lesson-document .lesson-paragraph {
+            margin: 0;
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: break-word;
+            line-height: 1.9;
+        }
+        .lesson-document .lesson-paragraph mjx-container {
+            display: inline;
+            vertical-align: -0.12em;
+        }
         .lesson-document mjx-container {
             display: inline;
             overflow-wrap: normal;
