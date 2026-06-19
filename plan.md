@@ -1,5 +1,7 @@
 # Kế hoạch dự án (Project Plan)
 
+*Cập nhật: 2026-06-20 — hardfix ôn tập / động lực / UX danh sách bài (`lotrinh.js?v=20260620-motivation-fix1`).*
+
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
 - [x] Cập nhật lại giao diện AI giải thích từ Popup Modal sang dạng **bong bóng chat theo ngữ cảnh**, xuất hiện ngay gần nút AI vừa bấm, có nút `x` để đóng, không bị cắt mũi/nội dung và vẫn render MathJax đúng.
@@ -35,6 +37,11 @@
 - [x] **Ôn tập thông minh** (`buildSmartReviewSuggestions`): đề xuất bài cần ôn theo điểm thấp, `needs_practice`, hoặc `mastered` ≥ 7 ngày; gắn vào panel Kế hoạch tự học và ưu tiên trong `buildStudyPlan`.
 - [x] **Bản đồ chương**: tab chuyển Danh sách / Bản đồ; lưới chương với trạng thái Chưa học / Đang học / Cần luyện / Đã xong; bấm chương → lọc danh sách.
 - [x] **Động lực học** (streak + huy hiệu nhẹ): `3 ngày liên tiếp`, `Hoàn thành 5 bài`, `Lần đầu đạt 100%`; lưu `localStorage` theo user + môn; cập nhật khi `syncLessonState` / bắt đầu học.
+- [x] Hardfix ôn tập / động lực / UX danh sách bài (sau review code):
+  - Ôn bài `mastered` cũ chỉ khi có `completedAt` hợp lệ (`staleMasteredDays`), tránh hiện “Infinity ngày trước”.
+  - Huy hiệu `perfect_100` chỉ mở khi `payload.score >= 100` (nộp luyện tập), không kích hoạt khi bấm **Đã học** thủ công.
+  - `todayKey()` dùng ngày local (VN), không `toISOString()` UTC — streak đúng sau 00:00.
+  - Ô tìm bài: `renderLessonList({ updateToolbar: false })` khi gõ/lọc — không mất focus input.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -48,8 +55,10 @@
 - [ ] Tạo/sửa học sinh trong admin với tên lớp rõ (vd. `6A`, `6B`, `6C`): đăng nhập giáo viên → mở trang lộ trình Toán 6 → panel tiến độ có dropdown **Lớp**; chọn từng lớp và lọc **Cần luyện thêm** để xem danh sách cần hỗ trợ.
 - [ ] Chọn "Tất cả lớp" trong panel tiến độ: kiểm tra bảng được nhóm theo lớp, mỗi nhóm thẳng cột với header (Lớp / số HS / đã học xong / cần luyện).
 - [ ] Học sinh: thử tab **Bản đồ chương** — màu trạng thái đúng, bấm chương mở đúng danh sách bài.
-- [ ] Học sinh: kiểm tra **Ôn tập thông minh** hiện bài yếu / cần luyện; bấm vào nhảy đúng bài + tab luyện tập.
-- [ ] Học sinh: học vài ngày liên tiếp / hoàn thành bài — huy hiệu và streak trong **Động lực học** cập nhật.
+- [ ] Học sinh: kiểm tra **Ôn tập thông minh** hiện bài yếu / cần luyện; bài `mastered` thiếu `completedAt` không được gợi ý ôn; bấm đề xuất nhảy đúng bài + tab luyện tập.
+- [ ] Học sinh: học vài ngày liên tiếp (thử sau 00:00 giờ VN) — streak trong **Động lực học** tăng đúng ngày.
+- [ ] Huy hiệu **Lần đầu đạt 100%** chỉ sáng sau nộp luyện tập đạt 100 điểm, không sáng khi chỉ bấm **Đã học**.
+- [ ] Ô **Tìm bài học**: gõ liên tục nhiều ký tự — input không bị mất focus.
 - [ ] Giáo viên trên `lotrinhtoan7.html`: chỉ thấy soạn bài Toán 7, không lẫn Toán 6/8/9.
 - [ ] Soạn bài: nhập mục tiêu → Lưu → tải lại vẫn còn mục tiêu; học sinh thấy ở phần mô tả bài.
 - [ ] Bài mới mặc định **chưa mở** cho học sinh; chỉ hiện sau khi giáo viên tick "Mở bài này cho học sinh" và lưu.
@@ -62,3 +71,4 @@
 - [ ] (Tùy chọn) Xuất nhanh báo cáo tiến độ theo lớp (CSV/in) hoặc lọc theo môn + lớp trên một màn hình tổng hợp.
 - [ ] (Tùy chọn) Đồng bộ streak/huy hiệu lên server (hiện lưu `localStorage` theo máy).
 - [ ] (Tùy chọn) Tinh chỉnh ngưỡng ôn tập thông minh (7 ngày, điểm 80%) theo ý giáo viên.
+- [ ] Đồng bộ cache `admin-progress.js` trên `index.html` với các trang lộ trình (`20260620-group-align1`).

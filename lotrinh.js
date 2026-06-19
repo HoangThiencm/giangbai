@@ -586,7 +586,10 @@
     }
 
     function todayKey(date = new Date()) {
-        return date.toISOString().slice(0, 10);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     function motivationStorageKey() {
@@ -655,10 +658,16 @@
     }
 
     function daysSince(isoDate) {
-        if (!isoDate) return Infinity;
+        if (!isoDate) return null;
         const then = new Date(isoDate).getTime();
-        if (Number.isNaN(then)) return Infinity;
+        if (Number.isNaN(then)) return null;
         return (Date.now() - then) / (1000 * 60 * 60 * 24);
+    }
+
+    function staleMasteredDays(completedAt) {
+        const elapsed = daysSince(completedAt);
+        if (elapsed === null || !Number.isFinite(elapsed)) return null;
+        return Math.floor(elapsed);
     }
 
     function smartReviewReason(lesson) {
@@ -672,9 +681,11 @@
         if (progress.status !== 'not_started' && score > 0 && score < 80) {
             return { priority: 90, reason: `Điểm ${score}% — dưới mục tiêu 80%`, tab: 'practice', minutes: 15, title: 'Củng cố điểm thấp' };
         }
-        if (progress.status === 'mastered' && daysSince(completedAt) >= REVIEW_STALE_DAYS) {
-            const days = Math.floor(daysSince(completedAt));
-            return { priority: 65, reason: `Đã học xong ${days} ngày trước — nên ôn lại`, tab: 'practice', minutes: 10, title: 'Ôn lại kiến thức cũ' };
+        if (progress.status === 'mastered') {
+            const days = staleMasteredDays(completedAt);
+            if (days !== null && days >= REVIEW_STALE_DAYS) {
+                return { priority: 65, reason: `Đã học xong ${days} ngày trước — nên ôn lại`, tab: 'practice', minutes: 10, title: 'Ôn lại kiến thức cũ' };
+            }
         }
         return null;
     }
@@ -1041,9 +1052,10 @@
     }
 
     function lessonMatchesSearch(lesson, search) {
-        if (!search) return true;
+        const term = String(search || '').trim().toLowerCase();
+        if (!term) return true;
         const haystack = `${lesson.title || ''} ${lesson.chapter || ''}`.toLowerCase();
-        return haystack.includes(search.toLowerCase());
+        return haystack.includes(term);
     }
 
     function renderLessonListToolbar(chapterGroups) {
@@ -1083,14 +1095,14 @@
         const chapterSelect = document.getElementById('lessonListChapterFilter');
         if (searchInput) {
             searchInput.oninput = () => {
-                state.lessonListUi.search = searchInput.value.trim();
-                renderLessonList();
+                state.lessonListUi.search = searchInput.value;
+                renderLessonList({ updateToolbar: false });
             };
         }
         if (chapterSelect) {
             chapterSelect.onchange = () => {
                 state.lessonListUi.chapter = chapterSelect.value || '';
-                renderLessonList();
+                renderLessonList({ updateToolbar: false });
             };
         }
     }
@@ -1147,7 +1159,8 @@
         meta.textContent = `${visibleCount} bài · ${chapterCount} chương`;
     }
 
-    function renderLessonList() {
+    function renderLessonList(options = {}) {
+        const { updateToolbar = true } = options;
         ensureLessonListShell();
 
         if (!state.lessons.length) {
@@ -1159,7 +1172,7 @@
 
         const activeLessonId = String(state.selectedLessonId || state.lessons[0]?.id || '');
         const chapterGroups = groupLessonsByChapter(state.lessons);
-        renderLessonListToolbar(chapterGroups);
+        if (updateToolbar) renderLessonListToolbar(chapterGroups);
 
         if (state.lessonListUi.view === 'map') {
             renderLessonListMeta(state.lessons.length, chapterGroups.length);
@@ -2220,7 +2233,7 @@
         };
         if (!isTeacher() || isTeacherPreview()) {
             recordStudyActivity();
-            if (payload.status === 'mastered' || payload.score >= 100 || lessonCompletionPercent(lesson, uiState, payload.status) >= 100) {
+            if (Number(payload.score) >= 100) {
                 markPerfectLesson(lesson);
             }
         }

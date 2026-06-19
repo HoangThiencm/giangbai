@@ -9,7 +9,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Layout học sinh: cột trái (tiến độ + danh sách/bản đồ bài), cột giữa (nội dung bài), cột phải (kế hoạch tự học, động lực, kỹ năng, nhiệm vụ).
    - Định dạng CSS nội bộ (`<style>`) giúp render MathJax SVG và bong bóng chat AI giải thích.
    - Đã thêm style `.ai-chat-bubble` đồng bộ cho cả Toán 6, 7, 8, 9; bong bóng có nút `x`, mũi nhọn chat, và không bị cắt nội dung.
-   - Cache script gần nhất: `lotrinh.js?v=20260620-motivation1`, `admin-lesson-manager.js?v=20260620-publish-off1`, `admin-progress.js?v=20260620-group-align1`.
+   - Cache script gần nhất (trang `lotrinhtoan6–9.html`): `lotrinh.js?v=20260620-motivation-fix1`, `admin-lesson-manager.js?v=20260620-publish-off1`, `admin-progress.js?v=20260620-group-align1`. Trang `index.html` vẫn dùng `admin-progress.js?v=20260619-class-filter1` — nên đồng bộ khi cập nhật panel tiến độ.
 
 2. **Logic Frontend (`lotrinh.js`)**
    - Quản lý trạng thái học tập của học sinh.
@@ -26,10 +26,10 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Marker `[AI]` / `[[AI]]` trong nội dung lý thuyết quyết định vị trí nút **AI giải thích**; không tự gắn theo ngắt đoạn.
    - `lessonRichText()` render định dạng soạn bài: xuống dòng, đoạn, đậm/nghiêng/gạch chân, ảnh.
    - `renderNextAction()` gợi ý bước tiếp theo theo tab (lý thuyết / ví dụ / luyện tập) và tiến độ hiện tại.
-   - **Danh sách bài** (`renderLessonList`): khung cuộn, tìm kiếm, lọc chương, dòng compact; tab **Bản đồ chương** (`renderChapterMap`) với `chapterAggregateStatus()` — Chưa học / Đang học / Cần luyện / Đã xong. View lưu `localStorage` key `lotrinh_lesson_nav_view_{môn}`.
-   - **Kế hoạch tự học** (`renderStudyPlanner`, mount cột phải): chọn 15–60 phút, lộ trình hôm nay (`buildStudyPlan`).
-   - **Ôn tập thông minh** (`buildSmartReviewSuggestions`, `smartReviewReason`): ưu tiên `needs_practice`, điểm dưới 80%, hoặc `mastered` từ ≥ 7 ngày (`REVIEW_STALE_DAYS`); hiển thị trên cùng panel kế hoạch, bấm → chuyển bài + tab.
-   - **Động lực học** (`renderMotivationPanel`): streak ngày học liên tiếp, huy hiệu `streak_3`, `mastered_5`, `perfect_100`; lưu `localStorage` `lotrinh_motivation_{môn}_{user}`; cập nhật qua `recordStudyActivity()` / `markPerfectLesson()` khi lưu tiến độ.
+   - **Danh sách bài** (`renderLessonList`): khung cuộn, tìm kiếm, lọc chương, dòng compact; khi gõ tìm/lọc chương chỉ render lại danh sách (`updateToolbar: false`) để giữ focus ô tìm. Tab **Bản đồ chương** (`renderChapterMap`) với `chapterAggregateStatus()` — Chưa học / Đang học / Cần luyện / Đã xong; bấm chương → lọc danh sách. View lưu `localStorage` key `lotrinh_lesson_nav_view_{môn}`.
+   - **Kế hoạch tự học** (`renderStudyPlanner`, mount cột phải): khối **Ôn tập thông minh** + **Lộ trình hôm nay**; chọn 15–60 phút (`buildStudyPlan` ưu tiên smart review trước).
+   - **Ôn tập thông minh** (`buildSmartReviewSuggestions`, `smartReviewReason`, `staleMasteredDays`): ưu tiên `needs_practice`, điểm dưới 80%; với `mastered` chỉ gợi ý ôn khi có `completedAt` hợp lệ và ≥ 7 ngày (`REVIEW_STALE_DAYS`). Bấm đề xuất → chuyển bài + tab luyện tập.
+   - **Động lực học** (`renderMotivationPanel`, cột phải dưới kế hoạch): streak theo `todayKey()` **ngày local**; huy hiệu `streak_3`, `mastered_5`, `perfect_100`. Badge 100% chỉ khi `score >= 100` sau nộp luyện tập (`markPerfectLesson`), không từ nút **Đã học** thủ công. Lưu `localStorage` `lotrinh_motivation_{môn}_{user}`.
 
 3. **Soạn bài giáo viên (`admin-lesson-manager.js`)**
    - Mount `#lessonDesignerMount` khi `userRole === 'teacher'`.
@@ -65,12 +65,13 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Theo dõi tiến độ cho giáo viên:** `admin-progress.js` chỉ mount vào `lessonDesignerMount` khi `localStorage.userRole === 'teacher'`; không mount vào admin dashboard. Nếu không có admin key, request API vẫn chạy bằng session giáo viên.
 - **Theo dõi tiến độ theo lớp:** Tiến độ lưu theo từng học sinh trong `student_lesson_progress`; UI nhóm/lọc qua `users.class_name`. Panel có dropdown **Lớp** (`#progressClassFilter`), lọc trạng thái, tìm kiếm; thống kê tính theo phạm vi lớp đang chọn. Chọn "Tất cả lớp" → dòng tóm tắt mỗi lớp căn đúng cột bảng. Lựa chọn lớp lưu `localStorage.progress_class_filter`.
 - **Phát hành bài cho học sinh:** API `lessons.php` chỉ trả bài `is_published` cho role `student`. Giáo viên soạn xong cần tick **Mở bài này cho học sinh** rồi Lưu; HS tải lại trang lộ trình mới thấy chương/bài mới.
-- **Ôn tập & kế hoạch:** Ôn tập thông minh và kế hoạch tự học dùng chung tiến độ `state.progress` + `completedAt`; không cần API riêng.
-- **Streak/huy hiệu:** Chỉ lưu phía client (`localStorage`); chưa đồng bộ server — đổi máy/trình duyệt sẽ mất streak cũ.
+- **Ôn tập & kế hoạch:** Ôn tập thông minh và kế hoạch tự học dùng chung tiến độ `state.progress`. Gợi ý ôn bài học xong lâu phụ thuộc `completedAt` trong progress — bài `mastered` thiếu ngày hoàn thành sẽ không vào danh sách ôn.
+- **Streak/huy hiệu:** Chỉ lưu phía client (`localStorage`); chưa đồng bộ server — đổi máy/trình duyệt sẽ mất streak cũ. Streak tính theo ngày local máy người dùng (không UTC). `perfect_100` = điểm luyện tập 100, khác với hoàn thành bài bằng nút **Đã học**.
+- **Kiến trúc UI học sinh (3 cột):** Trái = tiến độ + danh sách/bản đồ bài; giữa = nội dung bài; phải = kế hoạch tự học + động lực + kỹ năng + nhiệm vụ. Ba tính năng ôn tập thông minh, bản đồ chương, động lực học bổ sung cho kế hoạch tự học và điều hướng lộ trình dài.
 - **Quy trình quản lý nhiều lớp (vd. Toán 6 có 3 lớp):** (1) Gắn `class_name` khi tạo/sửa HS trong admin; (2) Mở trang lộ trình tương ứng; (3) Chọn bài học + lớp; (4) Lọc "Cần luyện thêm" để xem HS cần hỗ trợ trong lớp đó.
 - **Render công thức trong theo dõi tiến độ:** `admin-progress.js` có hàm `mathText()` và gọi `MathJax.typesetPromise()` sau khi render bảng. `index.html` và các trang lộ trình Toán nạp MathJax để công thức trong dữ liệu kỹ năng/cần lưu ý hiển thị đúng.
 - **Bài luyện tập:** Trắc nghiệm đã có phản hồi đúng/sai sau khi chọn đáp án; thao tác nộp bài cập nhật điểm, kỹ năng và trạng thái (`in_progress`, `needs_practice`, `mastered`). Nút "Làm lại bài luyện" reset đáp án/điểm luyện tập về trạng thái đang học để học sinh có thể làm lại.
-- **Cần phản biện sau sửa:** Người dùng nên kiểm tra lại 3 điểm trên UI: AI có còn trả câu cụt không, tab Luyện tập có hiện phần trăm thay vì `--` không, và phần trăm có tăng khi chọn đáp án không.
+- **Cần phản biện sau sửa:** Xem checklist đầy đủ trong `plan.md` (mục *Cần người dùng phản biện lại trên giao diện*), gồm AI giải thích, tiến trình luyện tập, panel giáo viên theo lớp, ôn tập thông minh, bản đồ chương, động lực học, tìm bài và phát hành bài mới.
 
 ---
-*File này được tạo và cập nhật nhằm mục đích đồng bộ thông tin trạng thái dự án khi chuyển đổi môi trường làm việc.*
+*Cập nhật lần cuối: 2026-06-20. File này đồng bộ trạng thái dự án khi chuyển môi trường làm việc.*
