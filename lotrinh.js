@@ -350,14 +350,32 @@
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${normalized.answers.map(part => mathText(part)).join(' · ')}`;
     }
 
-    function buildSortCheckFeedback(normalized, savedOrder) {
+    function sortPieceIndex(piece, items) {
+        const key = normalizeAnswerText(piece);
+        return items.findIndex(item => normalizeAnswerText(item) === key);
+    }
+
+    function isSortAnswerCorrect(normalized, savedOrder) {
+        if (!savedOrder.length || savedOrder.length < normalized.items.length) return false;
+        const expectedIndexes = normalized.answer.map(answer => sortPieceIndex(answer, normalized.items));
+        const givenIndexes = savedOrder.map(piece => sortPieceIndex(piece, normalized.items));
+        if (expectedIndexes.every(index => index >= 0) && givenIndexes.every(index => index >= 0)) {
+            return expectedIndexes.join('|') === givenIndexes.join('|');
+        }
+        return savedOrder.map(normalizeAnswerText).join('|') === normalized.answer.map(normalizeAnswerText).join('|');
+    }
+
+    function buildSortCheckFeedback(normalized, savedOrder, poolRemaining = 0) {
         if (!savedOrder.length) {
-            return '<span class="font-bold text-slate-600">Hãy kéo các mảnh vào hàng thứ tự trước khi kiểm tra.</span>';
+            if (poolRemaining > 0) {
+                return '<span class="font-bold text-slate-600">Các mảnh vẫn đang ở khay phía trên. Hãy <strong>kéo xuống hàng trả lời bên dưới</strong> theo thứ tự đúng, rồi bấm kiểm tra.</span>';
+            }
+            return '<span class="font-bold text-slate-600">Hãy kéo các mảnh xuống hàng trả lời bên dưới theo thứ tự đúng trước khi kiểm tra.</span>';
         }
-        if (savedOrder.length < normalized.answer.length) {
-            return '<span class="font-bold text-slate-600">Hãy xếp đủ tất cả mảnh theo thứ tự trước khi kiểm tra.</span>';
+        if (savedOrder.length < normalized.items.length) {
+            return '<span class="font-bold text-slate-600">Hãy kéo đủ tất cả mảnh xuống hàng trả lời bên dưới theo thứ tự trước khi kiểm tra.</span>';
         }
-        const ok = savedOrder.map(normalizeAnswerText).join('|') === normalized.answer.map(normalizeAnswerText).join('|');
+        const ok = isSortAnswerCorrect(normalized, savedOrder);
         return ok
             ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml(normalized.answer.join(' → '))}`;
@@ -1763,7 +1781,7 @@
                 normalized.items.filter(piece => !savedOrder.includes(piece)),
                 shuffleSeed(`${lesson.id}-sort-${key}`)
             );
-            const ok = practiceDone && savedOrder.map(normalizeAnswerText).join('|') === normalized.answer.map(normalizeAnswerText).join('|');
+            const ok = practiceDone && isSortAnswerCorrect(normalized, savedOrder);
             const feedback = practiceDone
                 ? (ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
@@ -1776,12 +1794,13 @@
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1} · Sắp xếp</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(normalized.prompt || '')}</h3>
                     </div>
-                    <p class="fill-pool-label">Kéo các mảnh vào hàng bên dưới theo thứ tự đúng:</p>
+                    <p class="fill-pool-label sort-pool-label">Kéo các mảnh vào hàng bên dưới theo thứ tự đúng:</p>
                     <div class="drag-pool sort-chip-pool" data-sort-pool="${escapeHtml(key)}">
                         ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
-                    <div class="drag-slot-row sort-slot-row" data-sort-zone="${escapeHtml(key)}">
-                        ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                    <p class="fill-pool-label sort-zone-label">Hàng trả lời:</p>
+                    <div class="drag-slot-row sort-slot-row sort-answer-zone" data-sort-zone="${escapeHtml(key)}">
+                        ${savedOrder.length ? savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('') : '<span class="sort-zone-placeholder">Kéo các mảnh từ khay phía trên xuống đây...</span>'}
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                         ${renderPracticeCheckButton('sort-check-btn', 'data-sort-key', key, practiceDone)}
@@ -2714,9 +2733,7 @@
             const zone = document.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
             const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.dataset.chipValue || node.textContent?.trim() || '');
             answers[key] = current;
-            const expected = normalized.answer.map(normalizeAnswerText);
-            const given = current.map(normalizeAnswerText);
-            if (expected.length && expected.join('|') === given.join('|')) correct += 1;
+            if (isSortAnswerCorrect(normalized, current)) correct += 1;
         });
         return { score: Math.round((correct / items.length) * 100), answers };
     }
@@ -3202,7 +3219,23 @@
             const zone = card.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
             if (!pool || !zone) return;
 
+            const syncSortZonePlaceholder = () => {
+                const chips = zone.querySelectorAll('.drag-chip');
+                let placeholder = zone.querySelector('.sort-zone-placeholder');
+                if (chips.length) {
+                    placeholder?.remove();
+                    return;
+                }
+                if (!placeholder) {
+                    placeholder = document.createElement('span');
+                    placeholder.className = 'sort-zone-placeholder';
+                    placeholder.textContent = 'Kéo các mảnh từ khay phía trên xuống đây...';
+                    zone.appendChild(placeholder);
+                }
+            };
+
             const persistOrder = async () => {
+                syncSortZonePlaceholder();
                 const ui = currentUiState(lesson);
                 const current = Array.from(zone.querySelectorAll('.drag-chip')).map(node => node.dataset.chipValue || node.textContent?.trim() || '');
                 await persistPracticeUi(lesson, {
@@ -3399,9 +3432,11 @@
                 if (!feedback || !card || !zone) return;
                 const item = (lesson.drag_exercises || []).map(normalizeDragExercise).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
                 if (!item || item.mode !== 'sort') return;
+                const pool = card?.querySelector(`[data-sort-pool="${escapeSelector(key)}"]`);
                 const savedOrder = Array.from(zone.querySelectorAll('.drag-chip')).map(node => node.dataset.chipValue || node.textContent?.trim() || '');
+                const poolRemaining = pool?.querySelectorAll('.drag-chip').length || 0;
                 feedback.classList.remove('hidden');
-                feedback.innerHTML = buildSortCheckFeedback(item, savedOrder);
+                feedback.innerHTML = buildSortCheckFeedback(item, savedOrder, poolRemaining);
             };
         });
 
