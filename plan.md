@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-20 — hardfix ôn tập / động lực / UX danh sách bài (`lotrinh.js?v=20260620-motivation-fix1`).*
+*Cập nhật: 2026-06-20 — quản lý bài/chương CRUD (`admin-lesson-manager.js?v=20260620-lesson-crud1`); hardfix ôn tập / động lực (`lotrinh.js?v=20260620-motivation-fix1`).*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -42,6 +42,11 @@
   - Huy hiệu `perfect_100` chỉ mở khi `payload.score >= 100` (nộp luyện tập), không kích hoạt khi bấm **Đã học** thủ công.
   - `todayKey()` dùng ngày local (VN), không `toISOString()` UTC — streak đúng sau 00:00.
   - Ô tìm bài: `renderLessonList({ updateToolbar: false })` khi gõ/lọc — không mất focus input.
+- [x] **Quản lý bài học & chương** cho giáo viên (`admin-lesson-manager.js` + `api/lessons.php`):
+  - **Thêm / sửa**: Tạo bài mới + Lưu; sửa theo `id` (đổi slug không tạo bài trùng).
+  - **Xóa**: `delete_lesson` — xóa bài và tiến độ HS liên quan (có xác nhận).
+  - **Nhân bản**: `duplicate_lesson` — bản sao `(bản sao)`, slug mới, mặc định chưa mở cho HS.
+  - **Chương**: sửa từng bài qua ô Chương; **đổi tên hàng loạt** qua `rename_chapter` (cập nhật tất cả bài cùng tên chương trong môn). Dropdown bài hiển thị `Chương · Tên bài`; ô Chương có gợi ý từ `datalist`.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -62,6 +67,10 @@
 - [ ] Giáo viên trên `lotrinhtoan7.html`: chỉ thấy soạn bài Toán 7, không lẫn Toán 6/8/9.
 - [ ] Soạn bài: nhập mục tiêu → Lưu → tải lại vẫn còn mục tiêu; học sinh thấy ở phần mô tả bài.
 - [ ] Bài mới mặc định **chưa mở** cho học sinh; chỉ hiện sau khi giáo viên tick "Mở bài này cho học sinh" và lưu.
+- [ ] Giáo viên: **Nhân bản bài đang chọn** — bản sao xuất hiện trong dropdown, chưa mở cho HS, nội dung giống bài gốc.
+- [ ] Giáo viên: **Xóa bài đang chọn** — bài biến mất khỏi lộ trình; tiến độ HS của bài đó cũng mất (cần cân nhắc trước khi xóa).
+- [ ] Giáo viên: sửa **slug** bài đã lưu rồi Lưu — không tạo bài trùng, chỉ cập nhật bài hiện tại.
+- [ ] Giáo viên: **Đổi tên chương cho tất cả bài trong chương này** — tất cả bài cùng chương trong môn đổi tên; HS/GV thấy chương mới sau tải lại.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
@@ -72,3 +81,4 @@
 - [ ] (Tùy chọn) Đồng bộ streak/huy hiệu lên server (hiện lưu `localStorage` theo máy).
 - [ ] (Tùy chọn) Tinh chỉnh ngưỡng ôn tập thông minh (7 ngày, điểm 80%) theo ý giáo viên.
 - [ ] Đồng bộ cache `admin-progress.js` trên `index.html` với các trang lộ trình (`20260620-group-align1`).
+- [ ] (Tùy chọn) Quản lý chương dạng thực thể riêng (thứ tự chương, xóa chương trống) — hiện chương là trường text trên từng bài.

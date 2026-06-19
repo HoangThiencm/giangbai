@@ -55,6 +55,7 @@
 
     let lessons = [];
     let currentSlug = defaults.slug;
+    let currentLessonId = null;
     let selectedSubject = PAGE_SUBJECT || 'Toán 6';
 
     function el(id) { return document.getElementById(id); }
@@ -72,6 +73,26 @@
             return lessons.filter(lesson => lesson.subject === selectedSubject);
         }
         return lessons.filter(lesson => normalizeSubjectName(lesson.subject) === PAGE_SUBJECT);
+    }
+
+    function chaptersForScope() {
+        const seen = new Set();
+        const items = [];
+        lessonsForScope().forEach(lesson => {
+            const chapter = String(lesson.chapter || '').trim();
+            if (!chapter || seen.has(chapter)) return;
+            seen.add(chapter);
+            items.push(chapter);
+        });
+        return items.sort((a, b) => a.localeCompare(b, 'vi'));
+    }
+
+    function renderChapterOptions() {
+        const datalist = el('lessonChapterOptions');
+        if (!datalist) return;
+        datalist.innerHTML = chaptersForScope()
+            .map(chapter => `<option value="${escapeHtml(chapter)}"></option>`)
+            .join('');
     }
 
     function getAdminKey() {
@@ -483,6 +504,12 @@
                     <button id="newLessonBtn" type="button" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2.5 rounded font-bold text-sm">
                         <i class="fas fa-plus mr-1"></i>Tạo bài mới
                     </button>
+                    <button id="duplicateLessonBtn" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
+                        <i class="fas fa-copy mr-1"></i>Nhân bản bài đang chọn
+                    </button>
+                    <button id="deleteLessonBtn" type="button" class="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 px-4 py-2.5 rounded font-bold text-sm">
+                        <i class="fas fa-trash mr-1"></i>Xóa bài đang chọn
+                    </button>
                     <button id="lessonReloadBtn" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
                         <i class="fas fa-rotate-right mr-1"></i>Tải lại dữ liệu
                     </button>
@@ -499,7 +526,11 @@
                             </select>
                         </label>
                         <label class="block text-sm font-bold text-slate-700">Chương
-                            <input id="lessonChapter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Chương 1: Số tự nhiên">
+                            <input id="lessonChapter" list="lessonChapterOptions" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Chương 1: Số tự nhiên">
+                            <datalist id="lessonChapterOptions"></datalist>
+                            <button id="renameChapterBtn" type="button" class="mt-2 text-xs font-bold text-teal-700 hover:text-teal-900 underline">
+                                Đổi tên chương cho tất cả bài trong chương này
+                            </button>
                         </label>
                         <label class="block text-sm font-bold text-slate-700">Tên bài
                             <input id="lessonTitleInput" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1: Tập hợp">
@@ -590,6 +621,9 @@
         el('lessonReloadBtn').onclick = refreshLessons;
         el('lessonSelect').onchange = () => fillForm(el('lessonSelect').value);
         el('newLessonBtn').onclick = newLesson;
+        el('duplicateLessonBtn').onclick = duplicateLesson;
+        el('deleteLessonBtn').onclick = deleteLesson;
+        el('renameChapterBtn').onclick = renameChapter;
         el('saveLessonBtn').onclick = saveLesson;
         el('seedLessonBtn').onclick = fillSeed;
         el('lessonTitleInput').addEventListener('blur', suggestSlug);
@@ -695,12 +729,16 @@
             return;
         }
         const scoped = isPageScopedEditor();
-        select.innerHTML = items.map(lesson => (
-            scoped
-                ? `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(lesson.title)}</option>`
-                : `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(lesson.title)} (${escapeHtml(lesson.subject)})</option>`
-        )).join('');
+        select.innerHTML = items.map(lesson => {
+            const chapter = String(lesson.chapter || '').trim();
+            const prefix = chapter ? `${chapter} · ` : '';
+            const label = scoped
+                ? `${prefix}${lesson.title}`
+                : `${prefix}${lesson.title} (${lesson.subject})`;
+            return `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(label)}</option>`;
+        }).join('');
         if (items.some(item => item.slug === currentSlug)) select.value = currentSlug;
+        renderChapterOptions();
     }
 
     function scopedEmptyLesson() {
@@ -730,11 +768,13 @@
         const fallback = isPageScopedEditor() ? scopedEmptyLesson() : defaults;
         const lesson = scopedLessons.find(item => item.slug === slug) || scopedLessons[0] || fallback;
         currentSlug = lesson.slug || '';
+        currentLessonId = lesson.id ? Number(lesson.id) : null;
         selectedSubject = isPageScopedEditor() ? PAGE_SUBJECT : (lesson.subject || selectedSubject);
         if (el('lessonSelect')) el('lessonSelect').value = lesson.slug;
         el('lessonSubject').value = selectedSubject;
         el('lessonSlug').value = lesson.slug || '';
         el('lessonChapter').value = lesson.chapter || '';
+        if (el('lessonChapter')) el('lessonChapter').dataset.renameSource = lesson.chapter || '';
         el('lessonTitleInput').value = lesson.title || '';
         el('lessonOrder').value = lesson.order_index || 1;
         el('lessonPublished').checked = !!lesson.is_published;
@@ -777,9 +817,12 @@
     }
 
     function newLesson() {
+        currentLessonId = null;
+        currentSlug = '';
         const order = lessons.filter(lesson => lesson.subject === selectedSubject).length + 1;
         el('lessonSubject').value = selectedSubject;
         el('lessonChapter').value = '';
+        el('lessonChapter').dataset.renameSource = '';
         el('lessonTitleInput').value = '';
         el('lessonSlug').value = '';
         el('lessonOrder').value = order;
@@ -828,6 +871,7 @@
         const skills = parseSkills(el('lessonSkills').value);
         const payload = {
             action: 'save_content',
+            id: currentLessonId || undefined,
             slug: el('lessonSlug').value.trim(),
             subject: (isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject').value).trim(),
             chapter: el('lessonChapter').value.trim(),
@@ -861,8 +905,10 @@
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Không lưu được bài học.');
-            currentSlug = payload.slug;
+            currentSlug = data.slug || payload.slug;
+            currentLessonId = data.id ? Number(data.id) : currentLessonId;
             selectedSubject = payload.subject;
+            if (el('lessonChapter')) el('lessonChapter').dataset.renameSource = payload.chapter;
             await refreshLessons();
             if (typeof window.refreshAdminProgress === 'function') window.refreshAdminProgress();
             alert('Đã lưu bài học.');
@@ -871,6 +917,113 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = old;
+        }
+    }
+
+    async function postLessonAction(action, body) {
+        const res = await fetch('api/lessons.php', {
+            method: 'POST',
+            headers: lessonRequestHeaders(),
+            body: JSON.stringify({ action, ...body })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Thao tác thất bại.');
+        return data;
+    }
+
+    async function duplicateLesson() {
+        const slug = el('lessonSlug').value.trim() || currentSlug;
+        if (!slug && !currentLessonId) {
+            alert('Chọn một bài học để nhân bản.');
+            return;
+        }
+        const btn = el('duplicateLessonBtn');
+        const old = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Đang nhân bản...';
+        try {
+            const data = await postLessonAction('duplicate_lesson', {
+                id: currentLessonId || undefined,
+                slug: slug || undefined
+            });
+            currentSlug = data.slug;
+            currentLessonId = data.id ? Number(data.id) : null;
+            await refreshLessons();
+            if (typeof window.refreshAdminProgress === 'function') window.refreshAdminProgress();
+            alert(`Đã tạo bản sao: ${data.title || 'Bài mới'}. Bản sao mặc định chưa mở cho học sinh.`);
+        } catch (e) {
+            alert(e.message || 'Không nhân bản được bài học.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = old;
+        }
+    }
+
+    async function deleteLesson() {
+        const slug = el('lessonSlug').value.trim() || currentSlug;
+        const title = el('lessonTitleInput').value.trim() || 'bài học này';
+        if (!slug && !currentLessonId) {
+            alert('Chọn một bài học để xóa.');
+            return;
+        }
+        const confirmed = confirm(
+            `Xóa "${title}"?\n\nTiến độ học sinh của bài này cũng sẽ bị xóa. Thao tác không thể hoàn tác.`
+        );
+        if (!confirmed) return;
+
+        const btn = el('deleteLessonBtn');
+        const old = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Đang xóa...';
+        try {
+            await postLessonAction('delete_lesson', {
+                id: currentLessonId || undefined,
+                slug: slug || undefined
+            });
+            currentLessonId = null;
+            currentSlug = '';
+            await refreshLessons();
+            if (typeof window.refreshAdminProgress === 'function') window.refreshAdminProgress();
+            alert('Đã xóa bài học.');
+        } catch (e) {
+            alert(e.message || 'Không xóa được bài học.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = old;
+        }
+    }
+
+    async function renameChapter() {
+        const subject = (isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject').value).trim();
+        const oldChapter = String(el('lessonChapter').dataset.renameSource || '').trim();
+        if (!oldChapter) {
+            alert('Chọn một bài đã có chương, hoặc lưu bài với tên chương trước khi đổi tên hàng loạt.');
+            return;
+        }
+        const newChapter = prompt(
+            `Đổi tên "${oldChapter}" thành tên mới cho tất cả bài thuộc môn "${subject}":`,
+            oldChapter
+        );
+        if (newChapter === null) return;
+        const trimmed = newChapter.trim();
+        if (!oldChapter || !trimmed) {
+            alert('Cần tên chương cũ và tên chương mới.');
+            return;
+        }
+        if (oldChapter === trimmed) return;
+
+        try {
+            const data = await postLessonAction('rename_chapter', {
+                subject,
+                old_chapter: oldChapter,
+                new_chapter: trimmed
+            });
+            el('lessonChapter').value = trimmed;
+            el('lessonChapter').dataset.renameSource = trimmed;
+            await refreshLessons();
+            alert(`Đã đổi tên chương cho ${data.updated || 0} bài.`);
+        } catch (e) {
+            alert(e.message || 'Không đổi tên chương được.');
         }
     }
 

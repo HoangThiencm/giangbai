@@ -303,9 +303,45 @@ if ($method === 'POST' && $action === 'reset_progress') {
     respond(['ok' => true]);
 }
 
+function find_lesson_by_id_or_slug(PDO $pdo, int $id, string $slug): ?array
+{
+    if ($id > 0) {
+        $stmt = $pdo->prepare('SELECT * FROM lessons WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if ($row) return $row;
+    }
+    if ($slug !== '') {
+        $stmt = $pdo->prepare('SELECT * FROM lessons WHERE slug = ? LIMIT 1');
+        $stmt->execute([$slug]);
+        $row = $stmt->fetch();
+        if ($row) return $row;
+    }
+    return null;
+}
+
+function unique_lesson_slug(PDO $pdo, string $baseSlug): string
+{
+    $baseSlug = trim($baseSlug);
+    if ($baseSlug === '') $baseSlug = 'bai-hoc';
+    $candidate = $baseSlug;
+    $suffix = 2;
+    while (true) {
+        $stmt = $pdo->prepare('SELECT id FROM lessons WHERE slug = ? LIMIT 1');
+        $stmt->execute([$candidate]);
+        if (!$stmt->fetch()) return $candidate;
+        $candidate = $baseSlug . '-copy' . ($suffix > 2 ? '-' . $suffix : '');
+        $suffix++;
+        if ($suffix > 50) {
+            return $baseSlug . '-' . time();
+        }
+    }
+}
+
 if ($method === 'POST' && $action === 'save_content') {
     if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
     $data = $requestData;
+    $lessonId = (int)($data['id'] ?? 0);
     $slug = trim($data['slug'] ?? '');
     if ($slug === '') respond(['error' => 'Thiếu slug.'], 422);
 
@@ -327,11 +363,46 @@ if ($method === 'POST' && $action === 'save_content') {
         'is_published' => !empty($data['is_published']) ? 1 : 0,
     ];
 
-    $stmt = $pdo->prepare('SELECT id FROM lessons WHERE slug = ? LIMIT 1');
-    $stmt->execute([$slug]);
-    $existing = $stmt->fetch();
+    $existing = find_lesson_by_id_or_slug($pdo, $lessonId, '');
 
     if ($existing) {
+        $conflict = $pdo->prepare('SELECT id FROM lessons WHERE slug = ? AND id != ? LIMIT 1');
+        $conflict->execute([$slug, (int)$existing['id']]);
+        if ($conflict->fetch()) {
+            respond(['error' => 'Slug đã được bài khác sử dụng.'], 422);
+        }
+        $update = $pdo->prepare('
+            UPDATE lessons
+            SET subject = ?, chapter = ?, title = ?, slug = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            WHERE id = ?
+        ');
+        $update->execute([
+            $payload['subject'],
+            $payload['chapter'],
+            $payload['title'],
+            $slug,
+            $payload['goal_text'],
+            $payload['theory_json'],
+            $payload['examples_json'],
+            $payload['questions_json'],
+            $payload['essay_json'],
+            $payload['fill_json'],
+            $payload['drag_json'],
+            $payload['videos_json'],
+            $payload['tasks_json'],
+            $payload['skills_json'],
+            $payload['order_index'],
+            $payload['is_published'],
+            (int)$existing['id']
+        ]);
+        respond(['ok' => true, 'id' => (int)$existing['id'], 'slug' => $slug]);
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM lessons WHERE slug = ? LIMIT 1');
+    $stmt->execute([$slug]);
+    $existingBySlug = $stmt->fetch();
+
+    if ($existingBySlug) {
         $update = $pdo->prepare('
             UPDATE lessons
             SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
@@ -355,32 +426,113 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['is_published'],
             $slug
         ]);
-    } else {
-        $insert = $pdo->prepare('
-            INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ');
-        $insert->execute([
-            $payload['subject'],
-            $payload['chapter'],
-            $payload['title'],
-            $slug,
-            $payload['order_index'],
-            $payload['is_published'],
-            $payload['goal_text'],
-            $payload['theory_json'],
-            $payload['examples_json'],
-            $payload['questions_json'],
-            $payload['essay_json'],
-            $payload['fill_json'],
-            $payload['drag_json'],
-            $payload['videos_json'],
-            $payload['tasks_json'],
-            $payload['skills_json']
-        ]);
+        respond(['ok' => true, 'id' => (int)$existingBySlug['id'], 'slug' => $slug]);
     }
 
-    respond(['ok' => true]);
+    $insert = $pdo->prepare('
+        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ');
+    $insert->execute([
+        $payload['subject'],
+        $payload['chapter'],
+        $payload['title'],
+        $slug,
+        $payload['order_index'],
+        $payload['is_published'],
+        $payload['goal_text'],
+        $payload['theory_json'],
+        $payload['examples_json'],
+        $payload['questions_json'],
+        $payload['essay_json'],
+        $payload['fill_json'],
+        $payload['drag_json'],
+        $payload['videos_json'],
+        $payload['tasks_json'],
+        $payload['skills_json']
+    ]);
+    respond(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'slug' => $slug]);
+}
+
+if ($method === 'POST' && $action === 'delete_lesson') {
+    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
+    $data = $requestData;
+    $lessonId = (int)($data['id'] ?? 0);
+    $slug = trim($data['slug'] ?? '');
+    $lesson = find_lesson_by_id_or_slug($pdo, $lessonId, $slug);
+    if (!$lesson) respond(['error' => 'Không tìm thấy bài học.'], 404);
+
+    $id = (int)$lesson['id'];
+    if (table_exists($pdo, 'student_lesson_progress')) {
+        $pdo->prepare('DELETE FROM student_lesson_progress WHERE lesson_id = ?')->execute([$id]);
+    }
+    $pdo->prepare('DELETE FROM lessons WHERE id = ?')->execute([$id]);
+    respond(['ok' => true, 'deleted_id' => $id]);
+}
+
+if ($method === 'POST' && $action === 'duplicate_lesson') {
+    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
+    $data = $requestData;
+    $lessonId = (int)($data['id'] ?? 0);
+    $slug = trim($data['slug'] ?? '');
+    $lesson = find_lesson_by_id_or_slug($pdo, $lessonId, $slug);
+    if (!$lesson) respond(['error' => 'Không tìm thấy bài học.'], 404);
+
+    $newSlug = unique_lesson_slug($pdo, $lesson['slug'] . '-copy');
+    $newTitle = trim($lesson['title'] ?? 'Bài học');
+    if (!preg_match('/\(bản sao\)$/iu', $newTitle)) {
+        $newTitle .= ' (bản sao)';
+    }
+    $orderStmt = $pdo->prepare('SELECT COALESCE(MAX(order_index), 0) + 1 FROM lessons WHERE subject = ?');
+    $orderStmt->execute([$lesson['subject']]);
+    $nextOrder = (int)$orderStmt->fetchColumn();
+
+    $insert = $pdo->prepare('
+        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ');
+    $insert->execute([
+        $lesson['subject'],
+        $lesson['chapter'],
+        $newTitle,
+        $newSlug,
+        $nextOrder,
+        $lesson['goal_text'] ?? '',
+        $lesson['theory_json'] ?? '[]',
+        $lesson['examples_json'] ?? '[]',
+        $lesson['questions_json'] ?? '[]',
+        $lesson['essay_json'] ?? '[]',
+        $lesson['fill_json'] ?? '[]',
+        $lesson['drag_json'] ?? '[]',
+        $lesson['videos_json'] ?? '[]',
+        $lesson['tasks_json'] ?? '[]',
+        $lesson['skills_json'] ?? '[]'
+    ]);
+
+    respond([
+        'ok' => true,
+        'id' => (int)$pdo->lastInsertId(),
+        'slug' => $newSlug,
+        'title' => $newTitle
+    ]);
+}
+
+if ($method === 'POST' && $action === 'rename_chapter') {
+    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
+    $data = $requestData;
+    $subject = trim($data['subject'] ?? '');
+    $oldChapter = trim($data['old_chapter'] ?? '');
+    $newChapter = trim($data['new_chapter'] ?? '');
+    if ($subject === '' || $oldChapter === '' || $newChapter === '') {
+        respond(['error' => 'Cần môn học, tên chương cũ và tên chương mới.'], 422);
+    }
+    if ($oldChapter === $newChapter) {
+        respond(['ok' => true, 'updated' => 0]);
+    }
+
+    $update = $pdo->prepare('UPDATE lessons SET chapter = ? WHERE subject = ? AND chapter = ?');
+    $update->execute([$newChapter, $subject, $oldChapter]);
+    respond(['ok' => true, 'updated' => $update->rowCount()]);
 }
 
 respond(['error' => 'Method not allowed.'], 405);

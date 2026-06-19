@@ -62,6 +62,8 @@
         error: ''
     };
 
+    let lessonListLastScrollId = null;
+
     function safeJson(value, fallback) {
         try {
             return value ? JSON.parse(value) : fallback;
@@ -454,6 +456,16 @@
         renderNextAction(lesson);
         bindPracticeInteractions(lesson);
         typesetMath();
+    }
+
+    function refreshLearningChrome(lesson) {
+        if (!lesson) return;
+        renderOverallProgress();
+        renderLessonList({ scrollToActive: false });
+        renderHeader(lesson);
+        renderSkills(lesson);
+        renderTasks(lesson);
+        renderNextAction(lesson);
     }
 
     function renderTeacherPreviewBanner() {
@@ -1160,7 +1172,7 @@
     }
 
     function renderLessonList(options = {}) {
-        const { updateToolbar = true } = options;
+        const { updateToolbar = true, scrollToActive } = options;
         ensureLessonListShell();
 
         if (!state.lessons.length) {
@@ -1236,8 +1248,10 @@
         });
 
         const activeItem = els.lessonList.querySelector('.lesson-item.active');
-        if (activeItem) {
+        const shouldScrollActive = scrollToActive ?? (activeLessonId !== lessonListLastScrollId);
+        if (activeItem && shouldScrollActive) {
             window.requestAnimationFrame(() => activeItem.scrollIntoView({ block: 'nearest' }));
+            lessonListLastScrollId = activeLessonId;
         }
     }
 
@@ -1712,7 +1726,7 @@
                             score: progress.score || 0,
                             skillScores: progress.skillScores || {}
                         });
-                        render();
+                        refreshLearningChrome(lesson);
                     } catch (err) {
                         console.error('save answer error:', err);
                         alert('Không lưu được câu trả lời: ' + (err.message || 'Lỗi không xác định'));
