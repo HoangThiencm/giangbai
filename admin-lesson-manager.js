@@ -514,13 +514,13 @@
                         </div>
                     </div>
 
-                    <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
-                        <input id="lessonPublished" type="checkbox" class="w-4 h-4 text-teal-600 rounded">
-                        Mở bài này cho học sinh
+                    <label class="flex items-start gap-2 rounded border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-900">
+                        <input id="lessonPublished" type="checkbox" class="mt-0.5 w-4 h-4 text-teal-600 rounded">
+                        <span>Mở bài này cho học sinh <span class="block text-xs font-medium text-teal-800">Mặc định tắt — chỉ bật khi bạn sẵn sàng cho lớp học bài này.</span></span>
                     </label>
 
                     <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
-                        <textarea id="lessonGoal" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
+                        <textarea id="lessonGoalInput" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
                     </label>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -603,7 +603,7 @@
             renderSubjectPills();
             suggestSlug();
         });
-        ['lessonGoal', 'lessonTheory', 'lessonExamples', 'lessonEssay', 'lessonFill', 'lessonDrag', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
+        ['lessonGoalInput', 'lessonTheory', 'lessonExamples', 'lessonEssay', 'lessonFill', 'lessonDrag', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
             el(id).addEventListener('input', renderPreview);
         });
         setupEditorFieldShortcuts();
@@ -738,7 +738,7 @@
         el('lessonTitleInput').value = lesson.title || '';
         el('lessonOrder').value = lesson.order_index || 1;
         el('lessonPublished').checked = !!lesson.is_published;
-        el('lessonGoal').value = lesson.goal || lesson.goal_text || '';
+        el('lessonGoalInput').value = lesson.goal || lesson.goal_text || '';
         el('lessonTheory').value = formatTheoryBlocks(lesson.theory);
         el('lessonExamples').value = formatExamples(lesson.examples);
         el('lessonEssay').value = formatEssayExercises(lesson.essay_exercises);
@@ -760,7 +760,7 @@
         el('lessonTitleInput').value = defaults.title;
         el('lessonOrder').value = defaults.order_index;
         el('lessonPublished').checked = true;
-        el('lessonGoal').value = defaults.goal_text;
+        el('lessonGoalInput').value = defaults.goal_text;
         el('lessonTheory').value = formatTheoryBlocks(defaults.theory.map((text, index) => (
             index === 1 ? { text, ai: true } : text
         )));
@@ -784,7 +784,7 @@
         el('lessonSlug').value = '';
         el('lessonOrder').value = order;
         el('lessonPublished').checked = false;
-        el('lessonGoal').value = '';
+        el('lessonGoalInput').value = '';
         el('lessonTheory').value = '';
         el('lessonExamples').value = '';
         el('lessonEssay').value = '';
@@ -834,7 +834,7 @@
             title: el('lessonTitleInput').value.trim(),
             order_index: Number(el('lessonOrder').value) || 0,
             is_published: el('lessonPublished').checked,
-            goal_text: el('lessonGoal').value.trim(),
+            goal_text: el('lessonGoalInput').value.trim(),
             theory: parseTheoryBlocks(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
             essay_exercises: parseEssayExercises(el('lessonEssay').value),
@@ -849,7 +849,6 @@
             alert('Cần nhập slug và tên bài.');
             return;
         }
-
         const btn = el('saveLessonBtn');
         const old = btn.innerHTML;
         btn.disabled = true;

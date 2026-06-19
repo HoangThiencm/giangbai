@@ -120,7 +120,14 @@
             </div>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3"></div>
             <div class="mt-5 overflow-x-auto rounded border border-slate-200">
-                <table class="min-w-full divide-y divide-slate-200">
+                <table class="min-w-full table-fixed divide-y divide-slate-200">
+                    <colgroup>
+                        <col style="width:26%">
+                        <col style="width:14%">
+                        <col style="width:10%">
+                        <col style="width:32%">
+                        <col style="width:18%">
+                    </colgroup>
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh / Lớp</th>
@@ -284,14 +291,11 @@
         const mastered = groupRows.filter(row => row.status === 'mastered').length;
         return `
             <tr class="bg-amber-50 border-t border-amber-100">
-                <td colspan="5" class="px-4 py-2.5">
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                        <span class="font-bold text-amber-900">Lớp ${escapeHtml(className)}</span>
-                        <span class="text-amber-800">${groupRows.length} học sinh</span>
-                        <span class="text-teal-700">${mastered} đã học xong</span>
-                        <span class="text-amber-700">${needs} cần luyện</span>
-                    </div>
-                </td>
+                <td class="px-4 py-2.5 text-sm font-bold text-amber-900">Lớp ${escapeHtml(className)}</td>
+                <td class="px-4 py-2.5 text-sm text-amber-800">${groupRows.length} học sinh</td>
+                <td class="px-4 py-2.5 text-sm font-semibold text-teal-700">${mastered} đã học xong</td>
+                <td class="px-4 py-2.5 text-sm font-semibold text-amber-700">${needs} cần luyện</td>
+                <td class="px-4 py-2.5 text-xs text-slate-400">—</td>
             </tr>
         `;
     }

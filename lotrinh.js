@@ -1783,6 +1783,9 @@
         const data = await api('api/lessons.php?debug=1', { method: 'GET' });
         state.user = data.user;
         state.lessons = (data.lessons || []).filter(lesson => String(lesson.subject || '').trim() === PAGE_SUBJECT);
+        if ((state.user?.role || data.user?.role) === 'student') {
+            state.lessons = state.lessons.filter(lesson => !!lesson.is_published);
+        }
         state.progress = data.progress || {};
         if (reselect && !state.selectedLessonId && state.lessons[0]) {
             state.selectedLessonId = state.lessons[0].id;
