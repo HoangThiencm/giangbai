@@ -51,11 +51,28 @@
         ]
     };
 
+    const PAGE_SUBJECT = String(window.LOTRINH_SUBJECT || '').trim();
+
     let lessons = [];
     let currentSlug = defaults.slug;
-    let selectedSubject = window.LOTRINH_SUBJECT || 'Toán 6';
+    let selectedSubject = PAGE_SUBJECT || 'Toán 6';
 
     function el(id) { return document.getElementById(id); }
+
+    function isPageScopedEditor() {
+        return !!PAGE_SUBJECT && !!el('lessonDesignerMount') && localStorage.getItem('userRole') === 'teacher';
+    }
+
+    function normalizeSubjectName(value) {
+        return String(value || '').trim();
+    }
+
+    function lessonsForScope() {
+        if (!isPageScopedEditor()) {
+            return lessons.filter(lesson => lesson.subject === selectedSubject);
+        }
+        return lessons.filter(lesson => normalizeSubjectName(lesson.subject) === PAGE_SUBJECT);
+    }
 
     function getAdminKey() {
         try {
@@ -452,7 +469,7 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-book-open text-teal-600 mr-2"></i>Tạo bài học cho lộ trình
                     </h3>
-                    <p class="text-sm text-slate-500 mt-1">Nhập nội dung theo từng mục. Công thức viết bằng LaTeX trong dấu <code>$...$</code>.</p>
+                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500 mt-1">Nhập nội dung theo từng mục. Công thức viết bằng LaTeX trong dấu <code>$...$</code>.</p>
                 </div>
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
@@ -578,6 +595,10 @@
         el('lessonTitleInput').addEventListener('blur', suggestSlug);
         el('lessonChapter').addEventListener('blur', suggestSlug);
         el('lessonSubject').addEventListener('change', event => {
+            if (isPageScopedEditor()) {
+                event.target.value = PAGE_SUBJECT;
+                return;
+            }
             selectedSubject = event.target.value;
             renderSubjectPills();
             suggestSlug();
@@ -589,7 +610,42 @@
         setupRichToolbars();
         injectLessonEditorStyles();
 
+        applyPageScopeUi();
         renderSubjectPills();
+    }
+
+    function applyPageScopeUi() {
+        const scoped = isPageScopedEditor();
+        const pills = el('subjectPills');
+        const subjectSelect = el('lessonSubject');
+        const hint = el('lessonEditorScopeHint');
+
+        if (scoped) {
+            selectedSubject = PAGE_SUBJECT;
+        }
+
+        if (pills) {
+            pills.classList.toggle('hidden', scoped);
+            if (scoped) pills.innerHTML = '';
+        }
+
+        if (subjectSelect) {
+            if (scoped) {
+                subjectSelect.innerHTML = `<option value="${escapeHtml(PAGE_SUBJECT)}">${escapeHtml(PAGE_SUBJECT)}</option>`;
+                subjectSelect.value = PAGE_SUBJECT;
+                subjectSelect.disabled = true;
+            } else {
+                subjectSelect.disabled = false;
+                subjectSelect.innerHTML = SUBJECTS.map(item => `<option value="${item.title}">${item.label}</option>`).join('');
+                subjectSelect.value = selectedSubject;
+            }
+        }
+
+        if (hint) {
+            hint.innerHTML = scoped
+                ? `Soạn bài cho <strong>${escapeHtml(PAGE_SUBJECT)}</strong>. Chỉ hiển thị bài học thuộc lộ trình này. Công thức viết bằng LaTeX trong dấu <code>$...$</code>.`
+                : 'Nhập nội dung theo từng mục. Công thức viết bằng LaTeX trong dấu <code>$...$</code>.';
+        }
     }
 
     function injectLessonEditorStyles() {
@@ -611,6 +667,11 @@
     function renderSubjectPills() {
         const box = el('subjectPills');
         if (!box) return;
+        if (isPageScopedEditor()) {
+            applyPageScopeUi();
+            return;
+        }
+        box.classList.remove('hidden');
         box.innerHTML = SUBJECTS.map(item => {
             const active = selectedSubject === item.title;
             return `<button type="button" data-subject="${item.title}" class="subject-pill rounded px-3 py-2 text-sm font-bold ${active ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">${item.label}</button>`;
@@ -628,16 +689,48 @@
     function renderSelect() {
         const select = el('lessonSelect');
         if (!select) return;
-        const filtered = lessons.filter(lesson => lesson.subject === selectedSubject);
-        const items = filtered.length ? filtered : lessons;
-        select.innerHTML = items.map(lesson => `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(lesson.title)} (${escapeHtml(lesson.subject)})</option>`).join('');
+        const items = lessonsForScope();
+        if (!items.length) {
+            select.innerHTML = '<option value="">Chưa có bài học</option>';
+            return;
+        }
+        const scoped = isPageScopedEditor();
+        select.innerHTML = items.map(lesson => (
+            scoped
+                ? `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(lesson.title)}</option>`
+                : `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(lesson.title)} (${escapeHtml(lesson.subject)})</option>`
+        )).join('');
         if (items.some(item => item.slug === currentSlug)) select.value = currentSlug;
     }
 
+    function scopedEmptyLesson() {
+        return {
+            ...defaults,
+            subject: PAGE_SUBJECT,
+            slug: '',
+            chapter: '',
+            title: '',
+            order_index: lessonsForScope().length + 1,
+            is_published: false,
+            goal_text: '',
+            theory: [],
+            examples: [],
+            essay_exercises: [],
+            fill_exercises: [],
+            drag_exercises: [],
+            videos: [],
+            skills: [],
+            tasks: [],
+            questions: []
+        };
+    }
+
     function fillForm(slug) {
-        const lesson = lessons.find(item => item.slug === slug) || lessons.find(item => item.subject === selectedSubject) || lessons[0] || defaults;
-        currentSlug = lesson.slug;
-        selectedSubject = lesson.subject || selectedSubject;
+        const scopedLessons = lessonsForScope();
+        const fallback = isPageScopedEditor() ? scopedEmptyLesson() : defaults;
+        const lesson = scopedLessons.find(item => item.slug === slug) || scopedLessons[0] || fallback;
+        currentSlug = lesson.slug || '';
+        selectedSubject = isPageScopedEditor() ? PAGE_SUBJECT : (lesson.subject || selectedSubject);
         if (el('lessonSelect')) el('lessonSelect').value = lesson.slug;
         el('lessonSubject').value = selectedSubject;
         el('lessonSlug').value = lesson.slug || '';
@@ -660,8 +753,8 @@
     }
 
     function fillSeed() {
-        selectedSubject = defaults.subject;
-        el('lessonSubject').value = defaults.subject;
+        selectedSubject = isPageScopedEditor() ? PAGE_SUBJECT : defaults.subject;
+        el('lessonSubject').value = selectedSubject;
         el('lessonSlug').value = defaults.slug;
         el('lessonChapter').value = defaults.chapter;
         el('lessonTitleInput').value = defaults.title;
@@ -736,7 +829,7 @@
         const payload = {
             action: 'save_content',
             slug: el('lessonSlug').value.trim(),
-            subject: el('lessonSubject').value.trim(),
+            subject: (isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject').value).trim(),
             chapter: el('lessonChapter').value.trim(),
             title: el('lessonTitleInput').value.trim(),
             order_index: Number(el('lessonOrder').value) || 0,
@@ -790,9 +883,14 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Không tải được bài học.');
         lessons = data.lessons || [];
-        if (!lessons.some(item => item.slug === currentSlug)) {
-            currentSlug = lessons.find(item => item.subject === selectedSubject)?.slug || lessons[0]?.slug || defaults.slug;
+        if (isPageScopedEditor()) {
+            selectedSubject = PAGE_SUBJECT;
         }
+        const scopedLessons = lessonsForScope();
+        if (!scopedLessons.some(item => item.slug === currentSlug)) {
+            currentSlug = scopedLessons[0]?.slug || (isPageScopedEditor() ? '' : defaults.slug);
+        }
+        applyPageScopeUi();
         renderSubjectPills();
         renderSelect();
         fillForm(currentSlug);

@@ -1,4 +1,6 @@
 (function () {
+    const PAGE_SUBJECT = String(window.LOTRINH_SUBJECT || '').trim();
+
     let lessons = [];
     let rows = [];
     let classes = [];
@@ -6,6 +8,11 @@
     let selectedClassName = localStorage.getItem('progress_class_filter') || '';
 
     function el(id) { return document.getElementById(id); }
+
+    function lessonsForPage() {
+        if (!PAGE_SUBJECT) return lessons;
+        return lessons.filter(lesson => String(lesson.subject || '').trim() === PAGE_SUBJECT);
+    }
 
     function getAdminKey() {
         try {
@@ -84,7 +91,7 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo dõi tiến độ học sinh
                     </h3>
-                    <p class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp — hoặc xem tất cả lớp được nhóm theo tên lớp.</p>
+                    <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp — hoặc xem tất cả lớp được nhóm theo tên lớp.</p>
                 </div>
                 <button id="progressReloadBtn" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
                     <i class="fas fa-rotate-right mr-1"></i>Tải lại
@@ -128,6 +135,7 @@
             </div>
         `;
         dashboard.prepend(panel);
+        applyPageScopeUi();
 
         el('progressReloadBtn').onclick = () => refresh();
         el('progressLessonSelect').onchange = event => {
@@ -175,17 +183,38 @@
         });
     }
 
+    function applyPageScopeUi() {
+        const hint = el('progressScopeHint');
+        if (!hint) return;
+        if (PAGE_SUBJECT) {
+            hint.textContent = `Theo dõi tiến độ ${PAGE_SUBJECT}. Chọn lớp để lọc nhanh học sinh cần hỗ trợ.`;
+        }
+    }
+
     function renderLessons() {
         const select = el('progressLessonSelect');
         if (!select) return;
-        select.innerHTML = lessons.map(lesson => `
-            <option value="${lesson.id}">${escapeHtml(lesson.subject)} - ${escapeHtml(lesson.title)}</option>
-        `).join('');
-        if (selectedLessonId) select.value = selectedLessonId;
+        const items = lessonsForPage();
+        if (!items.length) {
+            select.innerHTML = '<option value="">Chưa có bài học</option>';
+            return;
+        }
+        select.innerHTML = items.map(lesson => (
+            PAGE_SUBJECT
+                ? `<option value="${lesson.id}">${escapeHtml(lesson.title)}</option>`
+                : `<option value="${lesson.id}">${escapeHtml(lesson.subject)} - ${escapeHtml(lesson.title)}</option>`
+        )).join('');
+        if (items.some(item => String(item.id) === String(selectedLessonId))) {
+            select.value = selectedLessonId;
+        } else {
+            selectedLessonId = String(items[0].id);
+            select.value = selectedLessonId;
+        }
     }
 
     function weakSkillText(row) {
-        const lesson = lessons.find(item => String(item.id) === String(selectedLessonId)) || lessons[0];
+        const scopedLessons = lessonsForPage();
+        const lesson = scopedLessons.find(item => String(item.id) === String(selectedLessonId)) || scopedLessons[0];
         const skills = lesson?.skills || [];
         const weak = skills.filter(skill => Number(row.skill_scores?.[skill.id] || 0) < Number(skill.target || 80));
         if (row.status === 'not_started') return 'Chưa vào làm bài';
@@ -310,7 +339,13 @@
         lessons = data.lessons || [];
         rows = data.rows || [];
         classes = Array.isArray(data.classes) ? data.classes : [];
-        selectedLessonId = String(data.lesson_id || lessons[0]?.id || '');
+        const scopedLessons = lessonsForPage();
+        const preferredLessonId = String(data.lesson_id || '');
+        if (scopedLessons.some(item => String(item.id) === preferredLessonId)) {
+            selectedLessonId = preferredLessonId;
+        } else {
+            selectedLessonId = String(scopedLessons[0]?.id || '');
+        }
         renderLessons();
         renderClasses();
         render();
