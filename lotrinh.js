@@ -381,6 +381,37 @@
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml(normalized.answer.join(' → '))}`;
     }
 
+    function getMatchPairValue(matches, leftIndex) {
+        if (!matches || typeof matches !== 'object' || Array.isArray(matches)) return undefined;
+        const leftKey = Number(leftIndex);
+        if (!Number.isFinite(leftKey) || leftKey < 0) return undefined;
+        if (matches[leftKey] !== undefined) return Number(matches[leftKey]);
+        if (matches[String(leftKey)] !== undefined) return Number(matches[String(leftKey)]);
+        return undefined;
+    }
+
+    function collectMatchAnswersFromCard(card) {
+        const savedMatches = {};
+        if (!card) return savedMatches;
+        card.querySelectorAll('.match-item[data-match-side="left"]').forEach(leftBtn => {
+            const leftIndex = Number.parseInt(leftBtn.dataset.matchIndex || '-1', 10);
+            const pairOrder = Number.parseInt(leftBtn.querySelector('.match-pair-badge')?.textContent || '', 10);
+            if (!Number.isFinite(leftIndex) || leftIndex < 0 || !Number.isFinite(pairOrder) || pairOrder < 1) return;
+            const rightBtn = Array.from(card.querySelectorAll('.match-item[data-match-side="right"]'))
+                .find(node => Number.parseInt(node.querySelector('.match-pair-badge')?.textContent || '', 10) === pairOrder);
+            const rightIndex = Number.parseInt(rightBtn?.dataset.matchIndex || '-1', 10);
+            if (Number.isFinite(rightIndex) && rightIndex >= 0) savedMatches[leftIndex] = rightIndex;
+        });
+        return savedMatches;
+    }
+
+    function isMatchAnswerCorrect(normalized, savedMatches) {
+        if (!normalized?.pairs?.length || !normalized.left?.length) return false;
+        const pairedCount = Object.keys(savedMatches || {}).length;
+        if (pairedCount < normalized.left.length) return false;
+        return normalized.pairs.every(pair => getMatchPairValue(savedMatches, pair.left) === Number(pair.right));
+    }
+
     function buildMatchCheckFeedback(normalized, savedMatches) {
         const totalPairs = normalized.left.length;
         const pairedCount = Object.keys(savedMatches || {}).length;
@@ -390,11 +421,7 @@
         if (pairedCount < totalPairs) {
             return '<span class="font-bold text-slate-600">Hãy nối đủ tất cả các cặp trước khi kiểm tra.</span>';
         }
-        let correctCount = 0;
-        normalized.pairs.forEach(pair => {
-            if (Number(savedMatches[pair.left]) === pair.right) correctCount += 1;
-        });
-        const ok = normalized.pairs.length > 0 && correctCount === normalized.pairs.length;
+        const ok = isMatchAnswerCorrect(normalized, savedMatches);
         return ok
             ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã nối đủ các cặp.'
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> ${escapeHtml(normalized.hint || 'Hãy kiểm tra lại các cặp chưa khớp.')}`;
@@ -1739,11 +1766,7 @@
             if (normalized.mode === 'match') {
                 const savedMatches = isDragMatchAnswer(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : {};
                 const pairedRight = new Set(Object.values(savedMatches).map(value => Number(value)));
-                let correctCount = 0;
-                normalized.pairs.forEach(pair => {
-                    if (Number(savedMatches[pair.left]) === pair.right) correctCount += 1;
-                });
-                const ok = practiceDone && normalized.pairs.length > 0 && correctCount === normalized.pairs.length;
+                const ok = practiceDone && isMatchAnswerCorrect(normalized, savedMatches);
                 const feedback = practiceDone
                     ? (ok
                         ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã nối đủ các cặp.'
@@ -2737,11 +2760,10 @@
             const normalized = normalizeDragExercise(item);
             const key = normalized.id || item.id || `drag_${itemIndex + 1}`;
             if (normalized.mode === 'match') {
-                const uiMatches = currentUiState(lesson).dragAnswers?.[key];
-                const matches = isDragMatchAnswer(uiMatches) ? { ...uiMatches } : {};
+                const card = document.querySelector(`[data-match-card="${escapeSelector(key)}"]`);
+                const matches = collectMatchAnswersFromCard(card);
                 answers[key] = matches;
-                const ok = normalized.pairs.length > 0 && normalized.pairs.every(pair => Number(matches[pair.left]) === pair.right);
-                if (ok) correct += 1;
+                if (isMatchAnswerCorrect(normalized, matches)) correct += 1;
                 return;
             }
             const zone = document.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
@@ -3465,16 +3487,7 @@
                 if (!feedback || !card) return;
                 const item = (lesson.drag_exercises || []).map(normalizeDragExercise).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
                 if (!item || item.mode !== 'match') return;
-                const savedMatches = {};
-                card.querySelectorAll('.match-item[data-match-side="left"]').forEach(leftBtn => {
-                    const leftIndex = Number.parseInt(leftBtn.dataset.matchIndex || '-1', 10);
-                    const pairOrder = Number.parseInt(leftBtn.querySelector('.match-pair-badge')?.textContent || '', 10);
-                    if (!Number.isFinite(leftIndex) || leftIndex < 0 || !Number.isFinite(pairOrder) || pairOrder < 1) return;
-                    const rightBtn = Array.from(card.querySelectorAll('.match-item[data-match-side="right"]'))
-                        .find(node => Number.parseInt(node.querySelector('.match-pair-badge')?.textContent || '', 10) === pairOrder);
-                    const rightIndex = Number.parseInt(rightBtn?.dataset.matchIndex || '-1', 10);
-                    if (Number.isFinite(rightIndex) && rightIndex >= 0) savedMatches[leftIndex] = rightIndex;
-                });
+                const savedMatches = collectMatchAnswersFromCard(card);
                 feedback.classList.remove('hidden');
                 feedback.innerHTML = buildMatchCheckFeedback(item, savedMatches);
             };
