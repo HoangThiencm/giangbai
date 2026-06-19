@@ -300,6 +300,88 @@
         return value && typeof value === 'object' && !Array.isArray(value);
     }
 
+    function shuffleSeed(text) {
+        let hash = 0;
+        const value = String(text || '');
+        for (let i = 0; i < value.length; i += 1) {
+            hash = ((hash << 5) - hash) + value.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash) || 1;
+    }
+
+    function seededShuffle(items, seed) {
+        const arr = [...items];
+        let state = seed >>> 0;
+        const random = () => {
+            state = (state * 1664525 + 1013904223) >>> 0;
+            return state / 0x100000000;
+        };
+        for (let i = arr.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function shuffledIndices(length, seed) {
+        return seededShuffle(Array.from({ length }, (_, index) => index), seed);
+    }
+
+    function renderPracticeCheckButton(className, attrName, attrValue, practiceDone) {
+        if (practiceDone) return '';
+        return `
+            <button type="button" class="${className} inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" ${attrName}="${escapeHtml(attrValue)}">
+                <i class="fas fa-check"></i>Kiểm tra đáp án
+            </button>
+        `;
+    }
+
+    function buildFillCheckFeedback(normalized, slots) {
+        const filledCount = slots.filter(slot => String(slot || '').trim()).length;
+        if (filledCount < normalized.blankCount) {
+            return '<span class="font-bold text-slate-600">Hãy kéo đủ mảnh vào tất cả ô trống trước khi kiểm tra.</span>';
+        }
+        const given = slots.map(normalizeAnswerText);
+        const expected = normalized.answers.map(normalizeAnswerText);
+        const ok = expected.length > 0 && expected.every((answer, slotIndex) => given[slotIndex] === answer);
+        return ok
+            ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã kéo đúng vào các ô trống.'
+            : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${normalized.answers.map(part => mathText(part)).join(' · ')}`;
+    }
+
+    function buildSortCheckFeedback(normalized, savedOrder) {
+        if (!savedOrder.length) {
+            return '<span class="font-bold text-slate-600">Hãy kéo các mảnh vào hàng thứ tự trước khi kiểm tra.</span>';
+        }
+        if (savedOrder.length < normalized.answer.length) {
+            return '<span class="font-bold text-slate-600">Hãy xếp đủ tất cả mảnh theo thứ tự trước khi kiểm tra.</span>';
+        }
+        const ok = savedOrder.map(normalizeAnswerText).join('|') === normalized.answer.map(normalizeAnswerText).join('|');
+        return ok
+            ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
+            : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml(normalized.answer.join(' → '))}`;
+    }
+
+    function buildMatchCheckFeedback(normalized, savedMatches) {
+        const totalPairs = normalized.left.length;
+        const pairedCount = Object.keys(savedMatches || {}).length;
+        if (!totalPairs) {
+            return '<span class="font-bold text-slate-600">Chưa có dữ liệu nối cặp để kiểm tra.</span>';
+        }
+        if (pairedCount < totalPairs) {
+            return '<span class="font-bold text-slate-600">Hãy nối đủ tất cả các cặp trước khi kiểm tra.</span>';
+        }
+        let correctCount = 0;
+        normalized.pairs.forEach(pair => {
+            if (Number(savedMatches[pair.left]) === pair.right) correctCount += 1;
+        });
+        const ok = normalized.pairs.length > 0 && correctCount === normalized.pairs.length;
+        return ok
+            ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã nối đủ các cặp.'
+            : `<span class="font-bold text-rose-700">Chưa đúng.</span> ${escapeHtml(normalized.hint || 'Hãy kiểm tra lại các cặp chưa khớp.')}`;
+    }
+
     function practiceProgress(lesson, ui = currentUiState(lesson)) {
         const items = practiceItems(lesson);
         if (!items.length) return { answered: 0, total: 0, percent: 0 };
@@ -1534,6 +1616,11 @@
                     <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em..." ${practiceDone ? 'disabled' : ''}>${escapeHtml(saved)}</textarea>
                     ${practiceDone ? '' : renderMathSymbolToolbar('essay', key)}
                     <div class="mt-3 flex flex-wrap gap-2">
+                        ${practiceDone ? '' : `
+                        <button type="button" class="essay-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-essay-key="${escapeHtml(key)}">
+                            <i class="fas fa-check"></i>Kiểm tra đáp án
+                        </button>
+                        `}
                         <button type="button" class="essay-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
@@ -1574,7 +1661,10 @@
             const key = normalized.id || item.id || `fill_${index + 1}`;
             const slots = normalizeFillSlots(savedAnswers[key], normalized.blankCount);
             const usedValues = slots.map(slot => normalizeAnswerText(slot)).filter(Boolean);
-            const poolItems = normalized.pool.filter(piece => !usedValues.includes(normalizeAnswerText(piece)));
+            const poolItems = seededShuffle(
+                normalized.pool.filter(piece => !usedValues.includes(normalizeAnswerText(piece))),
+                shuffleSeed(`${lesson.id}-fill-${key}`)
+            );
             const given = slots.map(normalizeAnswerText);
             const expected = normalized.answers.map(normalizeAnswerText);
             const ok = practiceDone && expected.length > 0 && expected.every((answer, slotIndex) => given[slotIndex] === answer);
@@ -1595,6 +1685,7 @@
                         ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
+                        ${renderPracticeCheckButton('fill-check-btn', 'data-fill-key', key, practiceDone)}
                         <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
@@ -1627,16 +1718,20 @@
                         : `<span class="font-bold text-rose-700">Chưa đúng.</span> Hãy kiểm tra lại các cặp chưa khớp.`)
                     : '';
                 const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
+                const matchSeed = shuffleSeed(`${lesson.id}-match-${key}`);
+                const leftOrder = shuffledIndices(normalized.left.length, matchSeed);
+                const rightOrder = shuffledIndices(normalized.right.length, matchSeed + 97);
                 return `
                     <article class="practice-card match-card ${dragDisabled}" data-match-card="${escapeHtml(key)}">
                         <div class="question-head">
                             <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1} · Nối cặp</p>
                             <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(normalized.prompt || '')}</h3>
                         </div>
-                        <p class="match-help">Bấm mục bên trái, rồi bấm mục bên phải để nối cặp. Bấm lại để gỡ.</p>
+                        <p class="match-help">Bấm mục bên trái, rồi bấm mục bên phải để nối cặp. Bấm lại để gỡ. Các mục hai bên được xáo trộn.</p>
                         <div class="match-board" data-match-key="${escapeHtml(key)}">
                             <div class="match-col" data-match-side="left">
-                                ${normalized.left.map((text, leftIndex) => {
+                                ${leftOrder.map(leftIndex => {
+                                    const text = normalized.left[leftIndex];
                                     const rightIndex = savedMatches[leftIndex];
                                     const paired = Number.isFinite(Number(rightIndex));
                                     const pairNumber = paired ? Object.entries(savedMatches).findIndex(([left]) => Number(left) === leftIndex) + 1 : '';
@@ -1644,7 +1739,8 @@
                                 }).join('')}
                             </div>
                             <div class="match-col" data-match-side="right">
-                                ${normalized.right.map((text, rightIndex) => {
+                                ${rightOrder.map(rightIndex => {
+                                    const text = normalized.right[rightIndex];
                                     const paired = pairedRight.has(rightIndex);
                                     const pairNumber = paired ? Object.entries(savedMatches).findIndex(([, right]) => Number(right) === rightIndex) + 1 : '';
                                     return `<button type="button" class="match-item ${paired ? 'is-paired' : ''}" data-match-side="right" data-match-index="${rightIndex}" ${practiceDone ? 'disabled' : ''}>${pairNumber ? `<span class="match-pair-badge">${pairNumber}</span>` : ''}<span class="match-item-text">${mathText(text)}</span></button>`;
@@ -1652,6 +1748,7 @@
                             </div>
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
+                            ${renderPracticeCheckButton('match-check-btn', 'data-match-key', key, practiceDone)}
                             <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
                                 <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                             </button>
@@ -1662,7 +1759,10 @@
             }
 
             const savedOrder = Array.isArray(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : [];
-            const poolItems = normalized.items.filter(piece => !savedOrder.includes(piece));
+            const poolItems = seededShuffle(
+                normalized.items.filter(piece => !savedOrder.includes(piece)),
+                shuffleSeed(`${lesson.id}-sort-${key}`)
+            );
             const ok = practiceDone && savedOrder.map(normalizeAnswerText).join('|') === normalized.answer.map(normalizeAnswerText).join('|');
             const feedback = practiceDone
                 ? (ok
@@ -1684,6 +1784,7 @@
                         ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
+                        ${renderPracticeCheckButton('sort-check-btn', 'data-sort-key', key, practiceDone)}
                         <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
@@ -3270,6 +3371,65 @@
             });
         });
 
+        document.querySelectorAll('.fill-check-btn').forEach(button => {
+            if (button.dataset.boundFillCheck === '1') return;
+            button.dataset.boundFillCheck = '1';
+            button.onclick = () => {
+                const key = button.dataset.fillKey || '';
+                const card = document.querySelector(`[data-fill-card="${escapeSelector(key)}"]`);
+                const feedback = card?.querySelector('.fill-feedback');
+                if (!feedback || !card) return;
+                const item = (lesson.fill_exercises || []).map(normalizeFillExercise).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
+                if (!item) return;
+                const slots = collectFillSlotsFromCard(card, item.blankCount);
+                feedback.classList.remove('hidden');
+                feedback.innerHTML = buildFillCheckFeedback(item, slots);
+                typesetMath();
+            };
+        });
+
+        document.querySelectorAll('.sort-check-btn').forEach(button => {
+            if (button.dataset.boundSortCheck === '1') return;
+            button.dataset.boundSortCheck = '1';
+            button.onclick = () => {
+                const key = button.dataset.sortKey || '';
+                const card = document.querySelector(`[data-sort-card="${escapeSelector(key)}"]`);
+                const feedback = card?.querySelector('.drag-feedback');
+                const zone = card?.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
+                if (!feedback || !card || !zone) return;
+                const item = (lesson.drag_exercises || []).map(normalizeDragExercise).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
+                if (!item || item.mode !== 'sort') return;
+                const savedOrder = Array.from(zone.querySelectorAll('.drag-chip')).map(node => node.dataset.chipValue || node.textContent?.trim() || '');
+                feedback.classList.remove('hidden');
+                feedback.innerHTML = buildSortCheckFeedback(item, savedOrder);
+            };
+        });
+
+        document.querySelectorAll('.match-check-btn').forEach(button => {
+            if (button.dataset.boundMatchCheck === '1') return;
+            button.dataset.boundMatchCheck = '1';
+            button.onclick = () => {
+                const key = button.dataset.matchKey || '';
+                const card = document.querySelector(`[data-match-card="${escapeSelector(key)}"]`);
+                const feedback = card?.querySelector('.drag-feedback');
+                if (!feedback || !card) return;
+                const item = (lesson.drag_exercises || []).map(normalizeDragExercise).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
+                if (!item || item.mode !== 'match') return;
+                const savedMatches = {};
+                card.querySelectorAll('.match-item[data-match-side="left"]').forEach(leftBtn => {
+                    const leftIndex = Number.parseInt(leftBtn.dataset.matchIndex || '-1', 10);
+                    const pairOrder = Number.parseInt(leftBtn.querySelector('.match-pair-badge')?.textContent || '', 10);
+                    if (!Number.isFinite(leftIndex) || leftIndex < 0 || !Number.isFinite(pairOrder) || pairOrder < 1) return;
+                    const rightBtn = Array.from(card.querySelectorAll('.match-item[data-match-side="right"]'))
+                        .find(node => Number.parseInt(node.querySelector('.match-pair-badge')?.textContent || '', 10) === pairOrder);
+                    const rightIndex = Number.parseInt(rightBtn?.dataset.matchIndex || '-1', 10);
+                    if (Number.isFinite(rightIndex) && rightIndex >= 0) savedMatches[leftIndex] = rightIndex;
+                });
+                feedback.classList.remove('hidden');
+                feedback.innerHTML = buildMatchCheckFeedback(item, savedMatches);
+            };
+        });
+
         document.querySelectorAll('.essay-check-btn').forEach(button => {
             if (button.dataset.boundEssay === '1') return;
             button.dataset.boundEssay = '1';
@@ -3278,9 +3438,16 @@
                 const card = button.closest('.practice-card');
                 const input = card?.querySelector(`[data-essay-key="${escapeSelector(key)}"]`);
                 const feedback = card?.querySelector('.essay-feedback');
-                if (!feedback) return;
+                if (!feedback || !input) return;
+                const value = String(input.value || '').trim();
+                if (!value) {
+                    feedback.classList.remove('hidden');
+                    feedback.innerHTML = '<span class="font-bold text-slate-600">Hãy nhập đáp án trước khi kiểm tra.</span>';
+                    input.focus();
+                    return;
+                }
                 const item = (lesson.essay_exercises || []).find((entry, index) => String(entry.id || `essay_${index + 1}`) === key);
-                const ok = normalizeAnswerText(input?.value || '') === normalizeAnswerText(item?.answer || '');
+                const ok = normalizeAnswerText(value) === normalizeAnswerText(item?.answer || '');
                 feedback.classList.remove('hidden');
                 feedback.innerHTML = ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
