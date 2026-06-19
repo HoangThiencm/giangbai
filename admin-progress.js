@@ -4,6 +4,7 @@
     let lessons = [];
     let rows = [];
     let classes = [];
+    let managedClasses = [];
     let selectedLessonId = '';
     let selectedClassName = localStorage.getItem('progress_class_filter') || '';
 
@@ -24,6 +25,19 @@
 
     function isTeacherUser() {
         return localStorage.getItem('userRole') === 'teacher';
+    }
+
+    function parseManagedClasses(value) {
+        return String(value || '')
+            .split(/[,;|]+/)
+            .map(part => part.trim())
+            .filter(Boolean);
+    }
+
+    function teacherManagedClasses() {
+        if (!isTeacherUser()) return [];
+        if (managedClasses.length) return managedClasses;
+        return parseManagedClasses(localStorage.getItem('userClassName') || '');
     }
 
     function escapeHtml(value) {
@@ -165,10 +179,32 @@
     function renderClasses() {
         const select = el('progressClassFilter');
         if (!select) return;
+        const teacherClasses = teacherManagedClasses();
+        const visibleClasses = teacherClasses.length
+            ? classes.filter(className => teacherClasses.includes(className))
+            : classes;
+
+        if (isTeacherUser() && teacherClasses.length) {
+            const options = teacherClasses.length > 1
+                ? ['<option value="">Tất cả lớp phụ trách</option>']
+                : [];
+            select.innerHTML = options
+                .concat(teacherClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`))
+                .join('');
+            select.disabled = teacherClasses.length === 1;
+            if (!selectedClassName || !teacherClasses.includes(selectedClassName)) {
+                selectedClassName = teacherClasses.length === 1 ? teacherClasses[0] : '';
+            }
+            select.value = selectedClassName;
+            localStorage.setItem('progress_class_filter', selectedClassName);
+            return;
+        }
+
         const options = ['<option value="">Tất cả lớp</option>']
-            .concat(classes.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`));
+            .concat(visibleClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`));
         select.innerHTML = options.join('');
-        if (selectedClassName && classes.includes(selectedClassName)) {
+        select.disabled = false;
+        if (selectedClassName && visibleClasses.includes(selectedClassName)) {
             select.value = selectedClassName;
         } else {
             selectedClassName = '';
@@ -193,8 +229,18 @@
     function applyPageScopeUi() {
         const hint = el('progressScopeHint');
         if (!hint) return;
+        const teacherClasses = teacherManagedClasses();
+        if (isTeacherUser() && teacherClasses.length) {
+            const classLabel = teacherClasses.length === 1
+                ? `lớp ${teacherClasses[0]}`
+                : `các lớp ${teacherClasses.join(', ')}`;
+            hint.textContent = PAGE_SUBJECT
+                ? `Theo dõi tiến độ ${PAGE_SUBJECT} — ${classLabel}. Chỉ hiển thị học sinh thuộc lớp phụ trách của bạn.`
+                : `Theo dõi tiến độ ${classLabel}. Chỉ hiển thị học sinh thuộc lớp phụ trách của bạn.`;
+            return;
+        }
         if (PAGE_SUBJECT) {
-            hint.textContent = `Theo dõi tiến độ ${PAGE_SUBJECT}. Chọn lớp để lọc nhanh học sinh cần hỗ trợ.`;
+            hint.textContent = `Theo dõi tiến độ ${PAGE_SUBJECT}. Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh học sinh cần hỗ trợ.`;
         }
     }
 
@@ -234,7 +280,10 @@
         const done = viewRows.filter(row => ['needs_practice', 'mastered'].includes(row.status)).length;
         const mastered = viewRows.filter(row => row.status === 'mastered').length;
         const needs = viewRows.filter(row => row.needs_practice).length;
-        const scope = selectedClassName ? `Lớp ${selectedClassName}` : 'Tất cả lớp';
+        const teacherClasses = teacherManagedClasses();
+        const scope = selectedClassName
+            ? `Lớp ${selectedClassName}`
+            : (isTeacherUser() && teacherClasses.length ? 'Tất cả lớp phụ trách' : 'Tất cả lớp');
         const cards = [
             [`Học sinh (${scope})`, total, 'text-slate-900'],
             ['Đã nộp bài', done, 'text-sky-700'],
@@ -335,6 +384,7 @@
         const qs = selectedLessonId ? `?lesson_id=${encodeURIComponent(selectedLessonId)}` : '';
         const headers = key ? { 'X-Admin-Key': key } : {};
         const res = await fetch(`api/admin_progress.php${qs}`, {
+            credentials: 'include',
             headers,
             cache: 'no-store'
         });
@@ -343,6 +393,10 @@
         lessons = data.lessons || [];
         rows = data.rows || [];
         classes = Array.isArray(data.classes) ? data.classes : [];
+        managedClasses = Array.isArray(data.managed_classes) ? data.managed_classes : [];
+        if (managedClasses.length) {
+            localStorage.setItem('userClassName', managedClasses.join(', '));
+        }
         const scopedLessons = lessonsForPage();
         const preferredLessonId = String(data.lesson_id || '');
         if (scopedLessons.some(item => String(item.id) === preferredLessonId)) {

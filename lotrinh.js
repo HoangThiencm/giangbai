@@ -1809,6 +1809,7 @@
         localStorage.removeItem('userName');
         localStorage.removeItem('userRole');
         localStorage.removeItem('allowedPages');
+        localStorage.removeItem('userClassName');
         localStorage.removeItem(LS_TAB_KEY);
         localStorage.removeItem(LS_LESSON_KEY);
         window.location.href = 'login.html';
@@ -2856,6 +2857,7 @@
             localStorage.removeItem('userName');
             localStorage.removeItem('userRole');
             localStorage.removeItem('allowedPages');
+            localStorage.removeItem('userClassName');
             window.location.href = 'login.html';
             return;
         }

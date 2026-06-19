@@ -186,6 +186,7 @@
             localStorage.removeItem('userName');
             localStorage.removeItem('userRole');
             localStorage.removeItem('allowedPages');
+            localStorage.removeItem('userClassName');
         }
 
         function landingPageFor(user) {
@@ -219,6 +220,7 @@
                 localStorage.setItem('userName', data.user.full_name);
                 localStorage.setItem('userRole', data.user.role);
                 localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
+                localStorage.setItem('userClassName', data.user.class_name || '');
                 window.location.href = landingPageFor(data.user);
             } catch {
                 clearLocalAuth();
@@ -279,6 +281,7 @@
                 localStorage.setItem('userName', data.user.full_name);
                 localStorage.setItem('userRole', data.user.role);
                 localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
+                localStorage.setItem('userClassName', data.user.class_name || '');
 
                 window.location.href = landingPageFor(data.user);
             } catch (err) {

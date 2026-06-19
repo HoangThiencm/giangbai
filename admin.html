@@ -529,6 +529,14 @@
             "1_year": "1 năm"
         };
 
+        const ACCOUNT_DURATION_HOSTING = {
+            forever: 'Không giới hạn',
+            '1_month': '1 tháng',
+            '3_months': '3 tháng',
+            '9_months': '9 tháng',
+            '1_year': '1 năm'
+        };
+
         const GEMINI_MODEL_OPTIONS = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'];
         const SHOPAIKEY_MODEL_OPTIONS = ['deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner'];
 
@@ -1137,8 +1145,14 @@
                         <input name="full_name" required class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nguyễn Văn An">
                     </label>
                     <label class="text-sm font-bold text-slate-700">
-                        Lớp/Nhóm
-                        <input name="class_name" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Toán 6 tối T3-T5">
+                        <span id="createClassNameLabel">Lớp/Nhóm</span>
+                        <input id="createClassNameInput" name="class_name" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">
+                        Thời hạn tài khoản
+                        <select id="createDurationOption" name="duration_option" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="forever">Không giới hạn</option>
+                        </select>
                     </label>
                     <div class="md:col-span-2 xl:col-span-3">
                         <p id="createAllowedPagesLabel" class="text-sm font-bold text-slate-700 mb-2">Trang mở cho học sinh</p>
@@ -1155,10 +1169,15 @@
 
             renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
             renderPageChecks('importAllowedPages', ['lotrinhtoan6']);
+            renderDurationOptions('createDurationOption', 'forever');
             const createRoleSelect = document.querySelector('#createStudentForm select[name="role"]');
             if (createRoleSelect) {
-                createRoleSelect.addEventListener('change', () => syncAllowedPagesLabels(createRoleSelect.value));
+                createRoleSelect.addEventListener('change', () => {
+                    syncAllowedPagesLabels(createRoleSelect.value);
+                    syncClassNameLabels(createRoleSelect.value);
+                });
                 syncAllowedPagesLabels(createRoleSelect.value);
+                syncClassNameLabels(createRoleSelect.value);
             }
             document.getElementById('createStudentForm').addEventListener('submit', createStudentAccount);
             document.getElementById('bulkPromoteRoute').addEventListener('change', updateBulkPromoteHint);
@@ -1350,6 +1369,51 @@
             if (editLabel) editLabel.textContent = label;
         }
 
+        function renderDurationOptions(selectId, selectedValue = 'forever') {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = Object.entries(ACCOUNT_DURATION_HOSTING).map(([value, label]) => (
+                `<option value="${value}" ${value === selectedValue ? 'selected' : ''}>${label}</option>`
+            )).join('');
+        }
+
+        function formatExpiryCell(user) {
+            if (!user.expires_at) {
+                return '<span class="text-green-600 font-semibold">Không giới hạn</span>';
+            }
+            const expired = new Date(String(user.expires_at).replace(' ', 'T')) < new Date();
+            const tone = expired ? 'text-red-500 font-bold' : 'text-blue-600';
+            const suffix = expired ? ' (Hết hạn)' : '';
+            return `<span class="${tone}">${user.expires_at}${suffix}</span>`;
+        }
+
+        function updateExpiryHint(user, selectId = 'editDurationOption', hintId = 'editExpiryHint') {
+            const hint = document.getElementById(hintId);
+            const select = document.getElementById(selectId);
+            if (!hint || !select) return;
+            if (select.value === 'forever') {
+                hint.textContent = 'Tài khoản không giới hạn thời gian.';
+                return;
+            }
+            if (user?.expires_at && select.value === (user.expires_option || 'forever')) {
+                hint.textContent = `Hết hạn hiện tại: ${user.expires_at}. Đổi gói thời gian sẽ tính lại từ hôm nay.`;
+                return;
+            }
+            hint.textContent = 'Lưu để áp dụng thời hạn mới tính từ thời điểm hiện tại.';
+        }
+
+        function syncClassNameLabels(role) {
+            const isTeacher = role === 'teacher';
+            const createLabel = document.getElementById('createClassNameLabel');
+            const createInput = document.getElementById('createClassNameInput');
+            if (createLabel) createLabel.textContent = isTeacher ? 'Lớp phụ trách' : 'Lớp/Nhóm';
+            if (createInput) createInput.placeholder = isTeacher ? '6A' : '6A hoặc Toán 6 tối T3-T5';
+            const editLabel = document.getElementById('editClassNameLabel');
+            const editInput = document.getElementById('editClassName');
+            if (editLabel) editLabel.textContent = isTeacher ? 'Lớp phụ trách' : 'Lớp/Nhóm';
+            if (editInput) editInput.placeholder = isTeacher ? '6A' : '6A hoặc Toán 6 tối T3-T5';
+        }
+
         function renderPageChecks(containerId, selectedPages) {
             const normalizedPages = (selectedPages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
             const selected = new Set(normalizedPages);
@@ -1485,7 +1549,8 @@
                     ? '<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200"><i class="fas fa-check mr-1"></i> Hoạt động</span>'
                     : '<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-700 border border-red-200"><i class="fas fa-ban mr-1"></i> Đang khóa</span>';
                 const pages = (user.allowed_pages || []).map(id => hostingPages[id]?.title || id).join(', ') || 'Chưa mở trang';
-                const className = user.class_name || 'Chưa xếp lớp';
+                const className = user.class_name || (user.role === 'teacher' ? 'Chưa gán lớp' : 'Chưa xếp lớp');
+                const classLabel = user.role === 'teacher' ? 'Lớp phụ trách' : 'Lớp';
                 const roleLabel = user.role === 'teacher' ? 'Giáo viên' : 'Học sinh';
                 const promotion = user.role === 'student' ? nextMathRouteFor(user) : null;
 
@@ -1498,13 +1563,13 @@
                                 </div>
                                 <div>
                                     <div class="font-bold text-slate-900">${user.full_name}</div>
-                                    <div class="text-xs text-slate-500">${user.username} · ${roleLabel} · ${className}</div>
+                                    <div class="text-xs text-slate-500">${user.username} · ${roleLabel} · ${classLabel}: ${className}</div>
                                     <div class="text-xs text-blue-600 mt-1">${pages}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${user.last_login_at || 'Chưa đăng nhập'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${formatExpiryCell(user)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button onclick="openStudentConfig(${user.id})" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
                                 <i class="fas fa-cog"></i> Cài đặt
@@ -1529,8 +1594,12 @@
             const formData = new FormData(form);
             const role = formData.get('role') || 'student';
             const allowedPages = selectedPagesFrom(document.getElementById('createAllowedPages'));
+            const className = String(formData.get('class_name') || '').trim();
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
+            }
+            if (role === 'teacher' && !className) {
+                return alert('Giáo viên cần có lớp phụ trách (vd. 6A). Lớp này phải trùng với Lớp/Nhóm của học sinh.');
             }
 
             try {
@@ -1543,16 +1612,21 @@
                         username: formData.get('username'),
                         password: formData.get('password'),
                         full_name: formData.get('full_name'),
-                        class_name: formData.get('class_name'),
-                        allowed_pages: allowedPages
+                        class_name: className,
+                        allowed_pages: allowedPages,
+                        duration_option: formData.get('duration_option') || 'forever'
                     })
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
                 form.reset();
                 renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
+                renderDurationOptions('createDurationOption', 'forever');
                 const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
-                if (roleSelect) syncAllowedPagesLabels(roleSelect.value);
+                if (roleSelect) {
+                    syncAllowedPagesLabels(roleSelect.value);
+                    syncClassNameLabels(roleSelect.value);
+                }
                 await loadUsers();
                 alert(role === 'teacher' ? 'Đã tạo tài khoản giáo viên.' : 'Đã tạo tài khoản học sinh.');
             } catch (e) {
@@ -1570,9 +1644,9 @@
                     Họ tên
                     <input id="editFullName" value="${editingStudent.full_name || ''}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </label>
-                <label class="block text-sm font-bold text-slate-700 mb-3">
+                <label id="editClassNameLabel" class="block text-sm font-bold text-slate-700 mb-3">
                     Lớp/Nhóm
-                    <input id="editClassName" value="${editingStudent.class_name || ''}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input id="editClassName" value="${editingStudent.class_name || ''}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
                 </label>
                 <label class="block text-sm font-bold text-slate-700 mb-3">
                     Đổi mật khẩu mới
@@ -1582,6 +1656,11 @@
                         <option value="teacher" ${editingStudent.role === 'teacher' ? 'selected' : ''}>Giáo viên</option>
                     </select>
                     <input id="editPassword" placeholder="Bỏ trống nếu không đổi" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </label>
+                <label class="block text-sm font-bold text-slate-700 mb-3">
+                    Thời hạn tài khoản
+                    <select id="editDurationOption" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                    <span id="editExpiryHint" class="mt-1 block text-xs font-normal text-slate-500"></span>
                 </label>
                 <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
                     <input id="editIsActive" type="checkbox" ${editingStudent.is_active ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
@@ -1594,9 +1673,19 @@
             `;
             renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6']);
             syncAllowedPagesLabels(editingStudent.role || 'student');
+            syncClassNameLabels(editingStudent.role || 'student');
             const editRoleSelect = document.getElementById('editRole');
             if (editRoleSelect) {
-                editRoleSelect.onchange = () => syncAllowedPagesLabels(editRoleSelect.value);
+                editRoleSelect.onchange = () => {
+                    syncAllowedPagesLabels(editRoleSelect.value);
+                    syncClassNameLabels(editRoleSelect.value);
+                };
+            }
+            renderDurationOptions('editDurationOption', editingStudent.expires_option || 'forever');
+            updateExpiryHint(editingStudent);
+            const editDurationSelect = document.getElementById('editDurationOption');
+            if (editDurationSelect) {
+                editDurationSelect.onchange = () => updateExpiryHint(editingStudent);
             }
             document.getElementById('btnSaveUserConfig').innerHTML = '<i class="fas fa-save"></i> Lưu tài khoản';
             document.getElementById('userConfigModal').classList.remove('hidden');
@@ -1606,18 +1695,23 @@
             if (!editingStudent) return;
             const role = document.getElementById('editRole').value;
             const allowedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
+            const className = document.getElementById('editClassName').value.trim();
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
+            }
+            if (role === 'teacher' && !className) {
+                return alert('Giáo viên cần có lớp phụ trách (vd. 6A). Lớp này phải trùng với Lớp/Nhóm của học sinh.');
             }
             const payload = {
                 action: 'update',
                 id: editingStudent.id,
                 full_name: document.getElementById('editFullName').value.trim(),
-                class_name: document.getElementById('editClassName').value.trim(),
+                class_name: className,
                 role,
                 password: document.getElementById('editPassword').value,
                 is_active: document.getElementById('editIsActive').checked,
-                allowed_pages: allowedPages
+                allowed_pages: allowedPages,
+                duration_option: document.getElementById('editDurationOption')?.value || 'forever'
             };
 
             try {

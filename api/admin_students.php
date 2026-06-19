@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 require_admin_key();
+ensure_users_expires_option_column($pdo);
 
 $method = $_SERVER['REQUEST_METHOD'];
 $data = json_body();
@@ -24,19 +25,35 @@ if ($action === 'create') {
     $role = ($data['role'] ?? 'student') === 'teacher' ? 'teacher' : 'student';
     $className = trim($data['class_name'] ?? '');
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
+    $expiry = resolve_account_expiry($data['duration_option'] ?? 'forever');
 
     if ($username === '' || $password === '' || $fullName === '') {
         respond(['error' => 'Thieu tai khoan, mat khau hoac ho ten.'], 422);
+    }
+    if ($role === 'teacher' && $className === '') {
+        respond(['error' => 'Giao vien can co lop phu trach (vd. 6A).'], 422);
+    }
+    if ($role === 'teacher' && !array_intersect($allowedPages, array_keys(lotrinh_page_subjects()))) {
+        respond(['error' => 'Giao vien can duoc mo it nhat mot lo trinh Toan 6-9.'], 422);
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
 
     try {
         $stmt = $pdo->prepare('
-            INSERT INTO users (username, password_hash, full_name, role, class_name, allowed_pages_json, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, 1)
+            INSERT INTO users (username, password_hash, full_name, role, class_name, allowed_pages_json, is_active, expires_at, expires_option)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
         ');
-        $stmt->execute([$username, $hash, $fullName, $role, $className ?: null, json_encode($allowedPages, JSON_UNESCAPED_UNICODE)]);
+        $stmt->execute([
+            $username,
+            $hash,
+            $fullName,
+            $role,
+            $className ?: null,
+            json_encode($allowedPages, JSON_UNESCAPED_UNICODE),
+            $expiry['expires_at'],
+            $expiry['expires_option'],
+        ]);
         respond(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'mode' => 'created']);
     } catch (PDOException $e) {
         $existing = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
@@ -49,10 +66,19 @@ if ($action === 'create') {
 
         $update = $pdo->prepare('
             UPDATE users
-            SET password_hash = ?, full_name = ?, role = ?, class_name = ?, allowed_pages_json = ?, is_active = 1
+            SET password_hash = ?, full_name = ?, role = ?, class_name = ?, allowed_pages_json = ?, is_active = 1, expires_at = ?, expires_option = ?
             WHERE id = ?
         ');
-        $update->execute([$hash, $fullName, $role, $className ?: null, json_encode($allowedPages, JSON_UNESCAPED_UNICODE), $user['id']]);
+        $update->execute([
+            $hash,
+            $fullName,
+            $role,
+            $className ?: null,
+            json_encode($allowedPages, JSON_UNESCAPED_UNICODE),
+            $expiry['expires_at'],
+            $expiry['expires_option'],
+            $user['id'],
+        ]);
         respond(['ok' => true, 'id' => (int)$user['id'], 'mode' => 'updated']);
     }
 }
@@ -67,12 +93,37 @@ if ($action === 'update') {
     $isActive = !empty($data['is_active']) ? 1 : 0;
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
 
+    if ($role === 'teacher' && $className === '') {
+        respond(['error' => 'Giao vien can co lop phu trach (vd. 6A).'], 422);
+    }
+    if ($role === 'teacher' && !array_intersect($allowedPages, array_keys(lotrinh_page_subjects()))) {
+        respond(['error' => 'Giao vien can duoc mo it nhat mot lo trinh Toan 6-9.'], 422);
+    }
+
+    $currentStmt = $pdo->prepare('SELECT expires_option, expires_at FROM users WHERE id = ? LIMIT 1');
+    $currentStmt->execute([$id]);
+    $currentUser = $currentStmt->fetch() ?: [];
+    $expiry = resolve_account_expiry(
+        $data['duration_option'] ?? ($currentUser['expires_option'] ?? 'forever'),
+        $currentUser['expires_option'] ?? 'forever',
+        $currentUser['expires_at'] ?? null
+    );
+
     $stmt = $pdo->prepare('
         UPDATE users
-        SET full_name = ?, class_name = ?, role = ?, is_active = ?, allowed_pages_json = ?
+        SET full_name = ?, class_name = ?, role = ?, is_active = ?, allowed_pages_json = ?, expires_at = ?, expires_option = ?
         WHERE id = ?
     ');
-    $stmt->execute([$fullName, $className ?: null, $role, $isActive, json_encode($allowedPages, JSON_UNESCAPED_UNICODE), $id]);
+    $stmt->execute([
+        $fullName,
+        $className ?: null,
+        $role,
+        $isActive,
+        json_encode($allowedPages, JSON_UNESCAPED_UNICODE),
+        $expiry['expires_at'],
+        $expiry['expires_option'],
+        $id,
+    ]);
 
     if (!empty($data['password'])) {
         $hash = password_hash((string)$data['password'], PASSWORD_DEFAULT);

@@ -4,14 +4,16 @@ session_start();
 
 $key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
 $isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $key);
-$isTeacher = false;
+$teacherUser = null;
 if (!$isAdmin && !empty($_SESSION['user_id'])) {
-    $userStmt = $pdo->prepare('SELECT role, is_active FROM users WHERE id = ? LIMIT 1');
+    $userStmt = $pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
     $userStmt->execute([$_SESSION['user_id']]);
-    $user = $userStmt->fetch();
-    $isTeacher = $user && (bool)$user['is_active'] && ($user['role'] ?? '') === 'teacher';
+    $teacherUser = $userStmt->fetch();
+    if (!$teacherUser || !(bool)$teacherUser['is_active'] || ($teacherUser['role'] ?? '') !== 'teacher') {
+        $teacherUser = null;
+    }
 }
-if (!$isAdmin && !$isTeacher) {
+if (!$isAdmin && !$teacherUser) {
     respond(['error' => 'Tài khoản không có quyền xem tiến độ học sinh.'], 403);
 }
 
@@ -25,19 +27,53 @@ function decode_json_array($value): array
 $lessonId = isset($_GET['lesson_id']) ? (int)$_GET['lesson_id'] : 0;
 
 $lessonStmt = $pdo->query('SELECT * FROM lessons ORDER BY subject ASC, order_index ASC, id ASC');
-$lessons = $lessonStmt->fetchAll();
+$allLessons = $lessonStmt->fetchAll();
+
+if ($teacherUser) {
+    $allowedSubjects = teacher_allowed_subjects($teacherUser);
+    $lessons = array_values(array_filter($allLessons, function ($lesson) use ($allowedSubjects) {
+        return in_array(trim((string)($lesson['subject'] ?? '')), $allowedSubjects, true);
+    }));
+} else {
+    $lessons = $allLessons;
+}
 
 if ($lessonId <= 0 && !empty($lessons)) {
     $lessonId = (int)$lessons[0]['id'];
 }
 
+if ($lessonId > 0) {
+    $lessonAllowed = false;
+    foreach ($lessons as $lesson) {
+        if ((int)$lesson['id'] === $lessonId) {
+            $lessonAllowed = true;
+            break;
+        }
+    }
+    if (!$lessonAllowed) {
+        respond(['error' => 'Tài khoản không có quyền xem tiến độ bài học này.'], 403);
+    }
+}
+
 $studentsStmt = $pdo->query("
     SELECT id, username, full_name, class_name, is_active, last_login_at
     FROM users
-    WHERE role = 'student'
+    WHERE role = 'student' AND is_active = 1
     ORDER BY class_name ASC, full_name ASC, username ASC
 ");
 $students = $studentsStmt->fetchAll();
+
+$managedClasses = $teacherUser ? teacher_managed_classes($teacherUser) : [];
+if ($teacherUser) {
+    if (!$managedClasses) {
+        respond([
+            'error' => 'Giáo viên chưa được gán lớp phụ trách. Admin cần điền Lớp phụ trách (vd. 6A) trong cấu hình tài khoản.',
+        ], 403);
+    }
+    $students = array_values(array_filter($students, function ($student) use ($teacherUser) {
+        return teacher_can_view_student_class($teacherUser, (string)($student['class_name'] ?? ''));
+    }));
+}
 
 $progressMap = [];
 if ($lessonId > 0) {
@@ -85,6 +121,7 @@ sort($classes, SORT_NATURAL | SORT_FLAG_CASE);
 respond([
     'ok' => true,
     'lesson_id' => $lessonId,
+    'managed_classes' => $managedClasses,
     'classes' => $classes,
     'lessons' => array_map(function ($lesson) {
         return [
