@@ -57,7 +57,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - `helpers.php`: Gồm các hàm tiện ích chung (`respond()`, `column_exists()`, `mysql_datetime_or_null()`).
 
 6. **Thi trực tuyến (`thitructuyen.html`)**
-   - Frontend React (CDN); backend đề thi/nộp bài/chấm điểm trên HuggingFace: `API_BASE` mặc định `https://hoangthiencm-giangbai.hf.space` (có thể ghi đè qua `localStorage.omr_backend_url`).
+   - Frontend React (CDN). **Dữ liệu đề thi & kết quả** lưu MySQL trên hosting qua `api/exam.php` (`EXAM_API` tự trỏ cùng domain). **AI soạn đề** (quét PDF, nhận diện câu hỏi) vẫn gọi HuggingFace: `AI_API` mặc định `https://hoangthiencm-giangbai.hf.space` (ghi đè `localStorage.omr_backend_url`).
    - **Giáo viên**: soạn đề (PDF/Word + AI), lưu kho đề, xem QR/link chia sẻ, xem kết quả, xuất Excel.
    - **Học sinh**: mở link `?mode=student&examId=...` (không cần đăng nhập — `access-control.js` bỏ qua khi có `examId`).
    - **Trộn đề**: khi HS làm bài, thứ tự câu và đáp án trộn trên UI; đáp án nộp lên server dùng `originalIdx` / `originalOptIdx` (theo **đề gốc**). Chấm điểm và `details_json` (câu sai) cũng theo đề gốc.
@@ -67,6 +67,8 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
      - `formatApiError()` — không còn alert `[object Object]`; luôn gửi `student_class` (có thể rỗng).
      - Modal xác nhận nộp trên mobile; `ref` cho đáp án/tên khi hết giờ tự nộp.
    - **Kết quả GV** (`ResultDetail`): bảng chi tiết + khối **Học sinh thi nhiều lần** (gom theo SBD+tên); **Xuất Excel** một sheet: `STT | Họ và tên | Số báo danh | Lớp học | Điểm | Kết quả | Các câu đúng (đề gốc) | Các câu sai (đề gốc)` — đối chiếu `details_json` với `api/exam/get/{id}` để ra số câu đề gốc.
+   - **Xóa kết quả HS** (`ResultDetail`): cột **Thao tác** — nút thùng rác xóa từng lượt thi (có xác nhận); nút **Xóa N bản ghi test** (SBD bắt đầu `TEST` hoặc tên `Test...`). API hosting: `api/exam.php?route=result/{id}` (DELETE), `route=results/delete-batch` (POST).
+   - **Bảng MySQL**: `exams`, `exam_submissions` (trong `database_schema.sql`; `api/exam.php` tự tạo bảng nếu chưa có).
    - **QRModal**: hiển thị mã QR + ô link + nút **Copy** (clipboard / fallback) để GV gửi Zalo.
 
 ## Vấn đề cần lưu ý (Notes)

@@ -54,6 +54,8 @@
   - **Xuất Excel** kết quả thi (một sheet): `STT | Họ và tên | Số báo danh | Lớp học | Điểm | Kết quả | Các câu đúng (đề gốc) | Các câu sai (đề gốc)` — số câu quy về **đề gốc** (đối chiếu `details_json` với `exam.questions`), không theo thứ tự đề trộn trên màn hình HS.
   - **Kết quả GV**: gom HS thi 2–3 lần theo số lần; bảng có cột Lần + Thời gian.
   - **QR chia sẻ đề**: thêm nút **Copy** cạnh link thi (hỗ trợ gửi Zalo).
+  - **Xóa kết quả HS** (GV): cột Thao tác + xóa từng dòng; nút xóa hàng loạt bản ghi test (`TEST*`, `Test...`).
+  - **Lưu trữ hosting**: đề thi + kết quả + nộp bài chuyển sang MySQL (`api/exam.php`); AI soạn đề vẫn HuggingFace.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -83,6 +85,7 @@
 - [ ] **Thi trực tuyến — QR**: bấm nút **Copy** → dán link vào Zalo được.
 - [ ] **Thi trực tuyến — Xuất Excel**: file có 8 cột; cột câu đúng/sai là số **Câu X** theo đề gốc, khớp đáp án GV.
 - [ ] **Thi trực tuyến — HS thi nhiều lần**: khối "Học sinh thi nhiều lần" gom đúng theo 2 lần / 3 lần.
+- [ ] **Thi trực tuyến — hosting**: upload `api/exam.php` + chạy SQL bảng `exams`/`exam_submissions` → lưu đề, nộp bài, xóa kết quả trên MySQL hosting.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
@@ -94,5 +97,6 @@
 - [ ] (Tùy chọn) Tinh chỉnh ngưỡng ôn tập thông minh (7 ngày, điểm 80%) theo ý giáo viên.
 - [ ] Đồng bộ cache `admin-progress.js` trên `index.html` với các trang lộ trình (`20260620-group-align1`).
 - [ ] (Tùy chọn) Quản lý chương dạng thực thể riêng (thứ tự chương, xóa chương trống) — hiện chương là trường text trên từng bài.
+
 - [ ] (Tùy chọn) Backend thi trực tuyến lưu `original_idx` trong `details_json` và `display_order` khi nộp — giảm phụ thuộc đối chiếu text câu hỏi.
 - [ ] (Tùy chọn) Khôi phục/sửa tên các bài thi cũ đã nộp trống `student_name` (dữ liệu cũ không tự điền lại được).

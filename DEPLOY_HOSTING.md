@@ -110,5 +110,14 @@ hoặc nếu domain nằm trong thư mục riêng:
 
 Workflow sẽ không upload `api/config.php`, nên cấu hình database thật trên hosting không bị ghi đè.
 
+## 7. Thi trực tuyến (MySQL trên hosting)
 
-test deploy
+Đề thi và kết quả học sinh lưu trên hosting qua `api/exam.php` (không còn Supabase).
+
+1. Chạy thêm SQL trong `database_schema.sql` (bảng `exams`, `exam_submissions`) — hoặc mở `thitructuyen.html` một lần, API sẽ tự tạo bảng nếu thiếu.
+2. Upload `api/exam.php` và `thitructuyen.html` mới.
+3. Giáo viên cần **đăng nhập** (`login.html`) trước khi soạn đề / xem kết quả — API dùng session PHP.
+4. Học sinh làm bài qua link QR **không cần đăng nhập** (chỉ `get` đề + `submit` kết quả).
+5. Chức năng **AI quét PDF / nhận diện câu** vẫn gọi HuggingFace (`omr_backend_url` trong localStorage nếu cần đổi URL).
+
+**Lưu ý:** Đề và kết quả cũ trên Supabase/HuggingFace không tự chuyển sang MySQL — cần soạn lại hoặc nhập tay nếu muốn giữ dữ liệu cũ.

@@ -346,7 +346,14 @@
 
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
+        const AI_API = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
+        const EXAM_API = (() => {
+            const override = localStorage.getItem("exam_api_url");
+            if (override) return override.replace(/\/$/, "");
+            const path = window.location.pathname.replace(/[^/]*$/, "");
+            return `${window.location.origin}${path}api/exam.php`;
+        })();
+        const examUrl = (route) => `${EXAM_API}?route=${encodeURIComponent(String(route || "").replace(/^\//, ""))}`;
 
         const formatApiError = (err, fallback = "Đã xảy ra lỗi.") => {
             const data = err?.response?.data;
@@ -598,7 +605,7 @@
 
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
 
-                    const res = await axios.post(`${API_BASE}/api/exam/normalize_manual`, {
+                    const res = await axios.post(`${AI_API}/api/exam/normalize_manual`, {
                         cropped_data: base64,
                         api_keys: keys,
                         model: model
@@ -662,7 +669,7 @@
                     const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
                     const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
-                    const res = await axios.post(`${API_BASE}/api/exam/import_answer_sheet`, { image_data: dataUrl, api_keys: keys, model: model });
+                    const res = await axios.post(`${AI_API}/api/exam/import_answer_sheet`, { image_data: dataUrl, api_keys: keys, model: model });
                     if (res.data.status === 'ok') setAiResult(res.data.data);
                     else alert("Lỗi: " + res.data.message);
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
@@ -1005,7 +1012,7 @@
                 setLoadingMsg("Đang xử lý PDF...");
                 const fd = new FormData(); fd.append("file", file);
                 try {
-                    const res = await axios.post(`${API_BASE}/api/exam/process_paper`, fd);
+                    const res = await axios.post(`${AI_API}/api/exam/process_paper`, fd);
                     if (res.data.status === 'ok') {
                         setPages(res.data.pages);
                         if (res.data.pages.length) setActivePageId(res.data.pages[0].id);
@@ -1047,7 +1054,7 @@
                 const keys = getApiKeys();
                 if (!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ nạp Key.");
 
-                const evtSource = new EventSource(`${API_BASE}/api/exam/progress/${page.id}`);
+                const evtSource = new EventSource(`${AI_API}/api/exam/progress/${page.id}`);
                 evtSource.onmessage = (e) => {
                     const value = parseInt(e.data);
                     setPageProgress(prev => ({ ...prev, [page.id]: value }));
@@ -1060,7 +1067,7 @@
                 const model = localStorage.getItem('default_gemini_module') || 'gemini-1.5-flash';
 
                 try {
-                    const res = await axios.post(`${API_BASE}/api/exam/normalize_segment`, {
+                    const res = await axios.post(`${AI_API}/api/exam/normalize_segment`, {
                         image_data: page.image_data,
                         api_keys: keys,
                         model: model
@@ -1127,7 +1134,7 @@
                 }
 
                 const payload = { id: initialData ? initialData.info.id : null, ...examInfo, start_time: examInfo.start_time ? new Date(examInfo.start_time).toISOString() : null, end_time: examInfo.end_time ? new Date(examInfo.end_time).toISOString() : null, questions: allQuestions, teacher_email: userEmail, api_keys: getApiKeys() };
-                try { await axios.post(`${API_BASE}/api/exam/save`, payload); alert("Đã lưu thành công!"); onBack(); } catch (e) { alert("Lỗi lưu: " + e.message); }
+                try { await axios.post(examUrl("save"), payload, { withCredentials: true }); alert("Đã lưu thành công!"); onBack(); } catch (e) { alert("Lỗi lưu: " + formatApiError(e, e.message)); }
             };
 
             if (step === 1) return (
@@ -1290,13 +1297,13 @@
                 if (!userEmail) return;
                 let cancelled = false;
                 setLoading(true);
-                axios.get(`${API_BASE}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`)
+                axios.get(`${examUrl("my-exams")}&email=${encodeURIComponent(userEmail)}`, { withCredentials: true })
                     .then(async res => {
                         const data = Array.isArray(res.data) ? res.data : [];
                         const enriched = await Promise.all(data.map(async ex => {
                             if (getExamOwnerEmail(ex) || !ex.id) return ex;
                             try {
-                                const detailRes = await axios.get(`${API_BASE}/api/exam/get/${ex.id}`);
+                                const detailRes = await axios.get(examUrl(`get/${ex.id}`), { withCredentials: true });
                                 const detail = detailRes.data || {};
                                 const info = detail.info || {};
                                 return {
@@ -1337,8 +1344,8 @@
                     return [ex.title, ex.school, ex.id, ex.info?.title, ex.info?.school].some(value => String(value || "").toLowerCase().includes(keyword));
                 });
             }, [visibleBaseExams, searchText, groupFilter]);
-            const handleDelete = async (id) => { if (confirm("Xóa đề này?")) { await axios.delete(`${API_BASE}/api/exam/delete/${id}`); setExams(exams.filter(e => e.id !== id)); } };
-            const handleDuplicate = async (id) => { await axios.post(`${API_BASE}/api/exam/duplicate/${id}`); window.location.reload(); };
+            const handleDelete = async (id) => { if (confirm("Xóa đề này?")) { await axios.delete(examUrl(`delete/${id}`), { withCredentials: true }); setExams(exams.filter(e => e.id !== id)); } };
+            const handleDuplicate = async (id) => { await axios.post(examUrl(`duplicate/${id}`), null, { withCredentials: true }); window.location.reload(); };
 
             return (
                 <div className="max-w-6xl mx-auto p-6">
@@ -1445,7 +1452,7 @@
             useEffect(() => { examRef.current = exam; }, [exam]);
 
             useEffect(() => {
-                axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => {
+                axios.get(examUrl(`get/${examId}`)).then(res => {
                     const data = res.data;
                     if (data.info.status === "not_started") { setError(`Chưa đến giờ thi! Mở lúc: ${new Date(data.info.start_time).toLocaleString()}`); setStep("locked"); }
                     else if (data.info.status === "expired") { setError("Đã hết giờ làm bài."); setStep("locked"); }
@@ -1525,7 +1532,7 @@
 
                 try {
                     await safeExitFullscreen();
-                    const res = await axios.post(`${API_BASE}/api/exam/submit`, {
+                    const res = await axios.post(examUrl("submit"), {
                         exam_id: examId,
                         student_name: currentInfo.name,
                         sbd: currentInfo.sbd,
@@ -1765,16 +1772,18 @@
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             const [examQuestions, setExamQuestions] = useState([]);
+            const [deletingId, setDeletingId] = useState(null);
+            const [deletingBatch, setDeletingBatch] = useState(false);
 
             useEffect(() => {
                 Promise.all([
-                    axios.get(`${API_BASE}/api/exam/results/${examId}`),
-                    axios.get(`${API_BASE}/api/exam/get/${examId}`)
+                    axios.get(examUrl(`results/${examId}`), { withCredentials: true }),
+                    axios.get(examUrl(`get/${examId}`), { withCredentials: true })
                 ]).then(([resResults, resExam]) => {
                     setResults(resResults.data || []);
                     setExamQuestions(resExam.data?.questions || []);
                 }).catch(() => {
-                    axios.get(`${API_BASE}/api/exam/results/${examId}`)
+                    axios.get(examUrl(`results/${examId}`), { withCredentials: true })
                         .then(res => setResults(res.data || []))
                         .catch(() => setResults([]));
                 });
@@ -1909,6 +1918,48 @@
 
             const formatQuestionNums = (nums) => nums.length ? nums.map(n => `Câu ${n}`).join(", ") : "—";
 
+            const isTestResult = (row) => {
+                const sbd = (row.sbd || "").trim().toUpperCase();
+                const name = (row.student_name || "").trim();
+                return sbd.startsWith("TEST") || /^Test(\s|$)/i.test(name);
+            };
+
+            const testResults = useMemo(() => results.filter(isTestResult), [results]);
+
+            const handleDeleteResult = async (row) => {
+                if (!row?.id) return alert("Không xác định được bản ghi để xóa.");
+                const label = `${(row.student_name || "").trim() || "Học sinh"} · ${(row.sbd || "").trim() || "?"}`;
+                if (!confirm(`Xóa kết quả: ${label}?`)) return;
+                setDeletingId(row.id);
+                try {
+                    await axios.delete(examUrl(`result/${row.id}`), { withCredentials: true });
+                    setResults(prev => prev.filter(item => item.id !== row.id));
+                } catch (e) {
+                    alert(formatApiError(e, "Không xóa được kết quả."));
+                } finally {
+                    setDeletingId(null);
+                }
+            };
+
+            const handleDeleteTestResults = async () => {
+                if (!testResults.length) return alert("Không có bản ghi test để xóa.");
+                if (!confirm(`Xóa ${testResults.length} bản ghi test (TEST999, TESTMAP01...)?`)) return;
+                setDeletingBatch(true);
+                try {
+                    const ids = testResults.map(r => r.id).filter(Boolean);
+                    if (ids.length === 1) {
+                        await axios.delete(examUrl(`result/${ids[0]}`), { withCredentials: true });
+                    } else {
+                        await axios.post(examUrl("results/delete-batch"), { ids }, { withCredentials: true });
+                    }
+                    setResults(prev => prev.filter(item => !ids.includes(item.id)));
+                } catch (e) {
+                    alert(formatApiError(e, "Không xóa được bản ghi test."));
+                } finally {
+                    setDeletingBatch(false);
+                }
+            };
+
             const exportExcel = () => {
                 const header = ["STT", "Họ và tên", "Số báo danh", "Lớp học", "Điểm", "Kết quả", "Các câu đúng (đề gốc)", "Các câu sai (đề gốc)"];
                 const note = "Ghi chú: STT câu đúng/sai theo đề gốc của giáo viên. Học sinh làm đề đã trộn nên thứ tự trên màn hình HS khác với đề gốc.";
@@ -1966,11 +2017,18 @@
                     )}
 
                     <div className="bg-white rounded-xl shadow overflow-hidden">
-                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                        <div className="p-4 border-b bg-gray-50 flex flex-wrap gap-2 justify-between items-center">
                             <h3 className="font-bold text-lg text-gray-800">Kết quả thi ({results.length} lượt)</h3>
-                            <button onClick={exportExcel} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold">
-                                <i className="fas fa-file-excel mr-1"></i> Xuất Excel
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                                {testResults.length > 0 && (
+                                    <button type="button" disabled={deletingBatch} onClick={handleDeleteTestResults} className="text-red-600 hover:bg-red-50 px-3 py-1 rounded border border-red-200 text-sm font-bold disabled:opacity-60">
+                                        <i className="fas fa-broom mr-1"></i> Xóa {testResults.length} bản ghi test
+                                    </button>
+                                )}
+                                <button type="button" onClick={exportExcel} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold">
+                                    <i className="fas fa-file-excel mr-1"></i> Xuất Excel
+                                </button>
+                            </div>
                         </div>
                         <table className="w-full text-left">
                             <thead className="bg-indigo-50 border-b">
@@ -1982,18 +2040,24 @@
                                     <th className="p-3">Điểm</th>
                                     <th className="p-3">Số câu đúng</th>
                                     <th className="p-3">Thời gian</th>
+                                    <th className="p-3 text-right">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {resultRows.map(r => (
-                                    <tr key={r.rowKey} className={`border-b hover:bg-gray-50 ${r.attemptNo > 1 ? "bg-amber-50/40" : ""}`}>
-                                        <td className="p-3 font-bold text-gray-700">{r.student_name}</td>
+                                    <tr key={r.rowKey} className={`border-b hover:bg-gray-50 ${r.attemptNo > 1 ? "bg-amber-50/40" : ""} ${isTestResult(r) ? "bg-red-50/30" : ""}`}>
+                                        <td className="p-3 font-bold text-gray-700">{r.student_name || "—"}</td>
                                         <td className="p-3 text-gray-600">{r.sbd}</td>
                                         <td className="p-3 text-gray-600">{r.student_class || "—"}</td>
                                         <td className="p-3 text-sm font-bold text-amber-700">{r.attemptNo > 1 ? `Lần ${r.attemptNo}` : "Lần 1"}</td>
                                         <td className="p-3 font-bold text-indigo-600">{r.score}</td>
                                         <td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td>
                                         <td className="p-3 text-xs text-gray-500">{r.created_at ? new Date(r.created_at).toLocaleString("vi-VN") : "—"}</td>
+                                        <td className="p-3 text-right">
+                                            <button type="button" disabled={deletingId === r.id} onClick={() => handleDeleteResult(r)} className="text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-bold disabled:opacity-60" title="Xóa kết quả này">
+                                                <i className="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -2020,7 +2084,7 @@
 
             const handleEdit = async (id) => {
                 try {
-                    const res = await axios.get(`${API_BASE}/api/exam/get/${id}`);
+                    const res = await axios.get(examUrl(`get/${id}`), { withCredentials: true });
                     setEditingData(res.data);
                     setView("create");
                 } catch (e) {

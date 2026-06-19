@@ -47,6 +47,39 @@ CREATE TABLE IF NOT EXISTS student_lesson_progress (
     CONSTRAINT fk_progress_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS exams (
+    id VARCHAR(16) PRIMARY KEY,
+    teacher_email VARCHAR(160) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    school VARCHAR(160) NOT NULL DEFAULT '',
+    duration_mins INT NOT NULL DEFAULT 45,
+    variants_json LONGTEXT NOT NULL,
+    api_keys_backup TEXT DEFAULT NULL,
+    start_time DATETIME DEFAULT NULL,
+    end_time DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_exams_teacher (teacher_email),
+    INDEX idx_exams_created (created_at)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS exam_submissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_id VARCHAR(16) NOT NULL,
+    student_name VARCHAR(160) NOT NULL DEFAULT '',
+    sbd VARCHAR(80) NOT NULL DEFAULT '',
+    student_class VARCHAR(80) NOT NULL DEFAULT '',
+    score DECIMAL(5,2) NOT NULL DEFAULT 0,
+    correct_count INT NOT NULL DEFAULT 0,
+    total_questions INT NOT NULL DEFAULT 0,
+    details_json LONGTEXT DEFAULT NULL,
+    ai_feedback TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_submissions_exam (exam_id),
+    INDEX idx_submissions_score (score),
+    CONSTRAINT fk_submissions_exam FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
 VALUES
     ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),
