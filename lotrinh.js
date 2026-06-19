@@ -2833,13 +2833,47 @@
         return { score, skillScores };
     }
 
-    function renderSkills(lesson) {
+    function resolveSkillDisplayScores(lesson) {
         const progress = currentLessonProgress(lesson);
         const ui = currentUiState(lesson);
+        const storedScores = progress.skillScores || {};
+        if (ui.practiceDone && Object.keys(storedScores).length) {
+            return storedScores;
+        }
+
         const liveScoreData = calculateScore(lesson, ui.answers || {});
-        const scores = ui.practiceDone && Object.keys(progress.skillScores || {}).length
-            ? progress.skillScores
-            : liveScoreData.skillScores;
+        const liveScores = liveScoreData.skillScores || {};
+        const completionPercent = lessonCompletionPercent(lesson);
+        const questions = Array.isArray(lesson.questions) ? lesson.questions : [];
+        const skillQuestionCounts = {};
+        questions.forEach(question => {
+            const skillId = question.skill;
+            if (skillId) skillQuestionCounts[skillId] = (skillQuestionCounts[skillId] || 0) + 1;
+        });
+
+        const result = {};
+        (lesson.skills || []).forEach(skill => {
+            const id = skill.id;
+            const stored = Number(storedScores[id]);
+            const baseline = Number.isFinite(stored) ? stored : completionPercent;
+            const live = Number(liveScores[id]);
+            const hasMcq = !!skillQuestionCounts[id];
+            const answeredMcq = hasMcq && questions.some(question => (
+                question.skill === id
+                && ui.answers?.[question.id] !== undefined
+                && ui.answers?.[question.id] !== null
+            ));
+            if (answeredMcq && Number.isFinite(live)) {
+                result[id] = Math.max(baseline, live);
+            } else {
+                result[id] = baseline;
+            }
+        });
+        return result;
+    }
+
+    function renderSkills(lesson) {
+        const scores = resolveSkillDisplayScores(lesson);
         const skills = Array.isArray(lesson.skills) ? lesson.skills : [];
         els.skillPanel.innerHTML = skills.length ? skills.map(skill => {
             const score = scores[skill.id] || 0;
