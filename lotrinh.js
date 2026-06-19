@@ -390,19 +390,58 @@
         return undefined;
     }
 
+    function normalizeMatchAnswers(raw) {
+        if (!isDragMatchAnswer(raw)) return {};
+        const savedMatches = {};
+        Object.entries(raw).forEach(([left, right]) => {
+            const leftIndex = Number.parseInt(left, 10);
+            const rightIndex = Number.parseInt(right, 10);
+            if (Number.isFinite(leftIndex) && leftIndex >= 0 && Number.isFinite(rightIndex) && rightIndex >= 0) {
+                savedMatches[leftIndex] = rightIndex;
+            }
+        });
+        return savedMatches;
+    }
+
     function collectMatchAnswersFromCard(card) {
         const savedMatches = {};
         if (!card) return savedMatches;
         card.querySelectorAll('.match-item[data-match-side="left"]').forEach(leftBtn => {
             const leftIndex = Number.parseInt(leftBtn.dataset.matchIndex || '-1', 10);
-            const pairOrder = Number.parseInt(leftBtn.querySelector('.match-pair-badge')?.textContent || '', 10);
-            if (!Number.isFinite(leftIndex) || leftIndex < 0 || !Number.isFinite(pairOrder) || pairOrder < 1) return;
+            if (!Number.isFinite(leftIndex) || leftIndex < 0) return;
+
+            const pairedRight = leftBtn.dataset.pairedRight;
+            if (pairedRight !== undefined && pairedRight !== '') {
+                const rightIndex = Number.parseInt(pairedRight, 10);
+                if (Number.isFinite(rightIndex) && rightIndex >= 0) {
+                    savedMatches[leftIndex] = rightIndex;
+                    return;
+                }
+            }
+
+            const pairOrder = Number.parseInt(leftBtn.querySelector('.match-pair-badge')?.textContent?.trim() || '', 10);
+            if (!Number.isFinite(pairOrder) || pairOrder < 1) return;
             const rightBtn = Array.from(card.querySelectorAll('.match-item[data-match-side="right"]'))
-                .find(node => Number.parseInt(node.querySelector('.match-pair-badge')?.textContent || '', 10) === pairOrder);
+                .find(node => Number.parseInt(node.querySelector('.match-pair-badge')?.textContent?.trim() || '', 10) === pairOrder);
             const rightIndex = Number.parseInt(rightBtn?.dataset.matchIndex || '-1', 10);
             if (Number.isFinite(rightIndex) && rightIndex >= 0) savedMatches[leftIndex] = rightIndex;
         });
         return savedMatches;
+    }
+
+    function resolveMatchAnswers(lesson, key, card = null) {
+        const fromState = normalizeMatchAnswers(currentUiState(lesson).dragAnswers?.[key]);
+        const matchCard = card || document.querySelector(`[data-match-card="${escapeSelector(key)}"]`);
+        const fromDom = collectMatchAnswersFromCard(matchCard);
+        return { ...fromState, ...fromDom };
+    }
+
+    function syncLocalLessonUiState(lesson, nextUi) {
+        const current = currentLessonProgress(lesson);
+        state.progress[lesson.id] = {
+            ...current,
+            state: nextUi
+        };
     }
 
     function isMatchAnswerCorrect(normalized, savedMatches) {
@@ -443,7 +482,7 @@
                 const normalized = normalizeDragExercise(item);
                 const saved = ui.dragAnswers?.[key];
                 if (normalized.mode === 'match') {
-                    const matches = isDragMatchAnswer(saved) ? saved : {};
+                    const matches = normalizeMatchAnswers(saved);
                     return normalized.left.length > 0 && Object.keys(matches).length >= normalized.left.length;
                 }
                 return Array.isArray(saved) && saved.length > 0;
@@ -1767,7 +1806,7 @@
             const normalized = normalizeDragExercise(item);
             const key = normalized.id || item.id || `drag_${index + 1}`;
             if (normalized.mode === 'match') {
-                const savedMatches = isDragMatchAnswer(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : {};
+                const savedMatches = normalizeMatchAnswers(ui.dragAnswers?.[key]);
                 const pairedRight = new Set(Object.values(savedMatches).map(value => Number(value)));
                 const ok = practiceDone && isMatchAnswerCorrect(normalized, savedMatches);
                 const feedback = practiceDone
@@ -1793,7 +1832,7 @@
                                     const rightIndex = savedMatches[leftIndex];
                                     const paired = Number.isFinite(Number(rightIndex));
                                     const pairNumber = paired ? Object.entries(savedMatches).findIndex(([left]) => Number(left) === leftIndex) + 1 : '';
-                                    return `<button type="button" class="match-item ${paired ? 'is-paired' : ''}" data-match-side="left" data-match-index="${leftIndex}" ${practiceDone ? 'disabled' : ''}>${pairNumber ? `<span class="match-pair-badge">${pairNumber}</span>` : ''}<span class="match-item-text">${mathText(text)}</span></button>`;
+                                    return `<button type="button" class="match-item ${paired ? 'is-paired' : ''}" data-match-side="left" data-match-index="${leftIndex}"${paired ? ` data-paired-right="${rightIndex}"` : ''} ${practiceDone ? 'disabled' : ''}>${pairNumber ? `<span class="match-pair-badge">${pairNumber}</span>` : ''}<span class="match-item-text">${mathText(text)}</span></button>`;
                                 }).join('')}
                             </div>
                             <div class="match-col" data-match-side="right">
@@ -2765,7 +2804,7 @@
             const key = normalized.id || item.id || `drag_${itemIndex + 1}`;
             if (normalized.mode === 'match') {
                 const card = document.querySelector(`[data-match-card="${escapeSelector(key)}"]`);
-                const matches = collectMatchAnswersFromCard(card);
+                const matches = resolveMatchAnswers(lesson, key, card);
                 answers[key] = matches;
                 if (isMatchAnswerCorrect(normalized, matches)) correct += 1;
                 return;
@@ -3388,10 +3427,9 @@
             const key = card.dataset.matchCard || '';
             let selectedLeft = null;
 
-            const readMatches = () => {
-                const ui = currentUiState(lesson);
-                return { ...(isDragMatchAnswer(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : {}) };
-            };
+            let localMatches = normalizeMatchAnswers(currentUiState(lesson).dragAnswers?.[key]);
+
+            const readMatches = () => ({ ...localMatches });
 
             const paintMatchState = matches => {
                 const entries = Object.entries(matches).map(([left, right]) => [Number(left), Number(right)]);
@@ -3403,6 +3441,8 @@
                     const pair = leftToPair.get(index);
                     button.classList.toggle('is-paired', !!pair);
                     button.classList.toggle('is-selected', selectedLeft === index);
+                    if (pair) button.dataset.pairedRight = String(pair.right);
+                    else delete button.dataset.pairedRight;
                     let badge = button.querySelector('.match-pair-badge');
                     if (pair) {
                         if (!badge) {
@@ -3436,18 +3476,21 @@
             };
 
             const saveMatches = async matches => {
+                localMatches = normalizeMatchAnswers(matches);
+                paintMatchState(localMatches);
                 const ui = currentUiState(lesson);
-                await persistPracticeUi(lesson, {
+                const nextUi = {
                     ...ui,
                     dragAnswers: {
                         ...(ui.dragAnswers || {}),
-                        [key]: matches
+                        [key]: localMatches
                     }
-                });
-                paintMatchState(matches);
+                };
+                syncLocalLessonUiState(lesson, nextUi);
+                await persistPracticeUi(lesson, nextUi);
             };
 
-            paintMatchState(readMatches());
+            paintMatchState(localMatches);
 
             card.querySelectorAll('.match-item').forEach(button => {
                 button.addEventListener('click', async () => {
@@ -3525,7 +3568,7 @@
                 if (!feedback || !card) return;
                 const item = (lesson.drag_exercises || []).map(normalizeDragExercise).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
                 if (!item || item.mode !== 'match') return;
-                const savedMatches = collectMatchAnswersFromCard(card);
+                const savedMatches = resolveMatchAnswers(lesson, key, card);
                 feedback.classList.remove('hidden');
                 feedback.innerHTML = buildMatchCheckFeedback(item, savedMatches);
             };
