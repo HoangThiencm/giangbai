@@ -550,6 +550,7 @@
         renderTasks(lesson);
         renderNextAction(lesson);
         bindPracticeInteractions(lesson);
+        refreshStudentAiAssist(lesson);
         typesetMath();
     }
 
@@ -1727,6 +1728,436 @@
         bindAiExplainButtons(lesson);
     }
 
+    const aiAssistState = {
+        selectionToolbar: null,
+        selectionAnchor: null,
+        chatHistory: [],
+        chatLessonId: '',
+        chatOpen: false,
+        chatBusy: false,
+        bound: false
+    };
+
+    function canUseStudentAiAssist() {
+        return !isTeacher() || isTeacherPreview();
+    }
+
+    function lessonAiPayload(lesson, extra = {}) {
+        return {
+            subject: lesson?.subject || PAGE_SUBJECT,
+            lesson_title: lesson?.title || PAGE_TITLE,
+            ...extra
+        };
+    }
+
+    function lessonContextText(lesson) {
+        if (!lesson) return '';
+        const theory = Array.isArray(lesson.theory) ? lesson.theory.join('\n') : '';
+        const examples = Array.isArray(lesson.examples)
+            ? lesson.examples.map(item => `${item.title || ''}\n${item.body || ''}`).join('\n')
+            : '';
+        return [lesson.goal_text || '', theory, examples]
+            .filter(Boolean)
+            .join('\n\n')
+            .replace(/\[\[?AI\]\]?/g, '')
+            .slice(0, 2200);
+    }
+
+    async function requestAiExplain(lesson, text) {
+        return api('api/ai_explain.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lessonAiPayload(lesson, { text }))
+        });
+    }
+
+    async function requestAiChat(lesson, question, history = []) {
+        return api('api/ai_explain.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lessonAiPayload(lesson, {
+                mode: 'chat',
+                question,
+                lesson_context: lessonContextText(lesson),
+                history
+            }))
+        });
+    }
+
+    function ensureStudentAiAssistStyles() {
+        if (document.getElementById('lotrinhStudentAiAssistStyles')) return;
+        const style = document.createElement('style');
+        style.id = 'lotrinhStudentAiAssistStyles';
+        style.textContent = `
+            .ai-selection-toolbar {
+                position: fixed;
+                z-index: 9500;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 10px;
+                border: 1px solid #fcd34d;
+                border-radius: 999px;
+                background: #fffbeb;
+                box-shadow: 0 10px 24px rgba(146, 64, 14, 0.18);
+                animation: aiBubbleIn 0.16s ease;
+            }
+            .ai-selection-toolbar button {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: 0;
+                border-radius: 999px;
+                background: #fde68a;
+                color: #92400e;
+                font-size: 0.78rem;
+                font-weight: 700;
+                padding: 6px 12px;
+                cursor: pointer;
+            }
+            .ai-selection-toolbar button:hover { background: #fcd34d; }
+            .ai-selection-toolbar button:disabled { opacity: 0.7; cursor: wait; }
+            .lesson-ai-chat-fab {
+                position: fixed;
+                right: 18px;
+                bottom: 18px;
+                z-index: 9400;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                border: 0;
+                border-radius: 999px;
+                background: #0f766e;
+                color: #fff;
+                font-size: 0.88rem;
+                font-weight: 800;
+                padding: 12px 16px;
+                box-shadow: 0 14px 30px rgba(15, 118, 110, 0.28);
+                cursor: pointer;
+            }
+            .lesson-ai-chat-fab:hover { background: #0d9488; }
+            .lesson-ai-chat-panel {
+                position: fixed;
+                right: 18px;
+                bottom: 78px;
+                z-index: 9450;
+                width: min(360px, calc(100vw - 24px));
+                max-height: min(70vh, 560px);
+                display: flex;
+                flex-direction: column;
+                border: 1px solid #cbd5e1;
+                border-radius: 16px;
+                background: #fff;
+                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+                overflow: hidden;
+            }
+            .lesson-ai-chat-panel.hidden { display: none; }
+            .lesson-ai-chat-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 12px 14px;
+                background: #f0fdfa;
+                border-bottom: 1px solid #ccfbf1;
+            }
+            .lesson-ai-chat-head strong { color: #115e59; font-size: 0.92rem; }
+            .lesson-ai-chat-head p { color: #0f766e; font-size: 0.72rem; margin-top: 2px; }
+            .lesson-ai-chat-close {
+                border: 0;
+                background: #ccfbf1;
+                color: #115e59;
+                width: 30px;
+                height: 30px;
+                border-radius: 999px;
+                cursor: pointer;
+                font-size: 1.1rem;
+                line-height: 1;
+            }
+            .lesson-ai-chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                background: #f8fafc;
+            }
+            .lesson-ai-chat-msg {
+                max-width: 92%;
+                padding: 10px 12px;
+                border-radius: 12px;
+                font-size: 0.9rem;
+                line-height: 1.7;
+                word-break: break-word;
+            }
+            .lesson-ai-chat-msg.user {
+                align-self: flex-end;
+                background: #dbeafe;
+                color: #1e3a8a;
+                border: 1px solid #bfdbfe;
+            }
+            .lesson-ai-chat-msg.assistant {
+                align-self: flex-start;
+                background: #fffbeb;
+                color: #334155;
+                border: 1px solid #fde68a;
+            }
+            .lesson-ai-chat-msg.error {
+                align-self: stretch;
+                background: #fef2f2;
+                color: #b91c1c;
+                border: 1px solid #fecaca;
+            }
+            .lesson-ai-chat-compose {
+                display: flex;
+                gap: 8px;
+                padding: 10px;
+                border-top: 1px solid #e2e8f0;
+                background: #fff;
+            }
+            .lesson-ai-chat-compose textarea {
+                flex: 1;
+                min-height: 42px;
+                max-height: 120px;
+                resize: vertical;
+                border: 1px solid #cbd5e1;
+                border-radius: 10px;
+                padding: 8px 10px;
+                font-size: 0.88rem;
+                outline: none;
+            }
+            .lesson-ai-chat-compose textarea:focus {
+                border-color: #14b8a6;
+                box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.15);
+            }
+            .lesson-ai-chat-send {
+                align-self: flex-end;
+                border: 0;
+                border-radius: 10px;
+                background: #0f766e;
+                color: #fff;
+                font-weight: 700;
+                font-size: 0.82rem;
+                padding: 10px 12px;
+                cursor: pointer;
+            }
+            .lesson-ai-chat-send:disabled { opacity: 0.6; cursor: wait; }
+            @media (max-width: 640px) {
+                .lesson-ai-chat-panel { right: 12px; bottom: 72px; }
+                .lesson-ai-chat-fab { right: 12px; bottom: 12px; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function hideAiSelectionToolbar() {
+        aiAssistState.selectionToolbar?.remove();
+        aiAssistState.selectionToolbar = null;
+        aiAssistState.selectionAnchor?.remove();
+        aiAssistState.selectionAnchor = null;
+    }
+
+    function positionAiSelectionToolbar(toolbar, rect) {
+        const margin = 8;
+        toolbar.style.visibility = 'hidden';
+        toolbar.style.display = 'inline-flex';
+        document.body.appendChild(toolbar);
+        const width = toolbar.offsetWidth;
+        const height = toolbar.offsetHeight;
+        let top = rect.top + window.scrollY - height - margin;
+        let left = rect.left + window.scrollX + rect.width / 2 - width / 2;
+        if (top < window.scrollY + margin) top = rect.bottom + window.scrollY + margin;
+        left = Math.max(window.scrollX + margin, Math.min(left, window.scrollX + window.innerWidth - width - margin));
+        toolbar.style.top = `${top}px`;
+        toolbar.style.left = `${left}px`;
+        toolbar.style.visibility = 'visible';
+    }
+
+    async function runAiExplainFromSelection(selectedText, anchorHost) {
+        const lesson = currentLesson();
+        if (!lesson || !selectedText) return;
+        hideAiSelectionToolbar();
+        window.getSelection()?.removeAllRanges();
+
+        const anchor = document.createElement('div');
+        anchor.className = 'ai-selection-anchor';
+        anchor.style.marginTop = '12px';
+        (anchorHost || els.tabContent)?.appendChild(anchor);
+
+        showAiModal('<p class="text-slate-500"><i class="fas fa-spinner fa-spin"></i> AI đang giải thích...</p>', anchor);
+        try {
+            const data = await requestAiExplain(lesson, selectedText);
+            showAiModal(renderAiAnswer(data.answer || ''), anchor);
+        } catch (err) {
+            showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, anchor);
+        }
+    }
+
+    function showAiSelectionToolbar(selectedText, rect, anchorHost) {
+        hideAiSelectionToolbar();
+        const toolbar = document.createElement('div');
+        toolbar.className = 'ai-selection-toolbar';
+        toolbar.innerHTML = '<button type="button"><i class="fas fa-wand-magic-sparkles"></i> AI giải thích</button>';
+        const button = toolbar.querySelector('button');
+        button.onclick = async () => {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang hỏi...';
+            await runAiExplainFromSelection(selectedText, anchorHost);
+        };
+        positionAiSelectionToolbar(toolbar, rect);
+        aiAssistState.selectionToolbar = toolbar;
+        aiAssistState.selectionAnchor = anchorHost;
+    }
+
+    function isSelectableAiRegion(node) {
+        return !!node?.closest?.('#tabContent .lesson-document, #tabContent .lesson-theory-flow, #tabContent .lesson-explain-block, #tabContent .practice-card, #tabContent .question-text, #tabContent .fill-prompt-line');
+    }
+
+    function handleLessonTextSelection() {
+        if (!canUseStudentAiAssist()) return hideAiSelectionToolbar();
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) return hideAiSelectionToolbar();
+
+        const selectedText = String(selection.toString() || '').replace(/\s+/g, ' ').trim();
+        if (selectedText.length < 2) return hideAiSelectionToolbar();
+
+        const range = selection.getRangeAt(0);
+        const anchorNode = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+            ? range.commonAncestorContainer.parentElement
+            : range.commonAncestorContainer;
+        if (!isSelectableAiRegion(anchorNode)) return hideAiSelectionToolbar();
+        if (anchorNode.closest('.lesson-ai-chat-panel, .ai-selection-toolbar, .ai-chat-bubble, button, input, textarea, select')) {
+            return hideAiSelectionToolbar();
+        }
+
+        const rect = range.getBoundingClientRect();
+        if (!rect.width && !rect.height) return hideAiSelectionToolbar();
+        const anchorHost = anchorNode.closest('.lesson-theory-flow, .lesson-explain-block, .practice-card, .lesson-document') || els.tabContent;
+        showAiSelectionToolbar(selectedText, rect, anchorHost);
+    }
+
+    function renderLessonChatMessages() {
+        const box = document.getElementById('lessonAiChatMessages');
+        if (!box) return;
+        if (!aiAssistState.chatHistory.length) {
+            box.innerHTML = '<div class="lesson-ai-chat-msg assistant">Em có thể hỏi về khái niệm, công thức hoặc cách làm bài trong bài học này.</div>';
+            return;
+        }
+        box.innerHTML = aiAssistState.chatHistory.map(msg => `
+            <div class="lesson-ai-chat-msg ${msg.role === 'error' ? 'error' : msg.role}">${msg.role === 'assistant' ? renderAiAnswer(msg.content) : escapeHtml(msg.content)}</div>
+        `).join('');
+        box.scrollTop = box.scrollHeight;
+        typesetMath();
+    }
+
+    function ensureLessonChatbot() {
+        ensureStudentAiAssistStyles();
+        if (document.getElementById('lessonAiChatRoot')) return;
+
+        const root = document.createElement('div');
+        root.id = 'lessonAiChatRoot';
+        root.innerHTML = `
+            <button type="button" id="lessonAiChatFab" class="lesson-ai-chat-fab" aria-label="Hỏi AI về bài học">
+                <i class="fas fa-comments"></i> Hỏi AI
+            </button>
+            <section id="lessonAiChatPanel" class="lesson-ai-chat-panel hidden" aria-label="Chat hỏi bài">
+                <div class="lesson-ai-chat-head">
+                    <div>
+                        <strong>Hỏi AI về bài học</strong>
+                        <p id="lessonAiChatLessonLabel">Đang tải...</p>
+                    </div>
+                    <button type="button" class="lesson-ai-chat-close" id="lessonAiChatClose" aria-label="Đóng">&times;</button>
+                </div>
+                <div id="lessonAiChatMessages" class="lesson-ai-chat-messages"></div>
+                <form id="lessonAiChatForm" class="lesson-ai-chat-compose">
+                    <textarea id="lessonAiChatInput" rows="2" placeholder="Ví dụ: Tập hợp là gì?"></textarea>
+                    <button type="submit" id="lessonAiChatSend" class="lesson-ai-chat-send">Gửi</button>
+                </form>
+            </section>
+        `;
+        document.body.appendChild(root);
+
+        document.getElementById('lessonAiChatFab').onclick = () => {
+            aiAssistState.chatOpen = !aiAssistState.chatOpen;
+            document.getElementById('lessonAiChatPanel').classList.toggle('hidden', !aiAssistState.chatOpen);
+            if (aiAssistState.chatOpen) document.getElementById('lessonAiChatInput')?.focus();
+        };
+        document.getElementById('lessonAiChatClose').onclick = () => {
+            aiAssistState.chatOpen = false;
+            document.getElementById('lessonAiChatPanel').classList.add('hidden');
+        };
+        document.getElementById('lessonAiChatForm').onsubmit = async event => {
+            event.preventDefault();
+            if (aiAssistState.chatBusy) return;
+            const lesson = currentLesson();
+            const input = document.getElementById('lessonAiChatInput');
+            const sendBtn = document.getElementById('lessonAiChatSend');
+            const question = String(input?.value || '').trim();
+            if (!lesson || !question) return;
+
+            aiAssistState.chatBusy = true;
+            sendBtn.disabled = true;
+            aiAssistState.chatHistory.push({ role: 'user', content: question });
+            input.value = '';
+            renderLessonChatMessages();
+            aiAssistState.chatHistory.push({ role: 'assistant', content: 'Đang suy nghĩ...' });
+            renderLessonChatMessages();
+
+            try {
+                const history = aiAssistState.chatHistory.slice(0, -2);
+                const data = await requestAiChat(lesson, question, history);
+                aiAssistState.chatHistory.pop();
+                aiAssistState.chatHistory.push({ role: 'assistant', content: data.answer || '' });
+            } catch (err) {
+                aiAssistState.chatHistory.pop();
+                aiAssistState.chatHistory.push({ role: 'error', content: err.message || 'Chưa gọi được AI.' });
+            } finally {
+                aiAssistState.chatBusy = false;
+                sendBtn.disabled = false;
+                renderLessonChatMessages();
+                input.focus();
+            }
+        };
+        renderLessonChatMessages();
+    }
+
+    function refreshStudentAiAssist(lesson) {
+        const enabled = canUseStudentAiAssist();
+        ensureLessonChatbot();
+        const root = document.getElementById('lessonAiChatRoot');
+        if (root) root.classList.toggle('hidden', !enabled);
+        const label = document.getElementById('lessonAiChatLessonLabel');
+        if (label) label.textContent = lesson?.title ? `Bài: ${lesson.title}` : PAGE_TITLE;
+        const lessonId = String(lesson?.id || '');
+        if (lessonId && lessonId !== aiAssistState.chatLessonId) {
+            aiAssistState.chatLessonId = lessonId;
+            aiAssistState.chatHistory = [];
+            renderLessonChatMessages();
+        }
+        if (!enabled) hideAiSelectionToolbar();
+    }
+
+    function initStudentAiAssist() {
+        if (aiAssistState.bound) return;
+        aiAssistState.bound = true;
+        ensureStudentAiAssistStyles();
+        document.addEventListener('mouseup', () => {
+            window.setTimeout(handleLessonTextSelection, 10);
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') hideAiSelectionToolbar();
+        });
+        document.addEventListener('mousedown', event => {
+            if (event.target.closest('.ai-selection-toolbar')) return;
+            window.setTimeout(() => {
+                const selection = window.getSelection();
+                if (!selection || selection.isCollapsed) hideAiSelectionToolbar();
+            }, 0);
+        });
+        ensureLessonChatbot();
+    }
+
     function showAiModal(htmlContent, anchorButton = null) {
         document.getElementById('aiExplainBubble')?.remove();
 
@@ -1742,7 +2173,7 @@
         `;
         bubble.querySelector('.ai-chat-bubble-close').onclick = () => bubble.remove();
 
-        const host = anchorButton?.closest('.lesson-theory-flow, .lesson-explain-block, .practice-card, .lesson-document') || anchorButton?.parentElement;
+        const host = anchorButton?.closest('.lesson-theory-flow, .lesson-explain-block, .practice-card, .lesson-document, .ai-selection-anchor') || anchorButton?.parentElement;
         if (host) {
             host.appendChild(bubble);
         } else {
@@ -1751,31 +2182,24 @@
         typesetMath();
     }
 
+    async function triggerAiExplainButton(button, lesson, text) {
+        const old = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
+        try {
+            const data = await requestAiExplain(lesson, text);
+            showAiModal(renderAiAnswer(data.answer || ''), button);
+        } catch (err) {
+            showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, button);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = old;
+        }
+    }
+
     function bindAiExplainButtons(lesson) {
         document.querySelectorAll('.ai-explain-btn').forEach(button => {
-            button.onclick = async () => {
-                const text = button.dataset.aiText || '';
-                const old = button.innerHTML;
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
-                try {
-                    const data = await api('api/ai_explain.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            subject: lesson.subject || PAGE_SUBJECT,
-                            lesson_title: lesson.title || PAGE_TITLE,
-                            text
-                        })
-                    });
-                    showAiModal(renderAiAnswer(data.answer || ''), button);
-                } catch (err) {
-                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, button);
-                } finally {
-                    button.disabled = false;
-                    button.innerHTML = old;
-                }
-            };
+            button.onclick = () => triggerAiExplainButton(button, lesson, button.dataset.aiText || '');
         });
     }
 
@@ -2525,29 +2949,7 @@
         document.querySelectorAll('[data-ai-text]').forEach(button => {
             if (button.dataset.boundAi === '1') return;
             button.dataset.boundAi = '1';
-            button.onclick = async () => {
-                const text = button.dataset.aiText || '';
-                const old = button.innerHTML;
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
-                try {
-                    const data = await api('api/ai_explain.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            subject: lesson.subject || PAGE_SUBJECT,
-                            lesson_title: lesson.title || PAGE_TITLE,
-                            text
-                        })
-                    });
-                    showAiModal(renderAiAnswer(data.answer || ''), button);
-                } catch (err) {
-                    showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, button);
-                } finally {
-                    button.disabled = false;
-                    button.innerHTML = old;
-                }
-            };
+            button.onclick = () => triggerAiExplainButton(button, lesson, button.dataset.aiText || '');
         });
 
         document.querySelectorAll('.fill-drag-card').forEach(card => {
@@ -2837,6 +3239,8 @@
 
         bindMathSymbolToolbars();
     }
+
+    initStudentAiAssist();
 
     try {
         await reloadLessons(true);

@@ -7,11 +7,30 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $data = json_body();
+$mode = trim((string)($data['mode'] ?? 'explain'));
 $text = trim($data['text'] ?? '');
+$question = trim($data['question'] ?? '');
 $lessonTitle = trim($data['lesson_title'] ?? 'bai hoc');
 $subject = trim($data['subject'] ?? 'Toan');
+$lessonContext = trim($data['lesson_context'] ?? '');
 
-if ($text === '') {
+$history = [];
+if (!empty($data['history']) && is_array($data['history'])) {
+    foreach (array_slice($data['history'], -8) as $turn) {
+        if (!is_array($turn)) continue;
+        $role = ($turn['role'] ?? '') === 'assistant' ? 'assistant' : 'user';
+        $content = trim((string)($turn['content'] ?? ''));
+        if ($content !== '') {
+            $history[] = ['role' => $role, 'content' => $content];
+        }
+    }
+}
+
+if ($mode === 'chat') {
+    if ($question === '') {
+        respond(['error' => 'Thieu cau hoi.'], 422);
+    }
+} elseif ($text === '') {
     respond(['error' => 'Thieu noi dung can giai thich.'], 422);
 }
 
@@ -78,6 +97,24 @@ function load_ai_runtime_config(): array
 function build_explain_prompt(string $subject, string $lessonTitle, string $text): string
 {
     return "Ban la tro ly hoc Toan cho hoc sinh THCS. Nhiem vu duy nhat: tra loi dung phan hoc sinh vua hoi trong muc NOI DUNG CAN GIAI THICH, khong tu y chuyen sang chu de khac, khong tom tat ca bai, khong them loi chao, khong noi 'thay se giup', khong dung Markdown, khong dung **, khong dung gach ngang ---.\n\nQuy tac bat buoc:\n- Neu noi dung la mot khai niem/cau/cum tu: giai thich truc tiep khai niem/cau/cum tu do.\n- Neu noi dung la mot cong thuc: giai thich tung ky hieu va y nghia cong thuc do, giu nguyen ky hieu Toan.\n- Neu noi dung la mot bai tap: chi goi y cach lam va diem can chu y, khong lam thay tron ven neu khong duoc yeu cau.\n- Chi dua vi du khi vi du giup lam ro dung noi dung dang hoi; neu dua vi du thi that ngan.\n- Neu noi dung hoi khong ro, noi ro can them thong tin nao, khong bịa.\n- Cau cuoi cung phai ket thuc tron ven bang dau cham, dau hoi hoac dau cham than; khong dung lai giua tu.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNOI DUNG CAN GIAI THICH:\n{$text}\n\nTra loi bang 2-5 cau ngan, bam sat noi dung tren.";
+}
+
+function build_chat_prompt(string $subject, string $lessonTitle, string $lessonContext, array $history, string $question): string
+{
+    $historyText = '';
+    foreach ($history as $turn) {
+        $role = ($turn['role'] ?? '') === 'assistant' ? 'Tro ly' : 'Hoc sinh';
+        $content = trim((string)($turn['content'] ?? ''));
+        if ($content !== '') {
+            $historyText .= "{$role}: {$content}\n";
+        }
+    }
+
+    $contextBlock = $lessonContext !== '' ? "TOM TAT BAI DANG HOC:\n{$lessonContext}\n\n" : '';
+
+    return "Ban la tro ly hoc Toan cho hoc sinh THCS. Hoc sinh dang hoc bai va hoi them trong khung chat.\n\nQuy tac bat buoc:\n- Chi tra loi trong pham vi bai hoc va mon Toan THCS, khong lam ho toan bo bai tap neu hoc sinh chi hoi khai niem.\n- Neu la bai tap: goi y cach lam, diem can chu y, khong lam thay tron ven neu hoc sinh khong yeu cau.\n- Giu ky hieu Toan/LaTeX khi can.\n- Khong dung Markdown, khong dung **, khong loi chao dai.\n- Tra loi ngan 2-6 cau, ro rang, ket thuc tron ven bang dau cham.\n\nMon: {$subject}\nBai: {$lessonTitle}\n{$contextBlock}"
+        . ($historyText !== '' ? "LICH SU CHAT GAN DAY:\n{$historyText}\n" : '')
+        . "CAU HOI MOI CUA HOC SINH:\n{$question}\n\nTra loi cau hoi moi.";
 }
 
 function answer_looks_complete(string $answer): bool
@@ -288,7 +325,9 @@ function try_shopaikey_explain(array $config, string $prompt): ?array
 }
 
 $runtime = load_ai_runtime_config();
-$prompt = build_explain_prompt($subject, $lessonTitle, $text);
+$prompt = $mode === 'chat'
+    ? build_chat_prompt($subject, $lessonTitle, $lessonContext, $history, $question)
+    : build_explain_prompt($subject, $lessonTitle, $text);
 
 if (empty($runtime['gemini_keys']) && trim((string)$runtime['shopaikey_api_key']) === '') {
     respond(['error' => 'AI chua co Gemini key hoac ShopAIKey fallback.'], 503);
