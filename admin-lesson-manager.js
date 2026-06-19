@@ -52,6 +52,13 @@
     };
 
     const PAGE_SUBJECT = String(window.LOTRINH_SUBJECT || '').trim();
+    const PAGE_TO_SUBJECT = {
+        lotrinh: 'Toán 6',
+        lotrinhtoan6: 'Toán 6',
+        lotrinhtoan7: 'Toán 7',
+        lotrinhtoan8: 'Toán 8',
+        lotrinhtoan9: 'Toán 9'
+    };
 
     let lessons = [];
     let currentSlug = defaults.slug;
@@ -59,6 +66,40 @@
     let selectedSubject = PAGE_SUBJECT || 'Toán 6';
 
     function el(id) { return document.getElementById(id); }
+
+    function getAllowedPages() {
+        try {
+            return JSON.parse(localStorage.getItem('allowedPages') || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    function getTeacherAllowedSubjects() {
+        if (localStorage.getItem('userRole') !== 'teacher') {
+            return SUBJECTS.map(item => item.title);
+        }
+        const subjects = getAllowedPages()
+            .map(page => PAGE_TO_SUBJECT[page === 'lotrinh' ? 'lotrinhtoan6' : page])
+            .filter(Boolean);
+        return [...new Set(subjects)];
+    }
+
+    function scopedSubjects() {
+        const allowed = new Set(getTeacherAllowedSubjects());
+        if (localStorage.getItem('userRole') !== 'teacher') {
+            return SUBJECTS;
+        }
+        return SUBJECTS.filter(item => allowed.has(item.title));
+    }
+
+    function teacherCanManageScope() {
+        if (localStorage.getItem('userRole') !== 'teacher') return true;
+        const allowed = getTeacherAllowedSubjects();
+        if (!allowed.length) return false;
+        if (isPageScopedEditor()) return allowed.includes(PAGE_SUBJECT);
+        return scopedSubjects().length > 0;
+    }
 
     function isPageScopedEditor() {
         return !!PAGE_SUBJECT && !!el('lessonDesignerMount') && localStorage.getItem('userRole') === 'teacher';
@@ -543,10 +584,19 @@
     }
 
     function ensurePanel() {
-        if (el('lessonEditorPanel')) return;
+        if (el('lessonEditorPanel') || el('lessonEditorBlocked')) return;
         const teacherMount = el('lessonDesignerMount');
         if (!teacherMount) return;
         if (localStorage.getItem('userRole') !== 'teacher') return;
+        if (!teacherCanManageScope()) {
+            teacherMount.innerHTML = `
+                <section id="lessonEditorBlocked" class="bg-amber-50 rounded-xl border border-amber-200 mb-8 p-6 text-sm text-amber-900">
+                    <p class="font-bold text-base mb-2"><i class="fas fa-lock mr-2"></i>Chưa được mở quyền soạn bài</p>
+                    <p>Admin cần tick lộ trình Toán 6/7/8/9 trong phần <strong>Lộ trình được phép soạn</strong> rồi giáo viên đăng nhập lại.</p>
+                </section>
+            `;
+            return;
+        }
         const dashboard = teacherMount;
 
         const panel = document.createElement('section');
@@ -737,8 +787,12 @@
                 subjectSelect.value = PAGE_SUBJECT;
                 subjectSelect.disabled = true;
             } else {
-                subjectSelect.disabled = false;
-                subjectSelect.innerHTML = SUBJECTS.map(item => `<option value="${item.title}">${item.label}</option>`).join('');
+                const subjects = scopedSubjects();
+                subjectSelect.disabled = subjects.length <= 1;
+                subjectSelect.innerHTML = subjects.map(item => `<option value="${item.title}">${item.label}</option>`).join('');
+                if (!subjects.some(item => item.title === selectedSubject)) {
+                    selectedSubject = subjects[0]?.title || selectedSubject;
+                }
                 subjectSelect.value = selectedSubject;
             }
         }
@@ -773,8 +827,14 @@
             applyPageScopeUi();
             return;
         }
+        const subjects = scopedSubjects();
+        if (!subjects.length) {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            return;
+        }
         box.classList.remove('hidden');
-        box.innerHTML = SUBJECTS.map(item => {
+        box.innerHTML = subjects.map(item => {
             const active = selectedSubject === item.title;
             return `<button type="button" data-subject="${item.title}" class="subject-pill rounded px-3 py-2 text-sm font-bold ${active ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">${item.label}</button>`;
         }).join('');
@@ -968,6 +1028,7 @@
         try {
             const res = await fetch('api/lessons.php', {
                 method: 'POST',
+                credentials: 'include',
                 headers: lessonRequestHeaders(),
                 body: JSON.stringify(payload)
             });
@@ -991,6 +1052,7 @@
     async function postLessonAction(action, body) {
         const res = await fetch('api/lessons.php', {
             method: 'POST',
+            credentials: 'include',
             headers: lessonRequestHeaders(),
             body: JSON.stringify({ action, ...body })
         });
@@ -1097,6 +1159,7 @@
 
     async function refreshLessons() {
         const res = await fetch('api/lessons.php?admin=1&debug=1', {
+            credentials: 'include',
             headers: lessonRequestHeaders(false),
             cache: 'no-store'
         });

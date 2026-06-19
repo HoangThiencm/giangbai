@@ -189,7 +189,6 @@
         }
 
         function landingPageFor(user) {
-            if (user?.role !== 'student') return 'index.html';
             const pageUrls = {
                 lotrinh: 'lotrinhtoan6.html',
                 lotrinhtoan6: 'lotrinhtoan6.html',
@@ -197,7 +196,17 @@
                 lotrinhtoan8: 'lotrinhtoan8.html',
                 lotrinhtoan9: 'lotrinhtoan9.html'
             };
-            return (user.allowed_pages || []).map(page => pageUrls[page]).find(Boolean) || 'lotrinhtoan6.html';
+            const allowedPages = user?.allowed_pages || [];
+            if (user?.role === 'teacher') {
+                const lotrinhPage = allowedPages
+                    .map(page => pageUrls[page])
+                    .find(url => url && url.includes('lotrinhtoan'));
+                return lotrinhPage || 'index.html';
+            }
+            if (user?.role === 'student') {
+                return allowedPages.map(page => pageUrls[page]).find(Boolean) || 'lotrinhtoan6.html';
+            }
+            return 'index.html';
         }
 
         async function redirectIfSessionIsValid() {

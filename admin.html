@@ -1141,7 +1141,7 @@
                         <input name="class_name" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Toán 6 tối T3-T5">
                     </label>
                     <div class="md:col-span-2 xl:col-span-3">
-                        <p class="text-sm font-bold text-slate-700 mb-2">Trang mở cho học sinh</p>
+                        <p id="createAllowedPagesLabel" class="text-sm font-bold text-slate-700 mb-2">Trang mở cho học sinh</p>
                         <div id="createAllowedPages" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
                     </div>
                     <div class="flex items-end">
@@ -1155,6 +1155,11 @@
 
             renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
             renderPageChecks('importAllowedPages', ['lotrinhtoan6']);
+            const createRoleSelect = document.querySelector('#createStudentForm select[name="role"]');
+            if (createRoleSelect) {
+                createRoleSelect.addEventListener('change', () => syncAllowedPagesLabels(createRoleSelect.value));
+                syncAllowedPagesLabels(createRoleSelect.value);
+            }
             document.getElementById('createStudentForm').addEventListener('submit', createStudentAccount);
             document.getElementById('bulkPromoteRoute').addEventListener('change', updateBulkPromoteHint);
             document.getElementById('bulkPromoteBtn').addEventListener('click', bulkPromoteStudents);
@@ -1331,6 +1336,18 @@
                 btn.disabled = false;
                 btn.innerHTML = original;
             }
+        }
+
+        function allowedPagesLabelFor(role) {
+            return role === 'teacher' ? 'Lộ trình được phép soạn' : 'Trang mở cho học sinh';
+        }
+
+        function syncAllowedPagesLabels(role) {
+            const label = allowedPagesLabelFor(role);
+            const createLabel = document.getElementById('createAllowedPagesLabel');
+            if (createLabel) createLabel.textContent = label;
+            const editLabel = document.getElementById('editAllowedPagesLabel');
+            if (editLabel) editLabel.textContent = label;
         }
 
         function renderPageChecks(containerId, selectedPages) {
@@ -1510,7 +1527,11 @@
             event.preventDefault();
             const form = event.currentTarget;
             const formData = new FormData(form);
+            const role = formData.get('role') || 'student';
             const allowedPages = selectedPagesFrom(document.getElementById('createAllowedPages'));
+            if (role === 'teacher' && !allowedPages.length) {
+                return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
+            }
 
             try {
                 const res = await fetch('api/admin_students.php', {
@@ -1518,7 +1539,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
                     body: JSON.stringify({
                         action: 'create',
-                        role: formData.get('role') || 'student',
+                        role,
                         username: formData.get('username'),
                         password: formData.get('password'),
                         full_name: formData.get('full_name'),
@@ -1530,8 +1551,10 @@
                 if (!res.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
                 form.reset();
                 renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
+                const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
+                if (roleSelect) syncAllowedPagesLabels(roleSelect.value);
                 await loadUsers();
-                alert('Đã tạo tài khoản học sinh.');
+                alert(role === 'teacher' ? 'Đã tạo tài khoản giáo viên.' : 'Đã tạo tài khoản học sinh.');
             } catch (e) {
                 alert(e.message);
             }
@@ -1565,23 +1588,36 @@
                     Tài khoản đang hoạt động
                 </label>
             `;
-            document.getElementById('modalFeaturesList').innerHTML = '<div id="editAllowedPages" class="space-y-2"></div>';
+            document.getElementById('modalFeaturesList').innerHTML = `
+                <p id="editAllowedPagesLabel" class="text-sm font-bold text-slate-700 mb-2"></p>
+                <div id="editAllowedPages" class="space-y-2"></div>
+            `;
             renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6']);
+            syncAllowedPagesLabels(editingStudent.role || 'student');
+            const editRoleSelect = document.getElementById('editRole');
+            if (editRoleSelect) {
+                editRoleSelect.onchange = () => syncAllowedPagesLabels(editRoleSelect.value);
+            }
             document.getElementById('btnSaveUserConfig').innerHTML = '<i class="fas fa-save"></i> Lưu tài khoản';
             document.getElementById('userConfigModal').classList.remove('hidden');
         };
 
         window.saveUserConfig = async function () {
             if (!editingStudent) return;
+            const role = document.getElementById('editRole').value;
+            const allowedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
+            if (role === 'teacher' && !allowedPages.length) {
+                return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
+            }
             const payload = {
                 action: 'update',
                 id: editingStudent.id,
                 full_name: document.getElementById('editFullName').value.trim(),
                 class_name: document.getElementById('editClassName').value.trim(),
-                role: document.getElementById('editRole').value,
+                role,
                 password: document.getElementById('editPassword').value,
                 is_active: document.getElementById('editIsActive').checked,
-                allowed_pages: selectedPagesFrom(document.getElementById('editAllowedPages'))
+                allowed_pages: allowedPages
             };
 
             try {

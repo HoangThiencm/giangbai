@@ -339,8 +339,8 @@ function unique_lesson_slug(PDO $pdo, string $baseSlug): string
 }
 
 if ($method === 'POST' && $action === 'save_content') {
-    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
     $data = $requestData;
+    require_lesson_manager($isAdmin, $sessionUser, trim($data['subject'] ?? 'Toán 6'));
     $lessonId = (int)($data['id'] ?? 0);
     $slug = trim($data['slug'] ?? '');
     if ($slug === '') respond(['error' => 'Thiếu slug.'], 422);
@@ -455,12 +455,12 @@ if ($method === 'POST' && $action === 'save_content') {
 }
 
 if ($method === 'POST' && $action === 'delete_lesson') {
-    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
     $data = $requestData;
     $lessonId = (int)($data['id'] ?? 0);
     $slug = trim($data['slug'] ?? '');
     $lesson = find_lesson_by_id_or_slug($pdo, $lessonId, $slug);
     if (!$lesson) respond(['error' => 'Không tìm thấy bài học.'], 404);
+    require_lesson_manager($isAdmin, $sessionUser, trim($lesson['subject'] ?? ''));
 
     $id = (int)$lesson['id'];
     if (table_exists($pdo, 'student_lesson_progress')) {
@@ -471,12 +471,12 @@ if ($method === 'POST' && $action === 'delete_lesson') {
 }
 
 if ($method === 'POST' && $action === 'duplicate_lesson') {
-    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
     $data = $requestData;
     $lessonId = (int)($data['id'] ?? 0);
     $slug = trim($data['slug'] ?? '');
     $lesson = find_lesson_by_id_or_slug($pdo, $lessonId, $slug);
     if (!$lesson) respond(['error' => 'Không tìm thấy bài học.'], 404);
+    require_lesson_manager($isAdmin, $sessionUser, trim($lesson['subject'] ?? ''));
 
     $newSlug = unique_lesson_slug($pdo, $lesson['slug'] . '-copy');
     $newTitle = trim($lesson['title'] ?? 'Bài học');
@@ -518,9 +518,9 @@ if ($method === 'POST' && $action === 'duplicate_lesson') {
 }
 
 if ($method === 'POST' && $action === 'rename_chapter') {
-    if (!$canManageLessons) respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
     $data = $requestData;
     $subject = trim($data['subject'] ?? '');
+    require_lesson_manager($isAdmin, $sessionUser, $subject);
     $oldChapter = trim($data['old_chapter'] ?? '');
     $newChapter = trim($data['new_chapter'] ?? '');
     if ($subject === '' || $oldChapter === '' || $newChapter === '') {

@@ -21,6 +21,7 @@
         thitructuyen: 'thitructuyen.html',
         kttx: 'kttx.html'
     };
+    const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
 
     const fileName = window.location.pathname.split('/').pop() || 'index.html';
     const pageKey = pageKeys[fileName];
@@ -38,20 +39,45 @@
         return;
     }
 
-    if (role !== 'student' || !pageKey) return;
-
-    let allowedPages = [];
-    try {
-        allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
-    } catch {
-        allowedPages = [];
+    function getAllowedPages() {
+        try {
+            return JSON.parse(localStorage.getItem('allowedPages') || '[]');
+        } catch {
+            return [];
+        }
     }
 
-    const canOpenPage = allowedPages.includes(pageKey) || (pageKey === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
+    function canOpenPage(pageKeyValue, allowedPages) {
+        return allowedPages.includes(pageKeyValue)
+            || (pageKeyValue === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
+    }
 
-    if (!canOpenPage) {
-        alert('Tài khoản của em chưa được giáo viên mở trang này.');
-        const fallback = allowedPages.map(page => pageUrls[page]).find(Boolean);
-        window.location.href = fallback || 'login.html';
+    function firstAllowedLotrinhUrl(allowedPages) {
+        return allowedPages
+            .filter(page => lotrinhPageKeys.has(page))
+            .map(page => pageUrls[page])
+            .find(Boolean);
+    }
+
+    if (!pageKey) {
+        return;
+    }
+
+    if (role === 'student') {
+        const allowedPages = getAllowedPages();
+        if (!canOpenPage(pageKey, allowedPages)) {
+            alert('Tài khoản của em chưa được giáo viên mở trang này.');
+            const fallback = allowedPages.map(page => pageUrls[page]).find(Boolean);
+            window.location.href = fallback || 'login.html';
+        }
+        return;
+    }
+
+    if (role === 'teacher' && lotrinhPageKeys.has(pageKey)) {
+        const allowedPages = getAllowedPages();
+        if (!canOpenPage(pageKey, allowedPages)) {
+            alert('Tài khoản chưa được admin mở lộ trình này để soạn bài.');
+            window.location.href = firstAllowedLotrinhUrl(allowedPages) || 'index.html';
+        }
     }
 })();

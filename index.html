@@ -795,10 +795,15 @@
         // Init UI
         SystemConfig.renderConfig();
         if (localStorage.getItem('userRole') === 'teacher') {
-            document.getElementById('lessonDesignerSection')?.classList.remove('hidden');
+            let allowedPages = [];
+            try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
+            const hasLotrinhScope = allowedPages.some(page => /^lotrinhtoan[6-9]$/.test(page) || page === 'lotrinh');
+            if (hasLotrinhScope) {
+                document.getElementById('lessonDesignerSection')?.classList.remove('hidden');
+            }
         }
     </script>
-    <script src="admin-lesson-manager.js?v=20260620-lesson-crud1"></script>
+    <script src="admin-lesson-manager.js?v=20260619-teacher-scope1"></script>
     <script src="admin-progress.js?v=20260619-class-filter1"></script>
 
 </body>

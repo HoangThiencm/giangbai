@@ -52,6 +52,72 @@ function normalize_pages($pages): array
     return array_values(array_unique($clean)) ?: ['lotrinhtoan6'];
 }
 
+function lotrinh_page_subjects(): array
+{
+    return [
+        'lotrinhtoan6' => 'Toán 6',
+        'lotrinhtoan7' => 'Toán 7',
+        'lotrinhtoan8' => 'Toán 8',
+        'lotrinhtoan9' => 'Toán 9',
+    ];
+}
+
+function subject_for_lotrinh_page(string $page): ?string
+{
+    return lotrinh_page_subjects()[$page] ?? null;
+}
+
+function teacher_allowed_subjects(array $user): array
+{
+    if (($user['role'] ?? '') !== 'teacher') {
+        return [];
+    }
+
+    $pages = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
+    $subjects = [];
+    foreach ($pages as $page) {
+        $subject = subject_for_lotrinh_page($page);
+        if ($subject) {
+            $subjects[] = $subject;
+        }
+    }
+
+    return array_values(array_unique($subjects));
+}
+
+function teacher_can_manage_subject(?array $user, string $subject, bool $isAdmin = false): bool
+{
+    if ($isAdmin) {
+        return true;
+    }
+    if (!$user || ($user['role'] ?? '') !== 'teacher') {
+        return false;
+    }
+
+    $subject = trim($subject);
+    if ($subject === '') {
+        return false;
+    }
+
+    return in_array($subject, teacher_allowed_subjects($user), true);
+}
+
+function require_lesson_manager(bool $isAdmin, ?array $sessionUser, ?string $subject = null): void
+{
+    if (!$isAdmin && !$sessionUser) {
+        respond(['error' => 'Chưa đăng nhập. Vui lòng đăng nhập lại qua trang Đăng nhập.'], 401);
+    }
+
+    $canManageLessons = $isAdmin || (($sessionUser['role'] ?? '') === 'teacher');
+    if (!$canManageLessons) {
+        respond(['error' => 'Tài khoản không có quyền soạn bài học.'], 403);
+    }
+
+    if ($subject !== null && !$isAdmin && !teacher_can_manage_subject($sessionUser, $subject, false)) {
+        respond(['error' => 'Tài khoản không có quyền soạn bài học cho lộ trình này.'], 403);
+    }
+}
+
 function public_user(array $user): array
 {
     $pages = json_decode($user['allowed_pages_json'] ?? '[]', true);
