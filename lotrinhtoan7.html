@@ -201,6 +201,92 @@
             padding: 8px 12px;
         }
         .drag-chip:active { cursor: grabbing; }
+        .drag-pool.drag-over,
+        .drag-slot-row.drag-over,
+        .fill-drop-slot.drag-over {
+            border-color: #0f766e;
+            background: #ecfdf5;
+        }
+        .fill-prompt-line {
+            margin: 16px;
+            line-height: 2.2;
+        }
+        .fill-pool-label,
+        .match-help {
+            margin: 0 16px 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #475569;
+        }
+        .fill-drop-slot {
+            display: inline-flex;
+            min-width: 96px;
+            min-height: 42px;
+            align-items: center;
+            justify-content: center;
+            margin: 0 4px;
+            padding: 4px 8px;
+            border: 2px dashed #5eead4;
+            border-radius: 10px;
+            background: #f0fdfa;
+            vertical-align: middle;
+        }
+        .fill-slot-placeholder {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #0f766e;
+        }
+        .match-board {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin: 16px;
+        }
+        .match-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .match-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            background: #fff;
+            padding: 12px 14px;
+            text-align: left;
+            color: #0f172a;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+        .match-item:hover { border-color: #94a3b8; background: #f8fafc; }
+        .match-item.is-selected {
+            border-color: #0f766e;
+            background: #ecfdf5;
+            box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.12);
+        }
+        .match-item.is-paired {
+            border-color: #14b8a6;
+            background: #f0fdfa;
+        }
+        .match-pair-badge {
+            display: inline-flex;
+            width: 24px;
+            height: 24px;
+            flex: 0 0 24px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #0f766e;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+        .match-item-text { flex: 1; min-width: 0; }
         .answer-letter {
             display: grid;
             width: 28px;
@@ -535,8 +621,8 @@
         </main>
     </div>
 
-    <script src="lotrinh.js?v=20260620-practice-scroll1"></script>
-    <script src="admin-lesson-manager.js?v=20260620-lesson-crud1"></script>
+    <script src="lotrinh.js?v=20260619-drag-fill1"></script>
+    <script src="admin-lesson-manager.js?v=20260619-drag-fill1"></script>
     <script src="admin-progress.js?v=20260620-group-align1"></script>
 </body>
 

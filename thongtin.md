@@ -70,7 +70,11 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 7. **Thi trực tuyến (`thitructuyen.html`)**
    - Frontend React (CDN). **Dữ liệu đề thi & kết quả** lưu MySQL trên hosting qua `api/exam.php` (`EXAM_API` tự trỏ cùng domain). **AI soạn đề** (quét PDF, nhận diện câu hỏi) vẫn gọi HuggingFace: `AI_API` mặc định `https://hoangthiencm-giangbai.hf.space` (ghi đè `localStorage.omr_backend_url`).
    - **Giáo viên**: soạn đề (PDF/Word + AI), lưu kho đề, xem QR/link chia sẻ, xem kết quả, xuất Excel.
-   - **Học sinh**: mở link `?mode=student&examId=...` (không cần đăng nhập — `access-control.js` bỏ qua khi có `examId`).
+   - **Chế độ thí sinh** (GV chọn khi lưu đề, lưu trong `variants_json` meta):
+     - **Thí sinh tự do** (`student_mode: free`): HS tự nhập Họ tên, SBD, Lớp — mặc định; đề cũ không có meta cũng dùng chế độ này.
+     - **Danh sách từ lớp** (`student_mode: class`): GV chọn lớp từ `users.class_name` (cùng nguồn admin/import Excel) → API `student-classes` / `class-students` lấy roster; snapshot `roster` lưu khi Lưu đề (SBD = `username`). Kho đề hiển thị cột **Thí sinh** (vd. `Lớp 6A (32 HS)`).
+     - Khi nộp bài chế độ lớp: server kiểm tra tên+SBD có trong `roster` của đề.
+   - **Học sinh**: mở link `?mode=student&examId=...` (không cần đăng nhập — `access-control.js` bỏ qua khi có `examId`). Chế độ lớp: ô tìm tên/SBD + dropdown chọn đúng tên trong danh sách; SBD và lớp tự điền.
    - **Trộn đề**: khi HS làm bài, thứ tự câu và đáp án trộn trên UI; đáp án nộp lên server dùng `originalIdx` / `originalOptIdx` (theo **đề gốc**). Chấm điểm và `details_json` (câu sai) cũng theo đề gốc.
    - **Nộp bài mobile/Zalo** (`StudentView`):
      - `isMobileExamClient()` nhận diện điện thoại / Zalo / in-app browser → **tắt** chống gian lận toàn màn hình và khóa màn hình.
@@ -109,6 +113,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Thi trực tuyến — đề trộn vs đề gốc:** HS chỉ thấy số câu 1…N theo thứ tự đã trộn; báo cáo GV/Excel luôn dùng số câu **đề gốc**. Không lưu `display_order` trên server — Excel quy đổi bằng đối chiếu nội dung câu trong `details_json`.
 - **Thi trực tuyến — dữ liệu cũ:** Các lượt thi trước khi sửa có thể thiếu `student_name` (nộp từ Zalo); không khôi phục tự động — cần HS thi lại sau khi deploy bản mới.
 - **Thi trực tuyến — khuyến nghị HS:** Nếu Zalo lỗi, mở link bằng Chrome/Safari (menu *Mở bằng trình duyệt*).
+- **Thi trực tuyến — danh sách lớp:** Lớp phải có HS hoạt động trong admin (`class_name` không rỗng). Đổi danh sách HS sau khi lưu đề **không** tự cập nhật đề đã lưu — GV cần mở sửa đề, chọn lại lớp và Lưu nếu muốn đồng bộ roster mới.
 
 ---
-*Cập nhật lần cuối: 2026-06-20. File này đồng bộ trạng thái dự án khi chuyển môi trường làm việc.*
+*Cập nhật lần cuối: 2026-06-19. File này đồng bộ trạng thái dự án khi chuyển môi trường làm việc.*

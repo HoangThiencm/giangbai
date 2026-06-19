@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-19 — Import Excel danh sách HS (`admin.html`); thi trực tuyến lưu hosting (`api/exam.php`).*
+*Cập nhật: 2026-06-19 — Chế độ thí sinh tự do / danh sách lớp khi tạo đề thi (`thitructuyen.html` + `api/exam.php`).*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -60,6 +60,10 @@
   - Panel import hàng loạt: mật khẩu/lớp mặc định, chọn trang mở, đọc file Excel (SheetJS).
   - File mẫu `templates/DanhSachHocSinh_Mau.xlsx`; nút **Tải file Excel mẫu** / **Tạo file mẫu mới**.
   - API `import_batch`: tạo mới hoặc cập nhật nếu trùng tài khoản; báo số tạo/cập nhật/lỗi.
+- [x] **Thi trực tuyến — chế độ thí sinh** (`thitructuyen.html` + `api/exam.php`):
+  - GV chọn **Thí sinh tự do** hoặc **Từ lớp** khi soạn/lưu đề (`student_mode`, `class_name`, `roster` trong meta).
+  - API `student-classes`, `class-students`; roster snapshot khi lưu; validate tên+SBD khi nộp bài chế độ lớp.
+  - HS chế độ lớp: ô tìm tên/SBD + dropdown chọn tên; kho đề có cột **Thí sinh**.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -91,6 +95,9 @@
 - [ ] **Thi trực tuyến — HS thi nhiều lần**: khối "Học sinh thi nhiều lần" gom đúng theo 2 lần / 3 lần.
 - [ ] **Thi trực tuyến — hosting**: upload `api/exam.php` + chạy SQL bảng `exams`/`exam_submissions` → lưu đề, nộp bài, xóa kết quả trên MySQL hosting.
 - [ ] **Admin — Import Excel HS**: tải `templates/DanhSachHocSinh_Mau.xlsx` → điền lớp `6A` → import → kiểm tra danh sách HS và lọc lớp trong panel tiến độ GV.
+- [ ] **Thi trực tuyến — đề chế độ lớp (GV)**: tạo đề → chọn **Từ lớp** → chọn lớp `6A` → Lưu → kho đề hiện `Lớp 6A (N HS)`.
+- [ ] **Thi trực tuyến — đề chế độ lớp (HS)**: mở link QR → gõ tên trong ô tìm → chọn đúng tên → SBD/lớp tự điền → vào thi và nộp thành công.
+- [ ] **Thi trực tuyến — đề chế độ tự do**: tạo đề **Thí sinh tự do** → HS vẫn nhập tay Họ tên/SBD như trước.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.

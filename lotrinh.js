@@ -217,6 +217,89 @@
         ];
     }
 
+    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]/g;
+
+    function splitPoolText(value) {
+        return String(value || '').split('>').map(part => part.trim()).filter(Boolean);
+    }
+
+    function countBlankTokens(prompt) {
+        const matches = String(prompt || '').match(BLANK_TOKEN_RE);
+        return matches?.length || 1;
+    }
+
+    function normalizeFillSlots(saved, blankCount) {
+        if (Array.isArray(saved)) return saved.slice(0, blankCount);
+        if (typeof saved === 'string' && saved.trim()) return [saved.trim()];
+        return Array.from({ length: blankCount }, () => '');
+    }
+
+    function normalizeFillExercise(item) {
+        const prompt = String(item?.prompt || '');
+        const blankCount = countBlankTokens(prompt);
+        let pool = Array.isArray(item?.items) ? [...item.items] : splitPoolText(item?.pool);
+        let answers = [];
+        if (Array.isArray(item?.answer)) {
+            answers = item.answer.map(part => String(part || '').trim()).filter(Boolean);
+        } else if (String(item?.answer || '').includes('>')) {
+            answers = splitPoolText(item.answer);
+        } else if (item?.answer) {
+            answers = [String(item.answer).trim()];
+        }
+        if (!pool.length && answers.length) pool = [...answers];
+        while (answers.length < blankCount && answers.length) {
+            answers.push(answers[answers.length - 1]);
+        }
+        if (!answers.length && pool.length) answers = [pool[0]];
+        return {
+            ...item,
+            prompt,
+            blankCount,
+            pool,
+            answers: answers.slice(0, blankCount),
+            hint: item?.hint || ''
+        };
+    }
+
+    function parseMatchPairs(spec) {
+        return String(spec || '').split(',').map(part => part.trim()).filter(Boolean).map(part => {
+            const [left, right] = part.split('-').map(value => Number.parseInt(value, 10));
+            if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+            return { left, right };
+        }).filter(Boolean);
+    }
+
+    function normalizeDragExercise(item) {
+        if (item?.mode === 'match' || (Array.isArray(item?.left) && Array.isArray(item?.right))) {
+            const left = Array.isArray(item.left) ? item.left : [];
+            const right = Array.isArray(item.right) ? item.right : [];
+            const pairs = Array.isArray(item.pairs) && item.pairs.length
+                ? item.pairs
+                : parseMatchPairs(item.pair_spec || item.pairs_text || '');
+            return {
+                ...item,
+                mode: 'match',
+                left,
+                right,
+                pairs,
+                hint: item?.hint || ''
+            };
+        }
+        const items = Array.isArray(item?.items) ? item.items : splitPoolText(item?.items_text);
+        const answer = Array.isArray(item?.answer) ? item.answer : splitPoolText(item?.answer_text || item?.answer);
+        return {
+            ...item,
+            mode: 'sort',
+            items,
+            answer,
+            hint: item?.hint || ''
+        };
+    }
+
+    function isDragMatchAnswer(value) {
+        return value && typeof value === 'object' && !Array.isArray(value);
+    }
+
     function practiceProgress(lesson, ui = currentUiState(lesson)) {
         const items = practiceItems(lesson);
         if (!items.length) return { answered: 0, total: 0, percent: 0 };
@@ -224,8 +307,20 @@
             if (type === 'choice') return ui.answers?.[item.id] !== undefined && ui.answers?.[item.id] !== null;
             const key = item.id || `${type}_${index + 1}`;
             if (type === 'essay') return String(ui.essayAnswers?.[key] || '').trim() !== '';
-            if (type === 'fill') return String(ui.fillAnswers?.[key] || '').trim() !== '';
-            if (type === 'drag') return Array.isArray(ui.dragAnswers?.[key]) && ui.dragAnswers[key].length > 0;
+            if (type === 'fill') {
+                const normalized = normalizeFillExercise(item);
+                const slots = normalizeFillSlots(ui.fillAnswers?.[key], normalized.blankCount);
+                return slots.filter(slot => String(slot || '').trim() !== '').length >= normalized.blankCount;
+            }
+            if (type === 'drag') {
+                const normalized = normalizeDragExercise(item);
+                const saved = ui.dragAnswers?.[key];
+                if (normalized.mode === 'match') {
+                    const matches = isDragMatchAnswer(saved) ? saved : {};
+                    return normalized.left.length > 0 && Object.keys(matches).length >= normalized.left.length;
+                }
+                return Array.isArray(saved) && saved.length > 0;
+            }
             return false;
         }).length;
         return { answered, total: items.length, percent: Math.round((answered / items.length) * 100) };
@@ -1429,33 +1524,60 @@
         }).join('');
     }
 
+    function renderPromptWithFillSlots(prompt, key, slots, practiceDone) {
+        const parts = String(prompt || '').split(BLANK_TOKEN_RE);
+        const markers = String(prompt || '').match(BLANK_TOKEN_RE) || [];
+        let slotIndex = 0;
+        let html = '';
+        parts.forEach((part, partIndex) => {
+            if (part) html += `<span class="fill-prompt-text">${mathText(part)}</span>`;
+            if (partIndex < markers.length) {
+                const value = String(slots[slotIndex] || '').trim();
+                const chipHtml = value
+                    ? `<button type="button" class="drag-chip fill-slot-chip" data-chip-value="${escapeHtml(value)}" data-chip-id="${escapeHtml(`${key}-slot-${slotIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(value)}</button>`
+                    : '<span class="fill-slot-placeholder">kéo vào đây</span>';
+                html += `<span class="fill-drop-slot" data-fill-key="${escapeHtml(key)}" data-slot-index="${slotIndex}" data-drop-slot="1">${chipHtml}</span>`;
+                slotIndex += 1;
+            }
+        });
+        return html;
+    }
+
     function renderFillExercises(lesson) {
         const items = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
         if (!items.length) {
-            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài điền khuyết cho bài này.</div>';
+            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài kéo vào ô trống cho bài này.</div>';
         }
         const ui = currentUiState(lesson);
         const practiceDone = !!ui.practiceDone;
         const savedAnswers = ui.fillAnswers || {};
         return items.map((item, index) => {
-            const key = item.id || `fill_${index + 1}`;
-            const saved = savedAnswers[key] || '';
-            const ok = practiceDone && normalizeAnswerText(saved) === normalizeAnswerText(item.answer || '');
+            const normalized = normalizeFillExercise(item);
+            const key = normalized.id || item.id || `fill_${index + 1}`;
+            const slots = normalizeFillSlots(savedAnswers[key], normalized.blankCount);
+            const usedValues = slots.map(slot => normalizeAnswerText(slot)).filter(Boolean);
+            const poolItems = normalized.pool.filter(piece => !usedValues.includes(normalizeAnswerText(piece)));
+            const given = slots.map(normalizeAnswerText);
+            const expected = normalized.answers.map(normalizeAnswerText);
+            const ok = practiceDone && expected.length > 0 && expected.every((answer, slotIndex) => given[slotIndex] === answer);
             const feedback = practiceDone
                 ? (ok
-                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã điền khớp đáp án.'
-                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${mathText(item.answer || '')}`)
+                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã kéo đúng vào các ô trống.'
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${normalized.answers.map(part => mathText(part)).join(' · ')}`)
                 : '';
+            const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
             return `
-                <article class="practice-card">
+                <article class="practice-card fill-drag-card ${dragDisabled}" data-fill-card="${escapeHtml(key)}">
                     <div class="question-head">
-                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Điền khuyết ${index + 1}</p>
-                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
+                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Kéo vào ô trống ${index + 1}</p>
+                        <div class="question-text mt-1 text-base font-bold leading-8 text-slate-950 fill-prompt-line">${renderPromptWithFillSlots(normalized.prompt, key, slots, practiceDone)}</div>
                     </div>
-                    <input class="fill-input" type="text" data-fill-key="${escapeHtml(key)}" value="${escapeHtml(saved)}" placeholder="Nhập đáp án hoặc bấm ký hiệu bên dưới..." ${practiceDone ? 'disabled' : ''}>
-                    ${practiceDone ? '' : renderMathSymbolToolbar('fill', key)}
+                    <p class="fill-pool-label">Kéo một mảnh vào từng ô trống:</p>
+                    <div class="drag-pool fill-chip-pool" data-fill-pool="${escapeHtml(key)}">
+                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                    </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
+                        <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
                     </div>
@@ -1468,36 +1590,85 @@
     function renderDragExercises(lesson) {
         const items = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
         if (!items.length) {
-            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài kéo thả cho bài này.</div>';
+            return '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa thêm bài nối ô cho bài này.</div>';
         }
-        const practiceDone = !!currentUiState(lesson).practiceDone;
+        const ui = currentUiState(lesson);
+        const practiceDone = !!ui.practiceDone;
         return items.map((item, index) => {
-            const dragItems = Array.isArray(item.items) ? item.items : [];
-            const answer = Array.isArray(item.answer) ? item.answer : [];
-            const key = item.id || `drag_${index + 1}`;
-            const savedOrder = currentUiState(lesson).dragAnswers?.[key] || [];
-            const poolItems = dragItems.filter(piece => !savedOrder.includes(piece));
-            const ok = practiceDone && savedOrder.map(normalizeAnswerText).join('|') === answer.map(normalizeAnswerText).join('|');
+            const normalized = normalizeDragExercise(item);
+            const key = normalized.id || item.id || `drag_${index + 1}`;
+            if (normalized.mode === 'match') {
+                const savedMatches = isDragMatchAnswer(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : {};
+                const pairedRight = new Set(Object.values(savedMatches).map(value => Number(value)));
+                let correctCount = 0;
+                normalized.pairs.forEach(pair => {
+                    if (Number(savedMatches[pair.left]) === pair.right) correctCount += 1;
+                });
+                const ok = practiceDone && normalized.pairs.length > 0 && correctCount === normalized.pairs.length;
+                const feedback = practiceDone
+                    ? (ok
+                        ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã nối đủ các cặp.'
+                        : `<span class="font-bold text-rose-700">Chưa đúng.</span> Hãy kiểm tra lại các cặp chưa khớp.`)
+                    : '';
+                const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
+                return `
+                    <article class="practice-card match-card ${dragDisabled}" data-match-card="${escapeHtml(key)}">
+                        <div class="question-head">
+                            <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Nối ô ${index + 1}</p>
+                            <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(normalized.prompt || '')}</h3>
+                        </div>
+                        <p class="match-help">Bấm mục bên trái, rồi bấm mục bên phải để nối cặp. Bấm lại để gỡ.</p>
+                        <div class="match-board" data-match-key="${escapeHtml(key)}">
+                            <div class="match-col" data-match-side="left">
+                                ${normalized.left.map((text, leftIndex) => {
+                                    const rightIndex = savedMatches[leftIndex];
+                                    const paired = Number.isFinite(Number(rightIndex));
+                                    const pairNumber = paired ? Object.entries(savedMatches).findIndex(([left]) => Number(left) === leftIndex) + 1 : '';
+                                    return `<button type="button" class="match-item ${paired ? 'is-paired' : ''}" data-match-side="left" data-match-index="${leftIndex}" ${practiceDone ? 'disabled' : ''}>${pairNumber ? `<span class="match-pair-badge">${pairNumber}</span>` : ''}<span class="match-item-text">${mathText(text)}</span></button>`;
+                                }).join('')}
+                            </div>
+                            <div class="match-col" data-match-side="right">
+                                ${normalized.right.map((text, rightIndex) => {
+                                    const paired = pairedRight.has(rightIndex);
+                                    const pairNumber = paired ? Object.entries(savedMatches).findIndex(([, right]) => Number(right) === rightIndex) + 1 : '';
+                                    return `<button type="button" class="match-item ${paired ? 'is-paired' : ''}" data-match-side="right" data-match-index="${rightIndex}" ${practiceDone ? 'disabled' : ''}>${pairNumber ? `<span class="match-pair-badge">${pairNumber}</span>` : ''}<span class="match-item-text">${mathText(text)}</span></button>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
+                                <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
+                            </button>
+                        </div>
+                        <div class="drag-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
+                    </article>
+                `;
+            }
+
+            const savedOrder = Array.isArray(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : [];
+            const poolItems = normalized.items.filter(piece => !savedOrder.includes(piece));
+            const ok = practiceDone && savedOrder.map(normalizeAnswerText).join('|') === normalized.answer.map(normalizeAnswerText).join('|');
             const feedback = practiceDone
                 ? (ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
-                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml(answer.join(' → '))}`)
+                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml(normalized.answer.join(' → '))}`)
                 : '';
             const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
             return `
-                <article class="practice-card ${dragDisabled}" data-drag-key="${escapeHtml(key)}" data-drag-answer="${escapeHtml(JSON.stringify(answer))}">
+                <article class="practice-card sort-card ${dragDisabled}" data-sort-card="${escapeHtml(key)}">
                     <div class="question-head">
-                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Kéo thả ${index + 1}</p>
-                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
+                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Sắp xếp ${index + 1}</p>
+                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(normalized.prompt || '')}</h3>
                     </div>
-                    <div class="drag-pool" data-drag-pool="${escapeHtml(key)}">
-                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-piece="${pieceIndex}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                    <p class="fill-pool-label">Kéo các mảnh vào hàng bên dưới theo thứ tự đúng:</p>
+                    <div class="drag-pool sort-chip-pool" data-sort-pool="${escapeHtml(key)}">
+                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
-                    <div class="drag-slot-row" data-drop-zone="${escapeHtml(key)}">
-                        ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-piece="saved-${pieceIndex}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                    <div class="drag-slot-row sort-slot-row" data-sort-zone="${escapeHtml(key)}">
+                        ${savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
+                        <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
                             <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
                         </button>
                     </div>
@@ -1925,7 +2096,7 @@
             toolbar.dataset.boundMathToolbar = '1';
             const kind = toolbar.dataset.inputKind || '';
             const key = toolbar.dataset.inputKey || '';
-            const attr = kind === 'essay' ? 'data-essay-key' : 'data-fill-key';
+            const attr = 'data-essay-key';
             const input = key ? root.querySelector(`[${attr}="${escapeSelector(key)}"]`) : null;
             if (!input) return;
             toolbar.querySelectorAll('.math-symbol-btn').forEach(button => {
@@ -1950,18 +2121,32 @@
         return { score: Math.round((correct / items.length) * 100), answers };
     }
 
+    function collectFillSlotsFromCard(card, blankCount) {
+        const slots = Array.from({ length: blankCount }, () => '');
+        card?.querySelectorAll('.fill-drop-slot').forEach(slot => {
+            const index = Number.parseInt(slot.dataset.slotIndex || '0', 10);
+            const chip = slot.querySelector('.fill-slot-chip');
+            if (Number.isFinite(index) && index >= 0 && index < blankCount) {
+                slots[index] = chip?.dataset.chipValue || chip?.textContent?.trim() || '';
+            }
+        });
+        return slots;
+    }
+
     function evaluateFillExercises(lesson) {
         const items = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
         if (!items.length) return { score: null, answers: {} };
         const answers = {};
         let correct = 0;
-        items.forEach(item => {
-            const key = item.id || `fill_${items.indexOf(item) + 1}`;
-            const field = document.querySelector(`[data-fill-key="${escapeSelector(key)}"]`);
-            const value = normalizeAnswerText(field?.value || '');
-            answers[key] = field?.value || '';
-            const expected = normalizeAnswerText(item.answer || '');
-            if (expected && value === expected) correct += 1;
+        items.forEach((item, itemIndex) => {
+            const normalized = normalizeFillExercise(item);
+            const key = normalized.id || item.id || `fill_${itemIndex + 1}`;
+            const card = document.querySelector(`[data-fill-card="${escapeSelector(key)}"]`);
+            const slots = collectFillSlotsFromCard(card, normalized.blankCount);
+            answers[key] = slots;
+            const given = slots.map(normalizeAnswerText);
+            const expected = normalized.answers.map(normalizeAnswerText);
+            if (expected.length && expected.every((answer, slotIndex) => given[slotIndex] === answer)) correct += 1;
         });
         return { score: Math.round((correct / items.length) * 100), answers };
     }
@@ -1971,16 +2156,39 @@
         if (!items.length) return { score: null, answers: {} };
         const answers = {};
         let correct = 0;
-        items.forEach(item => {
-            const key = item.id || `drag_${items.indexOf(item) + 1}`;
-            const zone = document.querySelector(`[data-drop-zone="${escapeSelector(key)}"]`);
-            const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.textContent || '');
+        items.forEach((item, itemIndex) => {
+            const normalized = normalizeDragExercise(item);
+            const key = normalized.id || item.id || `drag_${itemIndex + 1}`;
+            if (normalized.mode === 'match') {
+                const uiMatches = currentUiState(lesson).dragAnswers?.[key];
+                const matches = isDragMatchAnswer(uiMatches) ? { ...uiMatches } : {};
+                answers[key] = matches;
+                const ok = normalized.pairs.length > 0 && normalized.pairs.every(pair => Number(matches[pair.left]) === pair.right);
+                if (ok) correct += 1;
+                return;
+            }
+            const zone = document.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
+            const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.dataset.chipValue || node.textContent?.trim() || '');
             answers[key] = current;
-            const expected = (item.answer || []).map(normalizeAnswerText);
+            const expected = normalized.answer.map(normalizeAnswerText);
             const given = current.map(normalizeAnswerText);
             if (expected.length && expected.join('|') === given.join('|')) correct += 1;
         });
         return { score: Math.round((correct / items.length) * 100), answers };
+    }
+
+    async function persistPracticeUi(lesson, nextUi) {
+        const progress = currentLessonProgress(lesson);
+        await syncLessonState(lesson, {
+            ...nextUi,
+            practiceDone: false,
+            startedAt: nextUi.startedAt || currentUiState(lesson).startedAt || new Date().toISOString()
+        }, {
+            status: 'in_progress',
+            score: progress.score || 0,
+            skillScores: progress.skillScores || {}
+        });
+        refreshLearningChrome(lesson);
     }
 
     function escapeSelector(value) {
@@ -2341,44 +2549,270 @@
             };
         });
 
-        document.querySelectorAll('.drag-pool').forEach(pool => {
-            if (pool.dataset.boundDrag === '1') return;
-            pool.dataset.boundDrag = '1';
-            const zoneId = pool.dataset.dragPool;
-            const zone = document.querySelector(`[data-drop-zone="${escapeSelector(zoneId)}"]`);
-            if (!zone) return;
+        document.querySelectorAll('.fill-drag-card').forEach(card => {
+            if (card.dataset.boundFillDrag === '1') return;
+            card.dataset.boundFillDrag = '1';
+            const key = card.dataset.fillCard || '';
+            const pool = card.querySelector(`[data-fill-pool="${escapeSelector(key)}"]`);
+            if (!pool) return;
+            const item = (lesson.fill_exercises || []).map(normalizeFillExercise).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
+            const blankCount = item?.blankCount || 1;
 
-            const bindChip = chip => {
+            const getSlots = () => collectFillSlotsFromCard(card, blankCount);
+
+            const persistSlots = async () => {
+                const ui = currentUiState(lesson);
+                await persistPracticeUi(lesson, {
+                    ...ui,
+                    fillAnswers: {
+                        ...(ui.fillAnswers || {}),
+                        [key]: getSlots()
+                    }
+                });
+            };
+
+            const bindFillChip = chip => {
+                if (chip.dataset.boundFillChip === '1') return;
+                chip.dataset.boundFillChip = '1';
                 chip.addEventListener('dragstart', e => {
-                    e.dataTransfer?.setData('text/plain', chip.textContent || '');
-                    e.dataTransfer?.setData('source', chip.parentElement === zone ? 'zone' : 'pool');
+                    e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
+                    e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
                     chip.classList.add('opacity-60');
                 });
                 chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
-                chip.addEventListener('click', () => {
+                chip.addEventListener('click', async () => {
+                    const slot = chip.closest('.fill-drop-slot');
+                    if (slot) {
+                        pool.appendChild(chip);
+                        chip.classList.remove('fill-slot-chip');
+                        slot.innerHTML = '<span class="fill-slot-placeholder">kéo vào đây</span>';
+                        await persistSlots();
+                    }
+                });
+            };
+
+            const allowDrop = target => {
+                target?.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    target.classList.add('drag-over');
+                });
+                target?.addEventListener('dragleave', () => target.classList.remove('drag-over'));
+            };
+
+            allowDrop(pool);
+            card.querySelectorAll('.fill-drop-slot').forEach(allowDrop);
+
+            const dropIntoSlot = async (slot, chip) => {
+                if (!slot || !chip) return;
+                const existing = slot.querySelector('.fill-slot-chip');
+                if (existing && existing !== chip) pool.appendChild(existing);
+                chip.classList.add('fill-slot-chip');
+                slot.innerHTML = '';
+                slot.appendChild(chip);
+                await persistSlots();
+            };
+
+            pool.addEventListener('drop', async e => {
+                e.preventDefault();
+                pool.classList.remove('drag-over');
+                const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
+                if (!chip) return;
+                const fromSlot = chip.closest('.fill-drop-slot');
+                if (fromSlot) fromSlot.innerHTML = '<span class="fill-slot-placeholder">kéo vào đây</span>';
+                pool.appendChild(chip);
+                chip.classList.remove('fill-slot-chip');
+                await persistSlots();
+            });
+
+            card.querySelectorAll('.fill-drop-slot').forEach(slot => {
+                slot.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                    const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
+                    await dropIntoSlot(slot, chip);
+                });
+            });
+
+            pool.querySelectorAll('.drag-chip').forEach(bindFillChip);
+            card.querySelectorAll('.fill-drop-slot .drag-chip').forEach(bindFillChip);
+        });
+
+        document.querySelectorAll('.sort-card').forEach(card => {
+            if (card.dataset.boundSortDrag === '1') return;
+            card.dataset.boundSortDrag = '1';
+            const key = card.dataset.sortCard || '';
+            const pool = card.querySelector(`[data-sort-pool="${escapeSelector(key)}"]`);
+            const zone = card.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
+            if (!pool || !zone) return;
+
+            const persistOrder = async () => {
+                const ui = currentUiState(lesson);
+                const current = Array.from(zone.querySelectorAll('.drag-chip')).map(node => node.dataset.chipValue || node.textContent?.trim() || '');
+                await persistPracticeUi(lesson, {
+                    ...ui,
+                    dragAnswers: {
+                        ...(ui.dragAnswers || {}),
+                        [key]: current
+                    }
+                });
+            };
+
+            const bindSortChip = chip => {
+                if (chip.dataset.boundSortChip === '1') return;
+                chip.dataset.boundSortChip = '1';
+                chip.addEventListener('dragstart', e => {
+                    e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
+                    e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
+                    chip.classList.add('opacity-60');
+                });
+                chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
+                chip.addEventListener('click', async () => {
                     if (chip.parentElement === zone) {
                         pool.appendChild(chip);
                     } else {
                         zone.appendChild(chip);
                     }
+                    await persistOrder();
                 });
             };
 
-            pool.querySelectorAll('.drag-chip').forEach(bindChip);
-            zone.querySelectorAll('.drag-chip').forEach(bindChip);
+            const allowDrop = target => {
+                target?.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    target.classList.add('drag-over');
+                });
+                target?.addEventListener('dragleave', () => target.classList.remove('drag-over'));
+            };
+            allowDrop(pool);
+            allowDrop(zone);
 
-            zone.addEventListener('dragover', e => e.preventDefault());
-            zone.addEventListener('drop', e => {
+            const moveChipToZone = async (chip, beforeNode = null) => {
+                if (!chip) return;
+                if (beforeNode && beforeNode.parentElement === zone) zone.insertBefore(chip, beforeNode);
+                else zone.appendChild(chip);
+                await persistOrder();
+            };
+
+            zone.addEventListener('drop', async e => {
                 e.preventDefault();
-                const text = e.dataTransfer?.getData('text/plain');
-                const chip = Array.from(document.querySelectorAll('.drag-chip')).find(node => node.classList.contains('opacity-60') && node.textContent === text);
+                zone.classList.remove('drag-over');
+                const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
                 if (!chip) return;
                 const target = e.target.closest('.drag-chip');
-                if (target && target.parentElement === zone && target !== chip) {
-                    zone.insertBefore(chip, target);
-                } else {
-                    zone.appendChild(chip);
-                }
+                await moveChipToZone(chip, target && target !== chip ? target : null);
+            });
+
+            pool.addEventListener('drop', async e => {
+                e.preventDefault();
+                pool.classList.remove('drag-over');
+                const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
+                if (!chip) return;
+                pool.appendChild(chip);
+                await persistOrder();
+            });
+
+            pool.querySelectorAll('.drag-chip').forEach(bindSortChip);
+            zone.querySelectorAll('.drag-chip').forEach(bindSortChip);
+        });
+
+        document.querySelectorAll('.match-card').forEach(card => {
+            if (card.dataset.boundMatch === '1') return;
+            card.dataset.boundMatch = '1';
+            const key = card.dataset.matchCard || '';
+            let selectedLeft = null;
+
+            const readMatches = () => {
+                const ui = currentUiState(lesson);
+                return { ...(isDragMatchAnswer(ui.dragAnswers?.[key]) ? ui.dragAnswers[key] : {}) };
+            };
+
+            const paintMatchState = matches => {
+                const entries = Object.entries(matches).map(([left, right]) => [Number(left), Number(right)]);
+                const rightToPair = new Map(entries.map(([left, right], order) => [right, { left, order: order + 1 }]));
+                const leftToPair = new Map(entries.map(([left, right], order) => [left, { right, order: order + 1 }]));
+
+                card.querySelectorAll('.match-item[data-match-side="left"]').forEach(button => {
+                    const index = Number.parseInt(button.dataset.matchIndex || '-1', 10);
+                    const pair = leftToPair.get(index);
+                    button.classList.toggle('is-paired', !!pair);
+                    button.classList.toggle('is-selected', selectedLeft === index);
+                    let badge = button.querySelector('.match-pair-badge');
+                    if (pair) {
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'match-pair-badge';
+                            button.prepend(badge);
+                        }
+                        badge.textContent = String(pair.order);
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                });
+
+                card.querySelectorAll('.match-item[data-match-side="right"]').forEach(button => {
+                    const index = Number.parseInt(button.dataset.matchIndex || '-1', 10);
+                    const pair = rightToPair.get(index);
+                    button.classList.toggle('is-paired', !!pair);
+                    button.classList.remove('is-selected');
+                    let badge = button.querySelector('.match-pair-badge');
+                    if (pair) {
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'match-pair-badge';
+                            button.prepend(badge);
+                        }
+                        badge.textContent = String(pair.order);
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                });
+            };
+
+            const saveMatches = async matches => {
+                const ui = currentUiState(lesson);
+                await persistPracticeUi(lesson, {
+                    ...ui,
+                    dragAnswers: {
+                        ...(ui.dragAnswers || {}),
+                        [key]: matches
+                    }
+                });
+                paintMatchState(matches);
+            };
+
+            paintMatchState(readMatches());
+
+            card.querySelectorAll('.match-item').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const side = button.dataset.matchSide;
+                    const index = Number.parseInt(button.dataset.matchIndex || '-1', 10);
+                    if (!Number.isFinite(index) || index < 0) return;
+                    const matches = readMatches();
+
+                    if (side === 'left') {
+                        if (matches[index] !== undefined) {
+                            delete matches[index];
+                            selectedLeft = null;
+                            await saveMatches(matches);
+                        } else {
+                            selectedLeft = index;
+                            paintMatchState(matches);
+                        }
+                        return;
+                    }
+
+                    if (selectedLeft === null) return;
+                    Object.keys(matches).forEach(leftKey => {
+                        if (Number(matches[leftKey]) === index) delete matches[leftKey];
+                    });
+                    matches[selectedLeft] = index;
+                    selectedLeft = null;
+                    await saveMatches(matches);
+                });
             });
         });
 
@@ -2397,45 +2831,6 @@
                 feedback.innerHTML = ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
                     : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item?.hint || 'Hãy thử so sánh với đáp án mẫu.')}`;
-            };
-        });
-
-        document.querySelectorAll('.fill-check-btn').forEach(button => {
-            if (button.dataset.boundFill === '1') return;
-            button.dataset.boundFill = '1';
-            button.onclick = () => {
-                const key = button.dataset.fillKey || '';
-                const card = button.closest('.practice-card');
-                const input = card?.querySelector(`[data-fill-key="${escapeSelector(key)}"]`);
-                const feedback = card?.querySelector('.fill-feedback');
-                const item = (lesson.fill_exercises || []).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
-                const ok = normalizeAnswerText(input?.value || '') === normalizeAnswerText(item?.answer || '');
-                if (feedback) {
-                    feedback.classList.remove('hidden');
-                    feedback.innerHTML = ok
-                        ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã điền khớp đáp án.'
-                        : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${escapeHtml(item?.answer || '')}`;
-                }
-            };
-        });
-
-        document.querySelectorAll('.drag-check-btn').forEach(button => {
-            if (button.dataset.boundDragCheck === '1') return;
-            button.dataset.boundDragCheck = '1';
-            button.onclick = () => {
-                const key = button.dataset.dragKey || '';
-                const card = button.closest('.practice-card');
-                const zone = card?.querySelector(`[data-drop-zone="${escapeSelector(key)}"]`);
-                const feedback = card?.querySelector('.drag-feedback');
-                const item = (lesson.drag_exercises || []).find((entry, index) => String(entry.id || `drag_${index + 1}`) === key);
-                const current = Array.from(zone?.querySelectorAll('.drag-chip') || []).map(node => node.textContent || '');
-                const ok = current.map(normalizeAnswerText).join('|') === (item?.answer || []).map(normalizeAnswerText).join('|');
-                if (feedback) {
-                    feedback.classList.remove('hidden');
-                    feedback.innerHTML = ok
-                        ? '<span class="font-bold text-teal-700">Đúng.</span> Thứ tự đã khớp.'
-                        : `<span class="font-bold text-rose-700">Chưa đúng.</span> Thứ tự đúng: ${escapeHtml((item?.answer || []).join(' → '))}`;
-                }
             };
         });
 

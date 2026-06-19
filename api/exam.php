@@ -146,13 +146,143 @@ function exam_status(array $row): string
     return 'open';
 }
 
+function parse_exam_meta(array $variants): array
+{
+    if (!is_array($variants) || empty($variants[0]['meta']) || !is_array($variants[0]['meta'])) {
+        return [];
+    }
+    return $variants[0]['meta'];
+}
+
+function normalize_roster_entry($entry): ?array
+{
+    if (!is_array($entry)) return null;
+    $fullName = trim((string)($entry['full_name'] ?? $entry['name'] ?? ''));
+    $sbd = trim((string)($entry['sbd'] ?? $entry['username'] ?? ''));
+    if ($fullName === '' || $sbd === '') return null;
+    return [
+        'student_id' => isset($entry['student_id']) ? (int)$entry['student_id'] : 0,
+        'username' => trim((string)($entry['username'] ?? $sbd)),
+        'full_name' => $fullName,
+        'sbd' => $sbd,
+        'class_name' => trim((string)($entry['class_name'] ?? '')),
+    ];
+}
+
+function normalize_roster($roster): array
+{
+    if (!is_array($roster)) return [];
+    $seen = [];
+    $normalized = [];
+    foreach ($roster as $entry) {
+        $item = normalize_roster_entry($entry);
+        if (!$item) continue;
+        $key = strtolower($item['sbd']) . '|' . strtolower($item['full_name']);
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+        $normalized[] = $item;
+    }
+    return $normalized;
+}
+
+function fetch_distinct_classes(PDO $pdo): array
+{
+    $stmt = $pdo->query("
+        SELECT DISTINCT class_name
+        FROM users
+        WHERE role = 'student' AND is_active = 1 AND TRIM(class_name) <> ''
+        ORDER BY class_name ASC
+    ");
+    $classes = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $name = trim((string)($row['class_name'] ?? ''));
+        if ($name !== '') $classes[] = $name;
+    }
+    return $classes;
+}
+
+function fetch_class_roster(PDO $pdo, string $className): array
+{
+    $className = trim($className);
+    if ($className === '') return [];
+    $stmt = $pdo->prepare("
+        SELECT id, username, full_name, class_name
+        FROM users
+        WHERE role = 'student' AND is_active = 1 AND class_name = ?
+        ORDER BY full_name ASC, username ASC
+    ");
+    $stmt->execute([$className]);
+    $roster = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $roster[] = [
+            'student_id' => (int)$row['id'],
+            'username' => trim((string)$row['username']),
+            'full_name' => trim((string)$row['full_name']),
+            'sbd' => trim((string)$row['username']),
+            'class_name' => trim((string)$row['class_name']),
+        ];
+    }
+    return $roster;
+}
+
+function build_exam_meta(array $data, PDO $pdo): array
+{
+    $mode = trim((string)($data['student_mode'] ?? 'free'));
+    if (!in_array($mode, ['free', 'class'], true)) $mode = 'free';
+
+    $className = trim((string)($data['class_name'] ?? ''));
+    $roster = normalize_roster($data['roster'] ?? []);
+
+    if ($mode === 'class') {
+        if ($className === '') {
+            respond(['error' => 'Vui lòng chọn lớp khi dùng danh sách từ lớp.'], 422);
+        }
+        if (count($roster) === 0) {
+            $roster = fetch_class_roster($pdo, $className);
+        }
+        if (count($roster) === 0) {
+            respond(['error' => 'Lớp đã chọn không có học sinh hoạt động.'], 422);
+        }
+        foreach ($roster as $idx => $item) {
+            if ($item['class_name'] === '') {
+                $roster[$idx]['class_name'] = $className;
+            }
+        }
+    } else {
+        $className = '';
+        $roster = [];
+    }
+
+    return [
+        'google_sheet_id' => $data['google_sheet_id'] ?? null,
+        'student_mode' => $mode,
+        'class_name' => $className,
+        'roster' => $roster,
+    ];
+}
+
+function roster_matches_submission(array $roster, string $name, string $sbd): bool
+{
+    $nameKey = strtolower(trim($name));
+    $sbdKey = strtolower(trim($sbd));
+    if ($nameKey === '' || $sbdKey === '') return false;
+    foreach ($roster as $entry) {
+        $entryName = strtolower(trim((string)($entry['full_name'] ?? '')));
+        $entrySbd = strtolower(trim((string)($entry['sbd'] ?? '')));
+        if ($entryName === $nameKey && $entrySbd === $sbdKey) return true;
+    }
+    return false;
+}
+
 function exam_to_public_payload(array $row): array
 {
     $variants = parse_json_or_default($row['variants_json'] ?? null, []);
+    $meta = parse_exam_meta($variants);
     $questions = [];
     if (is_array($variants) && !empty($variants[0]['questions']) && is_array($variants[0]['questions'])) {
         $questions = $variants[0]['questions'];
     }
+    $studentMode = in_array($meta['student_mode'] ?? '', ['free', 'class'], true) ? $meta['student_mode'] : 'free';
     return [
         'info' => [
             'title' => $row['title'],
@@ -162,6 +292,9 @@ function exam_to_public_payload(array $row): array
             'start_time' => $row['start_time'],
             'end_time' => $row['end_time'],
             'status' => exam_status($row),
+            'student_mode' => $studentMode,
+            'class_name' => trim((string)($meta['class_name'] ?? '')),
+            'roster' => $studentMode === 'class' ? normalize_roster($meta['roster'] ?? []) : [],
         ],
         'questions' => $questions,
     ];
@@ -202,10 +335,11 @@ if ($method === 'POST' && $action === 'save') {
     $apiKeys = $data['api_keys'] ?? [];
     if (!is_array($apiKeys)) $apiKeys = [];
 
+    $meta = build_exam_meta($data, $pdo);
     $variants = [[
         'exam_code' => 'ROOT',
         'questions' => $questions,
-        'meta' => ['google_sheet_id' => $data['google_sheet_id'] ?? null],
+        'meta' => $meta,
     ]];
 
     $examId = trim((string)($data['id'] ?? ''));
@@ -253,6 +387,25 @@ if ($method === 'POST' && $action === 'save') {
     }
 
     respond(['status' => 'ok', 'exam_id' => $examId]);
+}
+
+if ($method === 'GET' && $action === 'student-classes') {
+    require_teacher($pdo);
+    respond(['classes' => fetch_distinct_classes($pdo)]);
+}
+
+if ($method === 'GET' && $action === 'class-students') {
+    require_teacher($pdo);
+    $className = trim((string)($_GET['class_name'] ?? ''));
+    if ($className === '') {
+        respond(['error' => 'Thiếu tên lớp.'], 422);
+    }
+    $roster = fetch_class_roster($pdo, $className);
+    respond([
+        'class_name' => $className,
+        'count' => count($roster),
+        'roster' => $roster,
+    ]);
 }
 
 if ($method === 'GET' && $action === 'get' && !empty($parts[1])) {
@@ -319,9 +472,28 @@ if ($method === 'POST' && $action === 'submit') {
     if ($status === 'expired') respond(['error' => 'Kỳ thi đã kết thúc.'], 403);
 
     $variants = parse_json_or_default($exam['variants_json'] ?? null, []);
+    $meta = parse_exam_meta($variants);
+    $studentMode = in_array($meta['student_mode'] ?? '', ['free', 'class'], true) ? $meta['student_mode'] : 'free';
+    $roster = $studentMode === 'class' ? normalize_roster($meta['roster'] ?? []) : [];
     $questions = [];
     if (is_array($variants) && !empty($variants[0]['questions']) && is_array($variants[0]['questions'])) {
         $questions = $variants[0]['questions'];
+    }
+
+    $studentName = trim((string)($data['student_name'] ?? ''));
+    $sbd = trim((string)($data['sbd'] ?? ''));
+    $studentClass = trim((string)($data['student_class'] ?? ''));
+
+    if ($studentMode === 'class') {
+        if (count($roster) === 0) {
+            respond(['error' => 'Đề thi chưa có danh sách thí sinh hợp lệ.'], 422);
+        }
+        if (!roster_matches_submission($roster, $studentName, $sbd)) {
+            respond(['error' => 'Thí sinh không có trong danh sách lớp của đề thi.'], 403);
+        }
+        if ($studentClass === '') {
+            $studentClass = trim((string)($meta['class_name'] ?? ''));
+        }
     }
 
     $answers = $data['answers'] ?? [];
@@ -350,9 +522,9 @@ if ($method === 'POST' && $action === 'submit') {
     $stmt = $pdo->prepare('INSERT INTO exam_submissions (exam_id, student_name, sbd, student_class, score, correct_count, total_questions, details_json, ai_feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $examId,
-        trim((string)($data['student_name'] ?? '')),
-        trim((string)($data['sbd'] ?? '')),
-        trim((string)($data['student_class'] ?? '')),
+        $studentName,
+        $sbd,
+        $studentClass,
         $score,
         $correct,
         $total,
