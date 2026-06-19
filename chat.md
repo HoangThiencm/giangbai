@@ -556,3 +556,72 @@ ghi lại toàn bộ luôn chứ không cần tóm tắt
 - Tin nhắn có `[Image #N]` là lúc bạn gửi kèm ảnh chụp màn hình (ảnh không lưu được vào file text).
 
 File này chính là bản đầy đủ để bạn đọc lại sau.
+
+---
+
+## Lượt 17
+
+**Người dùng:**
+
+Tôi muốn tạo danh sách học sinh cho lóp học nhanh nhất bằng cách import excel. Bạn tạo nhé và cung cấp file excel mẫu từ hệ thống để chuyển qua cho nhanh
+
+**Trợ lý:**
+
+Đã thêm chức năng **import danh sách học sinh từ Excel** và file mẫu.
+
+## Cách dùng
+
+1. Vào `admin.html` → đăng nhập Admin Key
+2. Trong khung **Import danh sách học sinh từ Excel**:
+   - Bấm **Tải file Excel mẫu** (file có sẵn trong repo)
+   - Hoặc **Tạo file mẫu mới** (tải trực tiếp từ trình duyệt)
+3. Điền danh sách HS vào Excel
+4. Chọn **Mật khẩu mặc định** (mặc định `123456`), **Lớp mặc định** (vd. `6A`), tick trang mở
+5. Chọn file → **Import danh sách**
+
+## File Excel mẫu
+
+Đường dẫn: `templates/DanhSachHocSinh_Mau.xlsx`
+
+| STT | Tài khoản | Mật khẩu | Họ và tên | Lớp/Nhóm |
+|-----|-----------|----------|-----------|----------|
+| 1 | HS6A01 | 123456 | Nguyễn Văn An | 6A |
+| 2 | HS6A02 | 123456 | Trần Thị Bình | 6A |
+| 3 | HS6A03 | 123456 | Lê Văn Cường | 6A |
+
+- **Bắt buộc:** Tài khoản, Họ và tên
+- **Mật khẩu / Lớp để trống** → dùng giá trị mặc định trên màn hình import
+- **Tài khoản trùng** → cập nhật thông tin (không tạo trùng)
+
+## File đã sửa
+
+- `api/admin_students.php` — action `import_batch`
+- `admin.html` — giao diện import + đọc Excel (SheetJS)
+- `templates/DanhSachHocSinh_Mau.xlsx` — file mẫu
+
+Upload `admin.html`, `api/admin_students.php` và thư mục `templates/` lên hosting rồi thử import một lớp thử.
+
+---
+
+## Lượt 18
+
+**Người dùng:**
+
+cập nhật vào thongtin.md, plan.md và chat.md
+
+**Trợ lý:**
+
+Đã cập nhật cả ba file:
+
+### `thongtin.md`
+- Bổ sung mục **6. Quản trị tài khoản (`admin.html`)** — tạo tài khoản, import Excel, lên lớp hàng loạt.
+- Cập nhật `admin_students.php` — thêm action `import_batch`.
+- Đánh lại số mục Thi trực tuyến thành **7**.
+
+### `plan.md`
+- Header cập nhật: import Excel HS + thi trực tuyến hosting.
+- Mục **đã hoàn thành**: Import Excel danh sách học sinh.
+- Mục **cần phản biện**: checklist thử import Excel trên admin.
+
+### `chat.md`
+- Thêm **Lượt 17** (yêu cầu import Excel) và **Lượt 18** (cập nhật tài liệu) vào cuối file.

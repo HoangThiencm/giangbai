@@ -52,11 +52,22 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 5. **Backend API (`api/`)**
    - `lessons.php`: Lấy danh sách bài học; **lưu tiến độ** HS (`save_progress`, `reset_progress`); **soạn bài** GV (`save_content` theo `id`/slug, `delete_lesson`, `duplicate_lesson`, `rename_chapter`). Auto-migrate schema (`ensure_lesson_schema`, `ensure_progress_schema`) dùng try-catch riêng từng cột.
    - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh theo `lesson_id`. Mỗi row gồm `class_name` (từ `users.class_name`); response thêm mảng `classes` (danh sách lớp distinct, đã sort). Cho phép session giáo viên đang hoạt động; admin key vẫn dùng được ở API nhưng UI admin không hiển thị panel tiến độ.
-   - `admin_students.php`: Tạo/sửa học sinh kèm trường `class_name` — dùng để nhóm và lọc tiến độ theo lớp (vd. `6A`, `6B`, `6C` hoặc `Toán 6 tối T3`).
+   - `admin_students.php`: Tạo/sửa/xóa học sinh kèm trường `class_name` — dùng để nhóm và lọc tiến độ theo lớp (vd. `6A`, `6B`, `6C` hoặc `Toán 6 tối T3`). Action `import_batch`: import hàng loạt từ Excel (mảng `rows` + `default_password`, `default_class_name`, `allowed_pages`).
    - `ai_explain.php`: Gọi Gemini trước; nếu hết quota hoặc lỗi thì fallback ShopAIKey (`https://api.shopaikey.com/v1/chat/completions`, mặc định model `deepseek-v4-flash`). Cấu hình key/model trong `admin.html` → `global_config.json`. Trả JSON súc tích; đã tăng giới hạn token và nối tiếp khi câu trả lời bị ngắt.
    - `helpers.php`: Gồm các hàm tiện ích chung (`respond()`, `column_exists()`, `mysql_datetime_or_null()`).
 
-6. **Thi trực tuyến (`thitructuyen.html`)**
+6. **Quản trị tài khoản (`admin.html`)**
+   - Đăng nhập bằng **Admin Key**; quản lý tài khoản HS/GV trên MySQL (`api/admin_students.php`).
+   - **Tạo từng tài khoản**: form Cấp tài khoản học sinh (vai trò, tài khoản, mật khẩu, họ tên, lớp, trang được mở).
+   - **Import Excel hàng loạt** (panel *Import danh sách học sinh từ Excel*):
+     - File mẫu: `templates/DanhSachHocSinh_Mau.xlsx` (tải từ repo hoặc nút **Tạo file mẫu mới** trên trang).
+     - Cột Excel: `STT | Tài khoản | Mật khẩu | Họ và tên | Lớp/Nhóm` — **bắt buộc** Tài khoản + Họ và tên.
+     - Mật khẩu/Lớp để trống → dùng **mật khẩu mặc định** / **lớp mặc định** trên màn hình import.
+     - Chọn trang mở (checkbox giống form tạo tài khoản); tài khoản trùng → **cập nhật** thông tin.
+     - Frontend đọc `.xlsx/.xls/.csv` bằng SheetJS; gửi `action: import_batch` lên API.
+   - **Lên lớp hàng loạt**: chuyển HS từ lộ trình Toán 6→7, 7→8, 8→9 (cập nhật `allowed_pages` + `class_name`).
+
+7. **Thi trực tuyến (`thitructuyen.html`)**
    - Frontend React (CDN). **Dữ liệu đề thi & kết quả** lưu MySQL trên hosting qua `api/exam.php` (`EXAM_API` tự trỏ cùng domain). **AI soạn đề** (quét PDF, nhận diện câu hỏi) vẫn gọi HuggingFace: `AI_API` mặc định `https://hoangthiencm-giangbai.hf.space` (ghi đè `localStorage.omr_backend_url`).
    - **Giáo viên**: soạn đề (PDF/Word + AI), lưu kho đề, xem QR/link chia sẻ, xem kết quả, xuất Excel.
    - **Học sinh**: mở link `?mode=student&examId=...` (không cần đăng nhập — `access-control.js` bỏ qua khi có `examId`).

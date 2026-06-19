@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-20 — Thi trực tuyến (`thitructuyen.html`): fix nộp bài mobile/Zalo, lưu tên HS, xuất Excel đề gốc, nút Copy QR.*
+*Cập nhật: 2026-06-19 — Import Excel danh sách HS (`admin.html`); thi trực tuyến lưu hosting (`api/exam.php`).*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -56,6 +56,10 @@
   - **QR chia sẻ đề**: thêm nút **Copy** cạnh link thi (hỗ trợ gửi Zalo).
   - **Xóa kết quả HS** (GV): cột Thao tác + xóa từng dòng; nút xóa hàng loạt bản ghi test (`TEST*`, `Test...`).
   - **Lưu trữ hosting**: đề thi + kết quả + nộp bài chuyển sang MySQL (`api/exam.php`); AI soạn đề vẫn HuggingFace.
+- [x] **Import Excel danh sách học sinh** (`admin.html` + `api/admin_students.php`):
+  - Panel import hàng loạt: mật khẩu/lớp mặc định, chọn trang mở, đọc file Excel (SheetJS).
+  - File mẫu `templates/DanhSachHocSinh_Mau.xlsx`; nút **Tải file Excel mẫu** / **Tạo file mẫu mới**.
+  - API `import_batch`: tạo mới hoặc cập nhật nếu trùng tài khoản; báo số tạo/cập nhật/lỗi.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -86,6 +90,7 @@
 - [ ] **Thi trực tuyến — Xuất Excel**: file có 8 cột; cột câu đúng/sai là số **Câu X** theo đề gốc, khớp đáp án GV.
 - [ ] **Thi trực tuyến — HS thi nhiều lần**: khối "Học sinh thi nhiều lần" gom đúng theo 2 lần / 3 lần.
 - [ ] **Thi trực tuyến — hosting**: upload `api/exam.php` + chạy SQL bảng `exams`/`exam_submissions` → lưu đề, nộp bài, xóa kết quả trên MySQL hosting.
+- [ ] **Admin — Import Excel HS**: tải `templates/DanhSachHocSinh_Mau.xlsx` → điền lớp `6A` → import → kiểm tra danh sách HS và lọc lớp trong panel tiến độ GV.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
