@@ -345,9 +345,34 @@
     </script>
 
     <script type="text/babel" data-presets="env,react">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
 
+        const formatApiError = (err, fallback = "Đã xảy ra lỗi.") => {
+            const data = err?.response?.data;
+            if (!data) return err?.message || fallback;
+            const detail = data.detail ?? data.message ?? data.error;
+            if (!detail) return fallback;
+            if (typeof detail === "string") return detail;
+            if (Array.isArray(detail)) {
+                return detail.map(item => {
+                    if (typeof item === "string") return item;
+                    const field = Array.isArray(item.loc) ? item.loc.filter(part => part !== "body").join(".") : "";
+                    const msg = item.msg || item.message || JSON.stringify(item);
+                    return field ? `${field}: ${msg}` : msg;
+                }).join("\n");
+            }
+            if (typeof detail === "object") {
+                return detail.message || detail.msg || JSON.stringify(detail);
+            }
+            return String(detail);
+        };
+
+        const isMobileExamClient = () => {
+            const ua = navigator.userAgent || "";
+            return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+                || /Zalo|FBAN|FBAV|Line|MicroMessenger|Instagram|Twitter/i.test(ua);
+        };
 
         // --- HELPER COMPONENTS ---
 
@@ -410,20 +435,62 @@
 
         const QRModal = ({ link, onClose }) => {
             const qrRef = useRef();
-            useEffect(() => { if (qrRef.current) { qrRef.current.innerHTML = ""; new QRCode(qrRef.current, { text: link, width: 200, height: 200 }); } }, [link]);
+            const linkInputRef = useRef(null);
+            const [copied, setCopied] = useState(false);
+
+            useEffect(() => {
+                if (qrRef.current) {
+                    qrRef.current.innerHTML = "";
+                    new QRCode(qrRef.current, { text: link, width: 200, height: 200 });
+                }
+            }, [link]);
+
+            const copyLink = async () => {
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(link);
+                    } else if (linkInputRef.current) {
+                        linkInputRef.current.focus();
+                        linkInputRef.current.select();
+                        document.execCommand("copy");
+                    } else {
+                        throw new Error("Không thể truy cập clipboard");
+                    }
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch {
+                    if (linkInputRef.current) {
+                        linkInputRef.current.focus();
+                        linkInputRef.current.select();
+                    }
+                    alert("Không copy tự động được. Vui lòng bấm vào ô link rồi copy thủ công.");
+                }
+            };
+
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal-box text-center" onClick={e => e.stopPropagation()}>
                         <h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3>
                         <div ref={qrRef} className="flex justify-center my-4"></div>
                         <div className="mb-3 text-left">
-                            <label className="text-xs text-gray-500 font-bold block mb-1">Đường dẫn (Copy để gửi Zalo):</label>
-                            <input
-                                value={link}
-                                readOnly
-                                className="qr-link w-full border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
-                                onClick={(e) => e.target.select()}
-                            />
+                            <label className="text-xs text-gray-500 font-bold block mb-1">Đường dẫn (gửi Zalo cho học sinh):</label>
+                            <div className="flex gap-2">
+                                <input
+                                    ref={linkInputRef}
+                                    value={link}
+                                    readOnly
+                                    className="qr-link flex-1 border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
+                                    onClick={(e) => e.target.select()}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={copyLink}
+                                    className={`shrink-0 px-4 py-2 rounded text-sm font-bold transition ${copied ? "bg-green-600 text-white" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
+                                >
+                                    <i className={`fas ${copied ? "fa-check" : "fa-copy"} mr-1`}></i>
+                                    {copied ? "Đã copy" : "Copy"}
+                                </button>
+                            </div>
                         </div>
                         <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button>
                     </div>
@@ -1310,8 +1377,9 @@
         };
 
         const StudentView = ({ examId }) => {
+            const isMobileClient = useMemo(() => isMobileExamClient(), []);
             const [step, setStep] = useState("loading");
-            const [info, setInfo] = useState({});
+            const [info, setInfo] = useState({ name: "", sbd: "", class: "" });
             const [exam, setExam] = useState(null);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
             const [answers, setAnswers] = useState({});
@@ -1319,8 +1387,62 @@
             const [error, setError] = useState(null);
             const [violationCount, setViolationCount] = useState(0);
             const [isLockedOut, setIsLockedOut] = useState(false);
-            // Ref để lưu trữ hàm cleanup event listener
+            const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+            const [submitting, setSubmitting] = useState(false);
+            const answersRef = useRef({});
+            const infoRef = useRef({ name: "", sbd: "", class: "" });
+            const nameInputRef = useRef(null);
+            const sbdInputRef = useRef(null);
+            const classInputRef = useRef(null);
+            const examRef = useRef(null);
+            const submittingRef = useRef(false);
+            const timeUpHandledRef = useRef(false);
             const cleanupListenersRef = useRef(null);
+            const infoStorageKey = `exam_student_info_${examId}`;
+
+            const persistInfo = (nextInfo) => {
+                const snapshot = {
+                    name: (nextInfo.name || "").trim(),
+                    sbd: (nextInfo.sbd || "").trim(),
+                    class: (nextInfo.class || "").trim()
+                };
+                infoRef.current = snapshot;
+                try { sessionStorage.setItem(infoStorageKey, JSON.stringify(snapshot)); } catch { }
+                return snapshot;
+            };
+
+            const readStoredInfo = () => {
+                try {
+                    const raw = sessionStorage.getItem(infoStorageKey);
+                    return raw ? JSON.parse(raw) : null;
+                } catch {
+                    return null;
+                }
+            };
+
+            const readInfoFromInputs = () => ({
+                name: (nameInputRef.current?.value || "").trim(),
+                sbd: (sbdInputRef.current?.value || "").trim(),
+                class: (classInputRef.current?.value || "").trim()
+            });
+
+            const getSubmitInfo = () => {
+                const stored = readStoredInfo() || {};
+                const refInfo = infoRef.current || {};
+                const stateInfo = info || {};
+                return {
+                    name: (refInfo.name || stored.name || stateInfo.name || "").trim(),
+                    sbd: (refInfo.sbd || stored.sbd || stateInfo.sbd || "").trim(),
+                    class: (refInfo.class || stored.class || stateInfo.class || "").trim()
+                };
+            };
+
+            const updateInfoField = (field, value) => {
+                setInfo(prev => persistInfo({ ...prev, [field]: value }));
+            };
+
+            useEffect(() => { answersRef.current = answers; }, [answers]);
+            useEffect(() => { examRef.current = exam; }, [exam]);
 
             useEffect(() => {
                 axios.get(`${API_BASE}/api/exam/get/${examId}`).then(res => {
@@ -1342,13 +1464,118 @@
                 }
             }, [step, exam]);
 
-            useEffect(() => {
-                if (step === "exam") {
-                    const timer = setInterval(() => setTimeLeft(v => {
-                        if (v <= 1) { handleSubmit(true); return 0; }
-                        return v - 1;
-                    }), 1000);
+            const safeExitFullscreen = async () => {
+                try {
+                    const active = document.fullscreenElement || document.webkitFullscreenElement;
+                    if (!active) return;
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                    if (!exit) return;
+                    await Promise.race([
+                        exit.call(document),
+                        new Promise(resolve => setTimeout(resolve, 1200))
+                    ]);
+                } catch { }
+            };
 
+            const normalizeAnswersPayload = (rawAnswers) => {
+                const payload = {};
+                Object.entries(rawAnswers || {}).forEach(([key, value]) => {
+                    if (value === undefined || value === null || value === "") return;
+                    payload[String(key)] = Number(value);
+                });
+                return payload;
+            };
+
+            const handleSubmit = useCallback(async (auto = false) => {
+                const currentExam = examRef.current;
+                if (!currentExam?.questions?.length) {
+                    alert("Không tải được đề thi. Vui lòng tải lại trang.");
+                    return;
+                }
+                if (submittingRef.current) return;
+
+                const currentAnswers = answersRef.current;
+                const currentInfo = getSubmitInfo();
+                const answeredCount = Object.keys(currentAnswers).length;
+                const totalCount = currentExam.questions.length;
+
+                if (!currentInfo.name || !currentInfo.sbd) {
+                    alert("Thiếu Họ tên hoặc SBD. Vui lòng tải lại trang, nhập đầy đủ thông tin rồi làm bài lại.");
+                    submittingRef.current = false;
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (!auto) {
+                    if (answeredCount < totalCount) {
+                        alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                        return;
+                    }
+                    if (!isMobileClient && !window.confirm("Bạn chắc chắn muốn nộp bài?")) return;
+                }
+
+                submittingRef.current = true;
+                setSubmitting(true);
+                setShowSubmitConfirm(false);
+
+                if (cleanupListenersRef.current) {
+                    cleanupListenersRef.current();
+                    cleanupListenersRef.current = null;
+                }
+
+                try {
+                    await safeExitFullscreen();
+                    const res = await axios.post(`${API_BASE}/api/exam/submit`, {
+                        exam_id: examId,
+                        student_name: currentInfo.name,
+                        sbd: currentInfo.sbd,
+                        student_class: currentInfo.class,
+                        answers: normalizeAnswersPayload(currentAnswers)
+                    }, { timeout: 45000 });
+                    setExam(prev => ({ ...(prev || {}), ...res.data }));
+                    setStep("result");
+                } catch (e) {
+                    const message = formatApiError(e, "Lỗi nộp bài!");
+                    alert(message);
+                    submittingRef.current = false;
+                    setSubmitting(false);
+                }
+            }, [examId, isMobileClient]);
+
+            const requestManualSubmit = () => {
+                const currentExam = examRef.current;
+                const currentAnswers = answersRef.current;
+                const answeredCount = Object.keys(currentAnswers).length;
+                const totalCount = currentExam?.questions?.length || 0;
+                if (answeredCount < totalCount) {
+                    alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                    return;
+                }
+                if (isMobileClient) {
+                    setShowSubmitConfirm(true);
+                    return;
+                }
+                handleSubmit(false);
+            };
+
+            useEffect(() => {
+                if (step !== "exam") return;
+
+                timeUpHandledRef.current = false;
+                const timer = setInterval(() => {
+                    setTimeLeft(v => {
+                        if (v <= 1) {
+                            if (!timeUpHandledRef.current) {
+                                timeUpHandledRef.current = true;
+                                handleSubmit(true);
+                            }
+                            return 0;
+                        }
+                        return v - 1;
+                    });
+                }, 1000);
+
+                if (!isMobileClient) {
                     const handleViolation = () => {
                         setViolationCount(prev => {
                             const newCount = prev + 1;
@@ -1356,41 +1583,40 @@
                                 alert("Vi phạm quy chế (thoát màn hình) quá 3 lần. Hệ thống tự động thu bài!");
                                 handleSubmit(true);
                             } else {
-                                setIsLockedOut(true); // Khóa màn hình
+                                setIsLockedOut(true);
                             }
                             return newCount;
                         });
                     };
 
                     const checkFullscreen = () => {
-                        if (!document.fullscreenElement) {
+                        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                             handleViolation();
                         }
                     };
 
                     const checkVisibility = () => {
-                        if (document.hidden) {
-                            handleViolation();
-                        }
+                        if (document.hidden) handleViolation();
                     };
 
                     document.addEventListener("fullscreenchange", checkFullscreen);
                     document.addEventListener("visibilitychange", checkVisibility);
                     window.addEventListener("blur", checkVisibility);
 
-                    // Lưu hàm cleanup để gọi thủ công khi nộp bài
                     cleanupListenersRef.current = () => {
                         document.removeEventListener("fullscreenchange", checkFullscreen);
                         document.removeEventListener("visibilitychange", checkVisibility);
                         window.removeEventListener("blur", checkVisibility);
                     };
-
-                    return () => {
-                        clearInterval(timer);
-                        if (cleanupListenersRef.current) cleanupListenersRef.current();
-                    };
+                } else {
+                    cleanupListenersRef.current = null;
                 }
-            }, [step]);
+
+                return () => {
+                    clearInterval(timer);
+                    if (cleanupListenersRef.current) cleanupListenersRef.current();
+                };
+            }, [step, isMobileClient, handleSubmit]);
 
             const enterFullscreen = () => {
                 const elem = document.documentElement;
@@ -1400,50 +1626,23 @@
             };
 
             const startExam = () => {
-                if (!info.name || !info.sbd) return alert("Vui lòng nhập Họ tên và SBD!");
-                enterFullscreen();
+                const fromInputs = readInfoFromInputs();
+                const snapshot = persistInfo({
+                    name: fromInputs.name || info.name,
+                    sbd: fromInputs.sbd || info.sbd,
+                    class: fromInputs.class || info.class
+                });
+                if (!snapshot.name || !snapshot.sbd) {
+                    return alert("Vui lòng nhập Họ tên và SBD!");
+                }
+                setInfo(snapshot);
+                if (!isMobileClient) enterFullscreen();
                 setStep("exam");
             };
 
             const unlockExam = () => {
-                enterFullscreen();
+                if (!isMobileClient) enterFullscreen();
                 setIsLockedOut(false);
-            };
-
-            const handleSubmit = async (auto = false) => {
-                const answeredCount = Object.keys(answers).length;
-                const totalCount = exam.questions.length;
-
-                if (!auto) {
-                    if (answeredCount < totalCount) {
-                        alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
-                        return;
-                    }
-                    if (!confirm("Bạn chắc chắn muốn nộp bài?")) return;
-                }
-
-                // QUAN TRỌNG: Hủy đăng ký sự kiện trước khi thoát fullscreen để tránh tính vi phạm oan
-                if (cleanupListenersRef.current) {
-                    cleanupListenersRef.current();
-                    cleanupListenersRef.current = null;
-                }
-
-                try {
-                    // Thoát fullscreen trước khi gửi request (tránh giao diện bị kẹt)
-                    if (document.exitFullscreen) await document.exitFullscreen().catch(() => { });
-
-                    const res = await axios.post(`${API_BASE}/api/exam/submit`, {
-                        exam_id: examId,
-                        student_name: info.name,
-                        sbd: info.sbd,
-                        student_class: info.class,
-                        answers: answers
-                    });
-                    setExam(res.data);
-                    setStep("result");
-                } catch (e) {
-                    alert(e.response?.data?.detail || "Lỗi nộp bài!");
-                }
             };
 
             const handleSelectAnswer = (originalQIdx, originalOptIdx) => {
@@ -1460,11 +1659,26 @@
                         <h2 className="text-2xl font-bold mb-2 text-gray-800">{exam.info.title}</h2>
                         <div className="flex justify-center gap-4 text-sm text-gray-500 mb-6"><span><i className="fas fa-clock"></i> {exam.info.duration_mins} phút</span><span><i className="fas fa-question-circle"></i> {exam.questions.length} câu</span></div>
                         <div className="space-y-3 text-left">
-                            <div><label className="text-xs font-bold text-gray-700">Họ và Tên (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="Nguyễn Văn A" onChange={e => setInfo({ ...info, name: e.target.value })} /></div>
-                            <div><label className="text-xs font-bold text-gray-700">Số Báo Danh (*)</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="SBD123456" onChange={e => setInfo({ ...info, sbd: e.target.value })} /></div>
-                            <div><label className="text-xs font-bold text-gray-700">Lớp</label><input className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="12A1" onChange={e => setInfo({ ...info, class: e.target.value })} /></div>
+                            <div><label className="text-xs font-bold text-gray-700">Họ và Tên (*)</label><input ref={nameInputRef} name="student_name" autoComplete="name" value={info.name} className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="Nguyễn Văn A" onChange={e => updateInfoField("name", e.target.value)} onBlur={e => updateInfoField("name", e.target.value)} /></div>
+                            <div><label className="text-xs font-bold text-gray-700">Số Báo Danh (*)</label><input ref={sbdInputRef} name="student_sbd" autoComplete="off" value={info.sbd} className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="SBD123456" onChange={e => updateInfoField("sbd", e.target.value)} onBlur={e => updateInfoField("sbd", e.target.value)} /></div>
+                            <div><label className="text-xs font-bold text-gray-700">Lớp</label><input ref={classInputRef} name="student_class" autoComplete="off" value={info.class} className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="12A1" onChange={e => updateInfoField("class", e.target.value)} onBlur={e => updateInfoField("class", e.target.value)} /></div>
                         </div>
-                        <div className="mt-6 bg-yellow-50 text-yellow-800 p-3 rounded text-xs text-left border border-yellow-200"><strong><i className="fas fa-exclamation-triangle"></i> CẢNH BÁO QUAN TRỌNG:</strong><br />- Hệ thống bật chế độ <b>TOÀN MÀN HÌNH</b>.<br />- <b>TUYỆT ĐỐI KHÔNG</b> thoát màn hình hoặc chuyển tab.<br />- Nếu vi phạm <b>3 lần</b> sẽ bị <b>THU BÀI</b> ngay lập tức.</div>
+                        <div className="mt-6 bg-yellow-50 text-yellow-800 p-3 rounded text-xs text-left border border-yellow-200">
+                            <strong><i className="fas fa-exclamation-triangle"></i> LƯU Ý:</strong><br />
+                            {isMobileClient ? (
+                                <>
+                                    - Làm bài trên điện thoại/Zalo: giữ nguyên màn hình thi, không thoát app giữa chừng.<br />
+                                    - Làm hết tất cả câu rồi bấm <b>Nộp Bài</b>. Hết giờ hệ thống tự nộp.<br />
+                                    - Nếu lỗi, thử mở link bằng Chrome/Safari thay vì Zalo.
+                                </>
+                            ) : (
+                                <>
+                                    - Hệ thống bật chế độ <b>TOÀN MÀN HÌNH</b>.<br />
+                                    - <b>TUYỆT ĐỐI KHÔNG</b> thoát màn hình hoặc chuyển tab.<br />
+                                    - Nếu vi phạm <b>3 lần</b> sẽ bị <b>THU BÀI</b> ngay lập tức.
+                                </>
+                            )}
+                        </div>
                         <button onClick={startExam} className="mt-6 bg-indigo-600 text-white w-full py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">VÀO THI NGAY</button>
                     </div>
                 </div>
@@ -1486,8 +1700,23 @@
 
             return (
                 <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
-                    {/* Anti-Cheat Overlay */}
-                    {isLockedOut && (
+                    {showSubmitConfirm && (
+                        <div className="modal-overlay" onClick={() => !submitting && setShowSubmitConfirm(false)}>
+                            <div className="modal-box text-center" onClick={e => e.stopPropagation()}>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-800">Xác nhận nộp bài</h3>
+                                <p className="text-sm text-gray-600 mb-5">Bạn đã hoàn thành tất cả câu hỏi. Bấm <b>Nộp bài</b> để gửi kết quả.</p>
+                                <div className="flex gap-2">
+                                    <button type="button" disabled={submitting} onClick={() => setShowSubmitConfirm(false)} className="flex-1 bg-gray-100 text-gray-700 px-4 py-3 rounded-lg font-bold">Làm tiếp</button>
+                                    <button type="button" disabled={submitting} onClick={() => handleSubmit(false)} className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-lg font-bold disabled:opacity-60">
+                                        {submitting ? "Đang nộp..." : "Nộp bài"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Anti-Cheat Overlay - chỉ máy tính */}
+                    {!isMobileClient && isLockedOut && (
                         <div className="violation-overlay">
                             <div className="text-6xl text-red-500 mb-4"><i className="fas fa-exclamation-triangle"></i></div>
                             <h2 className="text-2xl font-bold mb-2 text-red-500">CẢNH BÁO VI PHẠM!</h2>
@@ -1496,11 +1725,16 @@
                         </div>
                     )}
 
-                    <div className={`max-w-4xl mx-auto pb-20 ${isLockedOut ? 'blur-sm pointer-events-none' : ''}`}>
+                    <div className={`max-w-4xl mx-auto pb-20 ${!isMobileClient && isLockedOut ? 'blur-sm pointer-events-none' : ''}`}>
                         <div className="sticky top-0 bg-white/95 backdrop-blur shadow-md px-4 py-3 rounded-b-xl flex justify-between items-center z-30 border-t-4 border-indigo-600">
                             <div><div className="font-bold text-gray-800 text-sm truncate w-32">{info.name}</div><div className="text-xs text-gray-500 font-mono">{info.sbd}</div></div>
-                            <div className="hidden md:block bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-600">Đã làm: <span className="text-indigo-600">{Object.keys(answers).length}</span>/{shuffledQuestions.length}</div>
-                            <div className="flex items-center gap-3"><div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-indigo-700'}`}>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div><button onClick={() => handleSubmit(false)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 shadow transition">Nộp Bài</button></div>
+                            <div className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-600">Đã làm: <span className="text-indigo-600">{Object.keys(answers).length}</span>/{shuffledQuestions.length}</div>
+                            <div className="flex items-center gap-3">
+                                <div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-indigo-700'}`}>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+                                <button type="button" disabled={submitting} onClick={requestManualSubmit} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 shadow transition disabled:opacity-60">
+                                    {submitting ? "Đang nộp..." : "Nộp Bài"}
+                                </button>
+                            </div>
                         </div>
                         <div className="h-1 w-full bg-gray-200 fixed top-[68px] left-0 z-20 md:hidden"><div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${(Object.keys(answers).length / shuffledQuestions.length) * 100}%` }}></div></div>
                         <div className="p-4 space-y-6 mt-2">
@@ -1529,8 +1763,244 @@
         };
 
         const ResultDetail = ({ examId, onBack }) => {
-            const [results, setResults] = useState([]); useEffect(() => { axios.get(`${API_BASE}/api/exam/results/${examId}`).then(res => setResults(res.data)); }, [examId]);
-            return (<div className="max-w-6xl mx-auto p-6"><button onClick={onBack} className="mb-4 text-gray-600 hover:text-indigo-600 flex items-center gap-2 font-bold"><i className="fas fa-arrow-left"></i> Quay lại</button><div className="bg-white rounded-xl shadow overflow-hidden"><div className="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 className="font-bold text-lg text-gray-800">Kết quả thi</h3><button onClick={() => { const ws = XLSX.utils.json_to_sheet(results); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "KetQua"); XLSX.writeFile(wb, "KetQuaThi.xlsx"); }} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold"><i className="fas fa-file-excel mr-1"></i> Xuất Excel</button></div><table className="w-full text-left"><thead className="bg-indigo-50 border-b"><tr><th className="p-3">Tên HS</th><th className="p-3">SBD</th><th className="p-3">Lớp</th><th className="p-3">Điểm</th><th className="p-3">Số câu đúng</th></tr></thead><tbody>{results.map((r, i) => (<tr key={i} className="border-b hover:bg-gray-50"><td className="p-3 font-bold text-gray-700">{r.student_name}</td><td className="p-3 text-gray-600">{r.sbd}</td><td className="p-3 text-gray-600">{r.student_class}</td><td className="p-3 font-bold text-indigo-600">{r.score}</td><td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td></tr>))}</tbody></table></div></div>);
+            const [results, setResults] = useState([]);
+            const [examQuestions, setExamQuestions] = useState([]);
+
+            useEffect(() => {
+                Promise.all([
+                    axios.get(`${API_BASE}/api/exam/results/${examId}`),
+                    axios.get(`${API_BASE}/api/exam/get/${examId}`)
+                ]).then(([resResults, resExam]) => {
+                    setResults(resResults.data || []);
+                    setExamQuestions(resExam.data?.questions || []);
+                }).catch(() => {
+                    axios.get(`${API_BASE}/api/exam/results/${examId}`)
+                        .then(res => setResults(res.data || []))
+                        .catch(() => setResults([]));
+                });
+            }, [examId]);
+
+            const resultRows = useMemo(() => {
+                const attemptCountByKey = {};
+                results.forEach(r => {
+                    const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
+                    attemptCountByKey[key] = (attemptCountByKey[key] || 0) + 1;
+                });
+                return [...results]
+                    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                    .map((r, index) => {
+                        const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
+                        return { ...r, attemptNo: attemptCountByKey[key]--, rowKey: `${r.id || index}-${r.created_at || index}` };
+                    });
+            }, [results]);
+
+            const repeatGroups = useMemo(() => {
+                const grouped = {};
+                results.forEach(r => {
+                    const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(r);
+                });
+                const byCount = {};
+                Object.values(grouped).forEach(attempts => {
+                    if (attempts.length < 2) return;
+                    const count = attempts.length;
+                    const sorted = [...attempts].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+                    const latest = sorted[0];
+                    if (!byCount[count]) byCount[count] = [];
+                    byCount[count].push({
+                        name: latest.student_name,
+                        sbd: latest.sbd,
+                        className: latest.student_class,
+                        scores: sorted.map(item => item.score).join(", ")
+                    });
+                });
+                return Object.keys(byCount)
+                    .map(Number)
+                    .sort((a, b) => a - b)
+                    .map(count => ({ count, students: byCount[count].sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi")) }));
+            }, [results]);
+
+            const stripMathDelimiters = (text) => String(text || "").replace(/\$/g, "").replace(/\\textbf\{([^}]+)\}/g, "$1").replace(/\\textit\{([^}]+)\}/g, "$1").replace(/\s+/g, " ").trim();
+
+            const normalizeQuestionText = (text) => stripMathDelimiters(text)
+                .replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, "")
+                .toLowerCase();
+
+            const originalQuestionList = useMemo(() => (
+                examQuestions.map((q, idx) => ({
+                    no: idx + 1,
+                    text: normalizeQuestionText(q.question || q.q || "")
+                }))
+            ), [examQuestions]);
+
+            const questionLookup = useMemo(() => {
+                const map = new Map();
+                originalQuestionList.forEach(item => {
+                    if (item.text) map.set(item.text, item.no);
+                });
+                return map;
+            }, [originalQuestionList]);
+
+            const findOriginalQuestionNo = (questionText) => {
+                const key = normalizeQuestionText(questionText);
+                if (!key) return null;
+                if (questionLookup.has(key)) return questionLookup.get(key);
+                let best = null;
+                let bestLen = 0;
+                originalQuestionList.forEach(item => {
+                    if (!item.text) return;
+                    if (item.text === key || item.text.includes(key) || key.includes(item.text)) {
+                        const overlap = Math.min(item.text.length, key.length);
+                        if (overlap > bestLen) {
+                            bestLen = overlap;
+                            best = item.no;
+                        }
+                    }
+                });
+                return best;
+            };
+
+            const parseWrongItems = (detailsJson) => {
+                if (!detailsJson) return [];
+                try {
+                    const details = typeof detailsJson === "string" ? JSON.parse(detailsJson) : detailsJson;
+                    return Array.isArray(details) ? details : [];
+                } catch {
+                    return [];
+                }
+            };
+
+            const splitCorrectWrong = (result) => {
+                const total = Number(result.total_questions) || examQuestions.length || 0;
+                const wrongItems = parseWrongItems(result.details_json);
+                const wrongNums = [];
+                wrongItems.forEach(item => {
+                    const num = findOriginalQuestionNo(item.q || item.question || "");
+                    if (num && !wrongNums.includes(num)) wrongNums.push(num);
+                });
+                wrongNums.sort((a, b) => a - b);
+
+                const expectedWrong = Math.max(0, total - Number(result.correct_count || 0));
+                if (wrongNums.length !== expectedWrong && expectedWrong > 0 && wrongItems.length === expectedWrong) {
+                    const used = new Set(wrongNums);
+                    wrongItems.forEach(item => {
+                        if (wrongNums.length >= expectedWrong) return;
+                        const key = normalizeQuestionText(item.q || item.question || "");
+                        originalQuestionList.forEach(q => {
+                            if (wrongNums.length >= expectedWrong) return;
+                            if (used.has(q.no)) return;
+                            if (q.text && key && (q.text.startsWith(key.slice(0, 24)) || key.startsWith(q.text.slice(0, 24)))) {
+                                wrongNums.push(q.no);
+                                used.add(q.no);
+                            }
+                        });
+                    });
+                    wrongNums.sort((a, b) => a - b);
+                }
+
+                const wrongSet = new Set(wrongNums);
+                const correctNums = [];
+                for (let i = 1; i <= total; i++) {
+                    if (!wrongSet.has(i)) correctNums.push(i);
+                }
+                return { correctNums, wrongNums };
+            };
+
+            const formatQuestionNums = (nums) => nums.length ? nums.map(n => `Câu ${n}`).join(", ") : "—";
+
+            const exportExcel = () => {
+                const header = ["STT", "Họ và tên", "Số báo danh", "Lớp học", "Điểm", "Kết quả", "Các câu đúng (đề gốc)", "Các câu sai (đề gốc)"];
+                const note = "Ghi chú: STT câu đúng/sai theo đề gốc của giáo viên. Học sinh làm đề đã trộn nên thứ tự trên màn hình HS khác với đề gốc.";
+                const dataRows = [...resultRows]
+                    .sort((a, b) => (a.student_name || "").localeCompare(b.student_name || "", "vi"))
+                    .map((r, index) => {
+                        const { correctNums, wrongNums } = splitCorrectWrong(r);
+                        return [
+                            index + 1,
+                            (r.student_name || "").trim(),
+                            (r.sbd || "").trim(),
+                            (r.student_class || "").trim(),
+                            r.score,
+                            `${r.correct_count ?? 0}/${r.total_questions ?? 0}`,
+                            formatQuestionNums(correctNums),
+                            formatQuestionNums(wrongNums)
+                        ];
+                    });
+                const ws = XLSX.utils.aoa_to_sheet([[note], [], header, ...dataRows]);
+                ws["!cols"] = [
+                    { wch: 5 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
+                    { wch: 8 }, { wch: 10 }, { wch: 28 }, { wch: 28 }
+                ];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "KetQua");
+                XLSX.writeFile(wb, "KetQuaThi.xlsx");
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    <button onClick={onBack} className="mb-4 text-gray-600 hover:text-indigo-600 flex items-center gap-2 font-bold">
+                        <i className="fas fa-arrow-left"></i> Quay lại
+                    </button>
+
+                    {repeatGroups.length > 0 && (
+                        <div className="mb-6 space-y-3">
+                            <h3 className="font-bold text-lg text-gray-800">Học sinh thi nhiều lần</h3>
+                            {repeatGroups.map(group => (
+                                <div key={group.count} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                    <div className="font-bold text-amber-800 mb-2">
+                                        Thi {group.count} lần ({group.students.length} em)
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {group.students.map((student, idx) => (
+                                            <span key={`${student.sbd}-${idx}`} className="inline-flex items-center gap-2 bg-white border border-amber-200 rounded-full px-3 py-1 text-sm text-gray-700">
+                                                <span className="font-semibold">{student.name}</span>
+                                                <span className="text-gray-400 font-mono text-xs">{student.sbd}</span>
+                                                <span className="text-amber-700 text-xs">({student.scores})</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-bold text-lg text-gray-800">Kết quả thi ({results.length} lượt)</h3>
+                            <button onClick={exportExcel} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold">
+                                <i className="fas fa-file-excel mr-1"></i> Xuất Excel
+                            </button>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-indigo-50 border-b">
+                                <tr>
+                                    <th className="p-3">Tên HS</th>
+                                    <th className="p-3">SBD</th>
+                                    <th className="p-3">Lớp</th>
+                                    <th className="p-3">Lần</th>
+                                    <th className="p-3">Điểm</th>
+                                    <th className="p-3">Số câu đúng</th>
+                                    <th className="p-3">Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {resultRows.map(r => (
+                                    <tr key={r.rowKey} className={`border-b hover:bg-gray-50 ${r.attemptNo > 1 ? "bg-amber-50/40" : ""}`}>
+                                        <td className="p-3 font-bold text-gray-700">{r.student_name}</td>
+                                        <td className="p-3 text-gray-600">{r.sbd}</td>
+                                        <td className="p-3 text-gray-600">{r.student_class || "—"}</td>
+                                        <td className="p-3 text-sm font-bold text-amber-700">{r.attemptNo > 1 ? `Lần ${r.attemptNo}` : "Lần 1"}</td>
+                                        <td className="p-3 font-bold text-indigo-600">{r.score}</td>
+                                        <td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td>
+                                        <td className="p-3 text-xs text-gray-500">{r.created_at ? new Date(r.created_at).toLocaleString("vi-VN") : "—"}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
         };
 
         const App = () => {
