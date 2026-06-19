@@ -7,6 +7,7 @@
     <title>Admin Panel - Quản Lý Người Dùng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 
 <body class="bg-slate-100 p-6 font-sans">
@@ -1074,6 +1075,47 @@
                     </div>
                     <p id="bulkPromoteHint" class="mt-2 text-sm font-semibold text-emerald-900"></p>
                 </div>
+                <div class="mb-5 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <h4 class="font-bold text-indigo-900"><i class="fas fa-file-excel mr-2"></i>Import danh sách học sinh từ Excel</h4>
+                            <p class="mt-1 text-sm text-indigo-800">Tải file mẫu, điền lớp và danh sách HS, rồi import một lần cho cả lớp.</p>
+                            <p class="mt-2 text-xs text-indigo-700">Cột bắt buộc: <b>Tài khoản</b>, <b>Họ và tên</b>. Mật khẩu/Lớp để trống sẽ dùng giá trị mặc định bên dưới.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="templates/DanhSachHocSinh_Mau.xlsx" download class="inline-flex items-center rounded bg-white px-4 py-2 text-sm font-bold text-indigo-700 border border-indigo-300 hover:bg-indigo-100">
+                                <i class="fas fa-download mr-2"></i> Tải file Excel mẫu
+                            </a>
+                            <button type="button" id="downloadStudentTemplateBtn" class="inline-flex items-center rounded bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700">
+                                <i class="fas fa-file-export mr-2"></i> Tạo file mẫu mới
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <label class="text-sm font-bold text-indigo-900">
+                            Mật khẩu mặc định
+                            <input id="importDefaultPassword" value="123456" class="mt-1 w-full rounded border border-indigo-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        </label>
+                        <label class="text-sm font-bold text-indigo-900">
+                            Lớp mặc định
+                            <input id="importDefaultClass" class="mt-1 w-full rounded border border-indigo-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="6A">
+                        </label>
+                        <label class="text-sm font-bold text-indigo-900 md:col-span-2">
+                            Chọn file Excel
+                            <input id="importStudentFile" type="file" accept=".xlsx,.xls,.csv" class="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:rounded file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-indigo-700">
+                        </label>
+                    </div>
+                    <div class="mt-3">
+                        <p class="text-sm font-bold text-indigo-900 mb-2">Trang mở cho học sinh import</p>
+                        <div id="importAllowedPages" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <button type="button" id="importStudentsBtn" class="rounded bg-indigo-700 px-4 py-2.5 text-sm font-bold text-white shadow hover:bg-indigo-800">
+                            <i class="fas fa-upload mr-1"></i> Import danh sách
+                        </button>
+                        <p id="importPreviewHint" class="text-sm font-semibold text-indigo-900"></p>
+                    </div>
+                </div>
                 <form id="createStudentForm" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <label class="text-sm font-bold text-slate-700">
                         Vai trò
@@ -1112,10 +1154,183 @@
             dashboard.insertBefore(panel, listCard);
 
             renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
+            renderPageChecks('importAllowedPages', ['lotrinhtoan6']);
             document.getElementById('createStudentForm').addEventListener('submit', createStudentAccount);
             document.getElementById('bulkPromoteRoute').addEventListener('change', updateBulkPromoteHint);
             document.getElementById('bulkPromoteBtn').addEventListener('click', bulkPromoteStudents);
+            document.getElementById('downloadStudentTemplateBtn').addEventListener('click', downloadStudentTemplate);
+            document.getElementById('importStudentFile').addEventListener('change', previewImportStudentFile);
+            document.getElementById('importStudentsBtn').addEventListener('click', importStudentsFromExcel);
             updateBulkPromoteHint();
+        }
+
+        function normalizeImportHeader(value) {
+            return String(value || '')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim();
+        }
+
+        function mapImportRow(headers, row, lineNo) {
+            const mapped = { line: lineNo };
+            headers.forEach((header, idx) => {
+                const key = normalizeImportHeader(header);
+                const value = row[idx];
+                if (value === undefined || value === null || value === '') return;
+                const text = String(value).trim();
+                if (!text) return;
+
+                if (['tai khoan', 'username', 'tk', 'account'].includes(key) || key.includes('tai khoan')) {
+                    mapped.username = text;
+                } else if (['mat khau', 'password', 'mk'].includes(key) || key.includes('mat khau')) {
+                    mapped.password = text;
+                } else if (['ho va ten', 'ho ten', 'full name', 'fullname', 'ten'].includes(key) || key.includes('ho va ten') || key.includes('ho ten')) {
+                    mapped.full_name = text;
+                } else if (['lop nhom', 'lop', 'class name', 'class', 'nhom'].includes(key) || key.includes('lop')) {
+                    mapped.class_name = text;
+                }
+            });
+            return mapped;
+        }
+
+        function parseStudentWorkbook(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        if (!rows.length) return resolve([]);
+
+                        let headerIndex = 0;
+                        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                            const normalized = (rows[i] || []).map(normalizeImportHeader);
+                            if (normalized.some(cell => cell.includes('tai khoan') || cell.includes('ho va ten') || cell.includes('ho ten'))) {
+                                headerIndex = i;
+                                break;
+                            }
+                        }
+
+                        const headers = rows[headerIndex] || [];
+                        const parsed = [];
+                        for (let i = headerIndex + 1; i < rows.length; i++) {
+                            const row = rows[i] || [];
+                            const firstCell = String(row[0] || '').trim();
+                            if (firstCell.toLowerCase().startsWith('huong dan')) break;
+                            const mapped = mapImportRow(headers, row, i + 1);
+                            if (mapped.username || mapped.full_name) parsed.push(mapped);
+                        }
+                        resolve(parsed);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Không đọc được file Excel.'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function downloadStudentTemplate() {
+            const header = ['STT', 'Tài khoản', 'Mật khẩu', 'Họ và tên', 'Lớp/Nhóm'];
+            const rows = [
+                header,
+                [1, 'HS6A01', '123456', 'Nguyễn Văn An', '6A'],
+                [2, 'HS6A02', '123456', 'Trần Thị Bình', '6A'],
+                [3, 'HS6A03', '123456', 'Lê Văn Cường', '6A'],
+                [],
+                ['Hướng dẫn: Tài khoản và Họ và tên bắt buộc. Mật khẩu/Lớp để trống sẽ dùng giá trị mặc định khi import.']
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 14 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'DanhSachHocSinh');
+            XLSX.writeFile(wb, 'DanhSachHocSinh_Mau.xlsx');
+        }
+
+        let pendingImportRows = [];
+
+        async function previewImportStudentFile(event) {
+            const file = event.target.files?.[0];
+            const hint = document.getElementById('importPreviewHint');
+            pendingImportRows = [];
+            if (!file) {
+                hint.textContent = '';
+                return;
+            }
+            try {
+                pendingImportRows = await parseStudentWorkbook(file);
+                hint.textContent = pendingImportRows.length
+                    ? `Đã đọc ${pendingImportRows.length} học sinh từ file "${file.name}".`
+                    : 'Không tìm thấy dòng học sinh hợp lệ trong file.';
+            } catch (error) {
+                hint.textContent = '';
+                alert(error.message || 'Không đọc được file Excel.');
+            }
+        }
+
+        async function importStudentsFromExcel() {
+            const fileInput = document.getElementById('importStudentFile');
+            const hint = document.getElementById('importPreviewHint');
+            const btn = document.getElementById('importStudentsBtn');
+            if (!cachedKey) return alert('Vui lòng đăng nhập Admin Key trước.');
+
+            let rows = pendingImportRows;
+            if (!rows.length && fileInput.files?.[0]) {
+                rows = await parseStudentWorkbook(fileInput.files[0]);
+            }
+            if (!rows.length) return alert('Chưa có dữ liệu để import. Hãy chọn file Excel hợp lệ.');
+
+            const defaultPassword = document.getElementById('importDefaultPassword').value.trim();
+            const defaultClass = document.getElementById('importDefaultClass').value.trim();
+            const allowedPages = selectedPagesFrom(document.getElementById('importAllowedPages'));
+            if (!defaultPassword) return alert('Vui lòng nhập mật khẩu mặc định.');
+            if (!allowedPages.length) return alert('Chọn ít nhất một trang mở cho học sinh.');
+
+            const preview = rows.slice(0, 5).map(row => `- ${row.full_name || '?'} (${row.username || '?'})`).join('\n');
+            const more = rows.length > 5 ? `\n... và ${rows.length - 5} học sinh khác` : '';
+            if (!confirm(`Import ${rows.length} học sinh?\nLớp mặc định: ${defaultClass || '(theo từng dòng)'}\n\n${preview}${more}`)) return;
+
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Đang import...';
+
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                    body: JSON.stringify({
+                        action: 'import_batch',
+                        rows,
+                        default_password: defaultPassword,
+                        default_class_name: defaultClass,
+                        allowed_pages: allowedPages
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Import thất bại.');
+
+                await loadUsers();
+                fileInput.value = '';
+                pendingImportRows = [];
+                hint.textContent = '';
+
+                let message = `Import xong: tạo mới ${data.created || 0}, cập nhật ${data.updated || 0}.`;
+                if (data.failed?.length) {
+                    const failLines = data.failed.slice(0, 5).map(item => `Dòng ${item.line} (${item.username || '?'}): ${item.error}`).join('\n');
+                    const moreFails = data.failed.length > 5 ? `\n... và ${data.failed.length - 5} lỗi khác` : '';
+                    message += `\n\nLỗi:\n${failLines}${moreFails}`;
+                }
+                alert(message);
+            } catch (error) {
+                alert(error.message || 'Import thất bại.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
         }
 
         function renderPageChecks(containerId, selectedPages) {

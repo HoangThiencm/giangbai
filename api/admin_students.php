@@ -89,4 +89,93 @@ if ($action === 'delete') {
     respond(['ok' => true]);
 }
 
+if ($action === 'import_batch') {
+    $rows = $data['rows'] ?? [];
+    if (!is_array($rows) || count($rows) === 0) {
+        respond(['error' => 'Khong co du lieu hoc sinh de import.'], 422);
+    }
+
+    $defaultPassword = trim((string)($data['default_password'] ?? '123456'));
+    if ($defaultPassword === '') {
+        respond(['error' => 'Can mat khau mac dinh cho hoc sinh.'], 422);
+    }
+
+    $defaultClass = trim((string)($data['default_class_name'] ?? ''));
+    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
+    $pagesJson = json_encode($allowedPages, JSON_UNESCAPED_UNICODE);
+
+    $created = 0;
+    $updated = 0;
+    $failed = [];
+
+    $insert = $pdo->prepare('
+        INSERT INTO users (username, password_hash, full_name, role, class_name, allowed_pages_json, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+    ');
+    $update = $pdo->prepare('
+        UPDATE users
+        SET password_hash = ?, full_name = ?, role = ?, class_name = ?, allowed_pages_json = ?, is_active = 1
+        WHERE id = ?
+    ');
+    $find = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
+
+    foreach ($rows as $index => $row) {
+        if (!is_array($row)) continue;
+
+        $lineNo = (int)($row['line'] ?? ($index + 1));
+        $username = trim((string)($row['username'] ?? ''));
+        $fullName = trim((string)($row['full_name'] ?? ''));
+        $password = trim((string)($row['password'] ?? ''));
+        $className = trim((string)($row['class_name'] ?? ''));
+        $role = (($row['role'] ?? 'student') === 'teacher') ? 'teacher' : 'student';
+
+        if ($username === '' && $fullName === '') continue;
+        if ($username === '' || $fullName === '') {
+            $failed[] = ['line' => $lineNo, 'username' => $username, 'error' => 'Thieu tai khoan hoac ho ten.'];
+            continue;
+        }
+
+        if ($password === '') $password = $defaultPassword;
+        if ($className === '') $className = $defaultClass;
+
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
+        try {
+            $find->execute([$username]);
+            $existing = $find->fetch();
+            if ($existing) {
+                $update->execute([
+                    $hash,
+                    $fullName,
+                    $role,
+                    $className !== '' ? $className : null,
+                    $pagesJson,
+                    (int)$existing['id'],
+                ]);
+                $updated++;
+            } else {
+                $insert->execute([
+                    $username,
+                    $hash,
+                    $fullName,
+                    $role,
+                    $className !== '' ? $className : null,
+                    $pagesJson,
+                ]);
+                $created++;
+            }
+        } catch (PDOException $e) {
+            $failed[] = ['line' => $lineNo, 'username' => $username, 'error' => 'Khong luu duoc tai khoan.'];
+        }
+    }
+
+    respond([
+        'ok' => true,
+        'created' => $created,
+        'updated' => $updated,
+        'failed' => $failed,
+        'total' => $created + $updated,
+    ]);
+}
+
 respond(['error' => 'Action khong hop le.'], 400);
