@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-20 — quản lý bài/chương CRUD (`admin-lesson-manager.js?v=20260620-lesson-crud1`); hardfix ôn tập / động lực (`lotrinh.js?v=20260620-motivation-fix1`).*
+*Cập nhật: 2026-06-20 — Thi trực tuyến (`thitructuyen.html`): fix nộp bài mobile/Zalo, lưu tên HS, xuất Excel đề gốc, nút Copy QR.*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -47,6 +47,13 @@
   - **Xóa**: `delete_lesson` — xóa bài và tiến độ HS liên quan (có xác nhận).
   - **Nhân bản**: `duplicate_lesson` — bản sao `(bản sao)`, slug mới, mặc định chưa mở cho HS.
   - **Chương**: sửa từng bài qua ô Chương; **đổi tên hàng loạt** qua `rename_chapter` (cập nhật tất cả bài cùng tên chương trong môn). Dropdown bài hiển thị `Chương · Tên bài`; ô Chương có gợi ý từ `datalist`.
+- [x] **Thi trực tuyến (`thitructuyen.html`)** — sửa lỗi nộp bài & kết quả:
+  - Fix lỗi `[object Object]` khi nộp bài: API bắt buộc `student_class` → luôn gửi `""` nếu trống; thêm `formatApiError()` hiển thị lỗi API dạng text.
+  - Fix nộp bài trên **điện thoại / Zalo**: tắt chống gian lận toàn màn hình trên mobile; dùng `ref` + `sessionStorage` tránh mất đáp án/tên khi hết giờ; modal xác nhận nộp thay `confirm()`; `safeExitFullscreen()` có timeout; chặn nộp trùng.
+  - Fix **mất tên học sinh** khi nộp: `persistInfo()` đồng bộ state/ref/`sessionStorage`; đọc lại từ input khi bấm *Vào thi* (hỗ trợ bàn phím tiếng Việt); `getSubmitInfo()` trước khi gửi API.
+  - **Xuất Excel** kết quả thi (một sheet): `STT | Họ và tên | Số báo danh | Lớp học | Điểm | Kết quả | Các câu đúng (đề gốc) | Các câu sai (đề gốc)` — số câu quy về **đề gốc** (đối chiếu `details_json` với `exam.questions`), không theo thứ tự đề trộn trên màn hình HS.
+  - **Kết quả GV**: gom HS thi 2–3 lần theo số lần; bảng có cột Lần + Thời gian.
+  - **QR chia sẻ đề**: thêm nút **Copy** cạnh link thi (hỗ trợ gửi Zalo).
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -71,6 +78,11 @@
 - [ ] Giáo viên: **Xóa bài đang chọn** — bài biến mất khỏi lộ trình; tiến độ HS của bài đó cũng mất (cần cân nhắc trước khi xóa).
 - [ ] Giáo viên: sửa **slug** bài đã lưu rồi Lưu — không tạo bài trùng, chỉ cập nhật bài hiện tại.
 - [ ] Giáo viên: **Đổi tên chương cho tất cả bài trong chương này** — tất cả bài cùng chương trong môn đổi tên; HS/GV thấy chương mới sau tải lại.
+- [ ] **Thi trực tuyến — HS trên điện thoại/Zalo**: mở link QR → nhập Họ tên + SBD → làm hết câu → **Nộp Bài** thành công; bảng kết quả GV hiện đúng tên.
+- [ ] **Thi trực tuyến — hết giờ**: để đồng hồ về 0:00, kiểm tra tự nộp được và tên/điểm lưu đúng.
+- [ ] **Thi trực tuyến — QR**: bấm nút **Copy** → dán link vào Zalo được.
+- [ ] **Thi trực tuyến — Xuất Excel**: file có 8 cột; cột câu đúng/sai là số **Câu X** theo đề gốc, khớp đáp án GV.
+- [ ] **Thi trực tuyến — HS thi nhiều lần**: khối "Học sinh thi nhiều lần" gom đúng theo 2 lần / 3 lần.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
@@ -82,3 +94,5 @@
 - [ ] (Tùy chọn) Tinh chỉnh ngưỡng ôn tập thông minh (7 ngày, điểm 80%) theo ý giáo viên.
 - [ ] Đồng bộ cache `admin-progress.js` trên `index.html` với các trang lộ trình (`20260620-group-align1`).
 - [ ] (Tùy chọn) Quản lý chương dạng thực thể riêng (thứ tự chương, xóa chương trống) — hiện chương là trường text trên từng bài.
+- [ ] (Tùy chọn) Backend thi trực tuyến lưu `original_idx` trong `details_json` và `display_order` khi nộp — giảm phụ thuộc đối chiếu text câu hỏi.
+- [ ] (Tùy chọn) Khôi phục/sửa tên các bài thi cũ đã nộp trống `student_name` (dữ liệu cũ không tự điền lại được).

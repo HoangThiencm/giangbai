@@ -56,6 +56,19 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - `ai_explain.php`: Gọi Gemini trước; nếu hết quota hoặc lỗi thì fallback ShopAIKey (`https://api.shopaikey.com/v1/chat/completions`, mặc định model `deepseek-v4-flash`). Cấu hình key/model trong `admin.html` → `global_config.json`. Trả JSON súc tích; đã tăng giới hạn token và nối tiếp khi câu trả lời bị ngắt.
    - `helpers.php`: Gồm các hàm tiện ích chung (`respond()`, `column_exists()`, `mysql_datetime_or_null()`).
 
+6. **Thi trực tuyến (`thitructuyen.html`)**
+   - Frontend React (CDN); backend đề thi/nộp bài/chấm điểm trên HuggingFace: `API_BASE` mặc định `https://hoangthiencm-giangbai.hf.space` (có thể ghi đè qua `localStorage.omr_backend_url`).
+   - **Giáo viên**: soạn đề (PDF/Word + AI), lưu kho đề, xem QR/link chia sẻ, xem kết quả, xuất Excel.
+   - **Học sinh**: mở link `?mode=student&examId=...` (không cần đăng nhập — `access-control.js` bỏ qua khi có `examId`).
+   - **Trộn đề**: khi HS làm bài, thứ tự câu và đáp án trộn trên UI; đáp án nộp lên server dùng `originalIdx` / `originalOptIdx` (theo **đề gốc**). Chấm điểm và `details_json` (câu sai) cũng theo đề gốc.
+   - **Nộp bài mobile/Zalo** (`StudentView`):
+     - `isMobileExamClient()` nhận diện điện thoại / Zalo / in-app browser → **tắt** chống gian lận toàn màn hình và khóa màn hình.
+     - `persistInfo()` + `sessionStorage` key `exam_student_info_{examId}` — giữ Họ tên/SBD khi nộp (fix mất tên do bàn phím tiếng Việt).
+     - `formatApiError()` — không còn alert `[object Object]`; luôn gửi `student_class` (có thể rỗng).
+     - Modal xác nhận nộp trên mobile; `ref` cho đáp án/tên khi hết giờ tự nộp.
+   - **Kết quả GV** (`ResultDetail`): bảng chi tiết + khối **Học sinh thi nhiều lần** (gom theo SBD+tên); **Xuất Excel** một sheet: `STT | Họ và tên | Số báo danh | Lớp học | Điểm | Kết quả | Các câu đúng (đề gốc) | Các câu sai (đề gốc)` — đối chiếu `details_json` với `api/exam/get/{id}` để ra số câu đề gốc.
+   - **QRModal**: hiển thị mã QR + ô link + nút **Copy** (clipboard / fallback) để GV gửi Zalo.
+
 ## Vấn đề cần lưu ý (Notes)
 - **MathJax & Tailwind:** Tailwind CSS mặc định thiết lập `svg { display: block; }`, điều này làm vỡ các công thức inline của MathJax. Dự án khắc phục bằng cách thiết lập cẩn thận thuộc tính `display: inline !important` cho `mjx-container svg`.
 - **Database Schema:** Chức năng lưu tiến độ học phụ thuộc vào bảng `student_lesson_progress`. Việc tự động thêm cột (`ALTER TABLE`) có thể gặp rủi ro nếu quyền Database không đủ. Đã bọc `try-catch` độc lập cho từng cột để tránh làm sập luồng.
@@ -79,7 +92,10 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Quy trình quản lý nhiều lớp (vd. Toán 6 có 3 lớp):** (1) Gắn `class_name` khi tạo/sửa HS trong admin; (2) Mở trang lộ trình tương ứng; (3) Chọn bài học + lớp; (4) Lọc "Cần luyện thêm" để xem HS cần hỗ trợ trong lớp đó.
 - **Render công thức trong theo dõi tiến độ:** `admin-progress.js` có hàm `mathText()` và gọi `MathJax.typesetPromise()` sau khi render bảng. `index.html` và các trang lộ trình Toán nạp MathJax để công thức trong dữ liệu kỹ năng/cần lưu ý hiển thị đúng.
 - **Bài luyện tập:** Trắc nghiệm đã có phản hồi đúng/sai sau khi chọn đáp án; thao tác nộp bài cập nhật điểm, kỹ năng và trạng thái (`in_progress`, `needs_practice`, `mastered`). Nút "Làm lại bài luyện" reset đáp án/điểm luyện tập về trạng thái đang học để học sinh có thể làm lại.
-- **Cần phản biện sau sửa:** Xem checklist trong `plan.md` (mục *Cần người dùng phản biện lại trên giao diện*), gồm AI giải thích, tiến trình luyện tập, panel giáo viên theo lớp, ôn tập/bản đồ/động lực, tìm bài, phát hành bài mới, và CRUD bài/chương (thêm, sửa, xóa, nhân bản, đổi tên chương).
+- **Cần phản biện sau sửa:** Xem checklist trong `plan.md` (mục *Cần người dùng phản biện lại trên giao diện*), gồm AI giải thích, tiến trình luyện tập, panel giáo viên theo lớp, ôn tập/bản đồ/động lực, tìm bài, phát hành bài mới, CRUD bài/chương, và **thi trực tuyến mobile/Zalo**.
+- **Thi trực tuyến — đề trộn vs đề gốc:** HS chỉ thấy số câu 1…N theo thứ tự đã trộn; báo cáo GV/Excel luôn dùng số câu **đề gốc**. Không lưu `display_order` trên server — Excel quy đổi bằng đối chiếu nội dung câu trong `details_json`.
+- **Thi trực tuyến — dữ liệu cũ:** Các lượt thi trước khi sửa có thể thiếu `student_name` (nộp từ Zalo); không khôi phục tự động — cần HS thi lại sau khi deploy bản mới.
+- **Thi trực tuyến — khuyến nghị HS:** Nếu Zalo lỗi, mở link bằng Chrome/Safari (menu *Mở bằng trình duyệt*).
 
 ---
 *Cập nhật lần cuối: 2026-06-20. File này đồng bộ trạng thái dự án khi chuyển môi trường làm việc.*
