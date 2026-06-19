@@ -19,7 +19,7 @@
         nextActionTitle: document.getElementById('nextActionTitle'),
         nextActionBody: document.getElementById('nextActionBody'),
         skillPanel: document.getElementById('skillPanel'),
-        dailyTasks: document.getElementById('dailyTasks'),
+        lessonAiChatAside: document.getElementById('lessonAiChatAside'),
         tabs: Array.from(document.querySelectorAll('.tab-btn')),
     };
 
@@ -541,14 +541,11 @@
 
         renderTeacherPreviewBanner();
         renderOverallProgress();
-        renderStudyPlanner();
-        renderMotivationPanel();
+        cleanupVerboseRightPanels();
         renderLessonList();
         renderHeader(lesson);
         renderTabs();
         renderSkills(lesson);
-        renderTasks(lesson);
-        renderNextAction(lesson);
         bindPracticeInteractions(lesson);
         refreshStudentAiAssist(lesson);
         typesetMath();
@@ -560,8 +557,12 @@
         renderLessonList({ scrollToActive: false });
         renderHeader(lesson);
         renderSkills(lesson);
-        renderTasks(lesson);
-        renderNextAction(lesson);
+    }
+
+    function cleanupVerboseRightPanels() {
+        document.getElementById('studyPlannerPanel')?.remove();
+        document.getElementById('motivationPanel')?.remove();
+        document.getElementById('lessonAiChatRoot')?.remove();
     }
 
     function renderTeacherPreviewBanner() {
@@ -592,7 +593,8 @@
     }
 
     function getLessonRightAside() {
-        return document.querySelector('#studentLearningMain section.grid > aside');
+        return document.getElementById('lessonRightAside')
+            || document.querySelector('#studentLearningMain section.grid > aside');
     }
 
     function ensureStudyPlannerPanel() {
@@ -1359,7 +1361,7 @@
             els.lessonPath.textContent = '';
             els.lessonTitle.textContent = 'Chưa có bài học';
             els.lessonGoal.textContent = '';
-            els.lessonStatus.innerHTML = '';
+            if (els.lessonStatus) els.lessonStatus.innerHTML = '';
             return;
         }
 
@@ -1372,6 +1374,7 @@
         els.lessonPath.textContent = `${lesson.subject} · ${lesson.chapter}`;
         els.lessonTitle.textContent = lesson.title;
         els.lessonGoal.textContent = lesson.goal || '';
+        if (!els.lessonStatus) return;
         els.lessonStatus.innerHTML = `
             <div class="flex items-center justify-between gap-3">
                 <span class="inline-flex items-center gap-2 text-sm font-bold ${status.tone}">
@@ -1427,7 +1430,6 @@
         localStorage.setItem(LS_TAB_KEY, tab);
         renderTabs();
         renderNextAction(currentLesson());
-        renderTasks(currentLesson());
     }
 
     function renderTabs() {
@@ -1731,9 +1733,9 @@
     const aiAssistState = {
         selectionToolbar: null,
         selectionAnchor: null,
+        selectionTimer: null,
         chatHistory: [],
         chatLessonId: '',
-        chatOpen: false,
         chatBusy: false,
         bound: false
     };
@@ -1791,7 +1793,7 @@
         style.textContent = `
             .ai-selection-toolbar {
                 position: fixed;
-                z-index: 9500;
+                z-index: 9999;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
@@ -1801,6 +1803,7 @@
                 background: #fffbeb;
                 box-shadow: 0 10px 24px rgba(146, 64, 14, 0.18);
                 animation: aiBubbleIn 0.16s ease;
+                user-select: none;
             }
             .ai-selection-toolbar button {
                 display: inline-flex;
@@ -1817,82 +1820,60 @@
             }
             .ai-selection-toolbar button:hover { background: #fcd34d; }
             .ai-selection-toolbar button:disabled { opacity: 0.7; cursor: wait; }
-            .lesson-ai-chat-fab {
-                position: fixed;
-                right: 18px;
-                bottom: 18px;
-                z-index: 9400;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                border: 0;
-                border-radius: 999px;
-                background: #0f766e;
-                color: #fff;
-                font-size: 0.88rem;
-                font-weight: 800;
-                padding: 12px 16px;
-                box-shadow: 0 14px 30px rgba(15, 118, 110, 0.28);
-                cursor: pointer;
+            #lessonRightAside {
+                align-self: start;
             }
-            .lesson-ai-chat-fab:hover { background: #0d9488; }
-            .lesson-ai-chat-panel {
-                position: fixed;
-                right: 18px;
-                bottom: 78px;
-                z-index: 9450;
-                width: min(360px, calc(100vw - 24px));
-                max-height: min(70vh, 560px);
+            .lesson-ai-chat-aside {
                 display: flex;
                 flex-direction: column;
-                border: 1px solid #cbd5e1;
-                border-radius: 16px;
-                background: #fff;
-                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
-                overflow: hidden;
+                min-height: 420px;
+                max-height: min(82vh, 680px);
+                border-color: #99f6e4;
+                background: linear-gradient(180deg, #f0fdfa 0%, #fff 28%);
             }
-            .lesson-ai-chat-panel.hidden { display: none; }
+            .lesson-ai-chat-aside.is-hidden { display: none !important; }
             .lesson-ai-chat-head {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 10px;
-                padding: 12px 14px;
-                background: #f0fdfa;
+                padding-bottom: 8px;
                 border-bottom: 1px solid #ccfbf1;
             }
-            .lesson-ai-chat-head strong { color: #115e59; font-size: 0.92rem; }
-            .lesson-ai-chat-head p { color: #0f766e; font-size: 0.72rem; margin-top: 2px; }
-            .lesson-ai-chat-close {
-                border: 0;
-                background: #ccfbf1;
+            .lesson-ai-chat-head strong {
+                display: block;
                 color: #115e59;
-                width: 30px;
-                height: 30px;
-                border-radius: 999px;
-                cursor: pointer;
-                font-size: 1.1rem;
-                line-height: 1;
+                font-size: 0.88rem;
+            }
+            .lesson-ai-chat-head p {
+                color: #0f766e;
+                font-size: 0.72rem;
+                margin-top: 4px;
+                line-height: 1.4;
+            }
+            .lesson-ai-chat-hint {
+                margin-top: 6px;
+                font-size: 0.68rem;
+                line-height: 1.45;
+                color: #64748b;
             }
             .lesson-ai-chat-messages {
                 flex: 1;
+                min-height: 180px;
                 overflow-y: auto;
-                padding: 12px;
+                margin-top: 10px;
+                padding: 8px 4px;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
-                background: #f8fafc;
+                gap: 8px;
             }
             .lesson-ai-chat-msg {
-                max-width: 92%;
-                padding: 10px 12px;
-                border-radius: 12px;
-                font-size: 0.9rem;
-                line-height: 1.7;
+                max-width: 100%;
+                padding: 8px 10px;
+                border-radius: 10px;
+                font-size: 0.82rem;
+                line-height: 1.65;
                 word-break: break-word;
             }
             .lesson-ai-chat-msg.user {
                 align-self: flex-end;
+                max-width: 92%;
                 background: #dbeafe;
                 color: #1e3a8a;
                 border: 1px solid #bfdbfe;
@@ -1904,27 +1885,27 @@
                 border: 1px solid #fde68a;
             }
             .lesson-ai-chat-msg.error {
-                align-self: stretch;
                 background: #fef2f2;
                 color: #b91c1c;
                 border: 1px solid #fecaca;
             }
             .lesson-ai-chat-compose {
                 display: flex;
+                flex-direction: column;
                 gap: 8px;
-                padding: 10px;
+                margin-top: 10px;
+                padding-top: 10px;
                 border-top: 1px solid #e2e8f0;
-                background: #fff;
             }
             .lesson-ai-chat-compose textarea {
-                flex: 1;
-                min-height: 42px;
+                width: 100%;
+                min-height: 56px;
                 max-height: 120px;
                 resize: vertical;
                 border: 1px solid #cbd5e1;
                 border-radius: 10px;
                 padding: 8px 10px;
-                font-size: 0.88rem;
+                font-size: 0.84rem;
                 outline: none;
             }
             .lesson-ai-chat-compose textarea:focus {
@@ -1932,7 +1913,6 @@
                 box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.15);
             }
             .lesson-ai-chat-send {
-                align-self: flex-end;
                 border: 0;
                 border-radius: 10px;
                 background: #0f766e;
@@ -1943,10 +1923,6 @@
                 cursor: pointer;
             }
             .lesson-ai-chat-send:disabled { opacity: 0.6; cursor: wait; }
-            @media (max-width: 640px) {
-                .lesson-ai-chat-panel { right: 12px; bottom: 72px; }
-                .lesson-ai-chat-fab { right: 12px; bottom: 12px; }
-            }
         `;
         document.head.appendChild(style);
     }
@@ -1960,15 +1936,16 @@
 
     function positionAiSelectionToolbar(toolbar, rect) {
         const margin = 8;
-        toolbar.style.visibility = 'hidden';
+        toolbar.style.position = 'fixed';
         toolbar.style.display = 'inline-flex';
+        toolbar.style.visibility = 'hidden';
         document.body.appendChild(toolbar);
         const width = toolbar.offsetWidth;
         const height = toolbar.offsetHeight;
-        let top = rect.top + window.scrollY - height - margin;
-        let left = rect.left + window.scrollX + rect.width / 2 - width / 2;
-        if (top < window.scrollY + margin) top = rect.bottom + window.scrollY + margin;
-        left = Math.max(window.scrollX + margin, Math.min(left, window.scrollX + window.innerWidth - width - margin));
+        let top = rect.top - height - margin;
+        let left = rect.left + rect.width / 2 - width / 2;
+        if (top < margin) top = rect.bottom + margin;
+        left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
         toolbar.style.top = `${top}px`;
         toolbar.style.left = `${left}px`;
         toolbar.style.visibility = 'visible';
@@ -1989,8 +1966,10 @@
         try {
             const data = await requestAiExplain(lesson, selectedText);
             showAiModal(renderAiAnswer(data.answer || ''), anchor);
+            anchor.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         } catch (err) {
             showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, anchor);
+            anchor.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
     }
 
@@ -2000,7 +1979,10 @@
         toolbar.className = 'ai-selection-toolbar';
         toolbar.innerHTML = '<button type="button"><i class="fas fa-wand-magic-sparkles"></i> AI giải thích</button>';
         const button = toolbar.querySelector('button');
-        button.onclick = async () => {
+        toolbar.addEventListener('mousedown', event => event.preventDefault());
+        button.onclick = async event => {
+            event.preventDefault();
+            event.stopPropagation();
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang hỏi...';
             await runAiExplainFromSelection(selectedText, anchorHost);
@@ -2011,7 +1993,7 @@
     }
 
     function isSelectableAiRegion(node) {
-        return !!node?.closest?.('#tabContent .lesson-document, #tabContent .lesson-theory-flow, #tabContent .lesson-explain-block, #tabContent .practice-card, #tabContent .question-text, #tabContent .fill-prompt-line');
+        return !!node?.closest?.('#tabContent');
     }
 
     function handleLessonTextSelection() {
@@ -2027,7 +2009,7 @@
             ? range.commonAncestorContainer.parentElement
             : range.commonAncestorContainer;
         if (!isSelectableAiRegion(anchorNode)) return hideAiSelectionToolbar();
-        if (anchorNode.closest('.lesson-ai-chat-panel, .ai-selection-toolbar, .ai-chat-bubble, button, input, textarea, select')) {
+        if (anchorNode.closest('.lesson-ai-chat-aside, .ai-selection-toolbar, .ai-chat-bubble, button, input, textarea, select, .tab-btn')) {
             return hideAiSelectionToolbar();
         }
 
@@ -2051,43 +2033,11 @@
         typesetMath();
     }
 
-    function ensureLessonChatbot() {
-        ensureStudentAiAssistStyles();
-        if (document.getElementById('lessonAiChatRoot')) return;
-
-        const root = document.createElement('div');
-        root.id = 'lessonAiChatRoot';
-        root.innerHTML = `
-            <button type="button" id="lessonAiChatFab" class="lesson-ai-chat-fab" aria-label="Hỏi AI về bài học">
-                <i class="fas fa-comments"></i> Hỏi AI
-            </button>
-            <section id="lessonAiChatPanel" class="lesson-ai-chat-panel hidden" aria-label="Chat hỏi bài">
-                <div class="lesson-ai-chat-head">
-                    <div>
-                        <strong>Hỏi AI về bài học</strong>
-                        <p id="lessonAiChatLessonLabel">Đang tải...</p>
-                    </div>
-                    <button type="button" class="lesson-ai-chat-close" id="lessonAiChatClose" aria-label="Đóng">&times;</button>
-                </div>
-                <div id="lessonAiChatMessages" class="lesson-ai-chat-messages"></div>
-                <form id="lessonAiChatForm" class="lesson-ai-chat-compose">
-                    <textarea id="lessonAiChatInput" rows="2" placeholder="Ví dụ: Tập hợp là gì?"></textarea>
-                    <button type="submit" id="lessonAiChatSend" class="lesson-ai-chat-send">Gửi</button>
-                </form>
-            </section>
-        `;
-        document.body.appendChild(root);
-
-        document.getElementById('lessonAiChatFab').onclick = () => {
-            aiAssistState.chatOpen = !aiAssistState.chatOpen;
-            document.getElementById('lessonAiChatPanel').classList.toggle('hidden', !aiAssistState.chatOpen);
-            if (aiAssistState.chatOpen) document.getElementById('lessonAiChatInput')?.focus();
-        };
-        document.getElementById('lessonAiChatClose').onclick = () => {
-            aiAssistState.chatOpen = false;
-            document.getElementById('lessonAiChatPanel').classList.add('hidden');
-        };
-        document.getElementById('lessonAiChatForm').onsubmit = async event => {
+    function bindLessonChatForm() {
+        const form = document.getElementById('lessonAiChatForm');
+        if (!form || form.dataset.bound === '1') return;
+        form.dataset.bound = '1';
+        form.addEventListener('submit', async event => {
             event.preventDefault();
             if (aiAssistState.chatBusy) return;
             const lesson = currentLesson();
@@ -2118,15 +2068,38 @@
                 renderLessonChatMessages();
                 input.focus();
             }
-        };
+        });
+    }
+
+    function ensureLessonChatbot() {
+        ensureStudentAiAssistStyles();
+        const mount = els.lessonAiChatAside || document.getElementById('lessonAiChatAside');
+        if (!mount) return;
+
+        if (!document.getElementById('lessonAiChatForm')) {
+            mount.innerHTML = `
+                <div class="lesson-ai-chat-head">
+                    <strong><i class="fas fa-comments text-teal-700 mr-1"></i> Hỏi AI</strong>
+                    <p id="lessonAiChatLessonLabel">Đang tải bài...</p>
+                    <p class="lesson-ai-chat-hint">Bôi đen đoạn trong bài → bấm <strong>AI giải thích</strong>. Hoặc gõ câu hỏi bên dưới.</p>
+                </div>
+                <div id="lessonAiChatMessages" class="lesson-ai-chat-messages"></div>
+                <form id="lessonAiChatForm" class="lesson-ai-chat-compose">
+                    <textarea id="lessonAiChatInput" rows="3" placeholder="Ví dụ: Tập hợp là gì?"></textarea>
+                    <button type="submit" id="lessonAiChatSend" class="lesson-ai-chat-send"><i class="fas fa-paper-plane mr-1"></i> Gửi câu hỏi</button>
+                </form>
+            `;
+        }
+        mount.dataset.ready = '1';
+        bindLessonChatForm();
         renderLessonChatMessages();
     }
 
     function refreshStudentAiAssist(lesson) {
         const enabled = canUseStudentAiAssist();
         ensureLessonChatbot();
-        const root = document.getElementById('lessonAiChatRoot');
-        if (root) root.classList.toggle('hidden', !enabled);
+        const mount = els.lessonAiChatAside || document.getElementById('lessonAiChatAside');
+        if (mount) mount.classList.toggle('is-hidden', !enabled);
         const label = document.getElementById('lessonAiChatLessonLabel');
         if (label) label.textContent = lesson?.title ? `Bài: ${lesson.title}` : PAGE_TITLE;
         const lessonId = String(lesson?.id || '');
@@ -2142,9 +2115,13 @@
         if (aiAssistState.bound) return;
         aiAssistState.bound = true;
         ensureStudentAiAssistStyles();
-        document.addEventListener('mouseup', () => {
-            window.setTimeout(handleLessonTextSelection, 10);
-        });
+        const scheduleSelectionCheck = () => {
+            window.clearTimeout(aiAssistState.selectionTimer);
+            aiAssistState.selectionTimer = window.setTimeout(handleLessonTextSelection, 30);
+        };
+        document.addEventListener('mouseup', scheduleSelectionCheck);
+        document.addEventListener('touchend', scheduleSelectionCheck);
+        document.addEventListener('selectionchange', scheduleSelectionCheck);
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') hideAiSelectionToolbar();
         });
@@ -2153,7 +2130,7 @@
             window.setTimeout(() => {
                 const selection = window.getSelection();
                 if (!selection || selection.isCollapsed) hideAiSelectionToolbar();
-            }, 0);
+            }, 120);
         });
         ensureLessonChatbot();
     }
@@ -2680,24 +2657,6 @@
                 </div>
             `;
         }).join('') : '<p class="muted-note">Giáo viên chưa nhập kỹ năng cho bài này.</p>';
-    }
-
-    function renderTasks(lesson) {
-        const ui = currentUiState(lesson);
-        const tasks = Array.isArray(lesson.tasks) && lesson.tasks.length ? lesson.tasks : ['Đọc lý thuyết ngắn', 'Xem 3 ví dụ mẫu', 'Làm 8 câu luyện tập'];
-        const statusList = [
-            { done: ui.theoryDone, text: tasks[0] || 'Đọc lý thuyết ngắn' },
-            { done: ui.examplesDone, text: tasks[1] || 'Xem ví dụ mẫu' },
-            { done: ui.practiceDone, text: tasks[2] || 'Làm bài luyện tập' }
-        ];
-        els.dailyTasks.innerHTML = statusList.map(task => `
-            <div class="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2">
-                <span class="grid h-7 w-7 place-items-center rounded ${task.done ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-400'}">
-                    <i class="fas ${task.done ? 'fa-check' : 'fa-circle'} text-xs"></i>
-                </span>
-                <span class="text-sm font-semibold text-slate-700">${task.text}</span>
-            </div>
-        `).join('');
     }
 
     function nextLessonAfter(lesson) {
