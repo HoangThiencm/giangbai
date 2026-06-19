@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/progress_recalc.php';
 session_start();
 
 $key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
@@ -24,35 +25,72 @@ function decode_json_array($value): array
     return is_array($decoded) ? $decoded : [];
 }
 
+function scoped_lessons_for_progress(PDO $pdo, ?array $teacherUser): array
+{
+    $lessonStmt = $pdo->query('SELECT * FROM lessons ORDER BY subject ASC, order_index ASC, id ASC');
+    $allLessons = $lessonStmt->fetchAll();
+    if ($teacherUser) {
+        $allowedSubjects = teacher_allowed_subjects($teacherUser);
+        return array_values(array_filter($allLessons, function ($lesson) use ($allowedSubjects) {
+            return in_array(trim((string)($lesson['subject'] ?? '')), $allowedSubjects, true);
+        }));
+    }
+    return $allLessons;
+}
+
+function lesson_allowed_for_progress(array $lessons, int $lessonId): bool
+{
+    if ($lessonId <= 0) return false;
+    foreach ($lessons as $lesson) {
+        if ((int)$lesson['id'] === $lessonId) return true;
+    }
+    return false;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $body = json_body();
+    $action = (string)($body['action'] ?? '');
+    if ($action === 'recalc_progress') {
+        $lessonId = (int)($body['lesson_id'] ?? 0);
+        $lessons = scoped_lessons_for_progress($pdo, $teacherUser);
+        if ($lessonId <= 0 && !empty($lessons)) {
+            $lessonId = (int)$lessons[0]['id'];
+        }
+        if (!lesson_allowed_for_progress($lessons, $lessonId)) {
+            respond(['error' => 'Tài khoản không có quyền cập nhật tiến độ bài học này.'], 403);
+        }
+        $lesson = null;
+        foreach ($lessons as $item) {
+            if ((int)$item['id'] === $lessonId) {
+                $lesson = $item;
+                break;
+            }
+        }
+        if (!$lesson) {
+            respond(['error' => 'Không tìm thấy bài học để cập nhật tiến độ.'], 404);
+        }
+        $result = pr_recalc_lesson_progress($pdo, $lesson, $teacherUser);
+        respond([
+            'ok' => true,
+            'message' => "Đã cập nhật tiến độ cho {$result['updated']}/{$result['checked']} học sinh.",
+            'checked' => $result['checked'],
+            'updated' => $result['updated'],
+            'lesson_id' => $result['lesson_id'],
+        ]);
+    }
+    respond(['error' => 'Thao tác không hợp lệ.'], 400);
+}
+
 $lessonId = isset($_GET['lesson_id']) ? (int)$_GET['lesson_id'] : 0;
 
-$lessonStmt = $pdo->query('SELECT * FROM lessons ORDER BY subject ASC, order_index ASC, id ASC');
-$allLessons = $lessonStmt->fetchAll();
-
-if ($teacherUser) {
-    $allowedSubjects = teacher_allowed_subjects($teacherUser);
-    $lessons = array_values(array_filter($allLessons, function ($lesson) use ($allowedSubjects) {
-        return in_array(trim((string)($lesson['subject'] ?? '')), $allowedSubjects, true);
-    }));
-} else {
-    $lessons = $allLessons;
-}
+$lessons = scoped_lessons_for_progress($pdo, $teacherUser);
 
 if ($lessonId <= 0 && !empty($lessons)) {
     $lessonId = (int)$lessons[0]['id'];
 }
 
-if ($lessonId > 0) {
-    $lessonAllowed = false;
-    foreach ($lessons as $lesson) {
-        if ((int)$lesson['id'] === $lessonId) {
-            $lessonAllowed = true;
-            break;
-        }
-    }
-    if (!$lessonAllowed) {
-        respond(['error' => 'Tài khoản không có quyền xem tiến độ bài học này.'], 403);
-    }
+if ($lessonId > 0 && !lesson_allowed_for_progress($lessons, $lessonId)) {
+    respond(['error' => 'Tài khoản không có quyền xem tiến độ bài học này.'], 403);
 }
 
 $studentsStmt = $pdo->query("
@@ -92,6 +130,8 @@ foreach ($students as $student) {
     $score = $progress ? (int)$progress['score'] : 0;
     $needsPractice = in_array($status, ['not_started', 'in_progress', 'needs_practice'], true) || $score < 80;
 
+    $state = $progress ? decode_json_array($progress['state_json']) : [];
+
     $rows[] = [
         'student_id' => (int)$student['id'],
         'username' => $student['username'],
@@ -102,6 +142,7 @@ foreach ($students as $student) {
         'status' => $status,
         'score' => $score,
         'skill_scores' => $skillScores,
+        'state' => $state,
         'needs_practice' => $needsPractice,
         'updated_at' => $progress['updated_at'] ?? null,
         'completed_at' => $progress['completed_at'] ?? null,

@@ -277,7 +277,7 @@ if ($method === 'POST' && $action === 'save_progress') {
     if ($exists) {
         $update = $pdo->prepare('
             UPDATE student_lesson_progress
-            SET status = ?, score = ?, skill_scores_json = ?, state_json = ?, started_at = COALESCE(?, started_at), completed_at = COALESCE(?, completed_at)
+            SET status = ?, score = ?, skill_scores_json = ?, state_json = ?, started_at = COALESCE(?, started_at), completed_at = ?
             WHERE student_id = ? AND lesson_id = ?
         ');
         $update->execute([$status, $score, json_encode($skillScores, JSON_UNESCAPED_UNICODE), json_encode($state, JSON_UNESCAPED_UNICODE), $startedAt, $completedAt, $user['id'], $lessonId]);

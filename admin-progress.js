@@ -91,8 +91,38 @@
         return map[status] || map.not_started;
     }
 
+    function bindProgressActionButtons() {
+        const reloadBtn = el('progressReloadBtn');
+        const syncBtn = el('progressSyncBtn');
+        if (reloadBtn && reloadBtn.dataset.boundProgressReload !== '1') {
+            reloadBtn.dataset.boundProgressReload = '1';
+            reloadBtn.onclick = () => refresh();
+        }
+        if (syncBtn && syncBtn.dataset.boundProgressSync !== '1') {
+            syncBtn.dataset.boundProgressSync = '1';
+            syncBtn.onclick = () => syncProgress();
+        }
+    }
+
+    function ensureProgressSyncButton() {
+        if (el('progressSyncBtn')) return;
+        const reloadBtn = el('progressReloadBtn');
+        if (!reloadBtn || !reloadBtn.parentElement) return;
+        const syncBtn = document.createElement('button');
+        syncBtn.id = 'progressSyncBtn';
+        syncBtn.type = 'button';
+        syncBtn.className = 'bg-teal-700 hover:bg-teal-800 text-white px-4 py-2.5 rounded font-bold text-sm';
+        syncBtn.innerHTML = '<i class="fas fa-arrows-rotate mr-1"></i>Cập nhật tiến trình';
+        reloadBtn.parentElement.insertBefore(syncBtn, reloadBtn);
+        bindProgressActionButtons();
+    }
+
     function ensurePanel() {
-        if (el('adminProgressPanel')) return;
+        if (el('adminProgressPanel')) {
+            ensureProgressSyncButton();
+            bindProgressActionButtons();
+            return;
+        }
         const dashboard = isTeacherUser() ? el('lessonDesignerMount') : null;
         if (!dashboard) return;
 
@@ -105,11 +135,16 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo dõi tiến độ học sinh
                     </h3>
-                    <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp — hoặc xem tất cả lớp được nhóm theo tên lớp.</p>
+                    <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp. Bấm <strong>Cập nhật tiến trình</strong> để hệ thống tính lại điểm luyện tập từ đáp án đã lưu của học sinh.</p>
                 </div>
-                <button id="progressReloadBtn" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
-                    <i class="fas fa-rotate-right mr-1"></i>Tải lại
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button id="progressSyncBtn" type="button" class="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2.5 rounded font-bold text-sm">
+                        <i class="fas fa-arrows-rotate mr-1"></i>Cập nhật tiến trình
+                    </button>
+                    <button id="progressReloadBtn" type="button" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
+                        <i class="fas fa-rotate-right mr-1"></i>Tải lại
+                    </button>
+                </div>
             </div>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 <label class="block text-sm font-bold text-slate-700">Bài học
@@ -146,7 +181,7 @@
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh / Lớp</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Trạng thái</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Điểm</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Điểm luyện tập</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cần lưu ý</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cập nhật</th>
                         </tr>
@@ -158,7 +193,7 @@
         dashboard.prepend(panel);
         applyPageScopeUi();
 
-        el('progressReloadBtn').onclick = () => refresh();
+        bindProgressActionButtons();
         el('progressLessonSelect').onchange = event => {
             selectedLessonId = event.target.value;
             refresh();
@@ -265,13 +300,24 @@
         }
     }
 
+    function lessonCompletionFromRow(row) {
+        if (row.status === 'mastered') return 100;
+        const state = row.state || {};
+        const theory = state.theoryDone ? 30 : 0;
+        const examples = state.examplesDone ? 20 : 0;
+        const practicePart = state.practiceDone ? 50 : 0;
+        return Math.max(0, Math.min(100, theory + examples + practicePart));
+    }
+
     function weakSkillText(row) {
         const scopedLessons = lessonsForPage();
         const lesson = scopedLessons.find(item => String(item.id) === String(selectedLessonId)) || scopedLessons[0];
         const skills = lesson?.skills || [];
         const weak = skills.filter(skill => Number(row.skill_scores?.[skill.id] || 0) < Number(skill.target || 80));
         if (row.status === 'not_started') return 'Chưa vào làm bài';
-        if (!weak.length && !row.needs_practice) return 'Đạt mục tiêu';
+        const lessonPercent = lessonCompletionFromRow(row);
+        if (!weak.length && row.score >= 80) return `Đạt mục tiêu · Tiến trình ${lessonPercent}%`;
+        if (!weak.length) return `Tiến trình ${lessonPercent}%`;
         return weak.map(skill => skill.name || skill.id).join(', ') || 'Nên luyện thêm';
     }
 
@@ -328,7 +374,10 @@
                 <td class="px-4 py-3 text-sm">
                     <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
                 </td>
-                <td class="px-4 py-3 text-sm font-bold ${scoreTone}">${row.score}%</td>
+                <td class="px-4 py-3 text-sm">
+                    <div class="font-bold ${scoreTone}">${row.score}%</div>
+                    ${row.status !== 'not_started' ? `<div class="text-xs text-slate-500 mt-0.5">Tiến trình ${lessonCompletionFromRow(row)}%</div>` : ''}
+                </td>
                 <td class="px-4 py-3 text-sm text-slate-700 leading-6">${mathText(weakSkillText(row))}</td>
                 <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>
             </tr>
@@ -377,6 +426,49 @@
         typesetMath();
     }
 
+    async function syncProgress() {
+        const key = getAdminKey();
+        if (!key && !isTeacherUser()) return;
+        ensurePanel();
+        const syncBtn = el('progressSyncBtn');
+        const lessonId = selectedLessonId || el('progressLessonSelect')?.value || '';
+        if (!lessonId) {
+            alert('Chưa chọn bài học để cập nhật tiến độ.');
+            return;
+        }
+        const oldHtml = syncBtn?.innerHTML || '';
+        if (syncBtn) {
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang cập nhật...';
+        }
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (key) headers['X-Admin-Key'] = key;
+            const res = await fetch('api/admin_progress.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers,
+                cache: 'no-store',
+                body: JSON.stringify({
+                    action: 'recalc_progress',
+                    lesson_id: Number(lessonId)
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Không cập nhật được tiến độ.');
+            await refresh();
+            alert(data.message || `Đã cập nhật tiến độ cho ${data.updated || 0} học sinh.`);
+        } catch (err) {
+            console.error('syncProgress error:', err);
+            alert(err.message || 'Không cập nhật được tiến độ học sinh.');
+        } finally {
+            if (syncBtn) {
+                syncBtn.disabled = false;
+                syncBtn.innerHTML = oldHtml;
+            }
+        }
+    }
+
     async function refresh() {
         const key = getAdminKey();
         if (!key && !isTeacherUser()) return;
@@ -423,6 +515,7 @@
     }
 
     window.refreshAdminProgress = refresh;
+    window.syncAdminProgress = syncProgress;
 
     function boot() {
         ensurePanel();

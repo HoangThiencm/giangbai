@@ -438,6 +438,12 @@
         return Math.max(0, Math.min(100, theory + examples + practicePart));
     }
 
+    function practiceScorePercent(lesson, progressOverride = null) {
+        const progress = progressOverride || currentLessonProgress(lesson);
+        const score = Number(progress?.score);
+        return Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : null;
+    }
+
     function lessonProgressSkillScores(lesson, percent) {
         const scores = {};
         (lesson.skills || []).forEach(skill => {
@@ -1468,6 +1474,8 @@
         const progress = currentLessonProgress(lesson);
         const status = statusInfo(progress.status);
         const lessonPercent = lessonCompletionPercent(lesson);
+        const ui = currentUiState(lesson);
+        const submittedPracticeScore = ui.practiceDone ? practiceScorePercent(lesson, progress) : null;
         if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
         if (els.routeSubject) els.routeSubject.textContent = lesson.subject || 'Lộ trình';
         if (els.routeChapter) els.routeChapter.textContent = lesson.chapter || 'Danh sách bài học';
@@ -1489,6 +1497,12 @@
                 <span>${lessonPercent}%</span>
             </div>
             <div class="skill-bar mt-2"><span style="width:${lessonPercent}%"></span></div>
+            ${submittedPracticeScore !== null ? `
+            <div class="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
+                <span>Điểm luyện tập (GV xem)</span>
+                <span class="${submittedPracticeScore >= 80 ? 'text-teal-700' : 'text-amber-700'}">${submittedPracticeScore}%</span>
+            </div>
+            ` : ''}
         `;
         const markBtn = document.getElementById('markLessonDoneBtn');
         if (markBtn) {
@@ -2493,7 +2507,7 @@
                     await syncLessonState(lesson, nextUi, {
                         status,
                         score: mergedScore,
-                        skillScores: scoreData.skillScores,
+                        skillScores: lessonProgressSkillScores(lesson, mergedScore),
                         completedAt
                     });
                     render();
@@ -2518,13 +2532,13 @@
                     completedAt: null,
                     startedAt: baseUi.startedAt || new Date().toISOString()
                 };
-                const nextPercent = lessonCompletionPercent(lesson, nextState, 'in_progress');
                 try {
                     await syncLessonState(lesson, nextState, {
                         status: 'in_progress',
-                        score: nextPercent,
-                        skillScores: lessonProgressSkillScores(lesson, nextPercent),
-                        startedAt: nextState.startedAt
+                        score: progress.score || 0,
+                        skillScores: progress.skillScores || {},
+                        startedAt: nextState.startedAt,
+                        completedAt: null
                     });
                     render();
                 } catch (err) {
@@ -2801,11 +2815,12 @@
         const progress = currentLessonProgress(lesson);
         const ui = currentUiState(lesson);
         const liveScoreData = calculateScore(lesson, ui.answers || {});
-        const scores = Object.keys(progress.skillScores || {}).length ? progress.skillScores : liveScoreData.skillScores;
-        const completionPercent = lessonCompletionPercent(lesson);
+        const scores = ui.practiceDone && Object.keys(progress.skillScores || {}).length
+            ? progress.skillScores
+            : liveScoreData.skillScores;
         const skills = Array.isArray(lesson.skills) ? lesson.skills : [];
         els.skillPanel.innerHTML = skills.length ? skills.map(skill => {
-            const score = Math.max(scores[skill.id] || 0, completionPercent);
+            const score = scores[skill.id] || 0;
             return `
                 <div>
                     <div class="flex items-start justify-between gap-3 text-sm">
@@ -2980,7 +2995,7 @@
             skill_scores: extra.skillScores || current.skillScores || {},
             state: uiState,
             started_at: extra.startedAt || uiState.startedAt || null,
-            completed_at: extra.completedAt || uiState.completedAt || null,
+            completed_at: 'completedAt' in extra ? extra.completedAt : (uiState.completedAt ?? null),
         };
         await api('api/lessons.php?action=save_progress&debug=1', {
             method: 'POST',
