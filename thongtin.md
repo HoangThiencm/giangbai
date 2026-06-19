@@ -5,9 +5,11 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 
 ### Các file và chức năng chính
 1. **Giao diện bài học (`lotrinhtoan6.html`, `lotrinhtoan7.html`, `lotrinhtoan8.html`, `lotrinhtoan9.html`)**
-   - Chứa cấu trúc HTML cho lộ trình học môn Toán các lớp.
+   - Chứa cấu trúc HTML cho lộ trình học môn Toán các lớp; mỗi trang đặt `window.LOTRINH_SUBJECT` và `window.LOTRINH_PAGE_TITLE` (UTF-8 đúng).
+   - Layout học sinh: cột trái (tiến độ + danh sách/bản đồ bài), cột giữa (nội dung bài), cột phải (kế hoạch tự học, động lực, kỹ năng, nhiệm vụ).
    - Định dạng CSS nội bộ (`<style>`) giúp render MathJax SVG và bong bóng chat AI giải thích.
    - Đã thêm style `.ai-chat-bubble` đồng bộ cho cả Toán 6, 7, 8, 9; bong bóng có nút `x`, mũi nhọn chat, và không bị cắt nội dung.
+   - Cache script gần nhất: `lotrinh.js?v=20260620-motivation1`, `admin-lesson-manager.js?v=20260620-publish-off1`, `admin-progress.js?v=20260620-group-align1`.
 
 2. **Logic Frontend (`lotrinh.js`)**
    - Quản lý trạng thái học tập của học sinh.
@@ -24,13 +26,24 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Marker `[AI]` / `[[AI]]` trong nội dung lý thuyết quyết định vị trí nút **AI giải thích**; không tự gắn theo ngắt đoạn.
    - `lessonRichText()` render định dạng soạn bài: xuống dòng, đoạn, đậm/nghiêng/gạch chân, ảnh.
    - `renderNextAction()` gợi ý bước tiếp theo theo tab (lý thuyết / ví dụ / luyện tập) và tiến độ hiện tại.
+   - **Danh sách bài** (`renderLessonList`): khung cuộn, tìm kiếm, lọc chương, dòng compact; tab **Bản đồ chương** (`renderChapterMap`) với `chapterAggregateStatus()` — Chưa học / Đang học / Cần luyện / Đã xong. View lưu `localStorage` key `lotrinh_lesson_nav_view_{môn}`.
+   - **Kế hoạch tự học** (`renderStudyPlanner`, mount cột phải): chọn 15–60 phút, lộ trình hôm nay (`buildStudyPlan`).
+   - **Ôn tập thông minh** (`buildSmartReviewSuggestions`, `smartReviewReason`): ưu tiên `needs_practice`, điểm dưới 80%, hoặc `mastered` từ ≥ 7 ngày (`REVIEW_STALE_DAYS`); hiển thị trên cùng panel kế hoạch, bấm → chuyển bài + tab.
+   - **Động lực học** (`renderMotivationPanel`): streak ngày học liên tiếp, huy hiệu `streak_3`, `mastered_5`, `perfect_100`; lưu `localStorage` `lotrinh_motivation_{môn}_{user}`; cập nhật qua `recordStudyActivity()` / `markPerfectLesson()` khi lưu tiến độ.
 
-3. **Theo dõi tiến độ giáo viên (`admin-progress.js`)**
+3. **Soạn bài giáo viên (`admin-lesson-manager.js`)**
+   - Mount `#lessonDesignerMount` khi `userRole === 'teacher'`.
+   - Trên trang `lotrinhtoan6–9`: khóa theo `LOTRINH_SUBJECT` — không chuyển sang môn khác.
+   - Mục tiêu bài: textarea `#lessonGoalInput` (không trùng `#lessonGoal` hiển thị HS); lưu field `goal_text`.
+   - **Mở cho học sinh** (`is_published`): mặc định **tắt** khi tạo bài mới; giáo viên chủ động bật khi muốn lộ trình tới bài đó. Học sinh chỉ nhận bài `is_published` từ API.
+
+4. **Theo dõi tiến độ giáo viên (`admin-progress.js`)**
    - Mount vào `#lessonDesignerMount` khi đăng nhập vai trò `teacher`.
    - Dropdown bài học, **lớp**, trạng thái, ô tìm kiếm; thẻ thống kê và bảng HS.
-   - Gọi `api/admin_progress.php`; nhóm bảng theo lớp khi xem "Tất cả lớp".
+   - Gọi `api/admin_progress.php`; nhóm bảng theo lớp khi xem "Tất cả lớp" (mỗi cột `<td>` thẳng header).
+   - Trên trang lộ trình: lọc dropdown bài học theo `LOTRINH_SUBJECT`.
 
-4. **Backend API (`api/`)**
+5. **Backend API (`api/`)**
    - `lessons.php`: Quản lý lấy danh sách bài học, và **lưu tiến độ** (trạng thái `started_at`, `completed_at`, `state_json`, ...). Đã có cơ chế auto-migrate cột database độc lập (`ensure_progress_schema`) sử dụng từng khối try-catch riêng.
    - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh theo `lesson_id`. Mỗi row gồm `class_name` (từ `users.class_name`); response thêm mảng `classes` (danh sách lớp distinct, đã sort). Cho phép session giáo viên đang hoạt động; admin key vẫn dùng được ở API nhưng UI admin không hiển thị panel tiến độ.
    - `admin_students.php`: Tạo/sửa học sinh kèm trường `class_name` — dùng để nhóm và lọc tiến độ theo lớp (vd. `6A`, `6B`, `6C` hoặc `Toán 6 tối T3`).
@@ -50,7 +63,10 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Kỹ năng của bài:** `renderSkills()` hiện hiển thị tối thiểu bằng `lessonCompletionPercent()`, nên học sinh đánh dấu đã học lý thuyết/ví dụ/toàn bài sẽ thấy thanh kỹ năng của bài thay đổi ngay, không đứng yên 0%.
 - **Học lại:** Khi bài ở trạng thái `mastered`, nút hành động chuyển thành "Học lại". Nút này gọi `resetLesson()`, xóa tiến trình bài đó và đánh dấu lại trạng thái bắt đầu để học sinh học lại.
 - **Theo dõi tiến độ cho giáo viên:** `admin-progress.js` chỉ mount vào `lessonDesignerMount` khi `localStorage.userRole === 'teacher'`; không mount vào admin dashboard. Nếu không có admin key, request API vẫn chạy bằng session giáo viên.
-- **Theo dõi tiến độ theo lớp:** Tiến độ lưu theo từng học sinh trong `student_lesson_progress`; UI nhóm/lọc qua `users.class_name`. Panel có dropdown **Lớp** (`#progressClassFilter`), lọc trạng thái, tìm kiếm; thống kê (tổng HS, đã nộp, đã học xong, cần luyện) tính theo phạm vi lớp đang chọn. Chọn "Tất cả lớp" → bảng nhóm theo lớp, mỗi nhóm có dòng tóm tắt. Lựa chọn lớp lưu `localStorage.progress_class_filter`. Cache script: `admin-progress.js?v=20260619-class-filter1`.
+- **Theo dõi tiến độ theo lớp:** Tiến độ lưu theo từng học sinh trong `student_lesson_progress`; UI nhóm/lọc qua `users.class_name`. Panel có dropdown **Lớp** (`#progressClassFilter`), lọc trạng thái, tìm kiếm; thống kê tính theo phạm vi lớp đang chọn. Chọn "Tất cả lớp" → dòng tóm tắt mỗi lớp căn đúng cột bảng. Lựa chọn lớp lưu `localStorage.progress_class_filter`.
+- **Phát hành bài cho học sinh:** API `lessons.php` chỉ trả bài `is_published` cho role `student`. Giáo viên soạn xong cần tick **Mở bài này cho học sinh** rồi Lưu; HS tải lại trang lộ trình mới thấy chương/bài mới.
+- **Ôn tập & kế hoạch:** Ôn tập thông minh và kế hoạch tự học dùng chung tiến độ `state.progress` + `completedAt`; không cần API riêng.
+- **Streak/huy hiệu:** Chỉ lưu phía client (`localStorage`); chưa đồng bộ server — đổi máy/trình duyệt sẽ mất streak cũ.
 - **Quy trình quản lý nhiều lớp (vd. Toán 6 có 3 lớp):** (1) Gắn `class_name` khi tạo/sửa HS trong admin; (2) Mở trang lộ trình tương ứng; (3) Chọn bài học + lớp; (4) Lọc "Cần luyện thêm" để xem HS cần hỗ trợ trong lớp đó.
 - **Render công thức trong theo dõi tiến độ:** `admin-progress.js` có hàm `mathText()` và gọi `MathJax.typesetPromise()` sau khi render bảng. `index.html` và các trang lộ trình Toán nạp MathJax để công thức trong dữ liệu kỹ năng/cần lưu ý hiển thị đúng.
 - **Bài luyện tập:** Trắc nghiệm đã có phản hồi đúng/sai sau khi chọn đáp án; thao tác nộp bài cập nhật điểm, kỹ năng và trạng thái (`in_progress`, `needs_practice`, `mastered`). Nút "Làm lại bài luyện" reset đáp án/điểm luyện tập về trạng thái đang học để học sinh có thể làm lại.

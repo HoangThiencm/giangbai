@@ -35,6 +35,15 @@
     const LS_LESSON_KEY = `lotrinh_selected_lesson_${PAGE_STORAGE_KEY}`;
     const LS_TEACHER_PREVIEW_KEY = `lotrinh_teacher_preview_${PAGE_STORAGE_KEY}`;
     const LS_STUDY_MINUTES_KEY = `lotrinh_study_minutes_${PAGE_STORAGE_KEY}`;
+    const LS_LESSON_NAV_VIEW_KEY = `lotrinh_lesson_nav_view_${PAGE_STORAGE_KEY}`;
+    const LS_MOTIVATION_KEY_PREFIX = `lotrinh_motivation_${PAGE_STORAGE_KEY}`;
+    const REVIEW_STALE_DAYS = 7;
+
+    const BADGE_DEFS = [
+        { id: 'streak_3', label: '3 ngày học liên tiếp', icon: 'fa-fire', tone: 'text-orange-600 bg-orange-50 border-orange-200' },
+        { id: 'mastered_5', label: 'Hoàn thành 5 bài', icon: 'fa-medal', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
+        { id: 'perfect_100', label: 'Lần đầu đạt 100%', icon: 'fa-star', tone: 'text-teal-700 bg-teal-50 border-teal-200' }
+    ];
 
     const state = {
         user: null,
@@ -44,6 +53,11 @@
         activeTab: localStorage.getItem(LS_TAB_KEY) || 'learn',
         studyMinutes: Number(localStorage.getItem(LS_STUDY_MINUTES_KEY)) || 30,
         teacherPreviewUi: { answers: {}, essayAnswers: {}, practiceDone: false },
+        lessonListUi: {
+            chapter: '',
+            search: '',
+            view: localStorage.getItem(LS_LESSON_NAV_VIEW_KEY) || 'list'
+        },
         loading: true,
         error: ''
     };
@@ -431,6 +445,7 @@
         renderTeacherPreviewBanner();
         renderOverallProgress();
         renderStudyPlanner();
+        renderMotivationPanel();
         renderLessonList();
         renderHeader(lesson);
         renderTabs();
@@ -468,19 +483,321 @@
         };
     }
 
+    function getLessonRightAside() {
+        return document.querySelector('#studentLearningMain section.grid > aside');
+    }
+
     function ensureStudyPlannerPanel() {
+        const rightAside = getLessonRightAside();
+        if (!rightAside) return null;
+
         let panel = document.getElementById('studyPlannerPanel');
-        if (panel) return panel;
-
-        const aside = document.querySelector('#studentLearningMain > aside');
-        if (!aside) return null;
-
-        panel = document.createElement('section');
-        panel.id = 'studyPlannerPanel';
-        panel.className = 'panel p-4';
-        const lessonPanel = document.getElementById('lessonList')?.closest('section');
-        aside.insertBefore(panel, lessonPanel || null);
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'studyPlannerPanel';
+            panel.className = 'panel p-5 study-planner-panel';
+            rightAside.insertBefore(panel, rightAside.firstChild);
+        } else if (panel.parentElement !== rightAside) {
+            rightAside.insertBefore(panel, rightAside.firstChild);
+        }
         return panel;
+    }
+
+    function injectLessonListStyles() {
+        if (document.getElementById('lessonListStyles')) return;
+        const style = document.createElement('style');
+        style.id = 'lessonListStyles';
+        style.textContent = `
+            .lesson-list-scroll {
+                max-height: min(68vh, 520px);
+                overflow-y: auto;
+                padding-right: 4px;
+                scroll-behavior: smooth;
+            }
+            .lesson-list-scroll::-webkit-scrollbar { width: 6px; }
+            .lesson-list-scroll::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 999px;
+            }
+            .lesson-item-compact { padding: 8px 10px; }
+            .lesson-item-compact .lesson-item-title {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .lesson-chapter-group[open] .lesson-chapter-head {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: #f8fafc;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .chapter-map-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+            .chapter-map-card {
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                background: #fff;
+                padding: 10px;
+                text-align: left;
+                transition: border-color 0.16s ease, box-shadow 0.16s ease;
+            }
+            .chapter-map-card:hover {
+                border-color: #94a3b8;
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+            }
+            .chapter-map-card.is-active {
+                border-color: #0f766e;
+                box-shadow: 0 6px 16px rgba(15, 118, 110, 0.12);
+            }
+            .chapter-map-dot {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 999px;
+                margin-right: 6px;
+            }
+            .chapter-map-legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 10px;
+                font-size: 0.72rem;
+                font-weight: 700;
+                color: #64748b;
+            }
+            .motivation-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border-radius: 999px;
+                border: 1px solid;
+                padding: 4px 10px;
+                font-size: 0.72rem;
+                font-weight: 700;
+            }
+            .motivation-badge.is-locked { opacity: 0.45; filter: grayscale(0.2); }
+            .smart-review-item { border-color: #fcd34d; background: #fffbeb; }
+            .smart-review-item:hover { border-color: #f59e0b; background: #fef3c7; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function todayKey(date = new Date()) {
+        return date.toISOString().slice(0, 10);
+    }
+
+    function motivationStorageKey() {
+        const userId = state.user?.id || state.user?.username || 'guest';
+        return `${LS_MOTIVATION_KEY_PREFIX}_${userId}`;
+    }
+
+    function loadMotivation() {
+        return safeJson(localStorage.getItem(motivationStorageKey()), {
+            studyDays: [],
+            badges: [],
+            firstPerfectLessonId: null
+        });
+    }
+
+    function saveMotivation(data) {
+        localStorage.setItem(motivationStorageKey(), JSON.stringify(data));
+    }
+
+    function computeStreak(studyDays) {
+        if (!studyDays.length) return 0;
+        const set = new Set(studyDays);
+        let streak = 0;
+        const cursor = new Date();
+        while (set.has(todayKey(cursor))) {
+            streak += 1;
+            cursor.setDate(cursor.getDate() - 1);
+        }
+        return streak;
+    }
+
+    function masteredLessonCount() {
+        return state.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered').length;
+    }
+
+    function evaluateMotivationBadges(data) {
+        const streak = computeStreak(data.studyDays);
+        const earned = new Set(data.badges || []);
+        if (streak >= 3) earned.add('streak_3');
+        if (masteredLessonCount() >= 5) earned.add('mastered_5');
+        if (data.firstPerfectLessonId) earned.add('perfect_100');
+        data.badges = [...earned];
+        return data;
+    }
+
+    function recordStudyActivity() {
+        if (isTeacher() && !isTeacherPreview()) return loadMotivation();
+        const data = evaluateMotivationBadges(loadMotivation());
+        const today = todayKey();
+        if (!data.studyDays.includes(today)) {
+            data.studyDays = [...data.studyDays, today].sort();
+        }
+        evaluateMotivationBadges(data);
+        saveMotivation(data);
+        return data;
+    }
+
+    function markPerfectLesson(lesson) {
+        if (!lesson || (isTeacher() && !isTeacherPreview())) return;
+        const data = loadMotivation();
+        if (!data.firstPerfectLessonId) {
+            data.firstPerfectLessonId = String(lesson.id);
+            evaluateMotivationBadges(data);
+            saveMotivation(data);
+        }
+    }
+
+    function daysSince(isoDate) {
+        if (!isoDate) return Infinity;
+        const then = new Date(isoDate).getTime();
+        if (Number.isNaN(then)) return Infinity;
+        return (Date.now() - then) / (1000 * 60 * 60 * 24);
+    }
+
+    function smartReviewReason(lesson) {
+        const progress = currentLessonProgress(lesson);
+        const score = Number(progress.score || 0);
+        const completedAt = progress.completedAt || progress.state?.completedAt || null;
+
+        if (progress.status === 'needs_practice') {
+            return { priority: 100, reason: `Điểm ${score}% — cần luyện thêm`, tab: 'practice', minutes: 15, title: 'Ôn lại bài yếu' };
+        }
+        if (progress.status !== 'not_started' && score > 0 && score < 80) {
+            return { priority: 90, reason: `Điểm ${score}% — dưới mục tiêu 80%`, tab: 'practice', minutes: 15, title: 'Củng cố điểm thấp' };
+        }
+        if (progress.status === 'mastered' && daysSince(completedAt) >= REVIEW_STALE_DAYS) {
+            const days = Math.floor(daysSince(completedAt));
+            return { priority: 65, reason: `Đã học xong ${days} ngày trước — nên ôn lại`, tab: 'practice', minutes: 10, title: 'Ôn lại kiến thức cũ' };
+        }
+        return null;
+    }
+
+    function buildSmartReviewSuggestions(limit = 4) {
+        return state.lessons
+            .map(lesson => {
+                const hint = smartReviewReason(lesson);
+                if (!hint) return null;
+                return {
+                    lesson,
+                    tab: hint.tab,
+                    minutes: hint.minutes,
+                    title: hint.title,
+                    body: hint.reason,
+                    priority: hint.priority,
+                    isReview: true
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.priority - a.priority)
+            .slice(0, limit);
+    }
+
+    function chapterAggregateStatus(lessons) {
+        const statuses = lessons.map(lesson => currentLessonProgress(lesson).status);
+        const percents = lessons.map(lesson => lessonCompletionPercent(lesson));
+        if (statuses.length && statuses.every(status => status === 'mastered')) return 'mastered';
+        if (statuses.some(status => status === 'needs_practice')) return 'needs_practice';
+        if (statuses.some(status => status === 'in_progress') || percents.some(percent => percent > 0)) return 'in_progress';
+        return 'not_started';
+    }
+
+    function shortChapterLabel(chapter) {
+        const text = String(chapter || '').trim();
+        const match = text.match(/^(Chương\s*\d+)/i);
+        return match ? match[1] : (text.length > 22 ? `${text.slice(0, 22)}…` : text);
+    }
+
+    function bindStudyActionButtons(root) {
+        if (!root) return;
+        root.querySelectorAll('[data-study-lesson-id]').forEach(button => {
+            button.onclick = async () => {
+                state.selectedLessonId = button.getAttribute('data-study-lesson-id') || state.selectedLessonId;
+                state.activeTab = button.getAttribute('data-study-tab') || state.activeTab;
+                localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
+                localStorage.setItem(LS_TAB_KEY, state.activeTab);
+                render();
+                if (!isTeacher()) await markLessonStarted(currentLesson());
+            };
+        });
+    }
+
+    function ensureMotivationPanel() {
+        const rightAside = getLessonRightAside();
+        if (!rightAside) return null;
+        let panel = document.getElementById('motivationPanel');
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'motivationPanel';
+            panel.className = 'panel p-5';
+            const studyPanel = document.getElementById('studyPlannerPanel');
+            if (studyPanel?.nextSibling) {
+                rightAside.insertBefore(panel, studyPanel.nextSibling);
+            } else {
+                rightAside.appendChild(panel);
+            }
+        }
+        return panel;
+    }
+
+    function renderMotivationPanel() {
+        if (isTeacher() && !isTeacherPreview()) {
+            document.getElementById('motivationPanel')?.remove();
+            return;
+        }
+        const panel = ensureMotivationPanel();
+        if (!panel) return;
+        const data = evaluateMotivationBadges(loadMotivation());
+        const streak = computeStreak(data.studyDays);
+        const earned = new Set(data.badges || []);
+        panel.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-500">Động lực học</h2>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">${streak > 0 ? `${streak} ngày học liên tiếp` : 'Bắt đầu chuỗi học hôm nay'}</p>
+                </div>
+                <div class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-bold text-orange-700">
+                    <i class="fas fa-fire mr-1"></i>${streak}
+                </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                ${BADGE_DEFS.map(badge => {
+                    const active = earned.has(badge.id);
+                    return `
+                        <span class="motivation-badge border ${badge.tone} ${active ? '' : 'is-locked'}">
+                            <i class="fas ${badge.icon}"></i>${escapeHtml(badge.label)}
+                        </span>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function ensureLessonListShell() {
+        if (!els.lessonList || els.lessonList.dataset.shellReady === '1') return;
+        injectLessonListStyles();
+        const section = els.lessonList.closest('section');
+        if (!section) return;
+
+        const toolbar = document.createElement('div');
+        toolbar.id = 'lessonListToolbar';
+        toolbar.className = 'mb-3 space-y-2';
+        section.insertBefore(toolbar, els.lessonList);
+
+        els.lessonList.classList.add('lesson-list-scroll');
+
+        const meta = document.createElement('p');
+        meta.id = 'lessonListMeta';
+        meta.className = 'mt-2 text-xs font-semibold text-slate-400';
+        section.appendChild(meta);
+
+        els.lessonList.dataset.shellReady = '1';
     }
 
     function lessonStudyTasks(lesson, includeReview = false) {
@@ -565,13 +882,23 @@
 
     function buildStudyPlan(minutes) {
         const budget = Math.max(10, Number(minutes) || 30);
-        const lessons = orderedStudyLessons();
+        const smartReview = buildSmartReviewSuggestions(3);
+        const reviewLessonIds = new Set(smartReview.map(task => String(task.lesson.id)));
+        const lessons = orderedStudyLessons().filter(lesson => !reviewLessonIds.has(String(lesson.id)));
         const primaryTasks = lessons.flatMap(lesson => lessonStudyTasks(lesson, false));
         const reviewTasks = lessons.flatMap(lesson => lessonStudyTasks(lesson, true))
             .filter(task => !primaryTasks.some(item => String(item.lesson.id) === String(task.lesson.id) && item.tab === task.tab));
         const candidates = [...primaryTasks, ...reviewTasks];
         const plan = [];
         let total = 0;
+
+        smartReview.forEach(task => {
+            if (plan.length >= 5) return;
+            if (total + task.minutes <= budget || !plan.length) {
+                plan.push(task);
+                total += task.minutes;
+            }
+        });
 
         candidates.some(task => {
             if (plan.length >= 5) return true;
@@ -582,7 +909,7 @@
             return total >= budget;
         });
 
-        return { plan, total, budget };
+        return { plan, total, budget, smartReview };
     }
 
     function renderStudyPlanner() {
@@ -600,7 +927,29 @@
             return;
         }
 
-        const { plan, total, budget } = buildStudyPlan(state.studyMinutes);
+        const { plan, total, budget, smartReview } = buildStudyPlan(state.studyMinutes);
+        const reviewBlock = smartReview.length ? `
+            <div class="mt-4">
+                <div class="mb-2 flex items-center justify-between gap-2">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-amber-700">Ôn tập thông minh</h3>
+                    <i class="fas fa-brain text-amber-600"></i>
+                </div>
+                <div class="space-y-2">
+                    ${smartReview.map(task => `
+                        <button type="button" class="smart-review-item study-plan-item w-full rounded border p-3 text-left" data-study-lesson-id="${escapeHtml(task.lesson.id)}" data-study-tab="${escapeHtml(task.tab)}">
+                            <p class="text-xs font-bold uppercase tracking-widest text-amber-800">${task.minutes} phút · ${escapeHtml(task.title)}</p>
+                            <p class="mt-1 truncate text-sm font-bold text-slate-900">${escapeHtml(task.lesson.title)}</p>
+                            <p class="mt-1 text-xs leading-5 text-amber-900/80">${escapeHtml(task.body)}</p>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        ` : `
+            <div class="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-500">
+                Chưa có bài cần ôn gấp. Tiếp tục kế hoạch học mới bên dưới.
+            </div>
+        `;
+
         panel.innerHTML = `
             <div class="flex items-center justify-between gap-3">
                 <div>
@@ -611,20 +960,24 @@
                     ${[15, 30, 45, 60].map(value => `<option value="${value}" ${Number(state.studyMinutes) === value ? 'selected' : ''}>${value} phút</option>`).join('')}
                 </select>
             </div>
-            <div class="mt-4 space-y-2">
-                ${plan.length ? plan.map((task, index) => `
-                    <button type="button" class="study-plan-item w-full rounded border border-slate-200 bg-white p-3 text-left hover:border-teal-300 hover:bg-teal-50" data-study-lesson-id="${escapeHtml(task.lesson.id)}" data-study-tab="${escapeHtml(task.tab)}">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Bước ${index + 1} - ${task.minutes} phút</p>
-                                <p class="mt-1 text-sm font-bold text-slate-900">${escapeHtml(task.title)}</p>
-                                <p class="mt-1 truncate text-xs font-semibold text-slate-500">${escapeHtml(task.lesson.title)}</p>
-                                <p class="mt-1 text-xs leading-5 text-slate-600">${escapeHtml(task.body)}</p>
+            ${reviewBlock}
+            <div class="mt-5">
+                <h3 class="mb-2 text-xs font-bold uppercase tracking-widest text-teal-700">Lộ trình hôm nay</h3>
+                <div class="space-y-2">
+                    ${plan.length ? plan.map((task, index) => `
+                        <button type="button" class="study-plan-item w-full rounded border border-slate-200 bg-white p-3 text-left hover:border-teal-300 hover:bg-teal-50 ${task.isReview ? 'smart-review-item' : ''}" data-study-lesson-id="${escapeHtml(task.lesson.id)}" data-study-tab="${escapeHtml(task.tab)}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-bold uppercase tracking-widest ${task.isReview ? 'text-amber-800' : 'text-teal-700'}">Bước ${index + 1} - ${task.minutes} phút</p>
+                                    <p class="mt-1 text-sm font-bold text-slate-900">${escapeHtml(task.title)}</p>
+                                    <p class="mt-1 truncate text-xs font-semibold text-slate-500">${escapeHtml(task.lesson.title)}</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-600">${escapeHtml(task.body)}</p>
+                                </div>
+                                <i class="fas fa-arrow-right mt-1 text-slate-400"></i>
                             </div>
-                            <i class="fas fa-arrow-right mt-1 text-slate-400"></i>
-                        </div>
-                    </button>
-                `).join('') : '<p class="rounded border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-500">Tất cả bài học đã hoàn thành. Hãy chọn 15 phút ôn nhanh để giữ nhịp.</p>'}
+                        </button>
+                    `).join('') : '<p class="rounded border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-500">Tất cả bài học đã hoàn thành. Hãy chọn 15 phút ôn nhanh để giữ nhịp.</p>'}
+                </div>
             </div>
         `;
 
@@ -637,16 +990,7 @@
             };
         }
 
-        panel.querySelectorAll('[data-study-lesson-id]').forEach(button => {
-            button.onclick = async () => {
-                state.selectedLessonId = button.getAttribute('data-study-lesson-id') || state.selectedLessonId;
-                state.activeTab = button.getAttribute('data-study-tab') || state.activeTab;
-                localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
-                localStorage.setItem(LS_TAB_KEY, state.activeTab);
-                render();
-                if (!isTeacher()) await markLessonStarted(currentLesson());
-            };
-        });
+        bindStudyActionButtons(panel);
     }
 
     function renderOverallProgress() {
@@ -696,39 +1040,171 @@
         return groups;
     }
 
+    function lessonMatchesSearch(lesson, search) {
+        if (!search) return true;
+        const haystack = `${lesson.title || ''} ${lesson.chapter || ''}`.toLowerCase();
+        return haystack.includes(search.toLowerCase());
+    }
+
+    function renderLessonListToolbar(chapterGroups) {
+        const toolbar = document.getElementById('lessonListToolbar');
+        if (!toolbar) return;
+        const chapters = chapterGroups.map(group => group.chapter);
+        const { chapter, search, view } = state.lessonListUi;
+        const listFilters = view === 'list' ? `
+            <input id="lessonListSearch" type="search" value="${escapeHtml(search)}" placeholder="Tìm bài học..." class="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+            <select id="lessonListChapterFilter" class="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="">Tất cả chương (${state.lessons.length} bài)</option>
+                ${chapters.map(name => `<option value="${escapeHtml(name)}" ${chapter === name ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+            </select>
+        ` : `
+            <div class="chapter-map-legend">
+                <span><span class="chapter-map-dot bg-slate-400"></span>Chưa học</span>
+                <span><span class="chapter-map-dot bg-sky-500"></span>Đang học</span>
+                <span><span class="chapter-map-dot bg-amber-500"></span>Cần luyện</span>
+                <span><span class="chapter-map-dot bg-teal-600"></span>Đã xong</span>
+            </div>
+        `;
+        toolbar.innerHTML = `
+            <div class="flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-bold">
+                <button type="button" data-lesson-view="list" class="lesson-nav-view-btn flex-1 rounded px-2 py-1.5 ${view === 'list' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600'}">Danh sách</button>
+                <button type="button" data-lesson-view="map" class="lesson-nav-view-btn flex-1 rounded px-2 py-1.5 ${view === 'map' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600'}">Bản đồ chương</button>
+            </div>
+            ${listFilters}
+        `;
+        toolbar.querySelectorAll('[data-lesson-view]').forEach(button => {
+            button.onclick = () => {
+                state.lessonListUi.view = button.getAttribute('data-lesson-view') || 'list';
+                localStorage.setItem(LS_LESSON_NAV_VIEW_KEY, state.lessonListUi.view);
+                renderLessonList();
+            };
+        });
+        const searchInput = document.getElementById('lessonListSearch');
+        const chapterSelect = document.getElementById('lessonListChapterFilter');
+        if (searchInput) {
+            searchInput.oninput = () => {
+                state.lessonListUi.search = searchInput.value.trim();
+                renderLessonList();
+            };
+        }
+        if (chapterSelect) {
+            chapterSelect.onchange = () => {
+                state.lessonListUi.chapter = chapterSelect.value || '';
+                renderLessonList();
+            };
+        }
+    }
+
+    function renderChapterMap(chapterGroups) {
+        const activeLesson = currentLesson();
+        const activeChapter = activeLesson?.chapter || '';
+        els.lessonList.innerHTML = `
+            <div class="chapter-map-grid">
+                ${chapterGroups.map(group => {
+                    const status = chapterAggregateStatus(group.lessons);
+                    const info = statusInfo(status);
+                    const masteredCount = group.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered').length;
+                    const isActive = group.chapter === activeChapter;
+                    return `
+                        <button type="button" class="chapter-map-card ${isActive ? 'is-active' : ''}" data-chapter-map="${escapeHtml(group.chapter)}">
+                            <div class="flex items-center">
+                                <span class="chapter-map-dot ${info.color}"></span>
+                                <span class="text-sm font-bold text-slate-900">${escapeHtml(shortChapterLabel(group.chapter))}</span>
+                            </div>
+                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-slate-600">${escapeHtml(group.chapter)}</p>
+                            <p class="mt-2 text-xs font-bold ${info.tone}">${info.text}</p>
+                            <p class="mt-1 text-xs text-slate-500">${masteredCount}/${group.lessons.length} bài</p>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        els.lessonList.querySelectorAll('[data-chapter-map]').forEach(button => {
+            button.onclick = () => {
+                const chapterName = button.getAttribute('data-chapter-map') || '';
+                const group = chapterGroups.find(item => item.chapter === chapterName);
+                const targetLesson = group?.lessons.find(lesson => String(lesson.id) === String(state.selectedLessonId)) || group?.lessons[0];
+                state.lessonListUi.chapter = chapterName;
+                state.lessonListUi.view = 'list';
+                localStorage.setItem(LS_LESSON_NAV_VIEW_KEY, 'list');
+                if (targetLesson) {
+                    state.selectedLessonId = targetLesson.id;
+                    localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
+                }
+                render();
+            };
+        });
+    }
+
+    function renderLessonListMeta(visibleCount, chapterCount) {
+        const meta = document.getElementById('lessonListMeta');
+        if (!meta) return;
+        const { chapter, search } = state.lessonListUi;
+        if (search || chapter) {
+            meta.textContent = `Đang hiển thị ${visibleCount} bài${chapter ? ` · ${chapter}` : ''}${search ? ` · "${search}"` : ''}`;
+            return;
+        }
+        meta.textContent = `${visibleCount} bài · ${chapterCount} chương`;
+    }
+
     function renderLessonList() {
+        ensureLessonListShell();
+
         if (!state.lessons.length) {
+            document.getElementById('lessonListToolbar')?.replaceChildren();
+            document.getElementById('lessonListMeta')?.replaceChildren();
             els.lessonList.innerHTML = '<div class="text-sm text-slate-500">Chưa có bài học nào được giáo viên mở.</div>';
             return;
         }
 
         const activeLessonId = String(state.selectedLessonId || state.lessons[0]?.id || '');
         const chapterGroups = groupLessonsByChapter(state.lessons);
+        renderLessonListToolbar(chapterGroups);
 
-        els.lessonList.innerHTML = chapterGroups.map(group => {
+        if (state.lessonListUi.view === 'map') {
+            renderLessonListMeta(state.lessons.length, chapterGroups.length);
+            renderChapterMap(chapterGroups);
+            return;
+        }
+
+        const { chapter, search } = state.lessonListUi;
+        const filteredGroups = chapterGroups
+            .filter(group => !chapter || group.chapter === chapter)
+            .map(group => ({
+                ...group,
+                lessons: group.lessons.filter(lesson => lessonMatchesSearch(lesson, search))
+            }))
+            .filter(group => group.lessons.length);
+
+        const visibleCount = filteredGroups.reduce((sum, group) => sum + group.lessons.length, 0);
+        renderLessonListMeta(visibleCount, chapterGroups.length);
+
+        if (!visibleCount) {
+            els.lessonList.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">Không có bài phù hợp bộ lọc.</div>';
+            return;
+        }
+
+        els.lessonList.innerHTML = filteredGroups.map(group => {
             const containsActive = group.lessons.some(lesson => String(lesson.id) === activeLessonId);
             const masteredCount = group.lessons.filter(lesson => currentLessonProgress(lesson).status === 'mastered').length;
             return `
                 <details class="lesson-chapter-group" ${containsActive ? 'open' : ''}>
                     <summary class="lesson-chapter-head">
                         <span class="lesson-chapter-title">${escapeHtml(group.chapter)}</span>
-                        <span class="lesson-chapter-meta">${masteredCount}/${group.lessons.length} bài</span>
+                        <span class="lesson-chapter-meta">${masteredCount}/${group.lessons.length}</span>
                     </summary>
-                    <div class="lesson-chapter-items space-y-2">
+                    <div class="lesson-chapter-items space-y-1.5">
                         ${group.lessons.map(lesson => {
-                            const progress = currentLessonProgress(lesson);
                             const active = String(lesson.id) === activeLessonId;
-                            const status = statusInfo(progress.status);
+                            const status = statusInfo(currentLessonProgress(lesson).status);
+                            const percent = lessonCompletionPercent(lesson);
                             return `
-                                <button class="lesson-item ${active ? 'active' : ''} w-full bg-white p-3 text-left" data-lesson-id="${lesson.id}">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p class="text-sm font-bold text-slate-900">${escapeHtml(lesson.title)}</p>
-                                            <p class="mt-1 text-xs text-slate-500">${lessonCompletionPercent(lesson)}% hoàn thành</p>
-                                        </div>
-                                        <span class="status-dot ${status.color} mt-1"></span>
+                                <button type="button" class="lesson-item lesson-item-compact ${active ? 'active' : ''} w-full bg-white text-left" data-lesson-id="${lesson.id}" title="${escapeHtml(lesson.title)} · ${status.text} · ${percent}%">
+                                    <div class="flex items-center gap-2">
+                                        <span class="status-dot ${status.color} flex-shrink-0"></span>
+                                        <span class="lesson-item-title flex-1 min-w-0 text-sm font-bold text-slate-900">${escapeHtml(lesson.title)}</span>
+                                        <span class="flex-shrink-0 text-xs font-bold ${status.tone}">${percent}%</span>
                                     </div>
-                                    <p class="mt-2 text-xs font-semibold ${status.tone}">${status.text}</p>
                                 </button>
                             `;
                         }).join('')}
@@ -745,6 +1221,11 @@
                 if (!isTeacher()) await markLessonStarted(currentLesson());
             });
         });
+
+        const activeItem = els.lessonList.querySelector('.lesson-item.active');
+        if (activeItem) {
+            window.requestAnimationFrame(() => activeItem.scrollIntoView({ block: 'nearest' }));
+        }
     }
 
     function renderHeader(lesson) {
@@ -1737,6 +2218,12 @@
             startedAt: payload.started_at || current.startedAt || null,
             completedAt: payload.completed_at || null,
         };
+        if (!isTeacher() || isTeacherPreview()) {
+            recordStudyActivity();
+            if (payload.status === 'mastered' || payload.score >= 100 || lessonCompletionPercent(lesson, uiState, payload.status) >= 100) {
+                markPerfectLesson(lesson);
+            }
+        }
         return state.progress[lesson.id];
     }
 
@@ -1765,6 +2252,7 @@
                 skillScores: progress.skillScores || {},
                 startedAt: nextState.startedAt
             });
+            if (!isTeacher()) recordStudyActivity();
             render();
         } catch (err) {
             console.warn('Không lưu được trạng thái bắt đầu bài học', err);

@@ -26,6 +26,15 @@
 - [x] Quy ước soạn nội dung bài học: Enter 1 lần = xuống dòng, Enter 2 lần = tách đoạn; hỗ trợ `**đậm**`, `*nghiêng*`, `++gạch chân++`, ảnh `![mô tả](url)`; render qua `lessonRichText()` trong `lotrinh.js`.
 - [x] Gợi ý hành động tiếp theo (`renderNextAction`) cập nhật theo tab và tiến độ; ô gợi ý có thể bấm để chuyển tab.
 - [x] Fallback AI: `api/ai_explain.php` thử Gemini trước, hết quota/lỗi thì gọi ShopAIKey (DeepSeek); cấu hình `shopaikey_api_key`, `shopaikey_model` trong `admin.html` / `global_config.json`.
+- [x] Khóa soạn bài theo trang lộ trình: trên `lotrinhtoan6–9.html` giáo viên chỉ soạn/xem bài đúng `LOTRINH_SUBJECT` (ẩn pill chuyển môn, khóa dropdown môn); `admin-progress.js` cũng lọc bài theo môn trang.
+- [x] Sửa lỗi encoding UTF-8 trên `lotrinhtoan7.html`, `lotrinhtoan8.html`, `lotrinhtoan9.html` (tiêu đề, `LOTRINH_SUBJECT`, chữ tiếng Việt ở header).
+- [x] Sửa lưu **mục tiêu bài học**: đổi textarea soạn bài thành `lessonGoalInput` (tránh trùng `id` với `<p id="lessonGoal">` của giao diện học sinh).
+- [x] Tối ưu **Danh sách bài** (sidebar trái): cuộn trong khung cố định, tìm bài, lọc chương, dòng gọn 1 hàng, chỉ mở chương đang học, tự cuộn tới bài active.
+- [x] Chuyển **Kế hoạch tự học** sang cột phải (trên Kỹ năng / Nhiệm vụ hôm nay).
+- [x] Căn cột bảng tiến độ giáo viên: dòng tóm tắt lớp thẳng hàng với header (`table-fixed` + từng ô `<td>`).
+- [x] **Ôn tập thông minh** (`buildSmartReviewSuggestions`): đề xuất bài cần ôn theo điểm thấp, `needs_practice`, hoặc `mastered` ≥ 7 ngày; gắn vào panel Kế hoạch tự học và ưu tiên trong `buildStudyPlan`.
+- [x] **Bản đồ chương**: tab chuyển Danh sách / Bản đồ; lưới chương với trạng thái Chưa học / Đang học / Cần luyện / Đã xong; bấm chương → lọc danh sách.
+- [x] **Động lực học** (streak + huy hiệu nhẹ): `3 ngày liên tiếp`, `Hoàn thành 5 bài`, `Lần đầu đạt 100%`; lưu `localStorage` theo user + môn; cập nhật khi `syncLessonState` / bắt đầu học.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -37,7 +46,13 @@
 - [ ] Đăng nhập admin: kiểm tra không còn tab/panel "Theo dõi tiến độ" trong admin.
 - [ ] Với bài đã học xong, kiểm tra nút hiển thị "Học lại"; bấm vào thì bài quay về trạng thái đang học và tiến trình được reset.
 - [ ] Tạo/sửa học sinh trong admin với tên lớp rõ (vd. `6A`, `6B`, `6C`): đăng nhập giáo viên → mở trang lộ trình Toán 6 → panel tiến độ có dropdown **Lớp**; chọn từng lớp và lọc **Cần luyện thêm** để xem danh sách cần hỗ trợ.
-- [ ] Chọn "Tất cả lớp" trong panel tiến độ: kiểm tra bảng được nhóm theo lớp, mỗi nhóm có dòng tóm tắt số học sinh / đã học xong / cần luyện.
+- [ ] Chọn "Tất cả lớp" trong panel tiến độ: kiểm tra bảng được nhóm theo lớp, mỗi nhóm thẳng cột với header (Lớp / số HS / đã học xong / cần luyện).
+- [ ] Học sinh: thử tab **Bản đồ chương** — màu trạng thái đúng, bấm chương mở đúng danh sách bài.
+- [ ] Học sinh: kiểm tra **Ôn tập thông minh** hiện bài yếu / cần luyện; bấm vào nhảy đúng bài + tab luyện tập.
+- [ ] Học sinh: học vài ngày liên tiếp / hoàn thành bài — huy hiệu và streak trong **Động lực học** cập nhật.
+- [ ] Giáo viên trên `lotrinhtoan7.html`: chỉ thấy soạn bài Toán 7, không lẫn Toán 6/8/9.
+- [ ] Soạn bài: nhập mục tiêu → Lưu → tải lại vẫn còn mục tiêu; học sinh thấy ở phần mô tả bài.
+- [ ] Bài mới mặc định **chưa mở** cho học sinh; chỉ hiện sau khi giáo viên tick "Mở bài này cho học sinh" và lưu.
 
 ## Các công việc tiếp theo (To-do)
 - [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
@@ -45,3 +60,5 @@
 - [ ] Mở rộng tính năng dùng module Gemini tự nhập key của riêng người dùng quản trị (bổ sung giao diện vào trang `admin.html`).
 - [ ] Chăm chút thêm cho giao diện di động (Responsive) của các trang lộ trình.
 - [ ] (Tùy chọn) Xuất nhanh báo cáo tiến độ theo lớp (CSV/in) hoặc lọc theo môn + lớp trên một màn hình tổng hợp.
+- [ ] (Tùy chọn) Đồng bộ streak/huy hiệu lên server (hiện lưu `localStorage` theo máy).
+- [ ] (Tùy chọn) Tinh chỉnh ngưỡng ôn tập thông minh (7 ngày, điểm 80%) theo ý giáo viên.
