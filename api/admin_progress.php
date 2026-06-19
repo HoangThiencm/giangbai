@@ -131,6 +131,7 @@ foreach ($students as $student) {
     $needsPractice = in_array($status, ['not_started', 'in_progress', 'needs_practice'], true) || $score < 80;
 
     $state = $progress ? decode_json_array($progress['state_json']) : [];
+    $practiceScoreState = isset($state['practiceScore']) ? (int)$state['practiceScore'] : null;
 
     $rows[] = [
         'student_id' => (int)$student['id'],
@@ -141,6 +142,7 @@ foreach ($students as $student) {
         'last_login_at' => $student['last_login_at'],
         'status' => $status,
         'score' => $score,
+        'practice_score_state' => $practiceScoreState,
         'skill_scores' => $skillScores,
         'state' => $state,
         'needs_practice' => $needsPractice,

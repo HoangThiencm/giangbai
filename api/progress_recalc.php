@@ -267,7 +267,12 @@ function pr_recalc_progress_row(array $lesson, array $progressRow): array
 
     if (!empty($state['practiceDone'])) {
         $merged = pr_merged_practice_score($lesson, $state);
-        $score = $merged !== null ? $merged : $oldScore;
+        $declared = isset($state['practiceScore']) ? (int)$state['practiceScore'] : null;
+        if ($declared !== null && $declared >= 0 && $declared <= 100) {
+            $score = $declared;
+        } else {
+            $score = $merged !== null ? $merged : $oldScore;
+        }
         $status = pr_derive_status($state, $score);
         $skillScores = pr_lesson_skill_scores($lesson, $score);
         $completedAt = $progressRow['completed_at'] ?? ($state['completedAt'] ?? null);

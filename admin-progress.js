@@ -377,6 +377,9 @@
                 <td class="px-4 py-3 text-sm">
                     <div class="font-bold ${scoreTone}">${row.score}%</div>
                     ${row.status !== 'not_started' ? `<div class="text-xs text-slate-500 mt-0.5">Tiến trình ${lessonCompletionFromRow(row)}%</div>` : ''}
+                    ${row.practice_score_state !== null && row.practice_score_state !== undefined && row.practice_score_state !== row.score
+                        ? `<div class="text-xs text-amber-700 mt-0.5">HS nộp: ${row.practice_score_state}% · DB: ${row.score}%</div>`
+                        : ''}
                 </td>
                 <td class="px-4 py-3 text-sm text-slate-700 leading-6">${mathText(weakSkillText(row))}</td>
                 <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>

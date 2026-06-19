@@ -1549,16 +1549,19 @@
                     theoryDone: true,
                     examplesDone: true,
                     practiceDone: true,
+                    practiceScore: Number.isFinite(Number(ui.practiceScore))
+                        ? Math.round(Number(ui.practiceScore))
+                        : (Number.isFinite(Number(progress.score)) ? Math.round(Number(progress.score)) : 100),
                     completedAt,
                     startedAt: ui.startedAt || completedAt
                 };
-                const nextPercent = lessonCompletionPercent(lesson, nextUi, 'mastered');
+                const practiceScore = nextUi.practiceScore;
                 await syncLessonState(lesson, {
                     ...nextUi
                 }, {
                     status: 'mastered',
-                    score: nextPercent,
-                    skillScores: lessonProgressSkillScores(lesson, nextPercent),
+                    score: practiceScore,
+                    skillScores: lessonProgressSkillScores(lesson, practiceScore),
                     completedAt
                 });
                 render();
@@ -2520,6 +2523,7 @@
                     const nextUi = {
                         ...ui,
                         practiceDone: true,
+                        practiceScore: mergedScore,
                         completedAt,
                         startedAt: ui.startedAt || completedAt,
                         answers: submittedAnswers,
@@ -3557,9 +3561,14 @@
 
     initStudentAiAssist();
 
-    try {
-        await reloadLessons(true);
-        if (!state.selectedLessonId && state.lessons[0]) {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible' || isTeacher()) return;
+            reloadLessons(false).then(() => render()).catch(console.warn);
+        });
+
+        try {
+            await reloadLessons(true);
+            if (!state.selectedLessonId && state.lessons[0]) {
             state.selectedLessonId = state.lessons[0].id;
             localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
         }
