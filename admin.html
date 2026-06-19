@@ -169,14 +169,16 @@
                     </div>
                 </div>
 
+                <div id="adminConfigStorageBanner" class="hidden rounded-lg border p-3 mb-4 text-sm"></div>
+
                 <!-- Gemini AI CONFIG -->
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <h4 class="font-bold text-emerald-900 text-sm">Google Gemini</h4>
-                            <p class="text-xs text-emerald-800 mt-1">Nhập nhiều API key, mỗi key một dòng. Hệ thống sẽ dùng model bạn chọn và các trang AI sẽ đọc lại từ trình duyệt này.</p>
+                            <p class="text-xs text-emerald-800 mt-1">Nhập nhiều API key, mỗi key một dòng. Key được lưu trên <strong>hosting</strong> (<code>global_config.json</code>), mọi máy dùng chung — không lưu riêng trên máy cá nhân.</p>
                         </div>
-                        <span id="adminGeminiStatus" class="text-xs font-semibold text-emerald-700"></span>
+                        <span id="adminGeminiStatus" class="text-xs font-semibold text-emerald-700 shrink-0"></span>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">
                         <div>
@@ -198,7 +200,7 @@
                                     <i class="fas fa-trash mr-1"></i> Xóa
                                 </button>
                             </div>
-                            <p class="text-xs text-emerald-800">Trang học và các công cụ AI sẽ ưu tiên dùng danh sách key này.</p>
+                            <p id="adminGeminiStorageDetail" class="text-xs text-emerald-800"></p>
                         </div>
                     </div>
                 </div>
@@ -233,7 +235,7 @@
                                     <i class="fas fa-trash mr-1"></i> Xóa
                                 </button>
                             </div>
-                            <p class="text-xs text-indigo-800">Chỉ dùng AI deepseek giải thích cho tự học toán 6, 7, 8, 9.</p>
+                            <p id="adminShopaikeyStorageDetail" class="text-xs text-indigo-800"></p>
                         </div>
                     </div>
                 </div>
@@ -509,6 +511,11 @@
         // ==========================================
         let currentConfigSha = null;
         let currentGlobalContent = { features: {}, user_features: {} };
+        let configStorageMeta = {
+            source: 'none',
+            lastSaveTarget: null,
+            lastSavedAt: null
+        };
 
         const FEATURE_NAMES = {
             gslides: "Trình Chiếu Slides",
@@ -549,16 +556,86 @@
             ));
         }
 
+        function configSourceLabel(source) {
+            const labels = {
+                hosting: 'hosting (global_config.json)',
+                github: 'GitHub',
+                file: 'file global_config.json',
+                none: 'chưa tải được'
+            };
+            return labels[source] || source;
+        }
+
+        function markConfigSaved(target) {
+            configStorageMeta.lastSaveTarget = target;
+            configStorageMeta.lastSavedAt = new Date().toLocaleString('vi-VN');
+            if (target === 'hosting') configStorageMeta.source = 'hosting';
+            renderConfigStorageBanner();
+        }
+
+        function renderConfigStorageBanner() {
+            const banner = document.getElementById('adminConfigStorageBanner');
+            if (!banner) return;
+
+            const keys = Array.isArray(currentGlobalContent?.gemini_keys) ? currentGlobalContent.gemini_keys.length : 0;
+            const hasShop = !!String(currentGlobalContent?.shopaikey_api_key || '').trim();
+            const source = configStorageMeta.source;
+            let tone = 'border-amber-200 bg-amber-50 text-amber-900';
+            let icon = 'fa-circle-info';
+            let message = '';
+
+            if (source === 'hosting') {
+                if (keys || hasShop) {
+                    tone = 'border-emerald-200 bg-emerald-50 text-emerald-900';
+                    icon = 'fa-cloud';
+                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: ${keys} Gemini key${keys === 1 ? '' : 's'}${hasShop ? ', có ShopAIKey fallback' : ', chưa có ShopAIKey fallback'}.`;
+                } else {
+                    tone = 'border-amber-200 bg-amber-50 text-amber-900';
+                    icon = 'fa-triangle-exclamation';
+                    message = 'Đã kết nối hosting nhưng <strong>chưa có key AI</strong> trong <code>global_config.json</code>. Nhập key rồi bấm <strong>Lưu Gemini</strong> / <strong>Lưu Fallback</strong>.';
+                }
+            } else if (source === 'github') {
+                tone = 'border-sky-200 bg-sky-50 text-sky-900';
+                icon = 'fa-brands fa-github';
+                message = `Đang đọc từ <strong>GitHub</strong> (hosting chưa phản hồi hoặc file trống). Có ${keys} Gemini key. Nên bấm lưu lại để đồng bộ xuống hosting.`;
+            } else if (source === 'file') {
+                tone = 'border-sky-200 bg-sky-50 text-sky-900';
+                icon = 'fa-file-code';
+                message = `Đọc từ file <code>global_config.json</code> tĩnh trên hosting. Có ${keys} Gemini key.`;
+            } else {
+                message = 'Chưa tải được cấu hình AI. Kiểm tra Admin Key và quyền ghi file <code>global_config.json</code> trên hosting.';
+            }
+
+            if (configStorageMeta.lastSaveTarget && configStorageMeta.lastSavedAt) {
+                message += ` Lần lưu gần nhất: <strong>${configSourceLabel(configStorageMeta.lastSaveTarget)}</strong> lúc ${configStorageMeta.lastSavedAt}.`;
+            }
+
+            banner.className = `rounded-lg border p-3 mb-4 text-sm ${tone}`;
+            banner.innerHTML = `<i class="fas ${icon} mr-2"></i><span>${message}</span>`;
+            banner.classList.remove('hidden');
+        }
+
         function syncGeminiAdminUI(content) {
             const keys = Array.isArray(content?.gemini_keys) ? content.gemini_keys : [];
             const model = typeof content?.gemini_model === 'string' ? content.gemini_model : 'gemini-2.5-flash';
             const keyInput = document.getElementById('adminGeminiKeysInput');
             const modelSelect = document.getElementById('adminGeminiModuleSelect');
             const status = document.getElementById('adminGeminiStatus');
+            const detail = document.getElementById('adminGeminiStorageDetail');
 
             if (keyInput) keyInput.value = keys.join('\n');
             if (modelSelect) modelSelect.value = GEMINI_MODEL_OPTIONS.includes(model) ? model : 'gemini-2.5-flash';
-            if (status) status.textContent = keys.length ? `Da nap ${keys.length} key` : 'Chua co key';
+            if (status) {
+                status.innerHTML = keys.length
+                    ? `<span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">Đã nạp ${keys.length} key · ${model}</span>`
+                    : '<span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-amber-800">Chưa có key trên server</span>';
+            }
+            if (detail) {
+                detail.textContent = keys.length
+                    ? `Nguồn hiện tại: ${configSourceLabel(configStorageMeta.source)}. AI lộ trình Toán 6-9 và các công cụ đọc từ file trên hosting.`
+                    : 'Chưa có Gemini key trong global_config.json trên hosting. Nhập key và bấm Lưu Gemini.';
+            }
+            renderConfigStorageBanner();
         }
 
         function readShopaikeyModelFromUI() {
@@ -578,7 +655,17 @@
             if (keyInput) keyInput.value = apiKey;
             if (modelSelect) modelSelect.value = SHOPAIKEY_MODEL_OPTIONS.includes(model) ? model : 'deepseek-v4-flash';
             if (modelCustom) modelCustom.value = SHOPAIKEY_MODEL_OPTIONS.includes(model) ? '' : model;
-            if (status) status.textContent = apiKey ? `Fallback: ${model}` : 'Chua bat fallback';
+            if (status) {
+                status.innerHTML = apiKey
+                    ? `<span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-1 text-indigo-800">Đã cấu hình · ${model}</span>`
+                    : '<span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-amber-800">Chưa có fallback trên server</span>';
+            }
+            if (document.getElementById('adminShopaikeyStorageDetail')) {
+                document.getElementById('adminShopaikeyStorageDetail').textContent = apiKey
+                    ? `ShopAIKey fallback đã lưu trên ${configSourceLabel(configStorageMeta.source)}. Dùng khi Gemini hết lượt hoặc lỗi.`
+                    : 'Chưa có ShopAIKey trên hosting. Nhập key và bấm Lưu Fallback nếu cần dự phòng cho AI lộ trình.';
+            }
+            renderConfigStorageBanner();
         }
 
         function adminHeaders(extra = {}) {
@@ -619,6 +706,7 @@
                 const data = await res.json();
                 if (!data.ok || !data.config) return false;
                 currentGlobalContent = data.config;
+                configStorageMeta.source = 'hosting';
                 applyGlobalConfigToAdminUI(currentGlobalContent);
                 return true;
             } catch (e) {
@@ -638,6 +726,8 @@
                 throw new Error(data.error || 'Khong luu duoc global_config.json qua API noi bo.');
             }
             currentGlobalContent = data.config || newConfig;
+            configStorageMeta.source = 'hosting';
+            markConfigSaved('hosting');
             applyGlobalConfigToAdminUI(currentGlobalContent);
         }
 
@@ -649,6 +739,22 @@
             if (sPat) document.getElementById('cfg_github_token').value = sPat;
 
             if (await loadConfigFromLocalApi()) return;
+
+            try {
+                const fileRes = await fetch('global_config.json', { cache: 'no-store' });
+                if (fileRes.ok) {
+                    const fileConfig = await fileRes.json();
+                    if (fileConfig && typeof fileConfig === 'object') {
+                        currentGlobalContent = fileConfig;
+                        if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
+                        configStorageMeta.source = 'file';
+                        applyGlobalConfigToAdminUI(currentGlobalContent);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Khong doc duoc global_config.json tinh:', e);
+            }
 
             let reqRepo = document.getElementById('cfg_github_repo').value.trim();
             let reqPat = document.getElementById('cfg_github_token').value.trim();
@@ -716,7 +822,9 @@
                         localStorage.setItem('admin_github_repo', content.github_repo);
                     }
 
+                    configStorageMeta.source = 'github';
                     syncGeminiAdminUI(content);
+                    syncShopaikeyAdminUI(content);
 
                     console.log("Loaded global config from GitHub API!");
 
@@ -727,6 +835,11 @@
                 }
             } catch (e) {
                 console.warn("Lỗi đọc config:", e);
+            }
+
+            if (configStorageMeta.source === 'none') {
+                syncGeminiAdminUI(currentGlobalContent);
+                syncShopaikeyAdminUI(currentGlobalContent);
             }
         }
 
@@ -798,6 +911,7 @@
                 } catch (localError) {
                     console.warn('Fallback luu GitHub vi API noi bo loi:', localError);
                     await pushConfigToGitHub(currentGlobalContent, "Admin: Cập nhật cấu hình Global Client");
+                    markConfigSaved('github');
                 }
 
                 alert("Da luu cau hinh thanh cong!");
@@ -825,9 +939,10 @@
                 } catch (localError) {
                     console.warn('Fallback luu Gemini len GitHub vi API noi bo loi:', localError);
                     await pushConfigToGitHub(currentGlobalContent, 'Admin: Cap nhat cau hinh Gemini');
+                    markConfigSaved('github');
                 }
                 syncGeminiAdminUI(currentGlobalContent);
-                alert(`Đã lưu Gemini: ${currentGlobalContent.gemini_keys.length} key, model ${currentGlobalContent.gemini_model}`);
+                alert(`Đã lưu Gemini lên ${configSourceLabel(configStorageMeta.lastSaveTarget || configStorageMeta.source)}: ${currentGlobalContent.gemini_keys.length} key, model ${currentGlobalContent.gemini_model}`);
             } catch (e) {
                 alert('Lỗi lưu Gemini: ' + e.message);
             } finally {
@@ -853,9 +968,10 @@
                 } catch (localError) {
                     console.warn('Fallback luu ShopAIKey len GitHub vi API noi bo loi:', localError);
                     await pushConfigToGitHub(currentGlobalContent, 'Admin: Cap nhat cau hinh ShopAIKey fallback');
+                    markConfigSaved('github');
                 }
                 syncShopaikeyAdminUI(currentGlobalContent);
-                alert(`Da luu ShopAIKey fallback, model ${currentGlobalContent.shopaikey_model}`);
+                alert(`Đã lưu ShopAIKey fallback lên ${configSourceLabel(configStorageMeta.lastSaveTarget || configStorageMeta.source)}, model ${currentGlobalContent.shopaikey_model}`);
             } catch (e) {
                 alert('Loi luu ShopAIKey: ' + e.message);
             } finally {
@@ -1146,7 +1262,9 @@
                     </label>
                     <label class="text-sm font-bold text-slate-700">
                         <span id="createClassNameLabel">Lớp/Nhóm</span>
+                        <select id="createClassNameSelect" class="mt-1 hidden w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"></select>
                         <input id="createClassNameInput" name="class_name" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
+                        <span id="createClassNameHint" class="mt-1 block text-xs font-normal text-slate-500"></span>
                     </label>
                     <label class="text-sm font-bold text-slate-700">
                         Thời hạn tài khoản
@@ -1402,16 +1520,151 @@
             hint.textContent = 'Lưu để áp dụng thời hạn mới tính từ thời điểm hiện tại.';
         }
 
-        function syncClassNameLabels(role) {
+        function escapeAdminHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
+        function escapeAdminAttr(value) {
+            return escapeAdminHtml(value).replace(/`/g, '&#96;');
+        }
+
+        function studentClassCatalog(users = cachedUsers) {
+            const counts = new Map();
+            (users || []).forEach(user => {
+                if (user.role !== 'student') return;
+                const name = String(user.class_name || '').trim();
+                if (!name) return;
+                counts.set(name, (counts.get(name) || 0) + 1);
+            });
+            return [...counts.entries()]
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true, sensitivity: 'base' }));
+        }
+
+        function readClassNameFromForm(prefix) {
+            const role = prefix === 'edit'
+                ? document.getElementById('editRole')?.value
+                : document.querySelector('#createStudentForm select[name="role"]')?.value;
+            const input = document.getElementById(`${prefix}ClassNameInput`);
+            const select = document.getElementById(`${prefix}ClassNameSelect`);
+            if (role === 'teacher' && select && !select.classList.contains('hidden')) {
+                if (select.value === '__custom__') {
+                    return input?.value.trim() || '';
+                }
+                return select.value || input?.value.trim() || '';
+            }
+            return input?.value.trim() || '';
+        }
+
+        function updateClassNameHint(prefix, role) {
+            const hint = document.getElementById(`${prefix}ClassNameHint`);
+            if (!hint) return;
+            if (role !== 'teacher') {
+                hint.textContent = '';
+                return;
+            }
+            const classes = studentClassCatalog();
+            if (!classes.length) {
+                hint.textContent = 'Chưa có học sinh nào được xếp lớp. Import/tạo học sinh có Lớp/Nhóm (vd. 6A) trước, hoặc chọn "Nhập lớp mới".';
+                return;
+            }
+            hint.textContent = `Có ${classes.length} lớp từ học sinh. Chọn lớp phụ trách — tên phải trùng Lớp/Nhóm của học sinh để giám sát tiến độ.`;
+        }
+
+        function applyClassFieldForRole(prefix, role, currentValue = '') {
+            const select = document.getElementById(`${prefix}ClassNameSelect`);
+            const input = document.getElementById(`${prefix}ClassNameInput`);
+            const current = String(currentValue || input?.value || '').trim();
+            const classes = studentClassCatalog();
+            const isTeacher = role === 'teacher';
+
+            if (!input) return;
+
+            if (!isTeacher) {
+                if (select) {
+                    select.classList.add('hidden');
+                    select.onchange = null;
+                }
+                input.classList.remove('hidden');
+                if (current) input.value = current;
+                updateClassNameHint(prefix, role);
+                return;
+            }
+
+            if (!classes.length) {
+                if (select) {
+                    select.classList.add('hidden');
+                    select.onchange = null;
+                }
+                input.classList.remove('hidden');
+                input.value = current;
+                input.placeholder = 'Nhập lớp phụ trách, vd. 6A';
+                updateClassNameHint(prefix, role);
+                return;
+            }
+
+            if (select) {
+                select.classList.remove('hidden');
+                const options = ['<option value="">-- Chọn lớp phụ trách --</option>']
+                    .concat(classes.map(item => (
+                        `<option value="${escapeAdminAttr(item.name)}">${escapeAdminHtml(item.name)} (${item.count} học sinh)</option>`
+                    )))
+                    .concat(['<option value="__custom__">+ Nhập lớp mới...</option>']);
+                select.innerHTML = options.join('');
+
+                if (current && classes.some(item => item.name === current)) {
+                    select.value = current;
+                    input.classList.add('hidden');
+                    input.value = current;
+                } else if (current) {
+                    select.value = '__custom__';
+                    input.classList.remove('hidden');
+                    input.value = current;
+                } else {
+                    select.value = '';
+                    input.classList.add('hidden');
+                    input.value = '';
+                }
+
+                select.onchange = () => {
+                    if (select.value === '__custom__') {
+                        input.classList.remove('hidden');
+                        if (!input.value || classes.some(item => item.name === input.value)) {
+                            input.value = '';
+                        }
+                        input.focus();
+                    } else {
+                        input.classList.add('hidden');
+                        input.value = select.value;
+                    }
+                    updateClassNameHint(prefix, role);
+                };
+            }
+
+            updateClassNameHint(prefix, role);
+        }
+
+        function syncClassNameLabels(role, currentValue = '') {
             const isTeacher = role === 'teacher';
             const createLabel = document.getElementById('createClassNameLabel');
             const createInput = document.getElementById('createClassNameInput');
             if (createLabel) createLabel.textContent = isTeacher ? 'Lớp phụ trách' : 'Lớp/Nhóm';
             if (createInput) createInput.placeholder = isTeacher ? '6A' : '6A hoặc Toán 6 tối T3-T5';
+            applyClassFieldForRole('create', role, createInput?.value || currentValue);
+
             const editLabel = document.getElementById('editClassNameLabel');
             const editInput = document.getElementById('editClassName');
             if (editLabel) editLabel.textContent = isTeacher ? 'Lớp phụ trách' : 'Lớp/Nhóm';
             if (editInput) editInput.placeholder = isTeacher ? '6A' : '6A hoặc Toán 6 tối T3-T5';
+            if (document.getElementById('editClassNameSelect')) {
+                applyClassFieldForRole('edit', role, currentValue || editInput?.value || '');
+            }
         }
 
         function renderPageChecks(containerId, selectedPages) {
@@ -1518,6 +1771,7 @@
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
                 ensureStudentCreatePanel();
+                await loadGlobalConfig();
                 updateStats(cachedUsers);
                 renderTable(cachedUsers, key);
                 updateBulkPromoteHint();
@@ -1594,12 +1848,12 @@
             const formData = new FormData(form);
             const role = formData.get('role') || 'student';
             const allowedPages = selectedPagesFrom(document.getElementById('createAllowedPages'));
-            const className = String(formData.get('class_name') || '').trim();
+            const className = readClassNameFromForm('create');
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
             }
             if (role === 'teacher' && !className) {
-                return alert('Giáo viên cần có lớp phụ trách (vd. 6A). Lớp này phải trùng với Lớp/Nhóm của học sinh.');
+                return alert('Giáo viên cần chọn hoặc nhập lớp phụ trách (vd. 6A). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
             }
 
             try {
@@ -1646,7 +1900,9 @@
                 </label>
                 <label id="editClassNameLabel" class="block text-sm font-bold text-slate-700 mb-3">
                     Lớp/Nhóm
-                    <input id="editClassName" value="${editingStudent.class_name || ''}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
+                    <select id="editClassNameSelect" class="mt-1 hidden w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                    <input id="editClassName" value="${escapeAdminAttr(editingStudent.class_name || '')}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
+                    <span id="editClassNameHint" class="mt-1 block text-xs font-normal text-slate-500"></span>
                 </label>
                 <label class="block text-sm font-bold text-slate-700 mb-3">
                     Đổi mật khẩu mới
@@ -1673,12 +1929,13 @@
             `;
             renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6']);
             syncAllowedPagesLabels(editingStudent.role || 'student');
-            syncClassNameLabels(editingStudent.role || 'student');
+            syncClassNameLabels(editingStudent.role || 'student', editingStudent.class_name || '');
             const editRoleSelect = document.getElementById('editRole');
             if (editRoleSelect) {
                 editRoleSelect.onchange = () => {
+                    const preservedClass = readClassNameFromForm('edit');
                     syncAllowedPagesLabels(editRoleSelect.value);
-                    syncClassNameLabels(editRoleSelect.value);
+                    syncClassNameLabels(editRoleSelect.value, preservedClass);
                 };
             }
             renderDurationOptions('editDurationOption', editingStudent.expires_option || 'forever');
@@ -1695,12 +1952,12 @@
             if (!editingStudent) return;
             const role = document.getElementById('editRole').value;
             const allowedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
-            const className = document.getElementById('editClassName').value.trim();
+            const className = readClassNameFromForm('edit');
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
             }
             if (role === 'teacher' && !className) {
-                return alert('Giáo viên cần có lớp phụ trách (vd. 6A). Lớp này phải trùng với Lớp/Nhóm của học sinh.');
+                return alert('Giáo viên cần chọn hoặc nhập lớp phụ trách (vd. 6A). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
             }
             const payload = {
                 action: 'update',
