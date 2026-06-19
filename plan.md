@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-19 — Chế độ thí sinh tự do / danh sách lớp khi tạo đề thi (`thitructuyen.html` + `api/exam.php`).*
+*Cập nhật: 2026-06-19 — Phân quyền GV (lộ trình + lớp phụ trách), thời hạn tài khoản, cấu hình AI hosting, bài tập kéo/nối ô (`lotrinh.js`).*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -64,6 +64,24 @@
   - GV chọn **Thí sinh tự do** hoặc **Từ lớp** khi soạn/lưu đề (`student_mode`, `class_name`, `roster` trong meta).
   - API `student-classes`, `class-students`; roster snapshot khi lưu; validate tên+SBD khi nộp bài chế độ lớp.
   - HS chế độ lớp: ô tìm tên/SBD + dropdown chọn tên; kho đề có cột **Thí sinh**.
+- [x] **Phân quyền GV soạn bài theo lộ trình** (`allowed_pages` + `access-control.js` + `api/helpers.php` + `api/lessons.php`):
+  - Không checkbox riêng “được soạn” — `role=teacher` + tick lộ trình Toán 6/7/8/9 trong admin.
+  - `access-control.js` chặn GV mở lộ trình chưa được cấp; `login.html` đưa GV vào lộ trình đầu tiên được cấp.
+  - Server enforce môn khi CRUD bài (`require_lesson_manager`, `teacher_allowed_subjects`).
+  - `admin-lesson-manager.js` lọc UI theo `allowedPages`, gửi request kèm session cookie.
+- [x] **Phân lớp phụ trách cho GV** (`class_name` GV = lớp phụ trách):
+  - `api/admin_progress.php` chỉ trả HS thuộc lớp GV; lọc bài theo môn được cấp.
+  - `admin-progress.js` khóa dropdown lớp; `login.html` lưu `userClassName`.
+  - `admin.html`: nhãn *Lớp phụ trách*, bắt buộc khi tạo/sửa GV; dropdown từ lớp HS (`studentClassCatalog`).
+- [x] **Thời hạn tài khoản GV/HS** (`expires_at`, `expires_option`):
+  - Gói: Không giới hạn, 1 tháng, 3 tháng, 9 tháng, 1 năm; auto-migrate cột.
+  - `api/login.php` chặn tài khoản hết hạn; admin hiển thị cột ngày hết hạn đúng.
+- [x] **Cấu hình Gemini / ShopAIKey trên hosting** (`api/global_config.php`, `admin.html`):
+  - Lưu `global_config.json` trên hosting; fix `loadUsers` hosting gọi `loadGlobalConfig()`.
+  - Banner `#adminConfigStorageBanner`: nguồn lưu trữ, số key, lần lưu gần nhất.
+- [x] **Bài tập kéo vào ô trống & nối ô** (`lotrinh.js` + `admin-lesson-manager.js`):
+  - HS: kéo chip vào ô trống; nối cặp trái–phải (bấm chọn).
+  - GV: parser/format mới cho textarea Điền khuyết và Kéo thả.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -98,16 +116,23 @@
 - [ ] **Thi trực tuyến — đề chế độ lớp (GV)**: tạo đề → chọn **Từ lớp** → chọn lớp `6A` → Lưu → kho đề hiện `Lớp 6A (N HS)`.
 - [ ] **Thi trực tuyến — đề chế độ lớp (HS)**: mở link QR → gõ tên trong ô tìm → chọn đúng tên → SBD/lớp tự điền → vào thi và nộp thành công.
 - [ ] **Thi trực tuyến — đề chế độ tự do**: tạo đề **Thí sinh tự do** → HS vẫn nhập tay Họ tên/SBD như trước.
+- [ ] **Admin — cấp quyền GV**: tạo GV → tick Toán 6 → chọn lớp `6A` → lưu → GV đăng xuất/đăng nhập lại → vào `lotrinhtoan6.html` soạn bài thành công.
+- [ ] **Admin — lớp phụ trách**: dropdown hiện `6A (N học sinh)` sau khi import HS; chọn lớp → panel tiến độ GV chỉ thấy HS lớp đó.
+- [ ] **Admin — thời hạn**: tạo HS gói 1 tháng → cột hết hạn hiển thị đúng; sau hết hạn đăng nhập bị chặn.
+- [ ] **Admin — cấu hình AI**: banner hiện trạng thái hosting; nhập key → Lưu → tải lại vẫn còn key; HS dùng AI giải thích được.
+- [ ] **GV — tiến độ theo lớp**: đăng nhập GV lớp `6A` → dropdown lớp khóa `6A`; không thấy HS lớp khác.
+- [ ] **HS — bài kéo vào ô trống**: kéo chip vào ô → nộp luyện tập → phản hồi đúng/sai.
+- [ ] **HS — bài nối ô**: bấm trái rồi phải ghép cặp → nộp → chấm đúng/sai.
 
 ## Các công việc tiếp theo (To-do)
-- [ ] Tiếp tục hoàn thiện phần bài tập thực hành (Luyện tập 1, 2, 3...) theo format Điền khuyết, Kéo thả và tự luận nâng cao.
+- [ ] Tiếp tục hoàn thiện bài tập: tự luận nâng cao, tinh chỉnh UX kéo/nối ô trên mobile.
 - [ ] Kiểm tra thực tế phần tính điểm (`score`) và các chỉ số kỹ năng (`skill_scores_json`) trên dữ liệu nhiều bài học/học sinh để đảm bảo báo cáo giáo viên khớp UI học sinh.
-- [ ] Mở rộng tính năng dùng module Gemini tự nhập key của riêng người dùng quản trị (bổ sung giao diện vào trang `admin.html`).
+- [x] Giao diện admin nhập/lưu key Gemini và ShopAIKey lên hosting (`admin.html` + `global_config.json`).
 - [ ] Chăm chút thêm cho giao diện di động (Responsive) của các trang lộ trình.
 - [ ] (Tùy chọn) Xuất nhanh báo cáo tiến độ theo lớp (CSV/in) hoặc lọc theo môn + lớp trên một màn hình tổng hợp.
 - [ ] (Tùy chọn) Đồng bộ streak/huy hiệu lên server (hiện lưu `localStorage` theo máy).
 - [ ] (Tùy chọn) Tinh chỉnh ngưỡng ôn tập thông minh (7 ngày, điểm 80%) theo ý giáo viên.
-- [ ] Đồng bộ cache `admin-progress.js` trên `index.html` với các trang lộ trình (`20260620-group-align1`).
+- [x] Đồng bộ cache script trên `index.html` và `lotrinhtoan6–9.html` (`20260619-teacher-scope1`, `20260619-teacher-class1`, `20260619-drag-fill1`).
 - [ ] (Tùy chọn) Quản lý chương dạng thực thể riêng (thứ tự chương, xóa chương trống) — hiện chương là trường text trên từng bài.
 
 - [ ] (Tùy chọn) Backend thi trực tuyến lưu `original_idx` trong `details_json` và `display_order` khi nộp — giảm phụ thuộc đối chiếu text câu hỏi.

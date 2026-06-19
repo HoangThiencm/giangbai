@@ -9,7 +9,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Layout học sinh: cột trái (tiến độ + danh sách/bản đồ bài), cột giữa (nội dung bài), cột phải (kế hoạch tự học, động lực, kỹ năng, nhiệm vụ).
    - Định dạng CSS nội bộ (`<style>`) giúp render MathJax SVG và bong bóng chat AI giải thích.
    - Đã thêm style `.ai-chat-bubble` đồng bộ cho cả Toán 6, 7, 8, 9; bong bóng có nút `x`, mũi nhọn chat, và không bị cắt nội dung.
-   - Cache script gần nhất: `lotrinh.js?v=20260620-motivation-fix1`, `admin-lesson-manager.js?v=20260620-lesson-crud1`, `admin-progress.js?v=20260620-group-align1` (trên `lotrinhtoan6–9.html` và `index.html`). Trang `index.html` vẫn dùng `admin-progress.js?v=20260619-class-filter1` — nên đồng bộ khi cập nhật panel tiến độ.
+   - Cache script gần nhất: `access-control.js?v=20260619-teacher-scope1`, `lotrinh.js?v=20260619-drag-fill1`, `admin-lesson-manager.js?v=20260619-teacher-scope1`, `admin-progress.js?v=20260619-teacher-class1` (trên `lotrinhtoan6–9.html` và `index.html`).
 
 2. **Logic Frontend (`lotrinh.js`)**
    - Quản lý trạng thái học tập của học sinh.
@@ -30,9 +30,12 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - **Kế hoạch tự học** (`renderStudyPlanner`, mount cột phải): khối **Ôn tập thông minh** + **Lộ trình hôm nay**; chọn 15–60 phút (`buildStudyPlan` ưu tiên smart review trước).
    - **Ôn tập thông minh** (`buildSmartReviewSuggestions`, `smartReviewReason`, `staleMasteredDays`): ưu tiên `needs_practice`, điểm dưới 80%; với `mastered` chỉ gợi ý ôn khi có `completedAt` hợp lệ và ≥ 7 ngày (`REVIEW_STALE_DAYS`). Bấm đề xuất → chuyển bài + tab luyện tập.
    - **Động lực học** (`renderMotivationPanel`, cột phải dưới kế hoạch): streak theo `todayKey()` **ngày local**; huy hiệu `streak_3`, `mastered_5`, `perfect_100`. Badge 100% chỉ khi `score >= 100` sau nộp luyện tập (`markPerfectLesson`), không từ nút **Đã học** thủ công. Lưu `localStorage` `lotrinh_motivation_{môn}_{user}`.
+   - **Bài tập kéo vào ô trống** (`renderFillExercises`): HS kéo chip từ pool vào ô trống trong đề; chấm sau khi nộp luyện tập. Soạn bài qua textarea *Điền khuyết* trong panel GV (`parseFillExercises` / `formatFillExercises`).
+   - **Bài tập nối ô** (`renderDragExercises`, `mode: match`): bấm mục trái rồi phải để ghép cặp; có chế độ sắp xếp thứ tự (`mode: sort`). Parser GV: `câu hỏi | trái > … | phải > … | 0-1,1-0` (cặp chỉ số).
 
 3. **Soạn bài giáo viên (`admin-lesson-manager.js`)**
    - Mount `#lessonDesignerMount` khi `userRole === 'teacher'`.
+   - Chỉ hiển thị/soạn môn nằm trong `allowedPages` (tick **Lộ trình được phép soạn** khi admin tạo/sửa GV). Request API dùng `credentials: 'include'` (session PHP).
    - Trên trang `lotrinhtoan6–9`: khóa theo `LOTRINH_SUBJECT` — không chuyển sang môn khác.
    - Mục tiêu bài: textarea `#lessonGoalInput` (không trùng `#lessonGoal` hiển thị HS); lưu field `goal_text`.
    - **Mở cho học sinh** (`is_published`): mặc định **tắt** khi tạo bài mới / nhân bản; giáo viên chủ động bật khi muốn lộ trình tới bài đó. Học sinh chỉ nhận bài `is_published` từ API.
@@ -46,19 +49,26 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 4. **Theo dõi tiến độ giáo viên (`admin-progress.js`)**
    - Mount vào `#lessonDesignerMount` khi đăng nhập vai trò `teacher`.
    - Dropdown bài học, **lớp**, trạng thái, ô tìm kiếm; thẻ thống kê và bảng HS.
+   - GV chỉ xem HS thuộc **lớp phụ trách** (`userClassName` từ `login.html`); dropdown lớp khóa khi chỉ có một lớp. API `admin_progress.php` cũng lọc theo lớp/môn được cấp.
    - Gọi `api/admin_progress.php`; nhóm bảng theo lớp khi xem "Tất cả lớp" (mỗi cột `<td>` thẳng header).
    - Trên trang lộ trình: lọc dropdown bài học theo `LOTRINH_SUBJECT`.
 
 5. **Backend API (`api/`)**
-   - `lessons.php`: Lấy danh sách bài học; **lưu tiến độ** HS (`save_progress`, `reset_progress`); **soạn bài** GV (`save_content` theo `id`/slug, `delete_lesson`, `duplicate_lesson`, `rename_chapter`). Auto-migrate schema (`ensure_lesson_schema`, `ensure_progress_schema`) dùng try-catch riêng từng cột.
-   - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh theo `lesson_id`. Mỗi row gồm `class_name` (từ `users.class_name`); response thêm mảng `classes` (danh sách lớp distinct, đã sort). Cho phép session giáo viên đang hoạt động; admin key vẫn dùng được ở API nhưng UI admin không hiển thị panel tiến độ.
-   - `admin_students.php`: Tạo/sửa/xóa học sinh kèm trường `class_name` — dùng để nhóm và lọc tiến độ theo lớp (vd. `6A`, `6B`, `6C` hoặc `Toán 6 tối T3`). Action `import_batch`: import hàng loạt từ Excel (mảng `rows` + `default_password`, `default_class_name`, `allowed_pages`).
-   - `ai_explain.php`: Gọi Gemini trước; nếu hết quota hoặc lỗi thì fallback ShopAIKey (`https://api.shopaikey.com/v1/chat/completions`, mặc định model `deepseek-v4-flash`). Cấu hình key/model trong `admin.html` → `global_config.json`. Trả JSON súc tích; đã tăng giới hạn token và nối tiếp khi câu trả lời bị ngắt.
-   - `helpers.php`: Gồm các hàm tiện ích chung (`respond()`, `column_exists()`, `mysql_datetime_or_null()`).
+   - `lessons.php`: Lấy danh sách bài học; **lưu tiến độ** HS (`save_progress`, `reset_progress`); **soạn bài** GV (`save_content` theo `id`/slug, `delete_lesson`, `duplicate_lesson`, `rename_chapter`) — server chặn nếu GV không có quyền môn (`require_lesson_manager`). Auto-migrate schema (`ensure_lesson_schema`, `ensure_progress_schema`) dùng try-catch riêng từng cột.
+   - `admin_progress.php`: Trả dữ liệu theo dõi tiến độ học sinh theo `lesson_id`. GV chỉ nhận bài thuộc môn được cấp và HS thuộc lớp phụ trách; thiếu lớp phụ trách → lỗi 403. Mỗi row gồm `class_name` (từ `users.class_name`); response thêm mảng `classes`. Cho phép session giáo viên đang hoạt động.
+   - `admin_students.php`: Tạo/sửa/xóa HS/GV kèm `class_name`, `allowed_pages`, `expires_at`, `expires_option`. GV bắt buộc có lớp phụ trách. Action `import_batch`: import hàng loạt từ Excel.
+   - `login.php`: Chặn đăng nhập nếu `expires_at` đã qua.
+   - `global_config.php`: Lưu/đọc cấu hình hệ thống trên hosting (`global_config.json`) — Gemini keys, ShopAIKey, GitHub PAT, v.v.
+   - `ai_explain.php`: Gọi Gemini trước; nếu hết quota hoặc lỗi thì fallback ShopAIKey (`https://api.shopaikey.com/v1/chat/completions`, mặc định model `deepseek-v4-flash`). Cấu hình key/model trong `admin.html` → `global_config.json` trên hosting. Trả JSON súc tích; đã tăng giới hạn token và nối tiếp khi câu trả lời bị ngắt.
+   - `helpers.php`: Tiện ích chung (`respond()`, `column_exists()`, `lotrinh_page_subjects()`, `teacher_allowed_subjects()`, `teacher_managed_classes()`, `require_lesson_manager()`, `resolve_account_expiry()`, `ensure_users_expires_option_column()`).
 
 6. **Quản trị tài khoản (`admin.html`)**
-   - Đăng nhập bằng **Admin Key**; quản lý tài khoản HS/GV trên MySQL (`api/admin_students.php`).
-   - **Tạo từng tài khoản**: form Cấp tài khoản học sinh (vai trò, tài khoản, mật khẩu, họ tên, lớp, trang được mở).
+   - Đăng nhập bằng **Admin Key**; quản lý tài khoản HS/GV trên MySQL (`api/admin_students.php`). Sau `loadUsers` hosting tự gọi `loadGlobalConfig()`.
+   - **Phân quyền giáo viên**: vai trò **Giáo viên** + tick **Lộ trình được phép soạn** (`lotrinhtoan6–9`) + **Lớp phụ trách** (bắt buộc). Không có checkbox riêng “được soạn bài” — quyền soạn = `role=teacher` + lộ trình được tick.
+   - **Lớp phụ trách**: dropdown từ danh sách lớp HS đã có (`studentClassCatalog()`); tùy chọn *+ Nhập lớp mới…*. Hỗ trợ nhiều lớp qua dấu phẩy (vd. `6A,6B`). Tên lớp phải trùng `Lớp/Nhóm` của HS.
+   - **Thời hạn tài khoản**: gói Không giới hạn / 1 tháng / 3 tháng / 9 tháng / 1 năm (`expires_option` + `expires_at`); cột bảng hiển thị ngày hết hạn.
+   - **Cấu hình AI**: lưu trên **hosting** (`global_config.json`), không lưu riêng máy cá nhân. Banner `#adminConfigStorageBanner` hiển thị nguồn (hosting/GitHub/file), số key Gemini, lần lưu gần nhất. `localStorage.global_gemini_keys` chỉ là bản copy khi HS mở `index.html`.
+   - **Tạo từng tài khoản**: form Cấp tài khoản (vai trò, tài khoản, mật khẩu, họ tên, lớp/lớp phụ trách, trang/lộ trình được mở, thời hạn).
    - **Import Excel hàng loạt** (panel *Import danh sách học sinh từ Excel*):
      - File mẫu: `templates/DanhSachHocSinh_Mau.xlsx` (tải từ repo hoặc nút **Tạo file mẫu mới** trên trang).
      - Cột Excel: `STT | Tài khoản | Mật khẩu | Họ và tên | Lớp/Nhóm` — **bắt buộc** Tài khoản + Họ và tên.
@@ -114,6 +124,12 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Thi trực tuyến — dữ liệu cũ:** Các lượt thi trước khi sửa có thể thiếu `student_name` (nộp từ Zalo); không khôi phục tự động — cần HS thi lại sau khi deploy bản mới.
 - **Thi trực tuyến — khuyến nghị HS:** Nếu Zalo lỗi, mở link bằng Chrome/Safari (menu *Mở bằng trình duyệt*).
 - **Thi trực tuyến — danh sách lớp:** Lớp phải có HS hoạt động trong admin (`class_name` không rỗng). Đổi danh sách HS sau khi lưu đề **không** tự cập nhật đề đã lưu — GV cần mở sửa đề, chọn lại lớp và Lưu nếu muốn đồng bộ roster mới.
+- **Phân quyền GV soạn bài:** Admin tick lộ trình Toán 6/7/8/9 trong form tài khoản GV. `access-control.js` chặn GV mở lộ trình chưa được cấp. `api/lessons.php` enforce môn khi lưu/xóa/nhân bản/đổi tên chương. GV báo “không có quyền” thường do session hết hạn hoặc chưa tick lộ trình — cần **đăng xuất → đăng nhập lại** sau khi admin lưu.
+- **Lớp phụ trách GV:** Trường `class_name` của GV = lớp phụ trách (vd. `6A`). Nhiều lớp: `6A,6B`. Panel tiến độ và API chỉ trả HS thuộc lớp đó. Chưa có HS xếp lớp → dropdown trống; cần import/tạo HS trước hoặc chọn *Nhập lớp mới*.
+- **Thời hạn tài khoản:** `expires_at` + `expires_option`; `login.php` chặn tài khoản hết hạn. Đổi gói thời hạn khi sửa sẽ tính lại từ hôm nay (trừ khi giữ nguyên gói đang dùng).
+- **Cấu hình AI trên hosting:** Key Gemini/ShopAIKey lưu trong `global_config.json` trên server. File trong repo có thể **không có** `gemini_keys` — form admin trống là đúng nếu chưa lưu trên hosting. Banner admin cho biết trạng thái tải/lưu.
+- **Quy trình admin cấp GV:** (1) Vai trò Giáo viên → (2) Tick lộ trình được phép soạn → (3) Chọn lớp phụ trách → (4) Chọn thời hạn → (5) GV đăng xuất/đăng nhập lại → (6) Vào `lotrinhtoan6.html` (hoặc lộ trình tương ứng).
+- **Bảo mật:** `global_config.json` trong repo có thể chứa GitHub PAT plaintext — nên rotate token, không commit secret.
 
 ---
 *Cập nhật lần cuối: 2026-06-19. File này đồng bộ trạng thái dự án khi chuyển môi trường làm việc.*

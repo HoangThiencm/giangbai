@@ -1,6 +1,6 @@
 # Toàn bộ nội dung chat — giangbai / Thi trực tuyến
 
-> Ghi nguyên văn từ phiên chat (session 019eddde-2aaf-7983-b92a-a967627d0e23).
+> Ghi nguyên văn từ các phiên chat. Phiên thi trực tuyến / import Excel: `019eddde-2aaf-7983-b92a-a967627d0e23`. Phiên phân quyền GV / lớp / thời hạn / AI: `019ede1f-f59a-7e33-8597-a3b9bf8bf94e`.
 > Các tin nhắn có `[Image #N]` là người dùng đã đính kèm ảnh chụp màn hình.
 > Phần trả lời của trợ lý là nội dung đã hiển thị trong chat; không tóm tắt thêm.
 
@@ -625,3 +625,218 @@ cập nhật vào thongtin.md, plan.md và chat.md
 
 ### `chat.md`
 - Thêm **Lượt 17** (yêu cầu import Excel) và **Lượt 18** (cập nhật tài liệu) vào cuối file.
+
+---
+
+## Lượt 19
+
+**Người dùng:**
+
+đọc thongtin.md, plan.md, chat.md để hiểu
+
+**Trợ lý:**
+
+Đã đọc lại ba file tài liệu và nắm trạng thái dự án: lộ trình Toán 6–9, thi trực tuyến hosting, import Excel HS, panel GV soạn bài/theo dõi tiến độ, checklist phản biện UI chưa tick.
+
+---
+
+## Lượt 20
+
+**Người dùng:**
+
+ở thitructuyen.html khi tạo đề thi lấy danh sách từ lớp đã có hoặc thí sinh tự do. Do GV quyết định
+
+đúng thế cập nhật đi
+
+**Trợ lý:**
+
+Đã triển khai chế độ thí sinh khi GV lưu đề:
+
+- **Thí sinh tự do** (`student_mode: free`): HS tự nhập Họ tên, SBD, Lớp — mặc định.
+- **Danh sách từ lớp** (`student_mode: class`): GV chọn lớp từ `users.class_name` → API `student-classes` / `class-students`; snapshot `roster` lưu khi Lưu đề.
+
+File: `thitructuyen.html`, `api/exam.php`. Đã cập nhật `thongtin.md` và `plan.md`.
+
+---
+
+## Lượt 21
+
+**Người dùng:**
+
+thay phần điền khuyết bằng kéo thả trong lotrinh, phần nối ô hoạt động không đúng yêu cầu
+
+**Trợ lý:**
+
+Đã sửa `lotrinh.js` và `admin-lesson-manager.js`:
+
+- **Kéo vào ô trống** (`renderFillExercises`): HS kéo chip từ pool vào ô trống trong đề; chấm sau nộp luyện tập.
+- **Nối ô** (`renderDragExercises`, `mode: match`): bấm mục trái rồi phải để ghép cặp; có badge số cặp.
+- Parser soạn bài GV cập nhật `parseFillExercises`, `parseDragExercises`, `formatFillExercises`, `formatDragExercises`.
+
+Cache: `lotrinh.js?v=20260619-drag-fill1`.
+
+---
+
+## Lượt 22
+
+**Người dùng:**
+
+tôi dùng tài khoản giáo viên soạn bài mà nó báo tài khoản không có quyền tạo bài học. Hay phải phân quyền trong admin để cho giáo viên nào có quyền soạn
+
+**Trợ lý:**
+
+Đúng — admin cần cấp quyền trong `admin.html`:
+
+1. Vai trò: **Giáo viên**
+2. Tick **Lộ trình được phép soạn** (vd. Toán 6 = `lotrinhtoan6`)
+3. GV **đăng xuất → đăng nhập lại** sau khi admin lưu
+
+Đã bổ sung enforce server + client:
+
+- `access-control.js`: GV chỉ mở được lộ trình đã tick.
+- `api/helpers.php`: `teacher_allowed_subjects()`, `require_lesson_manager()`.
+- `api/lessons.php`: chặn lưu/xóa/nhân bản nếu sai môn.
+- `admin-lesson-manager.js`: lọc theo `allowedPages`, `credentials: 'include'`.
+- `login.html`: GV sau đăng nhập vào lộ trình đầu tiên được cấp.
+
+Không có checkbox riêng “được soạn bài” — quyền soạn = `role=teacher` + lộ trình được tick.
+
+---
+
+## Lượt 23
+
+**Người dùng:**
+
+ý là admin phân quyền cho GV soạn bài lớp học nào. Chỉ sau này phát triển nhiều giáo viên thì sao?
+
+**Trợ lý:**
+
+Mô hình đề xuất (đã triển khai):
+
+- **Soạn bài theo lộ trình** (`allowed_pages`): tick Toán 6/7/8/9 — mỗi GV có thể soạn một hoặc nhiều lộ trình.
+- **Giám sát tiến độ theo lớp** (`class_name` của GV = lớp phụ trách): mỗi lớp gán một GV (hoặc nhiều lớp qua dấu phẩy `6A,6B`).
+
+Ví dụ Toán 6 có 3 lớp 6A/6B/6C → 3 tài khoản GV, mỗi người tick `lotrinhtoan6` + lớp phụ trách riêng.
+
+---
+
+## Lượt 24
+
+**Người dùng:**
+
+vậy bạn không sửa gì à
+
+[Image #1]
+
+Ví dụ nhé. Lộ trình toán 6 nhưng có thể có 2-3-4 lớp, mỗi lớp 1 giáo viên thì phải phân lớp để họ có trách nhiệm giám sát tiến độ chứ
+
+**Trợ lý:**
+
+Đã triển khai phân lớp phụ trách:
+
+- `admin.html`: nhãn **Lớp phụ trách** (bắt buộc với GV).
+- `api/admin_progress.php`: chỉ trả HS thuộc lớp GV; lọc bài theo môn được cấp.
+- `admin-progress.js`: khóa dropdown lớp theo `userClassName`.
+- `login.html`: lưu `userClassName` vào `localStorage`.
+- `api/helpers.php`: `teacher_managed_classes()`, `teacher_can_view_student_class()`.
+
+Cache: `admin-progress.js?v=20260619-teacher-class1`.
+
+---
+
+## Lượt 25
+
+**Người dùng:**
+
+[Image #1]
+
+Trong thiết lập phân quyền không có thời gian hết hạn của giáo viên để 1 tháng, 3 tháng, 9 tháng, 1 năm, không giới hạn
+
+**Trợ lý:**
+
+Đã thêm **Thời hạn tài khoản** cho HS/GV:
+
+- Cột `expires_at` + `expires_option` (auto-migrate).
+- Gói: Không giới hạn, 1 tháng, 3 tháng, 9 tháng, 1 năm.
+- `api/helpers.php`: `resolve_account_expiry()`.
+- `api/login.php`: chặn tài khoản hết hạn.
+- `admin.html`: chọn thời hạn khi tạo/sửa; cột bảng hiển thị `expires_at`.
+
+---
+
+## Lượt 26
+
+**Người dùng:**
+
+[Image #1]
+
+Cái này lưu ở hosting hay lưu ở máy tính cá nhân vậy mà sao lúc trước tôi đặt và lưu rồi giờ không thấy gì
+
+**Trợ lý:**
+
+Cấu hình Gemini/ShopAIKey lưu trên **hosting** (`global_config.json` qua `api/global_config.php`), không lưu riêng máy cá nhân.
+
+- `localStorage.global_gemini_keys` chỉ là bản copy khi HS mở `index.html`.
+- File `global_config.json` trong repo hiện **không có** `gemini_keys` → form admin trống là đúng nếu chưa lưu trên hosting.
+- **Bug đã sửa**: `loadUsers` hosting không gọi `loadGlobalConfig()` → đã thêm.
+
+---
+
+## Lượt 27
+
+**Người dùng:**
+
+Phải thêm trạng thái như thế
+
+[Image #1]
+
+**Trợ lý:**
+
+Đã thêm banner trạng thái cấu hình AI trong `admin.html`:
+
+- `#adminConfigStorageBanner`: hiển thị nguồn (hosting / GitHub / file / chưa tải), badge Gemini/ShopAIKey, số key, lần lưu gần nhất.
+- Gợi ý rõ khi hosting chưa có key: nhập key rồi bấm **Lưu Gemini** / **Lưu Fallback**.
+
+---
+
+## Lượt 28
+
+**Người dùng:**
+
+[Image #1]
+
+Lớp phụ trách không phân được vì không có gì để chọn
+
+**Trợ lý:**
+
+Đã sửa dropdown **Lớp phụ trách** trong `admin.html`:
+
+- `studentClassCatalog()`: lấy danh sách lớp từ HS đã có (vd. `6A (12 học sinh)`).
+- `applyClassFieldForRole()`: GV thấy dropdown; tùy chọn *+ Nhập lớp mới…*.
+- Nếu chưa có HS xếp lớp → gợi ý import/tạo HS trước.
+- Tên lớp phải trùng `Lớp/Nhóm` của HS để panel tiến độ hoạt động.
+
+---
+
+## Lượt 29
+
+**Người dùng:**
+
+cập nhật thongtin.md, plan.md và chat.md
+
+**Trợ lý:**
+
+Đã cập nhật cả ba file:
+
+### `thongtin.md`
+- Phân quyền GV (lộ trình + lớp phụ trách), thời hạn tài khoản, cấu hình AI hosting, banner trạng thái.
+- Bài tập kéo vào ô trống & nối ô; cache script mới.
+- API/helpers mới; quy trình admin cấp GV; ghi chú lỗi thường gặp.
+
+### `plan.md`
+- Mục **đã hoàn thành**: phân quyền GV, lớp phụ trách, thời hạn, AI hosting, kéo/nối ô.
+- Mục **cần phản biện**: checklist thử phân quyền GV, lớp, thời hạn, AI, bài tập kéo/nối.
+- Cập nhật to-do (đồng bộ cache, Gemini admin UI → done).
+
+### `chat.md`
+- Thêm **Lượt 19–29** (phiên phân quyền GV, lớp, thời hạn, AI, kéo/nối ô).
