@@ -1514,10 +1514,11 @@
     function renderEssayExercises(lesson) {
         const items = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
         if (!items.length) return '';
-        const practiceDone = !!currentUiState(lesson).practiceDone;
+        const ui = currentUiState(lesson);
+        const practiceDone = !!ui.practiceDone;
         return items.map((item, index) => {
             const key = item.id || `essay_${index + 1}`;
-            const saved = currentUiState(lesson).essayAnswers?.[key] || '';
+            const saved = ui.essayAnswers?.[key] || '';
             const ok = practiceDone && normalizeAnswerText(saved) === normalizeAnswerText(item.answer || '');
             const feedback = practiceDone
                 ? (ok
@@ -2006,6 +2007,10 @@
 
     function handleLessonTextSelection() {
         if (!canUseStudentAiAssist()) return hideAiSelectionToolbar();
+        const active = document.activeElement;
+        if (active?.matches('.essay-input, #lessonAiChatInput, input, textarea, select, [contenteditable="true"]')) {
+            return hideAiSelectionToolbar();
+        }
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed || selection.rangeCount === 0) return hideAiSelectionToolbar();
 
@@ -2124,6 +2129,10 @@
         aiAssistState.bound = true;
         ensureStudentAiAssistStyles();
         const scheduleSelectionCheck = () => {
+            const active = document.activeElement;
+            if (active?.matches('.essay-input, #lessonAiChatInput, input, textarea, select, [contenteditable="true"]')) {
+                return hideAiSelectionToolbar();
+            }
             window.clearTimeout(aiAssistState.selectionTimer);
             aiAssistState.selectionTimer = window.setTimeout(handleLessonTextSelection, 30);
         };
@@ -2936,7 +2945,58 @@
         }
     }
 
+    function bindEssayInputs(lesson) {
+        document.querySelectorAll('.essay-input').forEach(field => {
+            if (field.dataset.boundEssayInput === '1' || field.disabled) return;
+            field.dataset.boundEssayInput = '1';
+            const key = field.dataset.essayKey || '';
+            let saveTimer = null;
+
+            const applyLocalEssayAnswer = value => {
+                if (isTeacherPreview()) {
+                    state.teacherPreviewUi = {
+                        ...state.teacherPreviewUi,
+                        essayAnswers: { ...(state.teacherPreviewUi.essayAnswers || {}), [key]: value }
+                    };
+                    return;
+                }
+                const progress = currentLessonProgress(lesson);
+                const ui = progress.state || {};
+                state.progress[lesson.id] = {
+                    ...progress,
+                    state: {
+                        ...ui,
+                        essayAnswers: { ...(ui.essayAnswers || {}), [key]: value }
+                    }
+                };
+            };
+
+            field.addEventListener('input', () => {
+                applyLocalEssayAnswer(field.value);
+                window.clearTimeout(saveTimer);
+                saveTimer = window.setTimeout(async () => {
+                    try {
+                        const ui = currentUiState(lesson);
+                        const progress = currentLessonProgress(lesson);
+                        await syncLessonState(lesson, {
+                            ...ui,
+                            essayAnswers: { ...(ui.essayAnswers || {}), [key]: field.value },
+                            startedAt: ui.startedAt || new Date().toISOString()
+                        }, {
+                            status: progress.status || 'in_progress',
+                            score: progress.score || 0,
+                            skillScores: progress.skillScores || {}
+                        });
+                    } catch (err) {
+                        console.warn('save essay answer error:', err);
+                    }
+                }, 500);
+            });
+        });
+    }
+
     function bindPracticeInteractions(lesson) {
+        bindEssayInputs(lesson);
         document.querySelectorAll('[data-ai-text]').forEach(button => {
             if (button.dataset.boundAi === '1') return;
             button.dataset.boundAi = '1';

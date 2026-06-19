@@ -125,13 +125,19 @@
         }
         .essay-input,
         .fill-input {
+            display: block;
             width: calc(100% - 32px);
             margin: 16px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             padding: 12px 14px;
             color: #0f172a;
+            background: #fff;
             outline: none;
+            pointer-events: auto;
+            user-select: text;
+            -webkit-user-select: text;
+            resize: vertical;
         }
         .essay-input:focus,
         .fill-input:focus {
@@ -655,7 +661,7 @@
         </main>
     </div>
 
-    <script src="lotrinh.js?v=20260619-practice-parts1"></script>
+    <script src="lotrinh.js?v=20260619-practice-input2"></script>
     <script src="admin-lesson-manager.js?v=20260619-teacher-scope1"></script>
     <script src="admin-progress.js?v=20260619-teacher-class1"></script>
 </body>
