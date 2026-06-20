@@ -199,11 +199,29 @@ function drive_get_or_create_folder(string $parentId, string $name): string
     return drive_find_folder($parentId, $safeName) ?: drive_create_folder($parentId, $safeName);
 }
 
-function drive_assignment_folder(string $publicCode, string $title): string
+function drive_school_year(?string $value = null): string
+{
+    $value = trim((string)$value);
+    if (preg_match('/^\d{4}\s*-\s*\d{4}$/', $value)) return str_replace(' ', '', $value);
+    $year = (int)date('Y');
+    $month = (int)date('n');
+    return $month >= 8 ? ($year . '-' . ($year + 1)) : (($year - 1) . '-' . $year);
+}
+
+function drive_assignment_folder(string $publicCode, string $title, string $submissionType = 'file', ?string $academicYear = null): string
 {
     $root = defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
     if ($root === '') throw new RuntimeException('Chưa cấu hình GOOGLE_DRIVE_ROOT_FOLDER_ID trên hosting.');
-    return drive_get_or_create_folder($root, '[' . $publicCode . '] ' . $title);
+    $category = $submissionType === 'report' ? '01_BAO_CAO' : '02_NOP_BAI';
+    $categoryFolder = drive_get_or_create_folder($root, $category);
+    $yearFolder = drive_get_or_create_folder($categoryFolder, 'NAM_HOC_' . drive_school_year($academicYear));
+    return drive_get_or_create_folder($yearFolder, '[' . $publicCode . '] ' . $title);
+}
+
+function drive_participant_folder(string $assignmentFolderId, string $groupName, string $fullName, string $identifier): string
+{
+    $groupFolder = drive_get_or_create_folder($assignmentFolderId, trim($groupName) !== '' ? $groupName : 'CHUA_PHAN_NHOM');
+    return drive_get_or_create_folder($groupFolder, trim($fullName) . ' - ' . trim($identifier));
 }
 
 function drive_upload_file(string $folderId, string $storedName, string $mimeType, string $tmpPath): array
@@ -248,4 +266,32 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
         'view_url' => (string)($response['webViewLink'] ?? ('https://drive.google.com/file/d/' . $fileId . '/view')),
         'download_url' => (string)($response['webContentLink'] ?? ('https://drive.google.com/uc?export=download&id=' . $fileId)),
     ];
+}
+
+function drive_download_file(string $fileId): string
+{
+    $url = 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?alt=media&supportsAllDrives=true';
+    $headers = ['Authorization: Bearer ' . drive_access_token()];
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 300,
+            CURLOPT_HTTPHEADER => $headers,
+        ]);
+        $body = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        if ($body === false || $status < 200 || $status >= 300) {
+            throw new RuntimeException('Không tải được tệp từ Google Drive' . ($error ? ': ' . $error : '.'));
+        }
+        return $body;
+    }
+    $context = stream_context_create(['http' => ['header' => implode("\r\n", $headers), 'timeout' => 300, 'ignore_errors' => true]]);
+    $body = @file_get_contents($url, false, $context);
+    if ($body === false) throw new RuntimeException('Hosting không thể tải tệp từ Google Drive.');
+    return $body;
 }

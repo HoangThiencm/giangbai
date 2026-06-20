@@ -32,19 +32,29 @@ function tranphu_schema(PDO $pdo): void
         CONSTRAINT fk_reference_people_list FOREIGN KEY (list_id) REFERENCES school_reference_lists(id) ON DELETE CASCADE
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-    $defaults = [
-        ['school', 'Toàn trường'],
-        ['teachers', 'Danh sách giáo viên'],
-        ['party', 'Danh sách đảng viên'],
-    ];
-    $fields = json_encode([
+    $schoolFields = json_encode([
         ['key' => 'full_name', 'label' => 'Họ và tên', 'required' => true],
-        ['key' => 'group_name', 'label' => 'Tổ/đơn vị hoặc lớp', 'required' => false],
-        ['key' => 'role_label', 'label' => 'Chức vụ/Vai trò', 'required' => false],
-        ['key' => 'contact', 'label' => 'Email/Số điện thoại', 'required' => false],
+        ['key' => 'role_label', 'label' => 'Chức vụ', 'required' => false],
     ], JSON_UNESCAPED_UNICODE);
+    $homeroomTeacherFields = json_encode([
+        ['key' => 'full_name', 'label' => 'Họ và tên', 'required' => true],
+        ['key' => 'group_name', 'label' => 'Lớp chủ nhiệm', 'required' => false],
+    ], JSON_UNESCAPED_UNICODE);
+    $partyFields = json_encode([
+        ['key' => 'full_name', 'label' => 'Họ tên', 'required' => true],
+        ['key' => 'role_label', 'label' => 'Ghi chú / Chức vụ', 'required' => false],
+    ], JSON_UNESCAPED_UNICODE);
+    $defaults = [
+        ['school', 'Toàn trường', $schoolFields],
+        ['teachers', 'Danh sách giáo viên chủ nhiệm', $homeroomTeacherFields],
+        ['party', 'Danh sách đảng viên', $partyFields],
+    ];
     $stmt = $pdo->prepare('INSERT IGNORE INTO school_reference_lists (list_code, title, fields_json) VALUES (?, ?, ?)');
-    foreach ($defaults as [$code, $title]) $stmt->execute([$code, $title, $fields]);
+    foreach ($defaults as [$code, $title, $fields]) $stmt->execute([$code, $title, $fields]);
+    // The party-member list has a deliberately smaller two-column template.
+    $pdo->prepare('UPDATE school_reference_lists SET title = ?, fields_json = ? WHERE list_code = ?')->execute(['Toàn trường', $schoolFields, 'school']);
+    $pdo->prepare('UPDATE school_reference_lists SET title = ?, fields_json = ? WHERE list_code = ?')->execute(['Danh sách giáo viên chủ nhiệm', $homeroomTeacherFields, 'teachers']);
+    $pdo->prepare('UPDATE school_reference_lists SET fields_json = ? WHERE list_code = ?')->execute([$partyFields, 'party']);
 }
 
 function tranphu_admin(): bool

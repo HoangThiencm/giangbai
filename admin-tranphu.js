@@ -53,7 +53,7 @@
                 </div>
                 <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
                     <p class="text-sm font-bold text-slate-800">Cấu trúc file</p>
-                    <p class="mt-1 text-sm text-slate-600">Cột bắt buộc: <b>Họ và tên</b>. Các cột nên có: <b>Tổ/đơn vị hoặc lớp</b>, <b>Chức vụ/Vai trò</b>, <b>Email/Số điện thoại</b>. Các cột khác vẫn được lưu làm thông tin bổ sung.</p>
+                    <p id="tranPhuStructureHint" class="mt-1 text-sm text-slate-600">Cột bắt buộc: <b>Họ và tên</b>. Các cột nên có: <b>Tổ/đơn vị hoặc lớp</b>, <b>Chức vụ/Vai trò</b>, <b>Email/Số điện thoại</b>. Các cột khác vẫn được lưu làm thông tin bổ sung.</p>
                     <label class="mt-4 block text-sm font-bold text-slate-700">Chọn file Excel
                         <input id="tranPhuImportFile" type="file" accept=".xlsx,.xls,.csv" class="mt-1 block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-sky-700">
                     </label>
@@ -63,7 +63,7 @@
                 <div id="tranPhuPreviewTable" class="mt-5 hidden overflow-x-auto rounded-lg border border-slate-200"></div>
             </div>`;
         dashboard.appendChild(node);
-        node.querySelector('#tranPhuListSelect').addEventListener('change', () => { pendingRows = []; renderPreview(); });
+        node.querySelector('#tranPhuListSelect').addEventListener('change', () => { pendingRows = []; renderPreview(); renderListHint(); });
         node.querySelector('#tranPhuTemplateBtn').addEventListener('click', downloadTemplate);
         node.querySelector('#tranPhuImportFile').addEventListener('change', previewImport);
         node.querySelector('#tranPhuImportBtn').addEventListener('click', importRows);
@@ -86,12 +86,24 @@
         select.innerHTML = lists.map(list => `<option value="${esc(list.list_code)}">${esc(list.title)} (${list.people_count} người)</option>`).join('');
         if (lists.some(list => list.list_code === previous)) select.value = previous;
         cards.innerHTML = lists.map(list => `<div class="rounded-lg border border-slate-200 bg-white p-4"><div class="text-xs font-bold uppercase tracking-wide text-slate-500">${esc(list.list_code)}</div><div class="mt-1 font-extrabold text-slate-900">${esc(list.title)}</div><div class="mt-2 text-2xl font-black text-sky-700">${list.people_count}</div><div class="text-xs text-slate-500">người trong danh sách</div></div>`).join('');
+        renderListHint();
+    }
+
+    function renderListHint() {
+        const holder = document.getElementById('tranPhuStructureHint');
+        const list = selectedList();
+        if (!holder || !list) return;
+        holder.innerHTML = list.list_code === 'party'
+            ? 'Cột bắt buộc: <b>Họ tên</b>. Cột thứ hai: <b>Ghi chú / Chức vụ</b>. Đây là danh sách ngắn gọn dành riêng cho đảng viên.'
+            : list.list_code === 'teachers'
+                ? 'Đúng ba cột: <b>STT</b>, <b>Họ và tên</b>, <b>Lớp chủ nhiệm</b>. STT chỉ để đánh số và được bỏ qua khi nhập.'
+                : 'Đúng ba cột: <b>STT</b>, <b>Họ và tên</b>, <b>Chức vụ</b>. STT chỉ để đánh số và được bỏ qua khi nhập.';
     }
 
     function mapHeader(header) {
         const value = norm(header);
         if (value.includes('ho va ten') || value === 'ten' || value.includes('full name')) return 'full_name';
-        if (value.includes('to don vi') || value.includes('lop nhom') || value === 'lop' || value.includes('nhom')) return 'group_name';
+        if (value.includes('to don vi') || value.includes('lop nhom') || value.includes('lop chu nhiem') || value === 'lop' || value.includes('nhom')) return 'group_name';
         if (value.includes('chuc vu') || value.includes('vai tro') || value.includes('role')) return 'role_label';
         if (value.includes('email') || value.includes('dien thoai') || value.includes('sdt') || value.includes('lien he')) return 'contact';
         return '';
@@ -145,15 +157,14 @@
     function downloadTemplate() {
         const list = selectedList();
         if (!list) return;
-        const rows = [
-            ['Họ và tên', 'Tổ/đơn vị hoặc lớp', 'Chức vụ/Vai trò', 'Email/Số điện thoại'],
-            ['Nguyễn Văn An', 'Tổ Toán', 'Giáo viên', 'nguyenvanan@example.com'],
-            ['Trần Thị Bình', 'Tổ Ngữ văn', 'Tổ trưởng', ''],
-            ['Lê Văn Cường', 'Văn phòng', 'Nhân viên', ''],
-        ];
+        const rows = list.list_code === 'party'
+            ? [['Họ tên', 'Ghi chú / Chức vụ'], ['Bùi Ngọc Nam', 'Bí thư Chi bộ'], ['Nguyễn Ngọc Nam', 'Phó Bí thư'], ['Nguyễn Văn An', 'Đảng viên']]
+            : list.list_code === 'teachers'
+                ? [['STT', 'Họ và tên', 'Lớp chủ nhiệm'], [1, 'Nguyễn Văn An', '6A'], [2, 'Trần Thị Bình', '7A'], [3, 'Lê Văn Cường', '8A']]
+                : [['STT', 'Họ và tên', 'Chức vụ'], [1, 'Nguyễn Văn An', 'Hiệu trưởng'], [2, 'Trần Thị Bình', 'Phó Hiệu trưởng'], [3, 'Lê Văn Cường', 'Giáo viên']];
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 22 }, { wch: 28 }];
+        ws['!cols'] = list.list_code === 'party' ? [{ wch: 28 }, { wch: 28 }] : [{ wch: 8 }, { wch: 28 }, { wch: 24 }];
         XLSX.utils.book_append_sheet(wb, ws, list.title.substring(0, 30));
         XLSX.writeFile(wb, `${list.list_code}-THCS-Tran-Phu.xlsx`);
     }
@@ -213,4 +224,3 @@
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
-

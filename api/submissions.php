@@ -558,7 +558,7 @@ function submission_rows_for_teacher(PDO $pdo, int $assignmentId): array
     $stmt = $pdo->prepare('SELECT * FROM assignment_submissions WHERE assignment_id = ? ORDER BY submitted_at DESC');
     $stmt->execute([$assignmentId]);
     $rows = $stmt->fetchAll();
-    $fileStmt = $pdo->prepare('SELECT id, original_name, mime_type, size_bytes, view_url, download_url, field_key FROM assignment_submission_files WHERE submission_id = ? ORDER BY id');
+    $fileStmt = $pdo->prepare('SELECT id, drive_file_id, original_name, mime_type, size_bytes, view_url, download_url, field_key FROM assignment_submission_files WHERE submission_id = ? ORDER BY id');
     foreach ($rows as &$row) {
         $row['id'] = (int)$row['id'];
         $row['participant_id'] = $row['participant_id'] ? (int)$row['participant_id'] : null;
@@ -643,6 +643,62 @@ if ($method === 'GET' && $action === 'detail') {
         'participants' => submission_participants_for_teacher($pdo, (int)$assignment['id']),
         'submissions' => submission_rows_for_teacher($pdo, (int)$assignment['id']),
     ]);
+}
+
+if ($method === 'GET' && $action === 'download-zip') {
+    $teacher = submission_require_teacher($pdo);
+    $assignment = submission_require_owner($pdo, $teacher, (int)($_GET['id'] ?? 0));
+    if (!class_exists('ZipArchive')) {
+        respond(['error' => 'Hosting chưa bật PHP extension ZipArchive. Hãy bật extension zip để tải tất cả tệp thành ZIP.'], 500);
+    }
+    $stmt = $pdo->prepare("SELECT f.drive_file_id, f.original_name, f.size_bytes, s.submitter_name, s.group_name
+        FROM assignment_submission_files f JOIN assignment_submissions s ON s.id = f.submission_id
+        WHERE s.assignment_id = ? ORDER BY s.group_name, s.submitter_name, f.id");
+    $stmt->execute([(int)$assignment['id']]);
+    $files = $stmt->fetchAll();
+    if (!$files) respond(['error' => 'Đợt này chưa có tệp nào để đóng gói.'], 422);
+    $maxZipBytes = (defined('SUBMISSION_ZIP_MAX_MB') ? max(10, (int)SUBMISSION_ZIP_MAX_MB) : 500) * 1024 * 1024;
+    $totalBytes = array_sum(array_map(fn($file) => (int)$file['size_bytes'], $files));
+    if ($totalBytes > $maxZipBytes) {
+        respond(['error' => 'Tổng dung lượng vượt giới hạn ZIP của hosting (' . round($maxZipBytes / 1024 / 1024) . ' MB). Hãy tải trực tiếp thư mục trên Google Drive hoặc tăng SUBMISSION_ZIP_MAX_MB.'], 422);
+    }
+    $temp = tempnam(sys_get_temp_dir(), 'giangbai_zip_');
+    if ($temp === false) respond(['error' => 'Hosting không tạo được tệp ZIP tạm.'], 500);
+    $zip = new ZipArchive();
+    if ($zip->open($temp, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        @unlink($temp);
+        respond(['error' => 'Không thể khởi tạo tệp ZIP.'], 500);
+    }
+    try {
+        $usedNames = [];
+        foreach ($files as $file) {
+            $group = drive_safe_name((string)($file['group_name'] ?? ''), 'CHUA_PHAN_NHOM');
+            $person = drive_safe_name((string)($file['submitter_name'] ?? ''), 'Nguoi nop');
+            $name = drive_safe_name((string)$file['original_name'], 'tep');
+            $entry = $group . '/' . $person . '/' . $name;
+            $base = $entry;
+            $index = 2;
+            while (isset($usedNames[$entry])) {
+                $entry = preg_replace('/(\.[^.]+)?$/', '-' . $index++ . '$0', $base);
+            }
+            $usedNames[$entry] = true;
+            $content = drive_download_file((string)$file['drive_file_id']);
+            if (!$zip->addFromString($entry, $content)) throw new RuntimeException('Không thêm được tệp ' . $name . ' vào ZIP.');
+        }
+        $zip->close();
+        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '-', drive_safe_name((string)$assignment['title'], 'bao-cao'));
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . trim($safe, '-') . '-' . $assignment['public_code'] . '.zip"');
+        header('Content-Length: ' . filesize($temp));
+        readfile($temp);
+        @unlink($temp);
+        exit;
+    } catch (Throwable $e) {
+        $zip->close();
+        @unlink($temp);
+        throw $e;
+    }
 }
 
 if ($method === 'POST' && $action === 'status') {
@@ -765,10 +821,15 @@ if ($method === 'POST' && $action === 'submit') {
     if ($uploadQueue) {
         $folderId = trim((string)($assignment['drive_folder_id'] ?? ''));
         if ($folderId === '') {
-            $folderId = drive_assignment_folder($assignment['public_code'], $assignment['title']);
+            $folderId = drive_assignment_folder(
+                $assignment['public_code'],
+                $assignment['title'],
+                (string)($assignment['submission_type'] ?? 'file'),
+                $assignment['academic_year'] ?? null
+            );
             $pdo->prepare('UPDATE submission_assignments SET drive_folder_id = ? WHERE id = ? AND (drive_folder_id IS NULL OR drive_folder_id = \'\')')->execute([$folderId, (int)$assignment['id']]);
         }
-        $personFolder = drive_get_or_create_folder($folderId, $name . ' - ' . $identifier);
+        $personFolder = drive_participant_folder($folderId, $group, $name, $identifier);
         $prefix = date('Ymd-His');
         foreach ($uploadQueue as $index => $queued) {
             $file = $queued['file'];
