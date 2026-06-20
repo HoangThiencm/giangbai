@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Link rút gọn dạng /s/AbCdEfGh -> s.php?c=AbCdEfGh
+RewriteRule ^s/([A-Za-z0-9]+)$ s.php?c=$1 [L,QSA]

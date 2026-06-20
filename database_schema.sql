@@ -162,6 +162,39 @@ CREATE TABLE IF NOT EXISTS assignment_submission_files (
     CONSTRAINT fk_assignment_file_submission FOREIGN KEY (submission_id) REFERENCES assignment_submissions(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS short_links (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(12) NOT NULL,
+    target_url TEXT NOT NULL,
+    title VARCHAR(200) DEFAULT NULL,
+    note TEXT DEFAULT NULL,
+    owner_id INT NOT NULL,
+    click_count INT NOT NULL DEFAULT 0,
+    max_clicks INT DEFAULT NULL,
+    expires_at DATETIME DEFAULT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    last_clicked_at DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_short_link_code (code),
+    INDEX idx_short_links_owner (owner_id),
+    INDEX idx_short_links_active (is_active),
+    INDEX idx_short_links_expires (expires_at),
+    CONSTRAINT fk_short_link_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS short_link_clicks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    link_id INT NOT NULL,
+    clicked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ip_hash VARCHAR(64) DEFAULT NULL,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    referer VARCHAR(255) DEFAULT NULL,
+    INDEX idx_short_link_clicks_link (link_id),
+    INDEX idx_short_link_clicks_time (clicked_at),
+    CONSTRAINT fk_short_link_click_link FOREIGN KEY (link_id) REFERENCES short_links(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
 VALUES
     ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),

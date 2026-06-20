@@ -27,7 +27,8 @@ function write_config($host, $name, $user, $pass, $adminKey)
         . "define('GOOGLE_DRIVE_TOKEN_JSON', '');\n"
         . "define('GOOGLE_DRIVE_ROOT_FOLDER_ID', '');\n"
         . "define('GOOGLE_DRIVE_SHARE_MODE', 'private');\n"
-        . "define('SUBMISSION_MAX_FILE_MB', 25);\n";
+        . "define('SUBMISSION_MAX_FILE_MB', 25);\n"
+        . "define('SUBMISSION_ZIP_MAX_MB', 500);\n";
 
     return file_put_contents($configPath, $content, LOCK_EX) !== false;
 }

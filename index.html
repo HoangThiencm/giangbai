@@ -386,6 +386,19 @@
             background: rgba(34, 211, 238, 0.38);
         }
 
+        .tool-tile--rutgon {
+            background: linear-gradient(145deg, #312e81 0%, #4f46e5 48%, #7c3aed 100%);
+            box-shadow: 0 14px 36px rgba(79, 70, 229, 0.22);
+        }
+
+        .tool-tile--rutgon .tool-tile-glow {
+            width: 150px;
+            height: 150px;
+            right: -28px;
+            bottom: -50px;
+            background: rgba(167, 139, 250, 0.42);
+        }
+
         .tool-tile--nopbai {
             background: linear-gradient(145deg, #172554 0%, #1d4ed8 52%, #3b82f6 100%);
             box-shadow: 0 14px 36px rgba(59, 130, 246, 0.22);
@@ -953,7 +966,8 @@
                         matrande: 'matrande.html',
                         tronde: 'tronde.html',
                         thitructuyen: 'thitructuyen.html',
-                        kttx: 'kttx.html'
+                        kttx: 'kttx.html',
+                        rutgon: 'rutgon.html'
                     };
 
                     Object.keys(links).forEach(key => {
@@ -963,6 +977,10 @@
                             });
                         }
                     });
+
+                    if (localStorage.getItem('userRole') === 'student') {
+                        document.querySelectorAll('[data-tool="rutgon"]').forEach(card => card.classList.add('hidden'));
+                    }
                 }
             } catch (e) {
                 console.warn("Chưa cấu hình global_config.json hoặc có lỗi tải file.");
@@ -1046,6 +1064,7 @@
                                 <li><b>Trộn Đề Thi:</b> Upload file Word/PDF rồi xáo trộn câu hỏi thành nhiều mã đề.</li>
                                 <li><b>Đề Kiểm Tra:</b> Sinh đề từ ảnh SGK hoặc tạo đề tương tự từ PDF.</li>
                                 <li><b>Thi Online:</b> Tổ chức thi trắc nghiệm trên điện thoại, máy tính.</li>
+                                <li><b>Link rút gọn &amp; QR:</b> Rút gọn URL, tạo mã QR, theo dõi lượt click và hạn dùng.</li>
                             </ul>
                         </div>
                     </div>
@@ -1161,6 +1180,17 @@
                             <span class="tool-tile-eyebrow">Hành chính</span>
                             <h3 class="tool-tile-title">Viết báo cáo</h3>
                             <p class="tool-tile-desc">AI soạn báo cáo giáo dục đúng văn phong.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="rutgon.html" data-tool="rutgon" class="tool-tile tool-tile--colored tool-tile--rutgon">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-qrcode"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Chia sẻ nhanh</span>
+                            <h3 class="tool-tile-title">Link rút gọn &amp; QR</h3>
+                            <p class="tool-tile-desc">Rút gọn URL, tạo mã QR, theo dõi lượt click và hạn dùng.</p>
                         </div>
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>

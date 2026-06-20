@@ -144,12 +144,13 @@ define('GOOGLE_DRIVE_TOKEN_JSON', '{...JSON có refresh_token...}'); // để tr
 define('GOOGLE_DRIVE_ROOT_FOLDER_ID', 'id-thu-muc-goc');
 define('GOOGLE_DRIVE_SHARE_MODE', 'private');
 define('SUBMISSION_MAX_FILE_MB', 25);
+define('SUBMISSION_ZIP_MAX_MB', 500);
 ```
 
 Giữ `GOOGLE_DRIVE_SHARE_MODE` là `private` để tệp kế thừa quyền của thư mục Drive.
 Chỉ dùng `anyone` nếu mọi tệp đều được phép công khai cho bất kỳ ai có đường link.
 
-Hosting PHP cần bật các extension `openssl`, `curl`, `fileinfo` và cho phép kết nối
+Hosting PHP cần bật các extension `openssl`, `curl`, `fileinfo`, `zip` và cho phép kết nối
 HTTPS ra `oauth2.googleapis.com`, `www.googleapis.com`. Đồng thời đặt `upload_max_filesize`
 và `post_max_size` lớn hơn giới hạn tệp muốn nhận.
 
@@ -164,3 +165,19 @@ bảng này lần đầu được mở để thuận tiện khi nâng cấp hệ
 - **Danh sách chỉ định:** chọn tài khoản sẵn có hoặc nhập thêm học sinh, phụ huynh,
   giáo viên, cán bộ và người ngoài hệ thống. Người chưa có tài khoản dùng mã cá nhân,
   không cần đăng ký tài khoản mới.
+
+### Cấu trúc tệp và tải ZIP
+
+Các đợt mới được tự sắp xếp trong Drive theo cấu trúc:
+
+```text
+01_BAO_CAO hoặc 02_NOP_BAI/
+└── NAM_HOC_2025-2026/
+    └── [MA_DOT] Ten dot/
+        └── Lop hoặc don vi/
+            └── Nguoi nop - ma nhan dien/
+```
+
+Trong trang kết quả, người quản lý có thể xem tệp qua Google Drive Viewer và tải
+tất cả tệp của một đợt thành ZIP. Việc tạo ZIP diễn ra tạm thời trên hosting, bị
+giới hạn bởi `SUBMISSION_ZIP_MAX_MB`, và cần bật PHP extension `zip`.

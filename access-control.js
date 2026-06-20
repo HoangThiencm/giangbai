@@ -10,7 +10,8 @@
         'gslides.html': 'gslides',
         'smartquiz.html': 'smartquiz',
         'thitructuyen.html': 'thitructuyen',
-        'kttx.html': 'kttx'
+        'kttx.html': 'kttx',
+        'rutgon.html': 'rutgon'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
@@ -23,7 +24,8 @@
         gslides: 'gslides.html',
         smartquiz: 'smartquiz.html',
         thitructuyen: 'thitructuyen.html',
-        kttx: 'kttx.html'
+        kttx: 'kttx.html',
+        rutgon: 'rutgon.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
@@ -101,8 +103,8 @@
     const role = localStorage.getItem('userRole');
 
     if (role === 'student') {
-        if (pageKey === 'thongketientrinh') {
-            alert('Trang thống kê chỉ dành cho giáo viên.');
+        if (pageKey === 'thongketientrinh' || pageKey === 'rutgon') {
+            alert(pageKey === 'rutgon' ? 'Trang rút gọn link chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.');
             window.location.href = firstAllowedPageUrl(allowedPages) || 'login.html';
             return;
         }
@@ -128,6 +130,10 @@
             alert('Tài khoản chưa được admin mở lộ trình nào để theo dõi tiến độ.');
             window.location.href = 'index.html';
         }
+        return;
+    }
+
+    if (role === 'teacher' && pageKey === 'rutgon') {
         return;
     }
 

@@ -37,6 +37,7 @@ function page_catalog(): array
         'smartquiz' => ['title' => 'Soạn câu hỏi/Game AI', 'url' => 'smartquiz.html'],
         'thitructuyen' => ['title' => 'Thi Online', 'url' => 'thitructuyen.html'],
         'kttx' => ['title' => 'Đề kiểm tra thường xuyên', 'url' => 'kttx.html'],
+        'rutgon' => ['title' => 'Link rút gọn & QR', 'url' => 'rutgon.html'],
     ];
 }
 

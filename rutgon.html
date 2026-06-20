@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link rút gọn &amp; QR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+        .soft-shadow { box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
+        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 14px; padding: .72rem .9rem; outline: none; background: #fff; }
+        .field:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, .12); }
+        .label { display: block; font-size: .78rem; font-weight: 800; color: #334155; margin-bottom: .42rem; }
+        .chip { display: inline-flex; align-items: center; border-radius: 999px; padding: .28rem .62rem; font-size: .72rem; font-weight: 800; }
+        .modal-backdrop { background: rgba(15, 23, 42, .58); backdrop-filter: blur(5px); }
+    </style>
+</head>
+<body class="min-h-screen bg-[#f4f7fb] text-slate-900">
+    <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200" title="Về trang chính"><i class="fas fa-arrow-left"></i></a>
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.18em] text-indigo-700">GiangBai</p>
+                    <h1 class="text-lg font-black tracking-tight">Link rút gọn &amp; QR</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="teacherName" class="hidden text-sm font-bold text-slate-600 sm:block"></span>
+                <button onclick="openCreator()" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700"><i class="fas fa-link mr-2"></i>Tạo link mới</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6">
+        <section class="overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-800 p-6 text-white soft-shadow sm:p-8">
+            <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div class="max-w-2xl">
+                    <span class="chip bg-white/10 text-indigo-100"><i class="fas fa-qrcode mr-2"></i>Rút gọn + QR + thống kê</span>
+                    <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Link ngắn, dễ gửi Zalo.</h2>
+                    <p class="mt-3 text-sm leading-6 text-indigo-50/80">Tạo link rút gọn cho đề thi, nộp bài, slides hoặc bất kỳ URL nào. Theo dõi lượt click, đặt hạn và tạo mã QR ngay trên trang.</p>
+                </div>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statLinks" class="text-2xl font-black">0</div><div class="text-[11px] text-indigo-100/80">Tổng link</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statActive" class="text-2xl font-black">0</div><div class="text-[11px] text-indigo-100/80">Đang hoạt động</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statClicks" class="text-2xl font-black">0</div><div class="text-[11px] text-indigo-100/80">Lượt click</div></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-7">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-black">Danh sách link</h2>
+                    <p class="mt-1 text-sm text-slate-500">Copy link ngắn, tạo QR hoặc xem lịch sử truy cập.</p>
+                </div>
+                <input id="searchBox" type="search" placeholder="Tìm theo tên, mã, URL..." oninput="renderLinks()" class="field !w-auto min-w-[220px] !py-2 text-sm font-semibold">
+            </div>
+            <div id="loading" class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2 text-indigo-600"></i>Đang tải dữ liệu...</div>
+            <div id="emptyState" class="hidden rounded-[24px] border-2 border-dashed border-slate-200 bg-white p-12 text-center">
+                <div class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-indigo-50 text-2xl text-indigo-600"><i class="fas fa-link"></i></div>
+                <h3 class="mt-4 text-lg font-black">Chưa có link rút gọn</h3>
+                <p class="mt-1 text-sm text-slate-500">Tạo link đầu tiên để chia sẻ nhanh cho học sinh.</p>
+                <button onclick="openCreator()" class="mt-5 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-extrabold text-white">Tạo ngay</button>
+            </div>
+            <div id="linkList" class="space-y-3"></div>
+        </section>
+    </main>
+
+    <div id="creatorModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-3 max-w-2xl overflow-hidden rounded-[26px] bg-white soft-shadow">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-indigo-700">Thiết lập</p>
+                    <h2 id="creatorTitle" class="text-xl font-black">Tạo link rút gọn</h2>
+                </div>
+                <button onclick="closeCreator()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fas fa-xmark"></i></button>
+            </div>
+            <form id="creatorForm" class="p-5 sm:p-7" onsubmit="saveLink(event)">
+                <input type="hidden" id="linkId">
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <label class="sm:col-span-2">
+                        <span class="label">Đường dẫn đích *</span>
+                        <input id="targetUrl" required type="url" class="field font-mono text-sm" placeholder="https://ten-mien.com/thitructuyen.html?mode=student&examId=...">
+                    </label>
+                    <label class="sm:col-span-2">
+                        <span class="label">Tên gợi nhớ</span>
+                        <input id="linkTitle" maxlength="200" class="field" placeholder="Ví dụ: Đề kiểm tra Toán 7 - lớp 7A">
+                    </label>
+                    <label id="customCodeWrap">
+                        <span class="label">Mã tùy chọn</span>
+                        <input id="customCode" maxlength="12" class="field uppercase font-mono" placeholder="VD: TOAN7A">
+                        <p class="mt-1 text-xs text-slate-500">Để trống để hệ thống tự sinh mã 8 ký tự.</p>
+                    </label>
+                    <label>
+                        <span class="label">Giới hạn lượt click</span>
+                        <input id="maxClicks" type="number" min="1" class="field" placeholder="Không giới hạn">
+                    </label>
+                    <label class="sm:col-span-2">
+                        <span class="label">Hết hạn</span>
+                        <input id="expiresAt" type="datetime-local" class="field">
+                    </label>
+                    <label class="sm:col-span-2">
+                        <span class="label">Ghi chú</span>
+                        <textarea id="linkNote" rows="2" class="field" placeholder="Ghi chú nội bộ cho giáo viên"></textarea>
+                    </label>
+                    <label id="activeWrap" class="hidden sm:col-span-2">
+                        <span class="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+                            <input id="isActive" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600" checked>
+                            Link đang bật (cho phép truy cập)
+                        </span>
+                    </label>
+                </div>
+                <div class="mt-6 flex flex-wrap justify-end gap-2">
+                    <button type="button" onclick="closeCreator()" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">Hủy</button>
+                    <button type="submit" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-indigo-700"><i class="fas fa-save mr-2"></i>Lưu link</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="qrModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-8 max-w-md overflow-hidden rounded-[26px] bg-white soft-shadow" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-indigo-700">QR Code</p>
+                    <h2 id="qrTitle" class="text-lg font-black">Link rút gọn</h2>
+                </div>
+                <button onclick="closeQr()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="p-6 text-center">
+                <div id="qrMount" class="mx-auto inline-block rounded-2xl border border-slate-200 bg-white p-3"></div>
+                <div class="mt-4 text-left">
+                    <label class="label">Link rút gọn</label>
+                    <div class="flex gap-2">
+                        <input id="qrLinkInput" readonly class="field font-mono text-sm text-indigo-700">
+                        <button type="button" onclick="copyText('qrLinkInput')" class="shrink-0 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-extrabold text-white hover:bg-indigo-700"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap justify-center gap-2">
+                    <button type="button" onclick="downloadQr()" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><i class="fas fa-download mr-2"></i>Tải ảnh QR</button>
+                </div>
+                <p class="mt-3 text-xs text-slate-500">In hoặc chiếu mã QR để học sinh quét và mở link ngay.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="statsModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-6 max-w-3xl overflow-hidden rounded-[26px] bg-white soft-shadow">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-indigo-700">Thống kê</p>
+                    <h2 id="statsTitle" class="text-xl font-black">Lịch sử click</h2>
+                </div>
+                <button onclick="closeStats()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="max-h-[60vh] overflow-y-auto p-5 sm:p-7">
+                <div id="statsLoading" class="py-8 text-center text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải...</div>
+                <div id="statsEmpty" class="hidden py-8 text-center text-sm text-slate-500">Chưa có lượt click nào.</div>
+                <table id="statsTable" class="hidden w-full text-left text-sm">
+                    <thead class="border-b text-slate-500">
+                        <tr><th class="pb-2 pr-3">Thời gian</th><th class="pb-2 pr-3">Thiết bị</th><th class="pb-2">Nguồn</th></tr>
+                    </thead>
+                    <tbody id="statsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="access-control.js"></script>
+    <script>
+        let links = [];
+
+        function esc(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+
+        function fmtDate(value) {
+            if (!value) return '—';
+            const date = new Date(String(value).replace(' ', 'T'));
+            if (Number.isNaN(date.getTime())) return value;
+            return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+        }
+
+        function statusChip(item) {
+            const map = {
+                active: 'bg-emerald-100 text-emerald-700',
+                inactive: 'bg-slate-200 text-slate-700',
+                expired: 'bg-amber-100 text-amber-800',
+                maxed: 'bg-rose-100 text-rose-700'
+            };
+            return `<span class="chip ${map[item.status] || 'bg-slate-100 text-slate-600'}">${esc(item.status_label)}</span>`;
+        }
+
+        async function api(action, payload = null, query = '') {
+            const options = { credentials: 'include', cache: 'no-store' };
+            if (payload) {
+                options.method = 'POST';
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify({ action, ...payload });
+            }
+            const url = payload ? 'api/short_links.php' : `api/short_links.php?action=${encodeURIComponent(action)}${query}`;
+            const res = await fetch(url, options);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Không thể kết nối máy chủ.');
+            return data;
+        }
+
+        async function loadLinks() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('linkList').innerHTML = '';
+            try {
+                const data = await api('list');
+                links = data.items || [];
+                document.getElementById('statLinks').textContent = data.stats?.total_links ?? links.length;
+                document.getElementById('statActive').textContent = data.stats?.active_links ?? 0;
+                document.getElementById('statClicks').textContent = data.stats?.total_clicks ?? 0;
+                renderLinks();
+            } catch (err) {
+                alert(err.message || 'Không tải được danh sách link.');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function renderLinks() {
+            const q = (document.getElementById('searchBox').value || '').trim().toLowerCase();
+            const filtered = links.filter(item => {
+                if (!q) return true;
+                const hay = [item.title, item.code, item.short_url, item.target_url, item.note].join(' ').toLowerCase();
+                return hay.includes(q);
+            });
+            const list = document.getElementById('linkList');
+            const empty = document.getElementById('emptyState');
+            if (!filtered.length) {
+                list.innerHTML = '';
+                empty.classList.toggle('hidden', !!q || !!links.length);
+                return;
+            }
+            empty.classList.add('hidden');
+            list.innerHTML = filtered.map(item => `
+                <article class="rounded-[22px] border border-slate-200 bg-white p-5 soft-shadow">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="text-lg font-black text-slate-900">${esc(item.title || item.code)}</h3>
+                                ${statusChip(item)}
+                            </div>
+                            <p class="mt-2 break-all font-mono text-sm font-bold text-indigo-700">${esc(item.short_url)}</p>
+                            <p class="mt-2 break-all text-sm text-slate-500"><i class="fas fa-arrow-turn-down mr-2 text-slate-400"></i>${esc(item.target_url)}</p>
+                            <div class="mt-3 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
+                                <span><i class="fas fa-mouse-pointer mr-1 text-indigo-500"></i>${item.click_count} click</span>
+                                <span><i class="fas fa-clock mr-1"></i>Hết hạn: ${item.expires_at ? fmtDate(item.expires_at) : 'Không'}</span>
+                                <span><i class="fas fa-hashtag mr-1"></i>Giới hạn: ${item.max_clicks ?? 'Không'}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>Tạo: ${fmtDate(item.created_at)}</span>
+                            </div>
+                            ${item.note ? `<p class="mt-2 text-sm text-slate-600">${esc(item.note)}</p>` : ''}
+                        </div>
+                        <div class="flex flex-wrap gap-2 lg:max-w-[320px] lg:justify-end">
+                            <button data-url="${esc(item.short_url)}" onclick="copyTextValue(this.dataset.url)" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"><i class="fas fa-copy mr-1"></i>Copy</button>
+                            <button onclick="openQr(${item.id})" class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100"><i class="fas fa-qrcode mr-1"></i>QR</button>
+                            <button onclick="openStats(${item.id})" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"><i class="fas fa-chart-line mr-1"></i>Click</button>
+                            <button onclick="openEditor(${item.id})" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"><i class="fas fa-pen mr-1"></i>Sửa</button>
+                            <button onclick="deleteLink(${item.id})" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100"><i class="fas fa-trash mr-1"></i>Xóa</button>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function openCreator() {
+            document.getElementById('creatorForm').reset();
+            document.getElementById('linkId').value = '';
+            document.getElementById('creatorTitle').textContent = 'Tạo link rút gọn';
+            document.getElementById('customCodeWrap').classList.remove('hidden');
+            document.getElementById('activeWrap').classList.add('hidden');
+            document.getElementById('creatorModal').classList.remove('hidden');
+        }
+
+        function openEditor(id) {
+            const item = links.find(link => link.id === id);
+            if (!item) return;
+            document.getElementById('linkId').value = String(item.id);
+            document.getElementById('targetUrl').value = item.target_url;
+            document.getElementById('linkTitle').value = item.title || '';
+            document.getElementById('customCode').value = '';
+            document.getElementById('maxClicks').value = item.max_clicks ?? '';
+            document.getElementById('expiresAt').value = item.expires_at ? String(item.expires_at).replace(' ', 'T').slice(0, 16) : '';
+            document.getElementById('linkNote').value = item.note || '';
+            document.getElementById('isActive').checked = !!item.is_active;
+            document.getElementById('creatorTitle').textContent = 'Sửa link rút gọn';
+            document.getElementById('customCodeWrap').classList.add('hidden');
+            document.getElementById('activeWrap').classList.remove('hidden');
+            document.getElementById('creatorModal').classList.remove('hidden');
+        }
+
+        function closeCreator() {
+            document.getElementById('creatorModal').classList.add('hidden');
+        }
+
+        async function saveLink(event) {
+            event.preventDefault();
+            const id = document.getElementById('linkId').value;
+            const payload = {
+                target_url: document.getElementById('targetUrl').value.trim(),
+                title: document.getElementById('linkTitle').value.trim(),
+                note: document.getElementById('linkNote').value.trim(),
+                max_clicks: document.getElementById('maxClicks').value.trim(),
+                expires_at: document.getElementById('expiresAt').value
+            };
+            try {
+                if (id) {
+                    payload.id = Number(id);
+                    payload.is_active = document.getElementById('isActive').checked;
+                    await api('update', payload);
+                } else {
+                    payload.custom_code = document.getElementById('customCode').value.trim();
+                    await api('create', payload);
+                }
+                closeCreator();
+                await loadLinks();
+            } catch (err) {
+                alert(err.message || 'Không lưu được link.');
+            }
+        }
+
+        async function deleteLink(id) {
+            const item = links.find(link => link.id === id);
+            if (!item) return;
+            if (!confirm(`Xóa link "${item.title || item.code}"? Hành động này không hoàn tác.`)) return;
+            try {
+                await api('delete', { id });
+                await loadLinks();
+            } catch (err) {
+                alert(err.message || 'Không xóa được link.');
+            }
+        }
+
+        let qrInstance = null;
+        function openQr(id) {
+            const item = links.find(link => link.id === id);
+            if (!item) return;
+            document.getElementById('qrTitle').textContent = item.title || item.code;
+            document.getElementById('qrLinkInput').value = item.short_url;
+            const mount = document.getElementById('qrMount');
+            mount.innerHTML = '';
+            qrInstance = new QRCode(mount, { text: item.short_url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function closeQr() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+
+        function downloadQr() {
+            const mount = document.getElementById('qrMount');
+            const canvas = mount?.querySelector('canvas');
+            const img = mount?.querySelector('img');
+            const source = canvas || img;
+            if (!source) {
+                alert('Chưa có mã QR để tải.');
+                return;
+            }
+            const link = document.createElement('a');
+            const code = (document.getElementById('qrTitle').textContent || 'qr').replace(/[^\w\-]+/g, '_').slice(0, 40);
+            if (canvas) {
+                link.href = canvas.toDataURL('image/png');
+            } else {
+                link.href = img.src;
+            }
+            link.download = `qr-${code}.png`;
+            link.click();
+        }
+
+        async function openStats(id) {
+            const item = links.find(link => link.id === id);
+            if (!item) return;
+            document.getElementById('statsTitle').textContent = `Lịch sử click — ${item.title || item.code}`;
+            document.getElementById('statsLoading').classList.remove('hidden');
+            document.getElementById('statsEmpty').classList.add('hidden');
+            document.getElementById('statsTable').classList.add('hidden');
+            document.getElementById('statsBody').innerHTML = '';
+            document.getElementById('statsModal').classList.remove('hidden');
+            try {
+                const data = await api('stats', null, `&id=${encodeURIComponent(id)}`);
+                const clicks = data.clicks || [];
+                document.getElementById('statsLoading').classList.add('hidden');
+                if (!clicks.length) {
+                    document.getElementById('statsEmpty').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('statsTable').classList.remove('hidden');
+                document.getElementById('statsBody').innerHTML = clicks.map(row => `
+                    <tr class="border-b border-slate-100">
+                        <td class="py-2 pr-3 whitespace-nowrap">${fmtDate(row.clicked_at)}</td>
+                        <td class="py-2 pr-3">${esc((row.user_agent || 'Không rõ').slice(0, 80))}</td>
+                        <td class="py-2 break-all">${esc(row.referer || '—')}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                document.getElementById('statsLoading').classList.add('hidden');
+                alert(err.message || 'Không tải được thống kê.');
+                closeStats();
+            }
+        }
+
+        function closeStats() {
+            document.getElementById('statsModal').classList.add('hidden');
+        }
+
+        async function copyText(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            try {
+                await navigator.clipboard.writeText(el.value);
+                alert('Đã copy link.');
+            } catch {
+                el.select();
+                document.execCommand('copy');
+                alert('Đã copy link.');
+            }
+        }
+
+        async function copyTextValue(value) {
+            try {
+                await navigator.clipboard.writeText(value);
+                alert('Đã copy link rút gọn.');
+            } catch {
+                alert('Không copy tự động được. Vui lòng copy thủ công.');
+            }
+        }
+
+        document.getElementById('qrModal').addEventListener('click', closeQr);
+        document.getElementById('statsModal').addEventListener('click', closeStats);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('userRole') !== 'teacher') {
+                alert('Trang này chỉ dành cho giáo viên.');
+                window.location.href = 'index.html';
+                return;
+            }
+            const name = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Giáo viên';
+            const label = document.getElementById('teacherName');
+            label.textContent = name;
+            label.classList.remove('hidden');
+            loadLinks();
+        });
+    </script>
+</body>
+</html>

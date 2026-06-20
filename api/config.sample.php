@@ -40,3 +40,7 @@ define('GOOGLE_DRIVE_SHARE_MODE', 'private');
 
 // Hard server-side ceiling. Each assignment may choose a lower limit.
 define('SUBMISSION_MAX_FILE_MB', 25);
+
+// Maximum combined size the hosting may fetch from Drive to create one ZIP.
+// Requires PHP ZipArchive extension on the hosting.
+define('SUBMISSION_ZIP_MAX_MB', 500);
