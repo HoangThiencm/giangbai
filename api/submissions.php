@@ -2,6 +2,18 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/google_drive.php';
 
+// Assignment times are entered as local browser times. Keep PHP and the MySQL
+// session on the same application timezone so shared hosting UTC defaults do not
+// delay an assignment by seven hours in Viet Nam.
+$submissionTimezone = defined('APP_TIMEZONE') ? (string)APP_TIMEZONE : 'Asia/Ho_Chi_Minh';
+try {
+    date_default_timezone_set($submissionTimezone);
+    $pdo->exec("SET time_zone = '+07:00'");
+} catch (Throwable $e) {
+    // Time comparisons still use PHP's configured timezone if MySQL rejects the
+    // session offset on a restricted hosting account.
+}
+
 set_exception_handler(function (Throwable $e) {
     $payload = ['error' => 'Có lỗi khi xử lý chức năng nộp bài.'];
     if (defined('APP_DEBUG') && APP_DEBUG) $payload['detail'] = $e->getMessage();

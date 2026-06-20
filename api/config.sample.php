@@ -12,6 +12,7 @@ define('ADMIN_KEY', 'change-this-admin-key');
 
 // Session cookie name for this app.
 define('APP_SESSION_NAME', 'giangbai_session');
+define('APP_TIMEZONE', 'Asia/Ho_Chi_Minh');
 
 // Optional Gemini AI support for lesson explanations.
 // You can set one key as a string or multiple keys as an array.
