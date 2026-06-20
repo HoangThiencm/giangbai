@@ -129,6 +129,168 @@
             color: #e2e8f0;
         }
 
+        .teacher-lotrinh-panel {
+            border-radius: 28px;
+            border: 1px solid rgba(15, 118, 110, 0.18);
+            background:
+                radial-gradient(circle at 100% 0%, rgba(245, 158, 11, 0.14), transparent 34%),
+                radial-gradient(circle at 0% 100%, rgba(20, 184, 166, 0.16), transparent 38%),
+                linear-gradient(145deg, #0f172a 0%, #134e4a 52%, #115e59 100%);
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+            color: #ecfdf5;
+            overflow: hidden;
+        }
+
+        .teacher-lotrinh-panel-inner {
+            padding: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .teacher-lotrinh-panel-inner {
+                padding: 1.75rem 2rem 2rem;
+            }
+        }
+
+        .lotrinh-action-grid {
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        @media (min-width: 768px) {
+            .lotrinh-action-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+        }
+
+        .lotrinh-action-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-radius: 20px;
+            padding: 1.1rem 1.2rem;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
+            transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .lotrinh-action-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.28);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .lotrinh-action-card.primary {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 250, 0.96));
+            color: #0f172a;
+            border-color: rgba(255, 255, 255, 0.65);
+        }
+
+        .lotrinh-action-card.stats {
+            background: linear-gradient(135deg, rgba(255, 251, 235, 0.96), rgba(254, 243, 199, 0.92));
+            color: #78350f;
+            border-color: rgba(251, 191, 36, 0.45);
+        }
+
+        .lotrinh-action-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .lotrinh-action-card.primary .lotrinh-action-icon {
+            background: #ccfbf1;
+            color: #0f766e;
+        }
+
+        .lotrinh-action-card.stats .lotrinh-action-icon {
+            background: #fde68a;
+            color: #b45309;
+        }
+
+        .lotrinh-action-title {
+            font-size: 1.02rem;
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
+        .lotrinh-action-desc {
+            margin-top: 0.2rem;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            opacity: 0.82;
+        }
+
+        .grade-tile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        @media (min-width: 640px) {
+            .grade-tile-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .grade-tile-grid {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+        }
+
+        .grade-tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            min-height: 108px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.07);
+            text-decoration: none;
+            color: #f8fafc;
+            transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+        }
+
+        .grade-tile:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.34);
+        }
+
+        .grade-tile-number {
+            font-size: 2rem;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+
+        .grade-tile-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            opacity: 0.88;
+        }
+
+        .teacher-tools-compact .tool-card {
+            min-height: 220px;
+        }
+
+        .teacher-tools-compact .tool-desc {
+            min-height: 3.2rem;
+            -webkit-line-clamp: 2;
+        }
+
     </style>
     <script>
         const SystemConfig = {
@@ -521,17 +683,13 @@
             </div>
 
             <section id="teacherLotrinhHub" class="mb-8 hidden">
-                <div class="mb-5">
-                    <p class="section-kicker text-teal-700">Lộ trình Toán</p>
-                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Không gian giáo viên</h3>
-                    <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Soạn bài trên từng lộ trình; theo dõi tiến độ học sinh theo lớp phụ trách ở trang thống kê riêng.</p>
-                </div>
-                <div id="teacherLotrinhCards" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"></div>
+                <div id="teacherLotrinhPanel" class="teacher-lotrinh-panel"></div>
             </section>
 
-            <div id="teacherToolsDivider" class="mb-5 hidden">
-                <p class="section-kicker text-indigo-600">Công cụ khác</p>
-                <h3 class="mt-2 text-xl font-extrabold text-slate-900">Công cụ AI hỗ trợ giảng dạy</h3>
+            <div id="teacherToolsDivider" class="mb-5 hidden rounded-[24px] border border-slate-200/80 bg-white/70 px-5 py-4 shadow-sm">
+                <p class="section-kicker text-indigo-600">Công cụ AI</p>
+                <h3 class="mt-1 text-lg font-extrabold text-slate-900">Hỗ trợ soạn đề, dạy học và báo cáo</h3>
+                <p class="mt-1 text-sm text-slate-500">Các công cụ bên dưới tách riêng với lộ trình Toán — dùng khi cần slides, đề thi, thi online...</p>
             </div>
 
             <div id="mainToolsGrid" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 mb-10">
@@ -826,12 +984,12 @@
             try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
 
             const routeMap = {
-                lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
-                lotrinhtoan4: { url: 'lotrinhtoan4.html', label: 'Toán 4' },
-                lotrinhtoan6: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
-                lotrinhtoan7: { url: 'lotrinhtoan7.html', label: 'Toán 7' },
-                lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8' },
-                lotrinhtoan9: { url: 'lotrinhtoan9.html', label: 'Toán 9' }
+                lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6', grade: 6 },
+                lotrinhtoan4: { url: 'lotrinhtoan4.html', label: 'Toán 4', grade: 4 },
+                lotrinhtoan6: { url: 'lotrinhtoan6.html', label: 'Toán 6', grade: 6 },
+                lotrinhtoan7: { url: 'lotrinhtoan7.html', label: 'Toán 7', grade: 7 },
+                lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8', grade: 8 },
+                lotrinhtoan9: { url: 'lotrinhtoan9.html', label: 'Toán 9', grade: 9 }
             };
 
             const lotrinhPages = [];
@@ -841,6 +999,7 @@
                     lotrinhPages.push({ key, ...routeMap[key] });
                 }
             });
+            lotrinhPages.sort((a, b) => a.grade - b.grade);
 
             document.querySelectorAll('[data-student-lotrinh-card]').forEach(card => {
                 card.classList.add('hidden');
@@ -849,46 +1008,76 @@
             if (!lotrinhPages.length) return;
 
             const hub = document.getElementById('teacherLotrinhHub');
-            const cardsHost = document.getElementById('teacherLotrinhCards');
+            const panel = document.getElementById('teacherLotrinhPanel');
             const divider = document.getElementById('teacherToolsDivider');
             const defaultToolsHeader = document.getElementById('defaultToolsHeader');
-            if (!hub || !cardsHost) return;
+            const mainToolsGrid = document.getElementById('mainToolsGrid');
+            if (!hub || !panel) return;
 
             hub.classList.remove('hidden');
             divider?.classList.remove('hidden');
             defaultToolsHeader?.classList.add('hidden');
+            mainToolsGrid?.classList.add('teacher-tools-compact');
+            document.getElementById('guideContent')?.closest('.mb-8')?.classList.add('hidden');
 
-            const designCards = lotrinhPages.map(page => `
-                <a href="${page.url}" class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-teal-200 text-left block">
-                    <div class="tool-icon bg-teal-100 text-teal-700">
-                        <i class="fas fa-pen-ruler"></i>
-                    </div>
-                    <div class="mt-6 flex-1">
-                        <h3 class="tool-title group-hover:text-teal-700 transition">Soạn bài ${page.label}</h3>
-                        <p class="tool-desc mt-3">Thiết kế lý thuyết, ví dụ, video và bài luyện tập cho lộ trình ${page.label}.</p>
-                    </div>
-                    <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-teal-700 transition group-hover:translate-x-1">
-                        Mở soạn bài <i class="fas fa-arrow-right"></i>
-                    </span>
+            const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+
+            const teacherName = escapeHtml(localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Giáo viên');
+            const managedClass = escapeHtml((localStorage.getItem('userClassName') || '').trim());
+            const classHint = managedClass
+                ? `Lớp phụ trách: <strong class="text-white">${managedClass}</strong>`
+                : 'Chưa gán lớp phụ trách — liên hệ admin nếu cần theo dõi tiến độ theo lớp.';
+
+            const defaultDesignUrl = lotrinhPages[0]?.url || 'lotrinhtoan6.html';
+            const gradeTiles = lotrinhPages.map(page => `
+                <a href="${page.url}" class="grade-tile" title="Soạn bài ${page.label}">
+                    <span class="grade-tile-number">${page.grade}</span>
+                    <span class="grade-tile-label">Soạn ${page.label}</span>
                 </a>
             `).join('');
 
-            const statsCard = `
-                <a href="thongketientrinh.html" class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-amber-200 text-left block">
-                    <div class="tool-icon bg-amber-100 text-amber-700">
-                        <i class="fas fa-chart-line"></i>
+            panel.innerHTML = `
+                <div class="teacher-lotrinh-panel-inner">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-2xl">
+                            <p class="section-kicker text-teal-200/90">Lộ trình Toán</p>
+                            <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-white md:text-3xl">Xin chào, ${teacherName}</h2>
+                            <p class="mt-2 text-sm leading-6 text-teal-50/90">
+                                Hai việc chính: <strong class="text-white">soạn bài</strong> trên từng khối lớp và
+                                <strong class="text-white">theo dõi tiến độ</strong> học sinh lớp bạn phụ trách.
+                            </p>
+                            <p class="mt-2 text-xs text-teal-100/80">${classHint}</p>
+                        </div>
+                        <div class="lotrinh-action-grid w-full lg:max-w-xl">
+                            <a href="${defaultDesignUrl}" class="lotrinh-action-card primary">
+                                <span class="lotrinh-action-icon"><i class="fas fa-pen-ruler"></i></span>
+                                <span>
+                                    <div class="lotrinh-action-title">Soạn bài lộ trình</div>
+                                    <div class="lotrinh-action-desc">Lý thuyết, ví dụ, video, luyện tập theo từng bài.</div>
+                                </span>
+                                <i class="fas fa-arrow-right ml-auto text-teal-700/70"></i>
+                            </a>
+                            <a href="thongketientrinh.html" class="lotrinh-action-card stats">
+                                <span class="lotrinh-action-icon"><i class="fas fa-chart-line"></i></span>
+                                <span>
+                                    <div class="lotrinh-action-title">Thống kê tiến trình</div>
+                                    <div class="lotrinh-action-desc">Xem HS theo lớp, lọc cần luyện thêm, cập nhật điểm.</div>
+                                </span>
+                                <i class="fas fa-arrow-right ml-auto text-amber-700/70"></i>
+                            </a>
+                        </div>
                     </div>
-                    <div class="mt-6 flex-1">
-                        <h3 class="tool-title group-hover:text-amber-700 transition">Thống kê tiến trình lớp</h3>
-                        <p class="tool-desc mt-3">Xem tiến độ học sinh theo lớp phụ trách, lọc bài cần luyện thêm và cập nhật điểm từ dữ liệu đã nộp.</p>
+                    <div class="mt-5 border-t border-white/10 pt-5">
+                        <div class="mb-3 flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-extrabold uppercase tracking-[0.12em] text-teal-100/90">Chọn khối soạn bài</h3>
+                            <span class="text-xs font-semibold text-teal-100/70">${lotrinhPages.length} lộ trình được mở</span>
+                        </div>
+                        <div class="grade-tile-grid">${gradeTiles}</div>
                     </div>
-                    <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-amber-700 transition group-hover:translate-x-1">
-                        Mở thống kê <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
+                </div>
             `;
-
-            cardsHost.innerHTML = designCards + statsCard;
         })();
     </script>
 
