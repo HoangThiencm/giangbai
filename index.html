@@ -412,6 +412,19 @@
             background: rgba(96, 165, 250, 0.42);
         }
 
+        .tool-tile--padlet {
+            background: linear-gradient(145deg, #4c1d95 0%, #7c3aed 52%, #c084fc 100%);
+            box-shadow: 0 14px 36px rgba(124, 58, 237, 0.22);
+        }
+
+        .tool-tile--padlet .tool-tile-glow {
+            width: 150px;
+            height: 150px;
+            right: -30px;
+            bottom: -55px;
+            background: rgba(216, 180, 254, 0.42);
+        }
+
         .tool-tile--vietbaocao {
             background: linear-gradient(145deg, #134e4a 0%, #0f766e 50%, #14b8a6 100%);
             box-shadow: 0 14px 36px rgba(20, 184, 166, 0.2);
@@ -967,7 +980,8 @@
                         tronde: 'tronde.html',
                         thitructuyen: 'thitructuyen.html',
                         kttx: 'kttx.html',
-                        rutgon: 'rutgon.html'
+                        rutgon: 'rutgon.html',
+                        padlet: 'padlet_ht.html'
                     };
 
                     Object.keys(links).forEach(key => {
@@ -1169,6 +1183,17 @@
                             <span class="tool-tile-eyebrow">Giao bài</span>
                             <h3 class="tool-tile-title">Giao &amp; nhận bài</h3>
                             <p class="tool-tile-desc">Link nộp theo lớp, lưu trên Google Drive.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="padlet_ht.html" data-tool="padlet" class="tool-tile tool-tile--colored tool-tile--padlet">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-table-cells-large"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Tương tác lớp học</span>
+                            <h3 class="tool-tile-title">Bảng chia sẻ</h3>
+                            <p class="tool-tile-desc">Tạo bảng kiểu Padlet: đăng bài, ảnh/tệp, bình luận và thả cảm xúc.</p>
                         </div>
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>

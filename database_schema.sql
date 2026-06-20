@@ -162,6 +162,102 @@ CREATE TABLE IF NOT EXISTS assignment_submission_files (
     CONSTRAINT fk_assignment_file_submission FOREIGN KEY (submission_id) REFERENCES assignment_submissions(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS padlet_boards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    public_code VARCHAR(24) NOT NULL UNIQUE,
+    owner_id INT NOT NULL,
+    title VARCHAR(220) NOT NULL,
+    description TEXT DEFAULT NULL,
+    layout_type ENUM('wall','columns') NOT NULL DEFAULT 'wall',
+    access_mode ENUM('public','class') NOT NULL DEFAULT 'public',
+    target_class VARCHAR(100) DEFAULT NULL,
+    status ENUM('open','closed') NOT NULL DEFAULT 'open',
+    academic_year VARCHAR(30) DEFAULT NULL,
+    moderation_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    comments_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    reactions_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    drive_folder_id VARCHAR(160) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_padlet_boards_owner (owner_id),
+    INDEX idx_padlet_boards_code (public_code),
+    CONSTRAINT fk_padlet_board_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS padlet_columns (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    board_id INT NOT NULL,
+    title VARCHAR(160) NOT NULL,
+    color VARCHAR(30) NOT NULL DEFAULT 'teal',
+    order_index INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_padlet_columns_board (board_id),
+    CONSTRAINT fk_padlet_column_board FOREIGN KEY (board_id) REFERENCES padlet_boards(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS padlet_posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    board_id INT NOT NULL,
+    column_id INT DEFAULT NULL,
+    author_user_id INT DEFAULT NULL,
+    author_name VARCHAR(180) NOT NULL,
+    author_role VARCHAR(100) DEFAULT NULL,
+    author_group VARCHAR(160) DEFAULT NULL,
+    body TEXT DEFAULT NULL,
+    link_url TEXT DEFAULT NULL,
+    card_color VARCHAR(30) NOT NULL DEFAULT 'white',
+    status ENUM('pending','published','rejected') NOT NULL DEFAULT 'pending',
+    pinned TINYINT(1) NOT NULL DEFAULT 0,
+    order_index INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_padlet_posts_board (board_id),
+    INDEX idx_padlet_posts_column (column_id),
+    INDEX idx_padlet_posts_status (status),
+    CONSTRAINT fk_padlet_post_board FOREIGN KEY (board_id) REFERENCES padlet_boards(id) ON DELETE CASCADE,
+    CONSTRAINT fk_padlet_post_column FOREIGN KEY (column_id) REFERENCES padlet_columns(id) ON DELETE SET NULL,
+    CONSTRAINT fk_padlet_post_author FOREIGN KEY (author_user_id) REFERENCES users(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS padlet_post_files (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    drive_file_id VARCHAR(160) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(160) DEFAULT NULL,
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    view_url TEXT NOT NULL,
+    download_url TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_padlet_files_post (post_id),
+    CONSTRAINT fk_padlet_file_post FOREIGN KEY (post_id) REFERENCES padlet_posts(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS padlet_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    author_user_id INT DEFAULT NULL,
+    author_name VARCHAR(180) NOT NULL,
+    author_role VARCHAR(100) DEFAULT NULL,
+    body TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_padlet_comments_post (post_id),
+    CONSTRAINT fk_padlet_comment_post FOREIGN KEY (post_id) REFERENCES padlet_posts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_padlet_comment_author FOREIGN KEY (author_user_id) REFERENCES users(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS padlet_reactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    visitor_key VARCHAR(100) NOT NULL,
+    reaction VARCHAR(20) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_padlet_reaction (post_id, visitor_key, reaction),
+    INDEX idx_padlet_reactions_post (post_id),
+    CONSTRAINT fk_padlet_reaction_post FOREIGN KEY (post_id) REFERENCES padlet_posts(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS short_links (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(12) NOT NULL,

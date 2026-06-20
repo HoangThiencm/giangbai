@@ -67,5 +67,99 @@
         function enableDrag(){let dragging=null;document.querySelectorAll('[data-post]').forEach(el=>{el.addEventListener('dragstart',()=>{dragging=el;el.classList.add('opacity-50')});el.addEventListener('dragend',()=>{dragging=null;el.classList.remove('opacity-50');document.querySelectorAll('[data-post-list]').forEach(x=>x.classList.remove('drop-over'))})});document.querySelectorAll('[data-post-list]').forEach(list=>{list.addEventListener('dragover',e=>{e.preventDefault();list.classList.add('drop-over')});list.addEventListener('drop',async e=>{e.preventDefault();if(!dragging)return;list.appendChild(dragging);list.classList.remove('drop-over');const ids=[...list.querySelectorAll('[data-post]')].map(x=>Number(x.dataset.post));try{await api(`${API}?action=reorder`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({board_id:state.board.id,type:'posts',column_id:Number(list.dataset.postList),ids})});toast('Đã sắp xếp lại') }catch(err){toast(err.message);loadBoard()}})})}
         if(boardCode){loadBoard();setInterval(()=>{if(!document.hidden)loadBoard()},45000)}else loadManager();
     </script>
+    <script>
+        // The manager list intentionally stays small. Fetch full column data only
+        // when editing so existing post-to-column links are kept intact.
+        window.openBoardEditor = async function (id = 0) {
+            let board = state.boards.find(item => Number(item.id) === Number(id));
+            let columns = [];
+            if (id) {
+                try {
+                    const detail = await api(`${API}?action=board-detail&id=${encodeURIComponent(id)}`);
+                    board = detail.board;
+                    columns = detail.columns || [];
+                } catch (error) {
+                    toast(error.message);
+                    return;
+                }
+            }
+            try {
+                const classData = await api(`${API}?action=classes`);
+                state.classes = classData.classes || state.classes;
+            } catch (_) { /* The public-board options remain usable without this list. */ }
+            document.getElementById('boardForm').reset();
+            document.getElementById('boardId').value = board?.id || '';
+            document.getElementById('boardModalTitle').textContent = board ? 'Sửa bảng' : 'Tạo bảng mới';
+            document.getElementById('boardTitle').value = board?.title || '';
+            document.getElementById('boardDescription').value = board?.description || '';
+            document.getElementById('boardLayout').value = board?.layout_type || 'wall';
+            document.getElementById('boardAcademicYear').value = board?.academic_year || schoolYear();
+            document.querySelector(`input[name="boardAccess"][value="${board?.access_mode || 'public'}"]`).checked = true;
+            document.getElementById('boardClass').innerHTML = '<option value="">-- Chọn lớp --</option>' + state.classes.map(c => `<option>${esc(c)}</option>`).join('');
+            document.getElementById('boardClass').value = board?.target_class || '';
+            document.getElementById('boardModeration').checked = board ? Number(board.moderation_enabled) === 1 : true;
+            document.getElementById('boardComments').checked = board ? Number(board.comments_enabled) === 1 : true;
+            document.getElementById('boardReactions').checked = board ? Number(board.reactions_enabled) === 1 : true;
+            document.getElementById('boardOpen').checked = board ? board.status === 'open' : true;
+            state.editColumns = columns.length ? columns : [{ title: 'Bài đăng', color: 'teal' }];
+            renderColumnsEditor();
+            toggleBoardClass();
+            document.getElementById('boardModal').classList.remove('hidden');
+        };
+
+        if (!document.getElementById('boardOpen')) {
+            document.getElementById('boardReactions').parentElement.insertAdjacentHTML('afterend', '<label class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-bold"><input id="boardOpen" type="checkbox" checked class="accent-teal-700">Mở nhận bài</label>');
+        }
+
+        window.saveBoard = async function (event) {
+            event.preventDefault();
+            const payload = {
+                id: Number(document.getElementById('boardId').value) || 0,
+                title: document.getElementById('boardTitle').value,
+                description: document.getElementById('boardDescription').value,
+                layout_type: document.getElementById('boardLayout').value,
+                academic_year: document.getElementById('boardAcademicYear').value,
+                access_mode: document.querySelector('input[name="boardAccess"]:checked').value,
+                target_class: document.getElementById('boardClass').value,
+                status: document.getElementById('boardOpen').checked ? 'open' : 'closed',
+                moderation_enabled: document.getElementById('boardModeration').checked,
+                comments_enabled: document.getElementById('boardComments').checked,
+                reactions_enabled: document.getElementById('boardReactions').checked,
+                columns: state.editColumns
+            };
+            try {
+                await api(`${API}?action=save-board`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                closeModal('boardModal');
+                toast('Đã lưu bảng');
+                await loadManager();
+            } catch (error) { toast(error.message); }
+        };
+
+        window.previewFile = function (id) {
+            const file = state.posts.flatMap(post => post.files || []).find(item => item.drive_file_id === id);
+            document.getElementById('previewTitle').textContent = file?.original_name || 'Xem tệp đính kèm';
+            document.getElementById('previewFrame').src = `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+            document.getElementById('previewModal').classList.remove('hidden');
+        };
+
+        window.postCard = function (post) {
+            const board = state.board;
+            const management = state.canManage ? `<div class="mt-3 flex flex-wrap gap-2 border-t border-slate-900/10 pt-3">
+                ${post.status === 'pending' ? `<button onclick="moderate(${post.id},'publish')" class="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white">Duyệt</button><button onclick="moderate(${post.id},'reject')" class="rounded-lg bg-amber-500 px-2.5 py-1.5 text-xs font-bold text-white">Từ chối</button>` : ''}
+                <button onclick="moderate(${post.id},'pin')" class="rounded-lg bg-white/70 px-2.5 py-1.5 text-xs font-bold text-slate-700"><i class="fas fa-thumbtack mr-1"></i>${post.pinned ? 'Bỏ ghim' : 'Ghim'}</button>
+                <button onclick="moderate(${post.id},'delete')" class="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700">Xóa</button>
+            </div>` : '';
+            const files = (post.files || []).map(file => `<button onclick="previewFile('${esc(file.drive_file_id)}')" class="rounded-lg bg-white/75 px-2.5 py-1.5 text-left text-xs font-bold text-slate-700"><i class="fas fa-paperclip mr-1 text-teal-700"></i>${esc(file.original_name)}</button>`).join('');
+            const reactions = ['👍', '❤️', '⭐'].map(reaction => `<button onclick="react(${post.id},'${reaction}')" class="rounded-lg bg-white/70 px-2 py-1 text-xs font-bold hover:bg-white">${reaction} ${post.reactions?.[reaction] || ''}</button>`).join('');
+            return `<article draggable="${state.canManage ? 'true' : 'false'}" data-post="${post.id}" class="post-${esc(post.card_color)} mb-3 rounded-2xl border border-slate-900/10 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3"><div><div class="font-black">${esc(post.author_name)}</div><div class="mt-0.5 text-[11px] font-bold text-slate-500">${esc([post.author_role, post.author_group].filter(Boolean).join(' · '))} · ${esc(fmt(post.created_at))}</div></div><div class="flex gap-2">${post.pinned ? '<span class="text-amber-600"><i class="fas fa-thumbtack"></i></span>' : ''}${state.canManage && post.status !== 'published' ? `<span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">${post.status === 'pending' ? 'CHỜ DUYỆT' : 'TỪ CHỐI'}</span>` : ''}</div></div>
+                ${post.body ? `<p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">${esc(post.body)}</p>` : ''}
+                ${post.link_url ? `<a class="mt-3 block truncate rounded-xl bg-white/70 px-3 py-2 text-xs font-bold text-teal-800 underline" href="${esc(post.link_url)}" target="_blank" rel="noopener"><i class="fas fa-link mr-1"></i>${esc(post.link_url)}</a>` : ''}
+                ${files ? `<div class="mt-3 flex flex-wrap gap-2">${files}</div>` : ''}
+                ${(board.reactions_enabled || board.comments_enabled) ? `<div class="mt-3 flex flex-wrap gap-1.5">${board.reactions_enabled ? reactions : ''}${board.comments_enabled ? `<button onclick="openComments(${post.id})" class="${board.reactions_enabled ? 'ml-auto' : ''} rounded-lg bg-white/70 px-2 py-1 text-xs font-bold text-slate-600"><i class="far fa-comment mr-1"></i>${post.comments?.length || 0}</button>` : ''}</div>` : ''}
+                ${management}
+            </article>`;
+        };
+    </script>
 </body>
 </html>

@@ -181,3 +181,19 @@ Các đợt mới được tự sắp xếp trong Drive theo cấu trúc:
 Trong trang kết quả, người quản lý có thể xem tệp qua Google Drive Viewer và tải
 tất cả tệp của một đợt thành ZIP. Việc tạo ZIP diễn ra tạm thời trên hosting, bị
 giới hạn bởi `SUBMISSION_ZIP_MAX_MB`, và cần bật PHP extension `zip`.
+
+## Bảng chia sẻ kiểu Padlet
+
+Upload thêm `padlet_ht.html`, `api/padlet.php` và phiên bản mới của
+`api/google_drive.php`. Từ trang chủ, giáo viên mở **Bảng chia sẻ** để tạo bảng
+theo dạng tường hoặc theo cột, chọn công khai qua link hoặc giới hạn cho lớp.
+
+- Bài đăng có thể gồm chữ, link và tối đa 5 tệp (mỗi tệp tối đa 25 MB); tệp đi
+  thẳng từ hosting sang Google Drive và được sắp theo `03_BANG_CHIA_SE/NAM_HOC/...`.
+- Giáo viên có thể duyệt/từ chối, ghim, xóa, đổi cột và kéo-thả sắp xếp bài.
+- Có bình luận, cảm xúc và chế độ không cần đăng nhập cho bảng công khai; người
+  đăng tự khai tên/vai trò trong trường hợp này.
+
+Các bảng `padlet_*` đã có trong `database_schema.sql`; `api/padlet.php` cũng tự
+tạo chúng ở lần mở đầu tiên. Với Drive đặt `private`, người xem tệp trong iframe
+cần có quyền xem thư mục/tệp trên Google Drive tương ứng.

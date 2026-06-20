@@ -113,7 +113,9 @@ function padlet_require_teacher(PDO $pdo): array
 function padlet_code(PDO $pdo): string
 {
     do {
-        $code = submission_code(8);
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $code = '';
+        for ($index = 0; $index < 8; $index++) $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
         $stmt = $pdo->prepare('SELECT id FROM padlet_boards WHERE public_code = ? LIMIT 1');
         $stmt->execute([$code]);
     } while ($stmt->fetch());
@@ -232,6 +234,12 @@ if ($method === 'GET' && $action === 'board-detail') {
     $teacher = padlet_require_teacher($pdo);
     $board = padlet_require_owner($pdo, $teacher, (int)($_GET['id'] ?? 0));
     respond(['ok' => true, 'board' => $board, 'columns' => padlet_columns($pdo, (int)$board['id'])]);
+}
+
+if ($method === 'GET' && $action === 'classes') {
+    padlet_require_teacher($pdo);
+    $classes = $pdo->query("SELECT DISTINCT TRIM(class_name) AS class_name FROM users WHERE role = 'student' AND class_name IS NOT NULL AND TRIM(class_name) <> '' ORDER BY class_name")->fetchAll(PDO::FETCH_COLUMN);
+    respond(['ok' => true, 'classes' => $classes]);
 }
 
 if ($method === 'POST' && $action === 'save-board') {
