@@ -1,0 +1,251 @@
+<?php
+
+/**
+ * Minimal Google Drive v3 client for shared-hosting PHP.
+ * It intentionally has no Composer dependency: service-account JWT signing uses
+ * OpenSSL and HTTP requests use cURL (with a stream fallback).
+ */
+
+function drive_base64url(string $value): string
+{
+    return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+}
+
+function drive_credentials(): array
+{
+    $raw = defined('GOOGLE_DRIVE_CREDENTIALS_JSON') ? trim((string)GOOGLE_DRIVE_CREDENTIALS_JSON) : '';
+    if ($raw === '') {
+        throw new RuntimeException('Chưa cấu hình GOOGLE_DRIVE_CREDENTIALS_JSON trên hosting.');
+    }
+    $credentials = json_decode($raw, true);
+    $oauthClient = $credentials['installed'] ?? $credentials['web'] ?? null;
+    $isServiceAccount = !empty($credentials['client_email']) && !empty($credentials['private_key']);
+    if (!is_array($oauthClient) && !$isServiceAccount) {
+        throw new RuntimeException('GOOGLE_DRIVE_CREDENTIALS_JSON không đúng định dạng Service Account hoặc OAuth Client.');
+    }
+    return $credentials;
+}
+
+function drive_http(string $method, string $url, array $headers = [], ?string $body = null): array
+{
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 120,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_HEADER => true,
+        ]);
+        if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        $raw = curl_exec($ch);
+        if ($raw === false) {
+            $message = curl_error($ch);
+            curl_close($ch);
+            throw new RuntimeException('Không kết nối được Google Drive: ' . $message);
+        }
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $responseBody = substr($raw, $headerSize);
+        curl_close($ch);
+    } else {
+        $context = stream_context_create(['http' => [
+            'method' => $method,
+            'header' => implode("\r\n", $headers),
+            'content' => $body ?? '',
+            'ignore_errors' => true,
+            'timeout' => 120,
+        ]]);
+        $responseBody = @file_get_contents($url, false, $context);
+        if ($responseBody === false) {
+            throw new RuntimeException('Hosting không thể kết nối đến Google Drive.');
+        }
+        $status = 0;
+        foreach ($http_response_header ?? [] as $line) {
+            if (preg_match('/^HTTP\/\S+\s+(\d+)/', $line, $match)) $status = (int)$match[1];
+        }
+    }
+
+    if ($status < 200 || $status >= 300) {
+        $decoded = json_decode((string)$responseBody, true);
+        $detail = $decoded['error']['message'] ?? $decoded['error_description'] ?? ('HTTP ' . $status);
+        throw new RuntimeException('Google Drive từ chối yêu cầu: ' . $detail);
+    }
+
+    $decoded = json_decode((string)$responseBody, true);
+    return is_array($decoded) ? $decoded : ['raw' => (string)$responseBody];
+}
+
+function drive_access_token(): string
+{
+    static $cachedToken = null;
+    static $expiresAt = 0;
+    if ($cachedToken && $expiresAt > time() + 60) return $cachedToken;
+
+    $credentials = drive_credentials();
+    $now = time();
+    $oauthClient = $credentials['installed'] ?? $credentials['web'] ?? null;
+    if (is_array($oauthClient)) {
+        $tokenRaw = defined('GOOGLE_DRIVE_TOKEN_JSON') ? trim((string)GOOGLE_DRIVE_TOKEN_JSON) : '';
+        $tokenData = json_decode($tokenRaw, true);
+        if (!is_array($tokenData) || empty($tokenData['refresh_token'])) {
+            throw new RuntimeException('Cấu hình OAuth cần GOOGLE_DRIVE_TOKEN_JSON có refresh_token.');
+        }
+        $body = http_build_query([
+            'client_id' => $oauthClient['client_id'] ?? '',
+            'client_secret' => $oauthClient['client_secret'] ?? '',
+            'refresh_token' => $tokenData['refresh_token'],
+            'grant_type' => 'refresh_token',
+        ]);
+        $response = drive_http('POST', $oauthClient['token_uri'] ?? 'https://oauth2.googleapis.com/token', [
+            'Content-Type: application/x-www-form-urlencoded',
+            'Content-Length: ' . strlen($body),
+        ], $body);
+        if (empty($response['access_token'])) throw new RuntimeException('Google không trả về OAuth access token.');
+        $cachedToken = (string)$response['access_token'];
+        $expiresAt = $now + (int)($response['expires_in'] ?? 3600);
+        return $cachedToken;
+    }
+
+    $header = drive_base64url(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
+    $claims = drive_base64url(json_encode([
+        'iss' => $credentials['client_email'],
+        'scope' => 'https://www.googleapis.com/auth/drive',
+        'aud' => 'https://oauth2.googleapis.com/token',
+        'iat' => $now,
+        'exp' => $now + 3600,
+    ]));
+    $signingInput = $header . '.' . $claims;
+    $privateKey = str_replace('\\n', "\n", (string)$credentials['private_key']);
+    $signature = '';
+    if (!function_exists('openssl_sign') || !openssl_sign($signingInput, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
+        throw new RuntimeException('Hosting cần bật extension OpenSSL để kết nối Google Drive.');
+    }
+
+    $assertion = $signingInput . '.' . drive_base64url($signature);
+    $body = http_build_query([
+        'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        'assertion' => $assertion,
+    ]);
+    $response = drive_http('POST', 'https://oauth2.googleapis.com/token', [
+        'Content-Type: application/x-www-form-urlencoded',
+        'Content-Length: ' . strlen($body),
+    ], $body);
+    if (empty($response['access_token'])) {
+        throw new RuntimeException('Google không trả về access token.');
+    }
+    $cachedToken = (string)$response['access_token'];
+    $expiresAt = $now + (int)($response['expires_in'] ?? 3600);
+    return $cachedToken;
+}
+
+function drive_api(string $method, string $url, ?array $json = null): array
+{
+    $headers = ['Authorization: Bearer ' . drive_access_token()];
+    $body = null;
+    if ($json !== null) {
+        $body = json_encode($json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $headers[] = 'Content-Type: application/json; charset=utf-8';
+        $headers[] = 'Content-Length: ' . strlen($body);
+    }
+    return drive_http($method, $url, $headers, $body);
+}
+
+function drive_safe_name(string $name, string $fallback = 'tep'): string
+{
+    $name = trim(preg_replace('/[\\\\\/:*?"<>|\x00-\x1F]+/u', '-', $name));
+    $name = preg_replace('/\s+/u', ' ', $name);
+    if ($name === '' || $name === '.' || $name === '..') $name = $fallback;
+    return function_exists('mb_substr') ? mb_substr($name, 0, 180) : substr($name, 0, 180);
+}
+
+function drive_escape_query(string $value): string
+{
+    return str_replace(['\\', "'"], ['\\\\', "\\'"], $value);
+}
+
+function drive_find_folder(string $parentId, string $name): ?string
+{
+    $query = "mimeType='application/vnd.google-apps.folder' and trashed=false and '" .
+        drive_escape_query($parentId) . "' in parents and name='" . drive_escape_query($name) . "'";
+    $url = 'https://www.googleapis.com/drive/v3/files?' . http_build_query([
+        'q' => $query,
+        'spaces' => 'drive',
+        'fields' => 'files(id,name)',
+        'pageSize' => 1,
+        'supportsAllDrives' => 'true',
+        'includeItemsFromAllDrives' => 'true',
+    ]);
+    $response = drive_api('GET', $url);
+    return !empty($response['files'][0]['id']) ? (string)$response['files'][0]['id'] : null;
+}
+
+function drive_create_folder(string $parentId, string $name): string
+{
+    $response = drive_api('POST', 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id', [
+        'name' => drive_safe_name($name, 'Thu muc'),
+        'mimeType' => 'application/vnd.google-apps.folder',
+        'parents' => [$parentId],
+    ]);
+    if (empty($response['id'])) throw new RuntimeException('Không tạo được thư mục trên Google Drive.');
+    return (string)$response['id'];
+}
+
+function drive_get_or_create_folder(string $parentId, string $name): string
+{
+    $safeName = drive_safe_name($name, 'Thu muc');
+    return drive_find_folder($parentId, $safeName) ?: drive_create_folder($parentId, $safeName);
+}
+
+function drive_assignment_folder(string $publicCode, string $title): string
+{
+    $root = defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
+    if ($root === '') throw new RuntimeException('Chưa cấu hình GOOGLE_DRIVE_ROOT_FOLDER_ID trên hosting.');
+    return drive_get_or_create_folder($root, '[' . $publicCode . '] ' . $title);
+}
+
+function drive_upload_file(string $folderId, string $storedName, string $mimeType, string $tmpPath): array
+{
+    $content = file_get_contents($tmpPath);
+    if ($content === false) throw new RuntimeException('Không đọc được tệp tạm để tải lên Drive.');
+
+    $boundary = 'giangbai_' . bin2hex(random_bytes(12));
+    $metadata = json_encode([
+        'name' => drive_safe_name($storedName),
+        'parents' => [$folderId],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $body = '--' . $boundary . "\r\n" .
+        "Content-Type: application/json; charset=UTF-8\r\n\r\n" . $metadata . "\r\n" .
+        '--' . $boundary . "\r\n" .
+        'Content-Type: ' . ($mimeType ?: 'application/octet-stream') . "\r\n\r\n" .
+        $content . "\r\n--" . $boundary . "--";
+
+    $response = drive_http(
+        'POST',
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink',
+        [
+            'Authorization: Bearer ' . drive_access_token(),
+            'Content-Type: multipart/related; boundary=' . $boundary,
+            'Content-Length: ' . strlen($body),
+        ],
+        $body
+    );
+    if (empty($response['id'])) throw new RuntimeException('Google Drive không trả về mã tệp.');
+
+    $fileId = (string)$response['id'];
+    if (defined('GOOGLE_DRIVE_SHARE_MODE') && GOOGLE_DRIVE_SHARE_MODE === 'anyone') {
+        drive_api('POST', 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '/permissions?supportsAllDrives=true', [
+            'type' => 'anyone',
+            'role' => 'reader',
+        ]);
+    }
+
+    return [
+        'file_id' => $fileId,
+        'stored_name' => (string)($response['name'] ?? $storedName),
+        'view_url' => (string)($response['webViewLink'] ?? ('https://drive.google.com/file/d/' . $fileId . '/view')),
+        'download_url' => (string)($response['webContentLink'] ?? ('https://drive.google.com/uc?export=download&id=' . $fileId)),
+    ];
+}

@@ -20,7 +20,13 @@ function write_config($host, $name, $user, $pass, $adminKey)
         . "define('DB_USER', " . var_export($user, true) . ");\n"
         . "define('DB_PASS', " . var_export($pass, true) . ");\n\n"
         . "define('ADMIN_KEY', " . var_export($adminKey, true) . ");\n"
-        . "define('APP_SESSION_NAME', 'giangbai_session');\n";
+        . "define('APP_SESSION_NAME', 'giangbai_session');\n\n"
+        . "// Google Drive for Giao & Nhan bai. Fill these values directly on the hosting.\n"
+        . "define('GOOGLE_DRIVE_CREDENTIALS_JSON', '');\n"
+        . "define('GOOGLE_DRIVE_TOKEN_JSON', '');\n"
+        . "define('GOOGLE_DRIVE_ROOT_FOLDER_ID', '');\n"
+        . "define('GOOGLE_DRIVE_SHARE_MODE', 'private');\n"
+        . "define('SUBMISSION_MAX_FILE_MB', 25);\n";
 
     return file_put_contents($configPath, $content, LOCK_EX) !== false;
 }

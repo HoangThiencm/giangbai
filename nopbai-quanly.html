@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao và nhận bài · GiangBai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+        .soft-shadow { box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
+        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 14px; padding: .72rem .9rem; outline: none; background: #fff; }
+        .field:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(13,148,136,.12); }
+        .label { display:block; font-size:.78rem; font-weight:800; color:#334155; margin-bottom:.42rem; }
+        .chip { display:inline-flex; align-items:center; border-radius:999px; padding:.28rem .62rem; font-size:.72rem; font-weight:800; }
+        .modal-backdrop { background: rgba(15,23,42,.58); backdrop-filter: blur(5px); }
+        .scroll-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#f4f7fb] text-slate-900">
+    <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200" title="Về trang chính"><i class="fas fa-arrow-left"></i></a>
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.18em] text-teal-700">GiangBai</p>
+                    <h1 class="text-lg font-black tracking-tight">Giao & nhận bài</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="teacherName" class="hidden text-sm font-bold text-slate-600 sm:block"></span>
+                <button onclick="openEditor()" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800"><i class="fas fa-plus mr-2"></i>Tạo đợt nộp</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6">
+        <section class="overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 via-teal-950 to-teal-800 p-6 text-white soft-shadow sm:p-8">
+            <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div class="max-w-2xl">
+                    <span class="chip bg-white/10 text-teal-100"><i class="fas fa-cloud-arrow-up mr-2"></i>Lưu tệp trên Google Drive</span>
+                    <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Một đường link, đúng người, đủ bài.</h2>
+                    <p class="mt-3 text-sm leading-6 text-teal-50/80">Tạo link công khai, giao theo lớp hoặc chỉ định học sinh, phụ huynh, giáo viên và người ngoài hệ thống bằng mã riêng.</p>
+                </div>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statCampaigns" class="text-2xl font-black">0</div><div class="text-[11px] text-teal-100/80">Đợt nộp</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statOpen" class="text-2xl font-black">0</div><div class="text-[11px] text-teal-100/80">Đang mở</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statSubmissions" class="text-2xl font-black">0</div><div class="text-[11px] text-teal-100/80">Lượt nộp</div></div>
+                </div>
+            </div>
+        </section>
+
+        <div id="driveWarning" class="mt-5 hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <i class="fas fa-triangle-exclamation mr-2"></i>Google Drive chưa được cấu hình. Bạn vẫn có thể soạn đợt nộp, nhưng cần bổ sung cấu hình trên hosting trước khi nhận tệp.
+        </div>
+
+        <section class="mt-7">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div><h2 class="text-xl font-black">Các đợt nộp</h2><p class="mt-1 text-sm text-slate-500">Theo dõi số lượt nộp và mở danh sách chi tiết.</p></div>
+                <div class="flex gap-2">
+                    <select id="statusFilter" onchange="renderAssignments()" class="field !w-auto !py-2 text-sm font-bold"><option value="all">Tất cả trạng thái</option><option value="open">Đang mở</option><option value="draft">Bản nháp</option><option value="closed">Đã đóng</option></select>
+                </div>
+            </div>
+            <div id="loading" class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2 text-teal-700"></i>Đang tải dữ liệu...</div>
+            <div id="emptyState" class="hidden rounded-[24px] border-2 border-dashed border-slate-200 bg-white p-12 text-center"><div class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-teal-50 text-2xl text-teal-700"><i class="fas fa-inbox"></i></div><h3 class="mt-4 text-lg font-black">Chưa có đợt nộp nào</h3><p class="mt-1 text-sm text-slate-500">Tạo link đầu tiên để bắt đầu nhận bài.</p><button onclick="openEditor()" class="mt-5 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-extrabold text-white">Tạo ngay</button></div>
+            <div id="assignmentGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+        </section>
+    </main>
+
+    <div id="editorModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-3 max-w-4xl overflow-hidden rounded-[26px] bg-white soft-shadow">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7"><div><p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-teal-700">Thiết lập</p><h2 id="editorTitle" class="text-xl font-black">Tạo đợt nộp mới</h2></div><button onclick="closeEditor()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fas fa-xmark"></i></button></div>
+            <form id="assignmentForm" class="p-5 sm:p-7" onsubmit="saveAssignment(event)">
+                <input type="hidden" id="assignmentId">
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <label class="sm:col-span-2"><span class="label">Tên đợt nộp *</span><input id="title" required maxlength="220" class="field" placeholder="Ví dụ: Nộp bài tập chương 1"></label>
+                    <label class="sm:col-span-2"><span class="label">Mô tả ngắn</span><textarea id="description" rows="2" class="field" placeholder="Nội dung người nộp cần chuẩn bị"></textarea></label>
+                    <label class="sm:col-span-2"><span class="label">Hướng dẫn chi tiết</span><textarea id="instructions" rows="3" class="field" placeholder="Quy cách đặt tên, yêu cầu nội dung..."></textarea></label>
+                    <label><span class="label">Mở từ</span><input id="openAt" type="datetime-local" class="field"></label>
+                    <label><span class="label">Hạn nộp</span><input id="dueAt" type="datetime-local" class="field"></label>
+                </div>
+
+                <div class="mt-6 border-t border-slate-200 pt-6"><span class="label">Ai được nộp?</span><div class="grid gap-3 sm:grid-cols-3">
+                    <label class="cursor-pointer rounded-2xl border border-slate-200 p-4 has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50"><input type="radio" name="accessMode" value="public" checked onchange="toggleAccessMode()" class="mr-2 accent-teal-700"><strong class="text-sm">Tự do</strong><p class="mt-1 text-xs leading-5 text-slate-500">Ai có link cũng có thể nộp.</p></label>
+                    <label class="cursor-pointer rounded-2xl border border-slate-200 p-4 has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50"><input type="radio" name="accessMode" value="class" onchange="toggleAccessMode()" class="mr-2 accent-teal-700"><strong class="text-sm">Theo lớp/nhóm</strong><p class="mt-1 text-xs leading-5 text-slate-500">Lấy danh sách tài khoản theo lớp.</p></label>
+                    <label class="cursor-pointer rounded-2xl border border-slate-200 p-4 has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50"><input type="radio" name="accessMode" value="selected" onchange="toggleAccessMode()" class="mr-2 accent-teal-700"><strong class="text-sm">Danh sách chỉ định</strong><p class="mt-1 text-xs leading-5 text-slate-500">Tài khoản sẵn có hoặc người ngoài.</p></label>
+                </div></div>
+
+                <div id="classAccess" class="mt-4 hidden rounded-2xl bg-slate-50 p-4"><label><span class="label">Chọn lớp/nhóm *</span><select id="targetClass" class="field"><option value="">-- Chọn lớp --</option></select></label><p class="mt-2 text-xs text-slate-500">Mỗi thành viên được tạo một mã cá nhân; người đã đăng nhập sẽ được nhận diện tự động.</p></div>
+                <div id="selectedAccess" class="mt-4 hidden space-y-4 rounded-2xl bg-slate-50 p-4">
+                    <div><div class="flex items-center justify-between"><span class="label">Chọn tài khoản trong hệ thống</span><input id="accountSearch" oninput="renderAccountChoices()" class="field !w-52 !py-2 text-sm" placeholder="Tìm tên, lớp..."></div><div id="accountChoices" class="scroll-thin mt-2 grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2"></div></div>
+                    <label><span class="label">Thêm phụ huynh, giáo viên hoặc người ngoài hệ thống</span><textarea id="manualPeople" rows="5" class="field font-mono text-xs" placeholder="Mỗi dòng: Họ tên | Vai trò | Nhóm/đơn vị | SĐT hoặc email&#10;Nguyễn Văn An | Phụ huynh | Lớp 6A | 090...&#10;&#10;Có thể giữ mã cũ khi sửa: MÃ | Họ tên | Vai trò | Nhóm | Liên hệ"></textarea></label>
+                </div>
+
+                <div class="mt-6 grid gap-4 border-t border-slate-200 pt-6 sm:grid-cols-4">
+                    <label><span class="label">Trạng thái</span><select id="status" class="field"><option value="open">Mở nhận bài</option><option value="draft">Bản nháp</option><option value="closed">Đóng</option></select></label>
+                    <label><span class="label">Tối đa số tệp</span><input id="maxFiles" type="number" min="1" max="20" value="5" class="field"></label>
+                    <label><span class="label">Dung lượng/tệp (MB)</span><input id="maxFileMb" type="number" min="1" value="25" class="field"></label>
+                    <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-3 pt-6"><input id="allowMultiple" type="checkbox" class="h-4 w-4 accent-teal-700"><span class="text-xs font-bold">Cho nộp nhiều lần</span></label>
+                    <label class="sm:col-span-4"><span class="label">Định dạng được phép</span><input id="extensions" value="pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,zip,rar,txt" class="field text-sm"></label>
+                </div>
+                <div id="formError" class="mt-4 hidden rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></div>
+                <div class="mt-6 flex justify-end gap-3"><button type="button" onclick="closeEditor()" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-600">Hủy</button><button id="saveButton" class="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-extrabold text-white"><i class="fas fa-check mr-2"></i>Lưu đợt nộp</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-3 max-w-6xl overflow-hidden rounded-[26px] bg-white soft-shadow">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-7"><div><p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-teal-700">Kết quả nhận bài</p><h2 id="detailTitle" class="text-xl font-black"></h2></div><div class="flex gap-2"><button id="detailCopy" class="rounded-xl bg-teal-50 px-3 py-2 text-sm font-extrabold text-teal-800"><i class="fas fa-link mr-2"></i>Sao chép link</button><button onclick="closeDetail()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600"><i class="fas fa-xmark"></i></button></div></div>
+            <div id="detailBody" class="p-5 sm:p-7"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 left-1/2 z-[70] hidden -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-xl"></div>
+
+    <script>
+        const API = 'api/submissions.php';
+        let state = { assignments: [], classes: [], users: [], selectedUsers: new Set(), detail: null };
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const fmt = value => value ? new Intl.DateTimeFormat('vi-VN',{dateStyle:'short',timeStyle:'short'}).format(new Date(String(value).replace(' ','T'))) : 'Không giới hạn';
+        const modeLabel = mode => ({public:'Tự do',class:'Theo lớp/nhóm',selected:'Danh sách chỉ định'}[mode] || mode);
+        const statusMeta = status => ({open:['Đang mở','bg-emerald-50 text-emerald-700'],draft:['Bản nháp','bg-amber-50 text-amber-700'],closed:['Đã đóng','bg-slate-100 text-slate-600']}[status] || [status,'bg-slate-100']);
+
+        async function api(url, options={}) {
+            const response = await fetch(url, {credentials:'same-origin', ...options});
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Không thể xử lý yêu cầu.');
+            return data;
+        }
+        function toast(message) { const el=document.getElementById('toast'); el.textContent=message; el.classList.remove('hidden'); clearTimeout(window.toastTimer); window.toastTimer=setTimeout(()=>el.classList.add('hidden'),2600); }
+        function submissionUrl(code) { const url=new URL('nopbai.html',location.href); url.searchParams.set('code',code); return url.href; }
+        async function copyLink(code) { await navigator.clipboard.writeText(submissionUrl(code)); toast('Đã sao chép đường link nộp bài'); }
+
+        async function load() {
+            try {
+                const data = await api(`${API}?action=bootstrap`);
+                state.assignments=data.assignments||[]; state.classes=data.classes||[]; state.users=data.users||[];
+                document.getElementById('teacherName').textContent=data.user?.full_name||'';
+                document.getElementById('driveWarning').classList.toggle('hidden',!!data.drive_configured);
+                document.getElementById('targetClass').innerHTML='<option value="">-- Chọn lớp --</option>'+state.classes.map(c=>`<option>${esc(c)}</option>`).join('');
+                renderAssignments(); renderAccountChoices();
+            } catch (error) {
+                if (/đăng nhập/i.test(error.message)) { location.href='login.html'; return; }
+                document.getElementById('loading').innerHTML=`<span class="text-red-600">${esc(error.message)}</span>`;
+            }
+        }
+        function renderAssignments() {
+            document.getElementById('loading').classList.add('hidden');
+            const filter=document.getElementById('statusFilter').value;
+            const items=state.assignments.filter(a=>filter==='all'||a.status===filter);
+            document.getElementById('emptyState').classList.toggle('hidden',state.assignments.length!==0);
+            document.getElementById('statCampaigns').textContent=state.assignments.length;
+            document.getElementById('statOpen').textContent=state.assignments.filter(a=>a.status==='open').length;
+            document.getElementById('statSubmissions').textContent=state.assignments.reduce((n,a)=>n+Number(a.submission_count||0),0);
+            document.getElementById('assignmentGrid').innerHTML=items.map(a=>{
+                const [label,cls]=statusMeta(a.status); const restricted=a.access_mode!=='public';
+                const completed=Number(a.completed_participant_count||0), total=Number(a.participant_count||0);
+                return `<article class="rounded-[22px] border border-slate-200 bg-white p-5 soft-shadow">
+                    <div class="flex items-start justify-between gap-3"><span class="chip ${cls}">${label}</span><button onclick="openEditor(${a.id})" class="grid h-9 w-9 place-items-center rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100" title="Sửa"><i class="fas fa-pen"></i></button></div>
+                    <h3 class="mt-4 line-clamp-2 text-lg font-black">${esc(a.title)}</h3><p class="mt-1 text-xs font-bold text-slate-500"><i class="fas fa-users mr-1.5 text-teal-600"></i>${esc(modeLabel(a.access_mode))}${a.target_class?` · ${esc(a.target_class)}`:''}</p>
+                    <div class="mt-5 grid grid-cols-2 gap-3"><div class="rounded-xl bg-slate-50 p-3"><div class="text-xl font-black">${a.submission_count}</div><div class="text-[11px] text-slate-500">Lượt nộp</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-xl font-black">${restricted?`${completed}/${total}`:'—'}</div><div class="text-[11px] text-slate-500">Đã hoàn thành</div></div></div>
+                    <div class="mt-4 text-xs text-slate-500"><i class="far fa-clock mr-1"></i>Hạn: ${esc(fmt(a.due_at))}</div>
+                    <div class="mt-5 grid grid-cols-2 gap-2"><button onclick="copyLink('${a.public_code}')" class="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-xs font-extrabold text-teal-800"><i class="fas fa-link mr-1"></i>Sao chép link</button><button onclick="openDetail(${a.id})" class="rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-extrabold text-white"><i class="fas fa-chart-simple mr-1"></i>Xem kết quả</button></div>
+                </article>`;
+            }).join('');
+        }
+
+        function resetForm() {
+            document.getElementById('assignmentForm').reset(); document.getElementById('assignmentId').value='';
+            document.querySelector('input[name="accessMode"][value="public"]').checked=true;
+            document.getElementById('maxFiles').value=5; document.getElementById('maxFileMb').value=25;
+            document.getElementById('extensions').value='pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,zip,rar,txt';
+            state.selectedUsers=new Set(); document.getElementById('manualPeople').value=''; document.getElementById('formError').classList.add('hidden'); toggleAccessMode(); renderAccountChoices();
+        }
+        async function openEditor(id=0) {
+            resetForm(); document.getElementById('editorTitle').textContent=id?'Sửa đợt nộp':'Tạo đợt nộp mới'; document.getElementById('editorModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
+            if (!id) return;
+            try {
+                const data=await api(`${API}?action=detail&id=${id}`); const a=data.assignment; document.getElementById('assignmentId').value=a.id; document.getElementById('title').value=a.title||''; document.getElementById('description').value=a.description||''; document.getElementById('instructions').value=a.instructions||'';
+                document.getElementById('openAt').value=toLocalInput(a.open_at); document.getElementById('dueAt').value=toLocalInput(a.due_at); document.querySelector(`input[name="accessMode"][value="${a.access_mode}"]`).checked=true; document.getElementById('targetClass').value=a.target_class||''; document.getElementById('status').value=a.status; document.getElementById('maxFiles').value=a.max_files; document.getElementById('maxFileMb').value=a.max_file_mb; document.getElementById('allowMultiple').checked=Number(a.allow_multiple)===1; document.getElementById('extensions').value=a.allowed_extensions;
+                state.selectedUsers=new Set((data.participants||[]).filter(p=>p.linked_user_id).map(p=>Number(p.linked_user_id)));
+                document.getElementById('manualPeople').value=(data.participants||[]).filter(p=>!p.linked_user_id).map(p=>[p.participant_code,p.full_name,p.role_label||'',p.group_name||'',p.contact||''].join(' | ')).join('\n'); toggleAccessMode(); renderAccountChoices();
+            } catch(error) { showFormError(error.message); }
+        }
+        function closeEditor(){ document.getElementById('editorModal').classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+        function toLocalInput(value){ return value?String(value).replace(' ','T').slice(0,16):''; }
+        function toggleAccessMode(){ const mode=document.querySelector('input[name="accessMode"]:checked').value; document.getElementById('classAccess').classList.toggle('hidden',mode!=='class'); document.getElementById('selectedAccess').classList.toggle('hidden',mode!=='selected'); }
+        function renderAccountChoices(){ const q=(document.getElementById('accountSearch')?.value||'').toLowerCase(); const list=state.users.filter(u=>`${u.full_name} ${u.username} ${u.class_name}`.toLowerCase().includes(q)); document.getElementById('accountChoices').innerHTML=list.length?list.map(u=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-xs"><input type="checkbox" ${state.selectedUsers.has(Number(u.id))?'checked':''} onchange="toggleUser(${u.id},this.checked)" class="accent-teal-700"><span><strong class="block text-slate-800">${esc(u.full_name)}</strong><span class="text-slate-500">${esc(u.role==='teacher'?'Giáo viên':(u.class_name||'Học sinh'))} · ${esc(u.username)}</span></span></label>`).join(''):'<p class="text-xs text-slate-500">Không tìm thấy tài khoản.</p>'; }
+        function toggleUser(id,checked){ checked?state.selectedUsers.add(Number(id)):state.selectedUsers.delete(Number(id)); }
+        function parseManualPeople(){ return document.getElementById('manualPeople').value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{ const p=line.split('|').map(x=>x.trim()); if(p.length>=5)return{participant_code:p[0],full_name:p[1],role_label:p[2],group_name:p[3],contact:p.slice(4).join(' | ')}; return{full_name:p[0]||'',role_label:p[1]||'',group_name:p[2]||'',contact:p.slice(3).join(' | ')}; }); }
+        function showFormError(message){ const el=document.getElementById('formError'); el.textContent=message; el.classList.remove('hidden'); }
+        async function saveAssignment(event){ event.preventDefault(); const button=document.getElementById('saveButton'); const mode=document.querySelector('input[name="accessMode"]:checked').value; const payload={id:Number(document.getElementById('assignmentId').value)||0,title:document.getElementById('title').value,description:document.getElementById('description').value,instructions:document.getElementById('instructions').value,open_at:document.getElementById('openAt').value,due_at:document.getElementById('dueAt').value,access_mode:mode,target_class:document.getElementById('targetClass').value,status:document.getElementById('status').value,max_files:Number(document.getElementById('maxFiles').value),max_file_mb:Number(document.getElementById('maxFileMb').value),allow_multiple:document.getElementById('allowMultiple').checked,allowed_extensions:document.getElementById('extensions').value,selected_user_ids:[...state.selectedUsers],participants:parseManualPeople()}; document.getElementById('formError').classList.add('hidden'); button.disabled=true; button.innerHTML='<i class="fas fa-circle-notch fa-spin mr-2"></i>Đang lưu'; try{await api(`${API}?action=save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); closeEditor(); toast('Đã lưu đợt nộp'); await load();}catch(error){showFormError(error.message);}finally{button.disabled=false;button.innerHTML='<i class="fas fa-check mr-2"></i>Lưu đợt nộp';}}
+
+        async function openDetail(id){ document.getElementById('detailModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden'); document.getElementById('detailBody').innerHTML='<div class="p-12 text-center text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải...</div>'; try{const data=await api(`${API}?action=detail&id=${id}`);state.detail=data;renderDetail();}catch(error){document.getElementById('detailBody').innerHTML=`<p class="text-red-600">${esc(error.message)}</p>`;}}
+        function closeDetail(){document.getElementById('detailModal').classList.add('hidden');document.body.classList.remove('overflow-hidden');state.detail=null;}
+        function renderDetail(){const {assignment:a,participants=[],submissions=[]}=state.detail;document.getElementById('detailTitle').textContent=a.title;document.getElementById('detailCopy').onclick=()=>copyLink(a.public_code);const pending=participants.filter(p=>!Number(p.submission_count));document.getElementById('detailBody').innerHTML=`
+            <div class="grid gap-3 sm:grid-cols-4"><div class="rounded-2xl bg-slate-50 p-4"><div class="text-2xl font-black">${submissions.length}</div><div class="text-xs text-slate-500">Lượt nộp</div></div><div class="rounded-2xl bg-emerald-50 p-4"><div class="text-2xl font-black text-emerald-700">${participants.filter(p=>Number(p.submission_count)).length}</div><div class="text-xs text-emerald-700/70">Đã nộp</div></div><div class="rounded-2xl bg-amber-50 p-4"><div class="text-2xl font-black text-amber-700">${pending.length}</div><div class="text-xs text-amber-700/70">Chưa nộp</div></div><div class="rounded-2xl bg-teal-50 p-4"><div class="truncate text-lg font-black text-teal-800">${esc(a.public_code)}</div><div class="text-xs text-teal-700/70">Mã đường link</div></div></div>
+            ${participants.length?`<section class="mt-7"><div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black">Danh sách được chỉ định</h3><p class="text-xs text-slate-500">Gửi mã cá nhân cho người chưa có tài khoản.</p></div><button onclick="exportParticipants()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold"><i class="fas fa-file-csv mr-1"></i>Xuất danh sách mã</button></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full min-w-[700px] text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="p-3">Họ tên</th><th class="p-3">Vai trò / Nhóm</th><th class="p-3">Mã cá nhân</th><th class="p-3">Trạng thái</th></tr></thead><tbody>${participants.map(p=>`<tr class="border-t border-slate-100"><td class="p-3 font-bold">${esc(p.full_name)}<div class="text-xs font-normal text-slate-400">${esc(p.contact||'')}</div></td><td class="p-3 text-slate-600">${esc(p.role_label||'—')}<div class="text-xs text-slate-400">${esc(p.group_name||'')}</div></td><td class="p-3"><button onclick="navigator.clipboard.writeText('${esc(p.participant_code)}');toast('Đã chép mã')" class="rounded-lg bg-slate-100 px-2 py-1 font-mono text-xs font-black">${esc(p.participant_code)}</button></td><td class="p-3">${Number(p.submission_count)?'<span class="chip bg-emerald-50 text-emerald-700">Đã nộp</span>':'<span class="chip bg-amber-50 text-amber-700">Chưa nộp</span>'}</td></tr>`).join('')}</tbody></table></div></section>`:''}
+            <section class="mt-7"><div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black">Bài đã nhận</h3><p class="text-xs text-slate-500">Tệp mở trực tiếp từ thư mục Google Drive của bạn.</p></div><button onclick="exportSubmissions()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold"><i class="fas fa-file-csv mr-1"></i>Xuất CSV</button></div>${submissions.length?`<div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full min-w-[850px] text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="p-3">Người nộp</th><th class="p-3">Thời gian</th><th class="p-3">Ghi chú</th><th class="p-3">Tệp</th></tr></thead><tbody>${submissions.map(s=>`<tr class="border-t border-slate-100 align-top"><td class="p-3 font-bold">${esc(s.submitter_name)}<div class="text-xs font-normal text-slate-400">${esc([s.submitter_role,s.group_name,s.identifier].filter(Boolean).join(' · '))}</div></td><td class="whitespace-nowrap p-3 text-slate-600">${esc(fmt(s.submitted_at))}</td><td class="max-w-xs p-3 text-slate-600">${esc(s.note||'—')}</td><td class="p-3"><div class="flex flex-wrap gap-1.5">${(s.files||[]).map(f=>`<a href="${esc(f.view_url)}" target="_blank" rel="noopener" class="rounded-lg bg-teal-50 px-2.5 py-1.5 text-xs font-bold text-teal-800 hover:bg-teal-100"><i class="fas fa-paperclip mr-1"></i>${esc(f.original_name)}</a>`).join('')}</div></td></tr>`).join('')}</tbody></table></div>`:'<div class="rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">Chưa có bài nộp.</div>'}</section>`;}
+        function downloadCsv(name,rows){const csv='\ufeff'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name;a.click();URL.revokeObjectURL(a.href);}
+        function exportParticipants(){const {assignment:a,participants:p}=state.detail;downloadCsv(`danh-sach-ma-${a.public_code}.csv`,[['Mã cá nhân','Họ tên','Vai trò','Nhóm/đơn vị','Liên hệ','Trạng thái'],...p.map(x=>[x.participant_code,x.full_name,x.role_label,x.group_name,x.contact,Number(x.submission_count)?'Đã nộp':'Chưa nộp'])]);}
+        function exportSubmissions(){const {assignment:a,submissions:s}=state.detail;downloadCsv(`bai-nop-${a.public_code}.csv`,[['Họ tên','Vai trò','Nhóm/đơn vị','Mã/SĐT/email','Thời gian','Ghi chú','Tệp'],...s.map(x=>[x.submitter_name,x.submitter_role,x.group_name,x.identifier,x.submitted_at,x.note,(x.files||[]).map(f=>f.view_url).join(' | ')])]);}
+        load();
+    </script>
+</body>
+</html>

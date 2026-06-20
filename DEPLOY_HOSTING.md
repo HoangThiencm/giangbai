@@ -121,3 +121,46 @@ Workflow sẽ không upload `api/config.php`, nên cấu hình database thật t
 5. Chức năng **AI quét PDF / nhận diện câu** vẫn gọi HuggingFace (`omr_backend_url` trong localStorage nếu cần đổi URL).
 
 **Lưu ý:** Đề và kết quả cũ trên Supabase/HuggingFace không tự chuyển sang MySQL — cần soạn lại hoặc nhập tay nếu muốn giữ dữ liệu cũ.
+
+## 8. Giao và nhận bài (Google Drive + hosting PHP)
+
+Mô-đun này không dùng backend Hugging Face. Trang quản lý là `nopbai-quanly.html`,
+trang dành cho người nộp là `nopbai.html`, API chạy tại `api/submissions.php`.
+Thông tin đợt nộp và trạng thái được lưu trong MySQL; tệp thật được tải thẳng từ
+hosting lên Google Drive.
+
+### Cấu hình Google Drive
+
+1. Bật **Google Drive API** trong Google Cloud Console.
+2. Chọn một trong hai cách xác thực:
+   - **OAuth Client** (phù hợp Drive cá nhân): dùng JSON OAuth Client và token JSON có `refresh_token`.
+   - **Service Account** (phù hợp Google Shared Drive): chia sẻ thư mục/Shared Drive cho email service account với quyền Editor. Service Account thường không có dung lượng Drive cá nhân, vì vậy nên dùng Shared Drive.
+3. Lấy ID thư mục gốc từ URL Google Drive.
+4. Thêm vào `api/config.php` trên hosting:
+
+```php
+define('GOOGLE_DRIVE_CREDENTIALS_JSON', '{...JSON credentials đầy đủ...}');
+define('GOOGLE_DRIVE_TOKEN_JSON', '{...JSON có refresh_token...}'); // để trống nếu dùng Service Account
+define('GOOGLE_DRIVE_ROOT_FOLDER_ID', 'id-thu-muc-goc');
+define('GOOGLE_DRIVE_SHARE_MODE', 'private');
+define('SUBMISSION_MAX_FILE_MB', 25);
+```
+
+Giữ `GOOGLE_DRIVE_SHARE_MODE` là `private` để tệp kế thừa quyền của thư mục Drive.
+Chỉ dùng `anyone` nếu mọi tệp đều được phép công khai cho bất kỳ ai có đường link.
+
+Hosting PHP cần bật các extension `openssl`, `curl`, `fileinfo` và cho phép kết nối
+HTTPS ra `oauth2.googleapis.com`, `www.googleapis.com`. Đồng thời đặt `upload_max_filesize`
+và `post_max_size` lớn hơn giới hạn tệp muốn nhận.
+
+Các bảng `submission_assignments`, `submission_participants`, `assignment_submissions`
+và `assignment_submission_files` có trong `database_schema.sql`. API cũng tự tạo các
+bảng này lần đầu được mở để thuận tiện khi nâng cấp hệ thống đang chạy.
+
+### Các kiểu người nộp
+
+- **Tự do:** ai có link cũng nộp được, tự khai họ tên, vai trò, đơn vị và thông tin nhận diện.
+- **Theo lớp/nhóm:** lấy tài khoản hiện có của lớp/nhóm và cấp mã cá nhân.
+- **Danh sách chỉ định:** chọn tài khoản sẵn có hoặc nhập thêm học sinh, phụ huynh,
+  giáo viên, cán bộ và người ngoài hệ thống. Người chưa có tài khoản dùng mã cá nhân,
+  không cần đăng ký tài khoản mới.

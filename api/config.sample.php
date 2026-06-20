@@ -21,3 +21,21 @@ define('GEMINI_MODEL', 'gemini-2.5-flash');
 // Optional fallback via ShopAIKey (OpenAI-compatible API).
 define('SHOPAIKEY_API_KEY', '');
 define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');
+
+// Google Drive storage for the assignment submission module.
+// Enable Google Drive API, then use either OAuth Client credentials (personal
+// Drive) or a Service Account (recommended with Shared Drive). Paste the full
+// credentials JSON below in api/config.php on the hosting.
+define('GOOGLE_DRIVE_CREDENTIALS_JSON', '');
+define('GOOGLE_DRIVE_ROOT_FOLDER_ID', '');
+
+// Only needed when GOOGLE_DRIVE_CREDENTIALS_JSON is an OAuth Desktop/Web client.
+// Paste token JSON containing refresh_token. For a service account, leave blank.
+define('GOOGLE_DRIVE_TOKEN_JSON', '');
+
+// Keep "private" when the root folder is shared with teachers who review files.
+// Use "anyone" only if every uploaded file may be opened by anyone with its link.
+define('GOOGLE_DRIVE_SHARE_MODE', 'private');
+
+// Hard server-side ceiling. Each assignment may choose a lower limit.
+define('SUBMISSION_MAX_FILE_MB', 25);

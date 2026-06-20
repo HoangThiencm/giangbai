@@ -81,6 +81,79 @@ CREATE TABLE IF NOT EXISTS exam_submissions (
     CONSTRAINT fk_submissions_exam FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS submission_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    public_code VARCHAR(24) NOT NULL UNIQUE,
+    owner_id INT NOT NULL,
+    title VARCHAR(220) NOT NULL,
+    description TEXT DEFAULT NULL,
+    instructions TEXT DEFAULT NULL,
+    access_mode ENUM('public', 'class', 'selected') NOT NULL DEFAULT 'public',
+    target_class VARCHAR(100) DEFAULT NULL,
+    status ENUM('draft', 'open', 'closed') NOT NULL DEFAULT 'open',
+    open_at DATETIME DEFAULT NULL,
+    due_at DATETIME DEFAULT NULL,
+    allow_multiple TINYINT(1) NOT NULL DEFAULT 0,
+    max_files INT NOT NULL DEFAULT 5,
+    max_file_mb INT NOT NULL DEFAULT 25,
+    allowed_extensions VARCHAR(500) NOT NULL DEFAULT 'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,zip,rar,txt',
+    drive_folder_id VARCHAR(160) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_submission_assignments_owner (owner_id),
+    INDEX idx_submission_assignments_status (status),
+    CONSTRAINT fk_submission_assignment_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS submission_participants (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    linked_user_id INT DEFAULT NULL,
+    participant_code VARCHAR(40) NOT NULL,
+    full_name VARCHAR(180) NOT NULL,
+    role_label VARCHAR(100) DEFAULT NULL,
+    group_name VARCHAR(160) DEFAULT NULL,
+    contact VARCHAR(180) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_assignment_participant_code (assignment_id, participant_code),
+    INDEX idx_submission_participants_user (linked_user_id),
+    CONSTRAINT fk_submission_participant_assignment FOREIGN KEY (assignment_id) REFERENCES submission_assignments(id) ON DELETE CASCADE,
+    CONSTRAINT fk_submission_participant_user FOREIGN KEY (linked_user_id) REFERENCES users(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS assignment_submissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    participant_id INT DEFAULT NULL,
+    linked_user_id INT DEFAULT NULL,
+    submitter_name VARCHAR(180) NOT NULL,
+    submitter_role VARCHAR(100) DEFAULT NULL,
+    group_name VARCHAR(160) DEFAULT NULL,
+    identifier VARCHAR(180) DEFAULT NULL,
+    note TEXT DEFAULT NULL,
+    submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_assignment_submissions_assignment (assignment_id),
+    INDEX idx_assignment_submissions_participant (participant_id),
+    CONSTRAINT fk_assignment_submission_assignment FOREIGN KEY (assignment_id) REFERENCES submission_assignments(id) ON DELETE CASCADE,
+    CONSTRAINT fk_assignment_submission_participant FOREIGN KEY (participant_id) REFERENCES submission_participants(id) ON DELETE SET NULL,
+    CONSTRAINT fk_assignment_submission_user FOREIGN KEY (linked_user_id) REFERENCES users(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS assignment_submission_files (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id INT NOT NULL,
+    drive_file_id VARCHAR(160) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(160) DEFAULT NULL,
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    view_url TEXT NOT NULL,
+    download_url TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_assignment_submission_files_submission (submission_id),
+    CONSTRAINT fk_assignment_file_submission FOREIGN KEY (submission_id) REFERENCES assignment_submissions(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
 VALUES
     ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),

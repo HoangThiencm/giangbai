@@ -71,56 +71,268 @@
             font-size: 0.72rem;
         }
 
-        .tool-card {
-            background: #ffffff;
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-            height: 100%;
-            min-height: 268px;
+        .ai-hub-banner {
+            border-radius: 28px;
+            border: 1px solid rgba(99, 102, 241, 0.18);
+            background:
+                radial-gradient(circle at 100% 0%, rgba(129, 140, 248, 0.22), transparent 42%),
+                linear-gradient(135deg, #1e1b4b 0%, #312e81 48%, #3730a3 100%);
+            box-shadow: 0 22px 50px rgba(49, 46, 129, 0.18);
+            color: #eef2ff;
+            overflow: hidden;
         }
 
-        .tool-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 42px rgba(15, 23, 42, 0.10);
-            border-color: rgba(99, 102, 241, 0.25);
+        .ai-hub-banner-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.35rem 1.5rem;
         }
 
-        .tool-icon {
-            width: 68px;
-            height: 68px;
-            border-radius: 20px;
+        @media (min-width: 768px) {
+            .ai-hub-banner-inner {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 1.5rem 1.75rem;
+            }
+        }
+
+        .ai-hub-banner h3 {
+            margin-top: 0.35rem;
+            font-size: 1.35rem;
+            font-weight: 800;
+            line-height: 1.25;
+            color: #fff;
+        }
+
+        .ai-hub-banner p {
+            margin-top: 0.45rem;
+            max-width: 38rem;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            color: rgba(224, 231, 255, 0.86);
+        }
+
+        .ai-hub-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.45rem 0.9rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #e0e7ff;
+            white-space: nowrap;
+        }
+
+        .tool-category-head {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .tool-category-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
             display: grid;
             place-items: center;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 12px 20px rgba(0, 0, 0, 0.10);
+            font-size: 0.9rem;
+            flex-shrink: 0;
         }
 
-        .tool-title {
-            font-size: 1.05rem;
-            line-height: 1.25;
+        .tool-category-title {
+            font-size: 0.95rem;
             font-weight: 800;
             color: #0f172a;
-            min-height: 2.6rem;
+        }
+
+        .tool-category-desc {
+            margin-top: 0.1rem;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+
+        .tool-category-grid {
+            display: grid;
+            gap: 0.9rem;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 640px) {
+            .tool-category-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .tool-category-grid--cols-3 {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .tool-category-grid--bento {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .tool-category-grid--bento .ai-tool-card--featured {
+                grid-column: span 2;
+            }
+        }
+
+        .ai-tool-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 168px;
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: #fff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .ai-tool-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
+        }
+
+        .ai-tool-card-accent {
+            height: 4px;
+            width: 100%;
+        }
+
+        .ai-tool-card-body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            padding: 1rem 1.1rem 1.05rem;
+        }
+
+        .ai-tool-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .ai-tool-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.05rem;
+            flex-shrink: 0;
+        }
+
+        .ai-tool-tag {
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background: #f8fafc;
+            color: #64748b;
+        }
+
+        .ai-tool-name {
+            margin-top: 0.85rem;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.3;
+            color: #0f172a;
+        }
+
+        .ai-tool-sub {
+            margin-top: 0.15rem;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .ai-tool-desc {
+            margin-top: 0.45rem;
+            flex: 1;
+            font-size: 0.84rem;
+            line-height: 1.5;
+            color: #64748b;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
-        .tool-desc {
-            color: #64748b;
-            font-size: 0.95rem;
-            line-height: 1.55;
-            min-height: 4.3rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+        .ai-tool-cta {
+            margin-top: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            transition: transform 0.18s ease, gap 0.18s ease;
         }
 
-        .tool-link {
-            font-weight: 800;
-            letter-spacing: 0.04em;
+        .ai-tool-card:hover .ai-tool-cta {
+            gap: 0.55rem;
+        }
+
+        .ai-tool-card--amber .ai-tool-card-accent { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .ai-tool-card--amber .ai-tool-icon { background: #fef3c7; color: #d97706; }
+        .ai-tool-card--amber .ai-tool-cta { color: #d97706; }
+        .ai-tool-card--amber:hover { border-color: rgba(245, 158, 11, 0.35); }
+
+        .ai-tool-card--indigo .ai-tool-card-accent { background: linear-gradient(90deg, #6366f1, #818cf8); }
+        .ai-tool-card--indigo .ai-tool-icon { background: #e0e7ff; color: #4f46e5; }
+        .ai-tool-card--indigo .ai-tool-cta { color: #4f46e5; }
+        .ai-tool-card--indigo:hover { border-color: rgba(99, 102, 241, 0.35); }
+
+        .ai-tool-card--sky .ai-tool-card-accent { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+        .ai-tool-card--sky .ai-tool-icon { background: #e0f2fe; color: #0284c7; }
+        .ai-tool-card--sky .ai-tool-cta { color: #0284c7; }
+        .ai-tool-card--sky:hover { border-color: rgba(14, 165, 233, 0.35); }
+
+        .ai-tool-card--pink .ai-tool-card-accent { background: linear-gradient(90deg, #ec4899, #f472b6); }
+        .ai-tool-card--pink .ai-tool-icon { background: #fce7f3; color: #db2777; }
+        .ai-tool-card--pink .ai-tool-cta { color: #db2777; }
+        .ai-tool-card--pink:hover { border-color: rgba(236, 72, 153, 0.35); }
+
+        .ai-tool-card--emerald .ai-tool-card-accent { background: linear-gradient(90deg, #10b981, #34d399); }
+        .ai-tool-card--emerald .ai-tool-icon { background: #d1fae5; color: #059669; }
+        .ai-tool-card--emerald .ai-tool-cta { color: #059669; }
+        .ai-tool-card--emerald:hover { border-color: rgba(16, 185, 129, 0.35); }
+
+        .ai-tool-card--orange .ai-tool-card-accent { background: linear-gradient(90deg, #f97316, #fb923c); }
+        .ai-tool-card--orange .ai-tool-icon { background: #ffedd5; color: #ea580c; }
+        .ai-tool-card--orange .ai-tool-cta { color: #ea580c; }
+        .ai-tool-card--orange:hover { border-color: rgba(249, 115, 22, 0.35); }
+
+        .ai-tool-card--cyan .ai-tool-card-accent { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+        .ai-tool-card--cyan .ai-tool-icon { background: #cffafe; color: #0891b2; }
+        .ai-tool-card--cyan .ai-tool-cta { color: #0891b2; }
+        .ai-tool-card--cyan:hover { border-color: rgba(6, 182, 212, 0.35); }
+
+        .ai-tool-card--teal .ai-tool-card-accent { background: linear-gradient(90deg, #14b8a6, #2dd4bf); }
+        .ai-tool-card--teal .ai-tool-icon { background: #ccfbf1; color: #0f766e; }
+        .ai-tool-card--teal .ai-tool-cta { color: #0f766e; }
+        .ai-tool-card--teal:hover { border-color: rgba(20, 184, 166, 0.35); }
+
+        .ai-tool-card--lime .ai-tool-card-accent { background: linear-gradient(90deg, #84cc16, #a3e635); }
+        .ai-tool-card--lime .ai-tool-icon { background: #ecfccb; color: #65a30d; }
+        .ai-tool-card--lime .ai-tool-cta { color: #65a30d; }
+        .ai-tool-card--lime:hover { border-color: rgba(132, 204, 22, 0.35); }
+
+        .tool-category--lotrinh .tool-category-icon {
+            background: #ecfccb;
+            color: #65a30d;
         }
 
         .nav-chip {
@@ -282,12 +494,11 @@
             opacity: 0.88;
         }
 
-        .teacher-tools-compact .tool-card {
-            min-height: 220px;
+        .teacher-tools-compact .ai-tool-card {
+            min-height: 156px;
         }
 
-        .teacher-tools-compact .tool-desc {
-            min-height: 3.2rem;
+        .teacher-tools-compact .ai-tool-desc {
             -webkit-line-clamp: 2;
         }
 
@@ -592,8 +803,9 @@
 
                     Object.keys(links).forEach(key => {
                         if (features[key] === false) {
-                            const card = document.querySelector(`a[href="${links[key]}"]`);
-                            if (card) card.style.display = 'none';
+                            document.querySelectorAll(`[data-tool="${key}"], a[href="${links[key]}"]`).forEach(card => {
+                                card.classList.add('hidden');
+                            });
                         }
                     });
                 }
@@ -640,8 +852,9 @@
         <section>
             <div id="defaultToolsHeader" class="mb-5 flex items-center justify-between gap-3">
                 <div>
-                    <p class="section-kicker text-indigo-600">Công cụ</p>
-                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Công Cụ Giảng Dạy</h3>
+                    <p class="section-kicker text-indigo-600">Công cụ AI</p>
+                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Bộ công cụ giảng dạy</h3>
+                    <p class="mt-1 text-sm text-slate-500">Nhóm theo mục đích: giảng dạy, soạn đề, thi online và lộ trình tự học.</p>
                 </div>
                 <button onclick="SystemConfig.toggleGuide('guideContent')"
                     class="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 md:inline-flex md:items-center md:gap-2">
@@ -689,205 +902,237 @@
                 <div id="teacherLotrinhPanel" class="teacher-lotrinh-panel"></div>
             </section>
 
-            <div id="teacherToolsDivider" class="mb-5 hidden rounded-[24px] border border-slate-200/80 bg-white/70 px-5 py-4 shadow-sm">
-                <p class="section-kicker text-indigo-600">Công cụ AI</p>
-                <h3 class="mt-1 text-lg font-extrabold text-slate-900">Hỗ trợ soạn đề, dạy học và báo cáo</h3>
-                <p class="mt-1 text-sm text-slate-500">Các công cụ bên dưới tách riêng với lộ trình Toán — dùng khi cần slides, đề thi, thi online...</p>
+            <div id="teacherToolsDivider" class="ai-hub-banner hidden mb-6">
+                <div class="ai-hub-banner-inner">
+                    <div>
+                        <p class="section-kicker text-indigo-200">Công cụ AI</p>
+                        <h3>Hỗ trợ soạn đề, dạy học và báo cáo</h3>
+                        <p>Tách riêng với lộ trình Toán — dùng khi cần slides, đề thi, thi online hoặc soạn báo cáo hành chính.</p>
+                    </div>
+                    <span class="ai-hub-pill"><i class="fas fa-wand-magic-sparkles"></i> 8 công cụ hỗ trợ</span>
+                </div>
             </div>
 
-            <div id="mainToolsGrid" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 mb-10">
+            <div id="mainToolsGrid" class="ai-tools-hub space-y-7 mb-10">
 
-            <!-- 1. TRÌNH CHIẾU SLIDES (ĐƯA LÊN ĐẦU) -->
-            <a href="gslides.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-amber-200">
-                <div class="tool-icon bg-amber-100 text-amber-600">
-                    <i class="fas fa-presentation-screen"></i>
+            <section class="tool-category">
+                <div class="tool-category-head">
+                    <span class="tool-category-icon bg-indigo-100 text-indigo-600"><i class="fas fa-chalkboard-user"></i></span>
+                    <div>
+                        <div class="tool-category-title">Giảng dạy trực quan</div>
+                        <div class="tool-category-desc">Slides, hình học và câu hỏi tương tác trên lớp</div>
+                    </div>
                 </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-amber-600 transition">Trình Chiếu Slides</h3>
-                    <p class="tool-desc mt-3">Tích hợp Google Slides vào hệ thống để giảng dạy trực tiếp không
-                    cần chuyển tab.</p>
+                <div class="tool-category-grid tool-category-grid--cols-3">
+                    <a href="gslides.html" data-tool="gslides" class="ai-tool-card ai-tool-card--amber group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-presentation-screen"></i></span>
+                                <span class="ai-tool-tag">Slides</span>
+                            </div>
+                            <h3 class="ai-tool-name">Trình chiếu Slides</h3>
+                            <p class="ai-tool-desc">Tích hợp Google Slides để giảng dạy trực tiếp, không cần chuyển tab.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="vehinh.html" data-tool="vehinh" class="ai-tool-card ai-tool-card--indigo group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-shapes"></i></span>
+                                <span class="ai-tool-tag">Vector</span>
+                            </div>
+                            <h3 class="ai-tool-name">Vẽ hình học AI</h3>
+                            <p class="ai-tool-desc">Mô tả bằng lời hoặc vẽ tay — AI dựng hình học, đồ thị hàm số chính xác.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="smartquiz.html" data-tool="smartquiz" class="ai-tool-card ai-tool-card--sky group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-magic"></i></span>
+                                <span class="ai-tool-tag">Game</span>
+                            </div>
+                            <h3 class="ai-tool-name">Soạn câu hỏi &amp; slide</h3>
+                            <p class="ai-tool-sub">Game dạy học theo chủ đề</p>
+                            <p class="ai-tool-desc">Nhập chủ đề, AI soạn câu hỏi và tạo slide trình chiếu tức thì.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
                 </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-amber-600 transition group-hover:translate-x-1">
-                    Truy cập <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
+            </section>
 
-            <!-- 2. VẼ HÌNH AI (ĐÃ BỎ CHỮ NEW) -->
-            <a href="vehinh.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-indigo-200">
-                <div class="tool-icon bg-indigo-100 text-indigo-600">
-                    <i class="fas fa-shapes"></i>
+            <section class="tool-category">
+                <div class="tool-category-head">
+                    <span class="tool-category-icon bg-pink-100 text-pink-600"><i class="fas fa-file-circle-check"></i></span>
+                    <div>
+                        <div class="tool-category-title">Soạn đề &amp; kiểm tra</div>
+                        <div class="tool-category-desc">Ma trận, trộn đề và ra đề kiểm tra định kỳ</div>
+                    </div>
                 </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-indigo-600 transition">Vẽ Hình Học AI</h3>
-                    <p class="tool-desc mt-3">Mô tả bằng lời hoặc vẽ tay, AI sẽ dựng hình học, đồ thị hàm số và biểu đồ chính xác vector.</p>
+                <div class="tool-category-grid tool-category-grid--cols-3">
+                    <a href="matrande.html" data-tool="matrande" class="ai-tool-card ai-tool-card--pink group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-table"></i></span>
+                                <span class="ai-tool-tag">CV 7991</span>
+                            </div>
+                            <h3 class="ai-tool-name">Đề từ ma trận</h3>
+                            <p class="ai-tool-sub">Theo CV 7991-BGDĐT</p>
+                            <p class="ai-tool-desc">Quét ma trận / bảng đặc tả → sinh đề TN &amp; TL → xuất Word chuẩn.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="tronde.html" data-tool="tronde" class="ai-tool-card ai-tool-card--emerald group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-random"></i></span>
+                                <span class="ai-tool-tag">Word/PDF</span>
+                            </div>
+                            <h3 class="ai-tool-name">Trộn đề thi</h3>
+                            <p class="ai-tool-desc">Xáo trộn câu hỏi từ Word/PDF, giữ định dạng công thức Toán học.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="kttx.html" data-tool="kttx" class="ai-tool-card ai-tool-card--cyan group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-stopwatch"></i></span>
+                                <span class="ai-tool-tag">KTTX</span>
+                            </div>
+                            <h3 class="ai-tool-name">Ra đề kiểm tra</h3>
+                            <p class="ai-tool-sub">Xuất ngược ma trận</p>
+                            <p class="ai-tool-desc">Tạo đề từ ảnh SGK hoặc PDF tương tự, xuất ma trận và bảng đặc tả.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
                 </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-indigo-600 transition group-hover:translate-x-1">
-                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
+            </section>
 
-            <!-- 3. SOẠN ĐỀ AI -->
-            <a href="smartquiz.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-sky-200">
-                <div class="tool-icon bg-sky-100 text-sky-600">
-                    <i class="fas fa-magic"></i>
+            <section class="tool-category">
+                <div class="tool-category-head">
+                    <span class="tool-category-icon bg-orange-100 text-orange-600"><i class="fas fa-clipboard-check"></i></span>
+                    <div>
+                        <div class="tool-category-title">Thi &amp; hành chính</div>
+                        <div class="tool-category-desc">Tổ chức thi online và soạn báo cáo giáo dục</div>
+                    </div>
                 </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-sky-600 transition">GAME DẠY HỌC - HỖ TRỢ SOẠN CÂU HỎI THEO CHỦ ĐỀ</h3>
-                    <p class="tool-desc mt-3">Nhập chủ đề bất kỳ, AI sẽ soạn câu hỏi và tạo slide trình chiếu dạy học tức thì.</p>
+                <div class="tool-category-grid tool-category-grid--bento">
+                    <a href="thitructuyen.html" data-tool="thitructuyen" class="ai-tool-card ai-tool-card--orange ai-tool-card--featured group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-qrcode"></i></span>
+                                <span class="ai-tool-tag">QR · Mobile</span>
+                            </div>
+                            <h3 class="ai-tool-name">Thi trực tuyến</h3>
+                            <p class="ai-tool-desc">Tạo kỳ thi, chia sẻ QR cho HS làm bài trên điện thoại. Chấm điểm tự động, xuất Excel kết quả.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="nopbai-quanly.html" data-tool="nopbai" class="ai-tool-card ai-tool-card--teal group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-cloud-arrow-up"></i></span>
+                                <span class="ai-tool-tag">Google Drive</span>
+                            </div>
+                            <h3 class="ai-tool-name">Giao &amp; nhận bài</h3>
+                            <p class="ai-tool-desc">Tạo link nộp tự do, theo lớp hoặc danh sách chỉ định; tệp lưu trực tiếp trên Drive.</p>
+                            <span class="ai-tool-cta">Quản lý bài nộp <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="vietbaocao.html" data-tool="vietbaocao" class="ai-tool-card ai-tool-card--teal group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-file-signature"></i></span>
+                                <span class="ai-tool-tag">Word</span>
+                            </div>
+                            <h3 class="ai-tool-name">Viết báo cáo</h3>
+                            <p class="ai-tool-desc">Nhập vài ý chính, AI soạn báo cáo giáo dục/hành chính đúng văn phong.</p>
+                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
                 </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-sky-600 transition group-hover:translate-x-1">
-                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
+            </section>
 
-            <!-- 4. MA TRẬN ĐỀ THI -->
-            <a href="matrande.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-pink-200">
-                <div class="tool-icon bg-pink-100 text-pink-600">
-                    <i class="fas fa-table"></i>
+            <section id="studentLotrinhCategory" class="tool-category tool-category--lotrinh">
+                <div class="tool-category-head">
+                    <span class="tool-category-icon"><i class="fas fa-route"></i></span>
+                    <div>
+                        <div class="tool-category-title">Lộ trình tự học Toán</div>
+                        <div class="tool-category-desc">Học sinh luyện tập theo từng bài, lưu tiến độ cá nhân</div>
+                    </div>
                 </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-pink-600 transition">Tạo Đề Từ Ma Trận (theo CV 7991-BGDĐT)</h3>
-                    <p class="tool-desc mt-3">Quét Ma trận / Bảng đặc tả → Sinh đề thi Trắc nghiệm & Tự luận → Xuất Word chuẩn.</p>
+                <div class="tool-category-grid tool-category-grid--cols-3">
+                    <a href="lotrinhtoan4.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
+                                <span class="ai-tool-tag">Lớp 4</span>
+                            </div>
+                            <h3 class="ai-tool-name">Lộ trình Toán 4</h3>
+                            <p class="ai-tool-desc">Luyện tập theo từng bài và theo dõi tiến độ cá nhân hóa.</p>
+                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="lotrinhtoan6.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
+                                <span class="ai-tool-tag">Lớp 6</span>
+                            </div>
+                            <h3 class="ai-tool-name">Lộ trình Toán 6</h3>
+                            <p class="ai-tool-desc">Cá nhân hóa theo bài học, luyện tập và gợi ý bước tiếp theo.</p>
+                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="lotrinhtoan7.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
+                                <span class="ai-tool-tag">Lớp 7</span>
+                            </div>
+                            <h3 class="ai-tool-name">Lộ trình Toán 7</h3>
+                            <p class="ai-tool-desc">Lộ trình theo từng bài, dùng chung hệ thống luyện tập và lưu tiến độ.</p>
+                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="lotrinhtoan8.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
+                                <span class="ai-tool-tag">Lớp 8</span>
+                            </div>
+                            <h3 class="ai-tool-name">Lộ trình Toán 8</h3>
+                            <p class="ai-tool-desc">Sẵn sàng nhập nội dung khi triển khai lớp mới.</p>
+                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    <a href="lotrinhtoan9.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
+                        <div class="ai-tool-card-accent"></div>
+                        <div class="ai-tool-card-body">
+                            <div class="ai-tool-card-top">
+                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
+                                <span class="ai-tool-tag">Lớp 9</span>
+                            </div>
+                            <h3 class="ai-tool-name">Lộ trình Toán 9</h3>
+                            <p class="ai-tool-desc">Ôn luyện và theo dõi tiến độ theo từng bài học.</p>
+                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
                 </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-pink-600 transition group-hover:translate-x-1">
-                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <!-- 5. TRỘN ĐỀ -->
-            <a href="tronde.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-emerald-200">
-                <div class="tool-icon bg-emerald-100 text-emerald-600">
-                    <i class="fas fa-random"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-emerald-600 transition">Trộn Đề Thi</h3>
-                    <p class="tool-desc mt-3">Xáo trộn câu hỏi từ file Word/PDF. Hỗ trợ giữ định dạng công thức Toán học.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-emerald-600 transition group-hover:translate-x-1">
-                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <!-- 6. THI ONLINE -->
-            <a href="thitructuyen.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-orange-200">
-                <div class="tool-icon bg-orange-100 text-orange-600">
-                    <i class="fas fa-laptop-code"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-orange-600 transition">Tổ Chức Thi Online</h3>
-                    <p class="tool-desc mt-3">Tạo kỳ thi, cấp mã QR cho học sinh làm bài trên điện thoại. Chấm điểm tự động.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-orange-600 transition group-hover:translate-x-1">
-                    Truy cập <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <!-- 7. KIỂM TRA THƯỜNG XUYÊN -->
-            <a href="kttx.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-cyan-200">
-                <div class="tool-icon bg-cyan-100 text-cyan-600">
-                    <i class="fas fa-stopwatch"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-cyan-600 transition">Ra Đề Kiểm Tra có thể xuất ngược ma trận</h3>
-                    <p class="tool-desc mt-3">Tạo đề kiểm tra định kỳ, thường xuyên từ hình ảnh SGK hoặc tạo đề tương tự từ file PDF. Xuất ra ma trận và bản đặc tả.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-cyan-600 transition group-hover:translate-x-1">
-                    Sử dụng ngay <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <!-- 8. VIẾT BÁO CÁO -->
-            <a href="vietbaocao.html"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-teal-200 text-left block">
-                <div class="tool-icon bg-teal-100 text-teal-600">
-                    <i class="fas fa-file-signature"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-teal-600 transition">Viết Báo Cáo</h3>
-                    <p class="tool-desc mt-3">Nhập vài ý chính, AI sẽ soạn báo cáo giáo dục/hành chính đúng văn phong, có thể tải về Word.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-teal-600 transition group-hover:translate-x-1">
-                    Tạo báo cáo <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <!-- 9. LO TRINH TU HOC -->
-            <a href="lotrinhtoan4.html" data-student-lotrinh-card="1"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
-                <div class="tool-icon bg-lime-100 text-lime-700">
-                    <i class="fas fa-route"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 4</h3>
-                    <p class="tool-desc mt-3">Lộ trình theo từng bài Toán 4, luyện tập và theo dõi tiến độ cá nhân hóa.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
-                    Mở lộ trình <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <a href="lotrinhtoan6.html" data-student-lotrinh-card="1"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
-                <div class="tool-icon bg-lime-100 text-lime-700">
-                    <i class="fas fa-route"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 6</h3>
-                    <p class="tool-desc mt-3">Thử nghiệm cá nhân hóa theo từng bài học: Bài 1 Tập hợp, luyện tập, chấm theo kỹ năng và gợi ý bước tiếp theo.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
-                    Mở lộ trình <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <a href="lotrinhtoan7.html" data-student-lotrinh-card="1"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
-                <div class="tool-icon bg-lime-100 text-lime-700">
-                    <i class="fas fa-route"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 7</h3>
-                    <p class="tool-desc mt-3">Lộ trình theo từng bài Toán 7, dùng chung hệ thống luyện tập và lưu tiến độ.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
-                    Mở lộ trình <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <a href="lotrinhtoan8.html" data-student-lotrinh-card="1"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
-                <div class="tool-icon bg-lime-100 text-lime-700">
-                    <i class="fas fa-route"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 8</h3>
-                    <p class="tool-desc mt-3">Lộ trình theo từng bài Toán 8, sẵn sàng nhập nội dung khi triển khai lớp mới.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
-                    Mở lộ trình <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
-
-            <a href="lotrinhtoan9.html" data-student-lotrinh-card="1"
-                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
-                <div class="tool-icon bg-lime-100 text-lime-700">
-                    <i class="fas fa-route"></i>
-                </div>
-                <div class="mt-6 flex-1">
-                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 9</h3>
-                    <p class="tool-desc mt-3">Lộ trình theo từng bài Toán 9, chuẩn bị cho phần ôn luyện và theo dõi tiến độ.</p>
-                </div>
-                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
-                    Mở lộ trình <i class="fas fa-arrow-right"></i>
-                </span>
-            </a>
+            </section>
 
             </div>
         </section>
@@ -1017,6 +1262,7 @@
                 .filter(key => routeMap[key] && allowedSet.has(key))
                 .map(key => ({ key, ...routeMap[key] }));
 
+            document.getElementById('studentLotrinhCategory')?.classList.add('hidden');
             document.querySelectorAll('[data-student-lotrinh-card]').forEach(card => {
                 card.classList.add('hidden');
             });
