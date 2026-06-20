@@ -117,13 +117,17 @@
         bindProgressActionButtons();
     }
 
+    function getProgressMount() {
+        return el('progressDashboardMount');
+    }
+
     function ensurePanel() {
         if (el('adminProgressPanel')) {
             ensureProgressSyncButton();
             bindProgressActionButtons();
             return;
         }
-        const dashboard = isTeacherUser() ? el('lessonDesignerMount') : null;
+        const dashboard = getProgressMount();
         if (!dashboard) return;
 
         const panel = document.createElement('section');
@@ -432,6 +436,7 @@
     async function syncProgress() {
         const key = getAdminKey();
         if (!key && !isTeacherUser()) return;
+        if (!getProgressMount()) return;
         ensurePanel();
         const syncBtn = el('progressSyncBtn');
         const lessonId = selectedLessonId || el('progressLessonSelect')?.value || '';
@@ -475,6 +480,7 @@
     async function refresh() {
         const key = getAdminKey();
         if (!key && !isTeacherUser()) return;
+        if (!getProgressMount()) return;
         ensurePanel();
         const qs = selectedLessonId ? `?lesson_id=${encodeURIComponent(selectedLessonId)}` : '';
         const headers = key ? { 'X-Admin-Key': key } : {};
@@ -521,6 +527,7 @@
     window.syncAdminProgress = syncProgress;
 
     function boot() {
+        if (!getProgressMount()) return;
         ensurePanel();
         wrapLoadUsers();
         if (isTeacherUser()) refresh().catch(console.warn);

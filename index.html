@@ -472,7 +472,7 @@
 
     <main class="mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <section>
-            <div class="mb-5 flex items-center justify-between gap-3">
+            <div id="defaultToolsHeader" class="mb-5 flex items-center justify-between gap-3">
                 <div>
                     <p class="section-kicker text-indigo-600">Công cụ</p>
                     <h3 class="mt-2 text-xl font-extrabold text-slate-900">Công Cụ Giảng Dạy</h3>
@@ -519,7 +519,21 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 mb-10">
+            <section id="teacherLotrinhHub" class="mb-8 hidden">
+                <div class="mb-5">
+                    <p class="section-kicker text-teal-700">Lộ trình Toán</p>
+                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Không gian giáo viên</h3>
+                    <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Soạn bài trên từng lộ trình; theo dõi tiến độ học sinh theo lớp phụ trách ở trang thống kê riêng.</p>
+                </div>
+                <div id="teacherLotrinhCards" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"></div>
+            </section>
+
+            <div id="teacherToolsDivider" class="mb-5 hidden">
+                <p class="section-kicker text-indigo-600">Công cụ khác</p>
+                <h3 class="mt-2 text-xl font-extrabold text-slate-900">Công cụ AI hỗ trợ giảng dạy</h3>
+            </div>
+
+            <div id="mainToolsGrid" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 mb-10">
 
             <!-- 1. TRÌNH CHIẾU SLIDES (ĐƯA LÊN ĐẦU) -->
             <a href="gslides.html"
@@ -643,7 +657,7 @@
             </a>
 
             <!-- 9. LO TRINH TU HOC -->
-            <a href="lotrinhtoan6.html"
+            <a href="lotrinhtoan6.html" data-student-lotrinh-card="1"
                 class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
                 <div class="tool-icon bg-lime-100 text-lime-700">
                     <i class="fas fa-route"></i>
@@ -657,7 +671,7 @@
                 </span>
             </a>
 
-            <a href="lotrinhtoan7.html"
+            <a href="lotrinhtoan7.html" data-student-lotrinh-card="1"
                 class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
                 <div class="tool-icon bg-lime-100 text-lime-700">
                     <i class="fas fa-route"></i>
@@ -671,7 +685,7 @@
                 </span>
             </a>
 
-            <a href="lotrinhtoan8.html"
+            <a href="lotrinhtoan8.html" data-student-lotrinh-card="1"
                 class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
                 <div class="tool-icon bg-lime-100 text-lime-700">
                     <i class="fas fa-route"></i>
@@ -685,7 +699,7 @@
                 </span>
             </a>
 
-            <a href="lotrinhtoan9.html"
+            <a href="lotrinhtoan9.html" data-student-lotrinh-card="1"
                 class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
                 <div class="tool-icon bg-lime-100 text-lime-700">
                     <i class="fas fa-route"></i>
@@ -700,10 +714,6 @@
             </a>
 
             </div>
-        </section>
-
-        <section id="lessonDesignerSection" class="mt-8 hidden">
-            <div id="lessonDesignerMount"></div>
         </section>
 
     </main>
@@ -792,19 +802,79 @@
     </div>
 
     <script>
-        // Init UI
         SystemConfig.renderConfig();
-        if (localStorage.getItem('userRole') === 'teacher') {
+
+        (function setupTeacherLotrinhHub() {
+            if (localStorage.getItem('userRole') !== 'teacher') return;
+
             let allowedPages = [];
             try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
-            const hasLotrinhScope = allowedPages.some(page => /^lotrinhtoan[6-9]$/.test(page) || page === 'lotrinh');
-            if (hasLotrinhScope) {
-                document.getElementById('lessonDesignerSection')?.classList.remove('hidden');
-            }
-        }
+
+            const routeMap = {
+                lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
+                lotrinhtoan6: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
+                lotrinhtoan7: { url: 'lotrinhtoan7.html', label: 'Toán 7' },
+                lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8' },
+                lotrinhtoan9: { url: 'lotrinhtoan9.html', label: 'Toán 9' }
+            };
+
+            const lotrinhPages = [];
+            allowedPages.forEach(page => {
+                const key = page === 'lotrinh' ? 'lotrinhtoan6' : page;
+                if (routeMap[key] && !lotrinhPages.some(item => item.key === key)) {
+                    lotrinhPages.push({ key, ...routeMap[key] });
+                }
+            });
+
+            document.querySelectorAll('[data-student-lotrinh-card]').forEach(card => {
+                card.classList.add('hidden');
+            });
+
+            if (!lotrinhPages.length) return;
+
+            const hub = document.getElementById('teacherLotrinhHub');
+            const cardsHost = document.getElementById('teacherLotrinhCards');
+            const divider = document.getElementById('teacherToolsDivider');
+            const defaultToolsHeader = document.getElementById('defaultToolsHeader');
+            if (!hub || !cardsHost) return;
+
+            hub.classList.remove('hidden');
+            divider?.classList.remove('hidden');
+            defaultToolsHeader?.classList.add('hidden');
+
+            const designCards = lotrinhPages.map(page => `
+                <a href="${page.url}" class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-teal-200 text-left block">
+                    <div class="tool-icon bg-teal-100 text-teal-700">
+                        <i class="fas fa-pen-ruler"></i>
+                    </div>
+                    <div class="mt-6 flex-1">
+                        <h3 class="tool-title group-hover:text-teal-700 transition">Soạn bài ${page.label}</h3>
+                        <p class="tool-desc mt-3">Thiết kế lý thuyết, ví dụ, video và bài luyện tập cho lộ trình ${page.label}.</p>
+                    </div>
+                    <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-teal-700 transition group-hover:translate-x-1">
+                        Mở soạn bài <i class="fas fa-arrow-right"></i>
+                    </span>
+                </a>
+            `).join('');
+
+            const statsCard = `
+                <a href="thongketientrinh.html" class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-amber-200 text-left block">
+                    <div class="tool-icon bg-amber-100 text-amber-700">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="mt-6 flex-1">
+                        <h3 class="tool-title group-hover:text-amber-700 transition">Thống kê tiến trình lớp</h3>
+                        <p class="tool-desc mt-3">Xem tiến độ học sinh theo lớp phụ trách, lọc bài cần luyện thêm và cập nhật điểm từ dữ liệu đã nộp.</p>
+                    </div>
+                    <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-amber-700 transition group-hover:translate-x-1">
+                        Mở thống kê <i class="fas fa-arrow-right"></i>
+                    </span>
+                </a>
+            `;
+
+            cardsHost.innerHTML = designCards + statsCard;
+        })();
     </script>
-    <script src="admin-lesson-manager.js?v=20260619-essay-number1"></script>
-    <script src="admin-progress.js?v=20260619-progress-db1"></script>
 
 </body>
 

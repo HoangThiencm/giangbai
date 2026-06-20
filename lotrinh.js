@@ -760,12 +760,23 @@
         const preview = isTeacherPreview();
         els.studentLearningMain?.classList.toggle('hidden', teacher && !preview);
         els.teacherLessonDesigner?.classList.toggle('hidden', !teacher || preview);
-        els.resetBtn?.classList.toggle('hidden', preview);
+        els.resetBtn?.classList.toggle('hidden', teacher || preview);
         if (els.accountRoleLabel) {
             els.accountRoleLabel.textContent = teacher ? 'Giáo viên' : 'Học sinh';
         }
-        if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
-        if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
+        if (els.routeTitle) {
+            els.routeTitle.textContent = teacher
+                ? (preview ? `Xem thử · ${PAGE_SUBJECT}` : `Soạn bài · ${PAGE_SUBJECT}`)
+                : PAGE_TITLE;
+        }
+        if (els.routeSubject) {
+            els.routeSubject.textContent = teacher
+                ? (preview ? 'Giao diện học sinh' : 'Không gian soạn bài')
+                : PAGE_SUBJECT;
+        }
+        if (teacher && typeof window.mountTeacherLotrinhNav === 'function') {
+            window.mountTeacherLotrinhNav({ mode: preview ? 'preview' : 'design', subject: PAGE_SUBJECT });
+        }
     }
 
     function render() {

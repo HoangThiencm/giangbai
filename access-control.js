@@ -5,6 +5,7 @@
         'lotrinhtoan7.html': 'lotrinhtoan7',
         'lotrinhtoan8.html': 'lotrinhtoan8',
         'lotrinhtoan9.html': 'lotrinhtoan9',
+        'thongketientrinh.html': 'thongketientrinh',
         'gslides.html': 'gslides',
         'smartquiz.html': 'smartquiz',
         'thitructuyen.html': 'thitructuyen',
@@ -16,6 +17,7 @@
         lotrinhtoan7: 'lotrinhtoan7.html',
         lotrinhtoan8: 'lotrinhtoan8.html',
         lotrinhtoan9: 'lotrinhtoan9.html',
+        thongketientrinh: 'thongketientrinh.html',
         gslides: 'gslides.html',
         smartquiz: 'smartquiz.html',
         thitructuyen: 'thitructuyen.html',
@@ -52,6 +54,10 @@
             || (pageKeyValue === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
     }
 
+    function hasLotrinhScope(allowedPages) {
+        return allowedPages.some(page => lotrinhPageKeys.has(page));
+    }
+
     function firstAllowedLotrinhUrl(allowedPages) {
         return allowedPages
             .filter(page => lotrinhPageKeys.has(page))
@@ -65,10 +71,25 @@
 
     if (role === 'student') {
         const allowedPages = getAllowedPages();
+        if (pageKey === 'thongketientrinh') {
+            alert('Trang thống kê chỉ dành cho giáo viên.');
+            const fallback = allowedPages.map(page => pageUrls[page]).find(Boolean);
+            window.location.href = fallback || 'login.html';
+            return;
+        }
         if (!canOpenPage(pageKey, allowedPages)) {
             alert('Tài khoản của em chưa được giáo viên mở trang này.');
             const fallback = allowedPages.map(page => pageUrls[page]).find(Boolean);
             window.location.href = fallback || 'login.html';
+        }
+        return;
+    }
+
+    if (role === 'teacher' && pageKey === 'thongketientrinh') {
+        const allowedPages = getAllowedPages();
+        if (!hasLotrinhScope(allowedPages)) {
+            alert('Tài khoản chưa được admin mở lộ trình nào để theo dõi tiến độ.');
+            window.location.href = 'index.html';
         }
         return;
     }

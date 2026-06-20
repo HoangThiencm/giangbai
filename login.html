@@ -199,10 +199,7 @@
             };
             const allowedPages = user?.allowed_pages || [];
             if (user?.role === 'teacher') {
-                const lotrinhPage = allowedPages
-                    .map(page => pageUrls[page])
-                    .find(url => url && url.includes('lotrinhtoan'));
-                return lotrinhPage || 'index.html';
+                return 'index.html';
             }
             if (user?.role === 'student') {
                 return allowedPages.map(page => pageUrls[page]).find(Boolean) || 'lotrinhtoan6.html';
