@@ -1912,7 +1912,8 @@
                 const chipHtml = value
                     ? `<button type="button" class="drag-chip fill-slot-chip" data-chip-value="${escapeHtml(value)}" data-chip-id="${escapeHtml(`${key}-slot-${slotIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(value)}</button>`
                     : '<span class="fill-slot-placeholder">kéo vào đây</span>';
-                html += `<span class="fill-drop-slot" data-fill-key="${escapeHtml(key)}" data-slot-index="${slotIndex}" data-drop-slot="1">${chipHtml}</span>`;
+                const slotAttrs = practiceDone ? '' : ' role="button" tabindex="0"';
+                html += `<span class="fill-drop-slot" data-fill-key="${escapeHtml(key)}" data-slot-index="${slotIndex}" data-drop-slot="1"${slotAttrs}>${chipHtml}</span>`;
                 slotIndex += 1;
             }
         });
@@ -2475,6 +2476,29 @@
                 border-color: #0f766e;
                 background: #ecfdf5;
                 box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.12);
+            }
+            .touch-placement .drag-chip,
+            .touch-placement .fill-drop-slot,
+            .touch-placement .drag-pool,
+            .touch-placement .drag-slot-row {
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: rgba(15, 118, 110, 0.12);
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            .touch-placement .drag-chip {
+                min-height: 44px;
+                padding: 10px 16px;
+                cursor: pointer;
+            }
+            .touch-placement .fill-drop-slot,
+            .touch-placement .drag-pool,
+            .touch-placement .drag-slot-row {
+                min-height: 52px;
+            }
+            .touch-placement .fill-drop-slot:not(:has(.fill-slot-chip)),
+            .touch-placement .drag-slot-row:has(.sort-zone-placeholder) {
+                cursor: pointer;
             }
             @media (pointer: coarse), (hover: none) {
                 .drag-chip {
@@ -3762,8 +3786,103 @@
         try {
             if (window.matchMedia('(pointer: coarse)').matches) return true;
             if (window.matchMedia('(hover: none)').matches) return true;
+            if (window.matchMedia('(any-pointer: coarse)').matches) return true;
+            if (window.matchMedia('(any-hover: none)').matches) return true;
         } catch {}
-        return (navigator.maxTouchPoints || 0) > 0;
+        if ((navigator.maxTouchPoints || 0) > 0) return true;
+        if ('ontouchstart' in window) return true;
+        return /Android|webOS|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    }
+
+    function bindTouchTap(element, handler, options = {}) {
+        if (!element || element.dataset.boundTouchTap === '1') return;
+        element.dataset.boundTouchTap = '1';
+
+        const isDisabled = () => (typeof options.disabled === 'function' ? options.disabled() : false);
+        const tapSlop = options.tapSlop ?? 16;
+        let activePointer = null;
+        let startX = 0;
+        let startY = 0;
+        let suppressClick = false;
+
+        const run = event => {
+            if (isDisabled()) return;
+            void handler(event);
+        };
+
+        const onPointerDown = event => {
+            if (isDisabled()) return;
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+            activePointer = event.pointerId;
+            startX = event.clientX;
+            startY = event.clientY;
+        };
+
+        const onPointerUp = event => {
+            if (isDisabled() || event.pointerId !== activePointer) return;
+            activePointer = null;
+
+            if (event.pointerType === 'mouse') {
+                run(event);
+                return;
+            }
+
+            const dx = Math.abs(event.clientX - startX);
+            const dy = Math.abs(event.clientY - startY);
+            if (dx > tapSlop || dy > tapSlop) return;
+
+            suppressClick = true;
+            event.preventDefault();
+            run(event);
+            window.setTimeout(() => { suppressClick = false; }, 500);
+        };
+
+        const onPointerCancel = event => {
+            if (event.pointerId === activePointer) activePointer = null;
+        };
+
+        if (window.PointerEvent) {
+            element.addEventListener('pointerdown', onPointerDown);
+            element.addEventListener('pointerup', onPointerUp);
+            element.addEventListener('pointercancel', onPointerCancel);
+            element.addEventListener('click', event => {
+                if (!suppressClick) return;
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            return;
+        }
+
+        let touchActive = false;
+        element.addEventListener('touchstart', event => {
+            if (isDisabled() || event.touches.length !== 1) return;
+            touchActive = true;
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+        }, { passive: true });
+
+        element.addEventListener('touchend', event => {
+            if (!touchActive) return;
+            touchActive = false;
+            const touch = event.changedTouches[0];
+            if (!touch) return;
+            const dx = Math.abs(touch.clientX - startX);
+            const dy = Math.abs(touch.clientY - startY);
+            if (dx > tapSlop || dy > tapSlop) return;
+            suppressClick = true;
+            event.preventDefault();
+            run(event);
+            window.setTimeout(() => { suppressClick = false; }, 500);
+        }, { passive: false });
+
+        element.addEventListener('click', event => {
+            if (suppressClick) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            run(event);
+        });
     }
 
     function configureChipDrag(chip, enabled) {
@@ -3851,6 +3970,7 @@
             const item = (lesson.fill_exercises || []).map(normalizeFillExercise).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
             const blankCount = item?.blankCount || 1;
             const practiceDone = !!currentUiState(lesson).practiceDone;
+            if (touchPlacement) card.classList.add('touch-placement');
             updateTouchDragHints(card, 'fill');
 
             const getSlots = () => collectFillSlotsFromCard(card, blankCount);
@@ -3904,12 +4024,10 @@
                     chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
                 }
 
-                chip.addEventListener('click', async e => {
+                const onFillChipTap = async () => {
                     if (practiceDone) return;
                     const slot = chip.closest('.fill-drop-slot');
-
                     if (touchPlacement) {
-                        e.preventDefault();
                         if (slot) {
                             await returnChipToPool(chip, slot);
                             return;
@@ -3917,11 +4035,16 @@
                         toggleSelectedChip(chip, card);
                         return;
                     }
-
                     if (slot) {
                         await returnChipToPool(chip, slot);
                     }
-                });
+                };
+
+                if (touchPlacement) {
+                    bindTouchTap(chip, onFillChipTap, { disabled: () => practiceDone });
+                } else {
+                    chip.addEventListener('click', onFillChipTap);
+                }
             };
 
             const allowDrop = target => {
@@ -3938,11 +4061,13 @@
 
             if (touchPlacement) {
                 card.querySelectorAll('.fill-drop-slot').forEach(slot => {
-                    slot.addEventListener('click', async () => {
+                    bindTouchTap(slot, async () => {
                         if (practiceDone || slot.querySelector('.fill-slot-chip')) return;
                         const selected = getSelectedChip(card);
                         if (!selected || selected.closest('.fill-drop-slot')) return;
                         await dropIntoSlot(slot, selected);
+                    }, {
+                        disabled: () => practiceDone || !!slot.querySelector('.fill-slot-chip')
                     });
                 });
             } else {
@@ -3982,6 +4107,7 @@
             const zone = card.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
             if (!pool || !zone) return;
             const practiceDone = !!currentUiState(lesson).practiceDone;
+            if (touchPlacement) card.classList.add('touch-placement');
             updateTouchDragHints(card, 'sort');
 
             const sortZonePlaceholderText = () => (
@@ -4042,11 +4168,9 @@
                     chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
                 }
 
-                chip.addEventListener('click', async e => {
+                const onSortChipTap = async () => {
                     if (practiceDone) return;
-
                     if (touchPlacement) {
-                        e.preventDefault();
                         if (chip.parentElement === zone) {
                             pool.appendChild(chip);
                             clearSelectedChips(card);
@@ -4056,14 +4180,19 @@
                         await moveChipToZone(chip);
                         return;
                     }
-
                     if (chip.parentElement === zone) {
                         pool.appendChild(chip);
                     } else {
                         zone.appendChild(chip);
                     }
                     await persistOrder();
-                });
+                };
+
+                if (touchPlacement) {
+                    bindTouchTap(chip, onSortChipTap, { disabled: () => practiceDone });
+                } else {
+                    chip.addEventListener('click', onSortChipTap);
+                }
             };
 
             const allowDrop = target => {
@@ -4098,12 +4227,12 @@
                     await persistOrder();
                 });
             } else {
-                zone.addEventListener('click', async e => {
-                    if (practiceDone || e.target.closest('.drag-chip')) return;
+                bindTouchTap(zone, async event => {
+                    if (practiceDone || event.target.closest('.drag-chip')) return;
                     const selected = getSelectedChip(card);
                     if (!selected || selected.parentElement !== pool) return;
                     await moveChipToZone(selected);
-                });
+                }, { disabled: () => practiceDone });
             }
 
             pool.querySelectorAll('.drag-chip').forEach(bindSortChip);
