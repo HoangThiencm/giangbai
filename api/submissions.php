@@ -654,6 +654,30 @@ if ($method === 'POST' && $action === 'status') {
     respond(['ok' => true, 'status' => $status]);
 }
 
+if ($method === 'POST' && $action === 'delete') {
+    $teacher = submission_require_teacher($pdo);
+    $data = json_body();
+    $assignment = submission_require_owner($pdo, $teacher, (int)($data['id'] ?? 0));
+    $assignmentId = (int)$assignment['id'];
+    $pdo->beginTransaction();
+    try {
+        // Delete database records explicitly so this also works for older
+        // installations whose automatically-created tables have no FK cascade.
+        $pdo->prepare('DELETE f FROM assignment_submission_files f INNER JOIN assignment_submissions s ON s.id = f.submission_id WHERE s.assignment_id = ?')->execute([$assignmentId]);
+        $pdo->prepare('DELETE FROM assignment_submissions WHERE assignment_id = ?')->execute([$assignmentId]);
+        $pdo->prepare('DELETE FROM submission_participants WHERE assignment_id = ?')->execute([$assignmentId]);
+        $pdo->prepare('DELETE FROM submission_assignments WHERE id = ?')->execute([$assignmentId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+    respond([
+        'ok' => true,
+        'message' => 'Đã xóa đợt báo cáo và toàn bộ dữ liệu nộp trong hệ thống. Tệp trên Google Drive được giữ lại để an toàn.',
+    ]);
+}
+
 if ($method === 'GET' && $action === 'public') {
     $assignment = submission_assignment_by_code($pdo, (string)($_GET['code'] ?? ''));
     if (!$assignment) respond(['error' => 'Đường link nộp bài không tồn tại.'], 404);
