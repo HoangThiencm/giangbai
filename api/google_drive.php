@@ -224,6 +224,15 @@ function drive_participant_folder(string $assignmentFolderId, string $groupName,
     return drive_get_or_create_folder($groupFolder, trim($fullName) . ' - ' . trim($identifier));
 }
 
+function drive_board_folder(string $publicCode, string $title, ?string $academicYear = null): string
+{
+    $root = defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
+    if ($root === '') throw new RuntimeException('Chưa cấu hình GOOGLE_DRIVE_ROOT_FOLDER_ID trên hosting.');
+    $categoryFolder = drive_get_or_create_folder($root, '03_BANG_CHIA_SE');
+    $yearFolder = drive_get_or_create_folder($categoryFolder, 'NAM_HOC_' . drive_school_year($academicYear));
+    return drive_get_or_create_folder($yearFolder, '[' . $publicCode . '] ' . $title);
+}
+
 function drive_upload_file(string $folderId, string $storedName, string $mimeType, string $tmpPath): array
 {
     $content = file_get_contents($tmpPath);
