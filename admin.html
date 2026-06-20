@@ -2118,6 +2118,7 @@
         (function () {
             const TAB_DEFS = [
                 ['accounts', 'Tạo tài khoản', 'fa-user-graduate'],
+                ['tranphu', 'THCS Trần Phú', 'fa-school'],
                 ['settings', 'Cài đặt hệ thống', 'fa-sliders']
             ];
 
@@ -2221,6 +2222,7 @@
                 });
                 move(panel('accounts'), $('studentCreatePanel'));
                 move(panel('accounts'), accountsTable());
+                move(panel('tranphu'), $('tranPhuDataPanel'));
                 move(panel('settings'), settingsCard());
 
                 nav.querySelectorAll('.admin-tab-button').forEach(btn => {
@@ -2253,6 +2255,7 @@
             }
         })();
     </script>
+    <script src="admin-tranphu.js"></script>
 </body>
 
 </html>

@@ -14,6 +14,9 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
         mjx-container svg { display: inline !important; }
 
@@ -71,268 +74,336 @@
             font-size: 0.72rem;
         }
 
-        .ai-hub-banner {
-            border-radius: 28px;
-            border: 1px solid rgba(99, 102, 241, 0.18);
-            background:
-                radial-gradient(circle at 100% 0%, rgba(129, 140, 248, 0.22), transparent 42%),
-                linear-gradient(135deg, #1e1b4b 0%, #312e81 48%, #3730a3 100%);
-            box-shadow: 0 22px 50px rgba(49, 46, 129, 0.18);
-            color: #eef2ff;
+        .tools-deck {
+            position: relative;
+            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+            border-radius: 32px;
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            box-shadow:
+                0 1px 2px rgba(15, 23, 42, 0.04),
+                0 28px 72px rgba(15, 23, 42, 0.09);
+            padding: 1.35rem;
             overflow: hidden;
         }
 
-        .ai-hub-banner-inner {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            padding: 1.35rem 1.5rem;
-        }
-
         @media (min-width: 768px) {
-            .ai-hub-banner-inner {
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                padding: 1.5rem 1.75rem;
+            .tools-deck {
+                padding: 1.65rem 1.75rem 1.75rem;
             }
         }
 
-        .ai-hub-banner h3 {
-            margin-top: 0.35rem;
-            font-size: 1.35rem;
+        .tools-deck::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #f97316);
+        }
+
+        .tools-deck-intro {
+            margin-bottom: 1.35rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .tools-deck-intro h2 {
+            margin-top: 0.4rem;
+            font-size: 1.45rem;
             font-weight: 800;
-            line-height: 1.25;
-            color: #fff;
-        }
-
-        .ai-hub-banner p {
-            margin-top: 0.45rem;
-            max-width: 38rem;
-            font-size: 0.9rem;
-            line-height: 1.55;
-            color: rgba(224, 231, 255, 0.86);
-        }
-
-        .ai-hub-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.45rem 0.9rem;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #e0e7ff;
-            white-space: nowrap;
-        }
-
-        .tool-category-head {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.9rem;
-        }
-
-        .tool-category-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
-            display: grid;
-            place-items: center;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-
-        .tool-category-title {
-            font-size: 0.95rem;
-            font-weight: 800;
+            letter-spacing: -0.03em;
             color: #0f172a;
+            line-height: 1.2;
         }
 
-        .tool-category-desc {
-            margin-top: 0.1rem;
-            font-size: 0.78rem;
+        .tools-deck-sub {
+            margin-top: 0.45rem;
+            max-width: 40rem;
+            font-size: 0.92rem;
+            line-height: 1.6;
             color: #64748b;
         }
 
-        .tool-category-grid {
+        .tools-bento {
             display: grid;
-            gap: 0.9rem;
+            gap: 12px;
             grid-template-columns: 1fr;
         }
 
-        @media (min-width: 640px) {
-            .tool-category-grid {
+        @media (min-width: 700px) {
+            .tools-bento {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
-        @media (min-width: 1024px) {
-            .tool-category-grid--cols-3 {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-
-            .tool-category-grid--bento {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-
-            .tool-category-grid--bento .ai-tool-card--featured {
-                grid-column: span 2;
+        @media (min-width: 1080px) {
+            .tools-bento {
+                grid-template-columns: repeat(12, minmax(0, 1fr));
+                gap: 14px;
             }
         }
 
-        .ai-tool-card {
+        .tool-tile {
             position: relative;
             display: flex;
             flex-direction: column;
-            min-height: 168px;
-            border-radius: 20px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: #fff;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-            overflow: hidden;
+            justify-content: flex-end;
+            min-height: 148px;
+            padding: 1.2rem 1.3rem;
+            border-radius: 22px;
             text-decoration: none;
-            color: inherit;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            overflow: hidden;
+            isolation: isolate;
+            transition:
+                transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.24s ease;
         }
 
-        .ai-tool-card:hover {
+        .tool-tile:hover {
             transform: translateY(-3px);
-            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
         }
 
-        .ai-tool-card-accent {
-            height: 4px;
-            width: 100%;
+        .tool-tile-glow {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            filter: blur(40px);
+            z-index: 0;
         }
 
-        .ai-tool-card-body {
-            display: flex;
-            flex: 1;
-            flex-direction: column;
-            padding: 1rem 1.1rem 1.05rem;
+        .tool-tile-watermark {
+            position: absolute;
+            right: 0.75rem;
+            top: 0.5rem;
+            font-size: 4.5rem;
+            line-height: 1;
+            opacity: 0.07;
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .ai-tool-card-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
+        .tool-tile-content {
+            position: relative;
+            z-index: 1;
+            padding-right: 2.75rem;
+            padding-bottom: 0.15rem;
         }
 
-        .ai-tool-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            font-size: 1.05rem;
-            flex-shrink: 0;
-        }
-
-        .ai-tool-tag {
-            border-radius: 999px;
-            padding: 0.2rem 0.55rem;
+        .tool-tile-eyebrow {
+            display: inline-block;
             font-size: 0.68rem;
-            font-weight: 800;
-            letter-spacing: 0.04em;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            background: #f8fafc;
-            color: #64748b;
+            opacity: 0.72;
         }
 
-        .ai-tool-name {
-            margin-top: 0.85rem;
-            font-size: 1rem;
+        .tool-tile-title {
+            margin-top: 0.35rem;
+            font-size: 1.08rem;
             font-weight: 800;
-            line-height: 1.3;
-            color: #0f172a;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
         }
 
-        .ai-tool-sub {
-            margin-top: 0.15rem;
-            font-size: 0.76rem;
-            font-weight: 600;
-            color: #94a3b8;
-        }
-
-        .ai-tool-desc {
-            margin-top: 0.45rem;
-            flex: 1;
-            font-size: 0.84rem;
+        .tool-tile-desc {
+            margin-top: 0.4rem;
+            font-size: 0.82rem;
             line-height: 1.5;
-            color: #64748b;
+            opacity: 0.82;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
-        .ai-tool-cta {
-            margin-top: 0.85rem;
+        .tool-tile-go {
+            position: absolute;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 2;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 0.82rem;
+            transition: transform 0.22s ease, background 0.22s ease;
+        }
+
+        .tool-tile:hover .tool-tile-go {
+            transform: translateX(2px);
+        }
+
+        .tool-tile--hero {
+            min-height: 188px;
+            color: #fff;
+        }
+
+        @media (min-width: 1080px) {
+            .tool-tile--hero-exam { grid-column: span 7; }
+            .tool-tile--hero-matrix { grid-column: span 5; }
+            .tool-tile--mid { grid-column: span 4; min-height: 156px; }
+            .tool-tile--sm { grid-column: span 3; min-height: 132px; }
+        }
+
+        .tool-tile--hero-exam {
+            background: linear-gradient(145deg, #0c0a09 0%, #431407 42%, #c2410c 100%);
+            box-shadow: 0 16px 40px rgba(194, 65, 12, 0.22);
+        }
+
+        .tool-tile--hero-exam .tool-tile-glow {
+            width: 220px;
+            height: 220px;
+            right: -40px;
+            top: -70px;
+            background: rgba(251, 146, 60, 0.55);
+        }
+
+        .tool-tile--hero-exam .tool-tile-watermark { opacity: 0.12; color: #fff; }
+        .tool-tile--hero-exam .tool-tile-go {
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        .tool-tile--hero-exam:hover .tool-tile-go {
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        .tool-tile--hero-matrix {
+            background: linear-gradient(145deg, #0f172a 0%, #312e81 46%, #7c3aed 100%);
+            box-shadow: 0 16px 40px rgba(124, 58, 237, 0.22);
+        }
+
+        .tool-tile--hero-matrix .tool-tile-glow {
+            width: 180px;
+            height: 180px;
+            left: -30px;
+            bottom: -60px;
+            background: rgba(167, 139, 250, 0.5);
+        }
+
+        .tool-tile--hero-matrix .tool-tile-watermark { opacity: 0.1; color: #fff; }
+        .tool-tile--hero-matrix .tool-tile-go {
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tool-tile--hero-matrix:hover .tool-tile-go {
+            background: rgba(255, 255, 255, 0.26);
+        }
+
+        .tool-tile--light {
+            background: #f8fafc;
+            border: 1px solid #e8edf3;
+            color: #0f172a;
+        }
+
+        .tool-tile--light .tool-tile-eyebrow { color: #64748b; }
+        .tool-tile--light .tool-tile-desc { color: #64748b; }
+        .tool-tile--light .tool-tile-watermark { color: #94a3b8; opacity: 0.09; }
+
+        .tool-tile--light .tool-tile-go {
+            background: #fff;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+        }
+
+        .tool-tile--light:hover {
+            background: #fff;
+            border-color: #c7d2fe;
+            box-shadow: 0 14px 36px rgba(99, 102, 241, 0.1);
+        }
+
+        .tool-tile--light:hover .tool-tile-go {
+            background: #4f46e5;
+            color: #fff;
+            border-color: #4f46e5;
+        }
+
+        .tools-lotrinh-strip {
+            margin-top: 1.35rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .tools-lotrinh-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .tools-lotrinh-head h3 {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+
+        .tools-lotrinh-head p {
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+
+        .tools-lotrinh-row {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+        }
+
+        .tool-lotrinh-pill {
+            flex: 0 0 auto;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
-            font-size: 0.8rem;
+            gap: 0.65rem;
+            padding: 0.75rem 1rem 0.75rem 0.85rem;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+            border: 1px solid #bbf7d0;
+            text-decoration: none;
+            color: #14532d;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .tool-lotrinh-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(22, 163, 74, 0.14);
+        }
+
+        .tool-lotrinh-grade {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 1rem;
             font-weight: 800;
-            letter-spacing: 0.03em;
-            transition: transform 0.18s ease, gap 0.18s ease;
+            color: #15803d;
+            box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
         }
 
-        .ai-tool-card:hover .ai-tool-cta {
-            gap: 0.55rem;
+        .tool-lotrinh-label {
+            font-size: 0.84rem;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
-        .ai-tool-card--amber .ai-tool-card-accent { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-        .ai-tool-card--amber .ai-tool-icon { background: #fef3c7; color: #d97706; }
-        .ai-tool-card--amber .ai-tool-cta { color: #d97706; }
-        .ai-tool-card--amber:hover { border-color: rgba(245, 158, 11, 0.35); }
+        .tool-lotrinh-pill i.fa-arrow-right {
+            font-size: 0.72rem;
+            opacity: 0.5;
+            margin-left: 0.15rem;
+        }
 
-        .ai-tool-card--indigo .ai-tool-card-accent { background: linear-gradient(90deg, #6366f1, #818cf8); }
-        .ai-tool-card--indigo .ai-tool-icon { background: #e0e7ff; color: #4f46e5; }
-        .ai-tool-card--indigo .ai-tool-cta { color: #4f46e5; }
-        .ai-tool-card--indigo:hover { border-color: rgba(99, 102, 241, 0.35); }
-
-        .ai-tool-card--sky .ai-tool-card-accent { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
-        .ai-tool-card--sky .ai-tool-icon { background: #e0f2fe; color: #0284c7; }
-        .ai-tool-card--sky .ai-tool-cta { color: #0284c7; }
-        .ai-tool-card--sky:hover { border-color: rgba(14, 165, 233, 0.35); }
-
-        .ai-tool-card--pink .ai-tool-card-accent { background: linear-gradient(90deg, #ec4899, #f472b6); }
-        .ai-tool-card--pink .ai-tool-icon { background: #fce7f3; color: #db2777; }
-        .ai-tool-card--pink .ai-tool-cta { color: #db2777; }
-        .ai-tool-card--pink:hover { border-color: rgba(236, 72, 153, 0.35); }
-
-        .ai-tool-card--emerald .ai-tool-card-accent { background: linear-gradient(90deg, #10b981, #34d399); }
-        .ai-tool-card--emerald .ai-tool-icon { background: #d1fae5; color: #059669; }
-        .ai-tool-card--emerald .ai-tool-cta { color: #059669; }
-        .ai-tool-card--emerald:hover { border-color: rgba(16, 185, 129, 0.35); }
-
-        .ai-tool-card--orange .ai-tool-card-accent { background: linear-gradient(90deg, #f97316, #fb923c); }
-        .ai-tool-card--orange .ai-tool-icon { background: #ffedd5; color: #ea580c; }
-        .ai-tool-card--orange .ai-tool-cta { color: #ea580c; }
-        .ai-tool-card--orange:hover { border-color: rgba(249, 115, 22, 0.35); }
-
-        .ai-tool-card--cyan .ai-tool-card-accent { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
-        .ai-tool-card--cyan .ai-tool-icon { background: #cffafe; color: #0891b2; }
-        .ai-tool-card--cyan .ai-tool-cta { color: #0891b2; }
-        .ai-tool-card--cyan:hover { border-color: rgba(6, 182, 212, 0.35); }
-
-        .ai-tool-card--teal .ai-tool-card-accent { background: linear-gradient(90deg, #14b8a6, #2dd4bf); }
-        .ai-tool-card--teal .ai-tool-icon { background: #ccfbf1; color: #0f766e; }
-        .ai-tool-card--teal .ai-tool-cta { color: #0f766e; }
-        .ai-tool-card--teal:hover { border-color: rgba(20, 184, 166, 0.35); }
-
-        .ai-tool-card--lime .ai-tool-card-accent { background: linear-gradient(90deg, #84cc16, #a3e635); }
-        .ai-tool-card--lime .ai-tool-icon { background: #ecfccb; color: #65a30d; }
-        .ai-tool-card--lime .ai-tool-cta { color: #65a30d; }
-        .ai-tool-card--lime:hover { border-color: rgba(132, 204, 22, 0.35); }
-
-        .tool-category--lotrinh .tool-category-icon {
-            background: #ecfccb;
-            color: #65a30d;
+        .tools-deck--teacher {
+            padding-top: 1.15rem;
         }
 
         .nav-chip {
@@ -492,14 +563,6 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             opacity: 0.88;
-        }
-
-        .teacher-tools-compact .ai-tool-card {
-            min-height: 156px;
-        }
-
-        .teacher-tools-compact .ai-tool-desc {
-            -webkit-line-clamp: 2;
         }
 
     </style>
@@ -850,11 +913,10 @@
 
     <main class="mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <section>
-            <div id="defaultToolsHeader" class="mb-5 flex items-center justify-between gap-3">
+            <div id="defaultToolsHeader" class="mb-4 flex items-center justify-between gap-3">
                 <div>
                     <p class="section-kicker text-indigo-600">Công cụ AI</p>
-                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Bộ công cụ giảng dạy</h3>
-                    <p class="mt-1 text-sm text-slate-500">Nhóm theo mục đích: giảng dạy, soạn đề, thi online và lộ trình tự học.</p>
+                    <h3 class="mt-2 text-xl font-extrabold tracking-tight text-slate-900">Bộ công cụ giảng dạy</h3>
                 </div>
                 <button onclick="SystemConfig.toggleGuide('guideContent')"
                     class="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 md:inline-flex md:items-center md:gap-2">
@@ -902,237 +964,145 @@
                 <div id="teacherLotrinhPanel" class="teacher-lotrinh-panel"></div>
             </section>
 
-            <div id="teacherToolsDivider" class="ai-hub-banner hidden mb-6">
-                <div class="ai-hub-banner-inner">
-                    <div>
-                        <p class="section-kicker text-indigo-200">Công cụ AI</p>
-                        <h3>Hỗ trợ soạn đề, dạy học và báo cáo</h3>
-                        <p>Tách riêng với lộ trình Toán — dùng khi cần slides, đề thi, thi online hoặc soạn báo cáo hành chính.</p>
-                    </div>
-                    <span class="ai-hub-pill"><i class="fas fa-wand-magic-sparkles"></i> 8 công cụ hỗ trợ</span>
-                </div>
-            </div>
+            <div id="toolsDeck" class="tools-deck mb-10">
 
-            <div id="mainToolsGrid" class="ai-tools-hub space-y-7 mb-10">
+                <div id="teacherToolsDivider" class="tools-deck-intro hidden">
+                    <p class="section-kicker text-indigo-600">Công cụ AI</p>
+                    <h2>Hỗ trợ soạn đề, dạy học và báo cáo</h2>
+                    <p class="tools-deck-sub">Tách riêng với lộ trình Toán — mở nhanh khi cần slides, đề thi, thi online hoặc giao bài.</p>
+                </div>
 
-            <section class="tool-category">
-                <div class="tool-category-head">
-                    <span class="tool-category-icon bg-indigo-100 text-indigo-600"><i class="fas fa-chalkboard-user"></i></span>
-                    <div>
-                        <div class="tool-category-title">Giảng dạy trực quan</div>
-                        <div class="tool-category-desc">Slides, hình học và câu hỏi tương tác trên lớp</div>
-                    </div>
-                </div>
-                <div class="tool-category-grid tool-category-grid--cols-3">
-                    <a href="gslides.html" data-tool="gslides" class="ai-tool-card ai-tool-card--amber group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-presentation-screen"></i></span>
-                                <span class="ai-tool-tag">Slides</span>
-                            </div>
-                            <h3 class="ai-tool-name">Trình chiếu Slides</h3>
-                            <p class="ai-tool-desc">Tích hợp Google Slides để giảng dạy trực tiếp, không cần chuyển tab.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="vehinh.html" data-tool="vehinh" class="ai-tool-card ai-tool-card--indigo group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-shapes"></i></span>
-                                <span class="ai-tool-tag">Vector</span>
-                            </div>
-                            <h3 class="ai-tool-name">Vẽ hình học AI</h3>
-                            <p class="ai-tool-desc">Mô tả bằng lời hoặc vẽ tay — AI dựng hình học, đồ thị hàm số chính xác.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="smartquiz.html" data-tool="smartquiz" class="ai-tool-card ai-tool-card--sky group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-magic"></i></span>
-                                <span class="ai-tool-tag">Game</span>
-                            </div>
-                            <h3 class="ai-tool-name">Soạn câu hỏi &amp; slide</h3>
-                            <p class="ai-tool-sub">Game dạy học theo chủ đề</p>
-                            <p class="ai-tool-desc">Nhập chủ đề, AI soạn câu hỏi và tạo slide trình chiếu tức thì.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                </div>
-            </section>
+                <div id="mainToolsGrid" class="tools-bento">
 
-            <section class="tool-category">
-                <div class="tool-category-head">
-                    <span class="tool-category-icon bg-pink-100 text-pink-600"><i class="fas fa-file-circle-check"></i></span>
-                    <div>
-                        <div class="tool-category-title">Soạn đề &amp; kiểm tra</div>
-                        <div class="tool-category-desc">Ma trận, trộn đề và ra đề kiểm tra định kỳ</div>
-                    </div>
-                </div>
-                <div class="tool-category-grid tool-category-grid--cols-3">
-                    <a href="matrande.html" data-tool="matrande" class="ai-tool-card ai-tool-card--pink group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-table"></i></span>
-                                <span class="ai-tool-tag">CV 7991</span>
-                            </div>
-                            <h3 class="ai-tool-name">Đề từ ma trận</h3>
-                            <p class="ai-tool-sub">Theo CV 7991-BGDĐT</p>
-                            <p class="ai-tool-desc">Quét ma trận / bảng đặc tả → sinh đề TN &amp; TL → xuất Word chuẩn.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                    <a href="thitructuyen.html" data-tool="thitructuyen" class="tool-tile tool-tile--hero tool-tile--hero-exam">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-qrcode"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Thi &amp; chấm điểm</span>
+                            <h3 class="tool-tile-title">Thi trực tuyến</h3>
+                            <p class="tool-tile-desc">Tạo kỳ thi, chia sẻ QR — HS làm bài trên điện thoại, chấm tự động, xuất Excel.</p>
                         </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>
-                    <a href="tronde.html" data-tool="tronde" class="ai-tool-card ai-tool-card--emerald group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-random"></i></span>
-                                <span class="ai-tool-tag">Word/PDF</span>
-                            </div>
-                            <h3 class="ai-tool-name">Trộn đề thi</h3>
-                            <p class="ai-tool-desc">Xáo trộn câu hỏi từ Word/PDF, giữ định dạng công thức Toán học.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="kttx.html" data-tool="kttx" class="ai-tool-card ai-tool-card--cyan group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-stopwatch"></i></span>
-                                <span class="ai-tool-tag">KTTX</span>
-                            </div>
-                            <h3 class="ai-tool-name">Ra đề kiểm tra</h3>
-                            <p class="ai-tool-sub">Xuất ngược ma trận</p>
-                            <p class="ai-tool-desc">Tạo đề từ ảnh SGK hoặc PDF tương tự, xuất ma trận và bảng đặc tả.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                </div>
-            </section>
 
-            <section class="tool-category">
-                <div class="tool-category-head">
-                    <span class="tool-category-icon bg-orange-100 text-orange-600"><i class="fas fa-clipboard-check"></i></span>
-                    <div>
-                        <div class="tool-category-title">Thi &amp; hành chính</div>
-                        <div class="tool-category-desc">Tổ chức thi online và soạn báo cáo giáo dục</div>
-                    </div>
-                </div>
-                <div class="tool-category-grid tool-category-grid--bento">
-                    <a href="thitructuyen.html" data-tool="thitructuyen" class="ai-tool-card ai-tool-card--orange ai-tool-card--featured group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-qrcode"></i></span>
-                                <span class="ai-tool-tag">QR · Mobile</span>
-                            </div>
-                            <h3 class="ai-tool-name">Thi trực tuyến</h3>
-                            <p class="ai-tool-desc">Tạo kỳ thi, chia sẻ QR cho HS làm bài trên điện thoại. Chấm điểm tự động, xuất Excel kết quả.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
+                    <a href="matrande.html" data-tool="matrande" class="tool-tile tool-tile--hero tool-tile--hero-matrix">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-table-cells"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">CV 7991-BGDĐT</span>
+                            <h3 class="tool-tile-title">Đề từ ma trận</h3>
+                            <p class="tool-tile-desc">Quét ma trận / bảng đặc tả → sinh đề TN &amp; TL → xuất Word.</p>
                         </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>
-                    <a href="nopbai-quanly.html" data-tool="nopbai" class="ai-tool-card ai-tool-card--teal group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-cloud-arrow-up"></i></span>
-                                <span class="ai-tool-tag">Google Drive</span>
-                            </div>
-                            <h3 class="ai-tool-name">Giao &amp; nhận bài</h3>
-                            <p class="ai-tool-desc">Tạo link nộp tự do, theo lớp hoặc danh sách chỉ định; tệp lưu trực tiếp trên Drive.</p>
-                            <span class="ai-tool-cta">Quản lý bài nộp <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="vietbaocao.html" data-tool="vietbaocao" class="ai-tool-card ai-tool-card--teal group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-file-signature"></i></span>
-                                <span class="ai-tool-tag">Word</span>
-                            </div>
-                            <h3 class="ai-tool-name">Viết báo cáo</h3>
-                            <p class="ai-tool-desc">Nhập vài ý chính, AI soạn báo cáo giáo dục/hành chính đúng văn phong.</p>
-                            <span class="ai-tool-cta">Mở công cụ <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                </div>
-            </section>
 
-            <section id="studentLotrinhCategory" class="tool-category tool-category--lotrinh">
-                <div class="tool-category-head">
-                    <span class="tool-category-icon"><i class="fas fa-route"></i></span>
-                    <div>
-                        <div class="tool-category-title">Lộ trình tự học Toán</div>
-                        <div class="tool-category-desc">Học sinh luyện tập theo từng bài, lưu tiến độ cá nhân</div>
+                    <a href="gslides.html" data-tool="gslides" class="tool-tile tool-tile--light tool-tile--mid">
+                        <span class="tool-tile-watermark"><i class="fas fa-presentation-screen"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Giảng dạy</span>
+                            <h3 class="tool-tile-title">Trình chiếu Slides</h3>
+                            <p class="tool-tile-desc">Google Slides tích hợp sẵn — giảng trực tiếp không chuyển tab.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="vehinh.html" data-tool="vehinh" class="tool-tile tool-tile--light tool-tile--mid">
+                        <span class="tool-tile-watermark"><i class="fas fa-shapes"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Giảng dạy</span>
+                            <h3 class="tool-tile-title">Vẽ hình học AI</h3>
+                            <p class="tool-tile-desc">Mô tả hoặc vẽ tay — AI dựng hình học, đồ thị hàm số vector.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="smartquiz.html" data-tool="smartquiz" class="tool-tile tool-tile--light tool-tile--mid">
+                        <span class="tool-tile-watermark"><i class="fas fa-wand-magic-sparkles"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Giảng dạy</span>
+                            <h3 class="tool-tile-title">Soạn câu hỏi game</h3>
+                            <p class="tool-tile-desc">Nhập chủ đề — AI soạn câu hỏi và slide dạy học tức thì.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="tronde.html" data-tool="tronde" class="tool-tile tool-tile--light tool-tile--sm">
+                        <span class="tool-tile-watermark"><i class="fas fa-shuffle"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Soạn đề</span>
+                            <h3 class="tool-tile-title">Trộn đề thi</h3>
+                            <p class="tool-tile-desc">Xáo trộn câu từ Word/PDF, giữ công thức Toán.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="kttx.html" data-tool="kttx" class="tool-tile tool-tile--light tool-tile--sm">
+                        <span class="tool-tile-watermark"><i class="fas fa-stopwatch"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Soạn đề</span>
+                            <h3 class="tool-tile-title">Ra đề KTTX</h3>
+                            <p class="tool-tile-desc">Từ ảnh SGK/PDF, xuất ngược ma trận.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="nopbai-quanly.html" data-tool="nopbai" class="tool-tile tool-tile--light tool-tile--sm">
+                        <span class="tool-tile-watermark"><i class="fas fa-cloud-arrow-up"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Giao bài</span>
+                            <h3 class="tool-tile-title">Giao &amp; nhận bài</h3>
+                            <p class="tool-tile-desc">Link nộp theo lớp, lưu trên Google Drive.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="vietbaocao.html" data-tool="vietbaocao" class="tool-tile tool-tile--light tool-tile--sm">
+                        <span class="tool-tile-watermark"><i class="fas fa-file-signature"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Hành chính</span>
+                            <h3 class="tool-tile-title">Viết báo cáo</h3>
+                            <p class="tool-tile-desc">AI soạn báo cáo giáo dục đúng văn phong.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                </div>
+
+                <section id="studentLotrinhCategory" class="tools-lotrinh-strip">
+                    <div class="tools-lotrinh-head">
+                        <div>
+                            <h3>Lộ trình tự học Toán</h3>
+                            <p>Học sinh luyện tập theo từng bài</p>
+                        </div>
                     </div>
-                </div>
-                <div class="tool-category-grid tool-category-grid--cols-3">
-                    <a href="lotrinhtoan4.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
-                                <span class="ai-tool-tag">Lớp 4</span>
-                            </div>
-                            <h3 class="ai-tool-name">Lộ trình Toán 4</h3>
-                            <p class="ai-tool-desc">Luyện tập theo từng bài và theo dõi tiến độ cá nhân hóa.</p>
-                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="lotrinhtoan6.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
-                                <span class="ai-tool-tag">Lớp 6</span>
-                            </div>
-                            <h3 class="ai-tool-name">Lộ trình Toán 6</h3>
-                            <p class="ai-tool-desc">Cá nhân hóa theo bài học, luyện tập và gợi ý bước tiếp theo.</p>
-                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="lotrinhtoan7.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
-                                <span class="ai-tool-tag">Lớp 7</span>
-                            </div>
-                            <h3 class="ai-tool-name">Lộ trình Toán 7</h3>
-                            <p class="ai-tool-desc">Lộ trình theo từng bài, dùng chung hệ thống luyện tập và lưu tiến độ.</p>
-                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="lotrinhtoan8.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
-                                <span class="ai-tool-tag">Lớp 8</span>
-                            </div>
-                            <h3 class="ai-tool-name">Lộ trình Toán 8</h3>
-                            <p class="ai-tool-desc">Sẵn sàng nhập nội dung khi triển khai lớp mới.</p>
-                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                    <a href="lotrinhtoan9.html" data-student-lotrinh-card="1" class="ai-tool-card ai-tool-card--lime group">
-                        <div class="ai-tool-card-accent"></div>
-                        <div class="ai-tool-card-body">
-                            <div class="ai-tool-card-top">
-                                <span class="ai-tool-icon"><i class="fas fa-route"></i></span>
-                                <span class="ai-tool-tag">Lớp 9</span>
-                            </div>
-                            <h3 class="ai-tool-name">Lộ trình Toán 9</h3>
-                            <p class="ai-tool-desc">Ôn luyện và theo dõi tiến độ theo từng bài học.</p>
-                            <span class="ai-tool-cta">Mở lộ trình <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </a>
-                </div>
-            </section>
+                    <div class="tools-lotrinh-row">
+                        <a href="lotrinhtoan4.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
+                            <span class="tool-lotrinh-grade">4</span>
+                            <span class="tool-lotrinh-label">Toán 4</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="lotrinhtoan6.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
+                            <span class="tool-lotrinh-grade">6</span>
+                            <span class="tool-lotrinh-label">Toán 6</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="lotrinhtoan7.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
+                            <span class="tool-lotrinh-grade">7</span>
+                            <span class="tool-lotrinh-label">Toán 7</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="lotrinhtoan8.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
+                            <span class="tool-lotrinh-grade">8</span>
+                            <span class="tool-lotrinh-label">Toán 8</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="lotrinhtoan9.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
+                            <span class="tool-lotrinh-grade">9</span>
+                            <span class="tool-lotrinh-label">Toán 9</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </section>
 
             </div>
         </section>
@@ -1273,13 +1243,12 @@
             const panel = document.getElementById('teacherLotrinhPanel');
             const divider = document.getElementById('teacherToolsDivider');
             const defaultToolsHeader = document.getElementById('defaultToolsHeader');
-            const mainToolsGrid = document.getElementById('mainToolsGrid');
             if (!hub || !panel) return;
 
             hub.classList.remove('hidden');
             divider?.classList.remove('hidden');
             defaultToolsHeader?.classList.add('hidden');
-            mainToolsGrid?.classList.add('teacher-tools-compact');
+            document.getElementById('toolsDeck')?.classList.add('tools-deck--teacher');
             document.getElementById('guideContent')?.closest('.mb-8')?.classList.add('hidden');
 
             const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({

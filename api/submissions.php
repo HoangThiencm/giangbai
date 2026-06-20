@@ -29,8 +29,13 @@ function submission_schema(PDO $pdo): void
         title VARCHAR(220) NOT NULL,
         description TEXT DEFAULT NULL,
         instructions TEXT DEFAULT NULL,
-        access_mode ENUM('public', 'class', 'selected') NOT NULL DEFAULT 'public',
+        submission_type VARCHAR(20) NOT NULL DEFAULT 'file',
+        academic_year VARCHAR(30) DEFAULT NULL,
+        form_fields_json LONGTEXT DEFAULT NULL,
+        require_files TINYINT(1) NOT NULL DEFAULT 1,
+        access_mode ENUM('public', 'class', 'selected', 'school_list') NOT NULL DEFAULT 'public',
         target_class VARCHAR(100) DEFAULT NULL,
+        source_list_code VARCHAR(40) DEFAULT NULL,
         status ENUM('draft', 'open', 'closed') NOT NULL DEFAULT 'open',
         open_at DATETIME DEFAULT NULL,
         due_at DATETIME DEFAULT NULL,
@@ -53,6 +58,7 @@ function submission_schema(PDO $pdo): void
         role_label VARCHAR(100) DEFAULT NULL,
         group_name VARCHAR(160) DEFAULT NULL,
         contact VARCHAR(180) DEFAULT NULL,
+        reopened TINYINT(1) NOT NULL DEFAULT 0,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uniq_assignment_participant_code (assignment_id, participant_code),
         INDEX idx_submission_participants_user (linked_user_id),
@@ -68,6 +74,7 @@ function submission_schema(PDO $pdo): void
         group_name VARCHAR(160) DEFAULT NULL,
         identifier VARCHAR(180) DEFAULT NULL,
         note TEXT DEFAULT NULL,
+        report_data_json LONGTEXT DEFAULT NULL,
         submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_assignment_submissions_assignment (assignment_id),
         INDEX idx_assignment_submissions_participant (participant_id)
@@ -82,9 +89,37 @@ function submission_schema(PDO $pdo): void
         size_bytes BIGINT NOT NULL DEFAULT 0,
         view_url TEXT NOT NULL,
         download_url TEXT DEFAULT NULL,
+        field_key VARCHAR(120) DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_assignment_submission_files_submission (submission_id)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    // Safe in-place upgrades for installations created before report forms were
+    // added. Shared hosting databases usually allow ALTER TABLE for their owner.
+    $upgrades = [
+        ['submission_assignments', 'submission_type', "VARCHAR(20) NOT NULL DEFAULT 'file'"],
+        ['submission_assignments', 'academic_year', 'VARCHAR(30) DEFAULT NULL'],
+        ['submission_assignments', 'form_fields_json', 'LONGTEXT DEFAULT NULL'],
+        ['submission_assignments', 'require_files', 'TINYINT(1) NOT NULL DEFAULT 1'],
+        ['submission_assignments', 'source_list_code', 'VARCHAR(40) DEFAULT NULL'],
+        ['submission_participants', 'reopened', 'TINYINT(1) NOT NULL DEFAULT 0'],
+        ['assignment_submissions', 'report_data_json', 'LONGTEXT DEFAULT NULL'],
+        ['assignment_submission_files', 'field_key', 'VARCHAR(120) DEFAULT NULL'],
+    ];
+    foreach ($upgrades as [$table, $column, $definition]) {
+        try {
+            $check = $pdo->query("SHOW COLUMNS FROM `$table` LIKE " . $pdo->quote($column));
+            if (!$check->fetch()) $pdo->exec("ALTER TABLE `$table` ADD COLUMN `$column` $definition");
+        } catch (Throwable $e) {
+            // A later API response will expose missing schema through APP_DEBUG;
+            // keep public pages available when ALTER is temporarily restricted.
+        }
+    }
+    try {
+        $pdo->exec("ALTER TABLE submission_assignments MODIFY access_mode ENUM('public', 'class', 'selected', 'school_list') NOT NULL DEFAULT 'public'");
+    } catch (Throwable $e) {
+        // Existing hosts may restrict ALTER permissions; old modes keep working.
+    }
 }
 
 function submission_current_user(PDO $pdo): ?array
@@ -130,6 +165,68 @@ function submission_datetime($value): ?string
     return $timestamp === false ? null : date('Y-m-d H:i:s', $timestamp);
 }
 
+function submission_field_key(string $value, int $index): string
+{
+    $value = trim($value);
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if (is_string($converted)) $value = $converted;
+    }
+    $value = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $value));
+    $value = trim($value, '_');
+    return substr($value ?: ('field_' . ($index + 1)), 0, 100);
+}
+
+function submission_normalize_form_fields($input): array
+{
+    if (!is_array($input)) return [];
+    $types = ['text', 'textarea', 'number', 'date', 'select', 'heading'];
+    $fields = [];
+    $used = [];
+    foreach (array_slice($input, 0, 40) as $index => $raw) {
+        if (!is_array($raw)) continue;
+        $label = trim((string)($raw['label'] ?? ''));
+        if ($label === '') continue;
+        $type = in_array(($raw['type'] ?? ''), $types, true) ? $raw['type'] : 'text';
+        $base = submission_field_key((string)($raw['key'] ?? $label), $index);
+        $key = $base;
+        $suffix = 2;
+        while (isset($used[$key])) $key = substr($base, 0, 94) . '_' . $suffix++;
+        $used[$key] = true;
+        $optionsRaw = $raw['options'] ?? [];
+        if (is_string($optionsRaw)) $optionsRaw = preg_split('/[,;\r\n]+/', $optionsRaw) ?: [];
+        $options = [];
+        if (is_array($optionsRaw)) {
+            foreach ($optionsRaw as $option) {
+                $option = trim((string)$option);
+                if ($option !== '' && !in_array($option, $options, true)) $options[] = substr($option, 0, 180);
+            }
+        }
+        $fields[] = [
+            'key' => $key,
+            'label' => substr($label, 0, 220),
+            'type' => $type,
+            'required' => $type !== 'heading' && !empty($raw['required']),
+            'allow_evidence' => $type !== 'heading' && !empty($raw['allow_evidence']),
+            'evidence_required' => $type !== 'heading' && !empty($raw['allow_evidence']) && !empty($raw['evidence_required']),
+            'options' => $type === 'select' ? array_slice($options, 0, 50) : [],
+        ];
+    }
+    return $fields;
+}
+
+function submission_form_fields(array $assignment): array
+{
+    $decoded = json_decode((string)($assignment['form_fields_json'] ?? '[]'), true);
+    return submission_normalize_form_fields(is_array($decoded) ? $decoded : []);
+}
+
+function submission_report_data($value): array
+{
+    $decoded = is_array($value) ? $value : json_decode((string)$value, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
 function submission_assignment(PDO $pdo, int $id): ?array
 {
     $stmt = $pdo->prepare('SELECT * FROM submission_assignments WHERE id = ? LIMIT 1');
@@ -169,8 +266,13 @@ function submission_public_assignment(array $assignment): array
         'title' => $assignment['title'],
         'description' => $assignment['description'] ?? '',
         'instructions' => $assignment['instructions'] ?? '',
+        'submission_type' => in_array(($assignment['submission_type'] ?? ''), ['file', 'report'], true) ? $assignment['submission_type'] : 'file',
+        'academic_year' => $assignment['academic_year'] ?? '',
+        'form_fields' => submission_form_fields($assignment),
+        'require_files' => (bool)($assignment['require_files'] ?? 1),
         'access_mode' => $assignment['access_mode'],
         'target_class' => $assignment['target_class'] ?? '',
+        'source_list_code' => $assignment['source_list_code'] ?? '',
         'status' => submission_public_status($assignment),
         'open_at' => $assignment['open_at'],
         'due_at' => $assignment['due_at'],
@@ -284,7 +386,16 @@ function submission_normalize_people($people): array
     return $result;
 }
 
-function submission_build_participants(PDO $pdo, string $mode, string $className, array $data, array $teacher): array
+function submission_school_list_people(PDO $pdo, string $listCode): array
+{
+    $stmt = $pdo->prepare("SELECT p.full_name, p.group_name, p.role_label, p.contact
+        FROM school_reference_people p JOIN school_reference_lists l ON l.id = p.list_id
+        WHERE l.list_code = ? ORDER BY p.group_name, p.full_name");
+    $stmt->execute([$listCode]);
+    return $stmt->fetchAll();
+}
+
+function submission_build_participants(PDO $pdo, string $mode, string $className, string $schoolListCode, array $data, array $teacher): array
 {
     if ($mode === 'public') return [];
     $people = $mode === 'selected' ? submission_normalize_people($data['participants'] ?? []) : [];
@@ -299,6 +410,24 @@ function submission_build_participants(PDO $pdo, string $mode, string $className
         $stmt = $pdo->prepare("SELECT id, username, full_name, role, class_name FROM users WHERE is_active = 1 AND class_name = ? ORDER BY full_name");
         $stmt->execute([$className]);
         $accounts = $stmt->fetchAll();
+    } elseif ($mode === 'school_list') {
+        if ($schoolListCode === '') respond(['error' => 'Vui lòng chọn danh sách của trường.'], 422);
+        try {
+            $schoolPeople = submission_school_list_people($pdo, $schoolListCode);
+        } catch (Throwable $e) {
+            respond(['error' => 'Danh sách THCS Trần Phú chưa được khai báo.'], 422);
+        }
+        foreach ($schoolPeople as $schoolPerson) {
+            $people[] = [
+                'linked_user_id' => null,
+                'participant_code' => submission_code(8),
+                'full_name' => trim((string)$schoolPerson['full_name']),
+                'role_label' => trim((string)($schoolPerson['role_label'] ?? '')),
+                'group_name' => trim((string)($schoolPerson['group_name'] ?? '')),
+                'contact' => trim((string)($schoolPerson['contact'] ?? '')),
+            ];
+        }
+        $accounts = [];
     } elseif ($selectedIds) {
         $directory = submission_teacher_directory($pdo, $teacher);
         $allowedUserIds = array_map(fn($row) => (int)$row['id'], $directory['users']);
@@ -385,9 +514,8 @@ function submission_sync_participants(PDO $pdo, int $assignmentId, array $people
     }
 }
 
-function submission_files_input(): array
+function submission_files_from_input($source): array
 {
-    $source = $_FILES['files'] ?? null;
     if (!$source) return [];
     if (!is_array($source['name'])) return [$source];
     $files = [];
@@ -403,6 +531,11 @@ function submission_files_input(): array
     return $files;
 }
 
+function submission_files_input(): array
+{
+    return submission_files_from_input($_FILES['files'] ?? null);
+}
+
 function submission_participants_for_teacher(PDO $pdo, int $assignmentId): array
 {
     $stmt = $pdo->prepare("SELECT p.*,
@@ -415,6 +548,7 @@ function submission_participants_for_teacher(PDO $pdo, int $assignmentId): array
         $row['id'] = (int)$row['id'];
         $row['linked_user_id'] = $row['linked_user_id'] ? (int)$row['linked_user_id'] : null;
         $row['submission_count'] = (int)$row['submission_count'];
+        $row['reopened'] = (bool)($row['reopened'] ?? false);
     }
     return $rows;
 }
@@ -424,10 +558,12 @@ function submission_rows_for_teacher(PDO $pdo, int $assignmentId): array
     $stmt = $pdo->prepare('SELECT * FROM assignment_submissions WHERE assignment_id = ? ORDER BY submitted_at DESC');
     $stmt->execute([$assignmentId]);
     $rows = $stmt->fetchAll();
-    $fileStmt = $pdo->prepare('SELECT id, original_name, mime_type, size_bytes, view_url, download_url FROM assignment_submission_files WHERE submission_id = ? ORDER BY id');
+    $fileStmt = $pdo->prepare('SELECT id, original_name, mime_type, size_bytes, view_url, download_url, field_key FROM assignment_submission_files WHERE submission_id = ? ORDER BY id');
     foreach ($rows as &$row) {
         $row['id'] = (int)$row['id'];
         $row['participant_id'] = $row['participant_id'] ? (int)$row['participant_id'] : null;
+        $row['report_data'] = submission_report_data($row['report_data_json'] ?? null);
+        unset($row['report_data_json']);
         $fileStmt->execute([$row['id']]);
         $row['files'] = $fileStmt->fetchAll();
     }
@@ -457,9 +593,15 @@ if ($method === 'POST' && $action === 'save') {
     $id = (int)($data['id'] ?? 0);
     $title = trim((string)($data['title'] ?? ''));
     if ($title === '') respond(['error' => 'Vui lòng nhập tên đợt nộp.'], 422);
-    $mode = in_array(($data['access_mode'] ?? ''), ['public', 'class', 'selected'], true) ? $data['access_mode'] : 'public';
+    $mode = in_array(($data['access_mode'] ?? ''), ['public', 'class', 'selected', 'school_list'], true) ? $data['access_mode'] : 'public';
     $className = $mode === 'class' ? trim((string)($data['target_class'] ?? '')) : '';
+    $schoolListCode = $mode === 'school_list' ? trim((string)($data['school_list_code'] ?? '')) : '';
     $status = in_array(($data['status'] ?? ''), ['draft', 'open', 'closed'], true) ? $data['status'] : 'open';
+    $submissionType = ($data['submission_type'] ?? '') === 'report' ? 'report' : 'file';
+    $formFields = $submissionType === 'report' ? submission_normalize_form_fields($data['form_fields'] ?? []) : [];
+    if ($submissionType === 'report' && !$formFields) respond(['error' => 'Báo cáo cần có ít nhất một trường thông tin.'], 422);
+    $academicYear = trim((string)($data['academic_year'] ?? ''));
+    $requireFiles = $submissionType === 'file' || !empty($data['require_files']);
     $openAt = submission_datetime($data['open_at'] ?? null);
     $dueAt = submission_datetime($data['due_at'] ?? null);
     if ($openAt && $dueAt && strtotime($openAt) >= strtotime($dueAt)) respond(['error' => 'Hạn nộp phải sau thời gian mở.'], 422);
@@ -468,18 +610,18 @@ if ($method === 'POST' && $action === 'save') {
     $maxFileMb = max(1, min($serverMax, (int)($data['max_file_mb'] ?? $serverMax)));
     $extensions = strtolower(preg_replace('/[^a-z0-9,]/', '', (string)($data['allowed_extensions'] ?? 'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,zip,rar,txt')));
     if ($extensions === '') respond(['error' => 'Cần cho phép ít nhất một loại tệp.'], 422);
-    $people = submission_build_participants($pdo, $mode, $className, $data, $teacher);
+    $people = submission_build_participants($pdo, $mode, $className, $schoolListCode, $data, $teacher);
 
     $pdo->beginTransaction();
     try {
         if ($id) {
             $existing = submission_require_owner($pdo, $teacher, $id);
-            $stmt = $pdo->prepare('UPDATE submission_assignments SET title=?, description=?, instructions=?, access_mode=?, target_class=?, status=?, open_at=?, due_at=?, allow_multiple=?, max_files=?, max_file_mb=?, allowed_extensions=? WHERE id=?');
-            $stmt->execute([$title, trim((string)($data['description'] ?? '')), trim((string)($data['instructions'] ?? '')), $mode, $className ?: null, $status, $openAt, $dueAt, !empty($data['allow_multiple']) ? 1 : 0, $maxFiles, $maxFileMb, $extensions, $id]);
+            $stmt = $pdo->prepare('UPDATE submission_assignments SET title=?, description=?, instructions=?, submission_type=?, academic_year=?, form_fields_json=?, require_files=?, access_mode=?, target_class=?, source_list_code=?, status=?, open_at=?, due_at=?, allow_multiple=?, max_files=?, max_file_mb=?, allowed_extensions=? WHERE id=?');
+            $stmt->execute([$title, trim((string)($data['description'] ?? '')), trim((string)($data['instructions'] ?? '')), $submissionType, $academicYear ?: null, json_encode($formFields, JSON_UNESCAPED_UNICODE), $requireFiles ? 1 : 0, $mode, $className ?: null, $schoolListCode ?: null, $status, $openAt, $dueAt, !empty($data['allow_multiple']) ? 1 : 0, $maxFiles, $maxFileMb, $extensions, $id]);
         } else {
             $publicCode = submission_unique_public_code($pdo);
-            $stmt = $pdo->prepare('INSERT INTO submission_assignments (public_code, owner_id, title, description, instructions, access_mode, target_class, status, open_at, due_at, allow_multiple, max_files, max_file_mb, allowed_extensions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$publicCode, (int)$teacher['id'], $title, trim((string)($data['description'] ?? '')), trim((string)($data['instructions'] ?? '')), $mode, $className ?: null, $status, $openAt, $dueAt, !empty($data['allow_multiple']) ? 1 : 0, $maxFiles, $maxFileMb, $extensions]);
+            $stmt = $pdo->prepare('INSERT INTO submission_assignments (public_code, owner_id, title, description, instructions, submission_type, academic_year, form_fields_json, require_files, access_mode, target_class, source_list_code, status, open_at, due_at, allow_multiple, max_files, max_file_mb, allowed_extensions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$publicCode, (int)$teacher['id'], $title, trim((string)($data['description'] ?? '')), trim((string)($data['instructions'] ?? '')), $submissionType, $academicYear ?: null, json_encode($formFields, JSON_UNESCAPED_UNICODE), $requireFiles ? 1 : 0, $mode, $className ?: null, $schoolListCode ?: null, $status, $openAt, $dueAt, !empty($data['allow_multiple']) ? 1 : 0, $maxFiles, $maxFileMb, $extensions]);
             $id = (int)$pdo->lastInsertId();
         }
         submission_sync_participants($pdo, $id, $people);
@@ -561,12 +703,33 @@ if ($method === 'POST' && $action === 'submit') {
         if ($dup->fetch()) respond(['error' => 'Người này đã nộp bài. Đợt nộp không cho phép nộp nhiều lần.'], 409);
     }
 
-    $files = array_values(array_filter(submission_files_input(), fn($file) => (int)$file['error'] !== UPLOAD_ERR_NO_FILE));
-    if (!$files) respond(['error' => 'Vui lòng chọn ít nhất một tệp.'], 422);
-    if (count($files) > (int)$assignment['max_files']) respond(['error' => 'Số tệp vượt quá giới hạn của đợt nộp.'], 422);
+    $submissionType = in_array(($assignment['submission_type'] ?? ''), ['file', 'report'], true) ? $assignment['submission_type'] : 'file';
+    $reportData = submission_report_data($_POST['report_data'] ?? null);
+    $formFields = $submissionType === 'report' ? submission_form_fields($assignment) : [];
+    if ($submissionType === 'report') {
+        foreach ($formFields as $field) {
+            if ($field['type'] === 'heading') continue;
+            $value = trim((string)($reportData[$field['key']] ?? ''));
+            if ($field['required'] && $value === '') respond(['error' => 'Thiếu trường bắt buộc: ' . $field['label']], 422);
+            if ($field['type'] === 'number' && $value !== '' && !is_numeric($value)) respond(['error' => 'Trường "' . $field['label'] . '" phải là số.'], 422);
+            if ($field['type'] === 'select' && $value !== '' && !in_array($value, $field['options'], true)) respond(['error' => 'Lựa chọn của trường "' . $field['label'] . '" không hợp lệ.'], 422);
+        }
+    }
+
+    $generalFiles = array_values(array_filter(submission_files_input(), fn($file) => (int)$file['error'] !== UPLOAD_ERR_NO_FILE));
+    $uploadQueue = array_map(fn($file) => ['file' => $file, 'field_key' => null], $generalFiles);
+    foreach ($formFields as $field) {
+        if (!$field['allow_evidence']) continue;
+        $evidenceFiles = array_values(array_filter(submission_files_from_input($_FILES['evidence_' . $field['key']] ?? null), fn($file) => (int)$file['error'] !== UPLOAD_ERR_NO_FILE));
+        if ($field['evidence_required'] && !$evidenceFiles) respond(['error' => 'Thiếu tệp minh chứng: ' . $field['label']], 422);
+        foreach ($evidenceFiles as $file) $uploadQueue[] = ['file' => $file, 'field_key' => $field['key']];
+    }
+    if ((bool)($assignment['require_files'] ?? true) && !$generalFiles) respond(['error' => 'Vui lòng chọn ít nhất một tệp đính kèm.'], 422);
+    if (count($uploadQueue) > (int)$assignment['max_files']) respond(['error' => 'Số tệp vượt quá giới hạn của đợt nộp.'], 422);
     $allowed = array_values(array_filter(array_map('trim', explode(',', strtolower($assignment['allowed_extensions'])))));
     $maxBytes = (int)$assignment['max_file_mb'] * 1024 * 1024;
-    foreach ($files as $file) {
+    foreach ($uploadQueue as $queued) {
+        $file = $queued['file'];
         if ((int)$file['error'] !== UPLOAD_ERR_OK) respond(['error' => 'Một tệp tải lên bị lỗi (mã ' . (int)$file['error'] . ').'], 422);
         if ((int)$file['size'] < 1 || (int)$file['size'] > $maxBytes) respond(['error' => 'Tệp ' . $file['name'] . ' vượt giới hạn ' . (int)$assignment['max_file_mb'] . ' MB.'], 422);
         $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
@@ -574,32 +737,36 @@ if ($method === 'POST' && $action === 'submit') {
         if (!is_uploaded_file($file['tmp_name'])) respond(['error' => 'Tệp tải lên không hợp lệ.'], 422);
     }
 
-    $folderId = trim((string)($assignment['drive_folder_id'] ?? ''));
-    if ($folderId === '') {
-        $folderId = drive_assignment_folder($assignment['public_code'], $assignment['title']);
-        $pdo->prepare('UPDATE submission_assignments SET drive_folder_id = ? WHERE id = ? AND (drive_folder_id IS NULL OR drive_folder_id = \'\')')->execute([$folderId, (int)$assignment['id']]);
-    }
-    $personFolder = drive_get_or_create_folder($folderId, $name . ' - ' . $identifier);
     $uploaded = [];
-    $prefix = date('Ymd-His');
-    foreach ($files as $index => $file) {
-        $original = (string)$file['name'];
-        $storedName = $prefix . '-' . ($index + 1) . '-' . drive_safe_name($original);
-        $mime = function_exists('finfo_open') ? (string)(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) : ((string)$file['type'] ?: 'application/octet-stream');
-        $drive = drive_upload_file($personFolder, $storedName, $mime, $file['tmp_name']);
-        $uploaded[] = [
-            'drive_file_id' => $drive['file_id'], 'original_name' => $original, 'stored_name' => $drive['stored_name'],
-            'mime_type' => $mime, 'size_bytes' => (int)$file['size'], 'view_url' => $drive['view_url'], 'download_url' => $drive['download_url'],
-        ];
+    if ($uploadQueue) {
+        $folderId = trim((string)($assignment['drive_folder_id'] ?? ''));
+        if ($folderId === '') {
+            $folderId = drive_assignment_folder($assignment['public_code'], $assignment['title']);
+            $pdo->prepare('UPDATE submission_assignments SET drive_folder_id = ? WHERE id = ? AND (drive_folder_id IS NULL OR drive_folder_id = \'\')')->execute([$folderId, (int)$assignment['id']]);
+        }
+        $personFolder = drive_get_or_create_folder($folderId, $name . ' - ' . $identifier);
+        $prefix = date('Ymd-His');
+        foreach ($uploadQueue as $index => $queued) {
+            $file = $queued['file'];
+            $original = (string)$file['name'];
+            $storedName = $prefix . '-' . ($index + 1) . '-' . drive_safe_name($original);
+            $mime = function_exists('finfo_open') ? (string)(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) : ((string)$file['type'] ?: 'application/octet-stream');
+            $drive = drive_upload_file($personFolder, $storedName, $mime, $file['tmp_name']);
+            $uploaded[] = [
+                'drive_file_id' => $drive['file_id'], 'original_name' => $original, 'stored_name' => $drive['stored_name'],
+                'mime_type' => $mime, 'size_bytes' => (int)$file['size'], 'view_url' => $drive['view_url'], 'download_url' => $drive['download_url'],
+                'field_key' => $queued['field_key'],
+            ];
+        }
     }
 
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('INSERT INTO assignment_submissions (assignment_id, participant_id, linked_user_id, submitter_name, submitter_role, group_name, identifier, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([(int)$assignment['id'], $participant ? (int)$participant['id'] : null, $participant && $participant['linked_user_id'] ? (int)$participant['linked_user_id'] : ($user ? (int)$user['id'] : null), $name, $role ?: null, $group ?: null, $identifier ?: null, trim((string)($_POST['note'] ?? '')) ?: null]);
+        $stmt = $pdo->prepare('INSERT INTO assignment_submissions (assignment_id, participant_id, linked_user_id, submitter_name, submitter_role, group_name, identifier, note, report_data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([(int)$assignment['id'], $participant ? (int)$participant['id'] : null, $participant && $participant['linked_user_id'] ? (int)$participant['linked_user_id'] : ($user ? (int)$user['id'] : null), $name, $role ?: null, $group ?: null, $identifier ?: null, trim((string)($_POST['note'] ?? '')) ?: null, $submissionType === 'report' ? json_encode($reportData, JSON_UNESCAPED_UNICODE) : null]);
         $submissionId = (int)$pdo->lastInsertId();
-        $fileStmt = $pdo->prepare('INSERT INTO assignment_submission_files (submission_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        foreach ($uploaded as $file) $fileStmt->execute([$submissionId, $file['drive_file_id'], $file['original_name'], $file['stored_name'], $file['mime_type'], $file['size_bytes'], $file['view_url'], $file['download_url']]);
+        $fileStmt = $pdo->prepare('INSERT INTO assignment_submission_files (submission_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url, field_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        foreach ($uploaded as $file) $fileStmt->execute([$submissionId, $file['drive_file_id'], $file['original_name'], $file['stored_name'], $file['mime_type'], $file['size_bytes'], $file['view_url'], $file['download_url'], $file['field_key']]);
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
