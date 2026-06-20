@@ -76,10 +76,10 @@
     function ensureStudentOnAllowedLotrinhPage(user) {
         if (!PAGE_KEY || (user?.role || '') !== 'student') return;
         const allowedPages = studentAllowedPages(user);
+        localStorage.setItem('allowedPages', JSON.stringify(allowedPages));
         if (!studentCanOpenPageKey(PAGE_KEY, allowedPages)) {
             const fallback = primaryLotrinhUrl(allowedPages) || 'login.html';
-            alert('Tài khoản của em chưa được mở lộ trình này.');
-            window.location.href = fallback;
+            window.location.replace(fallback);
         }
     }
     const PAGE_STORAGE_KEY = PAGE_SUBJECT.normalize('NFD')
