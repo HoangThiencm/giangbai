@@ -23,8 +23,65 @@
         tabs: Array.from(document.querySelectorAll('.tab-btn')),
     };
 
-    const PAGE_SUBJECT = window.LOTRINH_SUBJECT || 'Toán 6';
+    const LOTRINH_PAGE_SUBJECTS = {
+        lotrinhtoan4: 'Toán 4',
+        lotrinhtoan6: 'Toán 6',
+        lotrinhtoan7: 'Toán 7',
+        lotrinhtoan8: 'Toán 8',
+        lotrinhtoan9: 'Toán 9',
+    };
+    const LOTRINH_ROUTE_ORDER = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+    const LOTRINH_PAGE_URLS = {
+        lotrinhtoan4: 'lotrinhtoan4.html',
+        lotrinhtoan6: 'lotrinhtoan6.html',
+        lotrinhtoan7: 'lotrinhtoan7.html',
+        lotrinhtoan8: 'lotrinhtoan8.html',
+        lotrinhtoan9: 'lotrinhtoan9.html',
+    };
+    const PAGE_KEY = String(window.LOTRINH_PAGE_KEY || '').trim();
+    const PAGE_SUBJECT = LOTRINH_PAGE_SUBJECTS[PAGE_KEY]
+        || String(window.LOTRINH_SUBJECT || '').trim()
+        || 'Toán 6';
     const PAGE_TITLE = window.LOTRINH_PAGE_TITLE || `Lộ trình tự học ${PAGE_SUBJECT}`;
+
+    function normalizeSubjectName(value) {
+        return String(value || '').trim().normalize('NFC');
+    }
+
+    function lessonMatchesPageSubject(lesson) {
+        return normalizeSubjectName(lesson?.subject) === normalizeSubjectName(PAGE_SUBJECT);
+    }
+
+    function studentAllowedPages(user) {
+        const pages = user?.allowed_pages;
+        return Array.isArray(pages) ? pages : [];
+    }
+
+    function studentCanOpenPageKey(pageKey, allowedPages) {
+        const pages = Array.isArray(allowedPages) ? allowedPages : [];
+        return pages.includes(pageKey)
+            || (pageKey === 'lotrinhtoan6' && pages.includes('lotrinh'));
+    }
+
+    function primaryLotrinhUrl(allowedPages) {
+        const pages = Array.isArray(allowedPages) ? allowedPages : [];
+        for (const pageKey of LOTRINH_ROUTE_ORDER) {
+            if (studentCanOpenPageKey(pageKey, pages) && LOTRINH_PAGE_URLS[pageKey]) {
+                return LOTRINH_PAGE_URLS[pageKey];
+            }
+        }
+        return null;
+    }
+
+    function ensureStudentOnAllowedLotrinhPage(user) {
+        if (!PAGE_KEY || (user?.role || '') !== 'student') return;
+        const allowedPages = studentAllowedPages(user);
+        if (!studentCanOpenPageKey(PAGE_KEY, allowedPages)) {
+            const fallback = primaryLotrinhUrl(allowedPages) || 'login.html';
+            alert('Tài khoản của em chưa được mở lộ trình này.');
+            window.location.href = fallback;
+        }
+    }
     const PAGE_STORAGE_KEY = PAGE_SUBJECT.normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
@@ -3633,9 +3690,10 @@
     }
 
     async function reloadLessons(reselect = true) {
-        const data = await api('api/lessons.php?debug=1', { method: 'GET' });
+        const data = await api(`api/lessons.php?debug=1&subject=${encodeURIComponent(PAGE_SUBJECT)}`, { method: 'GET' });
         state.user = data.user;
-        state.lessons = (data.lessons || []).filter(lesson => String(lesson.subject || '').trim() === PAGE_SUBJECT);
+        ensureStudentOnAllowedLotrinhPage(state.user);
+        state.lessons = (data.lessons || []).filter(lesson => lessonMatchesPageSubject(lesson));
         if ((state.user?.role || data.user?.role) === 'student') {
             state.lessons = state.lessons.filter(lesson => !!lesson.is_published);
         }

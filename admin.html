@@ -1268,6 +1268,7 @@
                     <label class="text-sm font-bold text-slate-700">
                         <span id="createClassNameLabel">Lớp/Nhóm</span>
                         <select id="createClassNameSelect" class="mt-1 hidden w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                        <div id="createClassNameCheckboxes" class="mt-1 hidden grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                         <input id="createClassNameInput" name="class_name" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
                         <span id="createClassNameHint" class="mt-1 block text-xs font-normal text-slate-500"></span>
                     </label>
@@ -1552,19 +1553,40 @@
                 .sort((a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true, sensitivity: 'base' }));
         }
 
+        function parseTeacherClassNames(value) {
+            return String(value || '')
+                .split(/[,;|]+/)
+                .map(part => part.trim())
+                .filter(Boolean);
+        }
+
+        function joinTeacherClassNames(names) {
+            const unique = [];
+            const seen = new Set();
+            (names || []).forEach(name => {
+                const trimmed = String(name || '').trim();
+                if (!trimmed || seen.has(trimmed)) return;
+                seen.add(trimmed);
+                unique.push(trimmed);
+            });
+            return unique.join(', ');
+        }
+
         function readClassNameFromForm(prefix) {
             const role = prefix === 'edit'
                 ? document.getElementById('editRole')?.value
                 : document.querySelector('#createStudentForm select[name="role"]')?.value;
             const input = document.getElementById(`${prefix}ClassNameInput`);
-            const select = document.getElementById(`${prefix}ClassNameSelect`);
-            if (role === 'teacher' && select && !select.classList.contains('hidden')) {
-                if (select.value === '__custom__') {
-                    return input?.value.trim() || '';
-                }
-                return select.value || input?.value.trim() || '';
+            if (role !== 'teacher') {
+                return input?.value.trim() || '';
             }
-            return input?.value.trim() || '';
+
+            const checkboxContainer = document.getElementById(`${prefix}ClassNameCheckboxes`);
+            const checked = checkboxContainer && !checkboxContainer.classList.contains('hidden')
+                ? [...checkboxContainer.querySelectorAll('.teacher-class-checkbox:checked')].map(el => el.value)
+                : [];
+            const custom = parseTeacherClassNames(input?.value || '');
+            return joinTeacherClassNames([...checked, ...custom]);
         }
 
         function updateClassNameHint(prefix, role) {
@@ -1576,82 +1598,79 @@
             }
             const classes = studentClassCatalog();
             if (!classes.length) {
-                hint.textContent = 'Chưa có học sinh nào được xếp lớp. Import/tạo học sinh có Lớp/Nhóm (vd. 6A) trước, hoặc chọn "Nhập lớp mới".';
+                hint.textContent = 'Chưa có học sinh nào được xếp lớp. Import/tạo học sinh có Lớp/Nhóm (vd. 6A) trước, hoặc nhập tên lớp phụ trách (cách nhau bằng dấu phẩy).';
                 return;
             }
-            hint.textContent = `Có ${classes.length} lớp từ học sinh. Chọn lớp phụ trách — tên phải trùng Lớp/Nhóm của học sinh để giám sát tiến độ.`;
+            hint.textContent = `Có ${classes.length} lớp từ học sinh. Tick một hoặc nhiều lớp phụ trách — tên phải trùng Lớp/Nhóm của học sinh để giám sát tiến độ.`;
+        }
+
+        function renderTeacherClassCheckboxes(prefix, currentValue = '') {
+            const container = document.getElementById(`${prefix}ClassNameCheckboxes`);
+            const select = document.getElementById(`${prefix}ClassNameSelect`);
+            const input = document.getElementById(`${prefix}ClassNameInput`);
+            if (!input) return;
+
+            const selected = new Set(parseTeacherClassNames(currentValue));
+            const classes = studentClassCatalog();
+            const catalogNames = new Set(classes.map(item => item.name));
+            const customOnly = [...selected].filter(name => !catalogNames.has(name));
+
+            if (select) {
+                select.classList.add('hidden');
+                select.onchange = null;
+            }
+
+            if (!classes.length) {
+                if (container) {
+                    container.classList.add('hidden');
+                    container.innerHTML = '';
+                }
+                input.classList.remove('hidden');
+                input.value = joinTeacherClassNames([...selected]);
+                input.placeholder = 'Nhập lớp phụ trách, vd. 6A, 6B';
+                return;
+            }
+
+            if (container) {
+                container.classList.remove('hidden');
+                container.innerHTML = classes.map(item => `
+                    <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100">
+                        <input type="checkbox" value="${escapeAdminAttr(item.name)}" class="teacher-class-checkbox w-4 h-4 text-blue-600 rounded" ${selected.has(item.name) ? 'checked' : ''}>
+                        <span>${escapeAdminHtml(item.name)} <span class="text-slate-400 font-normal">(${item.count})</span></span>
+                    </label>
+                `).join('');
+            }
+
+            input.classList.remove('hidden');
+            input.value = joinTeacherClassNames(customOnly);
+            input.placeholder = 'Thêm lớp khác (vd. 6D) — cách nhau bằng dấu phẩy';
         }
 
         function applyClassFieldForRole(prefix, role, currentValue = '') {
             const select = document.getElementById(`${prefix}ClassNameSelect`);
             const input = document.getElementById(`${prefix}ClassNameInput`);
+            const checkboxContainer = document.getElementById(`${prefix}ClassNameCheckboxes`);
             const current = String(currentValue || input?.value || '').trim();
-            const classes = studentClassCatalog();
-            const isTeacher = role === 'teacher';
 
             if (!input) return;
 
-            if (!isTeacher) {
+            if (role !== 'teacher') {
                 if (select) {
                     select.classList.add('hidden');
                     select.onchange = null;
+                }
+                if (checkboxContainer) {
+                    checkboxContainer.classList.add('hidden');
+                    checkboxContainer.innerHTML = '';
                 }
                 input.classList.remove('hidden');
                 if (current) input.value = current;
+                input.placeholder = '6A hoặc Toán 6 tối T3-T5';
                 updateClassNameHint(prefix, role);
                 return;
             }
 
-            if (!classes.length) {
-                if (select) {
-                    select.classList.add('hidden');
-                    select.onchange = null;
-                }
-                input.classList.remove('hidden');
-                input.value = current;
-                input.placeholder = 'Nhập lớp phụ trách, vd. 6A';
-                updateClassNameHint(prefix, role);
-                return;
-            }
-
-            if (select) {
-                select.classList.remove('hidden');
-                const options = ['<option value="">-- Chọn lớp phụ trách --</option>']
-                    .concat(classes.map(item => (
-                        `<option value="${escapeAdminAttr(item.name)}">${escapeAdminHtml(item.name)} (${item.count} học sinh)</option>`
-                    )))
-                    .concat(['<option value="__custom__">+ Nhập lớp mới...</option>']);
-                select.innerHTML = options.join('');
-
-                if (current && classes.some(item => item.name === current)) {
-                    select.value = current;
-                    input.classList.add('hidden');
-                    input.value = current;
-                } else if (current) {
-                    select.value = '__custom__';
-                    input.classList.remove('hidden');
-                    input.value = current;
-                } else {
-                    select.value = '';
-                    input.classList.add('hidden');
-                    input.value = '';
-                }
-
-                select.onchange = () => {
-                    if (select.value === '__custom__') {
-                        input.classList.remove('hidden');
-                        if (!input.value || classes.some(item => item.name === input.value)) {
-                            input.value = '';
-                        }
-                        input.focus();
-                    } else {
-                        input.classList.add('hidden');
-                        input.value = select.value;
-                    }
-                    updateClassNameHint(prefix, role);
-                };
-            }
-
+            renderTeacherClassCheckboxes(prefix, current);
             updateClassNameHint(prefix, role);
         }
 
@@ -1858,7 +1877,7 @@
                 return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
             }
             if (role === 'teacher' && !className) {
-                return alert('Giáo viên cần chọn hoặc nhập lớp phụ trách (vd. 6A). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
+                return alert('Giáo viên cần tick chọn hoặc nhập ít nhất một lớp phụ trách (vd. 6A, 6B). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
             }
 
             try {
@@ -1906,6 +1925,7 @@
                 <label class="block text-sm font-bold text-slate-700 mb-3">
                     <span id="editClassNameLabel">Lớp/Nhóm</span>
                     <select id="editClassNameSelect" class="mt-1 hidden w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                    <div id="editClassNameCheckboxes" class="mt-1 hidden grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                     <input id="editClassNameInput" value="${escapeAdminAttr(editingStudent.class_name || '')}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="6A">
                     <span id="editClassNameHint" class="mt-1 block text-xs font-normal text-slate-500"></span>
                 </label>
@@ -1962,7 +1982,7 @@
                 return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
             }
             if (role === 'teacher' && !className) {
-                return alert('Giáo viên cần chọn hoặc nhập lớp phụ trách (vd. 6A). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
+                return alert('Giáo viên cần tick chọn hoặc nhập ít nhất một lớp phụ trách (vd. 6A, 6B). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
             }
             const payload = {
                 action: 'update',

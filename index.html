@@ -526,14 +526,17 @@
             let allowedPages = [];
             try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
             const routeMap = {
-                lotrinh: 'lotrinhtoan6.html',
                 lotrinhtoan4: 'lotrinhtoan4.html',
                 lotrinhtoan6: 'lotrinhtoan6.html',
                 lotrinhtoan7: 'lotrinhtoan7.html',
                 lotrinhtoan8: 'lotrinhtoan8.html',
                 lotrinhtoan9: 'lotrinhtoan9.html'
             };
-            window.location.href = allowedPages.map(page => routeMap[page]).find(Boolean) || 'lotrinhtoan6.html';
+            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+            const canOpen = pageKey => allowedPages.includes(pageKey)
+                || (pageKey === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
+            const primary = routeOrder.find(pageKey => canOpen(pageKey) && routeMap[pageKey]);
+            window.location.href = primary ? routeMap[primary] : 'lotrinhtoan6.html';
         }
 
         // Load Global Config from GitHub deployment

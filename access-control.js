@@ -60,11 +60,15 @@
         return allowedPages.some(page => lotrinhPageKeys.has(page));
     }
 
+    const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+
     function firstAllowedLotrinhUrl(allowedPages) {
-        return allowedPages
-            .filter(page => lotrinhPageKeys.has(page))
-            .map(page => pageUrls[page])
-            .find(Boolean);
+        for (const page of lotrinhRouteOrder) {
+            if (canOpenPage(page, allowedPages) && pageUrls[page]) {
+                return pageUrls[page];
+            }
+        }
+        return null;
     }
 
     if (!pageKey) {

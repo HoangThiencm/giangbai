@@ -222,8 +222,24 @@ if ($method === 'GET') {
     }
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
     $lessons = array_map('lesson_row_to_payload', $stmt->fetchAll());
+    $requestedSubject = trim((string)($_GET['subject'] ?? ''));
 
     if ($user['role'] === 'student') {
+        $allowedSubjects = subjects_for_allowed_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
+        if ($requestedSubject !== '') {
+            if (!in_array($requestedSubject, $allowedSubjects, true)) {
+                respond(['error' => 'Em chưa được mở lộ trình ' . $requestedSubject . '.'], 403);
+            }
+            $lessons = array_values(array_filter(
+                $lessons,
+                fn($lesson) => trim((string)($lesson['subject'] ?? '')) === $requestedSubject
+            ));
+        } elseif ($allowedSubjects) {
+            $lessons = array_values(array_filter(
+                $lessons,
+                fn($lesson) => in_array(trim((string)($lesson['subject'] ?? '')), $allowedSubjects, true)
+            ));
+        }
         $lessons = array_values(array_filter($lessons, fn($lesson) => $lesson['is_published']));
     }
 

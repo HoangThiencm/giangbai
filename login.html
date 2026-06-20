@@ -191,19 +191,22 @@
 
         function landingPageFor(user) {
             const pageUrls = {
-                lotrinh: 'lotrinhtoan6.html',
                 lotrinhtoan4: 'lotrinhtoan4.html',
                 lotrinhtoan6: 'lotrinhtoan6.html',
                 lotrinhtoan7: 'lotrinhtoan7.html',
                 lotrinhtoan8: 'lotrinhtoan8.html',
                 lotrinhtoan9: 'lotrinhtoan9.html'
             };
+            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
             const allowedPages = user?.allowed_pages || [];
+            const canOpen = (pageKey) => allowedPages.includes(pageKey)
+                || (pageKey === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
             if (user?.role === 'teacher') {
                 return 'index.html';
             }
             if (user?.role === 'student') {
-                return allowedPages.map(page => pageUrls[page]).find(Boolean) || 'lotrinhtoan6.html';
+                const primary = routeOrder.find(pageKey => canOpen(pageKey) && pageUrls[pageKey]);
+                return primary ? pageUrls[primary] : 'lotrinhtoan6.html';
             }
             return 'index.html';
         }

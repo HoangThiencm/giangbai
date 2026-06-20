@@ -24,6 +24,9 @@ if ($action === 'create') {
     $fullName = trim($data['full_name'] ?? '');
     $role = ($data['role'] ?? 'student') === 'teacher' ? 'teacher' : 'student';
     $className = trim($data['class_name'] ?? '');
+    if ($role === 'teacher' && $className !== '') {
+        $className = normalize_teacher_class_name($className);
+    }
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
     $expiry = resolve_account_expiry($data['duration_option'] ?? 'forever');
 
@@ -90,6 +93,9 @@ if ($action === 'update') {
     $fullName = trim($data['full_name'] ?? '');
     $className = trim($data['class_name'] ?? '');
     $role = ($data['role'] ?? 'student') === 'teacher' ? 'teacher' : 'student';
+    if ($role === 'teacher' && $className !== '') {
+        $className = normalize_teacher_class_name($className);
+    }
     $isActive = !empty($data['is_active']) ? 1 : 0;
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
 

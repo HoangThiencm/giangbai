@@ -69,6 +69,49 @@ function subject_for_lotrinh_page(string $page): ?string
     return lotrinh_page_subjects()[$page] ?? null;
 }
 
+function lotrinh_route_order(): array
+{
+    return ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+}
+
+function subjects_for_allowed_pages($pages): array
+{
+    $pages = normalize_pages(is_array($pages) ? $pages : []);
+    $subjects = [];
+    foreach ($pages as $page) {
+        $subject = subject_for_lotrinh_page($page);
+        if ($subject) {
+            $subjects[] = $subject;
+        }
+    }
+    return array_values(array_unique($subjects));
+}
+
+function primary_lotrinh_page($pages): ?string
+{
+    $pages = normalize_pages(is_array($pages) ? $pages : []);
+    foreach (lotrinh_route_order() as $page) {
+        if (in_array($page, $pages, true)) {
+            return $page;
+        }
+    }
+    return null;
+}
+
+function normalize_teacher_class_name(string $raw): string
+{
+    $parts = preg_split('/[,;|]+/', trim($raw)) ?: [];
+    $classes = [];
+    foreach ($parts as $part) {
+        $className = trim((string)$part);
+        if ($className !== '') {
+            $classes[] = $className;
+        }
+    }
+
+    return implode(', ', array_values(array_unique($classes)));
+}
+
 function teacher_managed_classes(array $user): array
 {
     if (($user['role'] ?? '') !== 'teacher') {
