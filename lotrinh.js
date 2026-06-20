@@ -1895,7 +1895,7 @@
                     <div class="practice-card-content">
                         <p class="fill-pool-label practice-zone-label"><i class="fas fa-grip-lines" aria-hidden="true"></i> Kéo một mảnh vào từng ô trống</p>
                         <div class="drag-pool fill-chip-pool practice-chip-pool" data-fill-pool="${escapeHtml(key)}">
-                            ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                            ${poolItems.map((piece, pieceIndex) => `<button type="button" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                         </div>
                         ${renderPracticeActions(`
                             ${renderPracticeCheckButton('fill-check-btn', 'data-fill-key', key, practiceDone)}
@@ -1987,11 +1987,11 @@
                     <div class="practice-card-content">
                         <p class="fill-pool-label sort-pool-label practice-zone-label"><i class="fas fa-layer-group" aria-hidden="true"></i> Kéo các mảnh vào hàng bên dưới theo thứ tự đúng</p>
                         <div class="drag-pool sort-chip-pool practice-chip-pool" data-sort-pool="${escapeHtml(key)}">
-                            ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                            ${poolItems.map((piece, pieceIndex) => `<button type="button" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                         </div>
                         <p class="fill-pool-label sort-zone-label practice-zone-label practice-zone-label--answer"><i class="fas fa-arrow-down" aria-hidden="true"></i> Hàng trả lời</p>
                         <div class="drag-slot-row sort-slot-row sort-answer-zone practice-answer-zone" data-sort-zone="${escapeHtml(key)}">
-                            ${savedOrder.length ? savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('') : '<span class="sort-zone-placeholder">Kéo các mảnh từ khay phía trên xuống đây...</span>'}
+                            ${savedOrder.length ? savedOrder.map((piece, pieceIndex) => `<button type="button" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('') : '<span class="sort-zone-placeholder">Kéo các mảnh từ khay phía trên xuống đây...</span>'}
                         </div>
                         ${renderPracticeActions(`
                             ${renderPracticeCheckButton('sort-check-btn', 'data-sort-key', key, practiceDone)}
@@ -2407,6 +2407,37 @@
                 font-weight: 700 !important;
             }
             .fill-prompt-line { margin: 0 !important; }
+            .drag-chip.chip-selected {
+                outline: 3px solid #0f766e;
+                background: #ecfdf5 !important;
+                box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.18);
+            }
+            .fill-drop-slot.is-drop-ready,
+            .drag-pool.is-drop-ready,
+            .drag-slot-row.is-drop-ready {
+                border-color: #0f766e;
+                background: #ecfdf5;
+                box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.12);
+            }
+            @media (pointer: coarse), (hover: none) {
+                .drag-chip {
+                    min-height: 44px;
+                    padding: 10px 16px;
+                    touch-action: manipulation;
+                    -webkit-user-select: none;
+                    user-select: none;
+                }
+                .fill-drop-slot,
+                .drag-pool,
+                .drag-slot-row {
+                    min-height: 52px;
+                    touch-action: manipulation;
+                }
+                .fill-drop-slot:not(:has(.fill-slot-chip)),
+                .drag-slot-row:has(.sort-zone-placeholder) {
+                    cursor: pointer;
+                }
+            }
             @media (max-width: 640px) {
                 .practice-part-head,
                 .practice-card-head,
@@ -3669,6 +3700,80 @@
         });
     }
 
+    function prefersTouchPlacement() {
+        try {
+            if (window.matchMedia('(pointer: coarse)').matches) return true;
+            if (window.matchMedia('(hover: none)').matches) return true;
+        } catch {}
+        return (navigator.maxTouchPoints || 0) > 0;
+    }
+
+    function configureChipDrag(chip, enabled) {
+        if (!chip || chip.disabled) return;
+        if (prefersTouchPlacement() || !enabled) {
+            chip.draggable = false;
+            chip.removeAttribute('draggable');
+        } else {
+            chip.setAttribute('draggable', 'true');
+        }
+    }
+
+    function clearSelectedChips(root) {
+        root?.querySelectorAll('.drag-chip.chip-selected').forEach(node => node.classList.remove('chip-selected'));
+        root?.querySelectorAll('.is-drop-ready').forEach(node => node.classList.remove('is-drop-ready'));
+    }
+
+    function toggleSelectedChip(chip, root) {
+        if (!chip) return false;
+        if (chip.classList.contains('chip-selected')) {
+            chip.classList.remove('chip-selected');
+            root?.querySelectorAll('.is-drop-ready').forEach(node => node.classList.remove('is-drop-ready'));
+            return false;
+        }
+        clearSelectedChips(root);
+        chip.classList.add('chip-selected');
+        root?.querySelectorAll('.fill-drop-slot, .drag-pool, .drag-slot-row').forEach(node => {
+            if (!node.querySelector('.fill-slot-chip') || node.classList.contains('fill-drop-slot')) {
+                node.classList.add('is-drop-ready');
+            }
+        });
+        return true;
+    }
+
+    function getSelectedChip(root) {
+        return root?.querySelector('.drag-chip.chip-selected') || null;
+    }
+
+    function fillSlotPlaceholderText() {
+        return prefersTouchPlacement() ? 'chạm để đặt' : 'kéo vào đây';
+    }
+
+    function updateTouchDragHints(card, mode) {
+        if (!prefersTouchPlacement()) return;
+        if (mode === 'fill') {
+            const poolLabel = card.querySelector('.fill-pool-label');
+            if (poolLabel) {
+                poolLabel.innerHTML = '<i class="fas fa-hand-pointer" aria-hidden="true"></i> Chạm một mảnh, rồi chạm ô trống để đặt vào';
+            }
+            card.querySelectorAll('.fill-slot-placeholder').forEach(node => {
+                node.textContent = fillSlotPlaceholderText();
+            });
+            return;
+        }
+        if (mode === 'sort') {
+            const poolLabel = card.querySelector('.sort-pool-label');
+            const zoneLabel = card.querySelector('.sort-zone-label');
+            if (poolLabel) {
+                poolLabel.innerHTML = '<i class="fas fa-hand-pointer" aria-hidden="true"></i> Chạm mảnh ở khay trên để thêm vào hàng trả lời';
+            }
+            if (zoneLabel) {
+                zoneLabel.innerHTML = '<i class="fas fa-hand-pointer" aria-hidden="true"></i> Chạm mảnh ở hàng trả lời để gỡ ra';
+            }
+            const placeholder = card.querySelector('.sort-zone-placeholder');
+            if (placeholder) placeholder.textContent = 'Chạm mảnh phía trên để thêm vào đây...';
+        }
+    }
+
     function bindPracticeInteractions(lesson) {
         bindEssayInputs(lesson);
         document.querySelectorAll('[data-ai-text]').forEach(button => {
@@ -3676,6 +3781,8 @@
             button.dataset.boundAi = '1';
             button.onclick = () => triggerAiExplainButton(button, lesson, button.dataset.aiText || '');
         });
+
+        const touchPlacement = prefersTouchPlacement();
 
         document.querySelectorAll('.fill-drag-card').forEach(card => {
             if (card.dataset.boundFillDrag === '1') return;
@@ -3685,6 +3792,8 @@
             if (!pool) return;
             const item = (lesson.fill_exercises || []).map(normalizeFillExercise).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
             const blankCount = item?.blankCount || 1;
+            const practiceDone = !!currentUiState(lesson).practiceDone;
+            updateTouchDragHints(card, 'fill');
 
             const getSlots = () => collectFillSlotsFromCard(card, blankCount);
 
@@ -3699,27 +3808,66 @@
                 });
             };
 
+            const emptySlotMarkup = () => `<span class="fill-slot-placeholder">${fillSlotPlaceholderText()}</span>`;
+
+            const dropIntoSlot = async (slot, chip) => {
+                if (!slot || !chip) return;
+                const existing = slot.querySelector('.fill-slot-chip');
+                if (existing && existing !== chip) pool.appendChild(existing);
+                chip.classList.add('fill-slot-chip');
+                slot.innerHTML = '';
+                slot.appendChild(chip);
+                configureChipDrag(chip, !practiceDone);
+                bindFillChip(chip);
+                clearSelectedChips(card);
+                await persistSlots();
+            };
+
+            const returnChipToPool = async (chip, slot) => {
+                if (!chip || !slot) return;
+                pool.appendChild(chip);
+                chip.classList.remove('fill-slot-chip');
+                slot.innerHTML = emptySlotMarkup();
+                clearSelectedChips(card);
+                await persistSlots();
+            };
+
             const bindFillChip = chip => {
                 if (chip.dataset.boundFillChip === '1') return;
                 chip.dataset.boundFillChip = '1';
-                chip.addEventListener('dragstart', e => {
-                    e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
-                    e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
-                    chip.classList.add('opacity-60');
-                });
-                chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
-                chip.addEventListener('click', async () => {
+                configureChipDrag(chip, !practiceDone);
+
+                if (!touchPlacement) {
+                    chip.addEventListener('dragstart', e => {
+                        e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
+                        e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
+                        chip.classList.add('opacity-60');
+                    });
+                    chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
+                }
+
+                chip.addEventListener('click', async e => {
+                    if (practiceDone) return;
                     const slot = chip.closest('.fill-drop-slot');
+
+                    if (touchPlacement) {
+                        e.preventDefault();
+                        if (slot) {
+                            await returnChipToPool(chip, slot);
+                            return;
+                        }
+                        toggleSelectedChip(chip, card);
+                        return;
+                    }
+
                     if (slot) {
-                        pool.appendChild(chip);
-                        chip.classList.remove('fill-slot-chip');
-                        slot.innerHTML = '<span class="fill-slot-placeholder">kéo vào đây</span>';
-                        await persistSlots();
+                        await returnChipToPool(chip, slot);
                     }
                 });
             };
 
             const allowDrop = target => {
+                if (touchPlacement) return;
                 target?.addEventListener('dragover', e => {
                     e.preventDefault();
                     target.classList.add('drag-over');
@@ -3730,38 +3878,39 @@
             allowDrop(pool);
             card.querySelectorAll('.fill-drop-slot').forEach(allowDrop);
 
-            const dropIntoSlot = async (slot, chip) => {
-                if (!slot || !chip) return;
-                const existing = slot.querySelector('.fill-slot-chip');
-                if (existing && existing !== chip) pool.appendChild(existing);
-                chip.classList.add('fill-slot-chip');
-                slot.innerHTML = '';
-                slot.appendChild(chip);
-                await persistSlots();
-            };
-
-            pool.addEventListener('drop', async e => {
-                e.preventDefault();
-                pool.classList.remove('drag-over');
-                const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
-                const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
-                if (!chip) return;
-                const fromSlot = chip.closest('.fill-drop-slot');
-                if (fromSlot) fromSlot.innerHTML = '<span class="fill-slot-placeholder">kéo vào đây</span>';
-                pool.appendChild(chip);
-                chip.classList.remove('fill-slot-chip');
-                await persistSlots();
-            });
-
-            card.querySelectorAll('.fill-drop-slot').forEach(slot => {
-                slot.addEventListener('drop', async e => {
+            if (touchPlacement) {
+                card.querySelectorAll('.fill-drop-slot').forEach(slot => {
+                    slot.addEventListener('click', async () => {
+                        if (practiceDone || slot.querySelector('.fill-slot-chip')) return;
+                        const selected = getSelectedChip(card);
+                        if (!selected || selected.closest('.fill-drop-slot')) return;
+                        await dropIntoSlot(slot, selected);
+                    });
+                });
+            } else {
+                pool.addEventListener('drop', async e => {
                     e.preventDefault();
-                    slot.classList.remove('drag-over');
+                    pool.classList.remove('drag-over');
                     const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
                     const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
-                    await dropIntoSlot(slot, chip);
+                    if (!chip) return;
+                    const fromSlot = chip.closest('.fill-drop-slot');
+                    if (fromSlot) fromSlot.innerHTML = emptySlotMarkup();
+                    pool.appendChild(chip);
+                    chip.classList.remove('fill-slot-chip');
+                    await persistSlots();
                 });
-            });
+
+                card.querySelectorAll('.fill-drop-slot').forEach(slot => {
+                    slot.addEventListener('drop', async e => {
+                        e.preventDefault();
+                        slot.classList.remove('drag-over');
+                        const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                        const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
+                        await dropIntoSlot(slot, chip);
+                    });
+                });
+            }
 
             pool.querySelectorAll('.drag-chip').forEach(bindFillChip);
             card.querySelectorAll('.fill-drop-slot .drag-chip').forEach(bindFillChip);
@@ -3774,6 +3923,14 @@
             const pool = card.querySelector(`[data-sort-pool="${escapeSelector(key)}"]`);
             const zone = card.querySelector(`[data-sort-zone="${escapeSelector(key)}"]`);
             if (!pool || !zone) return;
+            const practiceDone = !!currentUiState(lesson).practiceDone;
+            updateTouchDragHints(card, 'sort');
+
+            const sortZonePlaceholderText = () => (
+                touchPlacement
+                    ? 'Chạm mảnh phía trên để thêm vào đây...'
+                    : 'Kéo các mảnh từ khay phía trên xuống đây...'
+            );
 
             const syncSortZonePlaceholder = () => {
                 const chips = zone.querySelectorAll('.drag-chip');
@@ -3785,9 +3942,9 @@
                 if (!placeholder) {
                     placeholder = document.createElement('span');
                     placeholder.className = 'sort-zone-placeholder';
-                    placeholder.textContent = 'Kéo các mảnh từ khay phía trên xuống đây...';
                     zone.appendChild(placeholder);
                 }
+                placeholder.textContent = sortZonePlaceholderText();
             };
 
             const persistOrder = async () => {
@@ -3803,16 +3960,45 @@
                 });
             };
 
+            const moveChipToZone = async (chip, beforeNode = null) => {
+                if (!chip) return;
+                if (beforeNode && beforeNode.parentElement === zone) zone.insertBefore(chip, beforeNode);
+                else zone.appendChild(chip);
+                configureChipDrag(chip, !practiceDone);
+                bindSortChip(chip);
+                clearSelectedChips(card);
+                await persistOrder();
+            };
+
             const bindSortChip = chip => {
                 if (chip.dataset.boundSortChip === '1') return;
                 chip.dataset.boundSortChip = '1';
-                chip.addEventListener('dragstart', e => {
-                    e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
-                    e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
-                    chip.classList.add('opacity-60');
-                });
-                chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
-                chip.addEventListener('click', async () => {
+                configureChipDrag(chip, !practiceDone);
+
+                if (!touchPlacement) {
+                    chip.addEventListener('dragstart', e => {
+                        e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
+                        e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
+                        chip.classList.add('opacity-60');
+                    });
+                    chip.addEventListener('dragend', () => chip.classList.remove('opacity-60'));
+                }
+
+                chip.addEventListener('click', async e => {
+                    if (practiceDone) return;
+
+                    if (touchPlacement) {
+                        e.preventDefault();
+                        if (chip.parentElement === zone) {
+                            pool.appendChild(chip);
+                            clearSelectedChips(card);
+                            await persistOrder();
+                            return;
+                        }
+                        await moveChipToZone(chip);
+                        return;
+                    }
+
                     if (chip.parentElement === zone) {
                         pool.appendChild(chip);
                     } else {
@@ -3823,6 +4009,7 @@
             };
 
             const allowDrop = target => {
+                if (touchPlacement) return;
                 target?.addEventListener('dragover', e => {
                     e.preventDefault();
                     target.classList.add('drag-over');
@@ -3832,35 +4019,38 @@
             allowDrop(pool);
             allowDrop(zone);
 
-            const moveChipToZone = async (chip, beforeNode = null) => {
-                if (!chip) return;
-                if (beforeNode && beforeNode.parentElement === zone) zone.insertBefore(chip, beforeNode);
-                else zone.appendChild(chip);
-                await persistOrder();
-            };
+            if (!touchPlacement) {
+                zone.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                    const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
+                    if (!chip) return;
+                    const target = e.target.closest('.drag-chip');
+                    await moveChipToZone(chip, target && target !== chip ? target : null);
+                });
 
-            zone.addEventListener('drop', async e => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-                const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
-                const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
-                if (!chip) return;
-                const target = e.target.closest('.drag-chip');
-                await moveChipToZone(chip, target && target !== chip ? target : null);
-            });
-
-            pool.addEventListener('drop', async e => {
-                e.preventDefault();
-                pool.classList.remove('drag-over');
-                const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
-                const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
-                if (!chip) return;
-                pool.appendChild(chip);
-                await persistOrder();
-            });
+                pool.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    pool.classList.remove('drag-over');
+                    const chipId = e.dataTransfer?.getData('application/x-lotrinh-chip');
+                    const chip = chipId ? card.querySelector(`[data-chip-id="${escapeSelector(chipId)}"]`) : null;
+                    if (!chip) return;
+                    pool.appendChild(chip);
+                    await persistOrder();
+                });
+            } else {
+                zone.addEventListener('click', async e => {
+                    if (practiceDone || e.target.closest('.drag-chip')) return;
+                    const selected = getSelectedChip(card);
+                    if (!selected || selected.parentElement !== pool) return;
+                    await moveChipToZone(selected);
+                });
+            }
 
             pool.querySelectorAll('.drag-chip').forEach(bindSortChip);
             zone.querySelectorAll('.drag-chip').forEach(bindSortChip);
+            syncSortZonePlaceholder();
         });
 
         document.querySelectorAll('.match-card').forEach(card => {
