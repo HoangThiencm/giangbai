@@ -1729,7 +1729,7 @@
         bindAiExplainButtons(lesson);
     }
 
-    function renderPracticePart(title, icon, bodyHtml, count = 0) {
+    function renderPracticePart(title, icon, bodyHtml, count = 0, note = '') {
         const countLabel = count === 1 ? '1 câu' : `${count} câu`;
         return `
             <section class="practice-part space-y-4">
@@ -1740,11 +1740,32 @@
                     <div class="min-w-0">
                         <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">${escapeHtml(title)}</h2>
                         <p class="text-xs text-slate-500">${countLabel}</p>
+                        ${note ? `<p class="mt-1 text-xs leading-5 text-amber-800">${note}</p>` : ''}
                     </div>
                 </div>
                 <div class="space-y-4">${bodyHtml}</div>
             </section>
         `;
+    }
+
+    function isEssayNumericAnswer(value) {
+        const text = String(value ?? '').trim().replace(/\s+/g, '');
+        if (!text) return false;
+        return /^-?(?:\d+(?:[.,]\d+)?|\d+[.,]\d+)(?:\/-?(?:\d+(?:[.,]\d+)?|\d+[.,]\d+))?$/.test(text);
+    }
+
+    function buildEssayCheckFeedback(item, value) {
+        const trimmed = String(value || '').trim();
+        if (!trimmed) {
+            return '<span class="font-bold text-slate-600">Hãy nhập đáp án trước khi kiểm tra.</span>';
+        }
+        if (!isEssayNumericAnswer(trimmed)) {
+            return '<span class="font-bold text-amber-700">Chỉ nhập kết quả là số.</span> Không nhập lời giải, công thức, chữ hoặc ký hiệu toán. Ví dụ: <strong>5</strong>, <strong>-3</strong>, <strong>1/2</strong>.';
+        }
+        const ok = normalizeAnswerText(trimmed) === normalizeAnswerText(item?.answer || '');
+        return ok
+            ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
+            : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item?.hint || 'Hãy thử so sánh với đáp án mẫu.')}`;
     }
 
     function renderEssayExercises(lesson) {
@@ -1767,8 +1788,8 @@
                         <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
                         <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
                     </div>
-                    <textarea class="essay-input" data-essay-key="${escapeHtml(key)}" rows="5" placeholder="Nhập đáp án của em..." ${practiceDone ? 'disabled' : ''}>${escapeHtml(saved)}</textarea>
-                    ${practiceDone ? '' : renderMathSymbolToolbar('essay', key)}
+                    <p class="essay-help">Chỉ nhập <strong>kết quả cuối cùng là số</strong> (ví dụ: 5, -3, 1/2). Không nhập lời giải, công thức hay kết quả dạng chữ.</p>
+                    <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="decimal" autocomplete="off" placeholder="Chỉ nhập số, ví dụ: 12 hoặc -3 hoặc 1/2" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
                     <div class="mt-3 flex flex-wrap gap-2">
                         ${practiceDone ? '' : `
                         <button type="button" class="essay-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-essay-key="${escapeHtml(key)}">
@@ -2537,7 +2558,13 @@
 
         const practiceParts = [
             essayExercises.length
-                ? renderPracticePart('Phần Bài tập tự luận', 'fa-pen-nib', renderEssayExercises(lesson), essayExercises.length)
+                ? renderPracticePart(
+                    'Phần Bài tập tự luận',
+                    'fa-pen-nib',
+                    renderEssayExercises(lesson),
+                    essayExercises.length,
+                    'Mỗi câu chỉ nhập <strong>kết quả là số</strong>. Không nhập lời giải, công thức hay đáp án dạng chữ.'
+                )
                 : '',
             fillExercises.length
                 ? renderPracticePart('Phần Bài tập điền khuyết', 'fa-i-cursor', renderFillExercises(lesson), fillExercises.length)
@@ -3636,19 +3663,11 @@
                 const input = card?.querySelector(`[data-essay-key="${escapeSelector(key)}"]`);
                 const feedback = card?.querySelector('.essay-feedback');
                 if (!feedback || !input) return;
-                const value = String(input.value || '').trim();
-                if (!value) {
-                    feedback.classList.remove('hidden');
-                    feedback.innerHTML = '<span class="font-bold text-slate-600">Hãy nhập đáp án trước khi kiểm tra.</span>';
-                    input.focus();
-                    return;
-                }
                 const item = (lesson.essay_exercises || []).find((entry, index) => String(entry.id || `essay_${index + 1}`) === key);
-                const ok = normalizeAnswerText(value) === normalizeAnswerText(item?.answer || '');
+                const value = String(input.value || '').trim();
                 feedback.classList.remove('hidden');
-                feedback.innerHTML = ok
-                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
-                    : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item?.hint || 'Hãy thử so sánh với đáp án mẫu.')}`;
+                feedback.innerHTML = buildEssayCheckFeedback(item, value);
+                if (!value || !isEssayNumericAnswer(value)) input.focus();
             };
         });
 

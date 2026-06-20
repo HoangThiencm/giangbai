@@ -747,8 +747,8 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <label class="block text-sm font-bold text-slate-700">Bài tập tự luận
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Đề bài | Đáp án mẫu | Gợi ý.</span>
-                            <textarea id="lessonEssay" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tính 2 + 3 | 5 | Có thể đếm thêm 3 đơn vị sau số 2."></textarea>
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Đề bài | Đáp án mẫu (chỉ số) | Gợi ý. Học sinh chỉ nhập kết quả là số, không nhập lời giải hay chữ.</span>
+                            <textarea id="lessonEssay" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tính 2 + 3 | 5 | Cộng thêm 3 đơn vị sau số 2."></textarea>
                         </label>
                         <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
                             <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu có ___ | Mảnh 1 » Mảnh 2 » ... | Đáp án đúng | Gợi ý. Dùng » giữa các mảnh; phép so sánh 2&gt;1 không bị tách.</span>
