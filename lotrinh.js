@@ -218,8 +218,10 @@
     }
 
     const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]/g;
+    const POOL_ITEM_JOINER = ' » ';
+    const POOL_ITEM_SEP_RE = /\s*»\s*/u;
 
-    function splitPoolText(value) {
+    function splitPoolTextByGt(value) {
         const source = String(value || '');
         if (!source) return [];
         const parts = [];
@@ -249,6 +251,28 @@
         const trimmed = current.trim();
         if (trimmed) parts.push(trimmed);
         return parts;
+    }
+
+    function splitPoolText(value) {
+        const source = String(value || '');
+        if (!source) return [];
+        if (POOL_ITEM_SEP_RE.test(source)) {
+            return source.split(POOL_ITEM_SEP_RE).map(part => part.trim()).filter(Boolean);
+        }
+        return splitPoolTextByGt(source);
+    }
+
+    function joinPoolText(items) {
+        return (items || []).map(item => String(item || '').trim()).filter(Boolean).join(POOL_ITEM_JOINER);
+    }
+
+    function repairPoolPieces(pieces, expectedCount = 0) {
+        if (!Array.isArray(pieces) || pieces.length <= 1) return pieces || [];
+        const repaired = splitPoolText(pieces.join(' > '));
+        if (repaired.length >= pieces.length) return pieces;
+        if (expectedCount > 0 && repaired.length === expectedCount) return repaired;
+        if (!expectedCount && repaired.length < pieces.length) return repaired;
+        return pieces;
     }
 
     function countBlankTokens(prompt) {
@@ -299,11 +323,12 @@
 
     function normalizeDragExercise(item) {
         if (item?.mode === 'match' || (Array.isArray(item?.left) && Array.isArray(item?.right))) {
-            const left = Array.isArray(item.left) ? item.left : [];
-            const right = Array.isArray(item.right) ? item.right : [];
             const pairs = Array.isArray(item.pairs) && item.pairs.length
                 ? item.pairs
                 : parseMatchPairs(item.pair_spec || item.pairs_text || '');
+            const pairCount = pairs.length || 0;
+            const left = repairPoolPieces(Array.isArray(item.left) ? item.left : [], pairCount);
+            const right = repairPoolPieces(Array.isArray(item.right) ? item.right : [], pairCount);
             return {
                 ...item,
                 mode: 'match',

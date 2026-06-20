@@ -367,7 +367,10 @@
         }).filter(item => item.prompt);
     }
 
-    function splitPoolText(value) {
+    const POOL_ITEM_JOINER = ' » ';
+    const POOL_ITEM_SEP_RE = /\s*»\s*/u;
+
+    function splitPoolTextByGt(value) {
         const source = String(value || '');
         if (!source) return [];
         const parts = [];
@@ -399,6 +402,32 @@
         return parts;
     }
 
+    function splitPoolText(value) {
+        const source = String(value || '');
+        if (!source) return [];
+        if (POOL_ITEM_SEP_RE.test(source)) {
+            return source.split(POOL_ITEM_SEP_RE).map(part => part.trim()).filter(Boolean);
+        }
+        return splitPoolTextByGt(source);
+    }
+
+    function joinPoolText(items) {
+        return (items || []).map(item => String(item || '').trim()).filter(Boolean).join(POOL_ITEM_JOINER);
+    }
+
+    function repairPoolPieces(pieces, expectedCount = 0) {
+        if (!Array.isArray(pieces) || pieces.length <= 1) return pieces || [];
+        const repaired = splitPoolText(pieces.join(' > '));
+        if (repaired.length >= pieces.length) return pieces;
+        if (expectedCount > 0 && repaired.length === expectedCount) return repaired;
+        if (!expectedCount && repaired.length < pieces.length) return repaired;
+        return pieces;
+    }
+
+    function poolTextHasMultipleItems(value) {
+        return splitPoolText(value).length > 1;
+    }
+
     function parseMatchPairs(spec) {
         return String(spec || '').split(',').map(part => part.trim()).filter(Boolean).map(part => {
             const [left, right] = part.split('-').map(value => Number.parseInt(value, 10));
@@ -414,14 +443,14 @@
             let pool = [];
             let answer = parts[1] || '';
             let hint = parts[2] || '';
-            if (String(parts[1] || '').includes('>')) {
+            if (poolTextHasMultipleItems(parts[1])) {
                 pool = splitPoolText(parts[1]);
                 answer = parts[2] || pool[0] || '';
                 hint = parts[3] || '';
             } else if (answer) {
                 pool = [String(answer).trim()];
             }
-            const answers = String(answer).includes('>') ? splitPoolText(answer) : [String(answer || '').trim()].filter(Boolean);
+            const answers = poolTextHasMultipleItems(answer) ? splitPoolText(answer) : [String(answer || '').trim()].filter(Boolean);
             return {
                 id: `fill_${index + 1}`,
                 prompt,
@@ -439,9 +468,9 @@
             const prompt = parts[0] || '';
             const pairSpec = parts[3] || '';
             if (pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) {
-                const left = splitPoolText(parts[1]);
-                const right = splitPoolText(parts[2]);
                 const pairs = parseMatchPairs(pairSpec);
+                const left = repairPoolPieces(splitPoolText(parts[1]), pairs.length);
+                const right = repairPoolPieces(splitPoolText(parts[2]), pairs.length);
                 return {
                     id: `drag_${index + 1}`,
                     mode: 'match',
@@ -506,8 +535,8 @@
 
     function formatFillExercises(items) {
         return (items || []).map(item => {
-            const pool = (item.items || item.pool || []).join(' > ');
-            const answer = Array.isArray(item.answer) ? item.answer.join(' > ') : (item.answer || '');
+            const pool = joinPoolText(item.items || item.pool || []);
+            const answer = Array.isArray(item.answer) ? joinPoolText(item.answer) : (item.answer || '');
             return [item.prompt || '', pool || answer, answer, item.hint || ''].filter((part, idx, arr) => !(idx === 1 && part === arr[2])).join(' | ');
         }).join('\n');
     }
@@ -516,9 +545,12 @@
         return (items || []).map(item => {
             if (item.mode === 'match' || (Array.isArray(item.left) && Array.isArray(item.right))) {
                 const pairs = (item.pairs || []).map(pair => `${pair.left}-${pair.right}`).join(',');
-                return [item.prompt || '', (item.left || []).join(' > '), (item.right || []).join(' > '), pairs, item.hint || ''].join(' | ');
+                const pairCount = (item.pairs || []).length;
+                const left = joinPoolText(repairPoolPieces(item.left || [], pairCount));
+                const right = joinPoolText(repairPoolPieces(item.right || [], pairCount));
+                return [item.prompt || '', left, right, pairs, item.hint || ''].join(' | ');
             }
-            return [item.prompt || '', (item.items || []).join(' > '), (item.answer || []).join(' > '), item.hint || ''].join(' | ');
+            return [item.prompt || '', joinPoolText(item.items || []), joinPoolText(item.answer || []), item.hint || ''].join(' | ');
         }).join('\n');
     }
 
@@ -719,12 +751,12 @@
                             <textarea id="lessonEssay" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tính 2 + 3 | 5 | Có thể đếm thêm 3 đơn vị sau số 2."></textarea>
                         </label>
                         <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu có ___ | Mảnh 1 &gt; Mảnh 2 &gt; ... | Đáp án đúng | Gợi ý.</span>
-                            <textarea id="lessonFill" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Số liền sau của 7 là ___ | 8 > 7 > 9 | 8 | Thêm 1 vào 7."></textarea>
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu có ___ | Mảnh 1 » Mảnh 2 » ... | Đáp án đúng | Gợi ý. Dùng » giữa các mảnh; phép so sánh 2&gt;1 không bị tách.</span>
+                            <textarea id="lessonFill" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Số liền sau của 7 là ___ | 8 » 7 » 9 | 8 | Thêm 1 vào 7."></textarea>
                         </label>
                         <label class="block text-sm font-bold text-slate-700">Nối ô / sắp xếp
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Nối ô: Đề | Cột trái &gt; ... | Cột phải &gt; ... | 0-0,1-1 | Gợi ý. Sắp xếp: Đề | Mảnh &gt; ... | Thứ tự đúng | Gợi ý.</span>
-                            <textarea id="lessonDrag" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Nối số với chữ | 1 > 2 > 3 | một > hai > ba | 0-0,1-1,2-2 | Ghép đúng cặp."></textarea>
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Nối ô: Đề | Cột trái » ... | Cột phải » ... | 0-0,1-1 | Gợi ý. Sắp xếp: Đề | Mảnh » ... | Thứ tự đúng | Gợi ý. Dùng » giữa các mục.</span>
+                            <textarea id="lessonDrag" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Nối cặp | $a$ » $b$ » $c$ | x » y » z | 0-0,1-1,2-2 | Ghép đúng cặp."></textarea>
                         </label>
                     </div>
 
@@ -963,7 +995,7 @@
         el('lessonExamples').value = formatExamples(defaults.examples);
         el('lessonEssay').value = 'Viết tập hợp A gồm các số tự nhiên nhỏ hơn 4 | A={0,1,2,3} | Các số tự nhiên bắt đầu từ 0.';
         el('lessonFill').value = 'Nếu A={1,2,3} thì 2 ___ A | thuộc > không thuộc > ∈ | thuộc | 2 là phần tử của A.';
-        el('lessonDrag').value = 'Nối khái niệm | 1 > 2 > 3 | một > hai > ba | 0-0,1-1,2-2 | Ghép đúng từng cặp.';
+        el('lessonDrag').value = 'Nối khái niệm | 1 » 2 » 3 | một » hai » ba | 0-0,1-1,2-2 | Ghép đúng từng cặp.';
         el('lessonVideos').value = formatVideos(defaults.videos);
         el('lessonSkills').value = formatSkills(defaults.skills);
         el('lessonTasks').value = defaults.tasks.join('\n');

@@ -7,9 +7,8 @@ function pr_decode_json_array($value): array
     return is_array($decoded) ? $decoded : [];
 }
 
-function pr_split_pool_text($value): array
+function pr_split_pool_text_by_gt(string $source): array
 {
-    $source = (string)$value;
     if ($source === '') return [];
 
     $parts = [];
@@ -42,6 +41,32 @@ function pr_split_pool_text($value): array
     $trimmed = trim($current);
     if ($trimmed !== '') $parts[] = $trimmed;
     return $parts;
+}
+
+function pr_split_pool_text($value): array
+{
+    $source = (string)$value;
+    if ($source === '') return [];
+    if (preg_match('/\s*»\s*/u', $source)) {
+        $parts = preg_split('/\s*»\s*/u', $source) ?: [];
+        $items = [];
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part !== '') $items[] = $part;
+        }
+        return $items;
+    }
+    return pr_split_pool_text_by_gt($source);
+}
+
+function pr_repair_pool_pieces(array $pieces, int $expectedCount = 0): array
+{
+    if (count($pieces) <= 1) return $pieces;
+    $repaired = pr_split_pool_text(implode(' > ', $pieces));
+    if (count($repaired) >= count($pieces)) return $pieces;
+    if ($expectedCount > 0 && count($repaired) === $expectedCount) return $repaired;
+    if ($expectedCount === 0 && count($repaired) < count($pieces)) return $repaired;
+    return $pieces;
 }
 
 function pr_normalize_answer_text($value): string
@@ -111,10 +136,14 @@ function pr_normalize_drag_exercise(array $item): array
         $pairs = is_array($item['pairs'] ?? null) && $item['pairs']
             ? $item['pairs']
             : pr_parse_match_pairs($item['pair_spec'] ?? $item['pairs_text'] ?? '');
+        $pairCount = count($pairs);
+        $left = pr_repair_pool_pieces(is_array($item['left'] ?? null) ? $item['left'] : [], $pairCount);
+        $right = pr_repair_pool_pieces(is_array($item['right'] ?? null) ? $item['right'] : [], $pairCount);
         return [
             'id' => $item['id'] ?? '',
             'mode' => 'match',
-            'left' => is_array($item['left'] ?? null) ? $item['left'] : [],
+            'left' => $left,
+            'right' => $right,
             'pairs' => $pairs,
         ];
     }
