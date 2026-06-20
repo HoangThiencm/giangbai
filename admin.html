@@ -635,7 +635,7 @@
             }
             if (detail) {
                 detail.textContent = keys.length
-                    ? `Nguồn hiện tại: ${configSourceLabel(configStorageMeta.source)}. AI lộ trình Toán 6-9 và các công cụ đọc từ file trên hosting.`
+                    ? `Nguồn hiện tại: ${configSourceLabel(configStorageMeta.source)}. AI lộ trình Toán 4-9 và các công cụ đọc từ file trên hosting.`
                     : 'Chưa có Gemini key trong global_config.json trên hosting. Nhập key và bấm Lưu Gemini.';
             }
             renderConfigStorageBanner();
@@ -1155,6 +1155,7 @@
         // Hosting/MySQL student management mode.
         // Keeps the existing admin page, but uses local PHP APIs instead of public registration.
         let hostingPages = {
+            lotrinhtoan4: { title: 'Lộ trình tự học Toán 4', url: 'lotrinhtoan4.html' },
             lotrinhtoan6: { title: 'Lộ trình tự học Toán 6', url: 'lotrinhtoan6.html' },
             lotrinhtoan7: { title: 'Lộ trình tự học Toán 7', url: 'lotrinhtoan7.html' },
             lotrinhtoan8: { title: 'Lộ trình tự học Toán 8', url: 'lotrinhtoan8.html' },
@@ -1190,6 +1191,7 @@
                             <label class="text-sm font-bold text-emerald-900">
                                 Đợt chuyển
                                 <select id="bulkPromoteRoute" class="mt-1 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500">
+                                    <option value="lotrinhtoan4">Toán 4 lên Toán 6</option>
                                     <option value="lotrinhtoan6">Toán 6 lên Toán 7</option>
                                     <option value="lotrinhtoan7">Toán 7 lên Toán 8</option>
                                     <option value="lotrinhtoan8">Toán 8 lên Toán 9</option>
@@ -1685,7 +1687,7 @@
             return [...container.querySelectorAll('.allowed-page:checked')].map(input => input.value);
         }
 
-        const mathRouteOrder = ['lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+        const mathRouteOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
         function normalizeAllowedPagesForAdmin(pages) {
             return (pages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);

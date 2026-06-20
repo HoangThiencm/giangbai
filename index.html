@@ -365,6 +365,7 @@
             try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
             const routeMap = {
                 lotrinh: 'lotrinhtoan6.html',
+                lotrinhtoan4: 'lotrinhtoan4.html',
                 lotrinhtoan6: 'lotrinhtoan6.html',
                 lotrinhtoan7: 'lotrinhtoan7.html',
                 lotrinhtoan8: 'lotrinhtoan8.html',
@@ -657,6 +658,20 @@
             </a>
 
             <!-- 9. LO TRINH TU HOC -->
+            <a href="lotrinhtoan4.html" data-student-lotrinh-card="1"
+                class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
+                <div class="tool-icon bg-lime-100 text-lime-700">
+                    <i class="fas fa-route"></i>
+                </div>
+                <div class="mt-6 flex-1">
+                    <h3 class="tool-title group-hover:text-lime-700 transition">Lộ trình tự học Toán 4</h3>
+                    <p class="tool-desc mt-3">Lộ trình theo từng bài Toán 4, luyện tập và theo dõi tiến độ cá nhân hóa.</p>
+                </div>
+                <span class="tool-link mt-6 inline-flex items-center gap-2 text-sm text-lime-700 transition group-hover:translate-x-1">
+                    Mở lộ trình <i class="fas fa-arrow-right"></i>
+                </span>
+            </a>
+
             <a href="lotrinhtoan6.html" data-student-lotrinh-card="1"
                 class="tool-card group flex flex-col rounded-[24px] p-6 border-transparent hover:border-lime-200 text-left block">
                 <div class="tool-icon bg-lime-100 text-lime-700">
@@ -812,6 +827,7 @@
 
             const routeMap = {
                 lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
+                lotrinhtoan4: { url: 'lotrinhtoan4.html', label: 'Toán 4' },
                 lotrinhtoan6: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
                 lotrinhtoan7: { url: 'lotrinhtoan7.html', label: 'Toán 7' },
                 lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8' },

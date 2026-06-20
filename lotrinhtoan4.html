@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lộ trình tự ôn luyện Toán 8</title>
+    <title>Lộ trình tự ôn luyện Toán 4</title>
     <script src="access-control.js?v=20260620-toan4-1"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        window.LOTRINH_SUBJECT = 'Toán 8';
-        window.LOTRINH_PAGE_TITLE = 'Tự học và rèn luyện Toán 8 cùng thầy Thiên';
+        window.LOTRINH_SUBJECT = 'Toán 4';
+        window.LOTRINH_PAGE_TITLE = 'Tự học và rèn luyện Toán 4 cùng thầy Thiên';
     </script>
     <script>
         window.MathJax = {
@@ -68,14 +68,19 @@
             color: #334155;
         }
         .lesson-chapter-head::-webkit-details-marker { display: none; }
-        .lesson-chapter-title { min-width: 0; line-height: 1.4; }
+        .lesson-chapter-title {
+            min-width: 0;
+            line-height: 1.4;
+        }
         .lesson-chapter-meta {
             flex-shrink: 0;
             font-size: 0.72rem;
             font-weight: 700;
             color: #64748b;
         }
-        .lesson-chapter-items { padding: 0 8px 8px; }
+        .lesson-chapter-items {
+            padding: 0 8px 8px;
+        }
         .skill-bar { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
         .skill-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0f766e, #f59e0b); }
         .practice-card {
@@ -387,13 +392,31 @@
         }
         /* AI giải thích - Nút */
         .ai-explain-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            margin-top: 6px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600;
-            color: #92400e; background: #fef3c7; border: 1px solid #fcd34d;
-            border-radius: 999px; cursor: pointer; transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+            padding: 4px 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #92400e;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .ai-explain-btn:hover { background: #fde68a; border-color: #f59e0b; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(245,158,11,0.2); }
-        .ai-explain-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
+        .ai-explain-btn:hover {
+            background: #fde68a;
+            border-color: #f59e0b;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+        }
+        .ai-explain-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+            transform: none;
+        }
         .ai-chat-bubble {
             position: relative;
             margin-top: 12px;
@@ -401,7 +424,7 @@
             border: 1px solid #fbbf24;
             border-radius: 14px;
             background: #fffbeb;
-            box-shadow: 0 16px 34px rgba(146,64,14,0.14);
+            box-shadow: 0 16px 34px rgba(146, 64, 14, 0.14);
             overflow: visible;
             animation: aiBubbleIn 0.18s ease;
         }
@@ -427,7 +450,11 @@
             font-size: 0.86rem;
             font-weight: 800;
         }
-        .ai-chat-bubble-head span { display: inline-flex; align-items: center; gap: 8px; }
+        .ai-chat-bubble-head span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
         .ai-chat-bubble-close {
             display: grid;
             width: 26px;
@@ -451,41 +478,99 @@
             overflow-y: auto;
         }
         .ai-chat-bubble-body mjx-container svg { display: inline !important; }
-        @keyframes aiBubbleIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes aiBubbleIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         /* AI giải thích - Modal popup */
         .ai-modal-overlay {
-            position: fixed; inset: 0; z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
-            animation: aiModalFadeIn 0.25s ease; padding: 16px;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            animation: aiModalFadeIn 0.25s ease;
+            padding: 16px;
         }
         .ai-modal-card {
-            background: #fff; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.25);
-            width: 100%; max-width: 560px; max-height: 80vh;
-            display: flex; flex-direction: column; animation: aiModalSlideUp 0.3s ease; overflow: hidden;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            max-width: 560px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: aiModalSlideUp 0.3s ease;
+            overflow: hidden;
         }
         .ai-modal-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 1rem; color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1e293b;
         }
         .ai-modal-close {
-            width: 32px; height: 32px; display: grid; place-items: center;
-            border: none; background: #f1f5f9; border-radius: 8px;
-            font-size: 1.3rem; color: #64748b; cursor: pointer; transition: all 0.15s;
+            width: 32px;
+            height: 32px;
+            display: grid;
+            place-items: center;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.15s;
         }
         .ai-modal-close:hover { background: #e2e8f0; color: #0f172a; }
-        .ai-modal-body { padding: 20px; overflow-y: auto; font-size: 0.95rem; line-height: 1.85; color: #334155; }
-        .ai-modal-body mjx-container svg { display: inline !important; }
-        .ai-modal-footer { padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; }
-        .ai-modal-close-btn {
-            display: inline-flex; align-items: center; gap: 6px; padding: 8px 20px;
-            font-size: 0.85rem; font-weight: 700; color: #fff;
-            background: linear-gradient(135deg, #0f766e, #14b8a6);
-            border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;
+        .ai-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: #334155;
         }
-        .ai-modal-close-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,118,110,0.3); }
-        @keyframes aiModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes aiModalSlideUp { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .ai-modal-body mjx-container svg { display: inline !important; }
+        .ai-modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .ai-modal-close-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #0f766e, #14b8a6);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ai-modal-close-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+        }
+        @keyframes aiModalFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        @keyframes aiModalSlideUp {
+            from { opacity: 0; transform: translateY(20px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
     </style>
 </head>
 
@@ -593,9 +678,8 @@
     </div>
 
     <script src="teacher-lotrinh-nav.js?v=20260620-toan4-1"></script>
-    <script src="lotrinh.js?v=20260620-role-split1"></script>
-    <script src="admin-lesson-manager.js?v=20260620-role-split1"></script>
+    <script src="lotrinh.js?v=20260620-toan4-1"></script>
+    <script src="admin-lesson-manager.js?v=20260620-toan4-1"></script>
 </body>
 
 </html>
-

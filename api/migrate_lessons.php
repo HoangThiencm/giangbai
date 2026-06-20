@@ -133,6 +133,7 @@ $stmt->execute([
 ]);
 
 $draftLessons = [
+    ['Toán 4', 'Chương 1', 'Bài 1: Nhập nội dung', 'math4-c1-b1-draft'],
     ['Toán 7', 'Chương 1', 'Bài 1: Nhập nội dung', 'math7-c1-b1-draft'],
     ['Toán 8', 'Chương 1', 'Bài 1: Nhập nội dung', 'math8-c1-b1-draft'],
     ['Toán 9', 'Chương 1', 'Bài 1: Nhập nội dung', 'math9-c1-b1-draft'],

@@ -1,6 +1,7 @@
 (function () {
     const pageKeys = {
         'lotrinh.html': 'lotrinh',
+        'lotrinhtoan4.html': 'lotrinhtoan4',
         'lotrinhtoan6.html': 'lotrinhtoan6',
         'lotrinhtoan7.html': 'lotrinhtoan7',
         'lotrinhtoan8.html': 'lotrinhtoan8',
@@ -13,6 +14,7 @@
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
+        lotrinhtoan4: 'lotrinhtoan4.html',
         lotrinhtoan6: 'lotrinhtoan6.html',
         lotrinhtoan7: 'lotrinhtoan7.html',
         lotrinhtoan8: 'lotrinhtoan8.html',
@@ -23,7 +25,7 @@
         thitructuyen: 'thitructuyen.html',
         kttx: 'kttx.html'
     };
-    const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
+    const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
 
     const fileName = window.location.pathname.split('/').pop() || 'index.html';
     const pageKey = pageKeys[fileName];

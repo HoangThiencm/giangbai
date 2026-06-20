@@ -1,5 +1,6 @@
 (function () {
     const SUBJECTS = [
+        { id: 'math4', label: 'Toán 4', title: 'Toán 4' },
         { id: 'math6', label: 'Toán 6', title: 'Toán 6' },
         { id: 'math7', label: 'Toán 7', title: 'Toán 7' },
         { id: 'math8', label: 'Toán 8', title: 'Toán 8' },
@@ -54,6 +55,7 @@
     const PAGE_SUBJECT = String(window.LOTRINH_SUBJECT || '').trim();
     const PAGE_TO_SUBJECT = {
         lotrinh: 'Toán 6',
+        lotrinhtoan4: 'Toán 4',
         lotrinhtoan6: 'Toán 6',
         lotrinhtoan7: 'Toán 7',
         lotrinhtoan8: 'Toán 8',
@@ -652,7 +654,7 @@
             teacherMount.innerHTML = `
                 <section id="lessonEditorBlocked" class="bg-amber-50 rounded-xl border border-amber-200 mb-8 p-6 text-sm text-amber-900">
                     <p class="font-bold text-base mb-2"><i class="fas fa-lock mr-2"></i>Chưa được mở quyền soạn bài</p>
-                    <p>Admin cần tick lộ trình Toán 6/7/8/9 trong phần <strong>Lộ trình được phép soạn</strong> rồi giáo viên đăng nhập lại.</p>
+                    <p>Admin cần tick lộ trình Toán 4/6/7/8/9 trong phần <strong>Lộ trình được phép soạn</strong> rồi giáo viên đăng nhập lại.</p>
                 </section>
             `;
             return;
