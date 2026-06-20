@@ -46,6 +46,8 @@
     }
 
     function activateTab(id) {
+        const accountStats = el('statTotal')?.closest('.grid');
+        accountStats?.classList.toggle('hidden', id === 'tranphu');
         document.querySelectorAll('.admin-tab-button').forEach(button => {
             const active = button.dataset.tab === id;
             button.classList.toggle('bg-blue-600', active);

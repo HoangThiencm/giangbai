@@ -2169,6 +2169,10 @@
 
             function activate(id) {
                 if (!TAB_DEFS.some(([tabId]) => tabId === id)) id = 'accounts';
+                // The account counters do not describe the shared reference
+                // lists managed in the THCS Trần Phú tab.
+                const accountStats = $('statTotal')?.closest('.grid');
+                accountStats?.classList.toggle('hidden', id === 'tranphu');
                 document.querySelectorAll('.admin-tab-button').forEach(btn => {
                     const active = btn.dataset.tab === id;
                     btn.classList.toggle('bg-blue-600', active);
