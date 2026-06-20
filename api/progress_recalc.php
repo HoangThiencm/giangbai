@@ -9,13 +9,39 @@ function pr_decode_json_array($value): array
 
 function pr_split_pool_text($value): array
 {
-    $parts = preg_split('/\s*>\s*/u', (string)$value) ?: [];
-    $items = [];
-    foreach ($parts as $part) {
-        $part = trim((string)$part);
-        if ($part !== '') $items[] = $part;
+    $source = (string)$value;
+    if ($source === '') return [];
+
+    $parts = [];
+    $current = '';
+    $length = strlen($source);
+    $inInlineMath = false;
+    $inDisplayMath = false;
+
+    for ($i = 0; $i < $length; $i += 1) {
+        if (!$inInlineMath && $i + 1 < $length && substr($source, $i, 2) === '$$') {
+            $inDisplayMath = !$inDisplayMath;
+            $current .= '$$';
+            $i += 1;
+            continue;
+        }
+        if (!$inDisplayMath && $source[$i] === '$') {
+            $inInlineMath = !$inInlineMath;
+            $current .= '$';
+            continue;
+        }
+        if ($source[$i] === '>' && !$inInlineMath && !$inDisplayMath) {
+            $trimmed = trim($current);
+            if ($trimmed !== '') $parts[] = $trimmed;
+            $current = '';
+            continue;
+        }
+        $current .= $source[$i];
     }
-    return $items;
+
+    $trimmed = trim($current);
+    if ($trimmed !== '') $parts[] = $trimmed;
+    return $parts;
 }
 
 function pr_normalize_answer_text($value): string

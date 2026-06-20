@@ -368,7 +368,35 @@
     }
 
     function splitPoolText(value) {
-        return String(value || '').split('>').map(item => item.trim()).filter(Boolean);
+        const source = String(value || '');
+        if (!source) return [];
+        const parts = [];
+        let current = '';
+        let inInlineMath = false;
+        let inDisplayMath = false;
+        for (let i = 0; i < source.length; i += 1) {
+            if (!inInlineMath && source.startsWith('$$', i)) {
+                inDisplayMath = !inDisplayMath;
+                current += '$$';
+                i += 1;
+                continue;
+            }
+            if (!inDisplayMath && source[i] === '$') {
+                inInlineMath = !inInlineMath;
+                current += '$';
+                continue;
+            }
+            if (source[i] === '>' && !inInlineMath && !inDisplayMath) {
+                const trimmed = current.trim();
+                if (trimmed) parts.push(trimmed);
+                current = '';
+                continue;
+            }
+            current += source[i];
+        }
+        const trimmed = current.trim();
+        if (trimmed) parts.push(trimmed);
+        return parts;
     }
 
     function parseMatchPairs(spec) {
