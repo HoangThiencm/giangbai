@@ -37,7 +37,7 @@ if ($action === 'create') {
         respond(['error' => 'Giao vien can co lop phu trach (vd. 6A).'], 422);
     }
     if ($role === 'teacher' && !array_intersect($allowedPages, array_keys(lotrinh_page_subjects()))) {
-        respond(['error' => 'Giao vien can duoc mo it nhat mot lo trinh Toan 6-9.'], 422);
+        respond(['error' => 'Giao vien can duoc mo it nhat mot lo trinh Toan 4-9.'], 422);
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -103,7 +103,7 @@ if ($action === 'update') {
         respond(['error' => 'Giao vien can co lop phu trach (vd. 6A).'], 422);
     }
     if ($role === 'teacher' && !array_intersect($allowedPages, array_keys(lotrinh_page_subjects()))) {
-        respond(['error' => 'Giao vien can duoc mo it nhat mot lo trinh Toan 6-9.'], 422);
+        respond(['error' => 'Giao vien can duoc mo it nhat mot lo trinh Toan 4-9.'], 422);
     }
 
     $currentStmt = $pdo->prepare('SELECT expires_option, expires_at FROM users WHERE id = ? LIMIT 1');

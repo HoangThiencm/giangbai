@@ -980,11 +980,25 @@
     <script>
         SystemConfig.renderConfig();
 
-        (function setupTeacherLotrinhHub() {
+        (async function setupTeacherLotrinhHub() {
             if (localStorage.getItem('userRole') !== 'teacher') return;
 
             let allowedPages = [];
-            try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
+            try {
+                const res = await fetch('api/me.php', { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    allowedPages = data.user?.allowed_pages || [];
+                    localStorage.setItem('allowedPages', JSON.stringify(allowedPages));
+                    if (data.user?.class_name) {
+                        localStorage.setItem('userClassName', data.user.class_name);
+                    }
+                } else {
+                    allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                }
+            } catch {
+                try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
+            }
 
             const routeMap = {
                 lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6', grade: 6 },
@@ -994,15 +1008,14 @@
                 lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8', grade: 8 },
                 lotrinhtoan9: { url: 'lotrinhtoan9.html', label: 'Toán 9', grade: 9 }
             };
+            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+            const allowedSet = new Set(
+                allowedPages.map(page => (page === 'lotrinh' ? 'lotrinhtoan6' : page))
+            );
 
-            const lotrinhPages = [];
-            allowedPages.forEach(page => {
-                const key = page === 'lotrinh' ? 'lotrinhtoan6' : page;
-                if (routeMap[key] && !lotrinhPages.some(item => item.key === key)) {
-                    lotrinhPages.push({ key, ...routeMap[key] });
-                }
-            });
-            lotrinhPages.sort((a, b) => a.grade - b.grade);
+            const lotrinhPages = routeOrder
+                .filter(key => routeMap[key] && allowedSet.has(key))
+                .map(key => ({ key, ...routeMap[key] }));
 
             document.querySelectorAll('[data-student-lotrinh-card]').forEach(card => {
                 card.classList.add('hidden');

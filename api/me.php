@@ -14,4 +14,6 @@ if (!$user || !(bool)$user['is_active']) {
     respond(['error' => 'Tài khoản không còn hoạt động.'], 403);
 }
 
+$user = maybe_upgrade_teacher_allowed_pages($pdo, $user);
+
 respond(['ok' => true, 'user' => public_user($user), 'pages' => page_catalog()]);

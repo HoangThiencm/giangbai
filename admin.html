@@ -1297,8 +1297,13 @@
             const createRoleSelect = document.querySelector('#createStudentForm select[name="role"]');
             if (createRoleSelect) {
                 createRoleSelect.addEventListener('change', () => {
-                    syncAllowedPagesLabels(createRoleSelect.value);
-                    syncClassNameLabels(createRoleSelect.value);
+                    const role = createRoleSelect.value;
+                    syncAllowedPagesLabels(role);
+                    syncClassNameLabels(role);
+                    renderPageChecks(
+                        'createAllowedPages',
+                        role === 'teacher' ? mathRouteOrder : ['lotrinhtoan6']
+                    );
                 });
                 syncAllowedPagesLabels(createRoleSelect.value);
                 syncClassNameLabels(createRoleSelect.value);

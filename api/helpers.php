@@ -74,6 +74,51 @@ function lotrinh_route_order(): array
     return ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 }
 
+function ensure_teacher_lotrinh_scope(array $pages): array
+{
+    $pages = normalize_pages($pages);
+    $lotrinhKeys = array_keys(lotrinh_page_subjects());
+    $hasLotrinh = (bool) array_intersect($pages, $lotrinhKeys);
+    if (!$hasLotrinh || in_array('lotrinhtoan4', $pages, true)) {
+        return $pages;
+    }
+
+    $merged = array_values(array_unique(array_merge(['lotrinhtoan4'], $pages)));
+    $order = array_flip(lotrinh_route_order());
+    $lotrinh = [];
+    $other = [];
+    foreach ($merged as $page) {
+        if (isset($order[$page])) {
+            $lotrinh[] = $page;
+        } else {
+            $other[] = $page;
+        }
+    }
+    usort($lotrinh, static fn(string $a, string $b): int => $order[$a] <=> $order[$b]);
+
+    return array_merge($lotrinh, $other);
+}
+
+function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
+{
+    if (($user['role'] ?? '') !== 'teacher') {
+        return $user;
+    }
+
+    $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
+    $upgraded = ensure_teacher_lotrinh_scope($current);
+    if ($upgraded === $current) {
+        return $user;
+    }
+
+    $json = json_encode($upgraded, JSON_UNESCAPED_UNICODE);
+    $pdo->prepare('UPDATE users SET allowed_pages_json = ? WHERE id = ?')
+        ->execute([$json, (int)$user['id']]);
+    $user['allowed_pages_json'] = $json;
+
+    return $user;
+}
+
 function subjects_for_allowed_pages($pages): array
 {
     $pages = normalize_pages(is_array($pages) ? $pages : []);
