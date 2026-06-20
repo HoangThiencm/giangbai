@@ -384,10 +384,39 @@
     function renderPracticeCheckButton(className, attrName, attrValue, practiceDone) {
         if (practiceDone) return '';
         return `
-            <button type="button" class="${className} inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" ${attrName}="${escapeHtml(attrValue)}">
+            <button type="button" class="${className} practice-btn practice-btn--primary" ${attrName}="${escapeHtml(attrValue)}">
                 <i class="fas fa-check"></i>Kiểm tra đáp án
             </button>
         `;
+    }
+
+    function renderPracticeAiButton(aiText) {
+        return `
+            <button type="button" class="practice-btn practice-btn--ghost drag-ai-btn fill-ai-btn essay-ai-btn" data-ai-text="${escapeHtml(aiText)}">
+                <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
+            </button>
+        `;
+    }
+
+    function renderPracticeQuestionMeta(index, typeLabel, theme) {
+        return `
+            <div class="practice-card-meta">
+                <span class="practice-q-badge practice-q-badge--${theme}">Câu ${index + 1}</span>
+                ${typeLabel ? `<span class="practice-type-chip practice-type-chip--${theme}">${escapeHtml(typeLabel)}</span>` : ''}
+            </div>
+        `;
+    }
+
+    function renderPracticeHint(html) {
+        return `<div class="practice-hint"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>${html}</span></div>`;
+    }
+
+    function renderPracticeActions(buttonsHtml) {
+        return `<div class="practice-card-actions">${buttonsHtml}</div>`;
+    }
+
+    function renderPracticeFeedback(className, content, visible = true) {
+        return `<div class="${className} practice-feedback ${visible ? '' : 'hidden'}">${content}</div>`;
     }
 
     function buildFillCheckFeedback(normalized, slots) {
@@ -740,6 +769,7 @@
     }
 
     function render() {
+        ensurePracticeStyles();
         const lesson = currentLesson();
         if (state.loading) {
             els.studentName.textContent = 'Đang tải...';
@@ -1729,21 +1759,21 @@
         bindAiExplainButtons(lesson);
     }
 
-    function renderPracticePart(title, icon, bodyHtml, count = 0, note = '') {
+    function renderPracticePart(title, icon, bodyHtml, count = 0, note = '', theme = 'choice') {
         const countLabel = count === 1 ? '1 câu' : `${count} câu`;
         return `
-            <section class="practice-part space-y-4">
-                <div class="flex items-center gap-3 border-b border-slate-200 pb-3">
-                    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-700">
-                        <i class="fas ${icon}"></i>
-                    </span>
-                    <div class="min-w-0">
-                        <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">${escapeHtml(title)}</h2>
-                        <p class="text-xs text-slate-500">${countLabel}</p>
-                        ${note ? `<p class="mt-1 text-xs leading-5 text-amber-800">${note}</p>` : ''}
+            <section class="practice-part practice-part--${theme}">
+                <header class="practice-part-head">
+                    <div class="practice-part-icon"><i class="fas ${icon}" aria-hidden="true"></i></div>
+                    <div class="practice-part-intro">
+                        <div class="practice-part-title-row">
+                            <h2 class="practice-part-title">${escapeHtml(title)}</h2>
+                            <span class="practice-part-count">${countLabel}</span>
+                        </div>
+                        ${note ? `<p class="practice-part-note">${note}</p>` : ''}
                     </div>
-                </div>
-                <div class="space-y-4">${bodyHtml}</div>
+                </header>
+                <div class="practice-part-body">${bodyHtml}</div>
             </section>
         `;
     }
@@ -1783,24 +1813,20 @@
                     : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item.hint || 'Hãy thử so sánh với đáp án mẫu.')}`)
                 : '';
             return `
-                <article class="practice-card">
-                    <div class="question-head">
-                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
-                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(item.prompt || '')}</h3>
+                <article class="practice-card practice-card--essay">
+                    <div class="question-head practice-card-head">
+                        ${renderPracticeQuestionMeta(index, 'Tự luận', 'essay')}
+                        <h3 class="question-text practice-q-text">${mathText(item.prompt || '')}</h3>
                     </div>
-                    <p class="essay-help">Chỉ nhập <strong>kết quả cuối cùng là số</strong> (ví dụ: 5, -3, 1/2). Không nhập lời giải, công thức hay kết quả dạng chữ.</p>
-                    <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="decimal" autocomplete="off" placeholder="Chỉ nhập số, ví dụ: 12 hoặc -3 hoặc 1/2" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        ${practiceDone ? '' : `
-                        <button type="button" class="essay-check-btn inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-essay-key="${escapeHtml(key)}">
-                            <i class="fas fa-check"></i>Kiểm tra đáp án
-                        </button>
-                        `}
-                        <button type="button" class="essay-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(item.prompt || '')}">
-                            <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
-                        </button>
+                    <div class="practice-card-content">
+                        ${renderPracticeHint('Chỉ nhập <strong>kết quả cuối cùng là số</strong> (ví dụ: 5, -3, 1/2). Không nhập lời giải, công thức hay kết quả dạng chữ.')}
+                        <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="decimal" autocomplete="off" placeholder="Chỉ nhập số, ví dụ: 12 hoặc -3 hoặc 1/2" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
+                        ${renderPracticeActions(`
+                            ${practiceDone ? '' : `<button type="button" class="essay-check-btn practice-btn practice-btn--primary" data-essay-key="${escapeHtml(key)}"><i class="fas fa-check"></i>Kiểm tra đáp án</button>`}
+                            ${renderPracticeAiButton(item.prompt || '')}
+                        `)}
+                        ${renderPracticeFeedback('essay-feedback', feedback, practiceDone)}
                     </div>
-                    <div class="essay-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
                 </article>
             `;
         }).join('');
@@ -1850,22 +1876,22 @@
                 : '';
             const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
             return `
-                <article class="practice-card fill-drag-card ${dragDisabled}" data-fill-card="${escapeHtml(key)}">
-                    <div class="question-head">
-                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
-                        <div class="question-text mt-1 text-base font-bold leading-8 text-slate-950 fill-prompt-line">${renderPromptWithFillSlots(normalized.prompt, key, slots, practiceDone)}</div>
+                <article class="practice-card practice-card--fill fill-drag-card ${dragDisabled}" data-fill-card="${escapeHtml(key)}">
+                    <div class="question-head practice-card-head">
+                        ${renderPracticeQuestionMeta(index, 'Điền khuyết', 'fill')}
+                        <div class="question-text practice-q-text fill-prompt-line">${renderPromptWithFillSlots(normalized.prompt, key, slots, practiceDone)}</div>
                     </div>
-                    <p class="fill-pool-label">Kéo một mảnh vào từng ô trống:</p>
-                    <div class="drag-pool fill-chip-pool" data-fill-pool="${escapeHtml(key)}">
-                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                    <div class="practice-card-content">
+                        <p class="fill-pool-label practice-zone-label"><i class="fas fa-grip-lines" aria-hidden="true"></i> Kéo một mảnh vào từng ô trống</p>
+                        <div class="drag-pool fill-chip-pool practice-chip-pool" data-fill-pool="${escapeHtml(key)}">
+                            ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                        </div>
+                        ${renderPracticeActions(`
+                            ${renderPracticeCheckButton('fill-check-btn', 'data-fill-key', key, practiceDone)}
+                            ${renderPracticeAiButton(normalized.prompt || '')}
+                        `)}
+                        ${renderPracticeFeedback('fill-feedback', feedback, practiceDone)}
                     </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        ${renderPracticeCheckButton('fill-check-btn', 'data-fill-key', key, practiceDone)}
-                        <button type="button" class="fill-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
-                            <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
-                        </button>
-                    </div>
-                    <div class="fill-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
                 </article>
             `;
         }).join('');
@@ -1893,12 +1919,13 @@
                 const leftOrder = shuffledIndices(normalized.left.length, matchSeed);
                 const rightOrder = shuffledIndices(normalized.right.length, matchSeed + 97);
                 return `
-                    <article class="practice-card match-card ${dragDisabled}" data-match-card="${escapeHtml(key)}">
-                        <div class="question-head">
-                            <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1} · Nối cặp</p>
-                            <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(normalized.prompt || '')}</h3>
+                    <article class="practice-card practice-card--drag match-card ${dragDisabled}" data-match-card="${escapeHtml(key)}">
+                        <div class="question-head practice-card-head">
+                            ${renderPracticeQuestionMeta(index, 'Nối cặp', 'drag')}
+                            <h3 class="question-text practice-q-text">${mathText(normalized.prompt || '')}</h3>
                         </div>
-                        <p class="match-help">Bấm mục bên trái, rồi bấm mục bên phải để nối cặp. Bấm lại để gỡ. Các mục hai bên được xáo trộn.</p>
+                        <div class="practice-card-content">
+                        ${renderPracticeHint('Bấm mục bên trái, rồi bấm mục bên phải để nối cặp. Bấm lại để gỡ. Các mục hai bên được xáo trộn.')}
                         <div class="match-board" data-match-key="${escapeHtml(key)}">
                             <div class="match-col" data-match-side="left">
                                 ${leftOrder.map(leftIndex => {
@@ -1918,13 +1945,12 @@
                                 }).join('')}
                             </div>
                         </div>
-                        <div class="mt-3 flex flex-wrap gap-2">
+                        ${renderPracticeActions(`
                             ${renderPracticeCheckButton('match-check-btn', 'data-match-key', key, practiceDone)}
-                            <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
-                                <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
-                            </button>
+                            ${renderPracticeAiButton(normalized.prompt || '')}
+                        `)}
+                        ${renderPracticeFeedback('drag-feedback', feedback, practiceDone)}
                         </div>
-                        <div class="drag-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
                     </article>
                 `;
             }
@@ -1942,26 +1968,26 @@
                 : '';
             const dragDisabled = practiceDone ? 'pointer-events-none opacity-80' : '';
             return `
-                <article class="practice-card sort-card ${dragDisabled}" data-sort-card="${escapeHtml(key)}">
-                    <div class="question-head">
-                        <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1} · Sắp xếp</p>
-                        <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(normalized.prompt || '')}</h3>
+                <article class="practice-card practice-card--drag sort-card ${dragDisabled}" data-sort-card="${escapeHtml(key)}">
+                    <div class="question-head practice-card-head">
+                        ${renderPracticeQuestionMeta(index, 'Sắp xếp', 'drag')}
+                        <h3 class="question-text practice-q-text">${mathText(normalized.prompt || '')}</h3>
                     </div>
-                    <p class="fill-pool-label sort-pool-label">Kéo các mảnh vào hàng bên dưới theo thứ tự đúng:</p>
-                    <div class="drag-pool sort-chip-pool" data-sort-pool="${escapeHtml(key)}">
-                        ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                    <div class="practice-card-content">
+                        <p class="fill-pool-label sort-pool-label practice-zone-label"><i class="fas fa-layer-group" aria-hidden="true"></i> Kéo các mảnh vào hàng bên dưới theo thứ tự đúng</p>
+                        <div class="drag-pool sort-chip-pool practice-chip-pool" data-sort-pool="${escapeHtml(key)}">
+                            ${poolItems.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
+                        </div>
+                        <p class="fill-pool-label sort-zone-label practice-zone-label practice-zone-label--answer"><i class="fas fa-arrow-down" aria-hidden="true"></i> Hàng trả lời</p>
+                        <div class="drag-slot-row sort-slot-row sort-answer-zone practice-answer-zone" data-sort-zone="${escapeHtml(key)}">
+                            ${savedOrder.length ? savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('') : '<span class="sort-zone-placeholder">Kéo các mảnh từ khay phía trên xuống đây...</span>'}
+                        </div>
+                        ${renderPracticeActions(`
+                            ${renderPracticeCheckButton('sort-check-btn', 'data-sort-key', key, practiceDone)}
+                            ${renderPracticeAiButton(normalized.prompt || '')}
+                        `)}
+                        ${renderPracticeFeedback('drag-feedback', feedback, practiceDone)}
                     </div>
-                    <p class="fill-pool-label sort-zone-label">Hàng trả lời:</p>
-                    <div class="drag-slot-row sort-slot-row sort-answer-zone" data-sort-zone="${escapeHtml(key)}">
-                        ${savedOrder.length ? savedOrder.map((piece, pieceIndex) => `<button type="button" draggable="${practiceDone ? 'false' : 'true'}" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-zone-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('') : '<span class="sort-zone-placeholder">Kéo các mảnh từ khay phía trên xuống đây...</span>'}
-                    </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        ${renderPracticeCheckButton('sort-check-btn', 'data-sort-key', key, practiceDone)}
-                        <button type="button" class="drag-ai-btn inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" data-ai-text="${escapeHtml(normalized.prompt || '')}">
-                            <i class="fas fa-wand-magic-sparkles"></i>Hỏi AI
-                        </button>
-                    </div>
-                    <div class="drag-feedback mt-3 ${practiceDone ? '' : 'hidden'} rounded border border-slate-200 bg-slate-50 p-3 text-sm leading-7">${feedback}</div>
                 </article>
             `;
         }).join('');
@@ -2069,6 +2095,319 @@
                 history
             }))
         });
+    }
+
+    function ensurePracticeStyles() {
+        if (document.getElementById('lotrinhPracticeStyles')) return;
+        const style = document.createElement('style');
+        style.id = 'lotrinhPracticeStyles';
+        style.textContent = `
+            .practice-workspace { display: flex; flex-direction: column; gap: 18px; }
+            .practice-parts-stack { display: flex; flex-direction: column; gap: 22px; }
+            .practice-part {
+                border-radius: 20px;
+                border: 1px solid #e2e8f0;
+                background: #fff;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+                overflow: hidden;
+            }
+            .practice-part-head {
+                display: flex;
+                gap: 14px;
+                align-items: flex-start;
+                padding: 18px 20px;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+            }
+            .practice-part--essay .practice-part-head { background: linear-gradient(135deg, #fffbeb 0%, #fff 72%); }
+            .practice-part--fill .practice-part-head { background: linear-gradient(135deg, #f5f3ff 0%, #fff 72%); }
+            .practice-part--drag .practice-part-head { background: linear-gradient(135deg, #f0f9ff 0%, #fff 72%); }
+            .practice-part--choice .practice-part-head { background: linear-gradient(135deg, #f0fdfa 0%, #fff 72%); }
+            .practice-part-icon {
+                width: 46px;
+                height: 46px;
+                flex: 0 0 46px;
+                display: grid;
+                place-items: center;
+                border-radius: 14px;
+                font-size: 1.05rem;
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65);
+            }
+            .practice-part--essay .practice-part-icon { background: #fde68a; color: #b45309; }
+            .practice-part--fill .practice-part-icon { background: #ddd6fe; color: #6d28d9; }
+            .practice-part--drag .practice-part-icon { background: #bae6fd; color: #0369a1; }
+            .practice-part--choice .practice-part-icon { background: #99f6e4; color: #0f766e; }
+            .practice-part-intro { min-width: 0; flex: 1; }
+            .practice-part-title-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 10px;
+            }
+            .practice-part-title {
+                margin: 0;
+                font-size: 0.95rem;
+                font-weight: 800;
+                letter-spacing: 0.03em;
+                text-transform: uppercase;
+                color: #0f172a;
+            }
+            .practice-part-count {
+                display: inline-flex;
+                align-items: center;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: rgba(255,255,255,0.85);
+                border: 1px solid rgba(148,163,184,0.35);
+                font-size: 0.72rem;
+                font-weight: 800;
+                color: #475569;
+            }
+            .practice-part-note {
+                margin: 8px 0 0;
+                font-size: 0.8rem;
+                line-height: 1.55;
+                color: #92400e;
+            }
+            .practice-part-body {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px;
+                background: linear-gradient(180deg, #fafbfc 0%, #fff 100%);
+            }
+            .practice-card {
+                border-radius: 16px;
+                border: 1px solid #dbe3ef;
+                background: #fff;
+                overflow: hidden;
+                box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
+            }
+            .practice-card:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            }
+            .practice-card--essay { border-top: 3px solid #f59e0b; }
+            .practice-card--fill { border-top: 3px solid #8b5cf6; }
+            .practice-card--drag { border-top: 3px solid #0ea5e9; }
+            .practice-card--choice { border-top: 3px solid #0f766e; }
+            .practice-card-head {
+                padding: 16px 18px 14px;
+                border-bottom: 1px solid #e8edf3;
+                background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+            }
+            .practice-card-meta {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+            .practice-q-badge,
+            .practice-type-chip {
+                display: inline-flex;
+                align-items: center;
+                padding: 5px 11px;
+                border-radius: 999px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+            }
+            .practice-q-badge--essay { background: #fef3c7; color: #b45309; }
+            .practice-q-badge--fill { background: #ede9fe; color: #6d28d9; }
+            .practice-q-badge--drag { background: #e0f2fe; color: #0369a1; }
+            .practice-q-badge--choice { background: #ccfbf1; color: #0f766e; }
+            .practice-type-chip {
+                border: 1px solid rgba(148,163,184,0.28);
+                background: #fff;
+                color: #475569;
+            }
+            .practice-q-text {
+                margin: 0;
+                font-size: 1rem;
+                font-weight: 700;
+                line-height: 1.75;
+                color: #0f172a;
+            }
+            .practice-card-content { padding-bottom: 2px; }
+            .practice-hint {
+                display: flex;
+                gap: 10px;
+                align-items: flex-start;
+                margin: 14px 18px 0;
+                padding: 12px 14px;
+                border-radius: 12px;
+                border: 1px solid #fde68a;
+                background: #fffbeb;
+                font-size: 0.84rem;
+                line-height: 1.55;
+                color: #78350f;
+            }
+            .practice-hint i {
+                margin-top: 2px;
+                color: #d97706;
+            }
+            .practice-zone-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 14px 18px 8px !important;
+                font-size: 0.82rem !important;
+                font-weight: 800 !important;
+                color: #475569 !important;
+            }
+            .practice-zone-label--answer { color: #0f766e !important; }
+            .practice-chip-pool,
+            .practice-answer-zone {
+                margin-left: 18px !important;
+                margin-right: 18px !important;
+            }
+            .practice-answer-zone {
+                border-width: 2px;
+                border-style: dashed;
+                border-color: #5eead4;
+                background: linear-gradient(180deg, #f0fdfa 0%, #fff 100%);
+            }
+            .practice-card-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-top: 14px;
+                padding: 14px 18px 16px;
+                border-top: 1px solid #e8edf3;
+                background: #f8fafc;
+            }
+            .practice-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                border-radius: 10px;
+                padding: 10px 16px;
+                font-size: 0.86rem;
+                font-weight: 800;
+                line-height: 1;
+                cursor: pointer;
+                transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+            }
+            .practice-btn:hover { transform: translateY(-1px); }
+            .practice-btn--primary,
+            .practice-btn--submit {
+                border: 0;
+                background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+                color: #fff;
+                box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
+            }
+            .practice-btn--primary:hover,
+            .practice-btn--submit:hover {
+                box-shadow: 0 10px 22px rgba(15, 118, 110, 0.28);
+            }
+            .practice-btn--ghost {
+                border: 1px solid #cbd5e1;
+                background: #fff;
+                color: #334155;
+            }
+            .practice-btn--ghost:hover {
+                border-color: #94a3b8;
+                background: #f8fafc;
+            }
+            .practice-feedback {
+                margin: 0 18px 16px;
+                padding: 14px 16px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                border-left: 4px solid #0f766e;
+                background: #f8fafc;
+                font-size: 0.88rem;
+                line-height: 1.65;
+            }
+            .practice-answer-grid { padding: 14px 16px 18px !important; }
+            .practice-status-banner {
+                display: flex;
+                gap: 14px;
+                align-items: flex-start;
+                padding: 16px 18px;
+                border-radius: 16px;
+                border: 1px solid #99f6e4;
+                background: linear-gradient(135deg, #f0fdfa 0%, #fff 70%);
+                box-shadow: 0 8px 20px rgba(15, 118, 110, 0.08);
+            }
+            .practice-status-banner--done {
+                border-color: #5eead4;
+            }
+            .practice-status-banner--active {
+                border-color: #fcd34d;
+                background: linear-gradient(135deg, #fffbeb 0%, #fff 70%);
+            }
+            .practice-status-icon {
+                width: 40px;
+                height: 40px;
+                flex: 0 0 40px;
+                display: grid;
+                place-items: center;
+                border-radius: 12px;
+                background: #ccfbf1;
+                color: #0f766e;
+                font-size: 1rem;
+            }
+            .practice-status-banner--active .practice-status-icon {
+                background: #fde68a;
+                color: #b45309;
+            }
+            .practice-status-title {
+                margin: 0;
+                font-size: 0.95rem;
+                font-weight: 800;
+                color: #0f172a;
+            }
+            .practice-status-text {
+                margin: 4px 0 0;
+                font-size: 0.86rem;
+                line-height: 1.6;
+                color: #475569;
+            }
+            .practice-submit-bar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                position: sticky;
+                bottom: 12px;
+                z-index: 5;
+                padding: 14px 16px;
+                border-radius: 16px;
+                border: 1px solid #dbe3ef;
+                background: rgba(255,255,255,0.96);
+                backdrop-filter: blur(8px);
+                box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+            }
+            .practice-empty-note {
+                padding: 18px;
+                border-radius: 14px;
+                border: 1px dashed #cbd5e1;
+                background: #f8fafc;
+                color: #64748b;
+                font-size: 0.9rem;
+                line-height: 1.6;
+            }
+            .essay-input {
+                width: calc(100% - 36px) !important;
+                margin: 14px 18px 0 !important;
+                border-radius: 12px !important;
+                font-size: 1.05rem !important;
+                font-weight: 700 !important;
+            }
+            .fill-prompt-line { margin: 0 !important; }
+            @media (max-width: 640px) {
+                .practice-part-head,
+                .practice-card-head,
+                .practice-card-actions,
+                .practice-submit-bar { padding-left: 14px; padding-right: 14px; }
+                .practice-hint,
+                .practice-feedback,
+                .practice-chip-pool,
+                .practice-answer-zone { margin-left: 14px !important; margin-right: 14px !important; }
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     function ensureStudentAiAssistStyles() {
@@ -2517,12 +2856,12 @@
         const practiceDone = !!ui.practiceDone;
         const answers = ui.answers || {};
         return questions.map((question, index) => `
-            <article class="practice-card">
-                <div class="question-head">
-                    <p class="text-xs font-bold uppercase tracking-widest text-teal-700">Câu ${index + 1}</p>
-                    <h3 class="question-text mt-1 text-base font-bold text-slate-950">${mathText(question.prompt)}</h3>
+            <article class="practice-card practice-card--choice">
+                <div class="question-head practice-card-head">
+                    ${renderPracticeQuestionMeta(index, 'Trắc nghiệm', 'choice')}
+                    <h3 class="question-text practice-q-text">${mathText(question.prompt)}</h3>
                 </div>
-                <div class="answer-grid">
+                <div class="answer-grid practice-answer-grid">
                     ${(question.options || []).map((option, optionIndex) => {
                         const checked = normalizeOptionIndex(answers[question.id]) === normalizeOptionIndex(optionIndex) ? 'checked' : '';
                         const mark = renderAnswerMark(question, optionIndex, answers, practiceDone);
@@ -2563,39 +2902,51 @@
                     'fa-pen-nib',
                     renderEssayExercises(lesson),
                     essayExercises.length,
-                    'Mỗi câu chỉ nhập <strong>kết quả là số</strong>. Không nhập lời giải, công thức hay đáp án dạng chữ.'
+                    'Mỗi câu chỉ nhập <strong>kết quả là số</strong>. Không nhập lời giải, công thức hay đáp án dạng chữ.',
+                    'essay'
                 )
                 : '',
             fillExercises.length
-                ? renderPracticePart('Phần Bài tập điền khuyết', 'fa-i-cursor', renderFillExercises(lesson), fillExercises.length)
+                ? renderPracticePart('Phần Bài tập điền khuyết', 'fa-i-cursor', renderFillExercises(lesson), fillExercises.length, '', 'fill')
                 : '',
             dragExercises.length
-                ? renderPracticePart('Phần Bài tập kéo thả', 'fa-hand-pointer', renderDragExercises(lesson), dragExercises.length)
+                ? renderPracticePart('Phần Bài tập kéo thả', 'fa-hand-pointer', renderDragExercises(lesson), dragExercises.length, '', 'drag')
                 : '',
             questions.length
-                ? renderPracticePart('Phần Bài tập trắc nghiệm', 'fa-list-check', renderMultipleChoiceExercises(lesson), questions.length)
+                ? renderPracticePart('Phần Bài tập trắc nghiệm', 'fa-list-check', renderMultipleChoiceExercises(lesson), questions.length, '', 'choice')
                 : ''
         ].filter(Boolean).join('');
 
         els.tabContent.innerHTML = `
-            <form id="practiceForm" class="space-y-6">
+            <form id="practiceForm" class="practice-workspace">
                 ${practiceDone ? `
-                    <div class="rounded border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-900">
-                        <p class="font-bold">Đã nộp bài luyện tập.</p>
-                        <p class="mt-1">${practiceScore !== null ? `Điểm luyện tập: <strong>${practiceScore}%</strong>. ` : ''}Các đáp án đúng/sai được hiển thị bên dưới. Bấm <strong>Làm lại bài luyện</strong> nếu muốn làm vòng mới.</p>
+                    <div class="practice-status-banner practice-status-banner--done">
+                        <div class="practice-status-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div>
+                        <div>
+                            <p class="practice-status-title">Đã nộp bài luyện tập</p>
+                            <p class="practice-status-text">${practiceScore !== null ? `Điểm luyện tập: <strong>${practiceScore}%</strong>. ` : ''}Các đáp án đúng/sai được hiển thị bên dưới. Bấm <strong>Làm lại bài luyện</strong> nếu muốn làm vòng mới.</p>
+                        </div>
                     </div>
-                ` : ''}
+                ` : `
+                    <div class="practice-status-banner practice-status-banner--active">
+                        <div class="practice-status-icon"><i class="fas fa-dumbbell" aria-hidden="true"></i></div>
+                        <div>
+                            <p class="practice-status-title">Luyện tập bài học</p>
+                            <p class="practice-status-text">Làm lần lượt từng dạng bài bên dưới. Có thể bấm <strong>Kiểm tra đáp án</strong> trước khi nộp.</p>
+                        </div>
+                    </div>
+                `}
                 ${hasAnyPractice
-                    ? practiceParts
-                    : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập bài luyện tập cho bài này.</div>'}
-                <div class="flex flex-wrap gap-3">
+                    ? `<div class="practice-parts-stack">${practiceParts}</div>`
+                    : '<div class="practice-empty-note">Giáo viên chưa nhập bài luyện tập cho bài này.</div>'}
+                <div class="practice-submit-bar">
                     ${practiceDone ? '' : `
-                        <button type="submit" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                        <button type="submit" class="practice-btn practice-btn--submit">
                             <i class="fas fa-paper-plane"></i>Nộp bài luyện
                         </button>
                     `}
                     ${practiceDone ? `
-                        <button id="clearAnswersBtn" type="button" class="inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                        <button id="clearAnswersBtn" type="button" class="practice-btn practice-btn--ghost">
                             <i class="fas fa-rotate-left"></i>Làm lại bài luyện
                         </button>
                     ` : ''}
