@@ -9,10 +9,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
-        body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+        body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 16px; }
+        body.board-view { font-size: 18px; }
         .soft-shadow { box-shadow: 0 18px 55px rgba(15, 23, 42, .10); }
         .field, input.field, textarea.field, select.field {
-            width: 100%; border: 1px solid #dbe3ef; border-radius: 13px; padding: .7rem .85rem;
+            width: 100%; border: 1px solid #dbe3ef; border-radius: 13px; padding: .8rem .95rem;
+            font-size: 1.05rem; line-height: 1.5;
             background: #fff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a;
             caret-color: #0f766e; outline: none;
         }
@@ -81,8 +83,14 @@
         .board-bg-slate { background: linear-gradient(145deg, #0f172a 0%, #334155 45%, #94a3b8 100%); }
         .masonry { column-gap: 1rem; }
         .masonry > * { break-inside: avoid; margin-bottom: 1rem; }
-        .padlet-card { transition: transform .15s ease, box-shadow .15s ease; }
+        .padlet-card { transition: transform .15s ease, box-shadow .15s ease; font-size: 1.1rem; }
         .padlet-card:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(15,23,42,.12); }
+        .padlet-card .post-body { font-size: 1.15rem; line-height: 1.7; }
+        .padlet-card .post-title { font-size: 1.2rem; line-height: 1.45; }
+        .padlet-card .post-meta { font-size: .98rem; }
+        .padlet-card .post-action { font-size: .98rem; }
+        .file-card-btn { transition: background .15s ease; }
+        .file-card-btn:hover { background: #f8fafc; }
         .add-tile { border: 2px dashed rgba(255,255,255,.45); background: rgba(255,255,255,.12); color: #fff; min-height: 140px; }
         .add-tile:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.7); }
         .board-drop-active { outline: 3px dashed rgba(255,255,255,.75); outline-offset: 6px; }
@@ -152,22 +160,23 @@
         .columns-board { display: flex; gap: 0; overflow-x: auto; padding-bottom: 1rem; scroll-snap-type: x proximity; }
         .columns-board::-webkit-scrollbar { height: 8px; }
         .columns-board::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 99px; }
-        .padlet-column { flex: 0 0 300px; scroll-snap-align: start; border-right: 1px solid rgba(0,0,0,.06); padding: 0 .65rem .5rem; }
+        .padlet-column { flex: 0 0 320px; scroll-snap-align: start; border-right: 1px solid rgba(0,0,0,.06); padding: 0 .7rem .5rem; }
         .sub-column-wrap { margin-top: .75rem; border-radius: .85rem; border: 1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.72); padding: .5rem .45rem .65rem; }
         .sub-column-head { display: flex; align-items: center; gap: .25rem; padding: .15rem .1rem .45rem; }
-        .sub-column-title { flex: 1; font-size: .82rem; font-weight: 800; color: #475569; }
+        .sub-column-title { flex: 1; font-size: .98rem; font-weight: 800; color: #475569; }
         .sub-column-title::before { content: '└ '; color: #94a3b8; font-weight: 700; }
-        .add-sub-branch { margin-top: .5rem; width: 100%; border-radius: .65rem; border: 1px dashed rgba(0,0,0,.14); background: rgba(255,255,255,.5); padding: .45rem; font-size: .75rem; font-weight: 800; color: #64748b; }
+        .add-sub-branch { margin-top: .5rem; width: 100%; border-radius: .65rem; border: 1px dashed rgba(0,0,0,.14); background: rgba(255,255,255,.5); padding: .5rem; font-size: .88rem; font-weight: 800; color: #64748b; }
         .add-sub-branch:hover { background: rgba(255,255,255,.85); color: #334155; }
         .padlet-column-head { display: flex; align-items: center; gap: .35rem; padding: .35rem .25rem .65rem; }
-        .padlet-column-title { flex: 1; font-size: .95rem; font-weight: 800; color: #1e293b; }
+        .padlet-column-title { flex: 1; font-size: 1.12rem; font-weight: 800; color: #1e293b; }
+        .board-prompt-input { font-size: 1.05rem; }
         .padlet-col-btn { display: grid; height: 2rem; width: 2rem; place-items: center; border-radius: .5rem; color: #64748b; }
         .padlet-col-btn:hover { background: rgba(0,0,0,.05); }
         .post-wide { max-width: none; }
         .fab-post-padlet {
             position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 25;
             display: inline-flex; align-items: center; gap: .5rem; border-radius: 999px;
-            background: #2563eb; padding: .85rem 1.35rem; font-size: .95rem; font-weight: 800; color: #fff;
+            background: #2563eb; padding: .9rem 1.45rem; font-size: 1.05rem; font-weight: 800; color: #fff;
             box-shadow: 0 12px 40px rgba(37,99,235,.35);
         }
         .fab-post-padlet:hover { background: #1d4ed8; }
@@ -228,7 +237,7 @@
     <!-- Composer đăng bài kiểu Padlet (nổi dưới màn hình) -->
     <div id="postComposer" class="composer-panel hidden">
         <form id="postForm" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl soft-shadow" onsubmit="submitPost(event)">
-            <textarea id="postBody" class="field min-h-[120px] resize-y border-0 px-0 text-base shadow-none focus:ring-0" rows="4" placeholder="Viết gì đó, dán link YouTube hoặc kéo thả tệp..."></textarea>
+            <textarea id="postBody" class="field min-h-[130px] resize-y border-0 px-0 text-xl shadow-none focus:ring-0" rows="4" placeholder="Viết gì đó, dán link YouTube hoặc kéo thả tệp..."></textarea>
             <div id="loggedInBadge" class="mb-2 mt-2 hidden rounded-xl bg-teal-50 px-3 py-2 text-sm font-bold text-teal-800">
                 <i class="fas fa-user-check mr-1"></i><span id="loggedInName"></span>
             </div>
@@ -1549,6 +1558,54 @@
             return /^image\//i.test(file?.mime_type || '') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file?.original_name || '');
         }
 
+        function fileExt(name) {
+            const m = String(name || '').match(/\.([a-z0-9]+)$/i);
+            return m ? m[1].toLowerCase() : '';
+        }
+
+        function isDocumentFile(file) {
+            const ext = fileExt(file?.original_name);
+            return ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf', 'odt', 'ods', 'odp', 'rtf', 'txt', 'csv'].includes(ext)
+                || /word|document|spreadsheet|presentation|pdf|text\/plain/i.test(file?.mime_type || '');
+        }
+
+        function fileIconClass(name) {
+            const ext = fileExt(name);
+            if (['doc', 'docx', 'odt', 'rtf'].includes(ext)) return 'fa-file-word text-blue-600';
+            if (['xls', 'xlsx', 'ods', 'csv'].includes(ext)) return 'fa-file-excel text-emerald-600';
+            if (['ppt', 'pptx', 'odp'].includes(ext)) return 'fa-file-powerpoint text-orange-600';
+            if (ext === 'pdf') return 'fa-file-pdf text-rose-600';
+            return 'fa-file-lines text-slate-500';
+        }
+
+        function primaryAttachment(files = []) {
+            return files.find(isImageFile) || files.find((f) => isDocumentFile(f) && !isImageFile(f)) || null;
+        }
+
+        function documentCardHtml(file) {
+            const icon = fileIconClass(file.original_name);
+            const viewUrl = file.view_url || `https://drive.google.com/file/d/${file.drive_file_id}/view`;
+            return `<button type="button" onclick="openDriveFile('${esc(file.drive_file_id)}','${esc(file.original_name)}','${esc(viewUrl)}')"
+                class="file-card-btn -mx-5 -mt-5 mb-3 flex w-[calc(100%+2.5rem)] items-center gap-3 rounded-t-2xl border-b border-slate-200/80 bg-white px-4 py-4 text-left">
+                <span class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-slate-100 text-3xl"><i class="fas ${icon}"></i></span>
+                <span class="min-w-0">
+                    <span class="post-title block truncate font-black text-slate-800">${esc(file.original_name)}</span>
+                    <span class="post-meta text-teal-700">Mở trên Google Drive</span>
+                </span>
+            </button>`;
+        }
+
+        function openDriveFile(id, name, viewUrl) {
+            const ext = fileExt(name);
+            if (ext === 'pdf') {
+                previewFile(id, name, viewUrl);
+                return;
+            }
+            const url = viewUrl || `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+            window.open(url, '_blank', 'noopener');
+            toast('Đã mở tệp trên Google Drive');
+        }
+
         function postMediaHtml(p) {
             const yt = p.link_url ? youtubeId(p.link_url) : null;
             if (yt) {
@@ -1559,11 +1616,13 @@
             }
             const imageFile = (p.files || []).find(isImageFile);
             if (imageFile) {
-                return `<button type="button" onclick="previewFile('${esc(imageFile.drive_file_id)}','${esc(imageFile.original_name)}')"
-                    class="-mx-4 -mt-4 mb-3 block w-[calc(100%+2rem)] overflow-hidden rounded-t-2xl">
+                return `<button type="button" onclick="previewFile('${esc(imageFile.drive_file_id)}','${esc(imageFile.original_name)}','${esc(imageFile.view_url || '')}')"
+                    class="-mx-5 -mt-5 mb-3 block w-[calc(100%+2.5rem)] overflow-hidden rounded-t-2xl">
                     <img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(imageFile.drive_file_id)}&sz=w800" alt="" class="max-h-52 w-full object-cover" loading="lazy">
                 </button>`;
             }
+            const docFile = (p.files || []).find((f) => isDocumentFile(f) && !isImageFile(f));
+            if (docFile) return documentCardHtml(docFile);
             if (p.link_image) {
                 const href = p.link_url ? esc(p.link_url) : '#';
                 return `<a href="${href}" target="_blank" rel="noopener" class="-mx-4 -mt-4 mb-3 block overflow-hidden rounded-t-2xl">
@@ -1577,33 +1636,35 @@
             const b = state.board;
             const isPending = p.status === 'pending';
             const statusBadge = state.canManage && p.status !== 'published'
-                ? `<span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">${isPending ? 'CHỜ DUYỆT' : 'TỪ CHỐI'}</span>`
+                ? `<span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-black text-amber-700">${isPending ? 'CHỜ DUYỆT' : 'TỪ CHỐI'}</span>`
                 : '';
 
             const actions = state.canManage ? `
-                <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-900/10 pt-3">
+                <div class="post-action mt-3 flex flex-wrap gap-2 border-t border-slate-900/10 pt-3">
                     ${isPending ? `
-                        <button type="button" onclick="moderate(${p.id},'publish')" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
+                        <button type="button" onclick="moderate(${p.id},'publish')" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white">
                             <i class="fas fa-check mr-1"></i>Duyệt
                         </button>
-                        <button type="button" onclick="moderate(${p.id},'reject')" class="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white">Từ chối
+                        <button type="button" onclick="moderate(${p.id},'reject')" class="rounded-lg bg-amber-500 px-3 py-2 font-bold text-white">Từ chối
                         </button>` : ''}
-                    <button type="button" onclick="moderate(${p.id},'pin')" class="rounded-lg bg-white/70 px-3 py-2 text-xs font-bold text-slate-700">
+                    <button type="button" onclick="moderate(${p.id},'pin')" class="rounded-lg bg-white/70 px-3 py-2 font-bold text-slate-700">
                         <i class="fas fa-thumbtack mr-1"></i>${p.pinned ? 'Bỏ ghim' : 'Ghim'}
                     </button>
-                    <button type="button" onclick="moderate(${p.id},'delete')" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+                    <button type="button" onclick="moderate(${p.id},'delete')" class="rounded-lg bg-red-50 px-3 py-2 font-bold text-red-700">
                         <i class="fas fa-trash-can mr-1"></i>Xóa
                     </button>
                 </div>` : '';
 
-            const otherFiles = (p.files || []).filter((f) => !isImageFile(f)).map((f) => `
-                <button type="button" onclick="previewFile('${esc(f.drive_file_id)}','${esc(f.original_name)}')"
-                    class="rounded-lg bg-white/75 px-2.5 py-1.5 text-left text-xs font-bold text-slate-700">
-                    <i class="fas fa-paperclip mr-1 text-teal-700"></i>${esc(f.original_name)}
+            const featured = primaryAttachment(p.files || []);
+            const featuredId = featured?.drive_file_id;
+            const otherFiles = (p.files || []).filter((f) => f.drive_file_id !== featuredId).map((f) => `
+                <button type="button" onclick="openDriveFile('${esc(f.drive_file_id)}','${esc(f.original_name)}','${esc(f.view_url || '')}')"
+                    class="post-meta rounded-lg bg-white/75 px-2.5 py-1.5 text-left font-bold text-slate-700">
+                    <i class="fas ${fileIconClass(f.original_name)} mr-1"></i>${esc(f.original_name)}
                 </button>`).join('');
 
             const reactions = ['👍', '❤️', '⭐'].map((r) => `
-                <button type="button" onclick="react(${p.id},'${r}')" class="rounded-lg bg-white/70 px-2 py-1 text-xs font-bold hover:bg-white">
+                <button type="button" onclick="react(${p.id},'${r}')" class="rounded-lg bg-white/70 px-2.5 py-1.5 text-base font-bold hover:bg-white">
                     ${r} ${p.reactions?.[r] || ''}
                 </button>`).join('');
 
@@ -1612,13 +1673,13 @@
                     ${b.reactions_enabled ? reactions : ''}
                     ${b.comments_enabled ? `
                         <button type="button" onclick="openComments(${p.id})"
-                            class="${b.reactions_enabled ? 'ml-auto' : ''} rounded-lg bg-white/70 px-2 py-1 text-xs font-bold text-slate-600">
+                            class="${b.reactions_enabled ? 'ml-auto' : ''} post-meta rounded-lg bg-white/70 px-2.5 py-1.5 font-bold text-slate-600">
                             <i class="far fa-comment mr-1"></i>${p.comments?.length || 0}
                         </button>` : ''}
                 </div>` : '';
 
             const linkBlock = p.link_url && !youtubeId(p.link_url) ? `
-                <a class="mt-2 block truncate text-xs font-bold text-teal-800 underline" href="${esc(p.link_url)}" target="_blank" rel="noopener">
+                <a class="post-meta mt-2 block truncate font-bold text-teal-800 underline" href="${esc(p.link_url)}" target="_blank" rel="noopener">
                     <i class="fas fa-link mr-1"></i>${esc(p.link_title || p.link_url)}
                 </a>` : '';
 
@@ -1626,18 +1687,18 @@
             const wideClass = state.board?.post_size === 'wide' ? ' post-wide' : '';
             const showAuthor = state.board?.show_author === undefined ? true : !!Number(state.board.show_author);
             const authorLine = showAuthor ? `
-                <div class="mt-3 border-t border-slate-900/10 pt-2 text-[11px] font-bold text-slate-500">
+                <div class="post-meta mt-3 border-t border-slate-900/10 pt-2 font-bold text-slate-500">
                     ${esc(p.author_name)}${p.author_group ? ` · ${esc(p.author_group)}` : ''} · ${esc(fmt(p.created_at))}
                 </div>` : '';
 
             return `<article draggable="${state.canManage ? 'true' : 'false'}" data-post="${p.id}"
-                data-status="${p.status}" class="padlet-card post-${esc(p.card_color)} overflow-hidden rounded-2xl border border-slate-900/10 p-4 shadow-sm${compactClass}${wideClass} ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
+                data-status="${p.status}" class="padlet-card post-${esc(p.card_color)} overflow-hidden rounded-2xl border border-slate-900/10 p-5 shadow-sm${compactClass}${wideClass} ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
                 ${postMediaHtml(p)}
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                        ${p.location_label ? `<div class="mb-2 inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-1 text-[11px] font-bold text-teal-800"><i class="fas fa-location-dot"></i>${esc(p.location_label)}</div>` : ''}
-                        ${p.link_title && !p.body ? `<div class="font-black leading-snug">${esc(p.link_title)}</div>` : ''}
-                        ${p.body ? `<p class="whitespace-pre-line text-sm leading-6 text-slate-700 ${p.link_title ? 'mt-2' : ''}">${esc(p.body)}</p>` : ''}
+                        ${p.location_label ? `<div class="post-meta mb-2 inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 font-bold text-teal-800"><i class="fas fa-location-dot"></i>${esc(p.location_label)}</div>` : ''}
+                        ${p.link_title && !p.body ? `<div class="post-title font-black">${esc(p.link_title)}</div>` : ''}
+                        ${p.body ? `<p class="post-body whitespace-pre-line text-slate-700 ${p.link_title ? 'mt-2' : ''}">${esc(p.body)}</p>` : ''}
                         ${linkBlock}
                     </div>
                     <div class="flex shrink-0 flex-col items-end gap-1">
@@ -1655,8 +1716,8 @@
         function addCardTile(columnId = null) {
             if (state.board?.status !== 'open') return '';
             const colArg = columnId ? columnId : 'null';
-            return `<button type="button" onclick="openPostModal(${colArg})" class="add-tile padlet-card flex w-full flex-col items-center justify-center rounded-2xl p-5 text-center text-sm font-extrabold">
-                <i class="fas fa-plus mb-1 text-xl"></i>Thêm
+            return `<button type="button" onclick="openPostModal(${colArg})" class="add-tile padlet-card flex w-full flex-col items-center justify-center rounded-2xl p-5 text-center text-base font-extrabold">
+                <i class="fas fa-plus mb-1 text-2xl"></i>Thêm
             </button>`;
         }
 
@@ -1925,11 +1986,11 @@
             const promptText = b.prompt_text || b.description || '';
             const headerTone = b.layout_type === 'whiteboard' ? 'text-slate-900' : 'text-white';
             const titleField = state.canManage
-                ? `<input type="text" class="board-title-input w-full max-w-3xl border-0 bg-transparent px-0 text-2xl font-black tracking-tight sm:text-4xl focus:outline-none focus:ring-0"
+                ? `<input type="text" class="board-title-input w-full max-w-3xl border-0 bg-transparent px-0 text-3xl font-black tracking-tight sm:text-5xl focus:outline-none focus:ring-0"
                     value="${esc(b.title)}" maxlength="220" onblur="saveInlineTitle(this.value)" onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}">`
-                : `<h1 class="max-w-3xl text-2xl font-black tracking-tight sm:text-4xl">${esc(b.title)}</h1>`;
+                : `<h1 class="max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">${esc(b.title)}</h1>`;
             const promptField = state.canManage
-                ? `<input type="text" class="board-prompt-input mt-2 w-full max-w-2xl border-0 bg-transparent px-0 text-sm focus:outline-none"
+                ? `<input type="text" class="board-prompt-input mt-2 w-full max-w-2xl border-0 bg-transparent px-0 focus:outline-none"
                     value="${esc(promptText)}" maxlength="500" placeholder="Thêm lời nhắn hoặc câu hỏi cho lớp..."
                     onblur="saveInlinePrompt(this.value)">`
                 : (promptText ? `<p class="mt-2 max-w-2xl text-sm leading-6 opacity-85">${esc(promptText)}</p>` : '');
@@ -2205,9 +2266,17 @@
             }
         }
 
-        function previewFile(id, name) {
+        function previewFile(id, name, viewUrl = '') {
+            const ext = fileExt(name);
+            const office = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf'];
+            if (office.includes(ext)) {
+                openDriveFile(id, name, viewUrl);
+                return;
+            }
             document.getElementById('previewTitle').textContent = name || 'Xem tệp';
-            document.getElementById('previewFrame').src = `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+            document.getElementById('previewFrame').src = ext === 'pdf'
+                ? `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`
+                : (viewUrl || `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`);
             document.getElementById('previewModal').classList.remove('hidden');
         }
 
@@ -2267,13 +2336,18 @@
         }
 
         async function moderate(postId, operation) {
+            if (operation === 'delete' && !confirm('Xóa bài đăng này và tất cả tệp đính kèm trên Google Drive? Thao tác không thể hoàn tác.')) return;
             try {
-                await api(`${API}?action=moderate`, {
+                const r = await api(`${API}?action=moderate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ board_id: state.board.id, post_id: postId, operation })
                 });
-                toast('Đã cập nhật bài đăng');
+                if (operation === 'delete') {
+                    toast(r.drive_failed ? `Đã xóa bài. ${r.drive_failed} tệp Drive không xóa được.` : 'Đã xóa bài và tệp trên Drive');
+                } else {
+                    toast('Đã cập nhật bài đăng');
+                }
                 loadBoard();
             } catch (err) {
                 toast(err.message);

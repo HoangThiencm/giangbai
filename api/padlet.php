@@ -307,6 +307,23 @@ function padlet_columns(PDO $pdo, int $boardId): array
     return $rows;
 }
 
+function padlet_column_drive_folder(string $boardFolderId, array $columns, int $columnId): string
+{
+    $byId = [];
+    foreach ($columns as $column) $byId[(int)$column['id']] = $column;
+    $parts = [];
+    $current = $byId[$columnId] ?? null;
+    while ($current) {
+        array_unshift($parts, (string)$current['title']);
+        $parentId = $current['parent_id'] ?? null;
+        $current = $parentId ? ($byId[(int)$parentId] ?? null) : null;
+    }
+    if (!$parts) $parts = ['Bai dang'];
+    $folderId = $boardFolderId;
+    foreach ($parts as $part) $folderId = drive_get_or_create_folder($folderId, $part);
+    return $folderId;
+}
+
 function padlet_trim_text(string $value, int $length): string
 {
     return function_exists('mb_substr') ? mb_substr($value, 0, $length) : substr($value, 0, $length);
@@ -355,6 +372,23 @@ function padlet_file_input(): array
     $files = [];
     foreach ($source['name'] as $index => $name) $files[] = ['name' => $name, 'type' => $source['type'][$index] ?? '', 'tmp_name' => $source['tmp_name'][$index] ?? '', 'error' => $source['error'][$index] ?? UPLOAD_ERR_NO_FILE, 'size' => $source['size'][$index] ?? 0];
     return $files;
+}
+
+function padlet_delete_drive_files_for_post(PDO $pdo, int $postId): array
+{
+    $stmt = $pdo->prepare('SELECT drive_file_id FROM padlet_post_files WHERE post_id = ?');
+    $stmt->execute([$postId]);
+    $failed = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $fileId = trim((string)($row['drive_file_id'] ?? ''));
+        if ($fileId === '') continue;
+        try {
+            drive_delete_file($fileId);
+        } catch (Throwable $e) {
+            $failed[] = $fileId;
+        }
+    }
+    return $failed;
 }
 
 function padlet_payload(PDO $pdo, array $board, bool $includeAll = false): array
@@ -560,7 +594,9 @@ if ($method === 'POST' && $action === 'post') {
     if ($files) {
         $folderId = trim((string)($board['drive_folder_id'] ?? ''));
         if ($folderId === '') { $folderId = drive_board_folder($board['public_code'], $board['title'], $board['academic_year'] ?? null); $pdo->prepare("UPDATE padlet_boards SET drive_folder_id = ? WHERE id = ? AND (drive_folder_id IS NULL OR drive_folder_id = '')")->execute([$folderId, (int)$board['id']]); }
-        $columnFolder = drive_get_or_create_folder($folderId, (string)$column['title']); $personFolder = drive_participant_folder($columnFolder, $group, $name, date('Ymd-His'));
+        $allColumns = padlet_columns($pdo, (int)$board['id']);
+        $columnFolder = padlet_column_drive_folder($folderId, $allColumns, (int)$column['id']);
+        $personFolder = drive_participant_folder($columnFolder, $group, $name, date('Ymd-His'));
         $insertFile = $pdo->prepare('INSERT INTO padlet_post_files (post_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
         foreach ($files as $index => $file) {
             if ((int)$file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) continue;
@@ -598,7 +634,16 @@ if ($method === 'POST' && $action === 'moderate') {
     $check = $pdo->prepare('SELECT id FROM padlet_posts WHERE id = ? AND board_id = ? LIMIT 1'); $check->execute([$postId, (int)$board['id']]); if (!$check->fetch()) respond(['error' => 'Không tìm thấy bài đăng.'], 404);
     if (in_array($operation, ['publish','reject'], true)) $pdo->prepare('UPDATE padlet_posts SET status = ? WHERE id = ?')->execute([$operation === 'publish' ? 'published' : 'rejected', $postId]);
     elseif ($operation === 'pin') $pdo->prepare('UPDATE padlet_posts SET pinned = 1 - pinned WHERE id = ?')->execute([$postId]);
-    elseif ($operation === 'delete') { $pdo->prepare('DELETE FROM padlet_post_files WHERE post_id = ?')->execute([$postId]); $pdo->prepare('DELETE FROM padlet_comments WHERE post_id = ?')->execute([$postId]); $pdo->prepare('DELETE FROM padlet_reactions WHERE post_id = ?')->execute([$postId]); $pdo->prepare('DELETE FROM padlet_posts WHERE id = ?')->execute([$postId]); }
+    elseif ($operation === 'delete') {
+        $driveFailed = padlet_delete_drive_files_for_post($pdo, $postId);
+        $pdo->prepare('DELETE FROM padlet_post_files WHERE post_id = ?')->execute([$postId]);
+        $pdo->prepare('DELETE FROM padlet_comments WHERE post_id = ?')->execute([$postId]);
+        $pdo->prepare('DELETE FROM padlet_reactions WHERE post_id = ?')->execute([$postId]);
+        $pdo->prepare('DELETE FROM padlet_posts WHERE id = ?')->execute([$postId]);
+        $payload = ['ok' => true];
+        if ($driveFailed) $payload['drive_failed'] = count($driveFailed);
+        respond($payload);
+    }
     else respond(['error' => 'Thao tác không hợp lệ.'], 422);
     respond(['ok' => true]);
 }

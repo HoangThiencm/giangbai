@@ -277,6 +277,19 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
     ];
 }
 
+function drive_delete_file(string $fileId): void
+{
+    $fileId = trim($fileId);
+    if ($fileId === '') return;
+    try {
+        drive_api('DELETE', 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?supportsAllDrives=true');
+    } catch (RuntimeException $e) {
+        $message = $e->getMessage();
+        if (str_contains($message, 'File not found') || str_contains($message, 'HTTP 404')) return;
+        throw $e;
+    }
+}
+
 function drive_download_file(string $fileId): string
 {
     $url = 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?alt=media&supportsAllDrives=true';
