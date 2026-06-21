@@ -71,6 +71,25 @@ if (isset($nextConfig['hf_fallback_url'])) {
 if (array_key_exists('hf_fallback_enabled', $nextConfig)) {
     $nextConfig['hf_fallback_enabled'] = (bool)$nextConfig['hf_fallback_enabled'];
 }
+if (array_key_exists('smart_quota_enabled', $nextConfig)) {
+    $nextConfig['smart_quota_enabled'] = (bool)$nextConfig['smart_quota_enabled'];
+}
+if (isset($nextConfig['cloudflare_neurons_daily_limit'])) {
+    $nextConfig['cloudflare_neurons_daily_limit'] = max(100, (int)$nextConfig['cloudflare_neurons_daily_limit']);
+}
+if (isset($nextConfig['smart_quota_warn_pct'])) {
+    $nextConfig['smart_quota_warn_pct'] = max(1, min(99, (int)$nextConfig['smart_quota_warn_pct']));
+}
+if (isset($nextConfig['smart_quota_critical_pct'])) {
+    $nextConfig['smart_quota_critical_pct'] = max(0, min(99, (int)$nextConfig['smart_quota_critical_pct']));
+}
+if (isset($nextConfig['smart_quota_exhausted_mode'])) {
+    $mode = (string)$nextConfig['smart_quota_exhausted_mode'];
+    $nextConfig['smart_quota_exhausted_mode'] = in_array($mode, ['fallback', 'block'], true) ? $mode : 'fallback';
+}
+if (isset($nextConfig['smart_quota_avg_neurons'])) {
+    $nextConfig['smart_quota_avg_neurons'] = max(50, (int)$nextConfig['smart_quota_avg_neurons']);
+}
 
 $json = json_encode($nextConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if ($json === false) {

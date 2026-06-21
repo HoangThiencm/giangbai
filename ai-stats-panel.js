@@ -27,6 +27,81 @@
         })[id] || id;
     }
 
+    function smartQuotaLevelMeta(level) {
+        return ({
+            disabled: { label: 'Tắt', border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-800', bar: 'bg-slate-400', icon: 'fa-circle-info' },
+            normal: { label: 'Ổn định', border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-900', bar: 'bg-emerald-500', icon: 'fa-circle-check' },
+            warn: { label: 'Cảnh báo vàng', border: 'border-amber-300', bg: 'bg-amber-50', text: 'text-amber-950', bar: 'bg-amber-500', icon: 'fa-triangle-exclamation' },
+            critical: { label: 'Sắp hết', border: 'border-orange-300', bg: 'bg-orange-50', text: 'text-orange-950', bar: 'bg-orange-500', icon: 'fa-circle-exclamation' },
+            exhausted: { label: 'Hết quota', border: 'border-rose-300', bg: 'bg-rose-50', text: 'text-rose-950', bar: 'bg-rose-500', icon: 'fa-ban' },
+        })[level] || { label: level, border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-800', bar: 'bg-slate-400', icon: 'fa-robot' };
+    }
+
+    function renderSmartQuotaPanel(sq, options = {}) {
+        if (!sq || typeof sq !== 'object') return '';
+        const compact = !!options.compact;
+        const meta = smartQuotaLevelMeta(sq.level || 'normal');
+        const usedPct = Math.max(0, Math.min(100, Number(sq.used_pct) || 0));
+        const remainingPct = Math.max(0, Math.min(100, Number(sq.remaining_pct) || 0));
+        const modeLabel = sq.exhausted_mode === 'block' ? 'Tắt AI lộ trình' : 'Tự chuyển Gemini / ShopAIKey';
+        const notice = escapeHtml(sq.teacher_notice || sq.message || '');
+        const resetsAt = escapeHtml(sq.resets_at_utc || '00:00 UTC');
+        const statsLink = options.hideLink ? '' : `
+            <a href="theodoi-ai.html" class="inline-flex items-center gap-1 text-xs font-bold underline ${meta.text} opacity-90 hover:opacity-100">
+                <i class="fas fa-chart-line"></i> Chi tiết
+            </a>
+        `;
+
+        if (compact) {
+            if (!sq.enabled || sq.level === 'normal' || sq.level === 'disabled') return '';
+            return `
+                <div class="rounded-xl border ${meta.border} ${meta.bg} px-3 py-2.5 text-xs ${meta.text}">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="font-bold"><i class="fas ${meta.icon} mr-1"></i>Smart Quota · ${meta.label}</span>
+                        <span>Còn ${formatNumber(remainingPct, 1)}% · ${formatNumber(sq.neurons_remaining)}/${formatNumber(sq.daily_limit)} Neurons</span>
+                    </div>
+                    ${notice ? `<p class="mt-1 leading-5">${notice}</p>` : ''}
+                </div>
+            `;
+        }
+
+        return `
+            <section class="rounded-xl border ${meta.border} ${meta.bg} p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-sm font-bold ${meta.text}"><i class="fas ${meta.icon} mr-1"></i>Smart Quota · Cloudflare Neurons</h3>
+                            <span class="inline-flex rounded-full border border-white/70 bg-white/80 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${meta.text}">${escapeHtml(meta.label)}</span>
+                            ${sq.enabled ? '' : '<span class="text-[11px] font-semibold text-slate-500">(đang tắt)</span>'}
+                        </div>
+                        <p class="mt-2 text-sm leading-6 ${meta.text}">${notice || 'Ưu tiên Cloudflare khi còn quota — tự chuyển fallback khi hết.'}</p>
+                        <p class="mt-1 text-xs ${meta.text} opacity-80">Khi hết: <strong>${escapeHtml(modeLabel)}</strong> · Reset ${resetsAt}</p>
+                    </div>
+                    <div class="shrink-0 text-right text-xs ${meta.text}">
+                        <div class="font-bold">Còn ${formatNumber(remainingPct, 1)}%</div>
+                        <div>${formatNumber(sq.neurons_remaining)} / ${formatNumber(sq.daily_limit)} Neurons</div>
+                        ${statsLink}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="mb-1 flex justify-between text-[11px] font-semibold ${meta.text}">
+                        <span>Đã dùng ${formatNumber(usedPct, 1)}%</span>
+                        <span>${formatNumber(sq.neurons_used)} Neurons</span>
+                    </div>
+                    <div class="h-2.5 overflow-hidden rounded-full bg-white/70">
+                        <div class="h-full rounded-full ${meta.bar}" style="width:${usedPct}%"></div>
+                    </div>
+                    ${sq.enabled ? `
+                        <div class="mt-2 flex flex-wrap gap-3 text-[11px] ${meta.text} opacity-85">
+                            <span>Cảnh báo vàng ≤ ${formatNumber(sq.warn_remaining_pct || 20)}%</span>
+                            <span>Cảnh báo đỏ ≤ ${formatNumber(sq.critical_remaining_pct || 10)}%</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </section>
+        `;
+    }
+
     function renderAiStats(data, ids = {}) {
         const loadingId = ids.loading || 'aiStatsLoading';
         const contentId = ids.content || 'aiStatsContent';
@@ -91,7 +166,10 @@
             </tr>
         `).join('');
 
+        const smartQuota = data.smart_quota || null;
+
         content.innerHTML = `
+            ${renderSmartQuotaPanel(smartQuota)}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
                     <div class="flex items-center justify-between gap-2">
@@ -196,7 +274,12 @@
         const gemLog = gemini.requests_today_internal || providers.gemini?.success || 0;
         const shopLog = shop.requests_today_internal || providers.shopaikey?.success || 0;
 
+        const smartQuota = data.smart_quota || null;
+        const quotaCompact = renderSmartQuotaPanel(smartQuota, { compact: true, hideLink: true });
+
         mount.innerHTML = `
+            <div class="space-y-3">
+            ${quotaCompact || ''}
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-sky-700">Lộ trình hôm nay</div>
@@ -218,6 +301,7 @@
                     <div class="mt-1 text-2xl font-black text-indigo-950">${formatNumber(shopLog)}</div>
                     <div class="text-[11px] text-indigo-800">${shop.remaining_usd != null ? `còn ${formatUsd(shop.remaining_usd)}` : 'log hôm nay'}</div>
                 </div>
+            </div>
             </div>
         `;
         mount.classList.remove('hidden');
@@ -282,6 +366,7 @@
     window.AiStatsPanel = {
         render: renderAiStats,
         renderCompact: renderAiStatsCompact,
+        renderSmartQuota: renderSmartQuotaPanel,
         load: loadAiStats,
     };
     window.loadAiStats = loadAiStats;

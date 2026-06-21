@@ -773,9 +773,73 @@
             const base = data && (data.error || data.message) ? (data.error || data.message) : `HTTP ${res.status}`;
             const detail = data && data.detail ? String(data.detail) : '';
             const message = detail && detail !== base ? `${base} (${detail})` : (detail || base);
-            throw new Error(message);
+            const err = new Error(message);
+            err.code = data?.code || '';
+            err.quota = data?.quota || null;
+            throw err;
         }
         return data;
+    }
+
+    function formatAiErrorMessage(err) {
+        if (err?.code === 'quota_exhausted_block') {
+            return 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai. '
+                + 'Giáo viên có thể dùng Gemini trên các công cụ Thi trực tuyến / Ma trận đề.';
+        }
+        return err?.message || 'Chưa gọi được AI.';
+    }
+
+    function formatAiErrorHtml(err) {
+        return `<p style="color:#dc2626">${escapeHtml(formatAiErrorMessage(err))}</p>`;
+    }
+
+    async function refreshTeacherQuotaBanner() {
+        if (!isTeacher() || isTeacherPreview()) {
+            document.getElementById('teacherQuotaBanner')?.remove();
+            return;
+        }
+        try {
+            const res = await fetch('api/ai_quota.php', { credentials: 'include', cache: 'no-store' });
+            const data = await res.json();
+            if (!res.ok) return;
+            renderTeacherQuotaBanner(data.smart_quota);
+        } catch (err) {
+            console.warn('Không tải quota AI:', err);
+        }
+    }
+
+    function renderTeacherQuotaBanner(sq) {
+        const host = els.teacherLessonDesigner;
+        if (!host) return;
+        document.getElementById('teacherQuotaBanner')?.remove();
+        if (!sq?.enabled || !sq.teacher_notice || sq.level === 'normal' || sq.level === 'disabled') return;
+
+        const levelClass = ({
+            warn: 'border-amber-300 bg-amber-50 text-amber-950',
+            critical: 'border-orange-300 bg-orange-50 text-orange-950',
+            exhausted: 'border-rose-300 bg-rose-50 text-rose-950',
+        })[sq.level] || 'border-sky-300 bg-sky-50 text-sky-950';
+        const icon = ({
+            warn: 'fa-triangle-exclamation text-amber-600',
+            critical: 'fa-circle-exclamation text-orange-600',
+            exhausted: 'fa-ban text-rose-600',
+        })[sq.level] || 'fa-robot text-sky-600';
+
+        const banner = document.createElement('section');
+        banner.id = 'teacherQuotaBanner';
+        banner.className = `mb-4 rounded-lg border px-4 py-3 text-sm leading-6 ${levelClass}`;
+        banner.innerHTML = `
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p><i class="fas ${icon} mr-2"></i><strong>Smart Quota:</strong> ${escapeHtml(sq.teacher_notice)}</p>
+                <a href="theodoi-ai.html" class="inline-flex shrink-0 items-center gap-1 text-xs font-bold underline opacity-90 hover:opacity-100">
+                    <i class="fas fa-chart-line"></i> Theo dõi AI
+                </a>
+            </div>
+            <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+                <div class="h-full rounded-full bg-current opacity-60" style="width:${Math.max(0, Math.min(100, Number(sq.used_pct) || 0))}%"></div>
+            </div>
+        `;
+        host.prepend(banner);
     }
 
     function currentLesson() {
@@ -833,6 +897,11 @@
         }
         if (teacher && typeof window.mountTeacherLotrinhNav === 'function') {
             window.mountTeacherLotrinhNav({ mode: preview ? 'preview' : 'design', subject: PAGE_SUBJECT });
+        }
+        if (teacher && !preview) {
+            refreshTeacherQuotaBanner();
+        } else {
+            document.getElementById('teacherQuotaBanner')?.remove();
         }
     }
 
@@ -2716,7 +2785,7 @@
             showAiModal(renderAiAnswer(data.answer || ''), anchor);
             anchor.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         } catch (err) {
-            showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, anchor);
+            showAiModal(formatAiErrorHtml(err), anchor);
             anchor.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
     }
@@ -2812,7 +2881,7 @@
                 aiAssistState.chatHistory.push({ role: 'assistant', content: data.answer || '' });
             } catch (err) {
                 aiAssistState.chatHistory.pop();
-                aiAssistState.chatHistory.push({ role: 'error', content: err.message || 'Chưa gọi được AI.' });
+                aiAssistState.chatHistory.push({ role: 'error', content: formatAiErrorMessage(err) });
             } finally {
                 aiAssistState.chatBusy = false;
                 sendBtn.disabled = false;
@@ -2922,7 +2991,7 @@
             const data = await requestAiExplain(lesson, text);
             showAiModal(renderAiAnswer(data.answer || ''), button);
         } catch (err) {
-            showAiModal(`<p style="color:#dc2626">${escapeHtml(err.message || 'Chưa gọi được AI.')}</p>`, button);
+            showAiModal(formatAiErrorHtml(err), button);
         } finally {
             button.disabled = false;
             button.innerHTML = old;

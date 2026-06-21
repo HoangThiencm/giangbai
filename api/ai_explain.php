@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
+require_once __DIR__ . '/ai_smart_quota.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -652,19 +653,63 @@ function ai_explain_log_result(string $mode, array $result, bool $ok, bool $fall
     ]);
 }
 
-$cloudflareResult = try_cloudflare_ai_explain($runtime, $workerPayload);
-if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {
-    ai_explain_log_result($mode, $cloudflareResult, true, false);
+$quotaStatus = ai_smart_quota_status();
+$quotaCfg = ai_smart_quota_load_config();
+
+if (ai_smart_quota_should_block_all()) {
     respond([
-        'ok' => true,
-        'answer' => trim($cloudflareResult['answer']),
-        'complete' => answer_looks_complete($cloudflareResult['answer']),
-        'provider' => 'cloudflare_workers_ai',
-        'model' => $cloudflareResult['model'] ?? 'Workers AI',
-    ]);
+        'error' => $quotaStatus['student_notice'] ?: 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai.',
+        'code' => 'quota_exhausted_block',
+        'quota' => $quotaStatus,
+    ], 503);
 }
-if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) {
-    ai_explain_log_result($mode, $cloudflareResult, false, false);
+
+$cloudflareResult = null;
+$cloudflareSkippedQuota = false;
+
+if (ai_smart_quota_allows_cloudflare()) {
+    $cloudflareResult = try_cloudflare_ai_explain($runtime, $workerPayload);
+    if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {
+        $neurons = ai_smart_quota_estimate_neurons(
+            (string)($cloudflareResult['model'] ?? $runtime['cloudflare_ai_model']),
+            (int)($cloudflareResult['prompt_tokens'] ?? 0),
+            (int)($cloudflareResult['completion_tokens'] ?? 0),
+            (int)$quotaCfg['avg_neurons_per_call']
+        );
+        ai_smart_quota_add_neurons($neurons);
+        $quotaStatus = ai_smart_quota_status();
+        ai_explain_log_result($mode, $cloudflareResult, true, false);
+        respond([
+            'ok' => true,
+            'answer' => trim($cloudflareResult['answer']),
+            'complete' => answer_looks_complete($cloudflareResult['answer']),
+            'provider' => 'cloudflare_workers_ai',
+            'model' => $cloudflareResult['model'] ?? 'Workers AI',
+            'quota' => $quotaStatus,
+        ]);
+    }
+    if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) {
+        if (ai_smart_quota_is_exhaustion_error((string)$cloudflareResult['error'])) {
+            ai_smart_quota_force_exhausted();
+            $quotaStatus = ai_smart_quota_status();
+        }
+        ai_explain_log_result($mode, $cloudflareResult, false, false);
+    }
+} else {
+    $cloudflareSkippedQuota = true;
+    $cloudflareResult = [
+        'error' => $quotaStatus['teacher_notice'] ?: 'Cloudflare tạm tắt do hết quota Neurons hôm nay.',
+        'provider' => 'cloudflare_workers_ai',
+        'quota_exhausted' => true,
+    ];
+}
+
+if ($cloudflareSkippedQuota && ai_smart_quota_should_block_all()) {
+    respond([
+        'error' => $quotaStatus['student_notice'] ?: 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai.',
+        'code' => 'quota_exhausted_block',
+        'quota' => $quotaStatus,
+    ], 503);
 }
 
 if ($cloudflareResult === null && (empty($runtime['gemini_enabled']) || empty($runtime['gemini_keys'])) && (empty($runtime['shopaikey_enabled']) || trim((string)$runtime['shopaikey_api_key']) === '')) {
@@ -673,7 +718,8 @@ if ($cloudflareResult === null && (empty($runtime['gemini_enabled']) || empty($r
 
 $geminiResult = try_gemini_explain($runtime, $prompt);
 if (is_array($geminiResult) && !empty($geminiResult['answer'])) {
-    $usedFallback = is_array($cloudflareResult) && !empty($cloudflareResult['error']);
+    $usedFallback = $cloudflareSkippedQuota
+        || (is_array($cloudflareResult) && !empty($cloudflareResult['error']));
     ai_explain_log_result($mode, $geminiResult, true, $usedFallback);
     respond([
         'ok' => true,
@@ -682,6 +728,7 @@ if (is_array($geminiResult) && !empty($geminiResult['answer'])) {
         'provider' => $geminiResult['provider'] ?? 'gemini',
         'model' => $geminiResult['model'] ?? $runtime['gemini_model'],
         'fallback' => $usedFallback,
+        'quota' => ai_smart_quota_status(),
     ]);
 }
 if (is_array($geminiResult) && !empty($geminiResult['error'])) {
@@ -698,6 +745,7 @@ if (is_array($fallbackResult) && !empty($fallbackResult['answer'])) {
         'provider' => $fallbackResult['provider'] ?? 'shopaikey',
         'model' => $fallbackResult['model'] ?? $runtime['shopaikey_model'],
         'fallback' => true,
+        'quota' => ai_smart_quota_status(),
     ]);
 }
 if (is_array($fallbackResult) && !empty($fallbackResult['error'])) {

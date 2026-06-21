@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
+require_once __DIR__ . '/ai_smart_quota.php';
 session_start();
 
 $key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
@@ -452,11 +453,14 @@ $geminiStats = [
     'dashboard_url' => 'https://aistudio.google.com/',
 ];
 
+$smartQuota = ai_smart_quota_status();
+
 respond([
     'ok' => true,
     'generated_at' => (new DateTimeImmutable('now', ai_usage_timezone()))->format(DateTimeInterface::ATOM),
     'today' => $todayKey,
     'timezone' => ai_usage_timezone()->getName(),
+    'smart_quota' => $smartQuota,
     'config' => [
         'cloudflare_model' => $runtime['cloudflare_ai_model'],
         'cloudflare_worker_url' => $runtime['cloudflare_worker_url'],
@@ -476,5 +480,6 @@ respond([
         'ShopAIKey dùng endpoint OpenAI-compatible /v1/dashboard/billing/*.',
         'Các module gọi Gemini trực tiếp từ trình duyệt không xuất hiện trong log nội bộ.',
         'Số lượt Worker trên Cloudflare có thể cao hơn log lộ trình vì đếm mọi request tới Worker; log nội bộ chỉ ghi lượt qua api/ai_explain.php.',
+        'Smart Quota: ước tính Neurons/ngày từ token mỗi lần Cloudflare thành công (mặc định 10.000 Neurons free). Cảnh báo vàng khi còn ≤20%, đỏ khi hết.',
     ],
 ]);
