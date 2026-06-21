@@ -28,7 +28,7 @@
 - [x] Quy ước soạn nội dung bài học: Enter 1 lần = xuống dòng, Enter 2 lần = tách đoạn; hỗ trợ `**đậm**`, `*nghiêng*`, `++gạch chân++`, ảnh `![mô tả](url)`; render qua `lessonRichText()` trong `lotrinh.js`.
 - [x] Gợi ý hành động tiếp theo (`renderNextAction`) cập nhật theo tab và tiến độ; ô gợi ý có thể bấm để chuyển tab.
 - [x] **Cloudflare Workers AI + fallback AI**: `api/ai_explain.php` ưu tiên Worker stateless chạy Workers AI; Worker lỗi/quá quota thì thử Gemini, sau đó ShopAIKey (DeepSeek). Worker URL/secret nằm trong `api/config.php`; không dùng D1/KV/Vectorize/RAG ở pha đầu.
-- [x] **Đổi model Cloudflare từ Admin**: Admin lưu `cloudflare_ai_model` và PHP gửi model đó tới Worker; Worker whitelist Qwen3 30B-A3B và Llama 3.2 3B, nên đổi model không cần Cloudflare API token hoặc sửa secret.
+- [x] **Đổi model AI từ Admin**: Cloudflare, Gemini và DeepSeek đều có danh sách nhanh + ô nhập model thủ công. Admin lưu `cloudflare_ai_model`; PHP gửi model đó tới Worker, Worker chấp nhận model ID hợp lệ dạng `@cf/...`, nên đổi model không cần Cloudflare API token hoặc sửa secret.
 - [x] **Công tắc kiểm thử provider AI**: Admin có thể tắt/bật riêng Gemini (`gemini_enabled`) và DeepSeek / ShopAIKey (`shopaikey_enabled`) mà không xóa key. Backend bỏ qua provider bị tắt; dùng để xác nhận Cloudflare Workers AI hoạt động độc lập.
 - [x] Khóa soạn bài theo trang lộ trình: trên `lotrinhtoan6–9.html` giáo viên chỉ soạn/xem bài đúng `LOTRINH_SUBJECT` (ẩn pill chuyển môn, khóa dropdown môn); `admin-progress.js` cũng lọc bài theo môn trang.
 - [x] Sửa lỗi encoding UTF-8 trên `lotrinhtoan7.html`, `lotrinhtoan8.html`, `lotrinhtoan9.html` (tiêu đề, `LOTRINH_SUBJECT`, chữ tiếng Việt ở header).

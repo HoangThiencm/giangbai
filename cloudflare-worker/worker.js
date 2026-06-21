@@ -1,8 +1,4 @@
 const DEFAULT_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-const ALLOWED_MODELS = new Set([
-  '@cf/qwen/qwen3-30b-a3b-fp8',
-  '@cf/meta/llama-3.2-3b-instruct',
-]);
 const MAX_CONTEXT_CHARS = 2600;
 const MAX_MESSAGE_CHARS = 1200;
 const MAX_HISTORY_TURNS = 6;
@@ -76,9 +72,9 @@ function extractAnswer(result) {
 
 function selectedModel(body, env) {
   const requested = String(body?.model || '');
-  if (ALLOWED_MODELS.has(requested)) return requested;
+  if (/^@cf\/[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(requested)) return requested;
   const configured = String(env.AI_MODEL || DEFAULT_MODEL);
-  return ALLOWED_MODELS.has(configured) ? configured : DEFAULT_MODEL;
+  return /^@cf\/[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(configured) ? configured : DEFAULT_MODEL;
 }
 
 export default {
