@@ -646,6 +646,20 @@
             opacity: 0.82;
         }
 
+        .teacher-ai-stats-embed {
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.96);
+            color: #0f172a;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        @media (min-width: 768px) {
+            .teacher-ai-stats-embed {
+                padding: 1.15rem 1.25rem 1.25rem;
+            }
+        }
+
         .grade-tile-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1372,6 +1386,7 @@
         </div>
     </div>
 
+    <script src="ai-stats-panel.js?v=20260621-teacher-hub-1"></script>
     <script>
         SystemConfig.renderConfig();
 
@@ -1525,6 +1540,31 @@
                     </div>
             ` : '';
 
+            const aiStatsSection = teacherTabs.ai_stats ? `
+                    <div class="mt-5 border-t border-white/10 pt-5">
+                        <div class="teacher-ai-stats-embed">
+                            <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-sm font-extrabold text-slate-900"><i class="fas fa-robot text-sky-600 mr-2"></i>Theo dõi AI hôm nay</h3>
+                                    <p class="mt-0.5 text-xs text-slate-500">Cloudflare Worker, Gemini fallback và ShopAIKey cho AI lộ trình.</p>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button id="teacherAiStatsRefreshBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                                        <i class="fas fa-rotate-right"></i> Tải lại
+                                    </button>
+                                    <a href="theodoi-ai.html" class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-sky-700">
+                                        Xem chi tiết <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div id="teacherAiStatsLoading" class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-xs text-slate-500">
+                                <i class="fas fa-circle-notch fa-spin mr-2 text-sky-600"></i>Đang tải thống kê AI...
+                            </div>
+                            <div id="teacherAiStatsMount" class="hidden"></div>
+                        </div>
+                    </div>
+            ` : '';
+
             const gridClass = actionCards.length === 2 ? 'lotrinh-action-grid lotrinh-action-grid--two' : 'lotrinh-action-grid';
 
             panel.innerHTML = `
@@ -1540,9 +1580,21 @@
                             ${actionCards.join('')}
                         </div>
                     </div>
+                    ${aiStatsSection}
                     ${gradeSection}
                 </div>
             `;
+
+            if (teacherTabs.ai_stats) {
+                const refreshAi = () => window.loadAiStats?.(true, {
+                    useSession: true,
+                    compact: true,
+                    compactMount: 'teacherAiStatsMount',
+                    ids: { loading: 'teacherAiStatsLoading', refreshBtn: 'teacherAiStatsRefreshBtn' },
+                });
+                document.getElementById('teacherAiStatsRefreshBtn')?.addEventListener('click', refreshAi);
+                refreshAi();
+            }
         })();
     </script>
 

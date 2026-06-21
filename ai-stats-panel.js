@@ -181,6 +181,48 @@
         content.classList.remove('hidden');
     }
 
+    function renderAiStatsCompact(data, mountEl) {
+        const mount = typeof mountEl === 'string' ? document.getElementById(mountEl) : mountEl;
+        if (!mount) return;
+
+        const cf = data.providers?.cloudflare || {};
+        const gemini = data.providers?.gemini || {};
+        const shop = data.providers?.shopaikey || {};
+        const summary = data.internal?.summary || {};
+        const providers = summary.providers || {};
+        const cfBucket = providers.cloudflare_workers_ai || {};
+        const cfWorker = cfBucket.worker_requests_today ?? (cf.available ? cf.requests_today : null);
+        const cfLog = cfBucket.success || cf.requests_today_internal || 0;
+        const gemLog = gemini.requests_today_internal || providers.gemini?.success || 0;
+        const shopLog = shop.requests_today_internal || providers.shopaikey?.success || 0;
+
+        mount.innerHTML = `
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
+                    <div class="text-[10px] font-bold uppercase text-sky-700">Lộ trình hôm nay</div>
+                    <div class="mt-1 text-2xl font-black text-sky-950">${formatNumber(summary.total_success || 0)}</div>
+                    <div class="text-[11px] text-sky-800">phản hồi thành công</div>
+                </div>
+                <div class="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                    <div class="text-[10px] font-bold uppercase text-orange-800">Cloudflare Worker</div>
+                    <div class="mt-1 text-2xl font-black text-orange-950">${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
+                    <div class="text-[11px] text-orange-800">log lộ trình: ${formatNumber(cfLog)}</div>
+                </div>
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div class="text-[10px] font-bold uppercase text-emerald-800">Gemini fallback</div>
+                    <div class="mt-1 text-2xl font-black text-emerald-950">${formatNumber(gemLog)}</div>
+                    <div class="text-[11px] text-emerald-800">lượt hôm nay</div>
+                </div>
+                <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+                    <div class="text-[10px] font-bold uppercase text-indigo-800">ShopAIKey</div>
+                    <div class="mt-1 text-2xl font-black text-indigo-950">${formatNumber(shopLog)}</div>
+                    <div class="text-[11px] text-indigo-800">${shop.remaining_usd != null ? `còn ${formatUsd(shop.remaining_usd)}` : 'log hôm nay'}</div>
+                </div>
+            </div>
+        `;
+        mount.classList.remove('hidden');
+    }
+
     async function loadAiStats(force = false, options = {}) {
         const ids = options.ids || {};
         const loadingId = ids.loading || 'aiStatsLoading';
@@ -188,13 +230,16 @@
         const btnId = ids.refreshBtn || 'aiStatsRefreshBtn';
         const adminKey = options.adminKey || '';
         const useSession = options.useSession !== false && !adminKey;
+        const isCompact = !!options.compact;
+        const compactMountId = options.compactMount || 'teacherAiStatsMount';
 
         if (!adminKey && !useSession) return;
 
         const loading = document.getElementById(loadingId);
-        const content = document.getElementById(contentId);
+        const content = isCompact ? null : document.getElementById(contentId);
+        const compactMount = isCompact ? document.getElementById(compactMountId) : null;
         const btn = document.getElementById(btnId);
-        if (!loading || !content) return;
+        if (!loading || (!isCompact && !content) || (isCompact && !compactMount)) return;
 
         if (btn) {
             btn.disabled = true;
@@ -202,7 +247,8 @@
         }
         loading.classList.remove('hidden');
         loading.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2 text-sky-600"></i>Đang tải thống kê AI...';
-        content.classList.add('hidden');
+        if (content) content.classList.add('hidden');
+        if (compactMount) compactMount.classList.add('hidden');
 
         try {
             const headers = {};
@@ -214,11 +260,17 @@
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Không tải được thống kê AI.');
-            renderAiStats(data, ids);
+            if (isCompact) {
+                renderAiStatsCompact(data, compactMount);
+                loading.classList.add('hidden');
+            } else {
+                renderAiStats(data, ids);
+            }
         } catch (err) {
             loading.innerHTML = `<span class="text-rose-700"><i class="fas fa-triangle-exclamation mr-2"></i>${escapeHtml(err.message || 'Không tải được thống kê AI.')}</span>`;
             loading.classList.remove('hidden');
-            content.classList.add('hidden');
+            if (content) content.classList.add('hidden');
+            if (compactMount) compactMount.classList.add('hidden');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -229,6 +281,7 @@
 
     window.AiStatsPanel = {
         render: renderAiStats,
+        renderCompact: renderAiStatsCompact,
         load: loadAiStats,
     };
     window.loadAiStats = loadAiStats;
