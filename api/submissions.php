@@ -600,7 +600,7 @@ if ($method === 'POST' && $action === 'save') {
     $submissionType = ($data['submission_type'] ?? '') === 'report' ? 'report' : 'file';
     $formFields = $submissionType === 'report' ? submission_normalize_form_fields($data['form_fields'] ?? []) : [];
     if ($submissionType === 'report' && !$formFields) respond(['error' => 'Báo cáo cần có ít nhất một trường thông tin.'], 422);
-    $academicYear = trim((string)($data['academic_year'] ?? ''));
+    $academicYear = drive_school_year(trim((string)($data['academic_year'] ?? '')));
     $requireFiles = $submissionType === 'file' || !empty($data['require_files']);
     $openAt = submission_datetime($data['open_at'] ?? null);
     $dueAt = submission_datetime($data['due_at'] ?? null);
