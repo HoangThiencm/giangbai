@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const DEFAULT_MODEL = '@cf/meta/llama-3.2-3b-instruct';
 const MAX_CONTEXT_CHARS = 2600;
 const MAX_MESSAGE_CHARS = 1200;
 const MAX_HISTORY_TURNS = 6;

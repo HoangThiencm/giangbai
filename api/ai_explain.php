@@ -602,8 +602,14 @@ function try_cloudflare_ai_explain(array $config, array $payload): ?array
             ];
         }
     }
+    $error = trim((string)($response['error'] ?? ''));
+    if ($error === '') {
+        $error = $curlError !== ''
+            ? 'Không kết nối được Worker: ' . $curlError
+            : 'Worker không trả dữ liệu (HTTP ' . $status . ').';
+    }
     return [
-        'error' => $response['error'] ?? ($curlError ?: 'Cloudflare Workers AI không phản hồi.'),
+        'error' => $error,
         'provider' => 'cloudflare_workers_ai',
     ];
 }
