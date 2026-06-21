@@ -58,7 +58,8 @@ if (isset($nextConfig['mistral_keys'])) {
     $nextConfig['mistral_keys'] = array_values(array_unique(array_filter(array_map('trim', $keys ?: []))));
 }
 if (isset($nextConfig['mistral_ocr_model'])) {
-    $nextConfig['mistral_ocr_model'] = trim((string)$nextConfig['mistral_ocr_model']) ?: 'mistral-ocr-latest';
+    $model = trim((string)$nextConfig['mistral_ocr_model']) ?: 'mistral-ocr-latest';
+    $nextConfig['mistral_ocr_model'] = preg_match('/^mistral-ocr/i', $model) ? $model : 'mistral-ocr-latest';
 }
 if (isset($nextConfig['mistral_enabled'])) {
     $nextConfig['mistral_enabled'] = (bool)$nextConfig['mistral_enabled'];

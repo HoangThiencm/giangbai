@@ -1326,7 +1326,7 @@
                 lesson,
                 tab: 'learn',
                 minutes: 10,
-                title: 'Đọc lý thuyết',
+                title: 'Đọc kiến thức cần nhớ',
                 body: 'Nắm khái niệm và công thức cốt lõi.'
             });
         }
@@ -1868,9 +1868,9 @@
         const theory = Array.isArray(lesson.theory) ? lesson.theory : [];
         els.tabContent.innerHTML = `
             <div class="space-y-4">
-                ${renderParagraphs(theory, 'Giáo viên chưa nhập lý thuyết cho bài này.')}
+                ${renderParagraphs(theory, 'Giáo viên chưa nhập kiến thức cần nhớ cho bài này.')}
                 <button id="markTheoryDone" class="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
-                    <i class="fas fa-check"></i>${ui.theoryDone ? 'Đã hoàn thành lý thuyết' : 'Đánh dấu đã học'}
+                    <i class="fas fa-check"></i>${ui.theoryDone ? 'Đã hoàn thành kiến thức cần nhớ' : 'Đánh dấu đã học'}
                 </button>
             </div>
         `;
@@ -2210,8 +2210,10 @@
         document.head.appendChild(style);
     }
 
-    function submissionsForSelfPracticeItem(itemIndex) {
-        return selfPracticeState.submissions.filter(row => Number(row.item_index) === Number(itemIndex));
+    const SELF_PRACTICE_WHOLE_INDEX = -1;
+
+    function submissionsForLessonSelfPractice() {
+        return selfPracticeState.submissions.filter(row => Number(row.item_index) === SELF_PRACTICE_WHOLE_INDEX);
     }
 
     async function loadSelfPracticeSubmissions(lesson, force = false) {
@@ -2225,62 +2227,69 @@
             selfPracticeState.submissions = Array.isArray(data.submissions) ? data.submissions : [];
             selfPracticeState.loaded = true;
         } catch (err) {
-            console.warn('Không tải bài nộp tự luyện:', err);
+            console.warn('Không tải bài nộp giáo viên:', err);
             selfPracticeState.submissions = [];
         } finally {
             selfPracticeState.loading = false;
         }
     }
 
-    function renderSelfPracticeSubmissionHistory(itemIndex) {
-        const rows = submissionsForSelfPracticeItem(itemIndex);
+    function renderSelfPracticeSubmissionHistory() {
+        const rows = submissionsForLessonSelfPractice();
         if (!rows.length) return '';
+        const row = rows[0];
         return `
             <div class="self-practice-history">
                 <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Bài đã nộp</div>
-                ${rows.map(row => `
-                    <div class="mb-2 text-sm text-slate-700">
-                        <div class="text-xs text-slate-500">${escapeHtml(String(row.submitted_at || '').replace('T', ' ').slice(0, 16))}</div>
-                        ${(row.files || []).map(file => `
-                            <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="mr-3 inline-flex items-center gap-1">
-                                <i class="fas fa-file"></i>${escapeHtml(file.original_name)}
-                            </a>
-                        `).join('')}
-                        ${row.note ? `<div class="text-xs text-slate-500 mt-1">${escapeHtml(row.note)}</div>` : ''}
-                    </div>
-                `).join('')}
+                <div class="mb-2 text-sm text-slate-700">
+                    <div class="text-xs text-slate-500">${escapeHtml(String(row.submitted_at || '').replace('T', ' ').slice(0, 16))}</div>
+                    ${(row.files || []).map(file => `
+                        <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="mr-3 inline-flex items-center gap-1">
+                            <i class="fas fa-file"></i>${escapeHtml(file.original_name)}
+                        </a>
+                    `).join('')}
+                    ${row.note ? `<div class="text-xs text-slate-500 mt-1">${escapeHtml(row.note)}</div>` : ''}
+                </div>
             </div>
         `;
     }
 
-    function renderSelfPracticeUploadForm(lesson, itemIndex, options = {}) {
+    function renderSelfPracticeUploadForm(lesson, options = {}) {
         const canSubmit = !!options.canSubmit;
         const showForm = !!options.showForm;
+        const alreadySubmitted = !!options.alreadySubmitted;
         if (!showForm) {
-            return `<p class="mt-3 text-sm text-slate-500"><i class="fab fa-google-drive mr-1"></i>Học sinh đăng nhập sẽ nộp bài làm lên Google Drive tại đây.</p>`;
+            return `<p class="text-sm text-slate-500"><i class="fab fa-google-drive mr-1"></i>Học sinh đăng nhập sẽ nộp bài làm lên Google Drive tại đây.</p>`;
         }
         if (!canSubmit) {
-            return `<p class="mt-3 text-sm text-amber-800"><i class="fab fa-google-drive mr-1"></i>Chế độ xem thử — học sinh mới nộp được bài làm thật.</p>`;
+            return `<p class="text-sm text-amber-800"><i class="fab fa-google-drive mr-1"></i>Chế độ xem thử — học sinh mới nộp được bài làm thật.</p>`;
         }
-        const key = `self_practice_${itemIndex}`;
+        if (alreadySubmitted) {
+            return `
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                    <i class="fas fa-circle-check mr-1"></i>Em đã nộp bài cho bài học này. Giáo viên sẽ xem trên Google Drive.
+                </div>
+                ${renderSelfPracticeSubmissionHistory()}
+            `;
+        }
+        const key = 'self_practice_whole';
         return `
             <div class="self-practice-upload" data-self-practice-drop="${key}">
                 <label class="block cursor-pointer text-center">
                     <input type="file" class="hidden" data-self-practice-input="${key}" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar,.txt">
                     <div class="mx-auto grid h-10 w-10 place-items-center rounded-lg bg-teal-50 text-teal-700"><i class="fas fa-cloud-arrow-up"></i></div>
                     <p class="mt-2 text-sm font-bold text-slate-800">Chọn tệp bài làm hoặc kéo thả vào đây</p>
-                    <p class="mt-1 text-xs text-slate-500">PDF, Word, ảnh… tối đa 5 tệp · 25 MB/tệp · lưu Google Drive</p>
+                    <p class="mt-1 text-xs text-slate-500">Gộp tất cả dạng vào một lần nộp · tối đa 10 tệp · 25 MB/tệp · lưu Google Drive</p>
                 </label>
                 <div class="self-practice-file-list" data-self-practice-file-list="${key}"></div>
                 <label class="mt-3 block text-xs font-bold text-slate-600">Ghi chú (không bắt buộc)
-                    <textarea rows="2" class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500" data-self-practice-note="${key}" placeholder="Ví dụ: Em làm dạng 2, chưa kịp kiểm tra lại"></textarea>
+                    <textarea rows="2" class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500" data-self-practice-note="${key}" placeholder="Ví dụ: Em nộp bài làm đầy đủ các dạng"></textarea>
                 </label>
-                <button type="button" class="mt-3 inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-self-practice-submit="${key}" data-item-index="${itemIndex}">
-                    <i class="fas fa-paper-plane"></i> Nộp bài làm
+                <button type="button" class="mt-3 inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-self-practice-submit="${key}">
+                    <i class="fas fa-paper-plane"></i> Nộp bài cho giáo viên
                 </button>
                 <div class="mt-2 hidden text-sm font-semibold text-rose-700" data-self-practice-error="${key}"></div>
             </div>
-            ${renderSelfPracticeSubmissionHistory(itemIndex)}
         `;
     }
 
@@ -2324,7 +2333,6 @@
             button.onclick = async () => {
                 if (!canSubmit) return;
                 const key = button.dataset.selfPracticeSubmit;
-                const itemIndex = Number(button.dataset.itemIndex || 0);
                 const input = document.querySelector(`[data-self-practice-input="${key}"]`);
                 const noteEl = document.querySelector(`[data-self-practice-note="${key}"]`);
                 const errorEl = document.querySelector(`[data-self-practice-error="${key}"]`);
@@ -2343,7 +2351,7 @@
                 const form = new FormData();
                 form.append('action', 'submit');
                 form.append('lesson_id', String(lesson.id));
-                form.append('item_index', String(itemIndex));
+                form.append('item_index', String(SELF_PRACTICE_WHOLE_INDEX));
                 form.append('note', String(noteEl?.value || '').trim());
                 files.forEach(file => form.append('files[]', file));
                 try {
@@ -2372,13 +2380,14 @@
         const canSubmit = !isTeacher();
         const showForm = canSubmit || isTeacherPreview();
         if (canSubmit) {
-            els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải bài tập tự luyện...</div>';
+            els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải bài tập nộp giáo viên...</div>';
             await loadSelfPracticeSubmissions(lesson);
         }
+        const alreadySubmitted = canSubmit && submissionsForLessonSelfPractice().length > 0;
         els.tabContent.innerHTML = `
             <div class="space-y-4">
                 <div class="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-                    <i class="fas fa-pencil-ruler mr-1"></i> Làm bài theo từng dạng, chụp/scan hoặc lưu file rồi <strong>nộp bài làm</strong> — tệp được lưu lên Google Drive để giáo viên xem trực tiếp.
+                    <i class="fas fa-cloud-arrow-up mr-1"></i> Đọc các dạng bài bên dưới, làm xong rồi <strong>nộp chung một lần</strong> — tệp được lưu lên Google Drive để giáo viên xem.
                 </div>
                 ${items.length ? items.map((raw, index) => {
                     const item = normalizeSelfPracticeItem(raw);
@@ -2391,10 +2400,16 @@
                             <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
                         </button>
                         ` : ''}
-                        ${renderSelfPracticeUploadForm(lesson, index, { canSubmit, showForm })}
                     </article>
                 `;
-                }).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập bài tập tự luyện cho bài này.</div>'}
+                }).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập bài tập nộp cho bài này.</div>'}
+                ${items.length ? `
+                <section class="self-practice-card">
+                    <h3 class="font-bold text-slate-900"><i class="fas fa-paper-plane text-teal-700 mr-1"></i> Nộp bài cho giáo viên</h3>
+                    <p class="mt-1 text-sm text-slate-600">Chọn một hoặc nhiều tệp chứa toàn bộ bài làm (mỗi bài học chỉ nộp một lần).</p>
+                    ${renderSelfPracticeUploadForm(lesson, { canSubmit, showForm, alreadySubmitted })}
+                </section>
+                ` : ''}
             </div>
         `;
         bindAiExplainButtons(lesson);
@@ -3814,7 +3829,7 @@
         const tab = state.activeTab;
         const practice = practiceProgress(lesson, ui);
         const tasks = Array.isArray(lesson.tasks) && lesson.tasks.length ? lesson.tasks : [
-            'Đọc lý thuyết ngắn',
+            'Đọc kiến thức cần nhớ',
             'Xem ví dụ mẫu',
             'Làm bài luyện tập'
         ];
@@ -3835,14 +3850,14 @@
         if (!ui.theoryDone) {
             if (tab === 'learn') {
                 applyNextActionSuggestion({
-                    title: 'Đang đọc lý thuyết',
+                    title: 'Đang đọc kiến thức cần nhớ',
                     body: 'Đọc xong thì bấm "Đánh dấu đã học" để mở phần ví dụ.'
                 });
                 return;
             }
             applyNextActionSuggestion({
-                title: tasks[0] || 'Bắt đầu bằng lý thuyết',
-                body: 'Quay lại tab Lý thuyết để nắm khái niệm và ký hiệu của bài.',
+                title: tasks[0] || 'Bắt đầu bằng kiến thức cần nhớ',
+                body: 'Quay lại tab Kiến thức cần nhớ để nắm khái niệm và ký hiệu của bài.',
                 tab: 'learn'
             });
             return;
@@ -3928,7 +3943,7 @@
             title: 'Đã làm xong các bước học',
             body: nextLesson
                 ? `Có thể chuyển sang bài "${nextLesson.title}" hoặc ôn lại phần luyện tập.`
-                : 'Có thể ôn lại lý thuyết hoặc làm thêm bài luyện.'
+                : 'Có thể ôn lại kiến thức cần nhớ hoặc làm thêm bài luyện.'
         });
     }
 

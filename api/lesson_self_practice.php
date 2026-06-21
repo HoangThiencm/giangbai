@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 set_exception_handler(function (Throwable $e) {
-    $payload = ['error' => 'Có lỗi khi xử lý bài tập tự luyện.'];
+    $payload = ['error' => 'Có lỗi khi xử lý bài tập nộp giáo viên.'];
     if (defined('APP_DEBUG') && APP_DEBUG) {
         $payload['detail'] = $e->getMessage();
     }
@@ -204,7 +204,7 @@ if ($method === 'GET' && $action === 'list') {
     }
 
     if ($role !== 'student') {
-        respond(['error' => 'Chỉ học sinh hoặc giáo viên mới xem được bài nộp tự luyện.'], 403);
+        respond(['error' => 'Chỉ học sinh hoặc giáo viên mới xem được bài nộp.'], 403);
     }
 
     $stmt = $pdo->prepare("SELECT s.*
@@ -233,11 +233,11 @@ if ($method === 'GET' && $action === 'list') {
 if ($method === 'POST' && $action === 'submit') {
     $user = lsp_current_user($pdo);
     if ((string)($user['role'] ?? '') !== 'student') {
-        respond(['error' => 'Chỉ học sinh mới nộp bài tập tự luyện.'], 403);
+        respond(['error' => 'Chỉ học sinh mới nộp bài tập.'], 403);
     }
 
     $lessonId = (int)($_POST['lesson_id'] ?? 0);
-    $itemIndex = (int)($_POST['item_index'] ?? 0);
+    $itemIndex = (int)($_POST['item_index'] ?? -1);
     $note = trim((string)($_POST['note'] ?? ''));
     if ($lessonId <= 0) respond(['error' => 'Thiếu lesson_id.'], 422);
 
@@ -248,13 +248,19 @@ if ($method === 'POST' && $action === 'submit') {
     }
 
     $items = lsp_parse_items($lesson['self_practice_json'] ?? null);
-    if (!$items) respond(['error' => 'Bài học chưa có bài tập tự luyện.'], 422);
-    if ($itemIndex < 0 || $itemIndex >= count($items)) {
-        respond(['error' => 'Dạng bài tập không hợp lệ.'], 422);
+    if (!$items) respond(['error' => 'Bài học chưa có bài tập nộp giáo viên.'], 422);
+
+    if ($itemIndex !== -1) {
+        respond(['error' => 'Chỉ nộp chung một lần cho cả bài học.'], 422);
     }
 
-    $item = $items[$itemIndex];
-    $itemTitle = trim((string)($item['title'] ?? ('Dạng ' . ($itemIndex + 1))));
+    $itemTitle = 'Bài tập nộp giáo viên';
+
+    $dupStmt = $pdo->prepare('SELECT id FROM lesson_self_practice_submissions WHERE lesson_id = ? AND student_id = ? AND item_index = -1 LIMIT 1');
+    $dupStmt->execute([$lessonId, (int)$user['id']]);
+    if ($dupStmt->fetch()) {
+        respond(['error' => 'Em đã nộp bài cho bài học này.'], 422);
+    }
 
     $files = array_values(array_filter(
         lsp_files_from_input($_FILES['files'] ?? null),
@@ -262,7 +268,7 @@ if ($method === 'POST' && $action === 'submit') {
     ));
     if (!$files) respond(['error' => 'Vui lòng chọn ít nhất một tệp đính kèm.'], 422);
 
-    $maxFiles = 5;
+    $maxFiles = 10;
     $maxBytes = 25 * 1024 * 1024;
     $allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip', 'rar', 'txt'];
     if (count($files) > $maxFiles) respond(['error' => "Tối đa {$maxFiles} tệp mỗi lần nộp."], 422);
@@ -293,7 +299,7 @@ if ($method === 'POST' && $action === 'submit') {
     $uploaded = [];
     foreach ($files as $index => $file) {
         $original = (string)$file['name'];
-        $fieldKey = 'dang-' . ($itemIndex + 1);
+        $fieldKey = 'bai-nop';
         $storedName = drive_submission_stored_name($className, $studentName, $identifier, $index + 1, $original, $fieldKey);
         $invalid = drive_validate_upload($file['tmp_name'], $original);
         if ($invalid) respond(['error' => $invalid], 422);
@@ -339,7 +345,7 @@ if ($method === 'POST' && $action === 'submit') {
         'submission_id' => $submissionId,
         'submitted_at' => date('c'),
         'file_count' => count($uploaded),
-        'message' => 'Đã nộp bài tập tự luyện lên Google Drive.',
+        'message' => 'Đã nộp bài tập lên Google Drive.',
     ]);
 }
 

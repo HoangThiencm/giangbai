@@ -811,6 +811,7 @@
                     if (config.mistral_ocr_model) {
                         localStorage.setItem('default_mistral_ocr_model', String(config.mistral_ocr_model));
                     }
+                    localStorage.setItem('global_mistral_enabled', config.mistral_enabled === false ? 'false' : 'true');
 
                     const userEmail = localStorage.getItem('userEmail') || "";
                     let features = config.features || {};
@@ -1326,7 +1327,7 @@
                             <div class="tool-tile-content">
                                 <span class="tool-tile-eyebrow">Lộ trình Toán</span>
                                 <h3 class="tool-tile-title">Soạn bài lộ trình</h3>
-                                <p class="tool-tile-desc">Lý thuyết, ví dụ, video và luyện tập theo từng bài.</p>
+                                <p class="tool-tile-desc">Kiến thức cần nhớ, ví dụ, bài giảng, luyện tập và nộp bài theo từng bài.</p>
                             </div>
                             <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                         </a>

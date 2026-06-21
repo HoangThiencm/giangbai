@@ -4,6 +4,24 @@
  */
 (function (global) {
     const API = 'https://api.mistral.ai/v1/ocr';
+    const OCR_MODEL_FALLBACK = 'mistral-ocr-latest';
+
+    function isOcrEnabled() {
+        if (global.AiDesignConfig && typeof AiDesignConfig.isMistralEnabled === 'function') {
+            return AiDesignConfig.isMistralEnabled();
+        }
+        try {
+            return localStorage.getItem('global_mistral_enabled') !== 'false';
+        } catch {
+            return true;
+        }
+    }
+
+    function sanitizeOcrModel(model) {
+        const value = (model || '').trim();
+        if (/^mistral-ocr/i.test(value)) return value;
+        return OCR_MODEL_FALLBACK;
+    }
 
     function getKeys(keys) {
         if (keys && keys.length) return keys.filter(Boolean);
@@ -16,7 +34,8 @@
     }
 
     function getModel(model) {
-        return model || (global.AiDesignConfig ? AiDesignConfig.getMistralModel() : null) || 'mistral-ocr-latest';
+        const raw = model || (global.AiDesignConfig ? AiDesignConfig.getMistralModel() : null) || OCR_MODEL_FALLBACK;
+        return sanitizeOcrModel(raw);
     }
 
     function toDataUrl(fileOrBuffer, mime) {
@@ -36,6 +55,7 @@
     }
 
     async function ocrDocument(documentUrl, keys, model) {
+        if (!isOcrEnabled()) throw new Error('Mistral OCR đang tắt trong Admin. Chỉ bật khi cần quét PDF.');
         const apiKeys = getKeys(keys);
         if (!apiKeys.length) throw new Error('Thiếu Mistral API Key. Bấm Cấu hình AI trên trang này.');
         const currentModel = getModel(model);

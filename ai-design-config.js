@@ -10,6 +10,7 @@
         geminiModel: 'default_gemini_module',
         groqModel: 'default_groq_model',
         mistralModel: 'default_mistral_ocr_model',
+        mistralEnabled: 'global_mistral_enabled',
         pdfEngine: 'pdf_scan_engine',
         hfFallback: 'hf_fallback_enabled',
         hfUrl: 'hf_fallback_url',
@@ -61,7 +62,7 @@
                     <hr class="border-slate-200" />
                     <div>
                         <label class="mb-2 block text-sm font-bold text-slate-700">Mistral OCR (API Keys)</label>
-                        <p class="mb-2 text-xs text-slate-500">Quét PDF → văn bản cực nhanh. Dùng cho tách trang + OCR trước khi nhận diện câu hỏi.</p>
+                        <p class="mb-2 text-xs text-slate-500">Chỉ quét PDF/ảnh → văn bản (endpoint OCR). Không dùng cho chat, soạn bài hay tạo câu hỏi.</p>
                         <div id="adcMistralStatus" class="mb-2"></div>
                         <label class="flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-300 hover:bg-sky-50">
                             <i class="fas fa-file-upload text-sky-500"></i> Chọn file Mistral Keys.txt
@@ -140,6 +141,7 @@
         getModule: () => localStorage.getItem(LS.geminiModel) || 'gemini-2.5-flash',
         getGroqModule: () => localStorage.getItem(LS.groqModel) || 'llama-3.3-70b-versatile',
         getMistralModel: () => localStorage.getItem(LS.mistralModel) || 'mistral-ocr-latest',
+        isMistralEnabled: () => localStorage.getItem(LS.mistralEnabled) !== 'false',
         getPdfEngine: () => localStorage.getItem(LS.pdfEngine) || 'browser',
 
         openModal() {
@@ -172,6 +174,7 @@
                     localStorage.setItem(LS.mistral, JSON.stringify(cfg.mistral_keys.filter(Boolean)));
                 }
                 if (cfg.mistral_ocr_model) localStorage.setItem(LS.mistralModel, String(cfg.mistral_ocr_model));
+                localStorage.setItem(LS.mistralEnabled, cfg.mistral_enabled === false ? 'false' : 'true');
                 if (cfg.hf_fallback_url) {
                     localStorage.setItem(LS.hfUrl, String(cfg.hf_fallback_url).replace(/\/$/, ''));
                 }
