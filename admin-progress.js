@@ -5,14 +5,55 @@
     let rows = [];
     let classes = [];
     let managedClasses = [];
+    let classSubjects = {};
     let selectedLessonId = '';
     let selectedClassName = localStorage.getItem('progress_class_filter') || '';
+
+    const LOTRINH_SUBJECTS = ['Toán 9', 'Toán 8', 'Toán 7', 'Toán 6', 'Toán 4'];
 
     function el(id) { return document.getElementById(id); }
 
     function lessonsForPage() {
         if (!PAGE_SUBJECT) return lessons;
         return lessons.filter(lesson => String(lesson.subject || '').trim() === PAGE_SUBJECT);
+    }
+
+    function inferSubjectFromClassName(className) {
+        const name = normalizeClassName(className);
+        if (!name) return '';
+        for (const subject of LOTRINH_SUBJECTS) {
+            if (name.toLowerCase().includes(subject.toLowerCase())) return subject;
+        }
+        const match = name.match(/\b([4-9])[A-Za-z]{0,3}\b/);
+        return match ? `Toán ${match[1]}` : '';
+    }
+
+    function subjectForClass(className) {
+        const normalized = normalizeClassName(className);
+        if (!normalized) return '';
+        return classSubjects[normalized] || inferSubjectFromClassName(normalized);
+    }
+
+    function lessonsForClassFilter() {
+        let items = lessonsForPage();
+        if (!selectedClassName) return items;
+        const subject = subjectForClass(selectedClassName);
+        if (!subject) return items;
+        const scoped = items.filter(lesson => String(lesson.subject || '').trim() === subject);
+        return scoped.length ? scoped : items;
+    }
+
+    function syncLessonSelectionForClass() {
+        const items = lessonsForClassFilter();
+        if (!items.length) {
+            selectedLessonId = '';
+            return false;
+        }
+        const previous = selectedLessonId;
+        if (!items.some(item => String(item.id) === String(selectedLessonId))) {
+            selectedLessonId = String(items[0].id);
+        }
+        return selectedLessonId !== previous;
     }
 
     function getAdminKey() {
@@ -94,6 +135,7 @@
     function bindProgressActionButtons() {
         const reloadBtn = el('progressReloadBtn');
         const syncBtn = el('progressSyncBtn');
+        const exportBtn = el('progressExportBtn');
         if (reloadBtn && reloadBtn.dataset.boundProgressReload !== '1') {
             reloadBtn.dataset.boundProgressReload = '1';
             reloadBtn.onclick = () => refresh();
@@ -101,6 +143,10 @@
         if (syncBtn && syncBtn.dataset.boundProgressSync !== '1') {
             syncBtn.dataset.boundProgressSync = '1';
             syncBtn.onclick = () => syncProgress();
+        }
+        if (exportBtn && exportBtn.dataset.boundProgressExport !== '1') {
+            exportBtn.dataset.boundProgressExport = '1';
+            exportBtn.onclick = () => exportProgressExcel();
         }
     }
 
@@ -142,6 +188,9 @@
                     <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp. Bấm <strong>Cập nhật tiến trình</strong> để hệ thống tính lại điểm luyện tập từ đáp án đã lưu của học sinh.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <button id="progressExportBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded font-bold text-sm">
+                        <i class="fas fa-file-excel mr-1"></i>Xuất Excel
+                    </button>
                     <button id="progressSyncBtn" type="button" class="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2.5 rounded font-bold text-sm">
                         <i class="fas fa-arrows-rotate mr-1"></i>Cập nhật tiến trình
                     </button>
@@ -202,9 +251,20 @@
             selectedLessonId = event.target.value;
             refresh();
         };
-        el('progressClassFilter').onchange = event => {
+        el('progressClassFilter').onchange = async event => {
             selectedClassName = event.target.value || '';
             localStorage.setItem('progress_class_filter', selectedClassName);
+            const lessonChanged = syncLessonSelectionForClass();
+            renderLessons();
+            if (lessonChanged && selectedLessonId) {
+                try {
+                    await refresh();
+                } catch (err) {
+                    console.warn(err);
+                    render();
+                }
+                return;
+            }
             render();
         };
         el('progressStatusFilter').onchange = render;
@@ -286,20 +346,20 @@
     function renderLessons() {
         const select = el('progressLessonSelect');
         if (!select) return;
-        const items = lessonsForPage();
+        const items = lessonsForClassFilter();
+        const subjectHint = selectedClassName ? subjectForClass(selectedClassName) : '';
         if (!items.length) {
             select.innerHTML = '<option value="">Chưa có bài học</option>';
             return;
         }
+        const showSubjectPrefix = !PAGE_SUBJECT && !subjectHint;
         select.innerHTML = items.map(lesson => (
-            PAGE_SUBJECT
-                ? `<option value="${lesson.id}">${escapeHtml(lesson.title)}</option>`
-                : `<option value="${lesson.id}">${escapeHtml(lesson.subject)} - ${escapeHtml(lesson.title)}</option>`
+            showSubjectPrefix
+                ? `<option value="${lesson.id}">${escapeHtml(lesson.subject)} - ${escapeHtml(lesson.title)}</option>`
+                : `<option value="${lesson.id}">${escapeHtml(lesson.title)}</option>`
         )).join('');
-        if (items.some(item => String(item.id) === String(selectedLessonId))) {
-            select.value = selectedLessonId;
-        } else {
-            selectedLessonId = String(items[0].id);
+        syncLessonSelectionForClass();
+        if (selectedLessonId) {
             select.value = selectedLessonId;
         }
     }
@@ -313,9 +373,13 @@
         return Math.max(0, Math.min(100, theory + examples + practicePart));
     }
 
-    function weakSkillText(row) {
-        const scopedLessons = lessonsForPage();
-        const lesson = scopedLessons.find(item => String(item.id) === String(selectedLessonId)) || scopedLessons[0];
+    function currentLessonMeta() {
+        const items = lessonsForClassFilter();
+        return items.find(item => String(item.id) === String(selectedLessonId)) || items[0] || null;
+    }
+
+    function weakSkillText(row, lessonOverride = null) {
+        const lesson = lessonOverride || currentLessonMeta();
         const skills = lesson?.skills || [];
         const weak = skills.filter(skill => Number(row.skill_scores?.[skill.id] || 0) < Number(skill.target || 80));
         if (row.status === 'not_started') return 'Chưa vào làm bài';
@@ -323,6 +387,171 @@
         if (!weak.length && row.score >= 80) return `Đạt mục tiêu · Tiến trình ${lessonPercent}%`;
         if (!weak.length) return `Tiến trình ${lessonPercent}%`;
         return weak.map(skill => skill.name || skill.id).join(', ') || 'Nên luyện thêm';
+    }
+
+    function plainText(value) {
+        return decodeBasicEntities(String(value ?? ''))
+            .replace(/\$\$?[^$]+\$\$?/g, ' ')
+            .replace(/\\\[([\s\S]*?)\\\]/g, ' ')
+            .replace(/\\\(([\s\S]*?)\\\)/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function fileSlug(value, fallback = 'TienDo') {
+        const slug = String(value || '').replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        return slug || fallback;
+    }
+
+    function formatExportTimestamp() {
+        const now = new Date();
+        const pad = num => String(num).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+    }
+
+    function buildCurrentLessonSheetRows(viewRows) {
+        const lesson = currentLessonMeta();
+        const lessonTitle = lesson ? `${lesson.subject || ''} - ${lesson.title || ''}`.trim() : 'Chưa chọn bài';
+        const classLabel = selectedClassName || (isTeacherUser() && teacherManagedClasses().length ? 'Tất cả lớp phụ trách' : 'Tất cả lớp');
+        const statusFilter = el('progressStatusFilter')?.value || '';
+        const statusLabels = { needs: 'Cần luyện thêm', mastered: 'Đã học xong', not_started: 'Chưa bắt đầu' };
+        const exportedAt = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+        const meta = [
+            ['BÁO CÁO TIẾN ĐỘ HỌC SINH'],
+            [`Bài học: ${lessonTitle}`],
+            [`Lớp: ${classLabel}`],
+            [`Lọc trạng thái: ${statusLabels[statusFilter] || 'Tất cả'}`],
+            [`Xuất lúc: ${exportedAt}`],
+            [],
+            ['STT', 'Họ và tên', 'Tài khoản', 'Lớp', 'Trạng thái', 'Điểm luyện tập (%)', 'Tiến trình (%)', 'Cần lưu ý', 'Cập nhật']
+        ];
+        const dataRows = viewRows.map((row, index) => {
+            const [statusText] = statusLabel(row.status);
+            return [
+                index + 1,
+                row.full_name || '',
+                row.username || '',
+                row.class_name || '',
+                statusText,
+                row.score ?? 0,
+                row.status === 'not_started' ? 0 : lessonCompletionFromRow(row),
+                plainText(weakSkillText(row)),
+                row.updated_at || 'Chưa có'
+            ];
+        });
+        return meta.concat(dataRows);
+    }
+
+    function buildMatrixSheetRows(matrixData) {
+        const lessonsList = matrixData.lessons || [];
+        const matrixRows = matrixData.rows || [];
+        const classLabel = matrixData.class_name || selectedClassName || 'Tất cả lớp';
+        const subjectLabel = matrixData.subject || subjectForClass(classLabel) || '';
+        const exportedAt = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+        const header = ['STT', 'Họ và tên', 'Tài khoản', 'Lớp'];
+        lessonsList.forEach(lesson => {
+            header.push(`${lesson.title || lesson.chapter || 'Bài'} (%)`);
+            header.push(`${lesson.title || lesson.chapter || 'Bài'} - TT`);
+        });
+        const meta = [
+            ['TỔNG HỢP TIẾN ĐỘ THEO LỚP'],
+            [`Lớp: ${classLabel}`]
+        ];
+        if (subjectLabel) meta.push([`Môn: ${subjectLabel}`]);
+        meta.push(
+            [`Số bài: ${lessonsList.length}`],
+            [`Xuất lúc: ${exportedAt}`],
+            [],
+            header
+        );
+        const dataRows = matrixRows.map((row, index) => {
+            const line = [
+                index + 1,
+                row.full_name || '',
+                row.username || '',
+                row.class_name || ''
+            ];
+            (row.lessons || []).forEach(item => {
+                line.push(item.score ?? 0);
+                line.push(item.status_label || statusLabel(item.status || 'not_started')[0]);
+            });
+            return line;
+        });
+        return meta.concat(dataRows);
+    }
+
+    async function fetchProgressMatrix() {
+        const key = getAdminKey();
+        const params = new URLSearchParams({ matrix: '1' });
+        if (selectedClassName) params.set('class_name', selectedClassName);
+        const subject = subjectForClass(selectedClassName);
+        if (subject) params.set('subject', subject);
+        const headers = key ? { 'X-Admin-Key': key } : {};
+        const res = await fetch(`api/admin_progress.php?${params.toString()}`, {
+            credentials: 'include',
+            headers,
+            cache: 'no-store'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Không tải được dữ liệu tổng hợp.');
+        return data;
+    }
+
+    async function exportProgressExcel() {
+        if (typeof window.XLSX === 'undefined') {
+            alert('Thư viện Excel chưa tải. Vui lòng tải lại trang.');
+            return;
+        }
+        const viewRows = sortRowsForView(filteredRows());
+        if (!viewRows.length) {
+            alert('Không có dữ liệu để xuất Excel.');
+            return;
+        }
+
+        const exportBtn = el('progressExportBtn');
+        const oldHtml = exportBtn?.innerHTML || '';
+        if (exportBtn) {
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang xuất...';
+        }
+
+        try {
+            const workbook = XLSX.utils.book_new();
+            const currentSheet = XLSX.utils.aoa_to_sheet(buildCurrentLessonSheetRows(viewRows));
+            currentSheet['!cols'] = [
+                { wch: 5 }, { wch: 24 }, { wch: 16 }, { wch: 18 },
+                { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 34 }, { wch: 18 }
+            ];
+            XLSX.utils.book_append_sheet(workbook, currentSheet, 'Bai hien tai');
+
+            const scopedLessons = lessonsForClassFilter();
+            if (scopedLessons.length > 1) {
+                const matrixData = await fetchProgressMatrix();
+                if ((matrixData.rows || []).length && (matrixData.lessons || []).length) {
+                    const matrixSheet = XLSX.utils.aoa_to_sheet(buildMatrixSheetRows(matrixData));
+                    const widths = [{ wch: 5 }, { wch: 24 }, { wch: 16 }, { wch: 18 }];
+                    (matrixData.lessons || []).forEach(() => {
+                        widths.push({ wch: 10 }, { wch: 16 });
+                    });
+                    matrixSheet['!cols'] = widths;
+                    XLSX.utils.book_append_sheet(workbook, matrixSheet, 'Tong hop lop');
+                }
+            }
+
+            const lesson = currentLessonMeta();
+            const stamp = formatExportTimestamp();
+            const classPart = fileSlug(selectedClassName || 'TatCaLop');
+            const lessonPart = fileSlug(lesson?.title || 'BaiHoc');
+            XLSX.writeFile(workbook, `TienDo_${classPart}_${lessonPart}_${stamp}.xlsx`);
+        } catch (err) {
+            console.error('exportProgressExcel error:', err);
+            alert(err.message || 'Không xuất được file Excel.');
+        } finally {
+            if (exportBtn) {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = oldHtml;
+            }
+        }
     }
 
     function renderSummary(viewRows) {
@@ -495,18 +724,18 @@
         rows = data.rows || [];
         classes = Array.isArray(data.classes) ? data.classes : [];
         managedClasses = Array.isArray(data.managed_classes) ? data.managed_classes : [];
+        classSubjects = data.class_subjects && typeof data.class_subjects === 'object' ? data.class_subjects : {};
         if (managedClasses.length) {
             localStorage.setItem('userClassName', managedClasses.join(', '));
         }
-        const scopedLessons = lessonsForPage();
         const preferredLessonId = String(data.lesson_id || '');
-        if (scopedLessons.some(item => String(item.id) === preferredLessonId)) {
+        if (preferredLessonId && lessonsForClassFilter().some(item => String(item.id) === preferredLessonId)) {
             selectedLessonId = preferredLessonId;
         } else {
-            selectedLessonId = String(scopedLessons[0]?.id || '');
+            syncLessonSelectionForClass();
         }
-        renderLessons();
         renderClasses();
+        renderLessons();
         render();
         if (typeof window.ensureAdminTabs === 'function') window.ensureAdminTabs();
     }
@@ -525,6 +754,7 @@
 
     window.refreshAdminProgress = refresh;
     window.syncAdminProgress = syncProgress;
+    window.exportAdminProgress = exportProgressExcel;
 
     function boot() {
         if (!getProgressMount()) return;

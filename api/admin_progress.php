@@ -81,6 +81,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     respond(['error' => 'Thao tác không hợp lệ.'], 400);
 }
 
+function progress_status_label(string $status): string
+{
+    return match ($status) {
+        'in_progress' => 'Đang học',
+        'needs_practice' => 'Cần luyện thêm',
+        'mastered' => 'Đã học xong',
+        default => 'Chưa bắt đầu',
+    };
+}
+
+function progress_row_from_student(array $student, ?array $progress): array
+{
+    $skillScores = $progress ? decode_json_array($progress['skill_scores_json']) : [];
+    $status = $progress['status'] ?? 'not_started';
+    $score = $progress ? (int)$progress['score'] : 0;
+    $needsPractice = in_array($status, ['not_started', 'in_progress', 'needs_practice'], true) || $score < 80;
+    $state = $progress ? decode_json_array($progress['state_json']) : [];
+    $practiceScoreState = isset($state['practiceScore']) ? (int)$state['practiceScore'] : null;
+
+    return [
+        'student_id' => (int)$student['id'],
+        'username' => $student['username'],
+        'full_name' => $student['full_name'],
+        'class_name' => $student['class_name'] ?: '',
+        'is_active' => (bool)$student['is_active'],
+        'last_login_at' => $student['last_login_at'],
+        'status' => $status,
+        'status_label' => progress_status_label($status),
+        'score' => $score,
+        'practice_score_state' => $practiceScoreState,
+        'skill_scores' => $skillScores,
+        'state' => $state,
+        'needs_practice' => $needsPractice,
+        'updated_at' => $progress['updated_at'] ?? null,
+        'completed_at' => $progress['completed_at'] ?? null,
+    ];
+}
+
 $lessonId = isset($_GET['lesson_id']) ? (int)$_GET['lesson_id'] : 0;
 
 $lessons = scoped_lessons_for_progress($pdo, $teacherUser);
@@ -94,12 +132,13 @@ if ($lessonId > 0 && !lesson_allowed_for_progress($lessons, $lessonId)) {
 }
 
 $studentsStmt = $pdo->query("
-    SELECT id, username, full_name, class_name, is_active, last_login_at
+    SELECT id, username, full_name, class_name, allowed_pages_json, is_active, last_login_at
     FROM users
     WHERE role = 'student' AND is_active = 1
     ORDER BY class_name ASC, full_name ASC, username ASC
 ");
 $students = $studentsStmt->fetchAll();
+$classSubjects = class_subject_map_from_students($students);
 
 $managedClasses = $teacherUser ? teacher_managed_classes($teacherUser) : [];
 if ($teacherUser) {
@@ -111,6 +150,75 @@ if ($teacherUser) {
     $students = array_values(array_filter($students, function ($student) use ($teacherUser) {
         return teacher_can_view_student_class($teacherUser, (string)($student['class_name'] ?? ''));
     }));
+}
+
+if (($_GET['matrix'] ?? '') === '1') {
+    $classFilter = trim((string)($_GET['class_name'] ?? ''));
+    $subjectFilter = trim((string)($_GET['subject'] ?? ''));
+    if ($classFilter !== '') {
+        $students = array_values(array_filter($students, static function ($student) use ($classFilter) {
+            return trim((string)($student['class_name'] ?? '')) === $classFilter;
+        }));
+    }
+    if ($subjectFilter === '' && $classFilter !== '') {
+        $subjectFilter = (string)($classSubjects[$classFilter] ?? infer_subject_from_class_name($classFilter) ?? '');
+    }
+    $matrixLessons = $lessons;
+    if ($subjectFilter !== '') {
+        $matrixLessons = array_values(array_filter($matrixLessons, static function ($lesson) use ($subjectFilter) {
+            return trim((string)($lesson['subject'] ?? '')) === $subjectFilter;
+        }));
+    }
+
+    $lessonIds = array_map(static fn(array $lesson): int => (int)$lesson['id'], $matrixLessons);
+    $progressLookup = [];
+    if ($lessonIds) {
+        $placeholders = implode(',', array_fill(0, count($lessonIds), '?'));
+        $progressStmt = $pdo->prepare("SELECT * FROM student_lesson_progress WHERE lesson_id IN ($placeholders)");
+        $progressStmt->execute($lessonIds);
+        foreach ($progressStmt->fetchAll() as $row) {
+            $progressLookup[(int)$row['student_id']][(int)$row['lesson_id']] = $row;
+        }
+    }
+
+    $matrixRows = [];
+    foreach ($students as $student) {
+        $studentId = (int)$student['id'];
+        $lessonProgress = [];
+        foreach ($matrixLessons as $lesson) {
+            $lessonIdKey = (int)$lesson['id'];
+            $progress = $progressLookup[$studentId][$lessonIdKey] ?? null;
+            $lessonProgress[] = [
+                'lesson_id' => $lessonIdKey,
+                'status' => $progress['status'] ?? 'not_started',
+                'status_label' => progress_status_label((string)($progress['status'] ?? 'not_started')),
+                'score' => $progress ? (int)$progress['score'] : 0,
+                'updated_at' => $progress['updated_at'] ?? null,
+            ];
+        }
+        $matrixRows[] = [
+            'student_id' => $studentId,
+            'username' => $student['username'],
+            'full_name' => $student['full_name'],
+            'class_name' => $student['class_name'] ?: '',
+            'lessons' => $lessonProgress,
+        ];
+    }
+
+    respond([
+        'ok' => true,
+        'class_name' => $classFilter,
+        'subject' => $subjectFilter,
+        'lessons' => array_map(static function ($lesson) {
+            return [
+                'id' => (int)$lesson['id'],
+                'subject' => $lesson['subject'],
+                'chapter' => $lesson['chapter'],
+                'title' => $lesson['title'],
+            ];
+        }, $matrixLessons),
+        'rows' => $matrixRows,
+    ]);
 }
 
 $progressMap = [];
@@ -133,22 +241,7 @@ foreach ($students as $student) {
     $state = $progress ? decode_json_array($progress['state_json']) : [];
     $practiceScoreState = isset($state['practiceScore']) ? (int)$state['practiceScore'] : null;
 
-    $rows[] = [
-        'student_id' => (int)$student['id'],
-        'username' => $student['username'],
-        'full_name' => $student['full_name'],
-        'class_name' => $student['class_name'] ?: '',
-        'is_active' => (bool)$student['is_active'],
-        'last_login_at' => $student['last_login_at'],
-        'status' => $status,
-        'score' => $score,
-        'practice_score_state' => $practiceScoreState,
-        'skill_scores' => $skillScores,
-        'state' => $state,
-        'needs_practice' => $needsPractice,
-        'updated_at' => $progress['updated_at'] ?? null,
-        'completed_at' => $progress['completed_at'] ?? null,
-    ];
+    $rows[] = progress_row_from_student($student, $progress);
 }
 
 $classNames = [];
@@ -165,6 +258,7 @@ respond([
     'ok' => true,
     'lesson_id' => $lessonId,
     'managed_classes' => $managedClasses,
+    'class_subjects' => $classSubjects,
     'classes' => $classes,
     'lessons' => array_map(function ($lesson) {
         return [

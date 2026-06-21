@@ -133,6 +133,65 @@ function subjects_for_allowed_pages($pages): array
     return array_values(array_unique($subjects));
 }
 
+function infer_subject_from_class_name(string $className): ?string
+{
+    $name = trim($className);
+    if ($name === '') {
+        return null;
+    }
+
+    $subjects = array_values(lotrinh_page_subjects());
+    usort($subjects, static fn(string $a, string $b): int => strlen($b) <=> strlen($a));
+    foreach ($subjects as $subject) {
+        if (mb_stripos($name, $subject) !== false) {
+            return $subject;
+        }
+    }
+
+    if (preg_match('/\b([4-9])[A-Za-z]{0,3}\b/u', $name, $matches)) {
+        return 'Toán ' . $matches[1];
+    }
+
+    return null;
+}
+
+function class_subject_map_from_students(array $students): array
+{
+    $counts = [];
+    foreach ($students as $student) {
+        $class = trim((string)($student['class_name'] ?? ''));
+        if ($class === '') {
+            continue;
+        }
+        $pages = json_decode((string)($student['allowed_pages_json'] ?? '[]'), true);
+        foreach (subjects_for_allowed_pages(is_array($pages) ? $pages : []) as $subject) {
+            $counts[$class][$subject] = ($counts[$class][$subject] ?? 0) + 1;
+        }
+    }
+
+    $map = [];
+    foreach ($counts as $class => $subjectCounts) {
+        if (!$subjectCounts) {
+            continue;
+        }
+        arsort($subjectCounts);
+        $map[$class] = (string) array_key_first($subjectCounts);
+    }
+
+    foreach ($students as $student) {
+        $class = trim((string)($student['class_name'] ?? ''));
+        if ($class === '' || isset($map[$class])) {
+            continue;
+        }
+        $inferred = infer_subject_from_class_name($class);
+        if ($inferred) {
+            $map[$class] = $inferred;
+        }
+    }
+
+    return $map;
+}
+
 function primary_lotrinh_page($pages): ?string
 {
     $pages = normalize_pages(is_array($pages) ? $pages : []);
