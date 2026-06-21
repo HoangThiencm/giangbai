@@ -48,6 +48,7 @@ function load_ai_runtime_config(): array
     $config = [
         'cloudflare_worker_url' => '',
         'cloudflare_worker_secret' => '',
+        'cloudflare_ai_model' => '@cf/qwen/qwen3-30b-a3b-fp8',
         'gemini_enabled' => true,
         'gemini_keys' => [],
         'gemini_model' => 'gemini-2.5-flash',
@@ -62,6 +63,9 @@ function load_ai_runtime_config(): array
     }
     if (defined('CLOUDFLARE_AI_WORKER_SECRET') && is_string(CLOUDFLARE_AI_WORKER_SECRET)) {
         $config['cloudflare_worker_secret'] = trim(CLOUDFLARE_AI_WORKER_SECRET);
+    }
+    if (defined('CLOUDFLARE_AI_MODEL') && is_string(CLOUDFLARE_AI_MODEL) && trim(CLOUDFLARE_AI_MODEL) !== '') {
+        $config['cloudflare_ai_model'] = trim(CLOUDFLARE_AI_MODEL);
     }
     if (defined('GEMINI_ENABLED')) {
         $config['gemini_enabled'] = (bool)GEMINI_ENABLED;
@@ -100,6 +104,9 @@ function load_ai_runtime_config(): array
             }
             if (array_key_exists('gemini_enabled', $globalConfig)) {
                 $config['gemini_enabled'] = (bool)$globalConfig['gemini_enabled'];
+            }
+            if (!empty($globalConfig['cloudflare_ai_model']) && is_string($globalConfig['cloudflare_ai_model'])) {
+                $config['cloudflare_ai_model'] = trim($globalConfig['cloudflare_ai_model']);
             }
             if (!empty($globalConfig['shopaikey_api_key']) && is_string($globalConfig['shopaikey_api_key'])) {
                 $config['shopaikey_api_key'] = trim($globalConfig['shopaikey_api_key']);
@@ -622,6 +629,7 @@ $workerPayload = [
     'question' => $question,
     'lesson_context' => $lessonContext,
     'history' => $history,
+    'model' => $runtime['cloudflare_ai_model'],
 ];
 $cloudflareResult = try_cloudflare_ai_explain($runtime, $workerPayload);
 if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {

@@ -24,6 +24,7 @@ define('GEMINI_ENABLED', true);
 // api/config.php on the hosting; never expose it through JavaScript or JSON.
 define('CLOUDFLARE_AI_WORKER_URL', 'https://late-bird-fe3b.hoangthien-thcstranphu.workers.dev');
 define('CLOUDFLARE_AI_WORKER_SECRET', 'paste-the-same-secret-as-APP_SHARED_SECRET');
+define('CLOUDFLARE_AI_MODEL', '@cf/qwen/qwen3-30b-a3b-fp8');
 
 // Optional fallback via ShopAIKey (OpenAI-compatible API).
 define('SHOPAIKEY_API_KEY', '');

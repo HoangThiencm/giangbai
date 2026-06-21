@@ -44,6 +44,11 @@ if (isset($nextConfig['gemini_keys'])) {
 if (isset($nextConfig['gemini_model'])) {
     $nextConfig['gemini_model'] = trim((string)$nextConfig['gemini_model']) ?: 'gemini-2.5-flash';
 }
+if (isset($nextConfig['cloudflare_ai_model'])) {
+    $allowedModels = ['@cf/qwen/qwen3-30b-a3b-fp8', '@cf/meta/llama-3.2-3b-instruct'];
+    $model = trim((string)$nextConfig['cloudflare_ai_model']);
+    $nextConfig['cloudflare_ai_model'] = in_array($model, $allowedModels, true) ? $model : '@cf/qwen/qwen3-30b-a3b-fp8';
+}
 if (isset($nextConfig['gemini_enabled'])) {
     $nextConfig['gemini_enabled'] = (bool)$nextConfig['gemini_enabled'];
 }
