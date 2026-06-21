@@ -7,6 +7,7 @@
         'lotrinhtoan8.html': 'lotrinhtoan8',
         'lotrinhtoan9.html': 'lotrinhtoan9',
         'thongketientrinh.html': 'thongketientrinh',
+        'quanlyvanban.html': 'quanlyvanban',
         'theodoi-ai.html': 'theodoiai',
         'gslides.html': 'gslides',
         'smartquiz.html': 'smartquiz',
@@ -22,6 +23,7 @@
         lotrinhtoan8: 'lotrinhtoan8.html',
         lotrinhtoan9: 'lotrinhtoan9.html',
         thongketientrinh: 'thongketientrinh.html',
+        quanlyvanban: 'quanlyvanban.html',
         theodoiai: 'theodoi-ai.html',
         gslides: 'gslides.html',
         smartquiz: 'smartquiz.html',
@@ -122,10 +124,10 @@
     }
 
     if (role === 'student') {
-        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon') {
+        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon' || pageKey === 'quanlyvanban') {
             const msg = pageKey === 'rutgon'
                 ? 'Trang rút gọn link chỉ dành cho giáo viên.'
-                : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.');
+                : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : (pageKey === 'quanlyvanban' ? 'Trang quản lý văn bản chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.'));
             alert(msg);
             window.location.href = firstAllowedPageUrl(allowedPages) || 'login.html';
             return;
@@ -174,6 +176,10 @@
     }
 
     if (role === 'teacher' && pageKey === 'rutgon') {
+        return;
+    }
+
+    if (role === 'teacher' && pageKey === 'quanlyvanban') {
         return;
     }
 

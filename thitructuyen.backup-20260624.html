@@ -1,0 +1,2451 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Quản Lý Thi Trực Tuyến Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <script src="access-control.js?v=20260618-open-exam1"></script>
+
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="hf-fallback-client.js?v=20260624"></script>
+    <script src="exam-vision-client.js?v=20260624"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+    <!-- Cropper.js for Manual Crop -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <!-- SortableJS for Drag & Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f3f4f6;
+            overscroll-behavior: none;
+        }
+
+        .math-render {
+            font-family: 'Times New Roman', serif;
+            font-size: 1.15em;
+            line-height: 1.6;
+        }
+
+        .math-render .katex {
+            font-size: 1.1em;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Layout */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 320px 420px 1fr;
+            height: calc(100vh - 64px);
+        }
+
+        .col-panel {
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .col-header {
+            padding: 12px;
+            font-weight: bold;
+            background: #f8fafc;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 0.9rem;
+            color: #475569;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .col-content {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Items */
+        .page-thumb {
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px solid #f1f1f1;
+            transition: background 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .page-thumb:hover {
+            background: #f8fafc;
+        }
+
+        .page-thumb.active {
+            background: #eef2ff;
+            border-left-color: #4f46e5;
+        }
+
+        .page-thumb img {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            padding: 24px;
+            shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-image-full {
+            max-width: 95vw;
+            max-height: 95vh;
+            object-fit: contain;
+            background: black;
+            border-radius: 4px;
+        }
+
+        .close-btn-full {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 101;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        /* Anti-Cheat */
+        .noselect {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Allow Select Override for Teachers */
+        .allow-select,
+        .qr-link {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text !important;
+        }
+
+        /* Violation Overlay */
+        .violation-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+        }
+
+        /* Error Box */
+        #react-error {
+            display: none;
+            padding: 20px;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #ef4444;
+            margin: 20px;
+            border-radius: 8px;
+        }
+
+        /* Cropper Styles */
+        .cropper-container {
+            max-height: 70vh;
+            background: #333;
+        }
+
+        /* Text styling helpers */
+        .tex-bold {
+            font-weight: bold;
+        }
+
+        .tex-italic {
+            font-style: italic;
+        }
+
+        /* Drag Handle */
+        .drag-handle {
+            cursor: grab;
+            padding: 4px 8px;
+            color: #9ca3af;
+            transition: color 0.2s;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .drag-handle:hover {
+            color: #4f46e5;
+        }
+
+        /* Guide Modal Styles */
+        .guide-step {
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            border-left: 3px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+
+        .guide-step:hover {
+            border-left-color: #4f46e5;
+        }
+
+        .guide-step h4 {
+            font-weight: bold;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .guide-step p,
+        .guide-step ul {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .guide-step ul {
+            list-style-type: disc;
+            padding-left: 1.2rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+
+<body class="noselect" oncontextmenu="return false;">
+    <div id="gb-hf-fallback-bar"></div>
+    <div id="root"></div>
+    <div id="react-error"></div>
+
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            const el = document.getElementById('react-error');
+            el.style.display = 'block';
+            el.innerHTML = `<strong>Lỗi Hệ Thống:</strong> ${msg}<br><small>${url}:${line}</small><br><pre>${error?.stack}</pre>`;
+            return false;
+        };
+
+        // Chặn phím tắt
+        document.addEventListener('keydown', function (e) {
+            // Cho phép các phím chức năng nếu đang ở trong input .allow-select (để giáo viên paste/copy)
+            if (e.target.classList.contains('allow-select') || e.target.classList.contains('qr-link') || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            if (e.key === 'F12' || e.key === 'PrintScreen' ||
+                (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S')) ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
+                e.preventDefault();
+                e.stopPropagation();
+                // alert("CẢNH BÁO: Thao tác này bị cấm trong giờ thi!");
+            }
+        });
+
+        // Xử lý sự kiện Copy (Cho phép nếu là .qr-link hoặc .allow-select)
+        document.addEventListener('copy', function (e) {
+            if (document.activeElement.classList.contains("qr-link") || document.activeElement.classList.contains("allow-select")) {
+                return true; // CHO PHÉP COPY
+            }
+            e.preventDefault();
+        });
+
+        // Xử lý sự kiện Paste toàn cục cho Modal Nạp Đáp Án
+        document.addEventListener("paste", function (e) {
+            const modal = document.querySelector(".answer-import-modal-active");
+            if (!modal) return; // Chỉ xử lý khi modal đang mở
+
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf("image") !== -1) {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        // Gọi hàm xử lý được expose từ React Component
+                        if (window.handleGlobalAnswerImagePaste) {
+                            window.handleGlobalAnswerImagePaste(ev.target.result);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    break;
+                }
+            }
+        });
+    </script>
+
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const examUrl = (route) => GiangBaiApi.examUrl(route);
+
+        const aiPost = async (route, body, config = {}) => {
+            const { res } = await GiangBaiApi.axiosPostWithFallback(
+                axios,
+                GiangBaiApi.examAiUrl(route),
+                GiangBaiApi.hfExamUrl(route),
+                body,
+                config,
+                'exam-ai'
+            );
+            return res;
+        };
+
+        const aiPostForm = async (route, formData) => {
+            const res = await GiangBaiApi.fetchWithFallback(
+                GiangBaiApi.examAiUrl(route),
+                GiangBaiApi.hfExamUrl(route),
+                { method: 'POST', body: formData },
+                'process_paper'
+            );
+            return res.json();
+        };
+
+        const formatApiError = (err, fallback = "Đã xảy ra lỗi.") => {
+            const data = err?.response?.data;
+            if (!data) return err?.message || fallback;
+            const detail = data.detail ?? data.message ?? data.error;
+            if (!detail) return fallback;
+            if (typeof detail === "string") return detail;
+            if (Array.isArray(detail)) {
+                return detail.map(item => {
+                    if (typeof item === "string") return item;
+                    const field = Array.isArray(item.loc) ? item.loc.filter(part => part !== "body").join(".") : "";
+                    const msg = item.msg || item.message || JSON.stringify(item);
+                    return field ? `${field}: ${msg}` : msg;
+                }).join("\n");
+            }
+            if (typeof detail === "object") {
+                return detail.message || detail.msg || JSON.stringify(detail);
+            }
+            return String(detail);
+        };
+
+        const isMobileExamClient = () => {
+            const ua = navigator.userAgent || "";
+            return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+                || /Zalo|FBAN|FBAV|Line|MicroMessenger|Instagram|Twitter/i.test(ua);
+        };
+
+        // --- HELPER COMPONENTS ---
+
+        const cleanOptionText = (text) => {
+            if (!text) return "";
+            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
+        };
+
+        // NEW: Clean question prefix like "Câu 1:", "Bài 2."
+        const cleanQuestionPrefix = (text) => {
+            if (!text) return "";
+            // Regex to remove "Câu/Bài/Question" followed by number and separator at the start
+            return text.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '');
+        };
+
+        const MathText = ({ text, cleanPrefix = false }) => {
+            const ref = useRef();
+
+            const formatTextMode = (str) => {
+                if (!str) return '';
+                let formatted = str.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
+                formatted = formatted.replace(/\\textit\{([^\}]+)\}/g, '<span class="tex-italic">$1</span>');
+                formatted = formatted.replace(/\n/g, '<br/>');
+                return formatted;
+            };
+
+            const processedText = useMemo(() => {
+                return cleanPrefix ? cleanQuestionPrefix(text) : text;
+            }, [text, cleanPrefix]);
+
+            useEffect(() => {
+                if (!processedText || !ref.current) return;
+                const el = ref.current;
+                el.innerHTML = '';
+                const parts = processedText.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                parts.forEach(part => {
+                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                        const span = document.createElement('span');
+                        const content = part.slice(2, -2);
+                        try { katex.render(content, span, { throwOnError: false, displayMode: true }); } catch (e) { span.innerText = content; }
+                        el.appendChild(span);
+                    } else if (part.startsWith('$') && part.endsWith('$')) {
+                        const span = document.createElement('span');
+                        const content = part.slice(1, -1);
+                        try { katex.render(content, span, { throwOnError: false, displayMode: false }); } catch (e) { span.innerText = content; }
+                        el.appendChild(span);
+                    } else {
+                        if (part.trim().length > 0) {
+                            const span = document.createElement('span');
+                            span.innerHTML = formatTextMode(part);
+                            el.appendChild(span);
+                        } else if (part.length > 0) {
+                            el.appendChild(document.createTextNode(part));
+                        }
+                    }
+                });
+            }, [processedText]);
+            return <div ref={ref} className="math-render text-gray-800 leading-relaxed break-words"></div>;
+        };
+
+        const QRModal = ({ link, onClose }) => {
+            const qrRef = useRef();
+            const linkInputRef = useRef(null);
+            const [copied, setCopied] = useState(false);
+
+            useEffect(() => {
+                if (qrRef.current) {
+                    qrRef.current.innerHTML = "";
+                    new QRCode(qrRef.current, { text: link, width: 200, height: 200 });
+                }
+            }, [link]);
+
+            const copyLink = async () => {
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(link);
+                    } else if (linkInputRef.current) {
+                        linkInputRef.current.focus();
+                        linkInputRef.current.select();
+                        document.execCommand("copy");
+                    } else {
+                        throw new Error("Không thể truy cập clipboard");
+                    }
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch {
+                    if (linkInputRef.current) {
+                        linkInputRef.current.focus();
+                        linkInputRef.current.select();
+                    }
+                    alert("Không copy tự động được. Vui lòng bấm vào ô link rồi copy thủ công.");
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal-box text-center" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-2 text-indigo-800">Quét mã để thi</h3>
+                        <div ref={qrRef} className="flex justify-center my-4"></div>
+                        <div className="mb-3 text-left">
+                            <label className="text-xs text-gray-500 font-bold block mb-1">Đường dẫn (gửi Zalo cho học sinh):</label>
+                            <div className="flex gap-2">
+                                <input
+                                    ref={linkInputRef}
+                                    value={link}
+                                    readOnly
+                                    className="qr-link flex-1 border p-2 rounded text-sm bg-gray-50 select-all cursor-text text-blue-600 font-mono"
+                                    onClick={(e) => e.target.select()}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={copyLink}
+                                    className={`shrink-0 px-4 py-2 rounded text-sm font-bold transition ${copied ? "bg-green-600 text-white" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
+                                >
+                                    <i className={`fas ${copied ? "fa-check" : "fa-copy"} mr-1`}></i>
+                                    {copied ? "Đã copy" : "Copy"}
+                                </button>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full">Đóng</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const ImageModal = ({ src, onClose }) => {
+            if (!src) return null;
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="close-btn-full" onClick={onClose}>&times;</div>
+                    <img src={src} className="modal-image-full" onClick={(e) => e.stopPropagation()} />
+                </div>
+            );
+        };
+
+        // --- NEW: Guide Modal ---
+        const GuideModal = ({ onClose }) => {
+            return (
+                <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+                    <div className="modal-box w-full max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b flex justify-between items-center bg-indigo-600 text-white rounded-t-lg">
+                            <h3 className="font-bold text-xl"><i className="fas fa-graduation-cap"></i> Hướng Dẫn Sử Dụng</h3>
+                            <button onClick={onClose} className="hover:bg-indigo-700 w-8 h-8 rounded-full flex items-center justify-center transition"><i className="fas fa-times"></i></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-file-upload text-blue-500"></i> 1. Tạo & Nhận Diện Đề</h4>
+                                        <p>Tải lên file PDF đề thi. Hệ thống tự động tách trang. Nhấn <b>"Nhận diện AI"</b> để trích xuất câu hỏi tự động.</p>
+                                    </div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-crop-alt text-orange-500"></i> 2. Xử Lý Sót Câu (Quan Trọng)</h4>
+                                        <p>Nếu AI bỏ sót câu hỏi (do ảnh mờ, công thức phức tạp):</p>
+                                        <ul>
+                                            <li>Nhấn nút <b>"Thủ công"</b> ở trang tương ứng.</li>
+                                            <li>Kéo chuột khoanh vùng câu hỏi bị thiếu.</li>
+                                            <li>Nhấn <b>"Quét & Gộp"</b>. Câu hỏi mới sẽ được thêm vào cuối trang.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-sort text-purple-500"></i> 3. Sắp Xếp Câu Hỏi</h4>
+                                        <p>Nếu thứ tự câu bị đảo lộn: Kéo biểu tượng <b>"☰"</b> để sắp xếp lại đúng vị trí mong muốn.</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-edit text-green-500"></i> 4. Chỉnh Sửa & Đáp Án</h4>
+                                        <p>Nhấn <b>"Sửa"</b> để chỉnh nội dung hoặc chọn đáp án đúng. Hệ thống yêu cầu phải chọn đủ đáp án đúng trước khi lưu.</p>
+                                    </div>
+                                    <div className="guide-step">
+                                        <h4><i className="fas fa-save text-indigo-500"></i> 5. Lưu & Tổ Chức Thi</h4>
+                                        <p>Nhấn <b>"Lưu Đề"</b>. Sau đó chia sẻ <b>Mã QR</b> cho học sinh để làm bài trên điện thoại/máy tính.</p>
+                                    </div>
+                                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800">
+                                        <strong><i className="fas fa-shield-alt"></i> Chống Gian Lận:</strong>
+                                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                                            <li>Chặn copy/paste nội dung.</li>
+                                            <li>Tự động thu bài nếu học sinh thoát màn hình quá 3 lần.</li>
+                                            <li>Chế độ toàn màn hình bắt buộc.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div className="p-4 border-t bg-gray-50 text-right">
+                            <button onClick={onClose} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition">Đã Hiểu</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- NEW: Manual Crop Modal ---
+        const ManualCropModal = ({ page, onClose, onMerge }) => {
+            const imgRef = useRef(null);
+            const [cropper, setCropper] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            useEffect(() => {
+                if (imgRef.current) {
+                    const c = new Cropper(imgRef.current, {
+                        viewMode: 1,
+                        autoCropArea: 0.5,
+                        background: false
+                    });
+                    setCropper(c);
+                    return () => c.destroy();
+                }
+            }, []);
+
+            const handleScan = async () => {
+                if (!cropper) return;
+                setLoading(true);
+                try {
+                    const canvas = cropper.getCroppedCanvas();
+                    const base64 = canvas.toDataURL('image/jpeg');
+
+                    const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
+                    const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+
+                    if (!keys.length) throw new Error("Chưa nạp API Key!");
+
+                    let payload = await ExamVision.normalizeManual(base64, keys, model);
+                    if (!payload || payload.status !== 'ok') {
+                        if (!GiangBaiApi.isFallbackEnabled()) throw new Error(payload?.message || 'Nhận diện thất bại.');
+                        const res = await aiPost('normalize_manual', { cropped_data: base64, api_keys: keys, model });
+                        payload = res.data;
+                    }
+                    if (payload.status === 'ok') {
+                        onMerge(payload.data);
+                        onClose();
+                    } else {
+                        alert("Lỗi: " + (payload.message || 'Không nhận diện được.'));
+                    }
+                } catch (err) {
+                    alert("Lỗi xử lý: " + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="modal-overlay" style={{ zIndex: 1000 }}>
+                    <div className="bg-white rounded-lg p-4 w-[90vw] h-[90vh] flex flex-col shadow-2xl relative">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-bold text-lg text-indigo-800"><i className="fas fa-crop"></i> Quét Vùng Thủ Công</h3>
+                            <button onClick={onClose} className="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+                        </div>
+                        <div className="flex-1 bg-gray-100 relative overflow-hidden flex items-center justify-center border rounded">
+                            <img ref={imgRef} src={page.image_data} className="max-w-full max-h-full block" />
+                        </div>
+                        <div className="mt-4 flex justify-between items-center">
+                            <p className="text-sm text-gray-500 italic">Kéo khung để chọn vùng câu hỏi bị sót.</p>
+                            <button onClick={handleScan} disabled={loading} className="bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 shadow flex items-center gap-2">
+                                {loading ? <div className="loader w-4 h-4 border-white"></div> : <i className="fas fa-magic"></i>}
+                                {loading ? "Đang xử lý..." : "Quét & Gộp"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AnswerImportModal = ({ onClose, onImport }) => {
+            const [mode, setMode] = useState("manual");
+            const [textInput, setTextInput] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [preview, setPreview] = useState(null);
+            const [aiResult, setAiResult] = useState(null);
+            const fileInputRef = useRef();
+
+            // Expose function để Global Script gọi khi Paste
+            useEffect(() => {
+                window.handleGlobalAnswerImagePaste = (dataUrl) => {
+                    setMode("image"); // Chuyển sang tab Image
+                    processImage(dataUrl);
+                };
+                return () => delete window.handleGlobalAnswerImagePaste;
+            }, []);
+
+            const processImage = async (dataUrl) => {
+                setLoading(true); setPreview(dataUrl); setAiResult(null);
+                try {
+                    const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
+                    const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                    if (!keys.length) throw new Error("Chưa nạp API Key!");
+                    let payload = await ExamVision.importAnswerSheet(dataUrl, keys, model);
+                    if (!payload || payload.status !== 'ok') {
+                        if (!GiangBaiApi.isFallbackEnabled()) throw new Error(payload?.message || 'Nhận diện thất bại.');
+                        const res = await aiPost('import_answer_sheet', { image_data: dataUrl, api_keys: keys, model });
+                        payload = res.data;
+                    }
+                    if (payload.status === 'ok') setAiResult(payload.data);
+                    else alert("Lỗi: " + (payload.message || 'Không nhận diện được.'));
+                } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
+            };
+
+            const handleManualImport = () => {
+                const parts = textInput.toUpperCase().match(/(\d+)[\.\-\:\s]*([A-D])/g);
+                if (!parts) return alert("Sai định dạng! VD: 1A 2B");
+                const results = parts.map(p => {
+                    const m = p.match(/(\d+)[\.\-\:\s]*([A-D])/);
+                    return { index: parseInt(m[1]), answer: m[2] };
+                });
+                onImport(results); onClose();
+            };
+
+            const handlePaste = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (ev) => processImage(ev.target.result);
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+                }
+            };
+
+            return (
+                // Thêm class answer-import-modal-active để global script nhận diện
+                <div className="modal-overlay answer-import-modal-active" onClick={onClose}>
+                    <div className="modal-box w-[95%] max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between mb-4 border-b pb-2">
+                            <h3 className="font-bold text-lg"><i className="fas fa-magic"></i> Nạp Đáp Án Nhanh</h3>
+                            <button onClick={onClose}><i className="fas fa-times text-xl text-gray-400 hover:text-red-500"></i></button>
+                        </div>
+                        <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg shrink-0">
+                            <button onClick={() => setMode("manual")} className={`flex-1 px-4 py-2 rounded-md font-bold text-sm transition ${mode === "manual" ? "bg-white shadow text-indigo-600" : "text-gray-500 hover:bg-gray-200"}`}>Nhập tay</button>
+                            <button onClick={() => setMode("image")} className={`flex-1 px-4 py-2 rounded-md font-bold text-sm transition ${mode === "image" ? "bg-white shadow text-indigo-600" : "text-gray-500 hover:bg-gray-200"}`}>Từ ảnh</button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                            {mode === "manual" ? (
+                                <div className="h-full flex flex-col">
+                                    <textarea value={textInput} onChange={e => setTextInput(e.target.value)} className="w-full border p-4 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 font-mono text-base flex-1 allow-select" placeholder="Ví dụ: 1.A 2.B 3.C 4D 5A ..."></textarea>
+                                    <button onClick={handleManualImport} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 mt-4 shadow"><i className="fas fa-save"></i> Lưu Đáp Án</button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="relative border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl bg-indigo-50/50 p-6 text-center cursor-pointer transition" onPaste={handlePaste} tabIndex="0" onClick={(e) => { if (!loading && !preview && !e.target.closest('.delete-btn')) fileInputRef.current.click() }}>
+                                        {loading ? (
+                                            <div className="py-10"><div className="loader w-8 h-8 border-indigo-500 mb-2"></div><p className="text-indigo-600 font-bold">AI đang đọc đáp án...</p></div>
+                                        ) : preview ? (
+                                            <div className="relative">
+                                                <img src={preview} className="max-h-60 mx-auto rounded shadow-sm border" />
+                                                <div className="delete-btn absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow cursor-pointer hover:bg-red-600" onClick={(e) => { e.stopPropagation(); setPreview(null); setAiResult(null); fileInputRef.current.value = "" }}>&times;</div>
+                                            </div>
+                                        ) : (
+                                            <div className="py-10">
+                                                <i className="fas fa-cloud-upload-alt text-4xl text-indigo-300 mb-2"></i>
+                                                <p className="font-bold text-indigo-800">Chọn ảnh bảng đáp án</p>
+                                                <p className="text-sm text-indigo-500">hoặc nhấn <kbd className="bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-sm text-xs font-mono">Ctrl + V</kbd> để dán</p>
+                                            </div>
+                                        )}
+                                        <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) { const r = new FileReader(); r.onload = (ev) => processImage(ev.target.result); r.readAsDataURL(f) } }} />
+                                    </div>
+
+                                    {aiResult && (
+                                        <div className="border rounded-xl overflow-hidden shadow-sm">
+                                            <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
+                                                <span className="font-bold text-gray-700 text-sm">Kết quả nhận diện ({aiResult.length} câu)</span>
+                                                <span className="text-xs text-gray-500">Vui lòng kiểm tra kỹ trước khi xác nhận</span>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto bg-white p-2">
+                                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                                                    {aiResult.map((r, idx) => (
+                                                        <div key={idx} className="flex items-center gap-1 bg-gray-50 border rounded px-2 py-1 text-sm allow-select">
+                                                            <span className="font-bold text-gray-500">{r.index}:</span>
+                                                            <span className="font-bold text-indigo-700">{r.answer}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="p-2 bg-gray-50 border-t">
+                                                <button onClick={() => { onImport(aiResult); onClose() }} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 shadow-sm flex items-center justify-center gap-2">
+                                                    <i className="fas fa-check-circle"></i> Xác nhận nhập {aiResult.length} câu
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const QuestionEditor = ({ q, idx, updateQuestion, deleteQuestion }) => {
+            const [isEditing, setIsEditing] = useState(false);
+            const handlePasteImage = (e) => {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function (ev) { updateQuestion(q.id, 'question_image', ev.target.result); };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+                }
+            };
+            return (
+                <div className={`border rounded-lg p-3 shadow-sm transition relative bg-white group hover:border-indigo-400 ${isEditing ? 'ring-2 ring-indigo-100' : ''}`}>
+                    <div className="flex justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="drag-handle" title="Kéo thả để sắp xếp">
+                                <i className="fas fa-grip-vertical"></i>
+                            </span>
+                            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Câu {idx + 1}</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsEditing(!isEditing)} className="text-indigo-500 hover:text-indigo-700 text-xs font-bold"><i className={`fas ${isEditing ? 'fa-check' : 'fa-pencil-alt'}`}></i> {isEditing ? 'Xong' : 'Sửa'}</button>
+                            <button onClick={() => deleteQuestion(q.id)} className="text-red-400 hover:text-red-600 text-xs"><i className="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    {!isEditing && (
+                        <div>
+                            <div className="mb-2 text-sm"><MathText text={q.question} /></div>
+                            {q.question_image && <img src={q.question_image} className="max-h-40 rounded border mb-2 object-contain block" />}
+                            <div className="flex flex-wrap gap-2">
+                                {q.options.map((o, k) => (
+                                    <span key={k} className={`px-2 py-0.5 rounded text-xs border ${q.correct_index === k ? 'bg-green-100 border-green-300 text-green-800 font-bold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                        {String.fromCharCode(65 + k)}. {cleanOptionText(o)}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {isEditing && (
+                        <div className="space-y-3 animation-fade-in">
+                            <textarea className="w-full text-sm border rounded p-2 font-mono h-24 focus:ring-1 focus:ring-indigo-500 allow-select" value={q.question} onChange={e => updateQuestion(q.id, 'question', e.target.value)} onPaste={handlePasteImage} placeholder="Nhập LaTeX hoặc dán ảnh..."></textarea>
+                            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                                {q.question_image ? (
+                                    <div className="relative"><img src={q.question_image} className="h-16 rounded border" /><button onClick={() => updateQuestion(q.id, 'question_image', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button></div>
+                                ) : (
+                                    <label className="text-xs text-blue-600 cursor-pointer flex items-center gap-1 hover:underline">
+                                        <i className="fas fa-image"></i> Dán ảnh
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files[0]; if (f) { const r = new FileReader(); r.onload = (ev) => updateQuestion(q.id, 'question_image', ev.target.result); r.readAsDataURL(f); } }} />
+                                    </label>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {q.options.map((opt, oIdx) => (
+                                    <div key={oIdx} className={`flex items-center border rounded px-1 py-1 ${q.correct_index === oIdx ? 'border-green-500 bg-green-50' : ''}`}>
+                                        <div onClick={() => updateQuestion(q.id, 'correct_index', oIdx)} className={`w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer mr-1 ${q.correct_index === oIdx ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>{String.fromCharCode(65 + oIdx)}</div>
+                                        <input className="w-full text-xs bg-transparent outline-none allow-select" value={opt} onChange={e => updateQuestion(q.id, 'options', e.target.value, oIdx)} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const normalizeImportedQuizText = (text) => {
+            return String(text || "")
+                .replace(/\r/g, "\n")
+                .replace(/\u00a0/g, " ")
+                .replace(/[“”]/g, '"')
+                .replace(/[‘’]/g, "'")
+                .replace(/\t/g, " ")
+                .replace(/[ ]+\n/g, "\n")
+                .replace(/\n{3,}/g, "\n\n")
+                .trim();
+        };
+
+        const getImportedAnswerKey = (text) => {
+            const answerMap = {};
+            const answerSectionMatch = text.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+            if (!answerSectionMatch) return answerMap;
+
+            const answerSection = answerSectionMatch[0];
+            const pairRegex = /(\d{1,3})\s*[\.\)\-:]?\s*([A-D])/gi;
+            let match;
+            while ((match = pairRegex.exec(answerSection)) !== null) {
+                answerMap[parseInt(match[1], 10)] = match[2].toUpperCase();
+            }
+            return answerMap;
+        };
+
+        const stripImportedAnswerKey = (text) => {
+            const answerSectionMatch = text.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+            if (!answerSectionMatch) return text;
+
+            const pairCount = (answerSectionMatch[0].match(/\d{1,3}\s*[\.\)\-:]?\s*[A-D]/gi) || []).length;
+            return pairCount ? text.slice(0, answerSectionMatch.index).trim() : text;
+        };
+
+        const parseLatexWordQuiz = (rawText) => {
+            const normalized = normalizeImportedQuizText(rawText);
+            const answerKey = getImportedAnswerKey(normalized);
+            const text = stripImportedAnswerKey(normalized);
+            const questionRegex = /(?:^|\n)\s*(?:Câu|Cau|Question|Q)\s*(\d{1,3})\s*[\.\):：-]\s*/gi;
+            const questionMatches = [];
+            let questionMatch;
+
+            while ((questionMatch = questionRegex.exec(text)) !== null) {
+                questionMatches.push({
+                    number: parseInt(questionMatch[1], 10),
+                    bodyStart: questionRegex.lastIndex,
+                    markerStart: questionMatch.index
+                });
+            }
+
+            if (!questionMatches.length) return [];
+
+            return questionMatches.map((item, index) => {
+                const next = questionMatches[index + 1];
+                let block = text.slice(item.bodyStart, next ? next.markerStart : text.length).trim();
+                const inlineAnswer = block.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer)\s*[:：]\s*([A-D])\b/i);
+                if (inlineAnswer) {
+                    block = block.replace(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer)\s*[:：]\s*[A-D]\b[\s\S]*$/i, "").trim();
+                }
+
+                const optionRegex = /(?:^|\n)\s*([A-D])\s*[\.\):：-]\s*/gi;
+                const optionMatches = [];
+                let optionMatch;
+                while ((optionMatch = optionRegex.exec(block)) !== null) {
+                    optionMatches.push({
+                        letter: optionMatch[1].toUpperCase(),
+                        markerStart: optionMatch.index,
+                        bodyStart: optionRegex.lastIndex
+                    });
+                }
+
+                if (optionMatches.length < 2) return null;
+
+                const question = block.slice(0, optionMatches[0].markerStart).trim();
+                const optionsByLetter = {};
+                optionMatches.forEach((option, optionIndex) => {
+                    const optionEnd = optionMatches[optionIndex + 1]?.markerStart ?? block.length;
+                    optionsByLetter[option.letter] = block.slice(option.bodyStart, optionEnd).trim();
+                });
+
+                const options = ["A", "B", "C", "D"].map(letter => optionsByLetter[letter] || "");
+                const answerLetter = (inlineAnswer?.[1] || answerKey[item.number] || "").toUpperCase();
+                const correctIndex = "ABCD".indexOf(answerLetter);
+
+                return {
+                    id: Date.now() + Math.random(),
+                    question: question || `Câu ${item.number}`,
+                    options,
+                    correct_index: correctIndex >= 0 ? correctIndex : null,
+                    question_image: null
+                };
+            }).filter(Boolean);
+        };
+
+        const HybridExamCreator = ({ onBack, initialData }) => {
+            const [step, setStep] = useState(initialData ? 2 : 1);
+            const [pages, setPages] = useState([]);
+            const [pageProgress, setPageProgress] = useState({});
+            const [pageQuestions, setPageQuestions] = useState({});
+            const [activePageId, setActivePageId] = useState(null);
+            const [loadingMsg, setLoadingMsg] = useState("");
+            const defaultExamInfo = {
+                title: "",
+                school: "",
+                duration: 45,
+                start_time: "",
+                end_time: "",
+                student_mode: "free",
+                class_name: "",
+                roster: []
+            };
+            const [examInfo, setExamInfo] = useState(initialData ? {
+                ...defaultExamInfo,
+                ...initialData.info,
+                duration: initialData.info.duration_mins ?? initialData.info.duration ?? 45,
+                student_mode: initialData.info.student_mode === "class" ? "class" : "free",
+                class_name: initialData.info.class_name || "",
+                roster: Array.isArray(initialData.info.roster) ? initialData.info.roster : []
+            } : defaultExamInfo);
+            const [availableClasses, setAvailableClasses] = useState([]);
+            const [loadingRoster, setLoadingRoster] = useState(false);
+            const classOptions = useMemo(() => {
+                const merged = new Set(availableClasses);
+                if (examInfo.class_name) merged.add(examInfo.class_name);
+                return Array.from(merged).sort((a, b) => a.localeCompare(b, "vi"));
+            }, [availableClasses, examInfo.class_name]);
+            const [showAnswerModal, setShowAnswerModal] = useState(false);
+            const [previewImage, setPreviewImage] = useState(null);
+            const [cropPage, setCropPage] = useState(null);
+
+            // New state for guide modal
+            const [showGuide, setShowGuide] = useState(false);
+
+            const userEmail = localStorage.getItem('userEmail');
+
+            useEffect(() => {
+                axios.get(examUrl("student-classes"), { withCredentials: true })
+                    .then(res => setAvailableClasses(Array.isArray(res.data?.classes) ? res.data.classes : []))
+                    .catch(() => setAvailableClasses([]));
+            }, []);
+
+            const loadClassRoster = async (className) => {
+                const trimmed = String(className || "").trim();
+                if (!trimmed) {
+                    setExamInfo(prev => ({ ...prev, class_name: "", roster: [] }));
+                    return;
+                }
+                setLoadingRoster(true);
+                try {
+                    const res = await axios.get(`${examUrl("class-students")}&class_name=${encodeURIComponent(trimmed)}`, { withCredentials: true });
+                    const roster = Array.isArray(res.data?.roster) ? res.data.roster : [];
+                    setExamInfo(prev => ({ ...prev, class_name: trimmed, roster }));
+                } catch (e) {
+                    alert("Không tải được danh sách lớp: " + formatApiError(e, e.message));
+                    setExamInfo(prev => ({ ...prev, class_name: trimmed, roster: [] }));
+                } finally {
+                    setLoadingRoster(false);
+                }
+            };
+
+            const handleStudentModeChange = (mode) => {
+                if (mode === "class") {
+                    setExamInfo(prev => ({ ...prev, student_mode: "class" }));
+                    return;
+                }
+                setExamInfo(prev => ({ ...prev, student_mode: "free", class_name: "", roster: [] }));
+            };
+
+            // Sync page question counts cleanly
+            useEffect(() => {
+                setPages(prevPages => prevPages.map(p => {
+                    const qs = pageQuestions[p.id];
+                    if (qs && qs.length !== p.q_count) {
+                        return { ...p, q_count: qs.length };
+                    }
+                    return p;
+                }));
+            }, [pageQuestions]);
+
+            // --- SORTABLEJS INTEGRATION ---
+            useEffect(() => {
+                if (!activePageId) return;
+                const el = document.getElementById("question-sortable");
+                if (el) {
+                    const sortable = new Sortable(el, {
+                        animation: 150,
+                        handle: ".drag-handle",
+                        ghostClass: "bg-blue-50",
+                        onEnd: (evt) => {
+                            if (evt.oldIndex === evt.newIndex) return;
+                            setPageQuestions(prev => {
+                                const newList = [...(prev[activePageId] || [])];
+                                const [moved] = newList.splice(evt.oldIndex, 1);
+                                newList.splice(evt.newIndex, 0, moved);
+                                return { ...prev, [activePageId]: newList };
+                            });
+                        }
+                    });
+                    return () => sortable.destroy();
+                }
+            }, [activePageId, pageQuestions[activePageId]?.length]); // Re-init only when page or length changes
+
+            useEffect(() => {
+                if (initialData && initialData.questions) {
+                    const fakeId = "imported";
+                    setPages([{ id: fakeId, page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }]);
+                    setPageQuestions({ [fakeId]: initialData.questions.map((q, i) => ({ ...q, id: Date.now() + i })) });
+                    setActivePageId(fakeId);
+                }
+            }, [initialData]);
+
+            const allQuestions = useMemo(() => {
+                let merged = [];
+                const sortedPages = [...pages].sort((a, b) => a.page_index - b.page_index);
+                sortedPages.forEach(p => { if (pageQuestions[p.id]) merged.push(...pageQuestions[p.id]); });
+                return merged;
+            }, [pages, pageQuestions]);
+
+            const getApiKeys = () => { try { return JSON.parse(localStorage.getItem('global_gemini_keys') || "[]"); } catch { return []; } };
+
+            const counts = useMemo(() => {
+                const total = allQuestions.length;
+                const hasAns = allQuestions.filter(q => q.correct_index !== null && q.correct_index !== undefined && parseInt(q.correct_index) >= 0).length;
+                return { total, hasAns };
+            }, [allQuestions]);
+
+            const handleUpload = async (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                setLoadingMsg("Đang xử lý PDF...");
+                const fd = new FormData(); fd.append("file", file);
+                try {
+                    const data = await aiPostForm('process_paper', fd);
+                    if (data.status === 'ok') {
+                        setPages(data.pages);
+                        if (data.pages.length) setActivePageId(data.pages[0].id);
+                        setStep(2);
+                    } else alert(data.message || 'Không xử lý được file.');
+                } catch (err) { alert(err.message); } finally { setLoadingMsg(""); }
+            };
+
+            const handleWordLatexImport = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setLoadingMsg("Đang đọc file Word...");
+
+                try {
+                    if (!window.mammoth) throw new Error("Chưa tải được thư viện đọc Word. Vui lòng kiểm tra mạng rồi thử lại.");
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({ arrayBuffer });
+                    const importedQuestions = parseLatexWordQuiz(result.value);
+
+                    if (!importedQuestions.length) {
+                        throw new Error("Không tìm thấy câu hỏi. File nên có dạng: Câu 1..., A..., B..., C..., D..., Đáp án: A.");
+                    }
+
+                    const pageId = `word-${Date.now()}`;
+                    setPages([{ id: pageId, page_index: 1, image_data: null, status: "done", q_count: importedQuestions.length }]);
+                    setPageQuestions({ [pageId]: importedQuestions });
+                    setActivePageId(pageId);
+                    setStep(2);
+                    alert(`Đã nhập ${importedQuestions.length} câu từ Word. Bạn có thể sửa thủ công trước khi lưu.`);
+                } catch (err) {
+                    alert("Lỗi nhập Word: " + err.message);
+                } finally {
+                    setLoadingMsg("");
+                    e.target.value = "";
+                }
+            };
+
+            const compressPageImage = (dataUrl, maxWidth = 1400) => new Promise((resolve, reject) => {
+                if (!dataUrl) return reject(new Error('Thiếu ảnh trang PDF.'));
+                const img = new Image();
+                img.onload = () => {
+                    const scale = img.width > maxWidth ? (maxWidth / img.width) : 1;
+                    const w = Math.max(1, Math.round(img.width * scale));
+                    const h = Math.max(1, Math.round(img.height * scale));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return resolve(dataUrl);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.82));
+                };
+                img.onerror = () => reject(new Error('Không đọc được ảnh trang PDF.'));
+                img.src = dataUrl;
+            });
+
+            const runAIForPage = async (page) => {
+                const keys = getApiKeys();
+                if (!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ → Cấu hình → nạp Gemini Keys.");
+
+                setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'processing' } : p));
+                setActivePageId(page.id);
+                setPageProgress(prev => ({ ...prev, [page.id]: 5 }));
+
+                const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                let progressStream = null;
+
+                try {
+                    const imageData = await compressPageImage(page.image_data);
+                    setPageProgress(prev => ({ ...prev, [page.id]: 20 }));
+
+                    let payload = null;
+                    let via = 'Gemini (trình duyệt)';
+
+                    try {
+                        if (!window.ExamVision) throw new Error('Chưa tải exam-vision-client.js');
+                        payload = await ExamVision.normalizeSegment(imageData, keys, model);
+                    } catch (browserErr) {
+                        if (!GiangBaiApi.isFallbackEnabled()) {
+                            throw new Error((browserErr.message || 'Gemini lỗi.') + '\n\nBật "HF dự phòng" trên menu để thử Space HuggingFace.');
+                        }
+                        progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
+                            setPageProgress(prev => ({ ...prev, [page.id]: value }));
+                        });
+                        const { res, source } = await GiangBaiApi.axiosPostWithFallback(
+                            axios,
+                            GiangBaiApi.examAiUrl('normalize_segment'),
+                            GiangBaiApi.hfExamUrl('normalize_segment'),
+                            { image_data: imageData, api_keys: keys, model, page_id: page.id },
+                            { timeout: 120000 },
+                            'exam-ai'
+                        );
+                        payload = res.data || {};
+                        via = source === 'hf-fallback' ? 'HuggingFace' : 'Hosting';
+                    }
+
+                    setPageProgress(prev => ({ ...prev, [page.id]: 95 }));
+
+                    if (!payload || payload.status !== 'ok') {
+                        throw new Error(payload?.message || `Nhận diện thất bại (${via}).`);
+                    }
+
+                    const newQs = (payload.data || []).map((q) => ({ ...q, id: Date.now() + Math.random() }));
+                    setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
+                    setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'done', q_count: newQs.length } : p));
+                    setPageProgress(prev => ({ ...prev, [page.id]: 100 }));
+
+                    if (!newQs.length) {
+                        alert(`AI (${via}) không tìm thấy câu hỏi trên trang này.\n\nThử Quét vùng thủ công.`);
+                    }
+                } catch (e) {
+                    setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'error' } : p));
+                    alert(formatApiError(e, e.message || 'Nhận diện AI thất bại.'));
+                } finally {
+                    if (progressStream) progressStream.close();
+                    setPageProgress(prev => {
+                        const next = { ...prev };
+                        delete next[page.id];
+                        return next;
+                    });
+                    setPages(prev => prev.map(p => {
+                        if (p.id !== page.id || p.status !== 'processing') return p;
+                        return { ...p, status: 'error' };
+                    }));
+                }
+            };
+
+            // --- Logic gộp câu hỏi mới ---
+            const isDuplicateFront = (q1, listQ) => {
+                const clean = t => t.replace(/\s+/g, '').toLowerCase();
+                const t1 = clean(q1.question);
+                if (t1.length < 10) return false;
+                for (let q2 of listQ) {
+                    const t2 = clean(q2.question);
+                    if (t1.includes(t2) || t2.includes(t1)) return true;
+                }
+                return false;
+            };
+
+            const handleManualMerge = (newQuestions) => {
+                if (!cropPage || !newQuestions.length) return;
+                const pageId = cropPage.id;
+
+                setPageQuestions(prev => {
+                    const existing = prev[pageId] || [];
+                    const added = [];
+                    newQuestions.forEach(nq => {
+                        if (!isDuplicateFront(nq, existing) && !isDuplicateFront(nq, added)) {
+                            added.push(nq);
+                        }
+                    });
+
+                    if (added.length === 0) alert("Không tìm thấy câu hỏi mới hoặc bị trùng lặp!");
+                    else alert(`Đã thêm thành công ${added.length} câu hỏi mới!`);
+
+                    // Chỉ cập nhật danh sách câu hỏi, số lượng sẽ được sync bởi useEffect
+                    return { ...prev, [pageId]: [...existing, ...added] };
+                });
+            };
+
+            const updateQuestion = (qId, field, value, optIdx = null) => { if (!activePageId) return; setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].map(q => { if (q.id === qId) { const newData = { ...q }; if (field === 'options') newData.options[optIdx] = value; else newData[field] = value; return newData; } return q; }) })); };
+            const deleteQuestion = (qId) => { if (confirm("Xóa câu này?")) setPageQuestions(prev => ({ ...prev, [activePageId]: prev[activePageId].filter(q => q.id !== qId) })); };
+            const addQuestion = () => { if (!activePageId) return alert("Chọn trang trước!"); const newQ = { id: Date.now(), question: "Câu hỏi mới...", options: ["", "", "", ""], correct_index: 0, question_image: null }; setPageQuestions(prev => ({ ...prev, [activePageId]: [...(prev[activePageId] || []), newQ] })); };
+            const handleBulkAnswer = (importedData) => { const map = { "A": 0, "B": 1, "C": 2, "D": 3 }; const newPageQs = { ...pageQuestions }; let globalIdx = 0; pages.forEach(p => { if (newPageQs[p.id]) { newPageQs[p.id] = newPageQs[p.id].map(q => { globalIdx++; const found = importedData.find(d => d.index === globalIdx); if (found && map[found.answer] !== undefined) return { ...q, correct_index: map[found.answer] }; return q; }); } }); setPageQuestions(newPageQs); alert(`Đã cập nhật ${importedData.length} câu.`); };
+
+            const handleSave = async () => {
+                if (!examInfo.title) return alert("Vui lòng nhập tên đề thi!");
+                if (!allQuestions.length) return alert("Đề thi đang trống! Vui lòng tải lên PDF và nhận diện câu hỏi.");
+
+                const questionsWithAnswer = allQuestions.filter(q => q.correct_index !== null && q.correct_index !== undefined && parseInt(q.correct_index) >= 0).length;
+                const totalQuestions = allQuestions.length;
+
+                if (questionsWithAnswer < totalQuestions) {
+                    return alert(`CHƯA HOÀN THÀNH:\n\n- Tổng số câu hỏi: ${totalQuestions}\n- Số câu đã có đáp án: ${questionsWithAnswer}\n\nVui lòng chọn đáp án đúng cho ${totalQuestions - questionsWithAnswer} câu còn thiếu trước khi lưu!`);
+                }
+
+                if (examInfo.student_mode === "class") {
+                    if (!examInfo.class_name) return alert("Vui lòng chọn lớp cho danh sách thí sinh.");
+                    if (!examInfo.roster?.length) return alert("Lớp đã chọn chưa có học sinh. Kiểm tra lại danh sách trong admin.");
+                }
+
+                const payload = {
+                    id: initialData ? initialData.info.id : null,
+                    ...examInfo,
+                    start_time: examInfo.start_time ? new Date(examInfo.start_time).toISOString() : null,
+                    end_time: examInfo.end_time ? new Date(examInfo.end_time).toISOString() : null,
+                    questions: allQuestions,
+                    teacher_email: userEmail,
+                    api_keys: getApiKeys(),
+                    student_mode: examInfo.student_mode === "class" ? "class" : "free",
+                    class_name: examInfo.student_mode === "class" ? examInfo.class_name : "",
+                    roster: examInfo.student_mode === "class" ? (examInfo.roster || []) : []
+                };
+                try { await axios.post(examUrl("save"), payload, { withCredentials: true }); alert("Đã lưu thành công!"); onBack(); } catch (e) { alert("Lỗi lưu: " + formatApiError(e, e.message)); }
+            };
+
+            if (step === 1) return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-2xl w-full">
+                        <h1 className="text-3xl font-bold text-indigo-700 mb-2">Tạo Đề Mới</h1>
+                        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded text-left text-sm mb-5 text-gray-700">
+                            <p className="font-bold text-yellow-800 mb-1">HƯỚNG DẪN:</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>PDF sẽ được nhận diện bằng AI như trước.</li>
+                                <li>Word .docx có sẵn LaTeX $...$ sẽ nhập nhanh, không OCR và không dùng quota.</li>
+                            </ul>
+                        </div>
+                        {loadingMsg ? (
+                            <div className="text-indigo-600 font-bold animate-pulse py-10">{loadingMsg}</div>
+                        ) : (
+                            <div className="grid sm:grid-cols-2 gap-4 text-left">
+                                <label className="block border-2 border-dashed border-indigo-300 bg-indigo-50 rounded-xl p-6 cursor-pointer hover:bg-indigo-100 transition">
+                                    <input type="file" className="hidden" accept=".pdf" onChange={handleUpload} />
+                                    <i className="fas fa-file-pdf text-4xl text-indigo-500 mb-3"></i>
+                                    <div className="font-bold text-indigo-700">Chọn file PDF</div>
+                                    <div className="text-sm text-indigo-500 mt-1">Tách trang rồi bấm Nhận diện AI</div>
+                                </label>
+                                <label className="block border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-xl p-6 cursor-pointer hover:bg-emerald-100 transition">
+                                    <input type="file" className="hidden" accept=".docx" onChange={handleWordLatexImport} />
+                                    <i className="fas fa-file-word text-4xl text-emerald-500 mb-3"></i>
+                                    <div className="font-bold text-emerald-700">Nhập Word LaTeX</div>
+                                    <div className="text-sm text-emerald-600 mt-1">Đọc Câu/A/B/C/D/Đáp án, giữ nguyên $...$</div>
+                                </label>
+                            </div>
+                        )}
+                        <button onClick={onBack} className="mt-6 text-gray-400 underline">Quay lại</button>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="flex h-screen flex-col bg-white">
+                    {/* Modals */}
+                    {showAnswerModal && <AnswerImportModal onClose={() => setShowAnswerModal(false)} onImport={handleBulkAnswer} />}
+                    {cropPage && <ManualCropModal page={cropPage} onClose={() => setCropPage(null)} onMerge={handleManualMerge} />}
+                    {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+                    <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />
+
+                    <div className="h-16 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20 bg-white">
+                        <div className="flex items-center gap-4">
+                            <button onClick={onBack} className="text-gray-500 hover:text-black"><i className="fas fa-arrow-left"></i></button>
+                            <input className="font-bold text-lg border-b border-dashed outline-none w-48 allow-select" placeholder="Tên đề thi..." value={examInfo.title} onChange={e => setExamInfo({ ...examInfo, title: e.target.value })} />
+                            <div className="flex items-center gap-2 text-xs">
+                                <input type="number" className="w-12 border rounded px-1 allow-select" value={examInfo.duration} onChange={e => setExamInfo({ ...examInfo, duration: e.target.value })} /> phút
+                                <span className="text-gray-400">|</span>
+                                <input type="datetime-local" className="border rounded px-1 allow-select" value={examInfo.start_time || ""} onChange={e => setExamInfo({ ...examInfo, start_time: e.target.value })} />
+                                ➜
+                                <input type="datetime-local" className="border rounded px-1 allow-select" value={examInfo.end_time || ""} onChange={e => setExamInfo({ ...examInfo, end_time: e.target.value })} />
+                            </div>
+
+                            <div className="text-xs font-bold bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                                Đã có đáp án: <span className={counts.hasAns < counts.total ? "text-red-600 animate-pulse" : "text-green-600"}>{counts.hasAns}/{counts.total}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs border rounded-lg px-2 py-1 bg-slate-50">
+                                <span className="font-bold text-gray-600 whitespace-nowrap">Thí sinh:</span>
+                                <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                                    <input type="radio" name="student_mode" checked={examInfo.student_mode !== "class"} onChange={() => handleStudentModeChange("free")} />
+                                    Tự do
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                                    <input type="radio" name="student_mode" checked={examInfo.student_mode === "class"} onChange={() => handleStudentModeChange("class")} />
+                                    Từ lớp
+                                </label>
+                                {examInfo.student_mode === "class" && (
+                                    <select
+                                        className="border rounded px-2 py-1 bg-white min-w-[120px] max-w-[160px]"
+                                        value={examInfo.class_name || ""}
+                                        onChange={e => loadClassRoster(e.target.value)}
+                                        disabled={loadingRoster}
+                                    >
+                                        <option value="">-- Chọn lớp --</option>
+                                        {classOptions.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                                    </select>
+                                )}
+                                {examInfo.student_mode === "class" && examInfo.class_name && (
+                                    <span className="text-indigo-700 font-bold whitespace-nowrap">
+                                        {loadingRoster ? "Đang tải..." : `${examInfo.roster?.length || 0} HS`}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowGuide(true)} className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded text-sm font-bold"><i className="fas fa-question-circle"></i> Hướng Dẫn</button>
+                            <button onClick={() => setShowAnswerModal(true)} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-sm font-bold"><i className="fas fa-key"></i> Nạp Đáp Án</button>
+                            <button onClick={handleSave} className="bg-green-600 text-white px-4 py-1.5 rounded text-sm font-bold shadow hover:bg-green-700"><i className="fas fa-save"></i> Lưu Đề</button>
+                        </div>
+                    </div>
+                    <div className="layout-grid bg-slate-50">
+                        <div className="col-panel">
+                            <div className="col-header"><span>TRANG PDF ({pages.length})</span></div>
+                            <div className="p-2 space-y-2">
+                                {pages.map(p => (
+                                    <div key={p.id} onClick={() => setActivePageId(p.id)} className={`page-thumb ${activePageId === p.id ? 'active' : ''}`}>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-bold text-gray-500">Trang {p.page_index}</span>
+                                            {p.status === 'done' ? <i className="fas fa-check-circle text-green-500"></i> : p.status === 'processing' ? <div className="loader w-3 h-3 border-blue-500"></div> : ''}
+                                        </div>
+                                        {p.image_data ? (<img src={p.image_data} onClick={(e) => { e.stopPropagation(); setPreviewImage(p.image_data); }} className="cursor-zoom-in hover:opacity-90 transition" />) : <div className="h-32 bg-gray-100 flex items-center justify-center text-xs">No Image</div>}
+                                        {pageProgress[p.id] !== undefined && p.status === 'processing' && (
+                                            <div className="w-full bg-gray-200 h-2 rounded mt-2">
+                                                <div className="bg-indigo-600 h-2 rounded transition-all duration-300" style={{ width: `${pageProgress[p.id]}%` }}></div>
+                                            </div>
+                                        )}
+                                        <div className="flex gap-1 mt-2 flex-wrap">
+                                            {p.status === 'done' ? (
+                                                <>
+                                                    <div className="w-full py-1 text-xs rounded font-bold bg-gray-100 text-gray-600 text-center mb-1">Đã lấy {pageQuestions[p.id]?.length || 0} câu</div>
+                                                    <button onClick={(e) => { e.stopPropagation(); setCropPage(p) }} className="flex-1 px-2 py-1 text-xs rounded font-bold bg-orange-100 text-orange-600 hover:bg-orange-200" title="Quét thủ công"><i className="fas fa-crop"></i> Thủ công</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); if (confirm("Nhận diện lại?")) runAIForPage(p) }} className="px-2 py-1 text-xs rounded font-bold bg-indigo-100 text-indigo-600 hover:bg-indigo-200" title="Nhận diện lại"><i className="fas fa-sync-alt"></i></button>
+                                                </>
+                                            ) : (
+                                                <button onClick={(e) => { e.stopPropagation(); runAIForPage(p) }} disabled={p.status === 'processing'} className={`w-full py-1 text-xs rounded font-bold ${p.status === 'processing' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>{p.status === 'processing' ? 'Đang đọc...' : 'Nhận diện AI'}</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="col-panel bg-white border-r"><div className="col-header"><span>CHI TIẾT (Trang {pages.find(p => p.id === activePageId)?.page_index})</span></div><div className="col-content space-y-4">{!activePageId ? <div className="text-center text-gray-400 mt-10">Chọn trang bên trái</div> : (!pageQuestions[activePageId]?.length && pages.find(p => p.id === activePageId)?.status !== 'done') ? <div className="text-center text-gray-400 mt-10">Chưa có câu hỏi. Bấm Nhận diện AI.</div> : (<>
+                            <div id="question-sortable" className="space-y-4">
+                                {pageQuestions[activePageId]?.map((q, idx) => (<QuestionEditor key={q.id} q={q} idx={idx} updateQuestion={updateQuestion} deleteQuestion={deleteQuestion} />))}
+                            </div>
+                            <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-bold flex items-center justify-center gap-2"><i className="fas fa-plus-circle"></i> Thêm câu hỏi thủ công</button>
+                        </>)}</div></div>
+                        <div className="col-panel bg-gray-50">
+                            <div className="col-header"><span>TỔNG HỢP ({allQuestions.length} câu)</span></div>
+                            <div className="col-content space-y-3">
+                                {allQuestions.length === 0 ? <div className="text-center text-gray-400 mt-10">Đề thi trống</div> : allQuestions.map((q, i) => (
+                                    <div key={i} className="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm">
+                                        <div className="font-bold text-gray-700 mb-1">Câu {i + 1}</div>
+                                        <div className="mb-2"><MathText text={q.question} /></div>
+                                        {q.question_image && <img src={q.question_image} className="h-20 mb-2 block border rounded" />}
+                                        <div className="flex flex-col gap-2">
+                                            {q.options.map((o, k) => (
+                                                <span key={k} className={`px-2 py-1 rounded text-xs border ${q.correct_index === k ? 'bg-green-100 border-green-300 text-green-800 font-bold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                                    {String.fromCharCode(65 + k)}. <MathText text={cleanOptionText(o)} />
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+        const getExamOwnerEmail = (exam) => normalizeEmail(
+            exam?.teacher_email ||
+            exam?.teacherEmail ||
+            exam?.owner_email ||
+            exam?.ownerEmail ||
+            exam?.created_by ||
+            exam?.info?.teacher_email ||
+            exam?.info?.teacherEmail ||
+            exam?.metadata?.teacher_email
+        );
+        const getExamGroupName = (exam) => {
+            const school = String(exam?.school || exam?.info?.school || "").trim();
+            if (school) return school;
+            const title = String(exam?.title || exam?.info?.title || "").trim();
+            const prefix = title.split(/[-–|]/)[0]?.trim();
+            return prefix || "Chưa phân loại";
+        };
+
+        const parseExamMetaFromRow = (exam) => {
+            try {
+                const raw = exam?.variants_json;
+                const variants = typeof raw === "string" ? JSON.parse(raw) : raw;
+                const meta = variants?.[0]?.meta || {};
+                return {
+                    student_mode: meta.student_mode === "class" ? "class" : "free",
+                    class_name: String(meta.class_name || "").trim(),
+                    roster: Array.isArray(meta.roster) ? meta.roster : []
+                };
+            } catch {
+                return { student_mode: "free", class_name: "", roster: [] };
+            }
+        };
+
+        const getExamStudentModeLabel = (exam) => {
+            const parsed = exam?.info?.student_mode ? exam.info : parseExamMetaFromRow(exam);
+            const mode = parsed?.student_mode || exam?.info?.student_mode || exam?.student_mode;
+            if (mode === "class") {
+                const className = String(parsed?.class_name || exam?.info?.class_name || exam?.class_name || "").trim();
+                const count = Array.isArray(parsed?.roster) ? parsed.roster.length : (Array.isArray(exam?.info?.roster) ? exam.info.roster.length : 0);
+                return className ? `Lớp ${className}${count ? ` (${count} HS)` : ""}` : "Danh sách lớp";
+            }
+            return "Thí sinh tự do";
+        };
+
+        const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
+            const [exams, setExams] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [searchText, setSearchText] = useState("");
+            const [groupFilter, setGroupFilter] = useState("all");
+            const [showLegacyExams, setShowLegacyExams] = useState(false);
+            const [qrLink, setQrLink] = useState(null);
+            const [showGuide, setShowGuide] = useState(false);
+            const userEmail = localStorage.getItem('userEmail');
+            const normalizedUserEmail = normalizeEmail(userEmail);
+
+            useEffect(() => {
+                if (!userEmail) return;
+                let cancelled = false;
+                setLoading(true);
+                axios.get(`${examUrl("my-exams")}&email=${encodeURIComponent(userEmail)}`, { withCredentials: true })
+                    .then(async res => {
+                        const data = Array.isArray(res.data) ? res.data : [];
+                        const enriched = await Promise.all(data.map(async ex => {
+                            const meta = parseExamMetaFromRow(ex);
+                            const base = {
+                                ...ex,
+                                info: { ...(ex.info || {}), ...meta }
+                            };
+                            if (getExamOwnerEmail(ex) || !ex.id) return base;
+                            try {
+                                const detailRes = await axios.get(examUrl(`get/${ex.id}`), { withCredentials: true });
+                                const detail = detailRes.data || {};
+                                const info = detail.info || {};
+                                return {
+                                    ...base,
+                                    teacher_email: detail.teacher_email || info.teacher_email || ex.teacher_email,
+                                    info: { ...(base.info || {}), ...info }
+                                };
+                            } catch {
+                                return base;
+                            }
+                        }));
+                        enriched.sort((a, b) => new Date(b.created_at || b.updated_at || b.start_time || 0) - new Date(a.created_at || a.updated_at || a.start_time || 0));
+                        if (!cancelled) setExams(enriched);
+                    })
+                    .catch(err => {
+                        console.error("Load exams failed:", err);
+                        if (!cancelled) setExams([]);
+                    })
+                    .finally(() => { if (!cancelled) setLoading(false); });
+                return () => { cancelled = true; };
+            }, [userEmail]);
+
+            const visibleBaseExams = useMemo(() => {
+                return exams.filter(ex => {
+                    const ownerEmail = getExamOwnerEmail(ex);
+                    if (ownerEmail) return ownerEmail === normalizedUserEmail;
+                    return showLegacyExams;
+                });
+            }, [exams, normalizedUserEmail, showLegacyExams]);
+            const legacyExamCount = useMemo(() => exams.filter(ex => !getExamOwnerEmail(ex)).length, [exams]);
+            const groups = useMemo(() => Array.from(new Set(visibleBaseExams.map(getExamGroupName))).sort((a, b) => a.localeCompare(b, "vi")), [visibleBaseExams]);
+            const filteredExams = useMemo(() => {
+                const keyword = searchText.trim().toLowerCase();
+                return visibleBaseExams.filter(ex => {
+                    const groupName = getExamGroupName(ex);
+                    if (groupFilter !== "all" && groupName !== groupFilter) return false;
+                    if (!keyword) return true;
+                    return [ex.title, ex.school, ex.id, ex.info?.title, ex.info?.school].some(value => String(value || "").toLowerCase().includes(keyword));
+                });
+            }, [visibleBaseExams, searchText, groupFilter]);
+            const handleDelete = async (id) => { if (confirm("Xóa đề này?")) { await axios.delete(examUrl(`delete/${id}`), { withCredentials: true }); setExams(exams.filter(e => e.id !== id)); } };
+            const handleDuplicate = async (id) => { await axios.post(examUrl(`duplicate/${id}`), null, { withCredentials: true }); window.location.reload(); };
+
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    {qrLink && <QRModal link={qrLink} onClose={() => setQrLink(null)} />}
+                    {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+                    <div className="flex justify-between items-center mb-6 bg-white p-6 rounded-xl shadow border border-indigo-100">
+                        <div className="flex items-center gap-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-2xl"><i className="fas fa-user-tie"></i></div><div><h1 className="text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500">{userEmail}</p></div></div>
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600">Home</button>
+                            <button onClick={() => setShowGuide(true)} className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded font-bold hover:bg-yellow-200"><i className="fas fa-question-circle"></i> Hướng Dẫn</button>
+                            <button onClick={onCreateNew} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow"><i className="fas fa-plus"></i> Tạo Đề Mới</button>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <div className="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+                            <div>
+                                <div className="font-bold text-gray-800">Kho đề của tôi</div>
+                                <div className="text-xs text-gray-500">{filteredExams.length}/{visibleBaseExams.length} đề đang hiển thị{legacyExamCount ? ` · ${legacyExamCount} đề cũ đang ẩn` : ""}</div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <label className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm bg-white text-gray-600">
+                                    <input type="checkbox" checked={showLegacyExams} onChange={e => setShowLegacyExams(e.target.checked)} />
+                                    Hiện đề cũ
+                                </label>
+                                <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white min-w-[180px]">
+                                    <option value="all">Tất cả phân loại</option>
+                                    {groups.map(group => <option key={group} value={group}>{group}</option>)}
+                                </select>
+                                <input value={searchText} onChange={e => setSearchText(e.target.value)} className="border rounded-lg px-3 py-2 text-sm min-w-[220px]" placeholder="Tìm tên đề, trường, mã đề..." />
+                            </div>
+                        </div>
+                        {loading ? <div className="p-10 text-center text-indigo-600 font-bold">Đang tải kho đề...</div> : filteredExams.length === 0 ? <div className="p-10 text-center text-gray-400">Chưa có đề phù hợp.</div> : <table className="w-full text-left"><thead className="bg-gray-50 border-b"><tr><th className="p-4">Kỳ Thi</th><th className="p-4">Phân Loại</th><th className="p-4">Thí sinh</th><th className="p-4">Thời Gian</th><th className="p-4 text-right">Công Cụ</th></tr></thead><tbody>{filteredExams.map((ex) => (<tr key={ex.id} className="border-b hover:bg-indigo-50/30"><td className="p-4"><div className="font-bold text-lg text-indigo-900">{ex.title}</div><div className="text-xs text-gray-500">{ex.id}</div></td><td className="p-4 text-sm text-gray-600">{getExamGroupName(ex)}</td><td className="p-4 text-sm"><span className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${(ex.info?.student_mode || ex.student_mode) === "class" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{getExamStudentModeLabel(ex)}</span></td><td className="p-4 text-sm text-gray-600">{ex.duration_mins} phút<br /><span className="text-xs text-gray-400">{ex.start_time ? new Date(ex.start_time).toLocaleDateString() : 'Tự do'}</span></td><td className="p-4 text-right"><div className="flex justify-end gap-2"><button onClick={() => setQrLink(`${window.location.href.split('?')[0]}?mode=student&examId=${ex.id}`)} className="bg-blue-100 text-blue-600 p-2 rounded" title="QR Code"><i className="fas fa-qrcode"></i></button><button onClick={() => onEdit(ex.id)} className="bg-yellow-100 text-yellow-600 p-2 rounded" title="Sửa đề"><i className="fas fa-edit"></i></button><button onClick={() => handleDuplicate(ex.id)} className="bg-purple-100 text-purple-600 p-2 rounded" title="Nhân bản"><i className="fas fa-copy"></i></button><button onClick={() => onViewDetail(ex.id)} className="bg-green-100 text-green-600 p-2 rounded" title="Kết quả"><i className="fas fa-chart-bar"></i></button><button onClick={() => handleDelete(ex.id)} className="bg-red-100 text-red-600 p-2 rounded" title="Xóa"><i className="fas fa-trash"></i></button></div></td></tr>))}</tbody></table>}
+                    </div>
+                </div>
+            );
+        };
+
+        const StudentView = ({ examId }) => {
+            const isMobileClient = useMemo(() => isMobileExamClient(), []);
+            const [step, setStep] = useState("loading");
+            const [info, setInfo] = useState({ name: "", sbd: "", class: "" });
+            const [selectedRosterKey, setSelectedRosterKey] = useState("");
+            const [rosterSearch, setRosterSearch] = useState("");
+            const [exam, setExam] = useState(null);
+            const [shuffledQuestions, setShuffledQuestions] = useState([]);
+            const [answers, setAnswers] = useState({});
+            const [timeLeft, setTimeLeft] = useState(0);
+            const [error, setError] = useState(null);
+            const [violationCount, setViolationCount] = useState(0);
+            const [isLockedOut, setIsLockedOut] = useState(false);
+            const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+            const [submitting, setSubmitting] = useState(false);
+            const answersRef = useRef({});
+            const infoRef = useRef({ name: "", sbd: "", class: "" });
+            const nameInputRef = useRef(null);
+            const sbdInputRef = useRef(null);
+            const classInputRef = useRef(null);
+            const examRef = useRef(null);
+            const submittingRef = useRef(false);
+            const timeUpHandledRef = useRef(false);
+            const cleanupListenersRef = useRef(null);
+            const infoStorageKey = `exam_student_info_${examId}`;
+
+            const persistInfo = (nextInfo) => {
+                const snapshot = {
+                    name: (nextInfo.name || "").trim(),
+                    sbd: (nextInfo.sbd || "").trim(),
+                    class: (nextInfo.class || "").trim()
+                };
+                infoRef.current = snapshot;
+                try { sessionStorage.setItem(infoStorageKey, JSON.stringify(snapshot)); } catch { }
+                return snapshot;
+            };
+
+            const readStoredInfo = () => {
+                try {
+                    const raw = sessionStorage.getItem(infoStorageKey);
+                    return raw ? JSON.parse(raw) : null;
+                } catch {
+                    return null;
+                }
+            };
+
+            const readInfoFromInputs = () => ({
+                name: (nameInputRef.current?.value || "").trim(),
+                sbd: (sbdInputRef.current?.value || "").trim(),
+                class: (classInputRef.current?.value || "").trim()
+            });
+
+            const getSubmitInfo = () => {
+                const stored = readStoredInfo() || {};
+                const refInfo = infoRef.current || {};
+                const stateInfo = info || {};
+                return {
+                    name: (refInfo.name || stored.name || stateInfo.name || "").trim(),
+                    sbd: (refInfo.sbd || stored.sbd || stateInfo.sbd || "").trim(),
+                    class: (refInfo.class || stored.class || stateInfo.class || "").trim()
+                };
+            };
+
+            const updateInfoField = (field, value) => {
+                setInfo(prev => persistInfo({ ...prev, [field]: value }));
+            };
+
+            const isClassRosterMode = exam?.info?.student_mode === "class";
+            const examRoster = useMemo(() => {
+                if (!Array.isArray(exam?.info?.roster)) return [];
+                return exam.info.roster
+                    .map(item => ({
+                        student_id: item.student_id || 0,
+                        full_name: String(item.full_name || "").trim(),
+                        sbd: String(item.sbd || item.username || "").trim(),
+                        class_name: String(item.class_name || exam?.info?.class_name || "").trim()
+                    }))
+                    .filter(item => item.full_name && item.sbd);
+            }, [exam]);
+
+            const rosterKey = (item) => `${item.sbd}::${item.full_name}`;
+
+            const filteredExamRoster = useMemo(() => {
+                const keyword = rosterSearch.trim().toLowerCase();
+                if (!keyword) return examRoster;
+                return examRoster.filter(student => {
+                    const haystack = `${student.full_name} ${student.sbd} ${student.class_name}`.toLowerCase();
+                    return haystack.includes(keyword);
+                });
+            }, [examRoster, rosterSearch]);
+
+            const selectRosterStudent = (key) => {
+                setSelectedRosterKey(key);
+                const student = examRoster.find(item => rosterKey(item) === key);
+                if (!student) {
+                    persistInfo({ name: "", sbd: "", class: "" });
+                    setInfo({ name: "", sbd: "", class: "" });
+                    return;
+                }
+                const snapshot = persistInfo({
+                    name: student.full_name,
+                    sbd: student.sbd,
+                    class: student.class_name || exam?.info?.class_name || ""
+                });
+                setInfo(snapshot);
+            };
+
+            useEffect(() => { answersRef.current = answers; }, [answers]);
+            useEffect(() => { examRef.current = exam; }, [exam]);
+
+            useEffect(() => {
+                axios.get(examUrl(`get/${examId}`)).then(res => {
+                    const data = res.data;
+                    if (data.info.status === "not_started") { setError(`Chưa đến giờ thi! Mở lúc: ${new Date(data.info.start_time).toLocaleString()}`); setStep("locked"); }
+                    else if (data.info.status === "expired") { setError("Đã hết giờ làm bài."); setStep("locked"); }
+                    else { setExam(data); setTimeLeft(data.info.duration_mins * 60); setStep("info"); }
+                }).catch(() => { setError("Không tìm thấy đề thi!"); setStep("locked"); });
+            }, [examId]);
+
+            useEffect(() => {
+                if (step === 'exam' && exam && exam.questions) {
+                    const mappedQuestions = exam.questions.map((q, originalIdx) => {
+                        const originalOptions = q.options.map((opt, optIdx) => ({ text: opt, originalOptIdx: optIdx }));
+                        const shuffledOptions = [...originalOptions].sort(() => Math.random() - 0.5);
+                        return { ...q, originalIdx: originalIdx, shuffledOptions: shuffledOptions };
+                    });
+                    setShuffledQuestions(mappedQuestions.sort(() => Math.random() - 0.5));
+                }
+            }, [step, exam]);
+
+            const safeExitFullscreen = async () => {
+                try {
+                    const active = document.fullscreenElement || document.webkitFullscreenElement;
+                    if (!active) return;
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                    if (!exit) return;
+                    await Promise.race([
+                        exit.call(document),
+                        new Promise(resolve => setTimeout(resolve, 1200))
+                    ]);
+                } catch { }
+            };
+
+            const normalizeAnswersPayload = (rawAnswers) => {
+                const payload = {};
+                Object.entries(rawAnswers || {}).forEach(([key, value]) => {
+                    if (value === undefined || value === null || value === "") return;
+                    payload[String(key)] = Number(value);
+                });
+                return payload;
+            };
+
+            const handleSubmit = useCallback(async (auto = false) => {
+                const currentExam = examRef.current;
+                if (!currentExam?.questions?.length) {
+                    alert("Không tải được đề thi. Vui lòng tải lại trang.");
+                    return;
+                }
+                if (submittingRef.current) return;
+
+                const currentAnswers = answersRef.current;
+                const currentInfo = getSubmitInfo();
+                const answeredCount = Object.keys(currentAnswers).length;
+                const totalCount = currentExam.questions.length;
+
+                if (!currentInfo.name || !currentInfo.sbd) {
+                    alert("Thiếu Họ tên hoặc SBD. Vui lòng tải lại trang, nhập đầy đủ thông tin rồi làm bài lại.");
+                    submittingRef.current = false;
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (!auto) {
+                    if (answeredCount < totalCount) {
+                        alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                        return;
+                    }
+                    if (!isMobileClient && !window.confirm("Bạn chắc chắn muốn nộp bài?")) return;
+                }
+
+                submittingRef.current = true;
+                setSubmitting(true);
+                setShowSubmitConfirm(false);
+
+                if (cleanupListenersRef.current) {
+                    cleanupListenersRef.current();
+                    cleanupListenersRef.current = null;
+                }
+
+                try {
+                    await safeExitFullscreen();
+                    const res = await axios.post(examUrl("submit"), {
+                        exam_id: examId,
+                        student_name: currentInfo.name,
+                        sbd: currentInfo.sbd,
+                        student_class: currentInfo.class,
+                        answers: normalizeAnswersPayload(currentAnswers)
+                    }, { timeout: 45000 });
+                    setExam(prev => ({ ...(prev || {}), ...res.data }));
+                    setStep("result");
+                } catch (e) {
+                    const message = formatApiError(e, "Lỗi nộp bài!");
+                    alert(message);
+                    submittingRef.current = false;
+                    setSubmitting(false);
+                }
+            }, [examId, isMobileClient]);
+
+            const requestManualSubmit = () => {
+                const currentExam = examRef.current;
+                const currentAnswers = answersRef.current;
+                const answeredCount = Object.keys(currentAnswers).length;
+                const totalCount = currentExam?.questions?.length || 0;
+                if (answeredCount < totalCount) {
+                    alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                    return;
+                }
+                if (isMobileClient) {
+                    setShowSubmitConfirm(true);
+                    return;
+                }
+                handleSubmit(false);
+            };
+
+            useEffect(() => {
+                if (step !== "exam") return;
+
+                timeUpHandledRef.current = false;
+                const timer = setInterval(() => {
+                    setTimeLeft(v => {
+                        if (v <= 1) {
+                            if (!timeUpHandledRef.current) {
+                                timeUpHandledRef.current = true;
+                                handleSubmit(true);
+                            }
+                            return 0;
+                        }
+                        return v - 1;
+                    });
+                }, 1000);
+
+                if (!isMobileClient) {
+                    const handleViolation = () => {
+                        setViolationCount(prev => {
+                            const newCount = prev + 1;
+                            if (newCount >= 3) {
+                                alert("Vi phạm quy chế (thoát màn hình) quá 3 lần. Hệ thống tự động thu bài!");
+                                handleSubmit(true);
+                            } else {
+                                setIsLockedOut(true);
+                            }
+                            return newCount;
+                        });
+                    };
+
+                    const checkFullscreen = () => {
+                        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                            handleViolation();
+                        }
+                    };
+
+                    const checkVisibility = () => {
+                        if (document.hidden) handleViolation();
+                    };
+
+                    document.addEventListener("fullscreenchange", checkFullscreen);
+                    document.addEventListener("visibilitychange", checkVisibility);
+                    window.addEventListener("blur", checkVisibility);
+
+                    cleanupListenersRef.current = () => {
+                        document.removeEventListener("fullscreenchange", checkFullscreen);
+                        document.removeEventListener("visibilitychange", checkVisibility);
+                        window.removeEventListener("blur", checkVisibility);
+                    };
+                } else {
+                    cleanupListenersRef.current = null;
+                }
+
+                return () => {
+                    clearInterval(timer);
+                    if (cleanupListenersRef.current) cleanupListenersRef.current();
+                };
+            }, [step, isMobileClient, handleSubmit]);
+
+            const enterFullscreen = () => {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) elem.requestFullscreen().catch(() => { });
+                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+            };
+
+            const startExam = () => {
+                let snapshot;
+                if (isClassRosterMode) {
+                    if (!selectedRosterKey) return alert("Vui lòng chọn tên của bạn trong danh sách lớp!");
+                    const student = examRoster.find(item => rosterKey(item) === selectedRosterKey);
+                    if (!student) return alert("Thí sinh không hợp lệ. Vui lòng chọn lại.");
+                    snapshot = persistInfo({
+                        name: student.full_name,
+                        sbd: student.sbd,
+                        class: student.class_name || exam?.info?.class_name || ""
+                    });
+                } else {
+                    const fromInputs = readInfoFromInputs();
+                    snapshot = persistInfo({
+                        name: fromInputs.name || info.name,
+                        sbd: fromInputs.sbd || info.sbd,
+                        class: fromInputs.class || info.class
+                    });
+                    if (!snapshot.name || !snapshot.sbd) {
+                        return alert("Vui lòng nhập Họ tên và SBD!");
+                    }
+                }
+                setInfo(snapshot);
+                if (!isMobileClient) enterFullscreen();
+                setStep("exam");
+            };
+
+            const unlockExam = () => {
+                if (!isMobileClient) enterFullscreen();
+                setIsLockedOut(false);
+            };
+
+            const handleSelectAnswer = (originalQIdx, originalOptIdx) => {
+                setAnswers(prev => ({ ...prev, [originalQIdx]: originalOptIdx }));
+            };
+
+            if (step === "locked") return <div className="flex justify-center h-screen items-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Đóng Cửa</h2><p>{error}</p></div></div>;
+            if (step === "loading") return <div className="flex justify-center h-screen items-center"><div className="loader border-indigo-600"></div></div>;
+
+            if (step === "info" && isClassRosterMode && examRoster.length === 0) {
+                return (
+                    <div className="flex justify-center h-screen items-center bg-gray-100 p-4">
+                        <div className="bg-white p-8 rounded shadow text-center max-w-md">
+                            <h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-exclamation-circle"></i> Không vào thi được</h2>
+                            <p className="text-gray-600">Đề thi đang dùng danh sách lớp nhưng chưa có thí sinh. Vui lòng báo giáo viên kiểm tra lại cấu hình đề.</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (step === "info") return (
+                <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg text-center">
+                        <div className="mb-4 text-indigo-600"><i className="fas fa-user-graduate text-5xl"></i></div>
+                        <h2 className="text-2xl font-bold mb-2 text-gray-800">{exam.info.title}</h2>
+                        <div className="flex justify-center gap-4 text-sm text-gray-500 mb-6"><span><i className="fas fa-clock"></i> {exam.info.duration_mins} phút</span><span><i className="fas fa-question-circle"></i> {exam.questions.length} câu</span></div>
+                        <div className="space-y-3 text-left">
+                            {isClassRosterMode ? (
+                                <>
+                                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm text-indigo-900">
+                                        <div className="font-bold mb-1"><i className="fas fa-users"></i> Danh sách lớp: {exam.info.class_name || "—"}</div>
+                                        <div className="text-xs text-indigo-700">Chọn đúng tên của bạn trong danh sách giáo viên đã gửi.</div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-700">Tìm tên hoặc SBD</label>
+                                        <input
+                                            className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select mb-2"
+                                            placeholder="Gõ họ tên hoặc SBD để lọc..."
+                                            value={rosterSearch}
+                                            onChange={e => setRosterSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-700">Chọn tên của bạn (*)</label>
+                                        <select
+                                            className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-white allow-select"
+                                            value={selectedRosterKey}
+                                            onChange={e => selectRosterStudent(e.target.value)}
+                                        >
+                                            <option value="">{filteredExamRoster.length ? "-- Chọn họ và tên --" : (rosterSearch.trim() ? "Không tìm thấy thí sinh" : "-- Chọn họ và tên --")}</option>
+                                            {filteredExamRoster.map(student => {
+                                                const key = rosterKey(student);
+                                                return (
+                                                    <option key={key} value={key}>
+                                                        {student.full_name} · SBD {student.sbd}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                        {rosterSearch.trim() && (
+                                            <div className="text-xs text-gray-500 mt-1">Hiển thị {filteredExamRoster.length}/{examRoster.length} thí sinh</div>
+                                        )}
+                                    </div>
+                                    {selectedRosterKey && (
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div className="bg-gray-50 border rounded p-2">
+                                                <div className="text-[11px] font-bold text-gray-500">SBD</div>
+                                                <div className="font-semibold text-gray-800">{info.sbd}</div>
+                                            </div>
+                                            <div className="bg-gray-50 border rounded p-2">
+                                                <div className="text-[11px] font-bold text-gray-500">Lớp</div>
+                                                <div className="font-semibold text-gray-800">{info.class || exam.info.class_name || "—"}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div><label className="text-xs font-bold text-gray-700">Họ và Tên (*)</label><input ref={nameInputRef} name="student_name" autoComplete="name" value={info.name} className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="Nguyễn Văn A" onChange={e => updateInfoField("name", e.target.value)} onBlur={e => updateInfoField("name", e.target.value)} /></div>
+                                    <div><label className="text-xs font-bold text-gray-700">Số Báo Danh (*)</label><input ref={sbdInputRef} name="student_sbd" autoComplete="off" value={info.sbd} className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="SBD123456" onChange={e => updateInfoField("sbd", e.target.value)} onBlur={e => updateInfoField("sbd", e.target.value)} /></div>
+                                    <div><label className="text-xs font-bold text-gray-700">Lớp</label><input ref={classInputRef} name="student_class" autoComplete="off" value={info.class} className="border p-3 w-full rounded focus:ring-2 focus:ring-indigo-500 outline-none allow-select" placeholder="12A1" onChange={e => updateInfoField("class", e.target.value)} onBlur={e => updateInfoField("class", e.target.value)} /></div>
+                                </>
+                            )}
+                        </div>
+                        <div className="mt-6 bg-yellow-50 text-yellow-800 p-3 rounded text-xs text-left border border-yellow-200">
+                            <strong><i className="fas fa-exclamation-triangle"></i> LƯU Ý:</strong><br />
+                            {isMobileClient ? (
+                                <>
+                                    - Làm bài trên điện thoại/Zalo: giữ nguyên màn hình thi, không thoát app giữa chừng.<br />
+                                    - Làm hết tất cả câu rồi bấm <b>Nộp Bài</b>. Hết giờ hệ thống tự nộp.<br />
+                                    - Nếu lỗi, thử mở link bằng Chrome/Safari thay vì Zalo.
+                                </>
+                            ) : (
+                                <>
+                                    - Hệ thống bật chế độ <b>TOÀN MÀN HÌNH</b>.<br />
+                                    - <b>TUYỆT ĐỐI KHÔNG</b> thoát màn hình hoặc chuyển tab.<br />
+                                    - Nếu vi phạm <b>3 lần</b> sẽ bị <b>THU BÀI</b> ngay lập tức.
+                                </>
+                            )}
+                        </div>
+                        <button onClick={startExam} className="mt-6 bg-indigo-600 text-white w-full py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">VÀO THI NGAY</button>
+                    </div>
+                </div>
+            );
+
+            if (step === "result") return (
+                <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
+                    <div className="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-lg w-full border border-green-100">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-4xl shadow-inner"><i className="fas fa-check"></i></div>
+                        <h2 className="text-3xl font-bold text-gray-800 mb-2">Hoàn Thành!</h2><p className="text-gray-500 mb-6">Bạn đã nộp bài thành công.</p>
+                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6"><p className="text-sm text-gray-500 uppercase tracking-wide font-bold mb-2">Kết quả</p><p className="text-5xl font-extrabold text-indigo-600 mb-2">{exam.score}</p><p className="text-sm font-bold text-gray-400">Điểm số</p></div>
+                        <div className="bg-blue-50 p-4 rounded text-left text-sm text-blue-800 italic border-l-4 border-blue-500">
+                            <strong><i className="fas fa-robot"></i> Nhận xét từ AI:</strong><br />
+                            {exam.feedback || exam.ai_feedback}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
+                    {showSubmitConfirm && (
+                        <div className="modal-overlay" onClick={() => !submitting && setShowSubmitConfirm(false)}>
+                            <div className="modal-box text-center" onClick={e => e.stopPropagation()}>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-800">Xác nhận nộp bài</h3>
+                                <p className="text-sm text-gray-600 mb-5">Bạn đã hoàn thành tất cả câu hỏi. Bấm <b>Nộp bài</b> để gửi kết quả.</p>
+                                <div className="flex gap-2">
+                                    <button type="button" disabled={submitting} onClick={() => setShowSubmitConfirm(false)} className="flex-1 bg-gray-100 text-gray-700 px-4 py-3 rounded-lg font-bold">Làm tiếp</button>
+                                    <button type="button" disabled={submitting} onClick={() => handleSubmit(false)} className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-lg font-bold disabled:opacity-60">
+                                        {submitting ? "Đang nộp..." : "Nộp bài"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Anti-Cheat Overlay - chỉ máy tính */}
+                    {!isMobileClient && isLockedOut && (
+                        <div className="violation-overlay">
+                            <div className="text-6xl text-red-500 mb-4"><i className="fas fa-exclamation-triangle"></i></div>
+                            <h2 className="text-2xl font-bold mb-2 text-red-500">CẢNH BÁO VI PHẠM!</h2>
+                            <p className="mb-6 max-w-md">Bạn đã rời khỏi màn hình thi. Đây là hành động vi phạm quy chế.<br />Bạn còn <b>{3 - violationCount}</b> lần vi phạm trước khi bị thu bài.</p>
+                            <button onClick={unlockExam} className="bg-white text-red-600 px-6 py-3 rounded-full font-bold shadow-lg hover:bg-gray-100 transition">Quay lại làm bài</button>
+                        </div>
+                    )}
+
+                    <div className={`max-w-4xl mx-auto pb-20 ${!isMobileClient && isLockedOut ? 'blur-sm pointer-events-none' : ''}`}>
+                        <div className="sticky top-0 bg-white/95 backdrop-blur shadow-md px-4 py-3 rounded-b-xl flex justify-between items-center z-30 border-t-4 border-indigo-600">
+                            <div><div className="font-bold text-gray-800 text-sm truncate w-32">{info.name}</div><div className="text-xs text-gray-500 font-mono">{info.sbd}</div></div>
+                            <div className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-600">Đã làm: <span className="text-indigo-600">{Object.keys(answers).length}</span>/{shuffledQuestions.length}</div>
+                            <div className="flex items-center gap-3">
+                                <div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-indigo-700'}`}>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+                                <button type="button" disabled={submitting} onClick={requestManualSubmit} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 shadow transition disabled:opacity-60">
+                                    {submitting ? "Đang nộp..." : "Nộp Bài"}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="h-1 w-full bg-gray-200 fixed top-[68px] left-0 z-20 md:hidden"><div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${(Object.keys(answers).length / shuffledQuestions.length) * 100}%` }}></div></div>
+                        <div className="p-4 space-y-6 mt-2">
+                            {shuffledQuestions.map((q, i) => (
+                                <div key={q.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative group hover:shadow-md transition">
+                                    <div className="flex gap-4 mb-4">
+                                        <div className="flex flex-col items-center gap-1"><span className="bg-indigo-100 text-indigo-700 w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm shadow-sm">{i + 1}</span>{answers[q.originalIdx] !== undefined && <i className="fas fa-check-circle text-green-500 text-xs"></i>}</div>
+                                        <div className="flex-1">
+                                            {/* Corrected logic for showing image */}
+                                            {q.question_image && <img src={q.question_image} className="max-h-60 rounded-lg border mb-3 block object-contain bg-gray-50" />}
+                                            <div className="text-gray-800 text-base leading-relaxed font-medium"><MathText text={q.question} cleanPrefix={true} /></div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-12">
+                                        {q.shuffledOptions.map((opt, visualIdx) => {
+                                            const isSelected = answers[q.originalIdx] === opt.originalOptIdx;
+                                            return (<div key={visualIdx} onClick={() => handleSelectAnswer(q.originalIdx, opt.originalOptIdx)} className={`p-3 rounded-xl border-2 cursor-pointer flex gap-3 items-center transition-all duration-200 active:scale-[0.98] ${isSelected ? 'border-indigo-500 bg-indigo-50 shadow-inner' : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65 + visualIdx)}</div><div className={`text-sm ${isSelected ? 'text-indigo-900 font-medium' : 'text-gray-600'}`}><MathText text={cleanOptionText(opt.text)} /></div></div>);
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ResultDetail = ({ examId, onBack }) => {
+            const [results, setResults] = useState([]);
+            const [examQuestions, setExamQuestions] = useState([]);
+            const [deletingId, setDeletingId] = useState(null);
+            const [deletingBatch, setDeletingBatch] = useState(false);
+
+            useEffect(() => {
+                Promise.all([
+                    axios.get(examUrl(`results/${examId}`), { withCredentials: true }),
+                    axios.get(examUrl(`get/${examId}`), { withCredentials: true })
+                ]).then(([resResults, resExam]) => {
+                    setResults(resResults.data || []);
+                    setExamQuestions(resExam.data?.questions || []);
+                }).catch(() => {
+                    axios.get(examUrl(`results/${examId}`), { withCredentials: true })
+                        .then(res => setResults(res.data || []))
+                        .catch(() => setResults([]));
+                });
+            }, [examId]);
+
+            const resultRows = useMemo(() => {
+                const attemptCountByKey = {};
+                results.forEach(r => {
+                    const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
+                    attemptCountByKey[key] = (attemptCountByKey[key] || 0) + 1;
+                });
+                return [...results]
+                    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                    .map((r, index) => {
+                        const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
+                        return { ...r, attemptNo: attemptCountByKey[key]--, rowKey: `${r.id || index}-${r.created_at || index}` };
+                    });
+            }, [results]);
+
+            const repeatGroups = useMemo(() => {
+                const grouped = {};
+                results.forEach(r => {
+                    const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(r);
+                });
+                const byCount = {};
+                Object.values(grouped).forEach(attempts => {
+                    if (attempts.length < 2) return;
+                    const count = attempts.length;
+                    const sorted = [...attempts].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+                    const latest = sorted[0];
+                    if (!byCount[count]) byCount[count] = [];
+                    byCount[count].push({
+                        name: latest.student_name,
+                        sbd: latest.sbd,
+                        className: latest.student_class,
+                        scores: sorted.map(item => item.score).join(", ")
+                    });
+                });
+                return Object.keys(byCount)
+                    .map(Number)
+                    .sort((a, b) => a - b)
+                    .map(count => ({ count, students: byCount[count].sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi")) }));
+            }, [results]);
+
+            const stripMathDelimiters = (text) => String(text || "").replace(/\$/g, "").replace(/\\textbf\{([^}]+)\}/g, "$1").replace(/\\textit\{([^}]+)\}/g, "$1").replace(/\s+/g, " ").trim();
+
+            const normalizeQuestionText = (text) => stripMathDelimiters(text)
+                .replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, "")
+                .toLowerCase();
+
+            const originalQuestionList = useMemo(() => (
+                examQuestions.map((q, idx) => ({
+                    no: idx + 1,
+                    text: normalizeQuestionText(q.question || q.q || "")
+                }))
+            ), [examQuestions]);
+
+            const questionLookup = useMemo(() => {
+                const map = new Map();
+                originalQuestionList.forEach(item => {
+                    if (item.text) map.set(item.text, item.no);
+                });
+                return map;
+            }, [originalQuestionList]);
+
+            const findOriginalQuestionNo = (questionText) => {
+                const key = normalizeQuestionText(questionText);
+                if (!key) return null;
+                if (questionLookup.has(key)) return questionLookup.get(key);
+                let best = null;
+                let bestLen = 0;
+                originalQuestionList.forEach(item => {
+                    if (!item.text) return;
+                    if (item.text === key || item.text.includes(key) || key.includes(item.text)) {
+                        const overlap = Math.min(item.text.length, key.length);
+                        if (overlap > bestLen) {
+                            bestLen = overlap;
+                            best = item.no;
+                        }
+                    }
+                });
+                return best;
+            };
+
+            const parseWrongItems = (detailsJson) => {
+                if (!detailsJson) return [];
+                try {
+                    const details = typeof detailsJson === "string" ? JSON.parse(detailsJson) : detailsJson;
+                    return Array.isArray(details) ? details : [];
+                } catch {
+                    return [];
+                }
+            };
+
+            const splitCorrectWrong = (result) => {
+                const total = Number(result.total_questions) || examQuestions.length || 0;
+                const wrongItems = parseWrongItems(result.details_json);
+                const wrongNums = [];
+                wrongItems.forEach(item => {
+                    const num = findOriginalQuestionNo(item.q || item.question || "");
+                    if (num && !wrongNums.includes(num)) wrongNums.push(num);
+                });
+                wrongNums.sort((a, b) => a - b);
+
+                const expectedWrong = Math.max(0, total - Number(result.correct_count || 0));
+                if (wrongNums.length !== expectedWrong && expectedWrong > 0 && wrongItems.length === expectedWrong) {
+                    const used = new Set(wrongNums);
+                    wrongItems.forEach(item => {
+                        if (wrongNums.length >= expectedWrong) return;
+                        const key = normalizeQuestionText(item.q || item.question || "");
+                        originalQuestionList.forEach(q => {
+                            if (wrongNums.length >= expectedWrong) return;
+                            if (used.has(q.no)) return;
+                            if (q.text && key && (q.text.startsWith(key.slice(0, 24)) || key.startsWith(q.text.slice(0, 24)))) {
+                                wrongNums.push(q.no);
+                                used.add(q.no);
+                            }
+                        });
+                    });
+                    wrongNums.sort((a, b) => a - b);
+                }
+
+                const wrongSet = new Set(wrongNums);
+                const correctNums = [];
+                for (let i = 1; i <= total; i++) {
+                    if (!wrongSet.has(i)) correctNums.push(i);
+                }
+                return { correctNums, wrongNums };
+            };
+
+            const formatQuestionNums = (nums) => nums.length ? nums.map(n => `Câu ${n}`).join(", ") : "—";
+
+            const isTestResult = (row) => {
+                const sbd = (row.sbd || "").trim().toUpperCase();
+                const name = (row.student_name || "").trim();
+                return sbd.startsWith("TEST") || /^Test(\s|$)/i.test(name);
+            };
+
+            const testResults = useMemo(() => results.filter(isTestResult), [results]);
+
+            const handleDeleteResult = async (row) => {
+                if (!row?.id) return alert("Không xác định được bản ghi để xóa.");
+                const label = `${(row.student_name || "").trim() || "Học sinh"} · ${(row.sbd || "").trim() || "?"}`;
+                if (!confirm(`Xóa kết quả: ${label}?`)) return;
+                setDeletingId(row.id);
+                try {
+                    await axios.delete(examUrl(`result/${row.id}`), { withCredentials: true });
+                    setResults(prev => prev.filter(item => item.id !== row.id));
+                } catch (e) {
+                    alert(formatApiError(e, "Không xóa được kết quả."));
+                } finally {
+                    setDeletingId(null);
+                }
+            };
+
+            const handleDeleteTestResults = async () => {
+                if (!testResults.length) return alert("Không có bản ghi test để xóa.");
+                if (!confirm(`Xóa ${testResults.length} bản ghi test (TEST999, TESTMAP01...)?`)) return;
+                setDeletingBatch(true);
+                try {
+                    const ids = testResults.map(r => r.id).filter(Boolean);
+                    if (ids.length === 1) {
+                        await axios.delete(examUrl(`result/${ids[0]}`), { withCredentials: true });
+                    } else {
+                        await axios.post(examUrl("results/delete-batch"), { ids }, { withCredentials: true });
+                    }
+                    setResults(prev => prev.filter(item => !ids.includes(item.id)));
+                } catch (e) {
+                    alert(formatApiError(e, "Không xóa được bản ghi test."));
+                } finally {
+                    setDeletingBatch(false);
+                }
+            };
+
+            const exportExcel = () => {
+                const header = ["STT", "Họ và tên", "Số báo danh", "Lớp học", "Điểm", "Kết quả", "Các câu đúng (đề gốc)", "Các câu sai (đề gốc)"];
+                const note = "Ghi chú: STT câu đúng/sai theo đề gốc của giáo viên. Học sinh làm đề đã trộn nên thứ tự trên màn hình HS khác với đề gốc.";
+                const dataRows = [...resultRows]
+                    .sort((a, b) => (a.student_name || "").localeCompare(b.student_name || "", "vi"))
+                    .map((r, index) => {
+                        const { correctNums, wrongNums } = splitCorrectWrong(r);
+                        return [
+                            index + 1,
+                            (r.student_name || "").trim(),
+                            (r.sbd || "").trim(),
+                            (r.student_class || "").trim(),
+                            r.score,
+                            `${r.correct_count ?? 0}/${r.total_questions ?? 0}`,
+                            formatQuestionNums(correctNums),
+                            formatQuestionNums(wrongNums)
+                        ];
+                    });
+                const ws = XLSX.utils.aoa_to_sheet([[note], [], header, ...dataRows]);
+                ws["!cols"] = [
+                    { wch: 5 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
+                    { wch: 8 }, { wch: 10 }, { wch: 28 }, { wch: 28 }
+                ];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "KetQua");
+                XLSX.writeFile(wb, "KetQuaThi.xlsx");
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto p-6">
+                    <button onClick={onBack} className="mb-4 text-gray-600 hover:text-indigo-600 flex items-center gap-2 font-bold">
+                        <i className="fas fa-arrow-left"></i> Quay lại
+                    </button>
+
+                    {repeatGroups.length > 0 && (
+                        <div className="mb-6 space-y-3">
+                            <h3 className="font-bold text-lg text-gray-800">Học sinh thi nhiều lần</h3>
+                            {repeatGroups.map(group => (
+                                <div key={group.count} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                    <div className="font-bold text-amber-800 mb-2">
+                                        Thi {group.count} lần ({group.students.length} em)
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {group.students.map((student, idx) => (
+                                            <span key={`${student.sbd}-${idx}`} className="inline-flex items-center gap-2 bg-white border border-amber-200 rounded-full px-3 py-1 text-sm text-gray-700">
+                                                <span className="font-semibold">{student.name}</span>
+                                                <span className="text-gray-400 font-mono text-xs">{student.sbd}</span>
+                                                <span className="text-amber-700 text-xs">({student.scores})</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <div className="p-4 border-b bg-gray-50 flex flex-wrap gap-2 justify-between items-center">
+                            <h3 className="font-bold text-lg text-gray-800">Kết quả thi ({results.length} lượt)</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {testResults.length > 0 && (
+                                    <button type="button" disabled={deletingBatch} onClick={handleDeleteTestResults} className="text-red-600 hover:bg-red-50 px-3 py-1 rounded border border-red-200 text-sm font-bold disabled:opacity-60">
+                                        <i className="fas fa-broom mr-1"></i> Xóa {testResults.length} bản ghi test
+                                    </button>
+                                )}
+                                <button type="button" onClick={exportExcel} className="text-green-600 hover:bg-green-50 px-3 py-1 rounded border border-green-200 text-sm font-bold">
+                                    <i className="fas fa-file-excel mr-1"></i> Xuất Excel
+                                </button>
+                            </div>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-indigo-50 border-b">
+                                <tr>
+                                    <th className="p-3">Tên HS</th>
+                                    <th className="p-3">SBD</th>
+                                    <th className="p-3">Lớp</th>
+                                    <th className="p-3">Lần</th>
+                                    <th className="p-3">Điểm</th>
+                                    <th className="p-3">Số câu đúng</th>
+                                    <th className="p-3">Thời gian</th>
+                                    <th className="p-3 text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {resultRows.map(r => (
+                                    <tr key={r.rowKey} className={`border-b hover:bg-gray-50 ${r.attemptNo > 1 ? "bg-amber-50/40" : ""} ${isTestResult(r) ? "bg-red-50/30" : ""}`}>
+                                        <td className="p-3 font-bold text-gray-700">{r.student_name || "—"}</td>
+                                        <td className="p-3 text-gray-600">{r.sbd}</td>
+                                        <td className="p-3 text-gray-600">{r.student_class || "—"}</td>
+                                        <td className="p-3 text-sm font-bold text-amber-700">{r.attemptNo > 1 ? `Lần ${r.attemptNo}` : "Lần 1"}</td>
+                                        <td className="p-3 font-bold text-indigo-600">{r.score}</td>
+                                        <td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td>
+                                        <td className="p-3 text-xs text-gray-500">{r.created_at ? new Date(r.created_at).toLocaleString("vi-VN") : "—"}</td>
+                                        <td className="p-3 text-right">
+                                            <button type="button" disabled={deletingId === r.id} onClick={() => handleDeleteResult(r)} className="text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-bold disabled:opacity-60" title="Xóa kết quả này">
+                                                <i className="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState("dashboard");
+            const [selectedId, setSelectedId] = useState(null);
+            const [isStudent, setIsStudent] = useState(false);
+            const [editingData, setEditingData] = useState(null);
+            const userEmail = localStorage.getItem('userEmail');
+
+            useEffect(() => {
+                const p = new URLSearchParams(window.location.search);
+                if (p.get("mode") === "student") {
+                    setSelectedId(p.get("examId"));
+                    setIsStudent(true);
+                }
+            }, []);
+
+            const handleEdit = async (id) => {
+                try {
+                    const res = await axios.get(examUrl(`get/${id}`), { withCredentials: true });
+                    setEditingData(res.data);
+                    setView("create");
+                } catch (e) {
+                    alert("Lỗi tải đề: " + e.message);
+                }
+            };
+
+            if (isStudent) return <StudentView examId={selectedId} />;
+
+            if (!userEmail) return (
+                <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
+                    <div className="text-xl font-bold text-gray-700">Phiên đăng nhập hết hạn</div>
+                    <a href="login.html" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">Đăng nhập ngay</a>
+                </div>
+            );
+
+            return (
+                <div>
+                    {view === "dashboard" && <TeacherDashboard onCreateNew={() => { setEditingData(null); setView("create"); }} onEdit={handleEdit} onViewDetail={(id) => { setSelectedId(id); setView("detail") }} />}
+                    {view === "create" && <HybridExamCreator initialData={editingData} onBack={() => setView("dashboard")} />}
+                    {view === "detail" && <ResultDetail examId={selectedId} onBack={() => setView("dashboard")} />}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.GiangBaiApi) GiangBaiApi.mountFallbackToggle('gb-hf-fallback-bar', { compact: true });
+        });
+    </script>
+</body>
+
+</html>

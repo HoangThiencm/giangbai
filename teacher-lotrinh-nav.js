@@ -64,6 +64,7 @@
         const file = currentFile();
         if (file === 'theodoi-ai.html') return 'ai-stats';
         if (file === 'thongketientrinh.html') return 'stats';
+        if (file === 'quanlyvanban.html') return 'documents';
         if (file.startsWith('lotrinhtoan')) return 'design';
         return 'hub';
     }
@@ -147,6 +148,7 @@
 
         const statsActive = mode === 'stats';
         const aiStatsActive = mode === 'ai-stats';
+        const documentsActive = mode === 'documents';
         const designActive = mode === 'design' || mode === 'preview';
         const showDesign = teacherTabEnabled('teacher_design_enabled');
         const showStats = teacherTabEnabled('teacher_progress_stats_enabled');
@@ -163,6 +165,7 @@
         const aiStatsLink = showAiStats
             ? `<a href="theodoi-ai.html" class="${navLinkClass(aiStatsActive)}"><i class="fas fa-robot"></i> Theo dõi AI</a>`
             : '';
+        const documentsLink = `<a href="quanlyvanban.html" class="${navLinkClass(documentsActive)}"><i class="fas fa-folder-open"></i> Quản lý văn bản</a>`;
 
         return `
             <div class="teacher-workspace-nav">
@@ -175,6 +178,7 @@
                         <a href="index.html" class="${navLinkClass(false)}"><i class="fas fa-home"></i> Trang chính</a>
                         ${designLink}
                         ${statsLink}
+                        ${documentsLink}
                         ${aiStatsLink}
                         ${previewBtn}
                     </div>

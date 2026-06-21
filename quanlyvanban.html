@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý văn bản</title>
+    <script src="access-control.js?v=20260621-qlvb1"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; background: #f6f8fb; }
+        .modal-backdrop { background: rgba(15, 23, 42, .58); backdrop-filter: blur(2px); }
+    </style>
+</head>
+<body class="min-h-screen text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-[.14em] text-teal-700">Không gian giáo viên</p>
+                <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950"><i class="fa-solid fa-folder-open mr-2 text-teal-700"></i>Quản lý văn bản</h1>
+                <p class="mt-1 text-sm text-slate-600">Văn bản đến/đi, hạn báo cáo và tệp minh chứng lưu trên Google Drive.</p>
+            </div>
+            <button id="newDocumentBtn" type="button" class="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-teal-800"><i class="fa-solid fa-plus mr-1"></i> Thêm văn bản</button>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-5">
+        <div id="driveWarning" class="mb-4 hidden rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Google Drive chưa được cấu hình. Vẫn có thể nhập danh mục, nhưng chưa thể tải tệp văn bản lên Drive.</div>
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <label class="text-sm font-bold text-slate-700">Loại văn bản
+                    <select id="directionFilter" class="mt-1 w-full rounded border border-slate-300 p-2.5 outline-none focus:ring-2 focus:ring-teal-500"><option value="">Tất cả</option><option value="incoming">Văn bản đến</option><option value="outgoing">Văn bản đi</option></select>
+                </label>
+                <label class="text-sm font-bold text-slate-700">Trạng thái báo cáo
+                    <select id="statusFilter" class="mt-1 w-full rounded border border-slate-300 p-2.5 outline-none focus:ring-2 focus:ring-teal-500"><option value="">Tất cả</option><option value="pending">Chưa xử lý</option><option value="in_progress">Đang xử lý</option><option value="completed">Đã báo cáo</option><option value="overdue">Quá hạn</option></select>
+                </label>
+                <label class="text-sm font-bold text-slate-700 xl:col-span-2">Tìm văn bản
+                    <input id="searchInput" class="mt-1 w-full rounded border border-slate-300 p-2.5 outline-none focus:ring-2 focus:ring-teal-500" placeholder="Số/ký hiệu, trích yếu, nơi gửi/nhận...">
+                </label>
+            </div>
+            <div id="summary" class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4"></div>
+        </section>
+
+        <section class="mt-5 rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <h2 class="font-bold text-slate-800">Danh mục văn bản</h2>
+                <span id="documentCount" class="text-sm text-slate-500"></span>
+            </div>
+            <div id="documentList" class="divide-y divide-slate-100"></div>
+        </section>
+    </main>
+
+    <div id="documentModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <form id="documentForm" class="mx-auto my-4 max-w-5xl rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <div><p class="text-xs font-extrabold uppercase tracking-[.13em] text-teal-700">Văn bản & công việc</p><h2 id="modalTitle" class="mt-1 text-xl font-black">Thêm văn bản</h2></div>
+                <button id="closeModalBtn" type="button" class="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-5 p-5">
+                <input id="documentId" type="hidden">
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <label class="text-sm font-bold text-slate-700">Loại
+                        <select id="direction" class="mt-1 w-full rounded border border-slate-300 p-2.5"><option value="incoming">Văn bản đến</option><option value="outgoing">Văn bản đi</option></select>
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">Số / ký hiệu
+                        <input id="documentNumber" class="mt-1 w-full rounded border border-slate-300 p-2.5" placeholder="Ví dụ: 123/PGDĐT-GDTrH">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">Ngày văn bản
+                        <input id="documentDate" type="date" class="mt-1 w-full rounded border border-slate-300 p-2.5">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">Loại công văn
+                        <input id="documentType" class="mt-1 w-full rounded border border-slate-300 p-2.5" placeholder="Công văn, kế hoạch...">
+                    </label>
+                </div>
+                <div class="grid gap-3 md:grid-cols-[1fr_320px]">
+                    <label class="text-sm font-bold text-slate-700">Trích yếu / tên văn bản <span class="text-rose-600">*</span>
+                        <input id="title" required class="mt-1 w-full rounded border border-slate-300 p-2.5" placeholder="Ví dụ: Báo cáo kết quả thực hiện nhiệm vụ...">
+                    </label>
+                    <label class="text-sm font-bold text-slate-700">Nơi gửi / nhận
+                        <input id="organization" class="mt-1 w-full rounded border border-slate-300 p-2.5" placeholder="Phòng GDĐT, UBND...">
+                    </label>
+                </div>
+                <label class="block text-sm font-bold text-slate-700">Tóm tắt việc cần làm
+                    <textarea id="summaryText" rows="3" class="mt-1 w-full rounded border border-slate-300 p-2.5" placeholder="Nội dung chính, đầu việc giáo viên cần thực hiện..."></textarea>
+                </label>
+
+                <section class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><h3 class="font-bold text-violet-950"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI đọc và tự điền</h3><p class="mt-1 text-xs text-violet-800">Dán trích văn bản hoặc chọn PDF để lấy chữ. AI sẽ gợi ý số/ký hiệu, ngày, hạn báo cáo và có cần báo cáo hay không.</p></div><button id="aiSuggestBtn" type="button" class="shrink-0 rounded-lg bg-violet-700 px-3 py-2 text-sm font-bold text-white hover:bg-violet-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI tự điền</button></div>
+                    <textarea id="sourceText" rows="6" class="mt-3 w-full rounded border border-violet-200 bg-white p-2.5 text-sm" placeholder="Dán phần nội dung văn bản tại đây. Khi chọn tệp PDF, hệ thống sẽ thử tự trích phần chữ vào ô này."></textarea>
+                    <p id="aiNote" class="mt-2 hidden text-xs font-semibold text-violet-800"></p>
+                </section>
+
+                <section class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <div class="flex flex-wrap items-center gap-4"><label class="inline-flex cursor-pointer items-center gap-2 text-sm font-bold text-amber-950"><input id="reportRequired" type="checkbox" class="h-4 w-4 accent-amber-700"> Cần báo cáo / hoàn thành công việc</label><span class="text-xs text-amber-800">Tự chuyển thành <strong>Quá hạn</strong> khi qua ngày hạn và chưa đánh dấu hoàn thành.</span></div>
+                    <div id="reportFields" class="mt-3 grid hidden gap-3 md:grid-cols-3">
+                        <label class="text-sm font-bold text-slate-700">Hạn báo cáo<input id="reportDueAt" type="date" class="mt-1 w-full rounded border border-amber-300 bg-white p-2.5"></label>
+                        <label class="text-sm font-bold text-slate-700">Trạng thái<select id="reportStatus" class="mt-1 w-full rounded border border-amber-300 bg-white p-2.5"><option value="pending">Chưa xử lý</option><option value="in_progress">Đang xử lý</option><option value="completed">Đã báo cáo / hoàn thành</option></select></label>
+                        <label class="text-sm font-bold text-slate-700 md:col-span-1">Ghi chú xử lý<textarea id="reportNote" rows="2" class="mt-1 w-full rounded border border-amber-300 bg-white p-2.5" placeholder="Đã gửi ai, còn thiếu gì..."></textarea></label>
+                    </div>
+                </section>
+
+                <label class="block text-sm font-bold text-slate-700">Tệp văn bản / minh chứng <span class="font-normal text-slate-500">(được tải lên Google Drive sau khi lưu)</span>
+                    <input id="files" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.txt" class="mt-2 block w-full rounded border border-slate-300 bg-slate-50 p-2 text-sm">
+                </label>
+                <p id="formError" class="hidden rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"></p>
+            </div>
+            <div class="flex flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-4"><button id="cancelModalBtn" type="button" class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Hủy</button><button id="saveDocumentBtn" type="submit" class="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"><i class="fa-solid fa-floppy-disk mr-1"></i> Lưu văn bản</button></div>
+        </form>
+    </div>
+
+    <div id="toast" class="fixed bottom-4 right-4 z-[60] hidden max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-xl"></div>
+
+    <script src="teacher-lotrinh-nav.js?v=20260621-qlvb1"></script>
+    <script>
+    (() => {
+        const API = 'api/vanban.php';
+        const state = { documents: [], driveConfigured: false };
+        const $ = id => document.getElementById(id);
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+        const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '—';
+        const statusInfo = status => ({
+            not_required: ['Không cần báo cáo','bg-slate-100 text-slate-700'], pending: ['Chưa xử lý','bg-amber-100 text-amber-800'],
+            in_progress: ['Đang xử lý','bg-sky-100 text-sky-800'], completed: ['Đã báo cáo','bg-teal-100 text-teal-800'], overdue: ['Quá hạn','bg-rose-100 text-rose-800']
+        }[status] || ['Chưa xử lý','bg-amber-100 text-amber-800']);
+        function toast(message, tone='teal') { const box=$('toast'); box.textContent=message; box.className=`fixed bottom-4 right-4 z-[60] max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-xl ${tone==='rose'?'bg-rose-700 text-white':'bg-teal-700 text-white'}`; box.classList.remove('hidden'); clearTimeout(window.vbdToast); window.vbdToast=setTimeout(()=>box.classList.add('hidden'),4200); }
+        async function api(action, options={}) { const response=await fetch(`${API}?action=${encodeURIComponent(action)}`,{credentials:'include',cache:'no-store',...options}); const data=await response.json().catch(()=>({})); if(!response.ok) throw new Error(data.error||'Không thể xử lý yêu cầu.'); return data; }
+        function filtered() { const direction=$('directionFilter').value, status=$('statusFilter').value, q=$('searchInput').value.trim().toLowerCase(); return state.documents.filter(doc=>{ if(direction&&doc.direction!==direction)return false; if(status&&doc.effective_status!==status)return false; return !q||`${doc.document_number} ${doc.title} ${doc.organization} ${doc.summary_text}`.toLowerCase().includes(q); }); }
+        function renderSummary() { const docs=state.documents, overdue=docs.filter(d=>d.effective_status==='overdue').length, pending=docs.filter(d=>['pending','in_progress'].includes(d.effective_status)).length, completed=docs.filter(d=>d.effective_status==='completed').length; const cards=[['Tổng văn bản',docs.length,'text-slate-900'],['Cần xử lý',pending,'text-amber-700'],['Quá hạn',overdue,'text-rose-700'],['Đã báo cáo',completed,'text-teal-700']]; $('summary').innerHTML=cards.map(([label,value,tone])=>`<div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs font-bold uppercase text-slate-500">${label}</div><div class="mt-1 text-2xl font-black ${tone}">${value}</div></div>`).join(''); }
+        function renderList() { const docs=filtered(); $('documentCount').textContent=`Hiển thị ${docs.length}/${state.documents.length} văn bản`; $('documentList').innerHTML=docs.length?docs.map(doc=>{ const [label,tone]=statusInfo(doc.effective_status); const due=doc.report_required?`<span class="text-xs text-slate-500"><i class="fa-regular fa-calendar mr-1"></i>Hạn: ${dateText(doc.report_due_at)}</span>`:''; const files=(doc.files||[]).map(file=>`<a target="_blank" rel="noopener" href="${esc(file.view_url)}" class="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"><i class="fa-solid fa-paperclip"></i>${esc(file.original_name)}</a>`).join(''); return `<article class="p-4 hover:bg-slate-50"><div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded px-2 py-1 text-xs font-bold ${doc.direction==='outgoing'?'bg-indigo-100 text-indigo-800':'bg-cyan-100 text-cyan-800'}">${doc.direction==='outgoing'?'Văn bản đi':'Văn bản đến'}</span><span class="rounded-full px-2.5 py-1 text-xs font-bold ${tone}">${label}</span>${doc.document_number?`<span class="text-xs font-bold text-slate-600">${esc(doc.document_number)}</span>`:''}</div><h3 class="mt-2 font-bold text-slate-900">${esc(doc.title)}</h3><p class="mt-1 text-sm text-slate-600">${esc(doc.organization||'Chưa ghi nơi gửi/nhận')}${doc.document_date?` · ${dateText(doc.document_date)}`:''}${doc.document_type?` · ${esc(doc.document_type)}`:''}</p>${doc.summary_text?`<p class="mt-2 text-sm leading-6 text-slate-700">${esc(doc.summary_text)}</p>`:''}<div class="mt-3 flex flex-wrap items-center gap-2">${due}${files}</div></div><div class="flex shrink-0 flex-wrap gap-2"><button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"><i class="fa-solid fa-pen mr-1"></i>Sửa</button>${doc.report_required&&doc.effective_status!=='completed'?`<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100">Đang xử lý</button><button data-action="complete" data-id="${doc.id}" class="rounded bg-teal-700 px-3 py-2 text-xs font-bold text-white hover:bg-teal-800">Đã báo cáo</button>`:''}<button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50"><i class="fa-solid fa-trash"></i></button></div></div></article>`; }).join(''):'<div class="p-10 text-center text-slate-500"><i class="fa-regular fa-folder-open mb-3 text-3xl"></i><p>Chưa có văn bản phù hợp.</p></div>'; document.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>handleAction(button.dataset.action,Number(button.dataset.id))); }
+        function render() { $('driveWarning').classList.toggle('hidden',state.driveConfigured); renderSummary(); renderList(); }
+        async function load() { try { const data=await api('list'); state.documents=data.documents||[]; state.driveConfigured=!!data.drive_configured; render(); } catch(error) { toast(error.message,'rose'); } }
+        function setReportVisibility() { $('reportFields').classList.toggle('hidden',!$('reportRequired').checked); }
+        function openModal(doc=null) { $('documentForm').reset(); $('formError').classList.add('hidden'); $('documentId').value=doc?.id||''; $('modalTitle').textContent=doc?'Cập nhật văn bản':'Thêm văn bản'; $('direction').value=doc?.direction||'incoming'; $('documentNumber').value=doc?.document_number||''; $('title').value=doc?.title||''; $('documentDate').value=doc?.document_date||''; $('documentType').value=doc?.document_type||''; $('organization').value=doc?.organization||''; $('summaryText').value=doc?.summary_text||''; $('sourceText').value=doc?.source_text||''; $('reportRequired').checked=!!Number(doc?.report_required||0); $('reportDueAt').value=doc?.report_due_at||''; $('reportStatus').value=['pending','in_progress','completed'].includes(doc?.report_status)?doc.report_status:'pending'; $('reportNote').value=doc?.report_note||''; $('aiNote').classList.add('hidden'); setReportVisibility(); $('documentModal').classList.remove('hidden'); }
+        function closeModal() { $('documentModal').classList.add('hidden'); }
+        async function handleAction(action,id) { const doc=state.documents.find(item=>Number(item.id)===id); if(!doc)return; if(action==='edit')return openModal(doc); if(action==='delete'){if(!confirm(`Xóa "${doc.title}" khỏi danh mục? Tệp trên Drive vẫn được giữ.`))return; try{await api('delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});toast('Đã xóa khỏi danh mục.');load();}catch(error){toast(error.message,'rose');}return;} const status=action==='complete'?'completed':'in_progress'; try{await api('update_status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,report_status:status})});toast(status==='completed'?'Đã xác nhận hoàn thành báo cáo.':'Đã chuyển sang đang xử lý.');load();}catch(error){toast(error.message,'rose');} }
+        async function extractPdf(file) { if(!window.pdfjsLib) throw new Error('Chưa tải được công cụ đọc PDF. Hãy dán nội dung văn bản thủ công.'); window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; const pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise; const pages=[]; for(let i=1;i<=Math.min(pdf.numPages,12);i++){const page=await pdf.getPage(i);const content=await page.getTextContent();pages.push(content.items.map(item=>item.str).join(' '));} return pages.join('\n'); }
+        async function uploadFiles(documentId) { const files=$('files').files; if(!files.length)return; const form=new FormData(); form.append('document_id',documentId); [...files].forEach(file=>form.append('files[]',file)); const response=await fetch(`${API}?action=upload`,{method:'POST',credentials:'include',body:form}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.error||'Không tải được tệp lên Google Drive.'); }
+        $('documentForm').onsubmit=async event=>{event.preventDefault(); const button=$('saveDocumentBtn'), original=button.innerHTML; button.disabled=true; button.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang lưu...'; try{const data=await api('save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:Number($('documentId').value)||0,direction:$('direction').value,document_number:$('documentNumber').value,title:$('title').value,document_date:$('documentDate').value,document_type:$('documentType').value,organization:$('organization').value,summary_text:$('summaryText').value,source_text:$('sourceText').value,report_required:$('reportRequired').checked,report_due_at:$('reportDueAt').value,report_status:$('reportStatus').value,report_note:$('reportNote').value})}); await uploadFiles(data.document.id); closeModal(); toast('Đã lưu văn bản và tệp đính kèm.'); load();}catch(error){$('formError').textContent=error.message;$('formError').classList.remove('hidden');}finally{button.disabled=false;button.innerHTML=original;}};
+        $('aiSuggestBtn').onclick=async()=>{const source=$('sourceText').value.trim()||`${$('title').value}\n${$('summaryText').value}`.trim(); if(source.length<20){toast('Hãy dán nội dung văn bản hoặc chọn PDF trước.','rose');return;} const button=$('aiSuggestBtn'), original=button.innerHTML; button.disabled=true; button.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-1"></i>AI đang đọc...'; try{const data=await api('ai_suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_text:source})});const item=data.suggestion||{}; if(item.document_number)$('documentNumber').value=item.document_number;if(item.title&&!$('title').value)$('title').value=item.title;if(item.organization)$('organization').value=item.organization;if(item.document_type)$('documentType').value=item.document_type;if(item.summary_text)$('summaryText').value=item.summary_text;if(item.document_date)$('documentDate').value=item.document_date;$('reportRequired').checked=!!item.report_required;if(item.report_due_at)$('reportDueAt').value=item.report_due_at;setReportVisibility();$('aiNote').textContent=`AI ${item.provider||''}: độ tin cậy ${item.confidence||'medium'}${item.note?` · ${item.note}`:''}. Hãy kiểm tra trước khi lưu.`;$('aiNote').classList.remove('hidden');}catch(error){toast(error.message,'rose');}finally{button.disabled=false;button.innerHTML=original;}};
+        $('files').onchange=async event=>{const file=[...event.target.files].find(item=>item.type==='application/pdf'||item.name.toLowerCase().endsWith('.pdf')); if(!file)return; $('aiNote').textContent='Đang trích chữ từ PDF để AI đọc...';$('aiNote').classList.remove('hidden');try{$('sourceText').value=await extractPdf(file);$('aiNote').textContent='Đã trích nội dung PDF. Bấm “AI tự điền” để lấy thông tin văn bản.';}catch(error){$('aiNote').textContent=error.message;}};
+        $('newDocumentBtn').onclick=()=>openModal(); $('closeModalBtn').onclick=closeModal; $('cancelModalBtn').onclick=closeModal; $('reportRequired').onchange=setReportVisibility; $('directionFilter').onchange=renderList; $('statusFilter').onchange=renderList; $('searchInput').oninput=renderList; $('documentModal').onclick=event=>{if(event.target===$('documentModal'))closeModal();}; load();
+    })();
+    </script>
+</body>
+</html>

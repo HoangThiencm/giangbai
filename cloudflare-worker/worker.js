@@ -24,12 +24,33 @@ function authorized(request, env) {
 }
 
 function buildMessages(body) {
-  const mode = body.mode === 'chat' ? 'chat' : 'explain';
+  const mode = body.mode === 'chat' ? 'chat' : (body.mode === 'document' ? 'document' : 'explain');
   const subject = text(body.subject || 'Toán', 80);
   const lessonTitle = text(body.lesson_title || 'Bài học', 180);
   const selectedText = text(body.text);
   const question = text(body.question);
   const lessonContext = text(body.lesson_context, MAX_CONTEXT_CHARS);
+
+  if (mode === 'document') {
+    return [
+      {
+        role: 'system',
+        content: [
+          'Bạn là trợ lý trích xuất văn bản hành chính Việt Nam cho trường học.',
+          'Chỉ dùng dữ kiện có trong văn bản; không bịa số văn bản, ngày hoặc thời hạn.',
+          'Trả về DUY NHẤT một JSON hợp lệ, không Markdown, không lời dẫn.',
+          'Đúng các khóa: document_number, title, organization, document_type, summary_text, document_date, report_required, report_due_at, confidence, note.',
+          'document_date và report_due_at có dạng YYYY-MM-DD hoặc null. report_required là true/false.',
+          'Nếu không thấy hạn báo cáo thì report_required=false và report_due_at=null.',
+          'summary_text tối đa 2 câu ngắn; confidence chỉ low, medium hoặc high.',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: `Trích xuất thông tin từ văn bản sau:\n${selectedText}`,
+      },
+    ];
+  }
 
   const system = [
     'Bạn là trợ lý học Toán THCS bằng tiếng Việt.',
@@ -106,7 +127,7 @@ export default {
       return json({ error: 'Dữ liệu JSON không hợp lệ.' }, 400);
     }
 
-    const mode = body?.mode === 'chat' ? 'chat' : 'explain';
+    const mode = body?.mode === 'chat' ? 'chat' : (body?.mode === 'document' ? 'document' : 'explain');
     if ((mode === 'chat' && !text(body?.question)) || (mode !== 'chat' && !text(body?.text))) {
       return json({ error: 'Thiếu nội dung cần AI trả lời.' }, 422);
     }
@@ -116,7 +137,7 @@ export default {
       const result = await env.AI.run(model, {
         messages: buildMessages(body),
         temperature: 0.25,
-        max_tokens: 360,
+        max_tokens: mode === 'document' ? 520 : 360,
       });
       const answer = extractAnswer(result);
       if (!answer) {
