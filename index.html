@@ -1338,7 +1338,7 @@
                         <span class="tool-tile-glow"></span>
                         <span class="tool-tile-watermark"><i class="fas fa-folder-open"></i></span>
                         <div class="tool-tile-content">
-                            <span class="tool-tile-eyebrow">Hành chính</span>
+                            <span class="tool-tile-eyebrow">Hành chính <span id="teacherDocumentsCardReminder" class="ml-1 hidden rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800"></span></span>
                             <h3 class="tool-tile-title">Quản lý văn bản</h3>
                             <p class="tool-tile-desc">Văn bản đến/đi, hạn báo cáo và tệp hồ sơ trên Google Drive.</p>
                         </div>
@@ -1346,6 +1346,24 @@
                     </a>
                 `);
                 mainToolsGrid.insertAdjacentHTML('beforeend', teacherWorkspaceCards.join(''));
+                const reminderBadge = document.getElementById('teacherDocumentsCardReminder');
+                if (reminderBadge) {
+                    fetch('api/vanban.php?action=list', { credentials: 'include', cache: 'no-store' })
+                        .then(response => response.ok ? response.json() : null)
+                        .then(data => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const count = (data?.documents || []).filter(document => {
+                                if (!Number(document.report_required) || document.effective_status === 'completed' || !document.report_due_at) return false;
+                                const due = new Date(`${document.report_due_at}T00:00:00`);
+                                return !Number.isNaN(due.getTime()) && Math.round((due - today) / 86400000) <= 7;
+                            }).length;
+                            if (!count) return;
+                            reminderBadge.textContent = `${count > 99 ? '99+' : count} cần xử lý`;
+                            reminderBadge.classList.remove('hidden');
+                        })
+                        .catch(() => {});
+                }
             }
 
             if (canViewAiStats) {

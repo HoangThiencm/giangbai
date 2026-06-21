@@ -129,6 +129,18 @@
                 background: #ecfdf5;
                 color: #0f766e;
             }
+            .teacher-document-reminder-badge {
+                min-width: 1.25rem;
+                height: 1.25rem;
+                display: inline-grid;
+                place-items: center;
+                border-radius: 999px;
+                background: #e11d48;
+                padding: 0 0.35rem;
+                font-size: 0.68rem;
+                font-weight: 800;
+                color: #fff;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -166,7 +178,7 @@
         const aiStatsLink = showAiStats
             ? `<a href="theodoi-ai.html" class="${navLinkClass(aiStatsActive)}"><i class="fas fa-robot"></i> Theo dõi AI</a>`
             : '';
-        const documentsLink = `<a href="quanlyvanban.html" class="${navLinkClass(documentsActive)}"><i class="fas fa-folder-open"></i> Quản lý văn bản</a>`;
+        const documentsLink = `<a href="quanlyvanban.html" class="${navLinkClass(documentsActive)}"><i class="fas fa-folder-open"></i> Quản lý văn bản <span id="teacherDocumentReminderBadge" class="teacher-document-reminder-badge hidden" title="Văn bản gần hoặc quá hạn báo cáo"></span></a>`;
 
         return `
             <div class="teacher-workspace-nav">
@@ -198,6 +210,33 @@
         });
     }
 
+    function reminderCount(documents) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return (documents || []).filter(document => {
+            if (!Number(document.report_required) || document.effective_status === 'completed' || !document.report_due_at) return false;
+            const due = new Date(`${document.report_due_at}T00:00:00`);
+            if (Number.isNaN(due.getTime())) return false;
+            return Math.round((due - today) / 86400000) <= 7;
+        }).length;
+    }
+
+    async function updateDocumentReminderBadge() {
+        const badge = document.getElementById('teacherDocumentReminderBadge');
+        if (!badge) return;
+        try {
+            const response = await fetch('api/vanban.php?action=list', { credentials: 'include', cache: 'no-store' });
+            if (!response.ok) return;
+            const data = await response.json();
+            const count = reminderCount(data.documents);
+            if (!count) return;
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.classList.remove('hidden');
+        } catch (_) {
+            // Không làm gián đoạn trang học nếu dịch vụ văn bản tạm thời không phản hồi.
+        }
+    }
+
     function mountTeacherLotrinhNav(options = {}) {
         if (!isTeacher()) return null;
         if (!getAllowedLotrinhPages().length) return null;
@@ -218,6 +257,7 @@
         host.innerHTML = html;
         host.classList.remove('hidden');
         bindPreviewButton(options.subject || window.LOTRINH_SUBJECT || '');
+        void updateDocumentReminderBadge();
         return host;
     }
 
