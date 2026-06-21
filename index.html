@@ -802,7 +802,11 @@
             },
 
             setHfFallbackEnabled: (enabled) => {
-                localStorage.setItem('hf_fallback_enabled', enabled ? 'true' : 'false');
+                if (window.GiangBaiApi) {
+                    GiangBaiApi.setFallbackEnabled(enabled, { silent: true });
+                } else {
+                    localStorage.setItem('hf_fallback_enabled', enabled ? 'true' : 'false');
+                }
                 SystemConfig.renderConfig();
             },
 
@@ -888,7 +892,7 @@
                                 Bật fallback HuggingFace khi hosting lỗi
                             </label>
                             <p class="text-xs text-slate-500 mt-2">URL dự phòng: <code>${url}</code></p>
-                            <p class="text-xs text-slate-500 mt-1">Ưu tiên hosting (api/exam_ai.php, api/tronde.php). Tắt khi đã ổn định hoàn toàn.</p>
+                            <p class="text-xs text-slate-500 mt-1">Hoặc bấm nút <strong>HF dự phòng</strong> trên thanh menu. Tắt = chế độ test chỉ hosting.</p>
                         </div>
                     `;
                 }
@@ -1053,6 +1057,7 @@
                 <span class="nav-chip rounded-full px-3 py-2 text-xs font-semibold">
                     <i class="fas fa-sparkles mr-1 text-indigo-300"></i> Cập nhật đồng bộ
                 </span>
+                <div id="gb-hf-fallback-nav"></div>
                 <button onclick="SystemConfig.openModal()"
                     class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
                     <i class="fas fa-cogs text-slate-500"></i> Cấu hình
@@ -1381,9 +1386,16 @@
         </div>
     </div>
 
+    <script src="hf-fallback-client.js?v=20260622"></script>
     <script src="ai-stats-panel.js?v=20260621-teacher-hub-1"></script>
     <script>
-        SystemConfig.loadHostingFallbackConfig().finally(() => SystemConfig.renderConfig());
+        SystemConfig.loadHostingFallbackConfig().finally(() => {
+            SystemConfig.renderConfig();
+            if (window.GiangBaiApi) {
+                GiangBaiApi.mountFallbackToggle('gb-hf-fallback-nav', { variant: 'navbar' });
+            }
+        });
+        document.addEventListener('giangbai-hf-fallback-change', () => SystemConfig.renderConfig());
 
         (async function setupTeacherLotrinhHub() {
             if (localStorage.getItem('userRole') !== 'teacher') return;

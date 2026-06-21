@@ -14,7 +14,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="hf-fallback-client.js?v=20260621"></script>
+    <script src="hf-fallback-client.js?v=20260622"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -286,6 +286,7 @@
 </head>
 
 <body class="noselect" oncontextmenu="return false;">
+    <div id="gb-hf-fallback-bar"></div>
     <div id="root"></div>
     <div id="react-error"></div>
 
@@ -2377,6 +2378,11 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.GiangBaiApi) GiangBaiApi.mountFallbackToggle('gb-hf-fallback-bar', { compact: true });
+        });
     </script>
 </body>
 

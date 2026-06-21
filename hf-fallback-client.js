@@ -10,6 +10,109 @@
         return true;
     }
 
+    function setFallbackEnabled(enabled, options) {
+        const opts = options || {};
+        localStorage.setItem('hf_fallback_enabled', enabled ? 'true' : 'false');
+        refreshAllFallbackToggles();
+        if (!opts.silent) {
+            document.dispatchEvent(new CustomEvent('giangbai-hf-fallback-change', {
+                detail: { enabled: !!enabled },
+            }));
+        }
+    }
+
+    function getFallbackStatus() {
+        const enabled = isFallbackEnabled();
+        return {
+            enabled,
+            label: enabled ? 'HF dự phòng: Bật' : 'Chỉ hosting (test)',
+            hint: enabled
+                ? 'Hosting lỗi → tự chuyển HuggingFace'
+                : 'Đang test hosting — không qua HuggingFace',
+            mode: enabled ? 'hybrid' : 'hosting-only',
+        };
+    }
+
+    function toggleFallback() {
+        const next = !isFallbackEnabled();
+        const msg = next
+            ? 'Bật fallback HuggingFace?\n\nKhi hosting lỗi, hệ thống tự chuyển sang Space HF.'
+            : 'Tắt fallback HuggingFace?\n\nChế độ kiểm tra: CHỈ hosting. Nếu hosting lỗi sẽ báo lỗi, không chuyển sang HF — dùng để xem hosting có đủ tốt không.';
+        if (!confirm(msg)) return false;
+        setFallbackEnabled(next);
+        return true;
+    }
+
+    function renderToggleHtml(variant) {
+        const st = getFallbackStatus();
+        const on = st.enabled;
+        const compact = variant === 'compact';
+        const navbar = variant === 'navbar';
+
+        const trackOn = 'bg-violet-600';
+        const trackOff = 'bg-emerald-600';
+        const knob = on ? 'translate-x-5' : 'translate-x-0.5';
+
+        if (navbar) {
+            return `
+                <button type="button" data-gb-hf-toggle data-gb-hf-variant="navbar"
+                    title="${st.hint}"
+                    class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm transition ${on ? 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100' : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}">
+                    <span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full ${on ? trackOn : trackOff}">
+                        <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${knob}"></span>
+                    </span>
+                    <span data-gb-hf-label>${st.label}</span>
+                </button>`;
+        }
+
+        return `
+            <div data-gb-hf-toggle-wrap data-gb-hf-variant="${compact ? 'compact' : 'bar'}"
+                class="${compact ? 'flex flex-wrap items-center justify-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs' : 'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm'}">
+                <div class="min-w-0">
+                    <p class="font-bold text-slate-800 ${compact ? 'text-xs' : 'text-sm'}">
+                        <i class="fas fa-flask ${on ? 'text-violet-500' : 'text-emerald-500'}"></i>
+                        Kiểm tra hosting không qua HuggingFace
+                    </p>
+                    <p data-gb-hf-hint class="text-slate-500 ${compact ? 'text-[11px]' : 'text-xs'} mt-0.5">${st.hint}</p>
+                </div>
+                <button type="button" data-gb-hf-toggle
+                    class="inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 font-bold transition ${on ? 'border-violet-200 bg-violet-50 text-violet-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}">
+                    <span class="relative inline-flex h-5 w-9 items-center rounded-full ${on ? trackOn : trackOff}">
+                        <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${knob}"></span>
+                    </span>
+                    <span data-gb-hf-label>${st.label}</span>
+                </button>
+            </div>`;
+    }
+
+    function refreshAllFallbackToggles() {
+        document.querySelectorAll('[data-gb-hf-toggle-root]').forEach((root) => {
+            const variant = root.getAttribute('data-gb-hf-variant') || 'bar';
+            root.innerHTML = renderToggleHtml(variant);
+        });
+    }
+
+    function mountFallbackToggle(containerId, options) {
+        const opts = options || {};
+        const el = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
+        if (!el) return;
+        const variant = opts.variant || (opts.compact ? 'compact' : 'bar');
+        el.setAttribute('data-gb-hf-toggle-root', '1');
+        el.setAttribute('data-gb-hf-variant', variant);
+        el.innerHTML = renderToggleHtml(variant);
+    }
+
+    if (!global.__gbHfToggleBound) {
+        global.__gbHfToggleBound = true;
+        document.addEventListener('click', (e) => {
+            const btn = e.target && e.target.closest ? e.target.closest('[data-gb-hf-toggle]') : null;
+            if (!btn) return;
+            e.preventDefault();
+            toggleFallback();
+        });
+        document.addEventListener('giangbai-hf-fallback-change', () => refreshAllFallbackToggles());
+    }
+
     function hfUrl() {
         return (localStorage.getItem('hf_fallback_url')
             || localStorage.getItem('omr_backend_url')
@@ -166,6 +269,11 @@
     global.GiangBaiApi = {
         HF_DEFAULT,
         isFallbackEnabled,
+        setFallbackEnabled,
+        getFallbackStatus,
+        toggleFallback,
+        mountFallbackToggle,
+        refreshAllFallbackToggles,
         hfUrl,
         hostingApiFile,
         examUrl,
