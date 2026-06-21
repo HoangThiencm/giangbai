@@ -160,6 +160,7 @@
 
     async function fetchWithFallback(hostUrl, hfUrlFull, init, label) {
         const opts = init || {};
+        opts.headers = clientFallbackHeaders(opts.headers);
         let hostRes = null;
         try {
             hostRes = await fetch(hostUrl, opts);
@@ -183,8 +184,15 @@
         return { res, data, source: res.headers.get('X-Giangbai-Source') || (res.url.includes('hf.space') ? 'hf-fallback' : 'hosting') };
     }
 
+    function clientFallbackHeaders(extra) {
+        const headers = Object.assign({}, extra || {});
+        headers['X-Giangbai-Client-Hf-Fallback'] = isFallbackEnabled() ? '1' : '0';
+        return headers;
+    }
+
     async function axiosPostWithFallback(axios, hostUrl, hfUrlFull, body, axiosConfig, label) {
         const cfg = Object.assign({ withCredentials: true }, axiosConfig || {});
+        cfg.headers = clientFallbackHeaders(cfg.headers);
         try {
             const res = await axios.post(hostUrl, body, cfg);
             return { res, source: res.headers?.['x-giangbai-source'] || 'hosting' };
@@ -287,5 +295,6 @@
         axiosGetWithFallback,
         axiosDeleteWithFallback,
         openProgressStream,
+        clientFallbackHeaders,
     };
 })(window);

@@ -17,6 +17,20 @@ function hf_fallback_enabled(): bool
     return true;
 }
 
+function hf_client_allows_server_fallback(): bool
+{
+    $client = strtolower(trim((string)($_SERVER['HTTP_X_GIANGBAI_CLIENT_HF_FALLBACK'] ?? '')));
+    if (in_array($client, ['0', 'false', 'off', 'no'], true)) {
+        return false;
+    }
+    return true;
+}
+
+function hf_should_proxy(): bool
+{
+    return hf_fallback_enabled() && hf_client_allows_server_fallback();
+}
+
 function hf_fallback_base_url(): string
 {
     if (defined('HF_FALLBACK_URL') && is_string(HF_FALLBACK_URL) && trim(HF_FALLBACK_URL) !== '') {
@@ -63,8 +77,12 @@ function hf_proxy_request(string $method, string $path, ?array $jsonBody = null,
 
 function hf_proxy_json_or_respond(string $method, string $path, ?array $jsonBody = null, ?array $multipart = null, int $timeout = 180): void
 {
-    if (!hf_fallback_enabled()) {
-        respond(['error' => 'Hosting xử lý thất bại và fallback HuggingFace đang tắt.'], 502);
+    if (!hf_should_proxy()) {
+        respond([
+            'status' => 'error',
+            'message' => 'Hosting không xử lý được và fallback HuggingFace đang tắt. Bật nút "HF dự phòng" trên menu để thử lại.',
+            'data' => [],
+        ], 502);
     }
 
     $proxy = hf_proxy_request($method, $path, $jsonBody, $multipart, $timeout);
@@ -86,8 +104,8 @@ function hf_proxy_json_or_respond(string $method, string $path, ?array $jsonBody
 
 function hf_proxy_binary_or_respond(string $method, string $path, ?array $multipart = null, int $timeout = 300): void
 {
-    if (!hf_fallback_enabled()) {
-        respond(['error' => 'Hosting xử lý thất bại và fallback HuggingFace đang tắt.'], 502);
+    if (!hf_should_proxy()) {
+        respond(['error' => 'Hosting không xử lý được và fallback HuggingFace đang tắt.'], 502);
     }
 
     $proxy = hf_proxy_request($method, $path, null, $multipart, $timeout);
@@ -176,7 +194,7 @@ function hf_call_gemini_vision(array $apiKeys, string $prompt, string $imageBase
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_TIMEOUT => 120,
+            CURLOPT_TIMEOUT => 150,
         ]);
         $raw = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);

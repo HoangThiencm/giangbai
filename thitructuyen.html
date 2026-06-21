@@ -14,7 +14,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="hf-fallback-client.js?v=20260622"></script>
+    <script src="hf-fallback-client.js?v=20260623"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -1124,6 +1124,25 @@
                 }
             };
 
+            const compressPageImage = (dataUrl, maxWidth = 1400) => new Promise((resolve, reject) => {
+                if (!dataUrl) return reject(new Error('Thiếu ảnh trang PDF.'));
+                const img = new Image();
+                img.onload = () => {
+                    const scale = img.width > maxWidth ? (maxWidth / img.width) : 1;
+                    const w = Math.max(1, Math.round(img.width * scale));
+                    const h = Math.max(1, Math.round(img.height * scale));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return resolve(dataUrl);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.82));
+                };
+                img.onerror = () => reject(new Error('Không đọc được ảnh trang PDF.'));
+                img.src = dataUrl;
+            });
+
             const runAIForPage = async (page) => {
                 const keys = getApiKeys();
                 if (!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ nạp Key.");
@@ -1135,26 +1154,54 @@
                 setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'processing' } : p));
                 setActivePageId(page.id);
 
-                const model = localStorage.getItem('default_gemini_module') || 'gemini-1.5-flash';
+                const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
 
                 try {
-                    const res = await aiPost('normalize_segment', {
-                        image_data: page.image_data,
-                        api_keys: keys,
-                        model: model,
-                        page_id: page.id
-                    }, { timeout: 180000 });
-                    progressStream.close();
+                    const imageData = await compressPageImage(page.image_data);
+                    const { res, source } = await GiangBaiApi.axiosPostWithFallback(
+                        axios,
+                        GiangBaiApi.examAiUrl('normalize_segment'),
+                        GiangBaiApi.hfExamUrl('normalize_segment'),
+                        {
+                            image_data: imageData,
+                            api_keys: keys,
+                            model: model,
+                            page_id: page.id
+                        },
+                        { timeout: 120000 },
+                        'exam-ai'
+                    );
 
-                    if (res.data.status === 'ok') {
-                        const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() }));
-                        setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
-                        setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'done', q_count: newQs.length } : p));
+                    const payload = res.data || {};
+                    const via = source === 'hf-fallback' ? 'HuggingFace' : 'Hosting';
+
+                    if (payload.status !== 'ok') {
+                        throw new Error(payload.message || `Nhận diện thất bại (${via}).`);
+                    }
+
+                    const newQs = (payload.data || []).map((q) => ({ ...q, id: Date.now() + Math.random() }));
+                    setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
+                    setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'done', q_count: newQs.length } : p));
+
+                    if (!newQs.length) {
+                        alert(`AI (${via}) không tìm thấy câu hỏi trên trang này.\n\nThử: Quét vùng thủ công, hoặc bật "HF dự phòng" nếu đang test chỉ hosting.`);
+                    } else if (source === 'hf-fallback') {
+                        console.info(`[exam-ai] Nhận diện qua HuggingFace fallback (${newQs.length} câu).`);
                     }
                 } catch (e) {
-                    progressStream.close();
                     setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'error' } : p));
-                    alert(e.message);
+                    alert(formatApiError(e, e.message || 'Nhận diện AI thất bại.'));
+                } finally {
+                    progressStream.close();
+                    setPages(prev => prev.map(p => {
+                        if (p.id !== page.id || p.status !== 'processing') return p;
+                        return { ...p, status: 'error' };
+                    }));
+                    setPageProgress(prev => {
+                        const next = { ...prev };
+                        delete next[page.id];
+                        return next;
+                    });
                 }
             };
 

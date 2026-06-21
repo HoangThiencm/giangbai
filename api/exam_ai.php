@@ -135,7 +135,9 @@ function exam_ai_process_paper_local(): ?array
 function exam_ai_normalize_segment_local(array $data): ?array
 {
     $apiKeys = hf_load_gemini_keys($data['api_keys'] ?? []);
-    if (empty($apiKeys)) return null;
+    if (empty($apiKeys)) {
+        return ['status' => 'error', 'message' => 'Thiếu Gemini API key. Vào Dashboard → Cấu hình để nạp key.', 'data' => []];
+    }
 
     $model = trim((string)($data['model'] ?? hf_default_gemini_model()));
     $pageId = trim((string)($data['page_id'] ?? ''));
@@ -168,7 +170,12 @@ PROMPT;
     exam_ai_progress_set($pageId, 80);
 
     if (!$vision['ok'] || !is_array($vision['data'])) {
-        return null;
+        exam_ai_progress_set($pageId, 100);
+        return [
+            'status' => 'error',
+            'message' => (string)($vision['error'] ?? 'Gemini Vision không trả về dữ liệu. Thử đổi model hoặc bật fallback HF.'),
+            'data' => [],
+        ];
     }
 
     $merged = [];
