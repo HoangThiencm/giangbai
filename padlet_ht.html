@@ -6,6 +6,8 @@
     <title>Bảng chia sẻ lớp học · GiangBai</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
         body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
         .soft-shadow { box-shadow: 0 18px 55px rgba(15, 23, 42, .10); }
@@ -20,10 +22,42 @@
         .fab-post { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 25; }
         details summary { cursor: pointer; list-style: none; }
         details summary::-webkit-details-marker { display: none; }
+        .board-bg-teal { background: linear-gradient(145deg, #042f2e 0%, #0f766e 45%, #5eead4 100%); }
+        .board-bg-blue { background: linear-gradient(145deg, #172554 0%, #1d4ed8 45%, #93c5fd 100%); }
+        .board-bg-violet { background: linear-gradient(145deg, #2e1065 0%, #6d28d9 45%, #c4b5fd 100%); }
+        .board-bg-rose { background: linear-gradient(145deg, #4c0519 0%, #e11d48 45%, #fda4af 100%); }
+        .board-bg-amber { background: linear-gradient(145deg, #451a03 0%, #d97706 45%, #fcd34d 100%); }
+        .board-bg-slate { background: linear-gradient(145deg, #0f172a 0%, #334155 45%, #94a3b8 100%); }
+        .masonry { column-gap: 1rem; }
+        .masonry > * { break-inside: avoid; margin-bottom: 1rem; }
+        .padlet-card { transition: transform .15s ease, box-shadow .15s ease; }
+        .padlet-card:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(15,23,42,.12); }
+        .add-tile { border: 2px dashed rgba(255,255,255,.45); background: rgba(255,255,255,.12); color: #fff; min-height: 140px; }
+        .add-tile:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.7); }
+        .board-drop-active { outline: 3px dashed rgba(255,255,255,.75); outline-offset: 6px; }
+        .link-preview-card img { max-height: 180px; object-fit: cover; width: 100%; }
+        body.board-view header { background: rgba(255,255,255,.82); }
+        body.board-view { color: #0f172a; }
+        body.manager-view { background: #0d0d0d; color: #f8fafc; }
+        body.manager-view header { background: #141414; border-color: #2a2a2a; }
+        body.manager-view header .text-teal-700 { color: #5eead4 !important; }
+        body.manager-view header strong, body.manager-view header a { color: #f8fafc; }
+        body.manager-view header a.rounded-xl { background: #1f1f1f; border-color: #333; }
+        .template-card { transition: transform .2s ease, box-shadow .2s ease; cursor: pointer; }
+        .template-card:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+        .template-soon { opacity: .45; cursor: not-allowed; }
+        .template-soon:hover { transform: none; box-shadow: none; }
+        .tpl-preview { background: rgba(0,0,0,.22); }
+        .board-bg-emerald { background: linear-gradient(145deg, #064e3b 0%, #059669 45%, #6ee7b7 100%); }
+        .timeline-track { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.4) transparent; }
+        .timeline-track::-webkit-scrollbar { height: 8px; }
+        .timeline-track::-webkit-scrollbar-thumb { background: rgba(255,255,255,.35); border-radius: 99px; }
+        #padletMap { height: min(52vh, 480px); border-radius: 1rem; z-index: 1; }
+        .leaflet-container { font-family: inherit; }
     </style>
 </head>
 <body class="min-h-screen bg-[#f5f7fb] text-slate-900 pb-24 sm:pb-7">
-    <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+    <header id="mainHeader" class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
         <div class="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <a href="index.html" class="flex min-w-0 items-center gap-3">
                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-700 text-white shadow-lg shadow-teal-700/20">
@@ -50,6 +84,30 @@
         </div>
     </main>
 
+    <!-- Modal tạo nhanh từ mẫu (giống Padlet) -->
+    <div id="quickModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-6">
+        <div class="mx-auto my-8 max-w-md rounded-[26px] bg-white soft-shadow">
+            <div class="border-b border-slate-200 px-5 py-4">
+                <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-teal-700">Tạo bảng mới</p>
+                <h2 class="text-xl font-black">Mẫu: <span id="quickTemplateName">Tường</span></h2>
+            </div>
+            <form class="space-y-4 p-5" onsubmit="quickCreate(event)">
+                <label>
+                    <span class="label">Tên bảng *</span>
+                    <input id="quickTitle" class="field" required maxlength="220" placeholder="Ví dụ: Sản phẩm học tập lớp 7A">
+                </label>
+                <label>
+                    <span class="label">Lời nhắn (tùy chọn)</span>
+                    <textarea id="quickDescription" class="field" rows="2" placeholder="Hướng dẫn cho học sinh..."></textarea>
+                </label>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('quickModal')" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold">Hủy</button>
+                    <button type="submit" id="quickSubmit" class="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-extrabold text-white">Tạo và mở bảng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal tạo/sửa bảng -->
     <div id="boardModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
         <div class="mx-auto my-3 max-w-2xl rounded-[26px] bg-white soft-shadow">
@@ -74,18 +132,40 @@
                 </label>
 
                 <div>
-                    <span class="label">Kiểu bảng</span>
+                    <span class="label">Kiểu bảng (giống Padlet)</span>
                     <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="layoutWallBtn" onclick="setBoardLayout('wall')" class="rounded-xl border-2 border-teal-600 bg-teal-50 p-3 text-left text-sm font-bold text-teal-900">
-                            <i class="fas fa-th-large mr-1"></i> Tường bài
-                            <p class="mt-1 text-xs font-normal text-teal-700/80">Một khu vực chung, dễ dùng nhất</p>
+                        <button type="button" id="layoutWallBtn" onclick="setBoardLayout('wall')" class="layout-pick rounded-xl border-2 border-teal-600 bg-teal-50 p-3 text-left text-sm font-bold text-teal-900">
+                            <i class="fas fa-grip mr-1"></i> Tường (Wall)
+                            <p class="mt-1 text-xs font-normal opacity-80">Thẻ xếp tự do như Padlet</p>
                         </button>
-                        <button type="button" id="layoutColumnsBtn" onclick="setBoardLayout('columns')" class="rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700">
-                            <i class="fas fa-columns mr-1"></i> Theo cột
-                            <p class="mt-1 text-xs font-normal text-slate-500">Ý tưởng, câu hỏi, sản phẩm...</p>
+                        <button type="button" id="layoutStreamBtn" onclick="setBoardLayout('stream')" class="layout-pick rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700">
+                            <i class="fas fa-align-left mr-1"></i> Dòng (Stream)
+                            <p class="mt-1 text-xs font-normal text-slate-500">Một cột bài đăng</p>
+                        </button>
+                        <button type="button" id="layoutGridBtn" onclick="setBoardLayout('grid')" class="layout-pick rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700">
+                            <i class="fas fa-border-all mr-1"></i> Lưới (Grid)
+                            <p class="mt-1 text-xs font-normal text-slate-500">Thẻ vuông đều nhau</p>
+                        </button>
+                        <button type="button" id="layoutColumnsBtn" onclick="setBoardLayout('columns')" class="layout-pick rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700">
+                            <i class="fas fa-columns mr-1"></i> Kệ (Shelf)
+                            <p class="mt-1 text-xs font-normal text-slate-500">Nhiều cột Kanban</p>
+                        </button>
+                        <button type="button" id="layoutTimelineBtn" onclick="setBoardLayout('timeline')" class="layout-pick rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700">
+                            <i class="fas fa-clock-rotate-left mr-1"></i> Dòng thời gian
+                            <p class="mt-1 text-xs font-normal text-slate-500">Theo ngày đăng</p>
+                        </button>
+                        <button type="button" id="layoutMapBtn" onclick="setBoardLayout('map')" class="layout-pick rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700">
+                            <i class="fas fa-map-location-dot mr-1"></i> Bản đồ
+                            <p class="mt-1 text-xs font-normal text-slate-500">Gắn địa điểm</p>
                         </button>
                     </div>
                     <input id="boardLayout" type="hidden" value="wall">
+                </div>
+
+                <div>
+                    <span class="label">Màu nền bảng</span>
+                    <div id="themePicker" class="flex flex-wrap gap-2"></div>
+                    <input id="boardBgTheme" type="hidden" value="teal">
                 </div>
 
                 <div id="columnTemplateBox" class="hidden rounded-2xl bg-slate-50 p-4">
@@ -190,8 +270,18 @@
                     <select id="postColumn" class="field"></select>
                 </label>
 
+                <div id="mapLocationWrap" class="hidden space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <span class="label">Địa điểm trên bản đồ</span>
+                    <input id="postLocation" class="field" placeholder="Ví dụ: Hà Nội, Trường THCS...">
+                    <button type="button" onclick="useMyLocation()" class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800">
+                        <i class="fas fa-location-crosshairs mr-1"></i>Dùng vị trí hiện tại
+                    </button>
+                    <input id="postMapLat" type="hidden">
+                    <input id="postMapLng" type="hidden">
+                </div>
+
                 <label>
-                    <span class="label">Nội dung *</span>
+                    <span class="label">Nội dung</span>
                     <textarea id="postBody" class="field" rows="6" placeholder="Chia sẻ ý tưởng, câu hỏi, sản phẩm hoặc lời nhắn..."></textarea>
                 </label>
 
@@ -201,9 +291,12 @@
                     </summary>
                     <div class="space-y-3 border-t border-slate-200 px-4 py-4">
                         <label>
-                            <span class="label">Liên kết web</span>
-                            <input id="postLink" class="field" type="url" placeholder="https://...">
+                            <span class="label">Liên kết web (YouTube, ảnh, trang web...)</span>
+                            <input id="postLink" class="field" type="url" placeholder="https://..." oninput="debounceLinkPreview()">
                         </label>
+                        <div id="linkPreviewBox" class="hidden overflow-hidden rounded-xl border border-slate-200 link-preview-card"></div>
+                        <input id="postLinkTitle" type="hidden">
+                        <input id="postLinkImage" type="hidden">
                         <div>
                             <span class="label">Màu thẻ</span>
                             <div id="colorChoices" class="flex flex-wrap gap-2"></div>
@@ -290,10 +383,37 @@
             ]
         };
 
+        const BOARD_THEMES = {
+            teal: 'Xanh ngọc', blue: 'Xanh dương', violet: 'Tím',
+            rose: 'Hồng đào', amber: 'Vàng ấm', slate: 'Xám đậm', emerald: 'Xanh lá'
+        };
+
+        const LAYOUT_LABELS = {
+            wall: 'Tường', stream: 'Dòng', grid: 'Bảng',
+            columns: 'Cột', timeline: 'Dòng thời gian', map: 'Bản đồ'
+        };
+
+        const PADLET_TEMPLATES = [
+            { key: 'wall', name: 'Tường', desc: 'Thu thập ảnh, video và link', layout: 'wall', theme: 'rose', gradient: 'from-rose-600 to-rose-950', preview: 'wall' },
+            { key: 'columns', name: 'Cột', desc: 'Sắp xếp theo chủ đề', layout: 'columns', theme: 'amber', gradient: 'from-amber-600 to-amber-950', preview: 'columns', columnPreset: 'ideas' },
+            { key: 'grid', name: 'Bảng', desc: 'Lưới thẻ gọn gàng', layout: 'grid', theme: 'amber', gradient: 'from-yellow-700 to-stone-900', preview: 'grid' },
+            { key: 'timeline', name: 'Dòng thời gian', desc: 'Theo trình tự thời gian', layout: 'timeline', theme: 'emerald', gradient: 'from-emerald-600 to-emerald-950', preview: 'timeline' },
+            { key: 'map', name: 'Bản đồ', desc: 'Gắn bài theo địa điểm', layout: 'map', theme: 'violet', gradient: 'from-violet-600 to-violet-950', preview: 'map' }
+        ];
+
+        const COMING_SOON = [
+            { name: 'Bảng trắng', icon: 'fa-shapes' },
+            { name: 'Sơ đồ tư duy', icon: 'fa-diagram-project' },
+            { name: 'Thuyết trình', icon: 'fa-list-ol' },
+            { name: 'Venn', icon: 'fa-circle-nodes' },
+            { name: 'Câu hỏi ngày', icon: 'fa-circle-question' }
+        ];
+
         let state = {
             boards: [], board: null, columns: [], posts: [], user: null,
             canManage: false, classes: [], editColumns: [],
-            activeCommentPost: null, postColor: 'white'
+            activeCommentPost: null, postColor: 'white', linkPreviewTimer: null,
+            pendingTemplate: null, mapInstance: null
         };
 
         const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
@@ -353,125 +473,196 @@
                 const data = await api(`${API}?action=manager`);
                 state.boards = data.boards || [];
                 state.user = data.user;
+                document.body.className = 'manager-view min-h-screen pb-16';
                 renderManager();
             } catch {
                 location.href = 'login.html';
             }
         }
 
-        function renderManager() {
-            document.getElementById('topActions').innerHTML = `
-                <button type="button" onclick="openBoardEditor()" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-teal-700/20">
-                    <i class="fas fa-plus mr-1"></i><span class="hidden sm:inline">Tạo bảng</span><span class="sm:hidden">Tạo</span>
-                </button>`;
+        function templatePreviewHtml(type) {
+            const boxes = (n) => Array.from({ length: n }, (_, i) =>
+                `<div class="rounded-sm" style="background:rgba(255,255,255,${0.22 + (i % 3) * 0.12});min-height:${28 + (i % 4) * 12}px"></div>`).join('');
+            if (type === 'wall') return `<div class="grid grid-cols-3 gap-1.5 p-3 h-full">${boxes(6)}</div>`;
+            if (type === 'columns') return `<div class="grid grid-cols-3 gap-2 p-3 h-full">${[0, 1, 2].map(() => `<div class="space-y-1">${boxes(2)}</div>`).join('')}</div>`;
+            if (type === 'grid') return `<div class="grid grid-cols-4 gap-1 p-3 h-full">${boxes(8)}</div>`;
+            if (type === 'timeline') return `<div class="flex items-end gap-2 p-3 h-full">${[0, 1, 2, 3].map((i) => `<div class="w-8 rounded-t" style="background:rgba(255,255,255,${0.3 + i * 0.15});height:${40 + i * 18}%"></div>`).join('')}</div>`;
+            if (type === 'map') return `<div class="relative h-full p-3"><div class="absolute inset-3 rounded-lg bg-white/10"></div><div class="absolute left-6 top-8 h-3 w-3 rounded-full bg-rose-300"></div><div class="absolute right-10 bottom-8 h-3 w-3 rounded-full bg-sky-300"></div></div>`;
+            return `<div class="grid grid-cols-3 gap-1.5 p-3 h-full">${boxes(6)}</div>`;
+        }
 
+        function renderTemplateGallery() {
+            return `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                ${PADLET_TEMPLATES.map((t) => `
+                    <button type="button" onclick="pickTemplate('${t.key}')" class="template-card overflow-hidden rounded-2xl bg-gradient-to-br ${t.gradient} p-3 text-left">
+                        <div class="tpl-preview mb-3 aspect-[4/3] overflow-hidden rounded-xl">${templatePreviewHtml(t.preview)}</div>
+                        <h3 class="text-lg font-black text-white">${esc(t.name)}</h3>
+                        <p class="mt-1 text-xs text-white/75">${esc(t.desc)}</p>
+                    </button>`).join('')}
+            </div>`;
+        }
+
+        function renderComingSoon() {
+            return `<div class="mt-10">
+                <h2 class="text-lg font-black text-white/90">Sắp ra mắt</h2>
+                <p class="mt-1 text-sm text-white/50">Bảng trắng, sơ đồ tư duy, thuyết trình...</p>
+                <div class="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    ${COMING_SOON.map((t) => `
+                        <div class="template-soon rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-center">
+                            <div class="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-white/10 text-2xl text-white/60"><i class="fas ${t.icon}"></i></div>
+                            <p class="mt-3 text-sm font-bold text-white/70">${esc(t.name)}</p>
+                        </div>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        function boardCardTheme(b) {
+            const tpl = PADLET_TEMPLATES.find((t) => t.layout === b.layout_type);
+            return b.bg_theme || tpl?.theme || 'teal';
+        }
+
+        function renderLibrary() {
+            if (!state.boards.length) {
+                return `<div class="rounded-2xl border border-dashed border-white/15 bg-white/5 p-12 text-center">
+                    <i class="fas fa-folder-open text-4xl text-white/30"></i>
+                    <p class="mt-4 text-white/60">Chưa có bảng — chọn mẫu phía trên để tạo.</p>
+                </div>`;
+            }
+            return `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                ${state.boards.map((b) => `
+                    <article class="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a]">
+                        <a href="${boardUrl(b.public_code)}" class="relative block aspect-[5/3] board-bg-${boardCardTheme(b)}">
+                            <span class="absolute left-3 top-3 rounded-full bg-black/35 px-2.5 py-1 text-[10px] font-extrabold text-white">${LAYOUT_LABELS[b.layout_type] || 'Bảng'}</span>
+                            ${b.pending_count > 0 ? `<span class="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-extrabold text-white">${b.pending_count} chờ</span>` : ''}
+                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-10">
+                                <h3 class="truncate font-black text-white">${esc(b.title)}</h3>
+                                <p class="mt-1 text-[11px] font-bold text-white/70">${b.post_count} bài · #${esc(b.public_code)}</p>
+                            </div>
+                        </a>
+                        <div class="flex flex-wrap gap-2 p-3">
+                            <button type="button" onclick="copyLink('${b.public_code}')" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-link mr-1"></i>Link</button>
+                            <button type="button" onclick="openBoardEditor(${b.id})" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-pen mr-1"></i>Sửa</button>
+                            <button type="button" onclick="deleteBoard(${b.id})" class="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-300"><i class="fas fa-trash-can mr-1"></i>Xóa</button>
+                        </div>
+                    </article>`).join('')}
+            </div>`;
+        }
+
+        function renderManager() {
+            const name = state.user?.full_name?.split(' ').pop() || state.user?.full_name || 'Giáo viên';
             const totalPending = state.boards.reduce((s, b) => s + (b.pending_count || 0), 0);
 
+            document.getElementById('topActions').innerHTML = `
+                <a href="index.html" class="hidden rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-bold text-white sm:inline-flex">
+                    <i class="fas fa-home mr-1"></i>Trang chủ GV
+                </a>`;
+
             document.getElementById('app').innerHTML = `
-                <section class="overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 via-teal-950 to-teal-700 p-6 text-white soft-shadow sm:p-8">
-                    <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-extrabold text-teal-100">Không gian tương tác</span>
-                    <h1 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Bảng chia sẻ lớp học</h1>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-teal-50/80">
-                        Tạo bảng ý tưởng, sản phẩm, hỏi đáp. Gửi link cho học sinh — bạn duyệt bài trước khi hiển thị.
-                    </p>
-                </section>
-
-                <section class="mt-6 grid gap-3 sm:grid-cols-3">
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 soft-shadow">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-sm font-black text-teal-800">1</div>
-                        <h3 class="mt-3 font-black">Tạo bảng</h3>
-                        <p class="mt-1 text-sm text-slate-500">Đặt tên, chọn kiểu tường hoặc cột. Mặc định đã bật duyệt bài.</p>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 soft-shadow">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-sm font-black text-teal-800">2</div>
-                        <h3 class="mt-3 font-black">Gửi link</h3>
-                        <p class="mt-1 text-sm text-slate-500">Bấm <strong>Sao chép link</strong> và chia sẻ qua Zalo, nhóm lớp.</p>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 soft-shadow">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-sm font-black text-teal-800">3</div>
-                        <h3 class="mt-3 font-black">Duyệt bài</h3>
-                        <p class="mt-1 text-sm text-slate-500">Mở bảng, bấm <strong>Duyệt</strong> trên thẻ chờ. ${totalPending ? `<span class="text-amber-600 font-bold">${totalPending} bài đang chờ.</span>` : ''}</p>
-                    </div>
-                </section>
-
-                <section class="mt-7">
-                    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div class="mb-8">
+                    <p class="text-sm text-white/50">Xin chào <strong class="text-white">${esc(name)}</strong></p>
+                    <div class="mt-4 flex flex-wrap items-end justify-between gap-4">
                         <div>
-                            <h2 class="text-xl font-black">Các bảng của bạn</h2>
-                            <p class="mt-1 text-sm text-slate-500">${state.boards.length} bảng · ${totalPending} bài chờ duyệt</p>
+                            <h1 class="text-3xl font-black tracking-tight text-white sm:text-4xl">Tạo một bảng</h1>
+                            <p class="mt-2 max-w-2xl text-sm text-white/55">Chọn mẫu giống Padlet — tạo xong mở bảng ngay, gửi link cho lớp.</p>
+                        </div>
+                        ${totalPending ? `<span class="rounded-full bg-amber-500/20 px-4 py-2 text-sm font-bold text-amber-200"><i class="fas fa-clock mr-1"></i>${totalPending} bài chờ duyệt</span>` : ''}
+                    </div>
+                </div>
+
+                <section>
+                    <h2 class="mb-1 text-sm font-extrabold uppercase tracking-wider text-white/40">Bố cục</h2>
+                    <p class="mb-4 text-sm text-white/50">Tạo bảng để thu thập và sắp xếp nội dung</p>
+                    ${renderTemplateGallery()}
+                    ${renderComingSoon()}
+                </section>
+
+                <section class="mt-12">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-black text-white">Thư viện của bạn</h2>
+                            <p class="mt-1 text-sm text-white/45">${state.boards.length} bảng</p>
                         </div>
                     </div>
-                    ${state.boards.length ? renderBoardList() : renderEmptyBoardList()}
+                    ${renderLibrary()}
                 </section>`;
         }
 
-        function renderBoardList() {
-            return `<div class="space-y-3">${state.boards.map((b) => `
-                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap gap-2">
-                                <span class="rounded-full px-2.5 py-1 text-[11px] font-extrabold ${b.status === 'open' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
-                                    ${b.status === 'open' ? 'Đang mở' : 'Đã đóng'}
-                                </span>
-                                ${b.moderation_enabled && b.pending_count > 0
-                                    ? `<span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-extrabold text-amber-700">
-                                        <i class="fas fa-clock mr-1"></i>${b.pending_count} chờ duyệt
-                                       </span>` : ''}
-                            </div>
-                            <h3 class="mt-2 text-lg font-black">${esc(b.title)}</h3>
-                            <p class="mt-1 text-xs font-bold text-slate-500">
-                                ${b.access_mode === 'class' ? `Lớp ${esc(b.target_class || '')}` : 'Mở qua link'}
-                                · ${b.layout_type === 'columns' ? 'Theo cột' : 'Tường bài'}
-                                · Mã #${esc(b.public_code)}
-                                · ${b.post_count} bài đăng
-                            </p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" onclick="copyLink('${b.public_code}')" class="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-bold text-teal-800">
-                                <i class="fas fa-link"></i>Sao chép link
-                            </button>
-                            <a href="${boardUrl(b.public_code)}" class="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white">
-                                <i class="fas fa-arrow-up-right-from-square"></i>Mở bảng
-                            </a>
-                            <button type="button" onclick="openBoardEditor(${b.id})" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">
-                                <i class="fas fa-pen"></i>Sửa
-                            </button>
-                            <button type="button" onclick="deleteBoard(${b.id})" class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700">
-                                <i class="fas fa-trash-can"></i>Xóa
-                            </button>
-                        </div>
-                    </div>
-                </article>`).join('')}</div>`;
+        function pickTemplate(key) {
+            const tpl = PADLET_TEMPLATES.find((t) => t.key === key);
+            if (!tpl) return;
+            state.pendingTemplate = tpl;
+            document.getElementById('quickTemplateName').textContent = tpl.name;
+            document.getElementById('quickTitle').value = '';
+            document.getElementById('quickDescription').value = '';
+            document.getElementById('quickModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('quickTitle').focus(), 80);
         }
 
-        function renderEmptyBoardList() {
-            return `<div class="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
-                <i class="fas fa-table-cells-large text-4xl text-teal-600"></i>
-                <h3 class="mt-4 text-lg font-black">Chưa có bảng nào</h3>
-                <p class="mt-1 text-sm text-slate-500">Tạo bảng đầu tiên — chỉ cần đặt tên là dùng được ngay.</p>
-                <button type="button" onclick="openBoardEditor()" class="mt-5 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white">
-                    <i class="fas fa-plus mr-1"></i>Tạo bảng đầu tiên
-                </button>
-            </div>`;
+        async function quickCreate(e) {
+            e.preventDefault();
+            const tpl = state.pendingTemplate;
+            if (!tpl) return;
+            const btn = document.getElementById('quickSubmit');
+            btn.disabled = true;
+            btn.textContent = 'Đang tạo...';
+            const columns = tpl.layout === 'columns'
+                ? (COLUMN_TEMPLATES[tpl.columnPreset] || COLUMN_TEMPLATES.ideas)
+                : [{ title: 'Bài đăng', color: 'teal' }];
+            try {
+                const data = await api(`${API}?action=save-board`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 0,
+                        title: document.getElementById('quickTitle').value.trim(),
+                        description: document.getElementById('quickDescription').value,
+                        layout_type: tpl.layout,
+                        bg_theme: tpl.theme,
+                        access_mode: 'public',
+                        target_class: '',
+                        status: 'open',
+                        academic_year: schoolYear(),
+                        moderation_enabled: true,
+                        comments_enabled: true,
+                        reactions_enabled: true,
+                        columns
+                    })
+                });
+                closeModal('quickModal');
+                toast('Đã tạo bảng');
+                location.href = boardUrl(data.board.public_code);
+            } catch (err) {
+                toast(err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Tạo và mở bảng';
+            }
+        }
+
+        function renderThemePicker(selected = 'teal') {
+            document.getElementById('themePicker').innerHTML = Object.entries(BOARD_THEMES).map(([key, label]) => `
+                <button type="button" onclick="pickBoardTheme('${key}')"
+                    class="theme-swatch h-10 w-10 rounded-full border-2 ${key === selected ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'} board-bg-${key}"
+                    title="${label}"></button>`).join('');
+            document.getElementById('boardBgTheme').value = selected;
+        }
+
+        function pickBoardTheme(theme) {
+            document.getElementById('boardBgTheme').value = theme;
+            renderThemePicker(theme);
         }
 
         function setBoardLayout(type) {
             document.getElementById('boardLayout').value = type;
-            const wallBtn = document.getElementById('layoutWallBtn');
-            const colBtn = document.getElementById('layoutColumnsBtn');
+            const active = 'rounded-xl border-2 border-teal-600 bg-teal-50 p-3 text-left text-sm font-bold text-teal-900';
+            const idle = 'rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700';
+            ['wall', 'stream', 'grid', 'columns', 'timeline', 'map'].forEach((key) => {
+                const btn = document.getElementById(`layout${key.charAt(0).toUpperCase()}${key.slice(1)}Btn`);
+                if (btn) btn.className = `layout-pick ${key === type ? active : idle}`;
+            });
             const colBox = document.getElementById('columnTemplateBox');
-            const isWall = type === 'wall';
-
-            wallBtn.className = isWall
-                ? 'rounded-xl border-2 border-teal-600 bg-teal-50 p-3 text-left text-sm font-bold text-teal-900'
-                : 'rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700';
-            colBtn.className = !isWall
-                ? 'rounded-xl border-2 border-teal-600 bg-teal-50 p-3 text-left text-sm font-bold text-teal-900'
-                : 'rounded-xl border-2 border-slate-200 bg-white p-3 text-left text-sm font-bold text-slate-700';
-
-            colBox.classList.toggle('hidden', isWall);
-            if (!isWall && state.editColumns.length <= 1) {
+            colBox.classList.toggle('hidden', type !== 'columns');
+            if (type === 'columns' && state.editColumns.length <= 1) {
                 applyColumnTemplate('ideas');
             }
         }
@@ -550,6 +741,7 @@
 
             const layout = board?.layout_type || 'wall';
             setBoardLayout(layout);
+            renderThemePicker(board?.bg_theme || 'teal');
             state.editColumns = columns.length
                 ? columns.map((c) => ({ id: c.id, title: c.title, color: c.color }))
                 : [{ title: 'Bài đăng', color: 'teal' }];
@@ -566,6 +758,7 @@
                 title: document.getElementById('boardTitle').value.trim(),
                 description: document.getElementById('boardDescription').value,
                 layout_type: layout,
+                bg_theme: document.getElementById('boardBgTheme').value,
                 academic_year: document.getElementById('boardAcademicYear').value,
                 access_mode: document.querySelector('input[name="boardAccess"]:checked').value,
                 target_class: document.getElementById('boardClass').value,
@@ -573,9 +766,9 @@
                 moderation_enabled: document.getElementById('boardModeration').checked,
                 comments_enabled: document.getElementById('boardComments').checked,
                 reactions_enabled: document.getElementById('boardReactions').checked,
-                columns: layout === 'wall'
-                    ? [{ title: 'Bài đăng', color: 'teal' }]
-                    : state.editColumns
+                columns: layout === 'columns'
+                    ? state.editColumns
+                    : [{ title: 'Bài đăng', color: 'teal' }]
             };
             try {
                 await api(`${API}?action=save-board`, {
@@ -634,7 +827,40 @@
             return state.posts.filter((p) => p.status === 'pending').length;
         }
 
-        function postCard(p) {
+        function youtubeId(url) {
+            const m = String(url || '').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i);
+            return m ? m[1] : null;
+        }
+
+        function isImageFile(file) {
+            return /^image\//i.test(file?.mime_type || '') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file?.original_name || '');
+        }
+
+        function postMediaHtml(p) {
+            const yt = p.link_url ? youtubeId(p.link_url) : null;
+            if (yt) {
+                return `<div class="-mx-4 -mt-4 mb-3 overflow-hidden rounded-t-2xl">
+                    <div class="aspect-video bg-black">
+                        <iframe class="h-full w-full" src="https://www.youtube.com/embed/${esc(yt)}" title="YouTube" loading="lazy" allowfullscreen></iframe>
+                    </div></div>`;
+            }
+            const imageFile = (p.files || []).find(isImageFile);
+            if (imageFile) {
+                return `<button type="button" onclick="previewFile('${esc(imageFile.drive_file_id)}','${esc(imageFile.original_name)}')"
+                    class="-mx-4 -mt-4 mb-3 block w-[calc(100%+2rem)] overflow-hidden rounded-t-2xl">
+                    <img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(imageFile.drive_file_id)}&sz=w800" alt="" class="max-h-52 w-full object-cover" loading="lazy">
+                </button>`;
+            }
+            if (p.link_image) {
+                const href = p.link_url ? esc(p.link_url) : '#';
+                return `<a href="${href}" target="_blank" rel="noopener" class="-mx-4 -mt-4 mb-3 block overflow-hidden rounded-t-2xl">
+                    <img src="${esc(p.link_image)}" alt="" class="max-h-52 w-full object-cover" loading="lazy" onerror="this.parentElement.remove()">
+                </a>`;
+            }
+            return '';
+        }
+
+        function postCard(p, compact = false) {
             const b = state.board;
             const isPending = p.status === 'pending';
             const statusBadge = state.canManage && p.status !== 'published'
@@ -657,7 +883,7 @@
                     </button>
                 </div>` : '';
 
-            const files = (p.files || []).map((f) => `
+            const otherFiles = (p.files || []).filter((f) => !isImageFile(f)).map((f) => `
                 <button type="button" onclick="previewFile('${esc(f.drive_file_id)}','${esc(f.original_name)}')"
                     class="rounded-lg bg-white/75 px-2.5 py-1.5 text-left text-xs font-bold text-slate-700">
                     <i class="fas fa-paperclip mr-1 text-teal-700"></i>${esc(f.original_name)}
@@ -678,122 +904,233 @@
                         </button>` : ''}
                 </div>` : '';
 
+            const linkBlock = p.link_url && !youtubeId(p.link_url) ? `
+                <a class="mt-2 block truncate text-xs font-bold text-teal-800 underline" href="${esc(p.link_url)}" target="_blank" rel="noopener">
+                    <i class="fas fa-link mr-1"></i>${esc(p.link_title || p.link_url)}
+                </a>` : '';
+
+            const compactClass = compact ? ' min-h-[180px]' : '';
+
             return `<article draggable="${state.canManage ? 'true' : 'false'}" data-post="${p.id}"
-                data-status="${p.status}" class="post-${esc(p.card_color)} mb-3 rounded-2xl border border-slate-900/10 p-4 shadow-sm ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <div class="font-black">${esc(p.author_name)}</div>
-                        <div class="mt-0.5 text-[11px] font-bold text-slate-500">
-                            ${esc([p.author_role, p.author_group].filter(Boolean).join(' · '))}${p.author_role || p.author_group ? ' · ' : ''}${esc(fmt(p.created_at))}
-                        </div>
+                data-status="${p.status}" class="padlet-card post-${esc(p.card_color)} overflow-hidden rounded-2xl border border-slate-900/10 p-4 shadow-sm${compactClass} ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
+                ${postMediaHtml(p)}
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        ${p.location_label ? `<div class="mb-2 inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-1 text-[11px] font-bold text-teal-800"><i class="fas fa-location-dot"></i>${esc(p.location_label)}</div>` : ''}
+                        ${p.link_title && !p.body ? `<div class="font-black leading-snug">${esc(p.link_title)}</div>` : ''}
+                        ${p.body ? `<p class="whitespace-pre-line text-sm leading-6 text-slate-700 ${p.link_title ? 'mt-2' : ''}">${esc(p.body)}</p>` : ''}
+                        ${linkBlock}
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex shrink-0 flex-col items-end gap-1">
                         ${p.pinned ? '<span class="text-amber-600"><i class="fas fa-thumbtack"></i></span>' : ''}
                         ${statusBadge}
                     </div>
                 </div>
-                ${p.body ? `<p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">${esc(p.body)}</p>` : ''}
-                ${p.link_url ? `<a class="mt-3 block truncate rounded-xl bg-white/70 px-3 py-2 text-xs font-bold text-teal-800 underline" href="${esc(p.link_url)}" target="_blank" rel="noopener">
-                    <i class="fas fa-link mr-1"></i>${esc(p.link_url)}
-                </a>` : ''}
-                ${files ? `<div class="mt-3 flex flex-wrap gap-2">${files}</div>` : ''}
+                ${otherFiles ? `<div class="mt-3 flex flex-wrap gap-2">${otherFiles}</div>` : ''}
                 ${social}
+                <div class="mt-3 border-t border-slate-900/10 pt-2 text-[11px] font-bold text-slate-500">
+                    ${esc(p.author_name)}${p.author_group ? ` · ${esc(p.author_group)}` : ''} · ${esc(fmt(p.created_at))}
+                </div>
                 ${actions}
             </article>`;
+        }
+
+        function addCardTile() {
+            if (state.board?.status !== 'open') return '';
+            return `<button type="button" onclick="openPostModal()" class="add-tile padlet-card flex w-full flex-col items-center justify-center rounded-2xl p-6 text-center text-sm font-extrabold">
+                <i class="fas fa-plus mb-2 text-2xl"></i>Thêm thẻ mới
+            </button>`;
+        }
+
+        function renderPostsArea(b, cols, byCol, isOpen) {
+            const layout = b.layout_type || 'wall';
+            const colId = cols[0]?.id || state.columns[0]?.id || 0;
+            const posts = byCol[colId] || [];
+
+            if (layout === 'columns') {
+                const gridClass = `lg:grid-cols-${Math.min(Math.max(cols.length, 1), 4)}`;
+                return `<div id="padletColumns" class="grid gap-4 ${gridClass}">
+                    ${cols.map((c) => {
+                        const colPosts = byCol[c.id] || [];
+                        return `<div class="min-w-0 rounded-2xl border-t-4 column-${esc(c.color)} bg-white/90 p-3 shadow-sm backdrop-blur" data-column="${c.id}">
+                            <div class="mb-3 flex items-center justify-between px-1">
+                                <h2 class="font-black text-slate-800">${esc(c.title)}</h2>
+                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">${colPosts.length}</span>
+                            </div>
+                            <div class="min-h-20 space-y-3" data-post-list="${c.id}">
+                                ${colPosts.map((p) => postCard(p)).join('')}
+                                ${isOpen ? addCardTile() : ''}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }
+
+            if (layout === 'stream') {
+                return `<div id="padletColumns" class="mx-auto max-w-2xl space-y-3" data-post-list="${colId}">
+                    ${posts.map((p) => postCard(p)).join('')}
+                    ${isOpen ? addCardTile() : ''}
+                </div>`;
+            }
+
+            if (layout === 'grid') {
+                return `<div id="padletColumns" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" data-post-list="${colId}">
+                    ${posts.map((p) => postCard(p, true)).join('')}
+                    ${isOpen ? `<div class="col-span-1">${addCardTile()}</div>` : ''}
+                </div>`;
+            }
+
+            if (layout === 'timeline') {
+                const sorted = [...posts].sort((a, b) => new Date(String(a.created_at).replace(' ', 'T')) - new Date(String(b.created_at).replace(' ', 'T')));
+                return `<div id="padletColumns" class="timeline-track overflow-x-auto" data-post-list="${colId}">
+                    <div class="flex min-w-max items-start gap-0 pb-2">
+                        ${sorted.map((p) => `
+                            <div class="flex w-72 shrink-0 flex-col items-center px-2">
+                                <span class="rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white">${esc(fmt(p.created_at))}</span>
+                                <div class="my-2 h-10 w-px bg-white/35"></div>
+                                <div class="w-full">${postCard(p)}</div>
+                            </div>`).join('')}
+                        ${isOpen ? `<div class="flex w-56 shrink-0 items-center px-2">${addCardTile()}</div>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            if (layout === 'map') {
+                return `<div id="padletColumns" data-post-list="${colId}">
+                    <div id="padletMap" class="mb-4 border border-white/20 shadow-xl"></div>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        ${posts.map((p) => postCard(p)).join('')}
+                        ${isOpen ? addCardTile() : ''}
+                    </div>
+                </div>`;
+            }
+
+            return `<div id="padletColumns" class="masonry columns-1 sm:columns-2 lg:columns-3 xl:columns-4" data-post-list="${colId}">
+                ${posts.map((p) => postCard(p)).join('')}
+                ${isOpen ? addCardTile() : ''}
+            </div>`;
+        }
+
+        function initMapBoard() {
+            if (typeof L === 'undefined') return;
+            const el = document.getElementById('padletMap');
+            if (!el) return;
+            if (state.mapInstance) {
+                state.mapInstance.remove();
+                state.mapInstance = null;
+            }
+            const geoPosts = state.posts.filter((p) => p.map_lat != null && p.map_lng != null);
+            const center = geoPosts.length
+                ? [parseFloat(geoPosts[0].map_lat), parseFloat(geoPosts[0].map_lng)]
+                : [21.0285, 105.8542];
+            const zoom = geoPosts.length > 1 ? 6 : (geoPosts.length ? 11 : 5);
+            state.mapInstance = L.map(el).setView(center, zoom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap'
+            }).addTo(state.mapInstance);
+            const bounds = [];
+            geoPosts.forEach((p) => {
+                const lat = parseFloat(p.map_lat);
+                const lng = parseFloat(p.map_lng);
+                if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                bounds.push([lat, lng]);
+                const label = esc(p.location_label || p.author_name || 'Bài đăng');
+                const snippet = esc((p.body || p.link_title || '').slice(0, 100));
+                L.marker([lat, lng]).addTo(state.mapInstance)
+                    .bindPopup(`<strong>${label}</strong>${snippet ? `<br>${snippet}` : ''}`);
+            });
+            if (bounds.length > 1) state.mapInstance.fitBounds(bounds, { padding: [36, 36] });
+            setTimeout(() => state.mapInstance?.invalidateSize(), 120);
+        }
+
+        function useMyLocation() {
+            if (!navigator.geolocation) {
+                toast('Trình duyệt không hỗ trợ định vị');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition((pos) => {
+                document.getElementById('postMapLat').value = pos.coords.latitude;
+                document.getElementById('postMapLng').value = pos.coords.longitude;
+                if (!document.getElementById('postLocation').value.trim()) {
+                    document.getElementById('postLocation').value = 'Vị trí hiện tại';
+                }
+                toast('Đã lấy vị trí của bạn');
+            }, () => toast('Không lấy được vị trí — hãy nhập tên địa điểm'));
         }
 
         function renderBoard() {
             const b = state.board;
             const isOpen = b.status === 'open';
             const pending = pendingCount();
+            const theme = b.bg_theme || 'teal';
 
             document.title = `${b.title} · Bảng chia sẻ`;
+            document.body.className = `min-h-screen board-view board-bg-${theme} text-slate-900 pb-24 sm:pb-7`;
 
             document.getElementById('topActions').innerHTML = `
                 ${state.canManage ? `
-                    <a href="padlet_ht.html" class="hidden rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 sm:inline-flex">
+                    <a href="padlet_ht.html" class="hidden rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm font-bold text-slate-700 sm:inline-flex">
                         <i class="fas fa-list mr-1"></i>Danh sách bảng
                     </a>` : ''}
-                <button type="button" onclick="copyLink('${b.public_code}')" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-extrabold text-white">
-                    <i class="fas fa-link mr-1"></i><span class="hidden sm:inline">Chia sẻ link</span><span class="sm:hidden">Link</span>
+                <button type="button" onclick="copyLink('${b.public_code}')" class="rounded-xl bg-white/95 px-4 py-2.5 text-sm font-extrabold text-teal-800 shadow">
+                    <i class="fas fa-link mr-1"></i><span class="hidden sm:inline">Chia sẻ</span><span class="sm:hidden">Link</span>
                 </button>`;
 
             const byCol = {};
             state.columns.forEach((c) => { byCol[c.id] = []; });
             state.posts.forEach((p) => { (byCol[p.column_id] ??= []).push(p); });
 
-            const cols = b.layout_type === 'wall'
-                ? [{ id: state.columns[0]?.id || 0, title: 'Bài đăng', color: 'teal' }]
-                : state.columns;
-
-            const gridClass = b.layout_type === 'columns'
-                ? `lg:grid-cols-${Math.min(Math.max(cols.length, 1), 4)}`
-                : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3';
+            const cols = b.layout_type === 'columns'
+                ? state.columns
+                : [{ id: state.columns[0]?.id || 0, title: 'Bài đăng', color: 'teal' }];
+            state.mapInstance = null;
 
             document.getElementById('app').innerHTML = `
-                <section class="overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 via-teal-950 to-teal-700 p-6 text-white soft-shadow sm:p-8">
+                <section class="rounded-[28px] bg-white/15 p-6 text-white shadow-lg backdrop-blur-md sm:p-8">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
                             <div class="flex flex-wrap gap-2">
-                                <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-extrabold">
+                                <span class="rounded-full bg-black/20 px-3 py-1 text-xs font-extrabold">${LAYOUT_LABELS[b.layout_type] || 'Tường'}</span>
+                                <span class="rounded-full bg-black/20 px-3 py-1 text-xs font-extrabold">
                                     ${b.access_mode === 'class' ? `Lớp ${esc(b.target_class || '')}` : 'Mở qua link'}
                                 </span>
-                                ${!isOpen ? '<span class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-extrabold text-rose-100">Đã đóng</span>' : ''}
+                                ${!isOpen ? '<span class="rounded-full bg-rose-500/40 px-3 py-1 text-xs font-extrabold">Đã đóng</span>' : ''}
                             </div>
                             <h1 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">${esc(b.title)}</h1>
-                            <p class="mt-2 max-w-3xl whitespace-pre-line text-sm leading-6 text-teal-50/80">
-                                ${esc(b.description || 'Cùng chia sẻ ý tưởng và sản phẩm học tập.')}
+                            <p class="mt-2 max-w-3xl whitespace-pre-line text-sm leading-6 text-white/85">
+                                ${esc(b.description || 'Nhấn + hoặc thả tệp để đăng — giống Padlet.')}
                             </p>
                         </div>
                         ${isOpen ? `
                             <button type="button" onclick="openPostModal()" class="hidden rounded-2xl bg-white px-5 py-3 text-sm font-black text-teal-800 shadow-lg sm:inline-flex">
-                                <i class="fas fa-plus mr-1"></i>Đăng bài
+                                <i class="fas fa-plus mr-1"></i>Thêm thẻ
                             </button>` : ''}
                     </div>
                 </section>
 
                 ${state.canManage && b.moderation_enabled && pending > 0 ? `
-                    <div id="pendingBanner" class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <div id="pendingBanner" class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-sm text-amber-900">
                         <span><i class="fas fa-shield-halved mr-2"></i><strong>${pending} bài</strong> đang chờ duyệt — chỉ bạn nhìn thấy.</span>
                         <button type="button" onclick="scrollToPending()" class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white">Xem ngay</button>
-                    </div>` : state.canManage && b.moderation_enabled ? `
-                    <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                        <i class="fas fa-shield-halved mr-2 text-teal-700"></i>Chế độ duyệt bài đang bật. Bài mới sẽ chờ bạn duyệt trước khi hiện với mọi người.
                     </div>` : ''}
 
                 ${!state.user && isOpen ? `
-                    <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                        <i class="fas fa-info-circle mr-2 text-teal-700"></i>Chưa đăng nhập? Nhập họ tên khi đăng bài. Đã có tài khoản? <a href="login.html" class="font-bold text-teal-700 underline">Đăng nhập</a>
+                    <div class="mt-4 rounded-2xl border border-white/30 bg-white/90 px-4 py-3 text-sm text-slate-600">
+                        <i class="fas fa-info-circle mr-2 text-teal-700"></i>Gõ nội dung hoặc dán link YouTube/ảnh. <a href="login.html" class="font-bold text-teal-700 underline">Đăng nhập</a> để tự điền tên.
                     </div>` : ''}
 
-                <section class="mt-6">
-                    <div id="padletColumns" class="grid gap-4 ${gridClass}">
-                        ${cols.map((c) => {
-                            const posts = byCol[c.id] || [];
-                            const isEmpty = !posts.length;
-                            return `<div class="min-w-0 rounded-2xl border-t-4 column-${esc(c.color)} bg-slate-100/80 p-3" data-column="${c.id}">
-                                <div class="mb-3 flex items-center justify-between px-1">
-                                    <h2 class="font-black">${esc(c.title)}</h2>
-                                    <span class="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-slate-500">${posts.length}</span>
-                                </div>
-                                <div class="min-h-20" data-post-list="${c.id}">
-                                    ${isEmpty ? `<p class="rounded-xl bg-white/60 px-3 py-6 text-center text-xs text-slate-500">Chưa có bài — bấm <strong>+</strong> để đăng.</p>` : posts.map(postCard).join('')}
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
+                <section id="boardDropZone" class="mt-6 rounded-[28px] p-1">
+                    ${renderPostsArea(b, cols, byCol, isOpen)}
                 </section>`;
 
             const fab = document.getElementById('fabPost');
-            if (isOpen) {
-                fab.classList.remove('hidden');
-                fab.classList.add('flex');
-            } else {
-                fab.classList.add('hidden');
-                fab.classList.remove('flex');
-            }
+            fab.classList.toggle('hidden', !isOpen);
+            fab.classList.toggle('flex', isOpen);
 
             if (state.canManage) enableDrag();
+            if (isOpen) enableBoardDrop();
+            if (b.layout_type === 'map') setTimeout(initMapBoard, 80);
         }
 
         function scrollToPending() {
@@ -802,10 +1139,99 @@
             else toast('Không còn bài chờ duyệt');
         }
 
+        function debounceLinkPreview() {
+            clearTimeout(state.linkPreviewTimer);
+            state.linkPreviewTimer = setTimeout(fetchLinkPreview, 500);
+        }
+
+        async function fetchLinkPreview() {
+            const url = document.getElementById('postLink').value.trim();
+            const box = document.getElementById('linkPreviewBox');
+            if (!url) {
+                box.classList.add('hidden');
+                box.innerHTML = '';
+                document.getElementById('postLinkTitle').value = '';
+                document.getElementById('postLinkImage').value = '';
+                return;
+            }
+            try {
+                const data = await api(`${API}?action=link-preview&url=${encodeURIComponent(url)}`);
+                const p = data.preview || {};
+                document.getElementById('postLinkTitle').value = p.title || '';
+                document.getElementById('postLinkImage').value = p.image || '';
+                if (p.image || p.title) {
+                    box.innerHTML = `${p.image ? `<img src="${esc(p.image)}" alt="">` : ''}
+                        <div class="bg-slate-50 p-3 text-sm font-bold text-slate-700">${esc(p.title || url)}</div>`;
+                    box.classList.remove('hidden');
+                } else {
+                    box.classList.add('hidden');
+                }
+            } catch {
+                box.classList.add('hidden');
+            }
+        }
+
+        function enableBoardDrop() {
+            const zone = document.getElementById('boardDropZone');
+            if (!zone) return;
+
+            ['dragenter', 'dragover'].forEach((evt) => {
+                zone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    zone.classList.add('board-drop-active');
+                });
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('board-drop-active'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('board-drop-active');
+                const files = [...(e.dataTransfer?.files || [])];
+                if (!files.length) return;
+                openPostModal();
+                const input = document.getElementById('postFiles');
+                const dt = new DataTransfer();
+                files.slice(0, 5).forEach((f) => dt.items.add(f));
+                input.files = dt.files;
+            });
+        }
+
+        if (!window.padletPasteReady) {
+            window.padletPasteReady = true;
+            document.addEventListener('paste', (e) => {
+                if (!state.board || state.board.status !== 'open') return;
+                if (!document.getElementById('postModal').classList.contains('hidden')) return;
+                const text = e.clipboardData?.getData('text')?.trim() || '';
+                const file = [...(e.clipboardData?.files || [])][0];
+                if (file) {
+                    e.preventDefault();
+                    openPostModal();
+                    const input = document.getElementById('postFiles');
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                    return;
+                }
+                if (text && /^https?:\/\//i.test(text)) {
+                    e.preventDefault();
+                    openPostModal();
+                    document.getElementById('postLink').value = text;
+                    fetchLinkPreview();
+                }
+            });
+        }
+
         function openPostModal() {
             const b = state.board;
             document.getElementById('postForm').reset();
             document.getElementById('postError').classList.add('hidden');
+            document.getElementById('linkPreviewBox').classList.add('hidden');
+            document.getElementById('linkPreviewBox').innerHTML = '';
+            document.getElementById('postLinkTitle').value = '';
+            document.getElementById('postLinkImage').value = '';
+            document.getElementById('postLocation').value = '';
+            document.getElementById('postMapLat').value = '';
+            document.getElementById('postMapLng').value = '';
+            document.getElementById('mapLocationWrap').classList.toggle('hidden', state.board?.layout_type !== 'map');
 
             const loggedIn = !!state.user;
             document.getElementById('guestIdentity').classList.toggle('hidden', loggedIn);
@@ -847,6 +1273,11 @@
             fd.append('column_id', document.getElementById('postColumn').value);
             fd.append('body', document.getElementById('postBody').value);
             fd.append('link_url', document.getElementById('postLink').value);
+            fd.append('link_title', document.getElementById('postLinkTitle').value);
+            fd.append('link_image', document.getElementById('postLinkImage').value);
+            fd.append('location_label', document.getElementById('postLocation').value);
+            fd.append('map_lat', document.getElementById('postMapLat').value);
+            fd.append('map_lng', document.getElementById('postMapLng').value);
             fd.append('card_color', state.postColor);
             fd.append('author_name', document.getElementById('postAuthorName').value);
             fd.append('author_role', document.getElementById('postAuthorRole').value);
@@ -991,6 +1422,7 @@
         }
 
         /* ── Khởi chạy ── */
+        renderThemePicker('teal');
         if (boardCode) {
             loadBoard();
             setInterval(() => { if (!document.hidden) loadBoard(); }, 45000);
