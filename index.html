@@ -438,6 +438,32 @@
             background: rgba(45, 212, 191, 0.38);
         }
 
+        .tool-tile--lotrinh {
+            background: linear-gradient(145deg, #064e3b 0%, #0f766e 52%, #14b8a6 100%);
+            box-shadow: 0 14px 36px rgba(13, 148, 136, 0.22);
+        }
+
+        .tool-tile--lotrinh .tool-tile-glow {
+            width: 160px;
+            height: 160px;
+            right: -28px;
+            top: -45px;
+            background: rgba(94, 234, 212, 0.42);
+        }
+
+        .tool-tile--documents {
+            background: linear-gradient(145deg, #1e3a5f 0%, #2563eb 52%, #38bdf8 100%);
+            box-shadow: 0 14px 36px rgba(37, 99, 235, 0.22);
+        }
+
+        .tool-tile--documents .tool-tile-glow {
+            width: 160px;
+            height: 160px;
+            left: -28px;
+            bottom: -48px;
+            background: rgba(125, 211, 252, 0.42);
+        }
+
         .tool-tile--colored:hover {
             box-shadow: 0 20px 44px rgba(15, 23, 42, 0.18);
         }
@@ -896,12 +922,12 @@
                 <div id="guideContent" class="accordion-content bg-white px-5 pb-5 pt-4">
                     <div class="grid grid-cols-1 gap-6 text-sm text-slate-600 md:grid-cols-2">
                         <div>
-                            <h4 class="mb-2 font-bold text-slate-900">1. Cấu hình AI (Bắt buộc)</h4>
-                            <p class="mb-2">Mỗi công cụ AI có nút <b>Cấu hình AI</b> riêng trên trang (Thi trực tuyến, Ma trận đề, Trộn đề…):</p>
+                            <h4 class="mb-2 font-bold text-slate-900">1. AI do Admin quản lý</h4>
+                            <p class="mb-2">API key và model được Admin cấu hình tập trung, rồi tự đồng bộ đến các công cụ:</p>
                             <ul class="list-disc space-y-1 pl-5">
                                 <li><b>Gemini Keys:</b> Nhận diện ảnh, sinh đề, vẽ hình.</li>
                                 <li><b>Mistral OCR:</b> Quét PDF ra văn bản cực nhanh.</li>
-                                <li><b>Groq / Hugging Face:</b> Dự phòng khi Gemini quá tải.</li>
+                                <li><b>Groq / Hugging Face:</b> Dự phòng khi dịch vụ chính quá tải hoặc lỗi.</li>
                             </ul>
                         </div>
                         <div>
@@ -1197,20 +1223,7 @@
                 ? `Lớp phụ trách: <strong class="text-white">${managedClass}</strong>`
                 : 'Chưa gán lớp phụ trách — liên hệ admin nếu cần theo dõi tiến độ theo lớp.';
 
-            const defaultDesignUrl = lotrinhPages[0]?.url || 'lotrinhtoan6.html';
             const actionCards = [];
-            if (teacherTabs.design) {
-                actionCards.push(`
-                    <a href="${defaultDesignUrl}" class="lotrinh-action-card primary">
-                        <span class="lotrinh-action-icon"><i class="fas fa-pen-ruler"></i></span>
-                        <span>
-                            <div class="lotrinh-action-title">Soạn bài lộ trình</div>
-                            <div class="lotrinh-action-desc">Lý thuyết, ví dụ, video, luyện tập theo từng bài.</div>
-                        </span>
-                        <i class="fas fa-arrow-right ml-auto text-teal-700/70"></i>
-                    </a>
-                `);
-            }
             if (teacherTabs.progress_stats) {
                 actionCards.push(`
                     <a href="thongketientrinh.html" class="lotrinh-action-card stats">
@@ -1223,16 +1236,6 @@
                     </a>
                 `);
             }
-            actionCards.push(`
-                <a href="quanlyvanban.html" class="lotrinh-action-card primary">
-                    <span class="lotrinh-action-icon"><i class="fas fa-folder-open"></i></span>
-                    <span>
-                        <div class="lotrinh-action-title">Quản lý văn bản</div>
-                        <div class="lotrinh-action-desc">Văn bản đến/đi, hạn báo cáo và tệp hồ sơ trên Google Drive.</div>
-                    </span>
-                    <i class="fas fa-arrow-right ml-auto text-teal-700/70"></i>
-                </a>
-            `);
             const canViewAiStats = teacherTabs.ai_stats && allowedSet.has('theodoiai');
             if (canViewAiStats) {
                 actionCards.push(`
@@ -1247,32 +1250,13 @@
                 `);
             }
 
-            const enabledCount = [teacherTabs.design, teacherTabs.progress_stats, true, canViewAiStats].filter(Boolean).length;
+            const enabledCount = [teacherTabs.progress_stats, canViewAiStats].filter(Boolean).length;
             const introParts = [];
-            if (teacherTabs.design) introParts.push('<strong class="text-white">soạn bài</strong>');
             if (teacherTabs.progress_stats) introParts.push('<strong class="text-white">theo dõi tiến độ</strong> học sinh');
-            introParts.push('<strong class="text-white">quản lý văn bản</strong>');
             if (canViewAiStats) introParts.push('<strong class="text-white">theo dõi AI</strong> lộ trình');
             const introText = introParts.length
                 ? `${enabledCount} việc chính: ${introParts.join(', ').replace(/, ([^,]*)$/, ' và $1')}.`
                 : 'Liên hệ admin nếu cần mở thêm chức năng lộ trình.';
-
-            const gradeTiles = teacherTabs.design ? lotrinhPages.map(page => `
-                <a href="${page.url}" class="grade-tile" title="Soạn bài ${page.label}">
-                    <span class="grade-tile-number">${page.grade}</span>
-                    <span class="grade-tile-label">Soạn ${page.label}</span>
-                </a>
-            `).join('') : '';
-
-            const gradeSection = teacherTabs.design ? `
-                    <div class="mt-5 border-t border-white/10 pt-5">
-                        <div class="mb-3 flex items-center justify-between gap-3">
-                            <h3 class="text-sm font-extrabold uppercase tracking-[0.12em] text-teal-100/90">Chọn khối soạn bài</h3>
-                            <span class="text-xs font-semibold text-teal-100/70">${lotrinhPages.length} lộ trình được mở</span>
-                        </div>
-                        <div class="grade-tile-grid">${gradeTiles}</div>
-                    </div>
-            ` : '';
 
             const aiStatsSection = canViewAiStats ? `
                     <div class="mt-5 border-t border-white/10 pt-5">
@@ -1315,9 +1299,43 @@
                         </div>
                     </div>
                     ${aiStatsSection}
-                    ${gradeSection}
                 </div>
             `;
+
+            // Hai tác vụ thao tác được đặt cùng các công cụ phía dưới; phần đầu chỉ
+            // giữ hai việc theo dõi thường ngày của giáo viên.
+            const mainToolsGrid = document.getElementById('mainToolsGrid');
+            if (mainToolsGrid) {
+                const teacherWorkspaceCards = [];
+                if (teacherTabs.design) {
+                    const defaultDesignUrl = lotrinhPages[0]?.url || 'lotrinhtoan6.html';
+                    teacherWorkspaceCards.push(`
+                        <a href="${defaultDesignUrl}" data-tool="teacher-lotrinh-design" class="tool-tile tool-tile--colored tool-tile--lotrinh">
+                            <span class="tool-tile-glow"></span>
+                            <span class="tool-tile-watermark"><i class="fas fa-pen-ruler"></i></span>
+                            <div class="tool-tile-content">
+                                <span class="tool-tile-eyebrow">Lộ trình Toán</span>
+                                <h3 class="tool-tile-title">Soạn bài lộ trình</h3>
+                                <p class="tool-tile-desc">Lý thuyết, ví dụ, video và luyện tập theo từng bài.</p>
+                            </div>
+                            <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                        </a>
+                    `);
+                }
+                teacherWorkspaceCards.push(`
+                    <a href="quanlyvanban.html" data-tool="teacher-documents" class="tool-tile tool-tile--colored tool-tile--documents">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-folder-open"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Hành chính</span>
+                            <h3 class="tool-tile-title">Quản lý văn bản</h3>
+                            <p class="tool-tile-desc">Văn bản đến/đi, hạn báo cáo và tệp hồ sơ trên Google Drive.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+                `);
+                mainToolsGrid.insertAdjacentHTML('beforeend', teacherWorkspaceCards.join(''));
+            }
 
             if (canViewAiStats) {
                 const refreshAi = () => window.loadAiStats?.(true, {

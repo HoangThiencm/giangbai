@@ -158,6 +158,20 @@
                 const res = await fetch('global_config.json', { cache: 'no-store' });
                 if (!res.ok) return;
                 const cfg = await res.json();
+                // Admin là nguồn cấu hình chung. Đồng bộ ở đây để khi mở thẳng
+                // một công cụ, giáo viên không cần ghé qua trang chủ trước.
+                if (Array.isArray(cfg.gemini_keys)) {
+                    localStorage.setItem(LS.gemini, JSON.stringify(cfg.gemini_keys.filter(Boolean)));
+                }
+                if (cfg.gemini_model) localStorage.setItem(LS.geminiModel, String(cfg.gemini_model));
+                if (Array.isArray(cfg.groq_keys)) {
+                    localStorage.setItem(LS.groq, JSON.stringify(cfg.groq_keys.filter(Boolean)));
+                }
+                if (cfg.groq_model) localStorage.setItem(LS.groqModel, String(cfg.groq_model));
+                if (Array.isArray(cfg.mistral_keys)) {
+                    localStorage.setItem(LS.mistral, JSON.stringify(cfg.mistral_keys.filter(Boolean)));
+                }
+                if (cfg.mistral_ocr_model) localStorage.setItem(LS.mistralModel, String(cfg.mistral_ocr_model));
                 if (cfg.hf_fallback_url) {
                     localStorage.setItem(LS.hfUrl, String(cfg.hf_fallback_url).replace(/\/$/, ''));
                 }
@@ -314,13 +328,14 @@
             const opts = options || {};
             const host = document.getElementById(containerId);
             if (!host) return;
+            const isTeacher = localStorage.getItem('userRole') === 'teacher';
             host.className = (opts.className || 'flex flex-wrap items-center justify-end gap-2 px-3 py-2') + (host.className ? ` ${host.className}` : '');
             host.innerHTML = `
-                <button type="button" id="${containerId}-cfg-btn" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+                ${isTeacher ? '' : `<button type="button" id="${containerId}-cfg-btn" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50">
                     <i class="fas fa-sliders-h text-indigo-500"></i> Cấu hình AI
-                </button>
+                </button>`}
                 <span id="${containerId}-hf-slot"></span>`;
-            document.getElementById(`${containerId}-cfg-btn`).addEventListener('click', () => AiDesignConfig.openModal());
+            document.getElementById(`${containerId}-cfg-btn`)?.addEventListener('click', () => AiDesignConfig.openModal());
             if (global.GiangBaiApi) {
                 GiangBaiApi.mountFallbackToggle(`${containerId}-hf-slot`, { compact: true, ...(opts.hfToggle || {}) });
             }

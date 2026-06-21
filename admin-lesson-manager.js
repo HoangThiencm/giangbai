@@ -747,6 +747,20 @@
                     </label>
                     </div>
 
+                    <label class="block text-sm font-bold text-slate-700">Bài tập tự luyện
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Cùng cấu trúc ví dụ — mỗi dạng một khối (Enter 2 lần). Học sinh làm bài rồi đính kèm tệp lên Google Drive. Không cần <code class="font-mono text-[11px]">[AI]</code> trừ khi muốn nút giải thích.</span>
+                        ${richToolbarHtml('lessonSelfPractice')}
+                        <textarea id="lessonSelfPractice" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    </label>
+
+                    <section id="selfPracticeSubmissionsPanel" class="hidden rounded-xl border border-sky-200 bg-sky-50 p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h4 class="text-sm font-bold text-sky-900"><i class="fas fa-cloud-arrow-up mr-1"></i> Bài nộp tự luyện (Google Drive)</h4>
+                            <button type="button" id="reloadSelfPracticeSubmissionsBtn" class="rounded border border-sky-300 bg-white px-3 py-1.5 text-xs font-bold text-sky-800 hover:bg-sky-100">Tải lại</button>
+                        </div>
+                        <div id="selfPracticeSubmissionsBody" class="mt-3 text-sm text-sky-900">Chưa có bài nộp.</div>
+                    </section>
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <label class="block text-sm font-bold text-slate-700">Bài tập tự luận
                             <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Đề bài | Đáp án mẫu (chỉ số) | Gợi ý. Học sinh chỉ nhập kết quả là số, không nhập lời giải hay chữ.</span>
@@ -817,9 +831,11 @@
             renderSubjectPills();
             suggestSlug();
         });
-        ['lessonGoalInput', 'lessonTheory', 'lessonExamples', 'lessonEssay', 'lessonFill', 'lessonDrag', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
-            el(id).addEventListener('input', renderPreview);
+        ['lessonGoalInput', 'lessonTheory', 'lessonExamples', 'lessonSelfPractice', 'lessonEssay', 'lessonFill', 'lessonDrag', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
+            const field = el(id);
+            if (field) field.addEventListener('input', renderPreview);
         });
+        el('reloadSelfPracticeSubmissionsBtn')?.addEventListener('click', () => loadSelfPracticeSubmissions());
         setupEditorFieldShortcuts();
         setupRichToolbars();
         injectLessonEditorStyles();
@@ -971,6 +987,7 @@
         el('lessonGoalInput').value = lesson.goal || lesson.goal_text || '';
         el('lessonTheory').value = formatTheoryBlocks(lesson.theory);
         el('lessonExamples').value = formatExamples(lesson.examples);
+        if (el('lessonSelfPractice')) el('lessonSelfPractice').value = formatExamples(lesson.self_practice || []);
         el('lessonEssay').value = formatEssayExercises(lesson.essay_exercises);
         el('lessonFill').value = formatFillExercises(lesson.fill_exercises);
         el('lessonDrag').value = formatDragExercises(lesson.drag_exercises);
@@ -980,6 +997,67 @@
         el('lessonQuestions').value = formatQuestions(lesson.questions);
         renderSubjectPills();
         renderPreview();
+        loadSelfPracticeSubmissions();
+    }
+
+    async function loadSelfPracticeSubmissions() {
+        const panel = el('selfPracticeSubmissionsPanel');
+        const body = el('selfPracticeSubmissionsBody');
+        if (!panel || !body) return;
+        if (!currentLessonId) {
+            panel.classList.add('hidden');
+            return;
+        }
+        panel.classList.remove('hidden');
+        body.innerHTML = '<span class="text-slate-500"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải bài nộp...</span>';
+        try {
+            const res = await fetch(`api/lesson_self_practice.php?action=list&lesson_id=${encodeURIComponent(currentLessonId)}`, {
+                credentials: 'include',
+                cache: 'no-store'
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Không tải được bài nộp.');
+            const submissions = Array.isArray(data.submissions) ? data.submissions : [];
+            if (!submissions.length) {
+                body.innerHTML = '<p class="text-sky-800">Chưa có học sinh nộp bài tập tự luyện.</p>';
+                return;
+            }
+            body.innerHTML = `
+                <div class="overflow-x-auto rounded-lg border border-sky-200 bg-white">
+                    <table class="min-w-full text-left text-xs">
+                        <thead class="bg-sky-100 font-bold uppercase text-sky-800">
+                            <tr>
+                                <th class="px-3 py-2">Thời gian</th>
+                                <th class="px-3 py-2">Học sinh</th>
+                                <th class="px-3 py-2">Dạng</th>
+                                <th class="px-3 py-2">Tệp</th>
+                                <th class="px-3 py-2">Ghi chú</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${submissions.map(row => `
+                                <tr class="border-t border-sky-100">
+                                    <td class="px-3 py-2 whitespace-nowrap">${String(row.submitted_at || '').replace('T', ' ').slice(0, 16)}</td>
+                                    <td class="px-3 py-2">
+                                        <div class="font-semibold">${escapeHtml(row.student_name || '')}</div>
+                                        <div class="text-sky-700">${escapeHtml(row.class_name || '')}</div>
+                                    </td>
+                                    <td class="px-3 py-2">${escapeHtml(row.item_title || ('Dạng ' + ((row.item_index || 0) + 1)))}</td>
+                                    <td class="px-3 py-2">
+                                        ${(row.files || []).map(file => `
+                                            <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="block font-bold text-sky-800 underline">${escapeHtml(file.original_name)}</a>
+                                        `).join('') || '—'}
+                                    </td>
+                                    <td class="px-3 py-2 text-slate-600">${escapeHtml(row.note || '')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } catch (err) {
+            body.innerHTML = `<p class="text-rose-700">${escapeHtml(err.message || 'Không tải được bài nộp.')}</p>`;
+        }
     }
 
     function fillSeed() {
@@ -995,6 +1073,7 @@
             index === 1 ? { text, ai: true } : text
         )));
         el('lessonExamples').value = formatExamples(defaults.examples);
+        if (el('lessonSelfPractice')) el('lessonSelfPractice').value = '';
         el('lessonEssay').value = 'Viết tập hợp A gồm các số tự nhiên nhỏ hơn 4 | A={0,1,2,3} | Các số tự nhiên bắt đầu từ 0.';
         el('lessonFill').value = 'Nếu A={1,2,3} thì 2 ___ A | thuộc > không thuộc > ∈ | thuộc | 2 là phần tử của A.';
         el('lessonDrag').value = 'Nối khái niệm | 1 » 2 » 3 | một » hai » ba | 0-0,1-1,2-2 | Ghép đúng từng cặp.';
@@ -1049,6 +1128,7 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn · ${blocks.filter(block => block.ai).length} có AI`; })()}</div></div>
                 <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
+                <div><div class="text-xs text-slate-500">Tự luyện</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
                 <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
                 <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${essayCount + fillCount + dragCount + questionCount}</div></div>
             </div>
@@ -1071,6 +1151,7 @@
             goal_text: el('lessonGoalInput').value.trim(),
             theory: parseTheoryBlocks(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
+            self_practice: parseExamples(el('lessonSelfPractice')?.value || ''),
             essay_exercises: parseEssayExercises(el('lessonEssay').value),
             fill_exercises: parseFillExercises(el('lessonFill').value),
             drag_exercises: parseDragExercises(el('lessonDrag').value),

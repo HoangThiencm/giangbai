@@ -75,6 +75,7 @@ function lesson_row_to_payload(array $row): array
         'goal' => $row['goal_text'] ?? '',
         'theory' => parse_json_or_default($row['theory_json'] ?? null, []),
         'examples' => parse_json_or_default($row['examples_json'] ?? null, []),
+        'self_practice' => parse_json_or_default($row['self_practice_json'] ?? null, []),
         'questions' => parse_json_or_default($row['questions_json'] ?? null, []),
         'essay_exercises' => parse_json_or_default($row['essay_json'] ?? null, []),
         'fill_exercises' => parse_json_or_default($row['fill_json'] ?? null, []),
@@ -137,6 +138,8 @@ function ensure_lesson_schema(PDO $pdo): void
             'goal_text TEXT DEFAULT NULL',
             'theory_json LONGTEXT DEFAULT NULL',
             'examples_json LONGTEXT DEFAULT NULL',
+            'self_practice_json LONGTEXT DEFAULT NULL',
+            'self_practice_drive_folder_id VARCHAR(160) DEFAULT NULL',
             'questions_json LONGTEXT DEFAULT NULL',
             'essay_json LONGTEXT DEFAULT NULL',
             'fill_json LONGTEXT DEFAULT NULL',
@@ -368,6 +371,7 @@ if ($method === 'POST' && $action === 'save_content') {
         'goal_text' => trim($data['goal_text'] ?? ''),
         'theory_json' => json_encode($data['theory'] ?? [], JSON_UNESCAPED_UNICODE),
         'examples_json' => json_encode($data['examples'] ?? [], JSON_UNESCAPED_UNICODE),
+        'self_practice_json' => json_encode($data['self_practice'] ?? [], JSON_UNESCAPED_UNICODE),
         'questions_json' => json_encode($data['questions'] ?? [], JSON_UNESCAPED_UNICODE),
         'essay_json' => json_encode($data['essay_exercises'] ?? [], JSON_UNESCAPED_UNICODE),
         'fill_json' => json_encode($data['fill_exercises'] ?? [], JSON_UNESCAPED_UNICODE),
@@ -389,7 +393,7 @@ if ($method === 'POST' && $action === 'save_content') {
         }
         $update = $pdo->prepare('
             UPDATE lessons
-            SET subject = ?, chapter = ?, title = ?, slug = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            SET subject = ?, chapter = ?, title = ?, slug = ?, goal_text = ?, theory_json = ?, examples_json = ?, self_practice_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
             WHERE id = ?
         ');
         $update->execute([
@@ -400,6 +404,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['goal_text'],
             $payload['theory_json'],
             $payload['examples_json'],
+            $payload['self_practice_json'],
             $payload['questions_json'],
             $payload['essay_json'],
             $payload['fill_json'],
@@ -421,7 +426,7 @@ if ($method === 'POST' && $action === 'save_content') {
     if ($existingBySlug) {
         $update = $pdo->prepare('
             UPDATE lessons
-            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, self_practice_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
             WHERE slug = ?
         ');
         $update->execute([
@@ -431,6 +436,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['goal_text'],
             $payload['theory_json'],
             $payload['examples_json'],
+            $payload['self_practice_json'],
             $payload['questions_json'],
             $payload['essay_json'],
             $payload['fill_json'],
@@ -446,8 +452,8 @@ if ($method === 'POST' && $action === 'save_content') {
     }
 
     $insert = $pdo->prepare('
-        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, self_practice_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
     $insert->execute([
         $payload['subject'],
@@ -459,6 +465,7 @@ if ($method === 'POST' && $action === 'save_content') {
         $payload['goal_text'],
         $payload['theory_json'],
         $payload['examples_json'],
+        $payload['self_practice_json'],
         $payload['questions_json'],
         $payload['essay_json'],
         $payload['fill_json'],
@@ -504,8 +511,8 @@ if ($method === 'POST' && $action === 'duplicate_lesson') {
     $nextOrder = (int)$orderStmt->fetchColumn();
 
     $insert = $pdo->prepare('
-        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
-        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, self_practice_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
     $insert->execute([
         $lesson['subject'],
@@ -516,6 +523,7 @@ if ($method === 'POST' && $action === 'duplicate_lesson') {
         $lesson['goal_text'] ?? '',
         $lesson['theory_json'] ?? '[]',
         $lesson['examples_json'] ?? '[]',
+        $lesson['self_practice_json'] ?? '[]',
         $lesson['questions_json'] ?? '[]',
         $lesson['essay_json'] ?? '[]',
         $lesson['fill_json'] ?? '[]',

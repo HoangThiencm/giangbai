@@ -1852,6 +1852,7 @@
 
         if (state.activeTab === 'learn') renderTheory(lesson);
         if (state.activeTab === 'examples') renderExamples(lesson);
+        if (state.activeTab === 'self_practice') renderSelfPractice(lesson);
         if (state.activeTab === 'videos') renderVideos(lesson);
         if (state.activeTab === 'practice') {
             renderPractice(lesson);
@@ -2178,6 +2179,225 @@
             }
         };
         bindAiExplainButtons(lesson);
+    }
+
+    const selfPracticeState = {
+        lessonId: '',
+        submissions: [],
+        loading: false,
+        loaded: false,
+    };
+
+    function normalizeSelfPracticeItem(item) {
+        return normalizeExampleItem(item);
+    }
+
+    function ensureSelfPracticeStyles() {
+        if (document.getElementById('lotrinhSelfPracticeStyles')) return;
+        const style = document.createElement('style');
+        style.id = 'lotrinhSelfPracticeStyles';
+        style.textContent = `
+            .self-practice-card { border-radius: 16px; border: 1px solid #e2e8f0; background: #fff; padding: 16px; box-shadow: 0 8px 24px rgba(15,23,42,.04); }
+            .self-practice-upload { margin-top: 14px; border-radius: 14px; border: 2px dashed #cbd5e1; background: #f8fafc; padding: 14px; }
+            .self-practice-upload.is-drag { border-color: #0f766e; background: #f0fdfa; }
+            .self-practice-file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+            .self-practice-file-item { display: flex; align-items: center; gap: 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 8px 10px; font-size: 12px; }
+            .self-practice-history { margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+            .self-practice-history a { color: #0f766e; font-weight: 700; text-decoration: underline; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function submissionsForSelfPracticeItem(itemIndex) {
+        return selfPracticeState.submissions.filter(row => Number(row.item_index) === Number(itemIndex));
+    }
+
+    async function loadSelfPracticeSubmissions(lesson, force = false) {
+        if (!lesson?.id) return;
+        const lessonId = String(lesson.id);
+        if (!force && selfPracticeState.loaded && selfPracticeState.lessonId === lessonId) return;
+        selfPracticeState.loading = true;
+        selfPracticeState.lessonId = lessonId;
+        try {
+            const data = await api(`api/lesson_self_practice.php?action=list&lesson_id=${encodeURIComponent(lessonId)}`);
+            selfPracticeState.submissions = Array.isArray(data.submissions) ? data.submissions : [];
+            selfPracticeState.loaded = true;
+        } catch (err) {
+            console.warn('Không tải bài nộp tự luyện:', err);
+            selfPracticeState.submissions = [];
+        } finally {
+            selfPracticeState.loading = false;
+        }
+    }
+
+    function renderSelfPracticeSubmissionHistory(itemIndex) {
+        const rows = submissionsForSelfPracticeItem(itemIndex);
+        if (!rows.length) return '';
+        return `
+            <div class="self-practice-history">
+                <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Bài đã nộp</div>
+                ${rows.map(row => `
+                    <div class="mb-2 text-sm text-slate-700">
+                        <div class="text-xs text-slate-500">${escapeHtml(String(row.submitted_at || '').replace('T', ' ').slice(0, 16))}</div>
+                        ${(row.files || []).map(file => `
+                            <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="mr-3 inline-flex items-center gap-1">
+                                <i class="fas fa-file"></i>${escapeHtml(file.original_name)}
+                            </a>
+                        `).join('')}
+                        ${row.note ? `<div class="text-xs text-slate-500 mt-1">${escapeHtml(row.note)}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function renderSelfPracticeUploadForm(lesson, itemIndex, options = {}) {
+        const canSubmit = !!options.canSubmit;
+        const showForm = !!options.showForm;
+        if (!showForm) {
+            return `<p class="mt-3 text-sm text-slate-500"><i class="fab fa-google-drive mr-1"></i>Học sinh đăng nhập sẽ nộp bài làm lên Google Drive tại đây.</p>`;
+        }
+        if (!canSubmit) {
+            return `<p class="mt-3 text-sm text-amber-800"><i class="fab fa-google-drive mr-1"></i>Chế độ xem thử — học sinh mới nộp được bài làm thật.</p>`;
+        }
+        const key = `self_practice_${itemIndex}`;
+        return `
+            <div class="self-practice-upload" data-self-practice-drop="${key}">
+                <label class="block cursor-pointer text-center">
+                    <input type="file" class="hidden" data-self-practice-input="${key}" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar,.txt">
+                    <div class="mx-auto grid h-10 w-10 place-items-center rounded-lg bg-teal-50 text-teal-700"><i class="fas fa-cloud-arrow-up"></i></div>
+                    <p class="mt-2 text-sm font-bold text-slate-800">Chọn tệp bài làm hoặc kéo thả vào đây</p>
+                    <p class="mt-1 text-xs text-slate-500">PDF, Word, ảnh… tối đa 5 tệp · 25 MB/tệp · lưu Google Drive</p>
+                </label>
+                <div class="self-practice-file-list" data-self-practice-file-list="${key}"></div>
+                <label class="mt-3 block text-xs font-bold text-slate-600">Ghi chú (không bắt buộc)
+                    <textarea rows="2" class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500" data-self-practice-note="${key}" placeholder="Ví dụ: Em làm dạng 2, chưa kịp kiểm tra lại"></textarea>
+                </label>
+                <button type="button" class="mt-3 inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800" data-self-practice-submit="${key}" data-item-index="${itemIndex}">
+                    <i class="fas fa-paper-plane"></i> Nộp bài làm
+                </button>
+                <div class="mt-2 hidden text-sm font-semibold text-rose-700" data-self-practice-error="${key}"></div>
+            </div>
+            ${renderSelfPracticeSubmissionHistory(itemIndex)}
+        `;
+    }
+
+    function bindSelfPracticeUploads(lesson) {
+        if (!lesson || (isTeacher() && !isTeacherPreview())) return;
+        const canSubmit = !isTeacher();
+        document.querySelectorAll('[data-self-practice-input]').forEach(input => {
+            const key = input.dataset.selfPracticeInput;
+            const list = document.querySelector(`[data-self-practice-file-list="${key}"]`);
+            const renderFiles = () => {
+                if (!list) return;
+                const files = [...input.files];
+                list.innerHTML = files.map(file => `
+                    <div class="self-practice-file-item">
+                        <span class="grid h-8 w-8 place-items-center rounded bg-teal-50 text-teal-700"><i class="fas fa-file"></i></span>
+                        <span class="min-w-0 flex-1 truncate font-semibold text-slate-800">${escapeHtml(file.name)}</span>
+                        <span class="text-slate-400">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                `).join('');
+            };
+            input.onchange = renderFiles;
+            const drop = document.querySelector(`[data-self-practice-drop="${key}"]`);
+            if (drop) {
+                ['dragenter', 'dragover'].forEach(name => drop.addEventListener(name, e => {
+                    e.preventDefault();
+                    drop.classList.add('is-drag');
+                }));
+                ['dragleave', 'drop'].forEach(name => drop.addEventListener(name, e => {
+                    e.preventDefault();
+                    drop.classList.remove('is-drag');
+                }));
+                drop.addEventListener('drop', e => {
+                    if (!canSubmit) return;
+                    input.files = e.dataTransfer.files;
+                    renderFiles();
+                });
+            }
+        });
+
+        document.querySelectorAll('[data-self-practice-submit]').forEach(button => {
+            button.onclick = async () => {
+                if (!canSubmit) return;
+                const key = button.dataset.selfPracticeSubmit;
+                const itemIndex = Number(button.dataset.itemIndex || 0);
+                const input = document.querySelector(`[data-self-practice-input="${key}"]`);
+                const noteEl = document.querySelector(`[data-self-practice-note="${key}"]`);
+                const errorEl = document.querySelector(`[data-self-practice-error="${key}"]`);
+                const files = input?.files ? [...input.files] : [];
+                if (!files.length) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Vui lòng chọn ít nhất một tệp.';
+                        errorEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+                const old = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+                if (errorEl) errorEl.classList.add('hidden');
+                const form = new FormData();
+                form.append('action', 'submit');
+                form.append('lesson_id', String(lesson.id));
+                form.append('item_index', String(itemIndex));
+                form.append('note', String(noteEl?.value || '').trim());
+                files.forEach(file => form.append('files[]', file));
+                try {
+                    const res = await fetch('api/lesson_self_practice.php', { method: 'POST', body: form, credentials: 'include', cache: 'no-store' });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(data.error || 'Không nộp được bài.');
+                    selfPracticeState.loaded = false;
+                    await loadSelfPracticeSubmissions(lesson, true);
+                    renderSelfPractice(lesson);
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err.message || 'Không nộp được bài.';
+                        errorEl.classList.remove('hidden');
+                    }
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = old;
+                }
+            };
+        });
+    }
+
+    async function renderSelfPractice(lesson) {
+        ensureSelfPracticeStyles();
+        const items = Array.isArray(lesson.self_practice) ? lesson.self_practice : [];
+        const canSubmit = !isTeacher();
+        const showForm = canSubmit || isTeacherPreview();
+        if (canSubmit) {
+            els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải bài tập tự luyện...</div>';
+            await loadSelfPracticeSubmissions(lesson);
+        }
+        els.tabContent.innerHTML = `
+            <div class="space-y-4">
+                <div class="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                    <i class="fas fa-pencil-ruler mr-1"></i> Làm bài theo từng dạng, chụp/scan hoặc lưu file rồi <strong>nộp bài làm</strong> — tệp được lưu lên Google Drive để giáo viên xem trực tiếp.
+                </div>
+                ${items.length ? items.map((raw, index) => {
+                    const item = normalizeSelfPracticeItem(raw);
+                    return `
+                    <article class="self-practice-card lesson-document">
+                        <h3 class="font-bold text-slate-900">${richText(item.title)}</h3>
+                        <div class="lesson-paragraph mt-2 text-base leading-7 text-slate-700">${richText(item.body)}</div>
+                        ${item.ai ? `
+                        <button type="button" class="ai-explain-btn mt-3" data-ai-type="self_practice" data-ai-index="${index}" data-ai-text="${escapeHtml(normalizeDisplayText(`${item.title}\n${item.body}`))}">
+                            <i class="fas fa-wand-magic-sparkles"></i> AI giải thích
+                        </button>
+                        ` : ''}
+                        ${renderSelfPracticeUploadForm(lesson, index, { canSubmit, showForm })}
+                    </article>
+                `;
+                }).join('') : '<div class="rounded border border-slate-200 bg-white p-4 muted-note">Giáo viên chưa nhập bài tập tự luyện cho bài này.</div>'}
+            </div>
+        `;
+        bindAiExplainButtons(lesson);
+        bindSelfPracticeUploads(lesson);
+        typesetMath();
     }
 
     const aiAssistState = {
