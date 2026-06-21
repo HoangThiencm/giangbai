@@ -122,11 +122,19 @@ export default {
       if (!answer) {
         return json({ error: 'Workers AI trả về nội dung rỗng.', code: 'empty_response' }, 502);
       }
+      const usage = result?.usage && typeof result.usage === 'object'
+        ? {
+            prompt_tokens: Number(result.usage.prompt_tokens || result.usage.input_tokens || 0),
+            completion_tokens: Number(result.usage.completion_tokens || result.usage.output_tokens || 0),
+            total_tokens: Number(result.usage.total_tokens || 0),
+          }
+        : null;
       return json({
         ok: true,
         answer,
         provider: 'cloudflare_workers_ai',
         model,
+        ...(usage ? { usage } : {}),
       });
     } catch (error) {
       const detail = text(error?.message || error, 300) || 'Lỗi không xác định.';

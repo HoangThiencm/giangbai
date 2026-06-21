@@ -26,6 +26,13 @@ define('CLOUDFLARE_AI_WORKER_URL', 'https://late-bird-fe3b.hoangthien-thcstranph
 define('CLOUDFLARE_AI_WORKER_SECRET', 'paste-the-same-secret-as-APP_SHARED_SECRET');
 define('CLOUDFLARE_AI_MODEL', '@cf/qwen/qwen3-30b-a3b-fp8');
 
+// Optional: Cloudflare GraphQL Analytics for tab "Theo dõi AI" in admin.html.
+// Create API token with Account Analytics (Read). Account ID is in Cloudflare dashboard URL.
+define('CLOUDFLARE_ACCOUNT_ID', '');
+define('CLOUDFLARE_API_TOKEN', '');
+// Worker script name (subdomain before .workers.dev), e.g. late-bird-fe3b
+define('CLOUDFLARE_WORKER_SCRIPT_NAME', 'late-bird-fe3b');
+
 // Optional fallback via ShopAIKey (OpenAI-compatible API).
 define('SHOPAIKEY_API_KEY', '');
 define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');

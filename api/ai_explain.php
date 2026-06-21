@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/ai_usage_log.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -532,11 +533,11 @@ function try_gemini_explain(array $config, string $prompt): ?array
             $finishReason = $response['candidates'][0]['finishReason'] ?? '';
             [$answer, ] = complete_answer_if_needed('gemini', $caller, $answer, ['finish_reason' => $finishReason]);
             @file_put_contents($lastKeyFile, $key, LOCK_EX);
-            return [
+            return array_merge([
                 'answer' => $answer,
                 'provider' => 'gemini',
                 'model' => $model,
-            ];
+            ], ai_usage_extract_gemini_tokens($response));
         }
 
         $lastError = $response['error']['message'] ?? ('Gemini loi HTTP ' . $status);
@@ -575,11 +576,11 @@ function try_shopaikey_explain(array $config, string $prompt): ?array
         }
         $finishReason = $response['choices'][0]['finish_reason'] ?? '';
         [$answer, ] = complete_answer_if_needed('shopaikey', $caller, $answer, ['finish_reason' => $finishReason]);
-        return [
+        return array_merge([
             'answer' => $answer,
             'provider' => 'shopaikey',
             'model' => $model,
-        ];
+        ], ai_usage_extract_shopaikey_tokens($response));
     }
 
     $errorMessage = $response['error']['message'] ?? ($response['message'] ?? ('ShopAIKey loi HTTP ' . $status));
@@ -602,10 +603,14 @@ function try_cloudflare_ai_explain(array $config, array $payload): ?array
     if ($status >= 200 && $status < 300) {
         $answer = trim((string)($response['answer'] ?? ''));
         if ($answer !== '') {
+            $usage = is_array($response['usage'] ?? null) ? $response['usage'] : [];
             return [
                 'answer' => $answer,
                 'provider' => 'cloudflare_workers_ai',
                 'model' => trim((string)($response['model'] ?? 'Workers AI')),
+                'prompt_tokens' => (int)($usage['prompt_tokens'] ?? 0),
+                'completion_tokens' => (int)($usage['completion_tokens'] ?? 0),
+                'total_tokens' => (int)($usage['total_tokens'] ?? 0),
             ];
         }
     }
@@ -631,8 +636,25 @@ $workerPayload = [
     'history' => $history,
     'model' => $runtime['cloudflare_ai_model'],
 ];
+function ai_explain_log_result(string $mode, array $result, bool $ok, bool $fallback = false): void
+{
+    ai_usage_record([
+        'provider' => (string)($result['provider'] ?? 'unknown'),
+        'mode' => $mode,
+        'model' => (string)($result['model'] ?? ''),
+        'ok' => $ok,
+        'fallback' => $fallback,
+        'prompt_tokens' => (int)($result['prompt_tokens'] ?? 0),
+        'completion_tokens' => (int)($result['completion_tokens'] ?? 0),
+        'total_tokens' => (int)($result['total_tokens'] ?? 0),
+        'estimated_usd' => isset($result['estimated_usd']) ? (float)$result['estimated_usd'] : 0.0,
+        'error' => $ok ? '' : (string)($result['error'] ?? ''),
+    ]);
+}
+
 $cloudflareResult = try_cloudflare_ai_explain($runtime, $workerPayload);
 if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {
+    ai_explain_log_result($mode, $cloudflareResult, true, false);
     respond([
         'ok' => true,
         'answer' => trim($cloudflareResult['answer']),
@@ -641,6 +663,9 @@ if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {
         'model' => $cloudflareResult['model'] ?? 'Workers AI',
     ]);
 }
+if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) {
+    ai_explain_log_result($mode, $cloudflareResult, false, false);
+}
 
 if ($cloudflareResult === null && (empty($runtime['gemini_enabled']) || empty($runtime['gemini_keys'])) && (empty($runtime['shopaikey_enabled']) || trim((string)$runtime['shopaikey_api_key']) === '')) {
     respond(['error' => 'Chưa cấu hình Cloudflare Workers AI, Gemini hoặc ShopAIKey.'], 503);
@@ -648,18 +673,24 @@ if ($cloudflareResult === null && (empty($runtime['gemini_enabled']) || empty($r
 
 $geminiResult = try_gemini_explain($runtime, $prompt);
 if (is_array($geminiResult) && !empty($geminiResult['answer'])) {
+    $usedFallback = is_array($cloudflareResult) && !empty($cloudflareResult['error']);
+    ai_explain_log_result($mode, $geminiResult, true, $usedFallback);
     respond([
         'ok' => true,
         'answer' => trim($geminiResult['answer']),
         'complete' => answer_looks_complete($geminiResult['answer']),
         'provider' => $geminiResult['provider'] ?? 'gemini',
         'model' => $geminiResult['model'] ?? $runtime['gemini_model'],
-        'fallback' => is_array($cloudflareResult),
+        'fallback' => $usedFallback,
     ]);
+}
+if (is_array($geminiResult) && !empty($geminiResult['error'])) {
+    ai_explain_log_result($mode, $geminiResult, false, false);
 }
 
 $fallbackResult = try_shopaikey_explain($runtime, $prompt);
 if (is_array($fallbackResult) && !empty($fallbackResult['answer'])) {
+    ai_explain_log_result($mode, $fallbackResult, true, true);
     respond([
         'ok' => true,
         'answer' => trim($fallbackResult['answer']),
@@ -668,6 +699,9 @@ if (is_array($fallbackResult) && !empty($fallbackResult['answer'])) {
         'model' => $fallbackResult['model'] ?? $runtime['shopaikey_model'],
         'fallback' => true,
     ]);
+}
+if (is_array($fallbackResult) && !empty($fallbackResult['error'])) {
+    ai_explain_log_result($mode, $fallbackResult, false, false);
 }
 
 $errors = [];

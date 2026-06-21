@@ -15,3 +15,9 @@ Worker này là AI chính cho lộ trình học: stateless, không dùng D1/KV/V
 PHP sẽ gọi `POST {WORKER_URL}/chat` và gửi header `X-Giangbai-Worker-Secret`. URL cùng secret phải nằm trong `api/config.php` trên hosting, không nằm trong file cấu hình công khai.
 
 Sau khi Worker đã Deploy và Binding/Secret đã tạo, tích hợp `api/ai_explain.php` để gọi Worker trước Gemini và ShopAIKey.
+
+## Theo dõi sử dụng
+
+- GiangBai ghi log mỗi lần gọi `api/ai_explain.php` vào `data/ai_usage.json`.
+- Tab **Theo dõi AI** trong `admin.html` đọc `api/ai_stats.php`.
+- Để hiển thị lượt Worker theo ngày từ Cloudflare Dashboard, thêm `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` và `CLOUDFLARE_WORKER_SCRIPT_NAME` vào `api/config.php`.
