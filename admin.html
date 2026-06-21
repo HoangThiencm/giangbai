@@ -1939,9 +1939,13 @@
         }
 
         function pageEntriesForRole(role = 'student') {
-            const entries = Object.entries(hostingPages);
-            if (role === 'teacher') {
-                return [...entries, ...Object.entries(teacherOnlyPages)];
+            let entries = Object.entries(hostingPages);
+            if (role !== 'teacher') {
+                return entries.filter(([id]) => !teacherOnlyPages[id]);
+            }
+            const seen = new Set(entries.map(([id]) => id));
+            for (const [id, page] of Object.entries(teacherOnlyPages)) {
+                if (!seen.has(id)) entries.push([id, page]);
             }
             return entries;
         }

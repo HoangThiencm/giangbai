@@ -789,6 +789,10 @@
                 SystemConfig.renderConfig();
             },
 
+            closeModal: () => {
+                document.getElementById('configModal').classList.add('hidden');
+            },
+
             loadHostingFallbackConfig: async () => {
                 try {
                     const res = await fetch('global_config.json', { cache: 'no-store' });
@@ -801,13 +805,26 @@
                 } catch (_) { /* noop */ }
             },
 
-            setHfFallbackEnabled: (enabled) => {
+            setHfFallbackEnabled: (enabled, options) => {
+                const opts = options || {};
                 if (window.GiangBaiApi) {
-                    GiangBaiApi.setFallbackEnabled(enabled, { silent: true });
+                    GiangBaiApi.setFallbackEnabled(enabled, { silent: !!opts.silent });
                 } else {
                     localStorage.setItem('hf_fallback_enabled', enabled ? 'true' : 'false');
                 }
-                SystemConfig.renderConfig();
+                if (!opts.skipRender) SystemConfig.renderConfig();
+            },
+
+            onHfFallbackCheckbox: (el) => {
+                const enabled = !!el.checked;
+                SystemConfig.setHfFallbackEnabled(enabled, { silent: true, skipRender: true });
+                const note = document.getElementById('hfFallbackSavedNote');
+                if (note) {
+                    note.textContent = enabled
+                        ? '✓ Đã bật fallback HuggingFace (lưu ngay)'
+                        : '✓ Đã tắt — chế độ test chỉ hosting (lưu ngay)';
+                    note.classList.remove('hidden');
+                }
             },
 
             toggleGuide: (id) => {
@@ -887,12 +904,13 @@
                     const url = localStorage.getItem('hf_fallback_url') || 'https://hoangthiencm-giangbai.hf.space';
                     hfFallbackContainer.innerHTML = `
                         <div class="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
-                            <label class="flex items-center gap-2 font-semibold text-slate-700">
-                                <input type="checkbox" ${enabled ? 'checked' : ''} onchange="SystemConfig.setHfFallbackEnabled(this.checked)">
+                            <label class="flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
+                                <input type="checkbox" ${enabled ? 'checked' : ''} onchange="SystemConfig.onHfFallbackCheckbox(this)">
                                 Bật fallback HuggingFace khi hosting lỗi
                             </label>
+                            <p id="hfFallbackSavedNote" class="hidden text-xs font-bold text-emerald-700 mt-2"></p>
                             <p class="text-xs text-slate-500 mt-2">URL dự phòng: <code>${url}</code></p>
-                            <p class="text-xs text-slate-500 mt-1">Hoặc bấm nút <strong>HF dự phòng</strong> trên thanh menu. Tắt = chế độ test chỉ hosting.</p>
+                            <p class="text-xs text-slate-500 mt-1">Tick/bỏ tick <strong>lưu ngay</strong>. Tắt = test hosting không qua HF. Hoặc dùng nút trên menu.</p>
                         </div>
                     `;
                 }
@@ -1305,8 +1323,8 @@
             class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
             <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
                 <h3 class="font-bold flex items-center gap-2"><i class="fas fa-sliders-h"></i> Cấu hình Hệ thống AI</h3>
-                <button onclick="document.getElementById('configModal').classList.add('hidden')"
-                    class="hover:text-red-400 transition"><i class="fas fa-times text-xl"></i></button>
+                <button type="button" onclick="SystemConfig.closeModal()"
+                    class="hover:text-red-400 transition" title="Đóng"><i class="fas fa-times text-xl"></i></button>
             </div>
 
             <div class="p-6 space-y-6">
@@ -1379,9 +1397,15 @@
 
                 <div class="bg-yellow-50 p-3 rounded text-xs text-yellow-800 mt-4 border border-yellow-100 flex gap-2">
                     <i class="fas fa-info-circle mt-0.5"></i>
-                    <span>Dữ liệu cấu hình được lưu cục bộ trên trình duyệt của bạn (Local Storage) để đảm bảo quyền
-                        riêng tư.</span>
+                    <span>Mọi thay đổi <strong>lưu ngay</strong> trên trình duyệt (Local Storage). Không cần nút Lưu riêng — chỉ bấm <strong>Xong</strong> để đóng cửa sổ.</span>
                 </div>
+            </div>
+            <div class="border-t border-slate-200 bg-slate-50 px-6 py-4 flex items-center justify-between gap-3">
+                <p class="text-xs text-slate-500">Gemini / Groq / HF token / fallback đều lưu tự động</p>
+                <button type="button" onclick="SystemConfig.closeModal()"
+                    class="shrink-0 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-indigo-700">
+                    Xong
+                </button>
             </div>
         </div>
     </div>
