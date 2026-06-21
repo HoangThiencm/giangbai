@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS padlet_boards (
 CREATE TABLE IF NOT EXISTS padlet_columns (
     id INT AUTO_INCREMENT PRIMARY KEY,
     board_id INT NOT NULL,
+    parent_id INT DEFAULT NULL,
     title VARCHAR(160) NOT NULL,
     color VARCHAR(30) NOT NULL DEFAULT 'teal',
     order_index INT NOT NULL DEFAULT 0,

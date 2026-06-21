@@ -165,6 +165,9 @@ function padlet_migrate(PDO $pdo): void
     if (!padlet_column_exists($pdo, 'padlet_boards', 'default_column_id')) {
         $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN default_column_id INT DEFAULT NULL AFTER show_author");
     }
+    if (!padlet_column_exists($pdo, 'padlet_columns', 'parent_id')) {
+        $pdo->exec("ALTER TABLE padlet_columns ADD COLUMN parent_id INT DEFAULT NULL AFTER board_id");
+    }
 }
 
 function padlet_layout_type(string $value): string
@@ -296,7 +299,11 @@ function padlet_columns(PDO $pdo, int $boardId): array
     $stmt = $pdo->prepare('SELECT * FROM padlet_columns WHERE board_id = ? ORDER BY order_index, id');
     $stmt->execute([$boardId]);
     $rows = $stmt->fetchAll();
-    foreach ($rows as &$row) { $row['id'] = (int)$row['id']; $row['order_index'] = (int)$row['order_index']; }
+    foreach ($rows as &$row) {
+        $row['id'] = (int)$row['id'];
+        $row['order_index'] = (int)$row['order_index'];
+        $row['parent_id'] = !empty($row['parent_id']) ? (int)$row['parent_id'] : null;
+    }
     return $rows;
 }
 
@@ -309,10 +316,16 @@ function padlet_normalize_columns($input): array
 {
     $colors = ['teal','blue','violet','amber','rose','emerald'];
     $out = [];
-    if (is_array($input)) foreach (array_slice($input, 0, 12) as $item) {
+    if (is_array($input)) foreach (array_slice($input, 0, 36) as $item) {
         $title = trim((string)(is_array($item) ? ($item['title'] ?? '') : $item));
         if ($title === '') continue;
-        $out[] = ['id' => (int)(is_array($item) ? ($item['id'] ?? 0) : 0), 'title' => padlet_trim_text($title, 160), 'color' => in_array(($item['color'] ?? ''), $colors, true) ? $item['color'] : 'teal'];
+        $parentId = (int)(is_array($item) ? ($item['parent_id'] ?? 0) : 0);
+        $out[] = [
+            'id' => (int)(is_array($item) ? ($item['id'] ?? 0) : 0),
+            'title' => padlet_trim_text($title, 160),
+            'color' => in_array(($item['color'] ?? ''), $colors, true) ? $item['color'] : 'teal',
+            'parent_id' => $parentId > 0 ? $parentId : null,
+        ];
     }
     return $out ?: [['id' => 0, 'title' => 'Bài đăng', 'color' => 'teal']];
 }
@@ -439,17 +452,25 @@ if ($method === 'POST' && $action === 'save-board') {
         $currentById = [];
         foreach ($current as $item) $currentById[(int)$item['id']] = $item;
         $seen = [];
-        $insertColumn = $pdo->prepare('INSERT INTO padlet_columns (board_id, title, color, order_index) VALUES (?, ?, ?, ?)');
-        $updateColumn = $pdo->prepare('UPDATE padlet_columns SET title = ?, color = ?, order_index = ? WHERE id = ? AND board_id = ?');
+        $insertColumn = $pdo->prepare('INSERT INTO padlet_columns (board_id, parent_id, title, color, order_index) VALUES (?, ?, ?, ?, ?)');
+        $updateColumn = $pdo->prepare('UPDATE padlet_columns SET parent_id = ?, title = ?, color = ?, order_index = ? WHERE id = ? AND board_id = ?');
         $resolvedColumns = [];
+        $idMap = [];
         foreach ($columns as $index => $column) {
+            $parentRef = $column['parent_id'] ?? null;
+            $parentId = null;
+            if ($parentRef) {
+                $parentId = $idMap[$parentRef] ?? ((int)$parentRef > 0 && isset($currentById[(int)$parentRef]) ? (int)$parentRef : null);
+            }
             $columnId = (int)($column['id'] ?? 0);
             if ($columnId && isset($currentById[$columnId])) {
-                $updateColumn->execute([$column['title'], $column['color'], $index, $columnId, $id]);
+                $updateColumn->execute([$parentId, $column['title'], $column['color'], $index, $columnId, $id]);
             } else {
-                $insertColumn->execute([$id, $column['title'], $column['color'], $index]);
+                $insertColumn->execute([$id, $parentId, $column['title'], $column['color'], $index]);
                 $columnId = (int)$pdo->lastInsertId();
             }
+            if (!empty($column['id'])) $idMap[$column['id']] = $columnId;
+            $idMap['new:' . $index] = $columnId;
             $seen[$columnId] = true;
             $resolvedColumns[] = $columnId;
         }

@@ -153,6 +153,12 @@
         .columns-board::-webkit-scrollbar { height: 8px; }
         .columns-board::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 99px; }
         .padlet-column { flex: 0 0 300px; scroll-snap-align: start; border-right: 1px solid rgba(0,0,0,.06); padding: 0 .65rem .5rem; }
+        .sub-column-wrap { margin-top: .75rem; border-radius: .85rem; border: 1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.72); padding: .5rem .45rem .65rem; }
+        .sub-column-head { display: flex; align-items: center; gap: .25rem; padding: .15rem .1rem .45rem; }
+        .sub-column-title { flex: 1; font-size: .82rem; font-weight: 800; color: #475569; }
+        .sub-column-title::before { content: '└ '; color: #94a3b8; font-weight: 700; }
+        .add-sub-branch { margin-top: .5rem; width: 100%; border-radius: .65rem; border: 1px dashed rgba(0,0,0,.14); background: rgba(255,255,255,.5); padding: .45rem; font-size: .75rem; font-weight: 800; color: #64748b; }
+        .add-sub-branch:hover { background: rgba(255,255,255,.85); color: #334155; }
         .padlet-column-head { display: flex; align-items: center; gap: .35rem; padding: .35rem .25rem .65rem; }
         .padlet-column-title { flex: 1; font-size: .95rem; font-weight: 800; color: #1e293b; }
         .padlet-col-btn { display: grid; height: 2rem; width: 2rem; place-items: center; border-radius: .5rem; color: #64748b; }
@@ -930,9 +936,53 @@
                 moderation_enabled: !!Number(b.moderation_enabled),
                 comments_enabled: !!Number(b.comments_enabled),
                 reactions_enabled: !!Number(b.reactions_enabled),
-                columns: state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color })),
+                columns: columnsPayload(),
                 ...overrides
             };
+        }
+
+        function columnsPayload(cols = state.columns) {
+            return flatColumnOrder(cols).map((c) => ({
+                id: c.id,
+                title: c.title,
+                color: c.color,
+                parent_id: c.parent_id || null
+            }));
+        }
+
+        function rootColumns(cols = state.columns) {
+            return cols.filter((c) => !c.parent_id).sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0) || a.id - b.id);
+        }
+
+        function childColumns(parentId, cols = state.columns) {
+            return cols.filter((c) => Number(c.parent_id) === Number(parentId))
+                .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0) || a.id - b.id);
+        }
+
+        function flatColumnOrder(cols = state.columns) {
+            const out = [];
+            rootColumns(cols).forEach((r) => {
+                out.push(r);
+                childColumns(r.id, cols).forEach((ch) => out.push(ch));
+            });
+            cols.filter((c) => c.parent_id && !cols.some((p) => Number(p.id) === Number(c.parent_id)))
+                .forEach((orphan) => out.push(orphan));
+            return out;
+        }
+
+        function removeColumnTree(cols, colId) {
+            const drop = new Set([Number(colId)]);
+            let changed = true;
+            while (changed) {
+                changed = false;
+                cols.forEach((c) => {
+                    if (c.parent_id && drop.has(Number(c.parent_id)) && !drop.has(Number(c.id))) {
+                        drop.add(Number(c.id));
+                        changed = true;
+                    }
+                });
+            }
+            return cols.filter((c) => !drop.has(Number(c.id)));
         }
 
         function boardFontClass(b) {
@@ -961,7 +1011,7 @@
                 reactions_enabled: !!Number(b.reactions_enabled),
                 moderation_enabled: !!Number(b.moderation_enabled),
                 status: b.status,
-                columns: state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color }))
+                columns: columnsPayload()
             };
             document.getElementById('setTitle').value = state.settingsDraft.title;
             document.getElementById('setDescription').value = state.settingsDraft.description;
@@ -1126,50 +1176,120 @@
 
         function openColumnMenu(colId, btn) {
             if (!state.canManage) return;
+            const col = state.columns.find((c) => Number(c.id) === Number(colId));
+            const isRoot = !col?.parent_id;
             const menu = document.getElementById('columnMenu');
             const rect = btn.getBoundingClientRect();
             state.activeColumnMenu = colId;
-            menu.innerHTML = `
+            const rootItems = isRoot ? `
                 <button type="button" onclick="columnAction('add-left')"><i class="fas fa-arrow-left mr-2 opacity-60"></i>Mục mới bên trái</button>
                 <button type="button" onclick="columnAction('add-right')"><i class="fas fa-arrow-right mr-2 opacity-60"></i>Mục mới bên phải</button>
                 <button type="button" onclick="columnAction('move-left')"><i class="fas fa-chevron-left mr-2 opacity-60"></i>Di chuyển mục trái</button>
                 <button type="button" onclick="columnAction('move-right')"><i class="fas fa-chevron-right mr-2 opacity-60"></i>Di chuyển mục phải</button>
+                <button type="button" onclick="columnAction('add-child')"><i class="fas fa-code-branch mr-2 opacity-60"></i>Thêm nhánh con</button>` : `
+                <button type="button" onclick="columnAction('move-left')"><i class="fas fa-arrow-up mr-2 opacity-60"></i>Đưa nhánh lên</button>
+                <button type="button" onclick="columnAction('move-right')"><i class="fas fa-arrow-down mr-2 opacity-60"></i>Đưa nhánh xuống</button>`;
+            menu.innerHTML = `${rootItems}
                 <button type="button" onclick="columnAction('rename')"><i class="fas fa-pen mr-2 opacity-60"></i>Đổi tên mục</button>
-                <button type="button" onclick="columnAction('default')"><i class="fas fa-star mr-2 opacity-60"></i>Đặt làm mục mặc định</button>
+                ${isRoot ? `<button type="button" onclick="columnAction('default')"><i class="fas fa-star mr-2 opacity-60"></i>Đặt làm mục mặc định</button>` : ''}
                 <button type="button" class="danger" onclick="columnAction('delete')"><i class="fas fa-trash-can mr-2"></i>Xóa mục</button>`;
             menu.style.top = `${rect.bottom + 6}px`;
             menu.style.left = `${Math.min(rect.left, window.innerWidth - 260)}px`;
             menu.classList.remove('hidden');
         }
 
-        async function columnAction(action) {
-            const colId = state.activeColumnMenu;
+        async function columnAction(action, parentIdArg = null) {
+            const colId = state.activeColumnMenu || parentIdArg;
             closeColumnMenu();
             if (!state.canManage) return;
-            const cols = state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color }));
+            let cols = state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color, parent_id: c.parent_id || null }));
 
             if (action === 'add-end') {
-                cols.push({ title: 'Mục mới', color: 'teal' });
-                try { await saveColumnsNow(cols); toast('Đã thêm cột'); } catch (err) { toast(err.message); }
+                cols.push({ title: 'Mục mới', color: 'teal', parent_id: null });
+                try { await saveColumnsNow(columnsPayload(cols)); toast('Đã thêm cột'); } catch (err) { toast(err.message); }
+                return;
+            }
+
+            if (action === 'add-child') {
+                const parentId = parentIdArg || colId;
+                if (!parentId) return;
+                const parent = cols.find((c) => Number(c.id) === Number(parentId));
+                cols.push({ title: 'Nhánh con', color: parent?.color || 'teal', parent_id: Number(parentId) });
+                try { await saveColumnsNow(columnsPayload(cols)); toast('Đã thêm nhánh con'); } catch (err) { toast(err.message); }
                 return;
             }
 
             if (!colId) return;
-            const idx = cols.findIndex((c) => Number(c.id) === Number(colId));
+            const col = cols.find((c) => Number(c.id) === Number(colId));
+            if (!col) return;
+            const isRoot = !col.parent_id;
+            const flat = flatColumnOrder(cols);
+            const idx = flat.findIndex((c) => Number(c.id) === Number(colId));
             if (idx < 0) return;
 
-            if (action === 'add-left') {
-                cols.splice(idx, 0, { title: 'Mục mới', color: 'teal' });
-            } else if (action === 'add-right') {
-                cols.splice(idx + 1, 0, { title: 'Mục mới', color: 'teal' });
-            } else if (action === 'move-left' && idx > 0) {
-                [cols[idx - 1], cols[idx]] = [cols[idx], cols[idx - 1]];
-            } else if (action === 'move-right' && idx < cols.length - 1) {
-                [cols[idx + 1], cols[idx]] = [cols[idx], cols[idx + 1]];
+            if (action === 'add-left' && isRoot) {
+                const roots = rootColumns(cols);
+                const rIdx = roots.findIndex((c) => Number(c.id) === Number(colId));
+                const newRoot = { title: 'Mục mới', color: 'teal', parent_id: null };
+                const insertAt = flat.findIndex((c) => Number(c.id) === Number(roots[rIdx]?.id));
+                flat.splice(insertAt >= 0 ? insertAt : 0, 0, newRoot);
+                cols = flat;
+            } else if (action === 'add-right' && isRoot) {
+                const roots = rootColumns(cols);
+                const rIdx = roots.findIndex((c) => Number(c.id) === Number(colId));
+                const newRoot = { title: 'Mục mới', color: 'teal', parent_id: null };
+                const childCount = childColumns(colId, cols).length;
+                flat.splice(idx + 1 + childCount, 0, newRoot);
+                cols = flat;
+            } else if (action === 'move-left') {
+                if (isRoot) {
+                    const roots = rootColumns(cols);
+                    const rIdx = roots.findIndex((c) => Number(c.id) === Number(colId));
+                    if (rIdx > 0) {
+                        const prev = roots[rIdx - 1];
+                        const prevIdx = flat.findIndex((c) => Number(c.id) === Number(prev.id));
+                        const block = flat.splice(idx, 1 + childColumns(colId, cols).length);
+                        flat.splice(prevIdx, 0, ...block);
+                        cols = flat;
+                    }
+                } else {
+                    const siblings = childColumns(col.parent_id, cols);
+                    const sIdx = siblings.findIndex((c) => Number(c.id) === Number(colId));
+                    if (sIdx > 0) {
+                        const prevId = siblings[sIdx - 1].id;
+                        const a = flat.findIndex((c) => Number(c.id) === Number(colId));
+                        const b = flat.findIndex((c) => Number(c.id) === Number(prevId));
+                        [flat[a], flat[b]] = [flat[b], flat[a]];
+                        cols = flat;
+                    }
+                }
+            } else if (action === 'move-right') {
+                if (isRoot) {
+                    const roots = rootColumns(cols);
+                    const rIdx = roots.findIndex((c) => Number(c.id) === Number(colId));
+                    if (rIdx < roots.length - 1) {
+                        const next = roots[rIdx + 1];
+                        const nextChildCount = childColumns(next.id, cols).length;
+                        const block = flat.splice(idx, 1 + childColumns(colId, cols).length);
+                        const nextIdx = flat.findIndex((c) => Number(c.id) === Number(next.id));
+                        flat.splice(nextIdx + 1 + nextChildCount, 0, ...block);
+                        cols = flat;
+                    }
+                } else {
+                    const siblings = childColumns(col.parent_id, cols);
+                    const sIdx = siblings.findIndex((c) => Number(c.id) === Number(colId));
+                    if (sIdx < siblings.length - 1) {
+                        const nextId = siblings[sIdx + 1].id;
+                        const a = flat.findIndex((c) => Number(c.id) === Number(colId));
+                        const b = flat.findIndex((c) => Number(c.id) === Number(nextId));
+                        [flat[a], flat[b]] = [flat[b], flat[a]];
+                        cols = flat;
+                    }
+                }
             } else if (action === 'rename') {
-                const name = prompt('Tên cột / mục:', cols[idx].title);
+                const name = prompt('Tên cột / nhánh:', col.title);
                 if (!name?.trim()) return;
-                cols[idx].title = name.trim();
+                col.title = name.trim();
             } else if (action === 'default') {
                 await api(`${API}?action=save-board`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1179,13 +1299,16 @@
                 await loadBoard();
                 return;
             } else if (action === 'delete') {
-                if (cols.length <= 1) { toast('Phải giữ ít nhất một cột'); return; }
-                if (!confirm('Xóa cột này? Bài đăng sẽ chuyển sang cột đầu.')) return;
-                cols.splice(idx, 1);
+                if (rootColumns(cols).length <= 1 && isRoot) { toast('Phải giữ ít nhất một cột'); return; }
+                const msg = isRoot && childColumns(colId, cols).length
+                    ? 'Xóa cột này và tất cả nhánh con? Bài đăng sẽ chuyển sang cột khác.'
+                    : 'Xóa nhánh này? Bài đăng sẽ chuyển sang cột khác.';
+                if (!confirm(msg)) return;
+                cols = removeColumnTree(cols, colId);
             } else return;
 
             try {
-                await saveColumnsNow(cols);
+                await saveColumnsNow(columnsPayload(cols));
                 toast('Đã cập nhật cột');
             } catch (err) { toast(err.message); }
         }
@@ -1332,7 +1455,7 @@
             setBoardLayout(layout);
             renderThemePicker(board?.bg_theme || 'teal');
             state.editColumns = columns.length
-                ? columns.map((c) => ({ id: c.id, title: c.title, color: c.color }))
+                ? columns.map((c) => ({ id: c.id, title: c.title, color: c.color, parent_id: c.parent_id || null }))
                 : [{ title: 'Bài đăng', color: 'teal' }];
             renderColumnsEditor();
             toggleBoardClass();
@@ -1537,18 +1660,44 @@
             </button>`;
         }
 
-        function columnHeader(c, colPosts, isOpen) {
+        function columnPostsBlock(c, colPosts, isOpen, compact = false) {
+            return `<div class="min-h-[80px] space-y-3" data-post-list="${c.id}">
+                ${colPosts.map((p) => postCard(p, compact)).join('')}
+                ${isOpen ? addCardTile(c.id) : ''}
+            </div>`;
+        }
+
+        function subColumnBlock(child, byCol, isOpen) {
+            const colPosts = byCol[child.id] || [];
+            const manage = state.canManage ? `
+                <button type="button" data-col-menu="${child.id}" onclick="openColumnMenu(${child.id}, this)" class="padlet-col-btn" title="Tùy chọn nhánh"><i class="fas fa-ellipsis"></i></button>
+                <button type="button" onclick="openPostModal(${child.id})" class="padlet-col-btn" title="Thêm bài"><i class="fas fa-plus"></i></button>` : '';
+            return `<div class="sub-column-wrap border-t-2 column-${esc(child.color)}" data-column="${child.id}">
+                <div class="sub-column-head">
+                    <div class="sub-column-title">${esc(child.title)}</div>
+                    ${manage}
+                </div>
+                ${columnPostsBlock(child, colPosts, isOpen)}
+            </div>`;
+        }
+
+        function renderColumnBlock(c, byCol, isOpen) {
+            const children = childColumns(c.id);
+            const colPosts = byCol[c.id] || [];
             const manage = state.canManage ? `
                 <button type="button" data-col-menu="${c.id}" onclick="openColumnMenu(${c.id}, this)" class="padlet-col-btn" title="Tùy chọn cột"><i class="fas fa-ellipsis"></i></button>
                 <button type="button" onclick="openPostModal(${c.id})" class="padlet-col-btn" title="Thêm bài"><i class="fas fa-plus"></i></button>` : '';
+            const addBranch = state.canManage && isOpen ? `
+                <button type="button" onclick="columnAction('add-child', ${c.id})" class="add-sub-branch">
+                    <i class="fas fa-code-branch mr-1"></i>Thêm nhánh con
+                </button>` : '';
             return `<div class="padlet-column-head">
                 <div class="padlet-column-title">${esc(c.title)}</div>
                 ${manage}
             </div>
-            <div class="min-h-[120px] space-y-3" data-post-list="${c.id}">
-                ${colPosts.map((p) => postCard(p)).join('')}
-                ${isOpen ? addCardTile(c.id) : ''}
-            </div>`;
+            ${columnPostsBlock(c, colPosts, isOpen)}
+            ${children.map((ch) => subColumnBlock(ch, byCol, isOpen)).join('')}
+            ${addBranch}`;
         }
 
         function renderPostsArea(b, cols, byCol, isOpen) {
@@ -1563,13 +1712,12 @@
                             <i class="fas fa-plus mr-1"></i>Thêm cột
                         </button>
                     </div>` : '';
+                const roots = rootColumns(cols);
                 return `<div id="padletColumns" class="columns-board -mx-1 rounded-2xl bg-white/35 px-1 py-2 backdrop-blur-sm">
-                    ${cols.map((c) => {
-                        const colPosts = byCol[c.id] || [];
-                        return `<div class="padlet-column border-t-4 column-${esc(c.color)}" data-column="${c.id}">
-                            ${columnHeader(c, colPosts, isOpen)}
-                        </div>`;
-                    }).join('')}
+                    ${roots.map((c) => `
+                        <div class="padlet-column border-t-4 column-${esc(c.color)}" data-column="${c.id}">
+                            ${renderColumnBlock(c, byCol, isOpen)}
+                        </div>`).join('')}
                     ${addColBtn}
                 </div>`;
             }
@@ -1767,9 +1915,11 @@
             state.columns.forEach((c) => { byCol[c.id] = []; });
             state.posts.forEach((p) => { (byCol[p.column_id] ??= []).push(p); });
 
-            const cols = (b.layout_type === 'columns' || b.layout_type === 'mindmap')
+            const cols = b.layout_type === 'columns'
                 ? state.columns
-                : [{ id: state.columns[0]?.id || 0, title: 'Bài đăng', color: 'teal' }];
+                : b.layout_type === 'mindmap'
+                    ? rootColumns(state.columns).length ? rootColumns(state.columns) : state.columns
+                    : [{ id: state.columns[0]?.id || 0, title: 'Bài đăng', color: 'teal' }];
             state.mapInstance = null;
 
             const promptText = b.prompt_text || b.description || '';
