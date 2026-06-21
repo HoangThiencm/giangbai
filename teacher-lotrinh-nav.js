@@ -47,8 +47,13 @@
         return (window.location.pathname.split('/').pop() || '').toLowerCase();
     }
 
+    function teacherTabEnabled(flagKey) {
+        return localStorage.getItem(flagKey) !== '0';
+    }
+
     function detectMode() {
         const file = currentFile();
+        if (file === 'theodoi-ai.html') return 'ai-stats';
         if (file === 'thongketientrinh.html') return 'stats';
         if (file.startsWith('lotrinhtoan')) return 'design';
         return 'hub';
@@ -132,19 +137,36 @@
             : '';
 
         const statsActive = mode === 'stats';
+        const aiStatsActive = mode === 'ai-stats';
         const designActive = mode === 'design' || mode === 'preview';
+        const showDesign = teacherTabEnabled('teacher_design_enabled');
+        const showStats = teacherTabEnabled('teacher_progress_stats_enabled');
+        const showAiStats = teacherTabEnabled('teacher_ai_stats_enabled');
+
+        const designLink = showDesign
+            ? (mode === 'design' || mode === 'preview'
+                ? `<span class="${navLinkClass(true)}"><i class="fas fa-pen-ruler"></i> Soạn bài</span>`
+                : `<a href="${pages[0]?.url || 'lotrinhtoan6.html'}" class="${navLinkClass(false)}"><i class="fas fa-pen-ruler"></i> Soạn bài</a>`)
+            : '';
+        const statsLink = showStats
+            ? `<a href="thongketientrinh.html" class="${navLinkClass(statsActive)}"><i class="fas fa-chart-line"></i> Thống kê lớp</a>`
+            : '';
+        const aiStatsLink = showAiStats
+            ? `<a href="theodoi-ai.html" class="${navLinkClass(aiStatsActive)}"><i class="fas fa-robot"></i> Theo dõi AI</a>`
+            : '';
 
         return `
             <div class="teacher-workspace-nav">
                 <div class="teacher-workspace-nav-inner">
                     <div>
                         <div class="teacher-workspace-nav-title">Không gian giáo viên · Lộ trình Toán</div>
-                        <p class="mt-1 text-sm text-slate-600">Soạn bài trên từng lộ trình; theo dõi tiến độ học sinh ở trang thống kê riêng.</p>
+                        <p class="mt-1 text-sm text-slate-600">Soạn bài, theo dõi tiến độ học sinh và mức sử dụng AI lộ trình.</p>
                     </div>
                     <div class="teacher-workspace-nav-actions">
                         <a href="index.html" class="${navLinkClass(false)}"><i class="fas fa-home"></i> Trang chính</a>
-                        <span class="${navLinkClass(designActive)}"><i class="fas fa-pen-ruler"></i> Soạn bài</span>
-                        <a href="thongketientrinh.html" class="${navLinkClass(statsActive)}"><i class="fas fa-chart-line"></i> Thống kê lớp</a>
+                        ${designLink}
+                        ${statsLink}
+                        ${aiStatsLink}
                         ${previewBtn}
                     </div>
                     ${pages.length > 1 ? `<div class="teacher-workspace-subject-links">${subjectLinks}</div>` : ''}

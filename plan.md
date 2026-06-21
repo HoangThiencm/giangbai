@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-19 — Phân quyền GV (lộ trình + lớp phụ trách), thời hạn tài khoản, cấu hình AI hosting, bài tập kéo/nối ô (`lotrinh.js`).*
+*Cập nhật: 2026-06-21 — Tab Theo dõi AI (log lượt sử dụng, ShopAIKey USD, Cloudflare GraphQL), sửa đăng nhập admin không hỏi lưu mật khẩu.*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -84,6 +84,14 @@
 - [x] **Bài tập kéo vào ô trống & nối ô** (`lotrinh.js` + `admin-lesson-manager.js`):
   - HS: kéo chip vào ô trống; nối cặp trái–phải (bấm chọn).
   - GV: parser/format mới cho textarea Điền khuyết và Kéo thả.
+- [x] **Theo dõi lượt sử dụng AI** (`api/ai_usage_log.php`, `api/ai_stats.php`, `admin.html`):
+  - `ai_explain.php` ghi mỗi lượt vào `data/ai_usage.json` (provider, mode, token, fallback, USD ước tính ShopAIKey).
+  - Tab admin **Theo dõi AI**: tổng hợp hôm nay + 14 ngày, lượt gọi gần đây.
+  - **ShopAIKey**: đọc API billing (`/v1/dashboard/billing/subscription`, `/usage`) — hiển thị Đã dùng $ / Còn lại $ (đã cấu hình, đọc dữ liệu thành công trên hosting).
+  - **Cloudflare**: GraphQL `workersInvocationsAdaptive` khi có `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_WORKER_SCRIPT_NAME` trong `api/config.php`; kèm log nội bộ lộ trình.
+  - **Gemini**: chỉ đếm lượt fallback server-side (không API quota realtime).
+  - `cloudflare-worker/worker.js`: trả `usage` nếu Workers AI có metadata.
+- [x] **Admin đăng nhập**: ô Admin Key không dùng `type="password"` + `autocomplete="off"` — tránh trình duyệt hỏi lưu mật khẩu mỗi lần vào `admin.html`.
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
@@ -123,6 +131,9 @@
 - [ ] **Admin — lớp phụ trách**: dropdown hiện `6A (N học sinh)` sau khi import HS; chọn lớp → panel tiến độ GV chỉ thấy HS lớp đó.
 - [ ] **Admin — thời hạn**: tạo HS gói 1 tháng → cột hết hạn hiển thị đúng; sau hết hạn đăng nhập bị chặn.
 - [ ] **Admin — cấu hình AI**: banner hiện trạng thái hosting; nhập key → Lưu → tải lại vẫn còn key; HS dùng AI giải thích được.
+- [x] **Admin — tab Theo dõi AI**: đăng nhập admin → tab **Theo dõi AI** → **Tải lại** → ShopAIKey hiện Đã dùng$/Còn lại$; log lộ trình tăng sau HS/GV dùng AI giải thích trong bài.
+- [ ] **Admin — tab Theo dõi AI (Cloudflare GraphQL)**: sau khi điền token trong `api/config.php` → tab hiện badge **GraphQL OK** và lượt Worker hôm nay khớp dashboard Cloudflare.
+- [ ] **Admin — đăng nhập**: vào `admin.html` → nhập Admin Key → trình duyệt **không** hỏi lưu mật khẩu (Chrome/Edge).
 - [ ] **GV — tiến độ theo lớp**: đăng nhập GV lớp `6A` → dropdown lớp khóa `6A`; không thấy HS lớp khác.
 - [ ] **HS — bài kéo vào ô trống**: kéo chip vào ô → nộp luyện tập → phản hồi đúng/sai.
 - [ ] **HS — bài nối ô**: bấm trái rồi phải ghép cặp → nộp → chấm đúng/sai.

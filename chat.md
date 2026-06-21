@@ -1,6 +1,6 @@
 # Toàn bộ nội dung chat — giangbai / Thi trực tuyến
 
-> Ghi nguyên văn từ các phiên chat. Phiên thi trực tuyến / import Excel: `019eddde-2aaf-7983-b92a-a967627d0e23`. Phiên phân quyền GV / lớp / thời hạn / AI: `019ede1f-f59a-7e33-8597-a3b9bf8bf94e`. Phiên giao diện CÔNG CỤ AI + Link rút gọn & QR: `019ee3f6-b145-7560-9aca-d54b84d67e82`.
+> Ghi nguyên văn từ các phiên chat. Phiên thi trực tuyến / import Excel: `019eddde-2aaf-7983-b92a-a967627d0e23`. Phiên phân quyền GV / lớp / thời hạn / AI: `019ede1f-f59a-7e33-8597-a3b9bf8bf94e`. Phiên giao diện CÔNG CỤ AI + Link rút gọn & QR + Theo dõi AI: `019ee3f6-b145-7560-9aca-d54b84d67e82`.
 > Các tin nhắn có `[Image #N]` là người dùng đã đính kèm ảnh chụp màn hình.
 > Phần trả lời của trợ lý là nội dung đã hiển thị trong chat; không tóm tắt thêm.
 
@@ -1042,3 +1042,185 @@ xuất ra chat.md
 **Trợ lý:**
 
 Đã cập nhật file `chat.md` — thêm **Lượt 30–37** (phiên đọc tài liệu, redesign CÔNG CỤ AI, hệ thống Link rút gọn & QR) vào cuối file, giữ nguyên định dạng hỏi–đáp như các lượt trước.
+
+---
+
+## Lượt 38
+
+**Người dùng:**
+
+Bạn đọc lại hệ thống. Đặc biệt là dùng AI thì có thể thống kê số lượt dùng của các module AI trong ngày không(đối với CloudFlare), của deepkseek (dùng shopaikey) hoặc quota của gemini. Đại loại như thế. Chắc gemini không thống kê được nhỉ. Còn deeppseek thì thống kê số USD thì phải
+
+**Trợ lý:**
+
+Đã đọc lại luồng AI trong codebase. Kết luận:
+
+## Hiện trạng: chưa có thống kê trong app
+
+GiangBai **không ghi log** lượt dùng AI theo ngày/module/provider. `api/ai_explain.php` chỉ trả `provider` + `model`; `api/hosting_stats.php` chỉ báo dung lượng hosting.
+
+## Ba nguồn AI
+
+| Nguồn | Trong app | Ngoài app |
+|-------|-----------|-----------|
+| **Cloudflare Workers AI** | Không log | Dashboard CF: requests/neurons theo ngày |
+| **Gemini** | Không log quota | AI Studio; free tier không có API “còn bao nhiêu lượt hôm nay” |
+| **ShopAIKey/DeepSeek** | Không lưu `usage` | Dashboard ShopAIKey: requests, USD đã dùng / còn lại |
+
+## Luồng AI hiện tại
+
+- **Server** (`api/ai_explain.php`): CF → Gemini fallback → ShopAIKey fallback (chỉ **lộ trình học**).
+- **Client** gọi thẳng Gemini: `app.js` (vẽ hình), `smartquiz.html`, `kttx.html`, các `game-*.html`, `matrande.html`… → không qua server, không thống kê được trừ khi tự log hoặc proxy.
+
+User đoán đúng: **Gemini** khó quota realtime trong app; **ShopAIKey** có thể xem USD trên dashboard hoặc API billing nếu tích hợp sau.
+
+---
+
+## Lượt 39
+
+**Người dùng:**
+
+[Image #1] Đây là của shopaikey.
+Còn cloudflare thì nó có số luợt gọi trong ngày mà.
+trong trang GV có thể mở tab theo dõi lượt sử dụng AI
+
+**Trợ lý:**
+
+Bổ sung / sửa đánh giá:
+
+- **ShopAIKey** — dashboard có Requests, **Đã dùng $**, **Còn lại $** (ảnh user: 62 requests, $2.0 đã dùng, $48.0 còn).
+- **Cloudflare** — dashboard có lượt gọi theo ngày (Workers AI / Analytics).
+- **Gemini** — vẫn khó quota realtime; chỉ ước lượng nếu tự log.
+
+Trong GiangBai lúc đó **chưa có tab** — `admin.html` chỉ có: Tạo tài khoản, THCS Trần Phú, Cài đặt hệ thống. Đề xuất thêm tab **Theo dõi AI** gồm:
+
+1. Cloudflare — lượt/ngày (log nội bộ + CF GraphQL nếu có token)
+2. ShopAIKey — USD / requests (API billing)
+3. Gemini — lượt fallback từ log server
+
+---
+
+## Lượt 40
+
+**Người dùng:**
+
+Làm hết luôn
+
+**Trợ lý:**
+
+Đã triển khai đầy đủ tab **Theo dõi AI** và luồng thống kê.
+
+### 1. Log nội bộ (`api/ai_usage_log.php` + `api/ai_explain.php`)
+
+- Mỗi lần gọi `api/ai_explain.php` ghi vào `data/ai_usage.json`
+- Lưu: provider, mode (explain/chat), model, OK/lỗi, fallback, token (Gemini/ShopAIKey), USD ước tính (DeepSeek)
+- Giữ lịch sử 90 ngày (tổng hợp) + 120 lượt gần nhất
+
+### 2. API thống kê (`api/ai_stats.php`)
+
+- Tổng hợp log nội bộ (hôm nay + 14 ngày)
+- **ShopAIKey**: `GET /v1/dashboard/billing/subscription` và `/usage` → Đã dùng $ / Còn lại $
+- **Cloudflare**: GraphQL `workersInvocationsAdaptive` (nếu có `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` trong `api/config.php`)
+- **Gemini**: số lượt fallback từ log (không có API quota realtime)
+
+### 3. Tab Admin (`admin.html`)
+
+- Tab mới: **Theo dõi AI** (giữa THCS Trần Phú và Cài đặt hệ thống)
+- 3 thẻ: Cloudflare, Gemini, ShopAIKey
+- Bảng 14 ngày + lượt gọi gần đây
+- Link mở Dashboard CF / AI Studio / ShopAIKey
+- Bấm tab hoặc **Tải lại** → gọi `api/ai_stats.php` (header `X-Admin-Key`)
+
+### 4. Cấu hình & Worker
+
+- `api/config.sample.php`: thêm `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_WORKER_SCRIPT_NAME`
+- `cloudflare-worker/worker.js`: trả `usage` nếu Workers AI có metadata
+- `cloudflare-worker/README.md`: hướng dẫn theo dõi sử dụng
+
+### File đã thêm/sửa
+
+| File | Vai trò |
+|------|---------|
+| `api/ai_usage_log.php` | Ghi/đọc `data/ai_usage.json` |
+| `api/ai_stats.php` | API thống kê cho admin |
+| `api/ai_explain.php` | Ghi log sau mỗi lượt AI |
+| `admin.html` | Tab + UI Theo dõi AI |
+| `api/config.sample.php` | Biến Cloudflare GraphQL |
+| `cloudflare-worker/worker.js` | Metadata usage (tuỳ chọn) |
+
+### Deploy lên hosting
+
+1. Upload các file trên; thư mục `data/` phải **ghi được** (tự tạo `ai_usage.json`).
+2. Để thấy lượt Worker/ngày từ Cloudflare (như dashboard CF), thêm vào `api/config.php`:
+
+```php
+define('CLOUDFLARE_ACCOUNT_ID', 'account-id-cua-ban');
+define('CLOUDFLARE_API_TOKEN', 'token-co-quyen-Account-Analytics-Read');
+define('CLOUDFLARE_WORKER_SCRIPT_NAME', 'late-bird-fe3b');
+```
+
+3. ShopAIKey dùng key đã lưu trong `global_config.json` — tab tự gọi API billing.
+
+### Lưu ý
+
+- Log nội bộ chỉ tính **AI lộ trình** (`api/ai_explain.php`). Vẽ hình, smartquiz, game… gọi Gemini từ trình duyệt **không** vào log này.
+- Chưa cấu hình CF token → tab vẫn chạy, thiếu cột “Worker hôm nay (CF)”, vẫn có “Lộ trình hôm nay (log)”.
+
+Vào `admin.html` → đăng nhập → tab **Theo dõi AI**.
+
+---
+
+## Lượt 41
+
+**Người dùng:**
+
+cập nhật vào chat.md
+
+**Trợ lý:**
+
+Đã cập nhật file `chat.md` — thêm **Lượt 38–41** (hỏi thống kê AI, ShopAIKey/Cloudflare, triển khai tab Theo dõi AI, cập nhật tài liệu chat) vào cuối file; cập nhật dòng phiên trong header.
+
+---
+
+## Lượt 42
+
+**Người dùng:**
+
+Sao mỗi lần đăng nhập trang admin.html cứ đòi lưu mật khẩu hoài vậy
+
+**Trợ lý:**
+
+**Nguyên nhân:** Trình duyệt coi ô **Mã bảo mật** là form đăng nhập vì `type="password"` + nút gửi.
+
+**Đã sửa trong `admin.html`:**
+- Ô Admin Key: `type="text"` + che ký tự bằng CSS (`admin-secret-mask`), `autocomplete="off"`
+- Form đăng nhập: `autocomplete="off"`, `data-lpignore` (tránh LastPass/1Password)
+- Các ô API key / mật khẩu HS: cùng cách
+
+Nếu vẫn hỏi sau deploy: xóa mục đã lưu cho site trong Cài đặt → Mật khẩu trình duyệt (bản cũ trước khi sửa).
+
+---
+
+## Lượt 43
+
+**Người dùng:**
+
+cập nhật các thông tin lại việc đã cấu hình đọc dữ liệu thành công AI về lượt sử dụng
+
+**Trợ lý:**
+
+Đã cập nhật `thongtin.md`, `plan.md` và `chat.md` với trạng thái **Theo dõi AI đã cấu hình và đọc dữ liệu thành công**:
+
+### `thongtin.md`
+- Bổ sung `ai_usage_log.php`, `ai_stats.php`; `ai_explain.php` ghi log vào `data/ai_usage.json`.
+- Tab admin: **Theo dõi AI**; mô tả nguồn số liệu (log nội bộ, ShopAIKey billing API, Cloudflare GraphQL).
+- Note: ShopAIKey USD đọc API thành công; CF GraphQL khi có token; Gemini chỉ fallback; phạm vi log chỉ lộ trình (`api/ai_explain.php`).
+- Sửa đăng nhập admin (`autocomplete="off"`). Ngày cập nhật **2026-06-21**.
+
+### `plan.md`
+- Header **2026-06-21**.
+- Mục **đã hoàn thành**: Theo dõi lượt sử dụng AI + sửa đăng nhập admin.
+- Checklist: tick **tab Theo dõi AI** (ShopAIKey/log); thêm mục kiểm tra Cloudflare GraphQL và không hỏi lưu mật khẩu.
+
+### `chat.md`
+- Thêm **Lượt 42–43**.

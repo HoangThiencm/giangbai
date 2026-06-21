@@ -7,6 +7,7 @@
         'lotrinhtoan8.html': 'lotrinhtoan8',
         'lotrinhtoan9.html': 'lotrinhtoan9',
         'thongketientrinh.html': 'thongketientrinh',
+        'theodoi-ai.html': 'theodoiai',
         'gslides.html': 'gslides',
         'smartquiz.html': 'smartquiz',
         'thitructuyen.html': 'thitructuyen',
@@ -21,6 +22,7 @@
         lotrinhtoan8: 'lotrinhtoan8.html',
         lotrinhtoan9: 'lotrinhtoan9.html',
         thongketientrinh: 'thongketientrinh.html',
+        theodoiai: 'theodoi-ai.html',
         gslides: 'gslides.html',
         smartquiz: 'smartquiz.html',
         thitructuyen: 'thitructuyen.html',
@@ -99,12 +101,32 @@
         return;
     }
 
+    async function refreshTeacherTabFlags() {
+        try {
+            const res = await fetch('global_config.json', { cache: 'no-store' });
+            if (!res.ok) return;
+            const cfg = await res.json();
+            const features = cfg.features || {};
+            localStorage.setItem('teacher_design_enabled', features.teacher_design !== false ? '1' : '0');
+            localStorage.setItem('teacher_progress_stats_enabled', features.teacher_progress_stats !== false ? '1' : '0');
+            localStorage.setItem('teacher_ai_stats_enabled', features.teacher_ai_stats !== false ? '1' : '0');
+        } catch {}
+    }
+
     const allowedPages = await refreshSessionPages();
+    await refreshTeacherTabFlags();
     const role = localStorage.getItem('userRole');
 
+    function teacherTabEnabled(flagKey) {
+        return localStorage.getItem(flagKey) !== '0';
+    }
+
     if (role === 'student') {
-        if (pageKey === 'thongketientrinh' || pageKey === 'rutgon') {
-            alert(pageKey === 'rutgon' ? 'Trang rút gọn link chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.');
+        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon') {
+            const msg = pageKey === 'rutgon'
+                ? 'Trang rút gọn link chỉ dành cho giáo viên.'
+                : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.');
+            alert(msg);
             window.location.href = firstAllowedPageUrl(allowedPages) || 'login.html';
             return;
         }
@@ -126,8 +148,26 @@
     }
 
     if (role === 'teacher' && pageKey === 'thongketientrinh') {
+        if (!teacherTabEnabled('teacher_progress_stats_enabled')) {
+            alert('Admin đã tắt tab Thống kê tiến trình cho giáo viên.');
+            window.location.href = 'index.html';
+            return;
+        }
         if (!hasLotrinhScope(allowedPages)) {
             alert('Tài khoản chưa được admin mở lộ trình nào để theo dõi tiến độ.');
+            window.location.href = 'index.html';
+        }
+        return;
+    }
+
+    if (role === 'teacher' && pageKey === 'theodoiai') {
+        if (!teacherTabEnabled('teacher_ai_stats_enabled')) {
+            alert('Admin đã tắt tab Theo dõi AI cho giáo viên.');
+            window.location.href = 'index.html';
+            return;
+        }
+        if (!hasLotrinhScope(allowedPages)) {
+            alert('Tài khoản chưa được admin mở lộ trình nào để theo dõi AI.');
             window.location.href = 'index.html';
         }
         return;
@@ -138,6 +178,11 @@
     }
 
     if (role === 'teacher' && lotrinhPageKeys.has(pageKey)) {
+        if (!teacherTabEnabled('teacher_design_enabled')) {
+            alert('Admin đã tắt tab Soạn bài lộ trình cho giáo viên.');
+            window.location.href = 'index.html';
+            return;
+        }
         if (!canOpenPage(pageKey, allowedPages)) {
             const fallback = firstAllowedLotrinhUrl(allowedPages);
             if (fallback && fallback !== fileName) {

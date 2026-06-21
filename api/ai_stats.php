@@ -1,7 +1,59 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
-require_admin_key();
+session_start();
+
+$key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
+$isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $key);
+$teacherUser = null;
+if (!$isAdmin && !empty($_SESSION['user_id'])) {
+    $userStmt = $pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+    $userStmt->execute([$_SESSION['user_id']]);
+    $teacherUser = $userStmt->fetch();
+    if (!$teacherUser || !(bool)$teacherUser['is_active'] || ($teacherUser['role'] ?? '') !== 'teacher') {
+        $teacherUser = null;
+    }
+}
+if (!$isAdmin && !$teacherUser) {
+    respond(['error' => 'Tài khoản không có quyền xem thống kê AI.'], 403);
+}
+
+function ai_stats_teacher_tab_enabled(): bool
+{
+    $globalConfigFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'global_config.json';
+    if (!is_file($globalConfigFile)) {
+        return true;
+    }
+    $globalConfig = json_decode((string)@file_get_contents($globalConfigFile), true);
+    if (!is_array($globalConfig)) {
+        return true;
+    }
+    $features = is_array($globalConfig['features'] ?? null) ? $globalConfig['features'] : [];
+    return ($features['teacher_ai_stats'] ?? true) !== false;
+}
+
+if ($teacherUser) {
+    if (!ai_stats_teacher_tab_enabled()) {
+        respond(['error' => 'Admin đã tắt tab Theo dõi AI cho giáo viên.'], 403);
+    }
+    $rawPages = $teacherUser['allowed_pages'] ?? null;
+    $pageList = [];
+    if ($rawPages !== null && $rawPages !== '') {
+        $decoded = json_decode((string)$rawPages, true);
+        $pageList = is_array($decoded) ? $decoded : [];
+    }
+    $allowedPages = normalize_pages($pageList);
+    $hasLotrinh = false;
+    foreach ($allowedPages as $page) {
+        if (subject_for_lotrinh_page($page) !== null) {
+            $hasLotrinh = true;
+            break;
+        }
+    }
+    if (!$hasLotrinh) {
+        respond(['error' => 'Tài khoản chưa được admin mở lộ trình nào để theo dõi AI.'], 403);
+    }
+}
 
 function ai_stats_load_runtime(): array
 {
@@ -306,12 +358,33 @@ function ai_stats_summarize_day(?array $day): array
         $totalSuccess += (int)($bucket['success'] ?? 0);
         $totalCalls += (int)($bucket['calls'] ?? 0);
     }
+    $byModeSuccess = (int)($byMode['explain'] ?? 0) + (int)($byMode['chat'] ?? 0);
+    if ($byModeSuccess > $totalSuccess) {
+        $totalSuccess = $byModeSuccess;
+    }
     return [
         'providers' => $providers,
         'by_mode' => $byMode,
         'total_success' => $totalSuccess,
         'total_calls' => $totalCalls,
     ];
+}
+
+function ai_stats_enrich_today_providers(array $today, array $cloudflareStats): array
+{
+    $providers = is_array($today['providers'] ?? null) ? $today['providers'] : [];
+    $internal = is_array($providers['cloudflare_workers_ai'] ?? null)
+        ? $providers['cloudflare_workers_ai']
+        : ['calls' => 0, 'success' => 0, 'error' => 0];
+
+    $cfBucket = $internal;
+    if (!empty($cloudflareStats['available'])) {
+        $cfBucket['worker_requests_today'] = (int)($cloudflareStats['requests_today'] ?? 0);
+        $cfBucket['worker_success_today'] = (int)($cloudflareStats['success_today'] ?? 0);
+        $cfBucket['worker_errors_today'] = (int)($cloudflareStats['errors_today'] ?? 0);
+    }
+    $providers['cloudflare_workers_ai'] = $cfBucket;
+    return $providers;
 }
 
 function ai_stats_build_history(array $byDay, int $days = 14): array
@@ -377,6 +450,8 @@ if (is_array($internalCf)) {
     $cloudflareStats['requests_today_internal'] = (int)($internalCf['success'] ?? 0);
     $cloudflareStats['errors_today_internal'] = (int)($internalCf['error'] ?? 0);
 }
+$today['providers'] = ai_stats_enrich_today_providers($today, $cloudflareStats);
+$internalToday['summary'] = $today;
 
 $geminiInternal = $today['providers']['gemini'] ?? null;
 $geminiStats = [
@@ -413,5 +488,6 @@ respond([
         'Cloudflare GraphQL cần API token có quyền Account Analytics (Read).',
         'ShopAIKey dùng endpoint OpenAI-compatible /v1/dashboard/billing/*.',
         'Các module gọi Gemini trực tiếp từ trình duyệt không xuất hiện trong log nội bộ.',
+        'Số lượt Worker trên Cloudflare có thể cao hơn log lộ trình vì đếm mọi request tới Worker; log nội bộ chỉ ghi lượt qua api/ai_explain.php.',
     ],
 ]);

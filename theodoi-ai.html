@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theo dõi sử dụng AI · Lộ trình Toán</title>
+    <script src="access-control.js?v=20260621-ai-stats-1"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background:
+                linear-gradient(180deg, rgba(14, 165, 233, 0.08), transparent 260px),
+                #f6f8fb;
+        }
+    </style>
+</head>
+
+<body class="text-slate-900 min-h-screen">
+    <header class="border-b border-slate-200 bg-white/95">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-950">Theo dõi sử dụng AI</h1>
+                <p class="mt-1 text-sm text-slate-600">Cloudflare Workers AI, Gemini fallback và ShopAIKey cho AI lộ trình học.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="index.html" class="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                    <i class="fas fa-home"></i> Trang chủ
+                </a>
+                <div id="teacherAccountLabel" class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">Giáo viên</div>
+                <button id="logoutBtn" type="button" class="inline-flex items-center gap-2 rounded border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50">
+                    <i class="fas fa-right-from-bracket"></i> Đăng xuất
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-5">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-slate-600">Số liệu từ <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs">api/ai_explain.php</code> — không bao gồm Gemini gọi trực tiếp từ trình duyệt.</p>
+            <button id="aiStatsRefreshBtn" type="button" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                <i class="fas fa-rotate-right mr-2"></i>Tải lại
+            </button>
+        </div>
+        <div id="aiStatsLoading" class="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+            <i class="fas fa-circle-notch fa-spin mr-2 text-sky-600"></i>Đang tải thống kê AI...
+        </div>
+        <div id="aiStatsContent" class="hidden space-y-5"></div>
+    </main>
+
+    <script>
+        (function () {
+            if (!localStorage.getItem('authToken')) {
+                window.location.href = 'login.html';
+                return;
+            }
+            if (localStorage.getItem('userRole') !== 'teacher') {
+                window.location.href = 'index.html';
+                return;
+            }
+            const label = document.getElementById('teacherAccountLabel');
+            if (label) {
+                label.textContent = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Giáo viên';
+            }
+            document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+                if (!confirm('Đăng xuất?')) return;
+                try { await fetch('api/logout.php', { method: 'POST', cache: 'no-store' }); } catch {}
+                localStorage.clear();
+                window.location.href = 'login.html';
+            });
+            document.getElementById('aiStatsRefreshBtn')?.addEventListener('click', () => {
+                window.loadAiStats?.(true, { useSession: true });
+            });
+        })();
+    </script>
+    <script src="teacher-lotrinh-nav.js?v=20260621-ai-stats-1"></script>
+    <script src="ai-stats-panel.js?v=20260621-ai-stats-1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.loadAiStats?.(true, { useSession: true });
+        });
+    </script>
+</body>
+
+</html>

@@ -71,6 +71,60 @@ function ai_usage_save_store(array $store): bool
     return @file_put_contents($path, $json, LOCK_EX) !== false;
 }
 
+function ai_usage_mutate_store(callable $mutator): bool
+{
+    $path = ai_usage_file_path();
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+
+    $fp = @fopen($path, 'c+');
+    if ($fp === false) {
+        return false;
+    }
+
+    try {
+        if (!@flock($fp, LOCK_EX)) {
+            return false;
+        }
+
+        rewind($fp);
+        $raw = stream_get_contents($fp);
+        $store = ai_usage_default_store();
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $store = $decoded;
+                if (!isset($store['by_day']) || !is_array($store['by_day'])) {
+                    $store['by_day'] = [];
+                }
+                if (!isset($store['recent']) || !is_array($store['recent'])) {
+                    $store['recent'] = [];
+                }
+                $store['version'] = 1;
+            }
+        }
+
+        $mutator($store);
+
+        $store['updated_at'] = (new DateTimeImmutable('now', ai_usage_timezone()))->format(DateTimeInterface::ATOM);
+        $json = json_encode($store, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        if (!is_string($json)) {
+            return false;
+        }
+
+        rewind($fp);
+        ftruncate($fp, 0);
+        $written = fwrite($fp, $json);
+        fflush($fp);
+        return $written !== false;
+    } finally {
+        @flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+}
+
 function ai_usage_provider_bucket(array &$day, string $provider): array
 {
     if (!isset($day['providers']) || !is_array($day['providers'])) {
@@ -145,59 +199,58 @@ function ai_usage_record(array $entry): void
         $estimatedUsd = ai_usage_estimate_shopaikey_usd($model, $promptTokens, $completionTokens);
     }
 
-    $store = ai_usage_load_store();
-    $dayKey = ai_usage_today_key();
-    if (!isset($store['by_day'][$dayKey]) || !is_array($store['by_day'][$dayKey])) {
-        $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => ['explain' => 0, 'chat' => 0]];
-    }
-    $day = &$store['by_day'][$dayKey];
-    $bucket = &ai_usage_provider_bucket($day, $provider);
-
-    $bucket['calls']++;
-    if ($ok) {
-        $bucket['success']++;
-        if ($fallback) {
-            $bucket['fallback_success']++;
+    ai_usage_mutate_store(function (array &$store) use ($provider, $mode, $model, $ok, $fallback, $promptTokens, $completionTokens, $totalTokens, $estimatedUsd, $entry) {
+        $dayKey = ai_usage_today_key();
+        if (!isset($store['by_day'][$dayKey]) || !is_array($store['by_day'][$dayKey])) {
+            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => ['explain' => 0, 'chat' => 0]];
         }
-    } else {
-        $bucket['error']++;
-    }
-    $bucket['prompt_tokens'] += $promptTokens;
-    $bucket['completion_tokens'] += $completionTokens;
-    $bucket['total_tokens'] += $totalTokens;
-    if ($estimatedUsd > 0) {
-        $bucket['estimated_usd'] = round((float)$bucket['estimated_usd'] + $estimatedUsd, 6);
-    }
+        $day = &$store['by_day'][$dayKey];
+        $bucket = &ai_usage_provider_bucket($day, $provider);
 
-    if (!isset($day['by_mode']) || !is_array($day['by_mode'])) {
-        $day['by_mode'] = ['explain' => 0, 'chat' => 0];
-    }
-    if ($ok) {
-        $day['by_mode'][$mode] = (int)($day['by_mode'][$mode] ?? 0) + 1;
-    }
+        $bucket['calls']++;
+        if ($ok) {
+            $bucket['success']++;
+            if ($fallback) {
+                $bucket['fallback_success']++;
+            }
+        } else {
+            $bucket['error']++;
+        }
+        $bucket['prompt_tokens'] += $promptTokens;
+        $bucket['completion_tokens'] += $completionTokens;
+        $bucket['total_tokens'] += $totalTokens;
+        if ($estimatedUsd > 0) {
+            $bucket['estimated_usd'] = round((float)$bucket['estimated_usd'] + $estimatedUsd, 6);
+        }
 
-    $recentItem = [
-        'ts' => (new DateTimeImmutable('now', ai_usage_timezone()))->format(DateTimeInterface::ATOM),
-        'provider' => $provider,
-        'mode' => $mode,
-        'model' => $model,
-        'ok' => $ok,
-        'fallback' => $fallback,
-        'prompt_tokens' => $promptTokens,
-        'completion_tokens' => $completionTokens,
-        'total_tokens' => $totalTokens,
-        'estimated_usd' => $estimatedUsd > 0 ? $estimatedUsd : null,
-        'error' => $ok ? null : trim((string)($entry['error'] ?? '')),
-    ];
-    array_unshift($store['recent'], $recentItem);
-    $store['recent'] = array_slice($store['recent'], 0, 120);
+        if (!isset($day['by_mode']) || !is_array($day['by_mode'])) {
+            $day['by_mode'] = ['explain' => 0, 'chat' => 0];
+        }
+        if ($ok) {
+            $day['by_mode'][$mode] = (int)($day['by_mode'][$mode] ?? 0) + 1;
+        }
 
-    $dayKeys = array_keys($store['by_day']);
-    rsort($dayKeys);
-    $keep = array_slice($dayKeys, 0, 90);
-    $store['by_day'] = array_intersect_key($store['by_day'], array_flip($keep));
+        $recentItem = [
+            'ts' => (new DateTimeImmutable('now', ai_usage_timezone()))->format(DateTimeInterface::ATOM),
+            'provider' => $provider,
+            'mode' => $mode,
+            'model' => $model,
+            'ok' => $ok,
+            'fallback' => $fallback,
+            'prompt_tokens' => $promptTokens,
+            'completion_tokens' => $completionTokens,
+            'total_tokens' => $totalTokens,
+            'estimated_usd' => $estimatedUsd > 0 ? $estimatedUsd : null,
+            'error' => $ok ? null : trim((string)($entry['error'] ?? '')),
+        ];
+        array_unshift($store['recent'], $recentItem);
+        $store['recent'] = array_slice($store['recent'], 0, 120);
 
-    ai_usage_save_store($store);
+        $dayKeys = array_keys($store['by_day']);
+        rsort($dayKeys);
+        $keep = array_slice($dayKeys, 0, 90);
+        $store['by_day'] = array_intersect_key($store['by_day'], array_flip($keep));
+    });
 }
 
 function ai_usage_extract_gemini_tokens(array $response): array
