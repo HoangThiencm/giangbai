@@ -27,7 +27,8 @@
 - [x] Marker thủ công cho nút **AI giải thích**: chỉ hiện nút khi nội dung có `[AI]` hoặc `[[AI]]` (ẩn marker khi hiển thị).
 - [x] Quy ước soạn nội dung bài học: Enter 1 lần = xuống dòng, Enter 2 lần = tách đoạn; hỗ trợ `**đậm**`, `*nghiêng*`, `++gạch chân++`, ảnh `![mô tả](url)`; render qua `lessonRichText()` trong `lotrinh.js`.
 - [x] Gợi ý hành động tiếp theo (`renderNextAction`) cập nhật theo tab và tiến độ; ô gợi ý có thể bấm để chuyển tab.
-- [x] Fallback AI: `api/ai_explain.php` thử Gemini trước, hết quota/lỗi thì gọi ShopAIKey (DeepSeek); cấu hình `shopaikey_api_key`, `shopaikey_model` trong `admin.html` / `global_config.json`.
+- [x] **AI học tập nhẹ + fallback AI**: `api/ai_explain.php` ưu tiên truy xuất nội dung bài học ngay trên PHP/hosting (khái niệm, công thức, ví dụ); không đủ dữ liệu thì thử Gemini, hết quota/lỗi thì gọi ShopAIKey (DeepSeek). Admin có công tắc `light_ai_enabled`; cấu hình `shopaikey_api_key`, `shopaikey_model` trong `admin.html` / `global_config.json`.
+- [x] **Công tắc kiểm thử provider AI**: Admin có thể tắt/bật riêng Gemini (`gemini_enabled`) và DeepSeek / ShopAIKey (`shopaikey_enabled`) mà không xóa key. Backend bỏ qua provider bị tắt; dùng để xác nhận AI học tập nhẹ hoạt động độc lập.
 - [x] Khóa soạn bài theo trang lộ trình: trên `lotrinhtoan6–9.html` giáo viên chỉ soạn/xem bài đúng `LOTRINH_SUBJECT` (ẩn pill chuyển môn, khóa dropdown môn); `admin-progress.js` cũng lọc bài theo môn trang.
 - [x] Sửa lỗi encoding UTF-8 trên `lotrinhtoan7.html`, `lotrinhtoan8.html`, `lotrinhtoan9.html` (tiêu đề, `LOTRINH_SUBJECT`, chữ tiếng Việt ở header).
 - [x] Sửa lưu **mục tiêu bài học**: đổi textarea soạn bài thành `lessonGoalInput` (tránh trùng `id` với `<p id="lessonGoal">` của giao diện học sinh).
@@ -85,6 +86,8 @@
 
 ## Cần người dùng phản biện lại trên giao diện
 - [ ] Mở lại AI giải thích ở đoạn lý thuyết: kiểm tra câu trả lời không còn dừng cụt kiểu "Khái"; nếu AI vẫn trả câu lửng, cần chụp lại nội dung mới để kiểm tra response thực tế từ Gemini.
+- [ ] **AI học tập nhẹ**: ở bài có công thức/định nghĩa/ví dụ rõ, bấm **AI giải thích** và hỏi trong chat để kiểm tra câu trả lời bám đúng phần giáo viên soạn; hỏi ngoài nội dung bài để kiểm tra hệ thống tự chuyển Gemini rồi ShopAIKey.
+- [ ] **AI học tập nhẹ — không dùng API ngoài**: tắt cả Gemini và DeepSeek/ShopAIKey trong Admin, lưu từng khối rồi thử câu hỏi thuộc bài; câu thuộc bài vẫn có phản hồi, câu ngoài bài báo chưa có provider dự phòng. Bật lại hai công tắc để khôi phục fallback.
 - [ ] Vào tab Luyện tập khi chưa chọn đáp án: kiểm tra sidebar/header đã hiện phần trăm tiến trình bài học và bảng kỹ năng không còn `--`.
 - [ ] Chọn từng đáp án trắc nghiệm: kiểm tra phần trăm tiến trình bài hiện tại tăng theo số câu đã làm, dấu đúng/sai hiện ngay, và kỹ năng đổi phần trăm tương ứng.
 - [ ] Bấm "Đánh dấu đã học" ở lý thuyết hoặc "Đánh dấu đã xem ví dụ": kiểm tra "Tiến độ chương" và "Tiến độ bài hiện tại" tăng ngay sau khi lưu.

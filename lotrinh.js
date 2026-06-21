@@ -2149,7 +2149,10 @@
         return api('api/ai_explain.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(lessonAiPayload(lesson, { text }))
+            body: JSON.stringify(lessonAiPayload(lesson, {
+                text,
+                lesson_context: lessonContextText(lesson)
+            }))
         });
     }
 

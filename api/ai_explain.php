@@ -46,13 +46,25 @@ function normalize_api_keys($value): array
 function load_ai_runtime_config(): array
 {
     $config = [
+        'light_ai_enabled' => true,
+        'gemini_enabled' => true,
         'gemini_keys' => [],
         'gemini_model' => 'gemini-2.5-flash',
         'shopaikey_api_key' => '',
+        'shopaikey_enabled' => true,
         'shopaikey_model' => 'deepseek-v4-flash',
         'shopaikey_base_url' => 'https://api.shopaikey.com/v1',
     ];
 
+    if (defined('LIGHT_AI_ENABLED')) {
+        $config['light_ai_enabled'] = (bool)LIGHT_AI_ENABLED;
+    }
+    if (defined('GEMINI_ENABLED')) {
+        $config['gemini_enabled'] = (bool)GEMINI_ENABLED;
+    }
+    if (defined('SHOPAIKEY_ENABLED')) {
+        $config['shopaikey_enabled'] = (bool)SHOPAIKEY_ENABLED;
+    }
     if (defined('GEMINI_API_KEYS')) {
         $config['gemini_keys'] = normalize_api_keys(GEMINI_API_KEYS);
     }
@@ -82,11 +94,20 @@ function load_ai_runtime_config(): array
             if (!empty($globalConfig['gemini_model']) && is_string($globalConfig['gemini_model'])) {
                 $config['gemini_model'] = trim($globalConfig['gemini_model']);
             }
+            if (array_key_exists('light_ai_enabled', $globalConfig)) {
+                $config['light_ai_enabled'] = (bool)$globalConfig['light_ai_enabled'];
+            }
+            if (array_key_exists('gemini_enabled', $globalConfig)) {
+                $config['gemini_enabled'] = (bool)$globalConfig['gemini_enabled'];
+            }
             if (!empty($globalConfig['shopaikey_api_key']) && is_string($globalConfig['shopaikey_api_key'])) {
                 $config['shopaikey_api_key'] = trim($globalConfig['shopaikey_api_key']);
             }
             if (!empty($globalConfig['shopaikey_model']) && is_string($globalConfig['shopaikey_model'])) {
                 $config['shopaikey_model'] = trim($globalConfig['shopaikey_model']);
+            }
+            if (array_key_exists('shopaikey_enabled', $globalConfig)) {
+                $config['shopaikey_enabled'] = (bool)$globalConfig['shopaikey_enabled'];
             }
         }
     }
@@ -147,6 +168,144 @@ function shopaikey_payload(string $model, string $prompt, int $maxTokens = 900):
         'temperature' => 0.2,
         'max_tokens' => $maxTokens,
     ], JSON_UNESCAPED_UNICODE);
+}
+
+function light_ai_normalize(string $text): string
+{
+    $text = preg_replace('/\[\[?AI\]\]?/u', '', $text) ?? $text;
+    $text = preg_replace('/\s+/u', ' ', trim($text)) ?? trim($text);
+    return trim($text);
+}
+
+function light_ai_lower(string $text): string
+{
+    return function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+}
+
+function light_ai_length(string $text): int
+{
+    return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
+}
+
+function light_ai_substr(string $text, int $start, int $length): string
+{
+    return function_exists('mb_substr') ? mb_substr($text, $start, $length, 'UTF-8') : substr($text, $start, $length);
+}
+
+function light_ai_keywords(string $text): array
+{
+    $text = light_ai_lower($text);
+    $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? '';
+    $stopWords = array_flip([
+        'là', 'và', 'của', 'có', 'cho', 'trong', 'với', 'các', 'một', 'những', 'được', 'không',
+        'em', 'bài', 'học', 'này', 'đó', 'thì', 'khi', 'để', 'từ', 'hay', 'như', 'theo', 'về',
+        'gì', 'sao', 'nào', 'ạ', 'ơi', 'giúp', 'mình', 'cần', 'phải', 'làm', 'thế', 'tại', 'vì'
+    ]);
+    $tokens = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $keywords = [];
+    foreach ($tokens as $token) {
+        if (light_ai_length($token) < 2 || isset($stopWords[$token])) continue;
+        $keywords[$token] = true;
+    }
+    return array_keys($keywords);
+}
+
+function light_ai_segments(string $context): array
+{
+    $rawSegments = preg_split('/(?:\r?\n){1,}|(?<=[.!?])\s+/u', $context) ?: [];
+    $segments = [];
+    $buffer = '';
+    foreach ($rawSegments as $raw) {
+        $part = light_ai_normalize($raw);
+        if ($part === '') continue;
+        $buffer = $buffer === '' ? $part : $buffer . ' ' . $part;
+        if (light_ai_length($buffer) >= 55) {
+            $segments[] = light_ai_substr($buffer, 0, 520);
+            $buffer = '';
+        }
+    }
+    if ($buffer !== '') $segments[] = light_ai_substr($buffer, 0, 520);
+    return array_slice($segments, 0, 45);
+}
+
+function light_ai_intent(string $question): string
+{
+    $question = light_ai_lower($question);
+    if (preg_match('/công thức|quy tắc|tính thế nào|tính như nào|tính sao/u', $question)) return 'formula';
+    if (preg_match('/ví dụ|minh hoạ|chẳng hạn/u', $question)) return 'example';
+    if (preg_match('/là gì|nghĩa là gì|khái niệm|định nghĩa/u', $question)) return 'definition';
+    if (preg_match('/bước|cách làm|làm thế nào|giải như/u', $question)) return 'method';
+    return 'general';
+}
+
+function light_ai_best_segment(string $question, string $context): ?array
+{
+    $queryKeywords = light_ai_keywords($question);
+    if (count($queryKeywords) < 1) return null;
+    $intent = light_ai_intent($question);
+    $best = null;
+    foreach (light_ai_segments($context) as $segment) {
+        $segmentKeywords = array_flip(light_ai_keywords($segment));
+        $overlap = 0;
+        foreach ($queryKeywords as $keyword) {
+            if (isset($segmentKeywords[$keyword])) $overlap++;
+        }
+        $lowerSegment = light_ai_lower($segment);
+        $bonus = 0;
+        if ($intent === 'formula' && (str_contains($segment, '=') || str_contains($lowerSegment, 'công thức') || str_contains($lowerSegment, 'quy tắc'))) $bonus = 1;
+        if ($intent === 'example' && (str_contains($lowerSegment, 'ví dụ') || str_contains($lowerSegment, 'minh hoạ'))) $bonus = 1;
+        if ($intent === 'definition' && (str_contains($lowerSegment, 'là ') || str_contains($lowerSegment, 'gọi là'))) $bonus = 1;
+        $score = $overlap * 2 + $bonus;
+        if ($best === null || $score > $best['score']) {
+            $best = ['text' => $segment, 'score' => $score, 'intent' => $intent];
+        }
+    }
+    return $best && $best['score'] >= 2 ? $best : null;
+}
+
+function light_ai_answer(string $lessonTitle, string $question, string $source, string $intent): string
+{
+    $source = light_ai_normalize($source);
+    $source = light_ai_substr($source, 0, 460);
+    $prefixes = [
+        'formula' => 'Quy tắc hoặc công thức liên quan trong bài là',
+        'example' => 'Ví dụ gần nhất trong bài cho em là',
+        'definition' => 'Theo nội dung bài “' . $lessonTitle . '”, ý cần hiểu là',
+        'method' => 'Gợi ý từ nội dung bài là',
+        'general' => 'Phần liên quan trực tiếp trong bài là',
+    ];
+    $prefix = $prefixes[$intent] ?? $prefixes['general'];
+    $guidance = $intent === 'method'
+        ? ' Em hãy đối chiếu từng dữ kiện của câu hỏi với phần này rồi làm từng bước.'
+        : ($intent === 'formula'
+            ? ' Khi làm bài, hãy thay đúng số hoặc ký hiệu vào công thức rồi tính cẩn thận.'
+            : ' Em hãy ghi nhớ các từ khóa trong phần này trước khi làm bài.');
+    return $prefix . ': ' . rtrim($source, ".!? \t") . '.' . $guidance;
+}
+
+function try_light_ai_explain(array $config, string $mode, string $lessonTitle, string $text, string $question, string $lessonContext): ?array
+{
+    if (empty($config['light_ai_enabled'])) return null;
+
+    if ($mode !== 'chat') {
+        $selected = light_ai_normalize($text);
+        if (light_ai_length($selected) < 12) return null;
+        return [
+            'answer' => light_ai_answer($lessonTitle, $selected, $selected, str_contains($selected, '=') ? 'formula' : 'definition'),
+            'provider' => 'light_ai',
+            'model' => 'noi-dung-bai-hoc',
+            'confidence' => 'high',
+        ];
+    }
+
+    $matched = light_ai_best_segment($question, $lessonContext);
+    if ($matched === null) return null;
+    return [
+        'answer' => light_ai_answer($lessonTitle, $question, $matched['text'], $matched['intent']),
+        'provider' => 'light_ai',
+        'model' => 'noi-dung-bai-hoc',
+        'confidence' => $matched['score'] >= 4 ? 'high' : 'medium',
+    ];
 }
 
 function call_gemini(string $model, string $key, string $payload): array
@@ -238,6 +397,7 @@ function complete_answer_if_needed(string $provider, callable $caller, string $a
 
 function try_gemini_explain(array $config, string $prompt): ?array
 {
+    if (empty($config['gemini_enabled'])) return null;
     $keys = $config['gemini_keys'] ?? [];
     if (empty($keys)) return null;
 
@@ -289,6 +449,7 @@ function try_gemini_explain(array $config, string $prompt): ?array
 
 function try_shopaikey_explain(array $config, string $prompt): ?array
 {
+    if (empty($config['shopaikey_enabled'])) return null;
     $apiKey = trim((string)($config['shopaikey_api_key'] ?? ''));
     if ($apiKey === '') return null;
 
@@ -329,8 +490,20 @@ $prompt = $mode === 'chat'
     ? build_chat_prompt($subject, $lessonTitle, $lessonContext, $history, $question)
     : build_explain_prompt($subject, $lessonTitle, $text);
 
-if (empty($runtime['gemini_keys']) && trim((string)$runtime['shopaikey_api_key']) === '') {
-    respond(['error' => 'AI chua co Gemini key hoac ShopAIKey fallback.'], 503);
+$lightResult = try_light_ai_explain($runtime, $mode, $lessonTitle, $text, $question, $lessonContext);
+if (is_array($lightResult) && !empty($lightResult['answer'])) {
+    respond([
+        'ok' => true,
+        'answer' => trim($lightResult['answer']),
+        'complete' => true,
+        'provider' => 'light_ai',
+        'model' => $lightResult['model'] ?? 'noi-dung-bai-hoc',
+        'confidence' => $lightResult['confidence'] ?? 'medium',
+    ]);
+}
+
+if ((empty($runtime['gemini_enabled']) || empty($runtime['gemini_keys'])) && (empty($runtime['shopaikey_enabled']) || trim((string)$runtime['shopaikey_api_key']) === '')) {
+    respond(['error' => 'AI học tập nhẹ chưa tìm được nội dung phù hợp và chưa có Gemini hoặc ShopAIKey dự phòng.'], 503);
 }
 
 $geminiResult = try_gemini_explain($runtime, $prompt);

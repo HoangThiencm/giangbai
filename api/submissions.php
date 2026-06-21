@@ -822,24 +822,23 @@ if ($method === 'POST' && $action === 'submit') {
         $folderId = trim((string)($assignment['drive_folder_id'] ?? ''));
         if ($folderId === '') {
             $folderId = drive_assignment_folder(
-                $assignment['public_code'],
                 $assignment['title'],
                 (string)($assignment['submission_type'] ?? 'file'),
                 $assignment['academic_year'] ?? null
             );
             $pdo->prepare('UPDATE submission_assignments SET drive_folder_id = ? WHERE id = ? AND (drive_folder_id IS NULL OR drive_folder_id = \'\')')->execute([$folderId, (int)$assignment['id']]);
         }
-        $personFolder = drive_participant_folder($folderId, $group, $name, $identifier);
-        $prefix = date('Ymd-His');
         foreach ($uploadQueue as $index => $queued) {
             $file = $queued['file'];
             $original = (string)$file['name'];
-            $storedName = $prefix . '-' . ($index + 1) . '-' . drive_safe_name($original);
-            $mime = function_exists('finfo_open') ? (string)(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) : ((string)$file['type'] ?: 'application/octet-stream');
-            $drive = drive_upload_file($personFolder, $storedName, $mime, $file['tmp_name']);
+            $storedName = drive_submission_stored_name($group, $name, $identifier, $index + 1, $original, $queued['field_key']);
+            $invalid = drive_validate_upload($file['tmp_name'], $original);
+            if ($invalid) respond(['error' => $invalid], 422);
+            $mime = drive_detect_mime($file['tmp_name'], $original, (string)($file['type'] ?? ''));
+            $drive = drive_upload_file($folderId, $storedName, $mime, $file['tmp_name']);
             $uploaded[] = [
                 'drive_file_id' => $drive['file_id'], 'original_name' => $original, 'stored_name' => $drive['stored_name'],
-                'mime_type' => $mime, 'size_bytes' => (int)$file['size'], 'view_url' => $drive['view_url'], 'download_url' => $drive['download_url'],
+                'mime_type' => $drive['mime_type'] ?? $mime, 'size_bytes' => (int)$file['size'], 'view_url' => $drive['view_url'], 'download_url' => $drive['download_url'],
                 'field_key' => $queued['field_key'],
             ];
         }

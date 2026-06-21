@@ -18,10 +18,16 @@ define('APP_TIMEZONE', 'Asia/Ho_Chi_Minh');
 // You can set one key as a string or multiple keys as an array.
 define('GEMINI_API_KEYS', []);
 define('GEMINI_MODEL', 'gemini-2.5-flash');
+define('GEMINI_ENABLED', true);
+
+// Lightweight learning assistant: retrieves explanations from the lesson
+// content already stored in this system. It runs on ordinary PHP hosting.
+define('LIGHT_AI_ENABLED', true);
 
 // Optional fallback via ShopAIKey (OpenAI-compatible API).
 define('SHOPAIKEY_API_KEY', '');
 define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');
+define('SHOPAIKEY_ENABLED', true);
 
 // Google Drive storage for the assignment submission module.
 // Enable Google Drive API, then use either OAuth Client credentials (personal

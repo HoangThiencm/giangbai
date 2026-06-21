@@ -601,9 +601,12 @@ if ($method === 'POST' && $action === 'post') {
         foreach ($files as $index => $file) {
             if ((int)$file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) continue;
             if ((int)$file['size'] > 25 * 1024 * 1024) respond(['error' => 'Mỗi tệp bảng chia sẻ tối đa 25 MB.'], 422);
-            $original = (string)$file['name']; $mime = function_exists('finfo_open') ? (string)(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) : ((string)$file['type'] ?: 'application/octet-stream');
+            $original = (string)$file['name'];
+            $invalid = drive_validate_upload($file['tmp_name'], $original);
+            if ($invalid) respond(['error' => $invalid], 422);
+            $mime = drive_detect_mime($file['tmp_name'], $original, (string)($file['type'] ?? ''));
             $drive = drive_upload_file($personFolder, date('Ymd-His') . '-' . ($index + 1) . '-' . drive_safe_name($original), $mime, $file['tmp_name']);
-            $insertFile->execute([$postId, $drive['file_id'], $original, $drive['stored_name'], $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
+            $insertFile->execute([$postId, $drive['file_id'], $original, $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
         }
     }
     respond(['ok' => true, 'message' => $status === 'pending' ? 'Bài đăng đã gửi và đang chờ giáo viên duyệt.' : 'Bài đăng đã xuất hiện trên bảng.']);
