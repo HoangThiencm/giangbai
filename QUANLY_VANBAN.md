@@ -3,6 +3,8 @@
 ## Chức năng
 
 - Giáo viên có tab **Quản lý văn bản** trong thanh điều hướng.
+- Năm học do giáo viên tự tạo trong giao diện; mỗi văn bản bắt buộc thuộc một
+  năm học đã khai báo.
 - Quản lý văn bản đến/đi, số ký hiệu, ngày, nơi gửi/nhận, trích yếu và tệp đính kèm.
 - Đặt hạn báo cáo và xác nhận trạng thái: Chưa xử lý, Đang xử lý, Đã báo cáo.
   Nếu quá hạn mà chưa hoàn thành, giao diện tự hiển thị Quá hạn.
@@ -42,5 +44,5 @@ Tệp được xếp trong Drive theo cấu trúc:
     └── VAN_BAN_DI/
 ```
 
-Khi xóa một văn bản trong giao diện, chỉ xóa danh mục MySQL. Tệp trên Drive được
-giữ lại để tránh mất hồ sơ ngoài ý muốn.
+Khi xóa một văn bản, giao diện hiện cảnh báo số tệp sẽ bị xóa. Sau khi xác nhận,
+hệ thống xóa cả danh mục MySQL lẫn toàn bộ tệp đính kèm của văn bản trên Google Drive.

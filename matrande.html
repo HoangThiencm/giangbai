@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="hf-fallback-client.js?v=20260622"></script>
+    <script src="ai-design-config.js?v=20260621"></script>
+    <script src="mistral-ocr-client.js?v=20260621"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
@@ -66,7 +68,7 @@
 </head>
 
 <body>
-    <div id="gb-hf-fallback-bar"></div>
+    <div id="gb-ai-toolbar"></div>
     <div id="root"></div>
 
     <script type="text/babel" data-presets="env,react">
@@ -367,7 +369,7 @@
 
             callGroq: async (payloadParts) => {
                 const { groqKeys, groqModel } = AIAdapter.getConfig();
-                if (!groqKeys.length) throw new Error("Thiếu Groq API Key! Vui lòng cấu hình ở Dashboard.");
+                if (!groqKeys.length) throw new Error("Thiếu Groq API Key! Bấm Cấu hình AI trên trang này.");
 
                 const hasImage = payloadParts.some(p => p.inlineData);
                 const actualModel = hasImage ? 'meta-llama/llama-4-scout-17b-16e-instruct' : groqModel;
@@ -2387,7 +2389,7 @@ YÊU CẦU:
                             </div>
                         </div>
 
-                        {!hasGemini && !hasGroq && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-lg"></i> ⚠️ Chưa có thiết lập AI API Key nào (cả Gemini và Groq đều trống). Vui lòng cấu hình ở Dashboard trước.</div>}
+                        {!hasGemini && !hasGroq && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-lg"></i> ⚠️ Chưa có API Key AI. Bấm <b>Cấu hình AI</b> ở góc trên để nạp Gemini hoặc Groq.</div>}
 
                         {step === 1 && (hasGemini || hasGroq) && (
                             <div className="glass-panel p-8 rounded-2xl border space-y-6 max-w-3xl mx-auto transition-all hover:shadow-lg">
@@ -3011,7 +3013,7 @@ YÊU CẦU:
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            if (window.GiangBaiApi) GiangBaiApi.mountFallbackToggle('gb-hf-fallback-bar', { compact: true });
+            if (window.AiDesignConfig) AiDesignConfig.mountBar('gb-ai-toolbar');
         });
     </script>
 </body>

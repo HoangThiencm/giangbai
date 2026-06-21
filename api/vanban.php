@@ -21,6 +21,7 @@ function vbd_ensure_schema(PDO $pdo): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS office_documents (
         id INT AUTO_INCREMENT PRIMARY KEY,
         owner_id INT NOT NULL,
+        academic_year VARCHAR(40) NOT NULL DEFAULT '',
         direction VARCHAR(12) NOT NULL DEFAULT 'incoming',
         document_number VARCHAR(160) DEFAULT NULL,
         title VARCHAR(500) NOT NULL,
@@ -38,9 +39,25 @@ function vbd_ensure_schema(PDO $pdo): void
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_office_documents_owner (owner_id),
+        INDEX idx_office_documents_year (academic_year),
         INDEX idx_office_documents_due (report_due_at),
         INDEX idx_office_documents_direction (direction)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS office_school_years (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(40) NOT NULL UNIQUE,
+        created_by INT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_office_school_years_name (name)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    try {
+        $column = $pdo->query("SHOW COLUMNS FROM office_documents LIKE 'academic_year'")->fetch();
+        if (!$column) $pdo->exec("ALTER TABLE office_documents ADD COLUMN academic_year VARCHAR(40) NOT NULL DEFAULT '' AFTER owner_id");
+    } catch (Throwable $e) {
+        // Existing installations may need the column added manually if ALTER TABLE is restricted.
+    }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS office_document_files (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -74,6 +91,11 @@ function vbd_date($value): ?string
     if ($value === '') return null;
     $time = strtotime($value);
     return $time ? date('Y-m-d', $time) : null;
+}
+
+function vbd_academic_year($value): string
+{
+    return vbd_truncate(trim((string)$value), 40);
 }
 
 function vbd_truncate(string $value, int $length): string
@@ -190,7 +212,9 @@ function vbd_drive_folder(array $document): string
     $root = defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
     if ($root === '') throw new RuntimeException('Chưa cấu hình GOOGLE_DRIVE_ROOT_FOLDER_ID trên hosting.');
     $rootFolder = drive_get_or_create_folder($root, '04_QUAN_LY_VAN_BAN');
-    $yearFolder = drive_get_or_create_folder($rootFolder, 'NAM_HOC_' . drive_school_year());
+    $year = vbd_academic_year($document['academic_year'] ?? '');
+    if ($year === '') throw new RuntimeException('Cần chọn năm học trước khi tải tệp lên Google Drive.');
+    $yearFolder = drive_get_or_create_folder($rootFolder, 'NAM_HOC_' . drive_safe_name($year, 'NAM_HOC'));
     $kindFolder = drive_get_or_create_folder($yearFolder, $document['direction'] === 'outgoing' ? 'VAN_BAN_DI' : 'VAN_BAN_DEN');
     $label = trim((string)($document['document_number'] ?? '')) ?: ('VB-' . (int)$document['id']);
     return drive_get_or_create_folder($kindFolder, drive_safe_name($label . ' - ' . $document['title'], 'Van ban'));
@@ -228,12 +252,27 @@ if ($action === 'list') {
         $document['effective_status'] = vbd_effective_status($document);
     }
     unset($document);
+    $years = $pdo->query('SELECT name FROM office_school_years ORDER BY name DESC')->fetchAll(PDO::FETCH_COLUMN);
     respond([
         'ok' => true,
         'documents' => $documents,
+        'school_years' => $years,
         'drive_configured' => defined('GOOGLE_DRIVE_CREDENTIALS_JSON') && trim((string)GOOGLE_DRIVE_CREDENTIALS_JSON) !== '' && defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') && trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) !== '',
         'user' => ['name' => $user['full_name'], 'username' => $user['username']],
     ]);
+}
+
+if ($action === 'create_school_year') {
+    $input = json_body();
+    $year = vbd_academic_year($input['academic_year'] ?? '');
+    if ($year === '') respond(['error' => 'Nhập tên năm học, ví dụ 2025-2026.'], 422);
+    try {
+        $stmt = $pdo->prepare('INSERT INTO office_school_years (name, created_by) VALUES (?, ?)');
+        $stmt->execute([$year, (int)$user['id']]);
+    } catch (Throwable $e) {
+        // Unique name means the school year was already created by another teacher.
+    }
+    respond(['ok' => true, 'academic_year' => $year, 'message' => 'Đã tạo hoặc chọn năm học ' . $year . '.']);
 }
 
 if ($action === 'ai_suggest') {
@@ -252,10 +291,16 @@ if ($action === 'save') {
     $id = (int)($input['id'] ?? 0);
     $title = trim((string)($input['title'] ?? ''));
     if ($title === '') respond(['error' => 'Cần nhập trích yếu hoặc tên văn bản.'], 422);
+    $academicYear = vbd_academic_year($input['academic_year'] ?? '');
+    if ($academicYear === '') respond(['error' => 'Cần chọn năm học cho văn bản.'], 422);
+    $yearStmt = $pdo->prepare('SELECT id FROM office_school_years WHERE name = ? LIMIT 1');
+    $yearStmt->execute([$academicYear]);
+    if (!$yearStmt->fetch()) respond(['error' => 'Năm học chưa có trong danh mục. Hãy tạo năm học trước.'], 422);
     $direction = vbd_direction((string)($input['direction'] ?? 'incoming'));
     $required = !empty($input['report_required']);
     $status = vbd_status((string)($input['report_status'] ?? ''), $required);
     $values = [
+        $academicYear,
         $direction,
         trim((string)($input['document_number'] ?? '')) ?: null,
         vbd_truncate($title, 500),
@@ -272,11 +317,11 @@ if ($action === 'save') {
     if ($id > 0) {
         if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản cần sửa.'], 404);
         $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
-        $stmt = $pdo->prepare('UPDATE office_documents SET direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
+        $stmt = $pdo->prepare('UPDATE office_documents SET academic_year=?, direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
         $stmt->execute(array_merge($values, [$reportedAt, $id, (int)$user['id']]));
     } else {
         $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
-        $stmt = $pdo->prepare('INSERT INTO office_documents (owner_id, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute(array_merge([(int)$user['id']], $values, [$reportedAt]));
         $id = (int)$pdo->lastInsertId();
     }
@@ -331,9 +376,25 @@ if ($action === 'delete') {
     $input = json_body();
     $id = (int)($input['id'] ?? 0);
     if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản.'], 404);
-    $pdo->prepare('DELETE FROM office_document_files WHERE document_id=?')->execute([$id]);
-    $pdo->prepare('DELETE FROM office_documents WHERE id=? AND owner_id=?')->execute([$id, (int)$user['id']]);
-    respond(['ok' => true, 'message' => 'Đã xóa dữ liệu khỏi danh mục. Tệp trên Google Drive được giữ lại để an toàn.']);
+    $fileStmt = $pdo->prepare('SELECT drive_file_id FROM office_document_files WHERE document_id=?');
+    $fileStmt->execute([$id]);
+    $files = $fileStmt->fetchAll();
+    try {
+        if ($files) {
+            require_once __DIR__ . '/google_drive.php';
+            foreach ($files as $file) {
+                drive_delete_file((string)$file['drive_file_id']);
+            }
+        }
+        $pdo->beginTransaction();
+        $pdo->prepare('DELETE FROM office_document_files WHERE document_id=?')->execute([$id]);
+        $pdo->prepare('DELETE FROM office_documents WHERE id=? AND owner_id=?')->execute([$id, (int)$user['id']]);
+        $pdo->commit();
+        respond(['ok' => true, 'message' => 'Đã xóa văn bản và toàn bộ tệp đính kèm trên Google Drive.']);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        respond(['error' => 'Không thể xóa trọn vẹn văn bản: ' . $e->getMessage()], 502);
+    }
 }
 
 respond(['error' => 'Thao tác không hợp lệ.'], 400);

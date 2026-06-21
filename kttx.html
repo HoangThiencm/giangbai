@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tạo Đề Kiểm Tra Thường Xuyên</title>
     <script src="access-control.js"></script>
+    <script src="hf-fallback-client.js?v=20260622"></script>
+    <script src="ai-design-config.js?v=20260621"></script>
+    <script src="mistral-ocr-client.js?v=20260621"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -165,6 +168,7 @@
 </head>
 
 <body>
+    <div id="gb-ai-toolbar"></div>
     <div id="root"></div>
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useMemo } = React;
@@ -222,7 +226,7 @@
             callGemini: async (payloadParts) => { const { geminiKeys, geminiModel } = AIAdapter.getConfig(); if (!geminiKeys.length) throw new Error("Thiếu Gemini API Key!"); const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5); const maxAttempts = Math.max(shuffledKeys.length * 2, 3); for (let i = 0; i < maxAttempts; i++) { const currentKey = shuffledKeys[i % shuffledKeys.length]; try { const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: payloadParts }] }) }); if (!res.ok) { const errRaw = await res.json(); if (res.status === 429 || res.status >= 500) { await new Promise(r => setTimeout(r, 2000)); continue; } throw new Error(errRaw.error?.message || `HTTP ${res.status}`); } const data = await res.json(); if (data.candidates && data.candidates[0]?.content) { const parts = data.candidates[0].content.parts; const answerPart = [...parts].reverse().find(p => !p.thought && p.text) || parts[parts.length - 1]; return answerPart.text; } throw new Error("Invalid Response"); } catch (e) { await new Promise(r => setTimeout(r, 2000)); if (i === maxAttempts - 1) throw e; } } throw new Error("Tất cả API Keys đều báo lỗi."); },
             callGroq: async (payloadParts) => {
                 const { groqKeys, groqModel } = AIAdapter.getConfig();
-                if (!groqKeys.length) throw new Error("Thiếu Groq API Key! Vui lòng cấu hình ở Dashboard.");
+                if (!groqKeys.length) throw new Error("Thiếu Groq API Key! Bấm Cấu hình AI trên trang này.");
 
                 const hasImage = payloadParts.some(p => p.inline_data || p.inlineData);
                 const actualModel = hasImage ? 'meta-llama/llama-4-scout-17b-16e-instruct' : groqModel;
@@ -1022,7 +1026,7 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
                         <button onClick={() => switchMode('similar')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all ${mode === 'similar' ? 'bg-white text-amber-700 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><i className="fas fa-clone mr-2"></i>Tạo đề tương tự</button>
                     </div>
 
-                    {(!hasGemini && !hasGroq) && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold"><i className="fas fa-exclamation-triangle mr-2"></i>Chưa có thiết lập AI API Key nào (cả Gemini và Groq đều trống). Vui lòng cấu hình ở Dashboard trước.</div>}
+                    {(!hasGemini && !hasGroq) && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r shadow-sm mb-6 text-sm font-semibold"><i className="fas fa-exclamation-triangle mr-2"></i>Chưa có API Key AI. Bấm <b>Cấu hình AI</b> ở góc trên để nạp Gemini hoặc Groq.</div>}
 
                     {/* TAB 1 STEPS */}
                     {mode === 'create' && (hasGemini || hasGroq) && <StepIndicator />}
@@ -1342,6 +1346,11 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
             </>);
         };
         const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AiDesignConfig) AiDesignConfig.mountBar('gb-ai-toolbar');
+        });
     </script>
 </body>
 

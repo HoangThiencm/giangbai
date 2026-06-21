@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <title>SmartQuiz AI</title>
     <script src="access-control.js"></script>
+    <script src="hf-fallback-client.js?v=20260622"></script>
+    <script src="ai-design-config.js?v=20260621"></script>
+    <script src="mistral-ocr-client.js?v=20260621"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -79,6 +82,7 @@
 </head>
 
 <body class="bg-slate-50 min-h-screen font-sans">
+    <div id="gb-ai-toolbar"></div>
     <div id="root"></div>
 
     <script type="text/babel" data-presets="env,react">
@@ -2234,6 +2238,11 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AiDesignConfig) AiDesignConfig.mountBar('gb-ai-toolbar');
+        });
     </script>
 </body>
 

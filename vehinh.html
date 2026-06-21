@@ -12,6 +12,8 @@
         }
     </script>
 
+    <script src="hf-fallback-client.js?v=20260622"></script>
+    <script src="ai-design-config.js?v=20260621"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -24,6 +26,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         body {
@@ -217,6 +220,7 @@
 </head>
 
 <body class="text-gray-800">
+    <div id="gb-ai-toolbar"></div>
     <div class="flex h-screen bg-gray-100">
         <main class="flex-1 flex flex-col p-4 lg:p-6 gap-6 overflow-y-auto">
             <h1 class="text-2xl font-bold text-gray-700">Vẽ hình & Biểu đồ AI (Gemini)</h1>
@@ -465,6 +469,9 @@
     <script src="app.js"></script>
     <script>
         lucide.createIcons();
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AiDesignConfig) AiDesignConfig.mountBar('gb-ai-toolbar');
+        });
     </script>
 </body>
 

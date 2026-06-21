@@ -136,7 +136,7 @@ function exam_ai_normalize_segment_local(array $data): ?array
 {
     $apiKeys = hf_load_gemini_keys($data['api_keys'] ?? []);
     if (empty($apiKeys)) {
-        return ['status' => 'error', 'message' => 'Thiếu Gemini API key. Vào Dashboard → Cấu hình để nạp key.', 'data' => []];
+        return ['status' => 'error', 'message' => 'Thiếu Gemini API key. Bấm Cấu hình AI trên trang Thi trực tuyến.', 'data' => []];
     }
 
     $model = trim((string)($data['model'] ?? hf_default_gemini_model()));

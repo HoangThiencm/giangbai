@@ -9,7 +9,7 @@ YÊU CẦU QUAN TRỌNG:
 2. CHUẨN HÓA NGHIÊM NGẶT TOÁN HỌC (LATEX): Inline $...$, Display $$...$$
 3. ĐÁP ÁN: Tách riêng 4 lựa chọn A, B, C, D vào mảng "options".
 4. KHÔNG BỊA ĐẶT nội dung bị cắt.
-5. Nếu thấy đáp án ở đầu ảnh mà không có câu hỏi -> tạo câu "[[Tiếp nối]]".
+5. CẮT TRANG: Nếu thấy đáp án (A,B,C,D) ở ĐẦU ảnh mà không có câu hỏi -> tạo câu question="[[Tiếp nối]]" với các options tương ứng. Nếu câu cuối ảnh thiếu đáp án (chỉ có A,B) -> chỉ ghi những gì thấy, KHÔNG bịa C,D.
 
 OUTPUT JSON (Mảng): [{"question": "...", "options": ["...",...], "correct_index": -1}, ...]`;
 
@@ -67,12 +67,16 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
             if (!isNaN(na) && !isNaN(nb)) return na - nb;
             return String(a).localeCompare(String(b));
         });
-        return keys.map((k) => merged[k]);
+        const list = keys.map((k) => merged[k]);
+        if (global.ExamStitch && ExamStitch.dedupeQuestions) {
+            return ExamStitch.dedupeQuestions(list);
+        }
+        return list;
     }
 
     async function callGeminiVision(dataUrl, prompt, keys, model, timeoutMs) {
         const apiKeys = getKeys(keys);
-        if (!apiKeys.length) throw new Error('Thiếu Gemini API Key. Vào Dashboard → Cấu hình để nạp key.');
+        if (!apiKeys.length) throw new Error('Thiếu Gemini API Key. Bấm Cấu hình AI trên trang này để nạp key.');
         const models = [getModel(model)];
         if (!models.includes('gemini-2.5-flash')) models.push('gemini-2.5-flash');
 
