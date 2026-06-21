@@ -11,9 +11,60 @@
     <style>
         body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
         .soft-shadow { box-shadow: 0 18px 55px rgba(15, 23, 42, .10); }
-        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 13px; padding: .7rem .85rem; background: #fff; outline: none; }
+        .field, input.field, textarea.field, select.field {
+            width: 100%; border: 1px solid #dbe3ef; border-radius: 13px; padding: .7rem .85rem;
+            background: #fff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a;
+            caret-color: #0f766e; outline: none;
+        }
+        .field::placeholder, input::placeholder, textarea::placeholder { color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8; opacity: 1; }
         .field:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(13, 148, 136, .12); }
+        .modal-panel { color: #0f172a; }
+        .modal-panel h1, .modal-panel h2, .modal-panel h3, .modal-panel p, .modal-panel span, .modal-panel label { color: inherit; }
+        .modal-panel .label { color: #334155; }
         .label { display: block; font-size: .78rem; font-weight: 800; color: #334155; margin-bottom: .4rem; }
+        .composer-panel {
+            position: fixed; left: 50%; bottom: 1.25rem; z-index: 45; width: min(640px, calc(100% - 1.5rem));
+            transform: translateX(-50%); color: #0f172a;
+        }
+        .composer-panel textarea, .composer-panel input, .composer-panel select {
+            color: #0f172a !important; -webkit-text-fill-color: #0f172a; background: #fff !important;
+        }
+        .composer-backdrop { position: fixed; inset: 0; z-index: 44; background: rgba(15,23,42,.35); }
+        body.composer-open .fab-post { display: none !important; }
+        .template-scroll {
+            display: flex; gap: 1rem; overflow-x: auto; padding: .25rem .25rem 1rem;
+            scroll-snap-type: x mandatory; scrollbar-width: thin;
+        }
+        .template-scroll > * { flex: 0 0 188px; scroll-snap-align: start; }
+        .template-scroll::-webkit-scrollbar { height: 6px; }
+        .template-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 99px; }
+        .padlet-tpl-card { min-height: 220px; width: 188px; }
+        body.manager-view .field, body.manager-view input, body.manager-view textarea, body.manager-view select {
+            color: #0f172a !important; -webkit-text-fill-color: #0f172a;
+        }
+        body.board-view main#app { max-width: none; padding-top: .5rem; }
+        body.board-view #mainHeader {
+            position: absolute; left: 0; right: 0; z-index: 30;
+            background: transparent; border-color: transparent;
+        }
+        body.board-view #mainHeader a, body.board-view #mainHeader strong, body.board-view #mainHeader button {
+            color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.25);
+        }
+        body.board-view #mainHeader .rounded-xl { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.25); backdrop-filter: blur(8px); }
+        body.board-view #mainHeader .text-teal-700 { color: #fff !important; }
+        body.board-whiteboard #mainHeader a, body.board-whiteboard #mainHeader strong, body.board-whiteboard #mainHeader button { color: #18181b; text-shadow: none; }
+        body.board-whiteboard #mainHeader .rounded-xl { background: rgba(255,255,255,.85); border-color: #e4e4e7; }
+        body.board-whiteboard #mainHeader .text-teal-700 { color: #0f766e !important; }
+        .board-prompt-input {
+            color: rgba(255,255,255,.9); caret-color: #fff; background: transparent;
+            border-bottom: 1px dashed rgba(255,255,255,.35);
+        }
+        body.board-whiteboard .board-prompt-input { color: #52525b; caret-color: #18181b; border-color: #d4d4d8; }
+        body.board-view .board-title-input {
+            color: #fff; caret-color: #fff; background: transparent;
+            text-shadow: 0 1px 12px rgba(0,0,0,.35);
+        }
+        body.board-whiteboard .board-title-input { color: #18181b; text-shadow: none; }
         .post-white { background: #fff; } .post-sky { background: #e0f2fe; } .post-amber { background: #fef3c7; }
         .post-violet { background: #ede9fe; } .post-rose { background: #ffe4e6; } .post-emerald { background: #d1fae5; }
         .column-teal { border-top-color: #0f766e; } .column-blue { border-top-color: #2563eb; } .column-violet { border-top-color: #7c3aed; }
@@ -54,6 +105,88 @@
         .timeline-track::-webkit-scrollbar-thumb { background: rgba(255,255,255,.35); border-radius: 99px; }
         #padletMap { height: min(52vh, 480px); border-radius: 1rem; z-index: 1; }
         .leaflet-container { font-family: inherit; }
+        .rainbow-bar { height: 4px; border-radius: 99px; background: linear-gradient(90deg, #ec4899, #f97316, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6); }
+        body.board-whiteboard { background: #f4f4f5; color: #18181b; }
+        body.board-whiteboard header { background: rgba(255,255,255,.92); }
+        .whiteboard-canvas {
+            min-height: 72vh; border-radius: 1.25rem; position: relative; overflow: auto;
+            background-color: #fafafa;
+            background-image: radial-gradient(circle, #d4d4d8 1px, transparent 1px);
+            background-size: 22px 22px;
+            border: 1px solid #e4e4e7;
+        }
+        .whiteboard-note { position: absolute; width: 210px; cursor: grab; z-index: 2; }
+        .whiteboard-note:active { cursor: grabbing; z-index: 5; }
+        .venn-wrap { position: relative; min-height: 520px; }
+        .venn-circle-left, .venn-circle-right {
+            position: absolute; top: 50%; width: 280px; height: 280px; border-radius: 50%;
+            transform: translateY(-50%); opacity: .35;
+        }
+        .venn-circle-left { left: 18%; background: #3b82f6; }
+        .venn-circle-right { right: 18%; background: #f43f5e; }
+        .venn-zone { position: absolute; top: 0; bottom: 0; padding: 1rem; overflow-y: auto; }
+        .venn-zone-left { left: 0; width: 33%; }
+        .venn-zone-both { left: 33%; width: 34%; top: 55%; height: 42%; }
+        .venn-zone-right { right: 0; width: 33%; }
+        .mindmap-stage { position: relative; min-height: 560px; }
+        .mindmap-hub {
+            position: absolute; left: 50%; top: 50%; z-index: 5; max-width: 220px;
+            transform: translate(-50%, -50%); border-radius: 999px;
+        }
+        .mindmap-branch { position: absolute; width: 220px; z-index: 2; }
+        .presentation-slide { min-height: 280px; }
+        .creative-card { border: 1px dashed rgba(255,255,255,.18); background: rgba(255,255,255,.04); }
+        .creative-card:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.35); }
+        .board-bg-peach { background: linear-gradient(160deg, #fce7f3 0%, #fbcfe8 35%, #fef3c7 70%, #e0f2fe 100%); }
+        body.board-light { color: #1e293b; }
+        body.board-light #mainHeader a, body.board-light #mainHeader strong, body.board-light #mainHeader button { color: #1e293b; text-shadow: none; }
+        body.board-light #mainHeader .rounded-xl { background: rgba(255,255,255,.72); border-color: rgba(0,0,0,.08); }
+        body.board-light #mainHeader .text-teal-700 { color: #0f766e !important; }
+        body.board-light .board-title-input { color: #0f172a; caret-color: #0f172a; text-shadow: none; }
+        body.board-light .board-prompt-input { color: #475569; caret-color: #0f172a; border-color: rgba(0,0,0,.15); }
+        body.board-light .add-tile { border-color: rgba(0,0,0,.15); background: rgba(255,255,255,.55); color: #334155; }
+        .font-inter { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+        .font-serif { font-family: Georgia, 'Times New Roman', serif; }
+        .font-mono { font-family: ui-monospace, 'Cascadia Code', monospace; }
+        .font-rounded { font-family: 'Segoe UI', 'Trebuchet MS', sans-serif; }
+        .columns-board { display: flex; gap: 0; overflow-x: auto; padding-bottom: 1rem; scroll-snap-type: x proximity; }
+        .columns-board::-webkit-scrollbar { height: 8px; }
+        .columns-board::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 99px; }
+        .padlet-column { flex: 0 0 300px; scroll-snap-align: start; border-right: 1px solid rgba(0,0,0,.06); padding: 0 .65rem .5rem; }
+        .padlet-column-head { display: flex; align-items: center; gap: .35rem; padding: .35rem .25rem .65rem; }
+        .padlet-column-title { flex: 1; font-size: .95rem; font-weight: 800; color: #1e293b; }
+        .padlet-col-btn { display: grid; height: 2rem; width: 2rem; place-items: center; border-radius: .5rem; color: #64748b; }
+        .padlet-col-btn:hover { background: rgba(0,0,0,.05); }
+        .post-wide { max-width: none; }
+        .fab-post-padlet {
+            position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 25;
+            display: inline-flex; align-items: center; gap: .5rem; border-radius: 999px;
+            background: #2563eb; padding: .85rem 1.35rem; font-size: .95rem; font-weight: 800; color: #fff;
+            box-shadow: 0 12px 40px rgba(37,99,235,.35);
+        }
+        .fab-post-padlet:hover { background: #1d4ed8; }
+        .settings-backdrop { position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.55); }
+        .settings-panel {
+            position: fixed; top: 0; right: 0; z-index: 56; height: 100%; width: min(480px, 100%);
+            overflow-y: auto; background: #111; color: #f1f5f9;
+        }
+        .settings-panel .field { background: #1a1a1a !important; border-color: #333 !important; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc; }
+        .settings-panel .field::placeholder { color: #64748b !important; -webkit-text-fill-color: #64748b; }
+        .settings-tab { flex: 0 0 auto; border-bottom: 2px solid transparent; padding: .65rem .85rem; font-size: .78rem; font-weight: 800; color: #94a3b8; white-space: nowrap; }
+        .settings-tab.active { border-color: #facc15; color: #facc15; }
+        .settings-card { border-radius: 1rem; border: 1px solid #2a2a2a; background: #161616; padding: 1rem; }
+        .settings-card + .settings-card { margin-top: .75rem; }
+        .seg-btn { flex: 1; border-radius: .65rem; border: 1px solid #333; padding: .55rem .75rem; font-size: .8rem; font-weight: 800; color: #94a3b8; }
+        .seg-btn.active { border-color: #ca8a04; background: rgba(250,204,21,.12); color: #fde047; }
+        .column-menu {
+            position: fixed; z-index: 50; min-width: 240px; overflow: hidden; border-radius: .85rem;
+            background: #1a1a1a; color: #f8fafc; box-shadow: 0 20px 50px rgba(0,0,0,.45);
+        }
+        .column-menu button { display: block; width: 100%; padding: .7rem 1rem; text-align: left; font-size: .85rem; font-weight: 600; }
+        .column-menu button:hover { background: #262626; }
+        .column-menu .danger { color: #fca5a5; }
+        .bg-swatch { height: 2.75rem; border-radius: .75rem; border: 2px solid transparent; cursor: pointer; }
+        .bg-swatch.active { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.25); }
     </style>
 </head>
 <body class="min-h-screen bg-[#f5f7fb] text-slate-900 pb-24 sm:pb-7">
@@ -84,9 +217,59 @@
         </div>
     </main>
 
-    <!-- Modal tạo nhanh từ mẫu (giống Padlet) -->
+    <div id="composerBackdrop" class="composer-backdrop hidden" onclick="closePostComposer()"></div>
+
+    <!-- Composer đăng bài kiểu Padlet (nổi dưới màn hình) -->
+    <div id="postComposer" class="composer-panel hidden">
+        <form id="postForm" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl soft-shadow" onsubmit="submitPost(event)">
+            <textarea id="postBody" class="field min-h-[120px] resize-y border-0 px-0 text-base shadow-none focus:ring-0" rows="4" placeholder="Viết gì đó, dán link YouTube hoặc kéo thả tệp..."></textarea>
+            <div id="loggedInBadge" class="mb-2 mt-2 hidden rounded-xl bg-teal-50 px-3 py-2 text-sm font-bold text-teal-800">
+                <i class="fas fa-user-check mr-1"></i><span id="loggedInName"></span>
+            </div>
+            <div id="guestIdentity" class="mb-2 grid gap-2 sm:grid-cols-2">
+                <input id="postAuthorName" class="field sm:col-span-2" placeholder="Họ và tên *">
+                <input id="postAuthorRole" class="field" placeholder="Vai trò (tùy chọn)">
+                <input id="postAuthorGroup" class="field" placeholder="Lớp / nhóm (tùy chọn)">
+            </div>
+            <div id="postColumnWrap" class="mt-3 hidden">
+                <span class="label">Đăng vào cột</span>
+                <select id="postColumn" class="field text-sm"></select>
+            </div>
+            <div id="vennZoneWrap" class="mt-3 hidden">
+                <select id="postVennZone" class="field text-sm">
+                    <option value="left">Vùng A (trái)</option>
+                    <option value="both">Giao A ∩ B</option>
+                    <option value="right">Vùng B (phải)</option>
+                </select>
+            </div>
+            <div id="mapLocationWrap" class="mt-3 hidden space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <input id="postLocation" class="field" placeholder="Tên địa điểm">
+                <button type="button" onclick="useMyLocation()" class="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-800"><i class="fas fa-location-crosshairs mr-1"></i>Vị trí của tôi</button>
+                <input id="postMapLat" type="hidden"><input id="postMapLng" type="hidden">
+            </div>
+            <details class="mt-3 rounded-xl border border-slate-200">
+                <summary class="cursor-pointer px-3 py-2 text-sm font-bold text-slate-600">Thêm link, tệp, màu thẻ</summary>
+                <div class="space-y-2 border-t border-slate-100 px-3 py-3">
+                    <input id="postLink" class="field text-sm" type="url" placeholder="https://..." oninput="debounceLinkPreview()">
+                    <div id="linkPreviewBox" class="hidden overflow-hidden rounded-lg border link-preview-card"></div>
+                    <input id="postLinkTitle" type="hidden"><input id="postLinkImage" type="hidden">
+                    <div id="colorChoices" class="flex flex-wrap gap-2"></div>
+                    <input id="postFiles" type="file" multiple class="block w-full text-sm text-slate-700">
+                </div>
+            </details>
+            <div id="postError" class="mt-3 hidden rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700"></div>
+            <div class="mt-3 flex items-center justify-between gap-2">
+                <button type="button" onclick="closePostComposer()" class="rounded-xl px-3 py-2 text-sm font-bold text-slate-500">Đóng</button>
+                <button type="submit" id="postSubmit" class="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-extrabold text-white">
+                    <i class="fas fa-paper-plane mr-1"></i>Đăng
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal đổi tên bảng (chỉ khi cần) -->
     <div id="quickModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-6">
-        <div class="mx-auto my-8 max-w-md rounded-[26px] bg-white soft-shadow">
+        <div class="modal-panel mx-auto my-8 max-w-md rounded-[26px] bg-white text-slate-900 soft-shadow">
             <div class="border-b border-slate-200 px-5 py-4">
                 <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-teal-700">Tạo bảng mới</p>
                 <h2 class="text-xl font-black">Mẫu: <span id="quickTemplateName">Tường</span></h2>
@@ -97,7 +280,7 @@
                     <input id="quickTitle" class="field" required maxlength="220" placeholder="Ví dụ: Sản phẩm học tập lớp 7A">
                 </label>
                 <label>
-                    <span class="label">Lời nhắn (tùy chọn)</span>
+                    <span id="quickDescLabel" class="label">Lời nhắn (tùy chọn)</span>
                     <textarea id="quickDescription" class="field" rows="2" placeholder="Hướng dẫn cho học sinh..."></textarea>
                 </label>
                 <div class="flex justify-end gap-3">
@@ -110,7 +293,7 @@
 
     <!-- Modal tạo/sửa bảng -->
     <div id="boardModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
-        <div class="mx-auto my-3 max-w-2xl rounded-[26px] bg-white soft-shadow">
+        <div class="modal-panel mx-auto my-3 max-w-2xl rounded-[26px] bg-white text-slate-900 soft-shadow">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-teal-700">Thiết lập bảng</p>
@@ -234,94 +417,9 @@
         </div>
     </div>
 
-    <!-- Modal đăng bài -->
-    <div id="postModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
-        <div class="mx-auto my-3 max-w-xl rounded-[26px] bg-white soft-shadow">
-            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                <div>
-                    <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-teal-700">Đăng lên bảng</p>
-                    <h2 class="text-xl font-black">Viết bài mới</h2>
-                </div>
-                <button type="button" onclick="closeModal('postModal')" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100">
-                    <i class="fas fa-xmark"></i>
-                </button>
-            </div>
-            <form id="postForm" class="space-y-4 p-5 sm:p-7" onsubmit="submitPost(event)">
-                <div id="loggedInBadge" class="hidden rounded-xl bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800">
-                    <i class="fas fa-user-check mr-2"></i>Đăng với tên: <span id="loggedInName"></span>
-                </div>
-                <div id="guestIdentity" class="grid gap-3 sm:grid-cols-2">
-                    <label class="sm:col-span-2">
-                        <span class="label">Họ và tên *</span>
-                        <input id="postAuthorName" class="field" placeholder="Nguyễn Văn An">
-                    </label>
-                    <label>
-                        <span class="label">Vai trò</span>
-                        <input id="postAuthorRole" class="field" placeholder="Học sinh">
-                    </label>
-                    <label>
-                        <span class="label">Lớp / nhóm</span>
-                        <input id="postAuthorGroup" class="field" placeholder="Lớp 6A">
-                    </label>
-                </div>
-
-                <label id="postColumnWrap" class="hidden">
-                    <span class="label">Đăng vào cột</span>
-                    <select id="postColumn" class="field"></select>
-                </label>
-
-                <div id="mapLocationWrap" class="hidden space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <span class="label">Địa điểm trên bản đồ</span>
-                    <input id="postLocation" class="field" placeholder="Ví dụ: Hà Nội, Trường THCS...">
-                    <button type="button" onclick="useMyLocation()" class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800">
-                        <i class="fas fa-location-crosshairs mr-1"></i>Dùng vị trí hiện tại
-                    </button>
-                    <input id="postMapLat" type="hidden">
-                    <input id="postMapLng" type="hidden">
-                </div>
-
-                <label>
-                    <span class="label">Nội dung</span>
-                    <textarea id="postBody" class="field" rows="6" placeholder="Chia sẻ ý tưởng, câu hỏi, sản phẩm hoặc lời nhắn..."></textarea>
-                </label>
-
-                <details class="rounded-2xl border border-slate-200">
-                    <summary class="px-4 py-3 text-sm font-extrabold text-slate-600">
-                        <i class="fas fa-paperclip mr-2 text-teal-700"></i>Thêm liên kết, tệp hoặc màu thẻ
-                    </summary>
-                    <div class="space-y-3 border-t border-slate-200 px-4 py-4">
-                        <label>
-                            <span class="label">Liên kết web (YouTube, ảnh, trang web...)</span>
-                            <input id="postLink" class="field" type="url" placeholder="https://..." oninput="debounceLinkPreview()">
-                        </label>
-                        <div id="linkPreviewBox" class="hidden overflow-hidden rounded-xl border border-slate-200 link-preview-card"></div>
-                        <input id="postLinkTitle" type="hidden">
-                        <input id="postLinkImage" type="hidden">
-                        <div>
-                            <span class="label">Màu thẻ</span>
-                            <div id="colorChoices" class="flex flex-wrap gap-2"></div>
-                        </div>
-                        <label>
-                            <span class="label">Tệp đính kèm (tối đa 5, mỗi tệp 25 MB)</span>
-                            <input id="postFiles" type="file" multiple class="block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-teal-100 file:px-3 file:py-2 file:text-sm file:font-bold file:text-teal-800">
-                        </label>
-                    </div>
-                </details>
-
-                <div id="postError" class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></div>
-                <div class="flex justify-end gap-3">
-                    <button type="button" onclick="closeModal('postModal')" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold">Hủy</button>
-                    <button type="submit" id="postSubmit" class="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-extrabold text-white">
-                        <i class="fas fa-paper-plane mr-1"></i>Đăng bài
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Modal bình luận -->
     <div id="commentModal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
-        <div class="mx-auto my-3 max-w-xl rounded-[26px] bg-white soft-shadow">
+        <div class="modal-panel mx-auto my-3 max-w-xl rounded-[26px] bg-white text-slate-900 soft-shadow">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <h2 class="text-lg font-black">Bình luận</h2>
                 <button type="button" onclick="closeModal('commentModal')" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100">
@@ -353,9 +451,143 @@
         </div>
     </div>
 
-    <button id="fabPost" type="button" onclick="openPostModal()" class="fab-post hidden h-14 w-14 items-center justify-center rounded-full bg-teal-700 text-white shadow-2xl shadow-teal-700/30 sm:hidden">
-        <i class="fas fa-plus text-xl"></i>
+    <button id="fabPost" type="button" onclick="openPostModal()" class="fab-post-padlet hidden">
+        <i class="fas fa-plus"></i><span>Đăng bài</span>
     </button>
+
+    <div id="columnMenu" class="column-menu hidden"></div>
+
+    <div id="settingsBackdrop" class="settings-backdrop hidden" onclick="closeSettings()"></div>
+    <aside id="settingsPanel" class="settings-panel hidden">
+        <div class="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#111] px-4 py-3">
+            <button type="button" onclick="closeSettings()" class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/5"><i class="fas fa-xmark"></i></button>
+            <strong class="text-base font-black">Cài đặt</strong>
+            <button type="button" onclick="saveSettings()" class="rounded-lg bg-yellow-400 px-3 py-1.5 text-xs font-extrabold text-slate-900">Lưu</button>
+        </div>
+        <div class="flex overflow-x-auto border-b border-white/10 px-2" id="settingsTabs">
+            <button type="button" class="settings-tab active" data-tab="title" onclick="switchSettingsTab('title')">Tiêu đề</button>
+            <button type="button" class="settings-tab" data-tab="appearance" onclick="switchSettingsTab('appearance')">Giao diện</button>
+            <button type="button" class="settings-tab" data-tab="layout" onclick="switchSettingsTab('layout')">Bố cục</button>
+            <button type="button" class="settings-tab" data-tab="posts" onclick="switchSettingsTab('posts')">Bài đăng</button>
+            <button type="button" class="settings-tab" data-tab="interaction" onclick="switchSettingsTab('interaction')">Tương tác</button>
+            <button type="button" class="settings-tab" data-tab="content" onclick="switchSettingsTab('content')">Nội dung</button>
+            <button type="button" class="settings-tab" data-tab="advanced" onclick="switchSettingsTab('advanced')">Nâng cao</button>
+        </div>
+        <div class="space-y-3 p-4">
+            <div id="settingsTitle" class="settings-section">
+                <div class="settings-card space-y-3">
+                    <label><span class="mb-1 block text-xs font-bold text-slate-400">Tiêu đề</span>
+                        <input id="setTitle" class="field" maxlength="220"></label>
+                    <label><span class="mb-1 block text-xs font-bold text-slate-400">Mô tả</span>
+                        <textarea id="setDescription" class="field" rows="2"></textarea></label>
+                </div>
+            </div>
+            <div id="settingsAppearance" class="settings-section hidden">
+                <div class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Hình nền</span>
+                    <div id="setBgSwatches" class="grid grid-cols-4 gap-2"></div>
+                </div>
+                <div class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Bảng màu</span>
+                    <div class="flex gap-2">
+                        <button type="button" id="setColorDark" class="seg-btn" onclick="setColorMode('dark')">Tối</button>
+                        <button type="button" id="setColorLight" class="seg-btn active" onclick="setColorMode('light')">Sáng</button>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Phông chữ</span>
+                    <div class="grid grid-cols-2 gap-2" id="setFontPicker"></div>
+                </div>
+                <div class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Cỡ bài đăng</span>
+                    <div class="flex gap-2">
+                        <button type="button" id="setPostStd" class="seg-btn active" onclick="setPostSize('standard')">Tiêu chuẩn</button>
+                        <button type="button" id="setPostWide" class="seg-btn" onclick="setPostSize('wide')">Rộng</button>
+                    </div>
+                </div>
+            </div>
+            <div id="settingsLayout" class="settings-section hidden">
+                <div class="settings-card space-y-3">
+                    <label><span class="mb-1 block text-xs font-bold text-slate-400">Định dạng</span>
+                        <select id="setLayout" class="field" onchange="syncSettingsColumns()">
+                            <option value="columns">Cột</option>
+                            <option value="wall">Tường</option>
+                            <option value="stream">Dòng</option>
+                            <option value="grid">Bảng</option>
+                            <option value="timeline">Dòng thời gian</option>
+                            <option value="map">Bản đồ</option>
+                        </select></label>
+                    <div>
+                        <span class="mb-1 block text-xs font-bold text-slate-400">Sắp xếp theo</span>
+                        <div class="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-300"><i class="fas fa-hand-pointer mr-2"></i>Kéo và thả</div>
+                    </div>
+                    <div>
+                        <span class="mb-2 block text-xs font-bold text-slate-400">Vị trí bài đăng mới</span>
+                        <div class="flex gap-2">
+                            <button type="button" id="setPosFirst" class="seg-btn active" onclick="setPostPosition('first')">Đầu tiên</button>
+                            <button type="button" id="setPosLast" class="seg-btn" onclick="setPostPosition('last')">Cuối cùng</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="setColumnsBox" class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Các cột / mục</span>
+                    <div id="setColumnRows" class="space-y-2"></div>
+                    <button type="button" onclick="settingsAddColumn()" class="mt-2 text-sm font-bold text-yellow-400"><i class="fas fa-plus mr-1"></i>Thêm cột</button>
+                </div>
+            </div>
+            <div id="settingsPosts" class="settings-section hidden">
+                <div class="settings-card flex items-center justify-between gap-3">
+                    <div>
+                        <div class="text-sm font-bold">Tên tác giả và thời gian</div>
+                        <div class="mt-1 text-xs text-slate-500">Hiển thị dưới mỗi bài đăng</div>
+                    </div>
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input id="setShowAuthor" type="checkbox" class="peer sr-only" checked>
+                        <span class="h-7 w-12 rounded-full bg-slate-600 peer-checked:bg-yellow-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="settingsInteraction" class="settings-section hidden">
+                <div class="settings-card flex items-center justify-between gap-3">
+                    <div class="text-sm font-bold">Bình luận</div>
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input id="setComments" type="checkbox" class="peer sr-only">
+                        <span class="h-7 w-12 rounded-full bg-slate-600 peer-checked:bg-yellow-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"></span>
+                    </label>
+                </div>
+                <div class="settings-card flex items-center justify-between gap-3">
+                    <div class="text-sm font-bold">Phản ứng bằng biểu tượng cảm xúc</div>
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input id="setReactions" type="checkbox" class="peer sr-only">
+                        <span class="h-7 w-12 rounded-full bg-slate-600 peer-checked:bg-yellow-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="settingsContent" class="settings-section hidden">
+                <div class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Kiểm duyệt</span>
+                    <select id="setModeration" class="field">
+                        <option value="1">Tất cả bài đăng cần duyệt</option>
+                        <option value="0">Không có — đăng ngay</option>
+                    </select>
+                </div>
+                <div class="settings-card flex items-center justify-between gap-3">
+                    <div class="text-sm font-bold">Bảng đang mở</div>
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input id="setOpen" type="checkbox" class="peer sr-only" checked>
+                        <span class="h-7 w-12 rounded-full bg-slate-600 peer-checked:bg-yellow-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="settingsAdvanced" class="settings-section hidden">
+                <div class="settings-card space-y-2">
+                    <span class="text-xs font-bold text-slate-400">Link chia sẻ</span>
+                    <div class="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs break-all text-slate-300" id="setShareUrl"></div>
+                    <button type="button" onclick="copySettingsLink()" class="text-sm font-bold text-yellow-400">Sao chép link</button>
+                </div>
+            </div>
+        </div>
+    </aside>
 
     <div id="toast" class="fixed bottom-5 left-1/2 z-[80] hidden -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-xl"></div>
 
@@ -380,40 +612,76 @@
                 { title: 'Hỏi', color: 'blue' },
                 { title: 'Đáp', color: 'violet' },
                 { title: 'Chia sẻ', color: 'rose' }
+            ],
+            groups: [
+                { title: 'Tài liệu tham khảo', color: 'rose' },
+                { title: 'Nhiệm vụ', color: 'amber' },
+                { title: 'Nhóm 1', color: 'teal' },
+                { title: 'Nhóm 2', color: 'blue' },
+                { title: 'Nhóm 3', color: 'violet' },
+                { title: 'Nhóm 4', color: 'emerald' },
+                { title: 'Nhóm 5', color: 'rose' }
+            ],
+            mindmap: [
+                { title: 'Nhánh 1', color: 'teal' },
+                { title: 'Nhánh 2', color: 'blue' },
+                { title: 'Nhánh 3', color: 'violet' },
+                { title: 'Nhánh 4', color: 'amber' }
             ]
         };
 
+        function templateColumns(tpl) {
+            if (tpl.layout === 'columns' || tpl.layout === 'mindmap') {
+                return COLUMN_TEMPLATES[tpl.columnPreset] || COLUMN_TEMPLATES.ideas;
+            }
+            return [{ title: 'Bài đăng', color: 'teal' }];
+        }
+
         const BOARD_THEMES = {
-            teal: 'Xanh ngọc', blue: 'Xanh dương', violet: 'Tím',
+            peach: 'Hồng pastel', teal: 'Xanh ngọc', blue: 'Xanh dương', violet: 'Tím',
             rose: 'Hồng đào', amber: 'Vàng ấm', slate: 'Xám đậm', emerald: 'Xanh lá'
+        };
+        const BOARD_THEME_CLASS = {
+            peach: 'board-bg-peach', teal: 'board-bg-teal', blue: 'board-bg-blue', violet: 'board-bg-violet',
+            rose: 'board-bg-rose', amber: 'board-bg-amber', slate: 'board-bg-slate', emerald: 'board-bg-emerald'
+        };
+        const FONT_OPTIONS = {
+            inter: { label: 'ABba', class: 'font-inter' },
+            serif: { label: 'ABba', class: 'font-serif' },
+            mono: { label: 'ABba', class: 'font-mono' },
+            rounded: { label: 'ABba', class: 'font-rounded' }
         };
 
         const LAYOUT_LABELS = {
-            wall: 'Tường', stream: 'Dòng', grid: 'Bảng',
-            columns: 'Cột', timeline: 'Dòng thời gian', map: 'Bản đồ'
+            wall: 'Tường', stream: 'Dòng', grid: 'Bảng', columns: 'Cột',
+            timeline: 'Dòng thời gian', map: 'Bản đồ', whiteboard: 'Bảng trắng',
+            mindmap: 'Sơ đồ tư duy', presentation: 'Thuyết trình', venn: 'Venn', question: 'Câu hỏi ngày'
         };
 
         const PADLET_TEMPLATES = [
             { key: 'wall', name: 'Tường', desc: 'Thu thập ảnh, video và link', layout: 'wall', theme: 'rose', gradient: 'from-rose-600 to-rose-950', preview: 'wall' },
-            { key: 'columns', name: 'Cột', desc: 'Sắp xếp theo chủ đề', layout: 'columns', theme: 'amber', gradient: 'from-amber-600 to-amber-950', preview: 'columns', columnPreset: 'ideas' },
+            { key: 'columns', name: 'Cột', desc: 'Sắp xếp theo chủ đề', layout: 'columns', theme: 'peach', gradient: 'from-pink-400 to-rose-300', preview: 'columns', columnPreset: 'groups' },
             { key: 'grid', name: 'Bảng', desc: 'Lưới thẻ gọn gàng', layout: 'grid', theme: 'amber', gradient: 'from-yellow-700 to-stone-900', preview: 'grid' },
             { key: 'timeline', name: 'Dòng thời gian', desc: 'Theo trình tự thời gian', layout: 'timeline', theme: 'emerald', gradient: 'from-emerald-600 to-emerald-950', preview: 'timeline' },
             { key: 'map', name: 'Bản đồ', desc: 'Gắn bài theo địa điểm', layout: 'map', theme: 'violet', gradient: 'from-violet-600 to-violet-950', preview: 'map' }
         ];
 
-        const COMING_SOON = [
-            { name: 'Bảng trắng', icon: 'fa-shapes' },
-            { name: 'Sơ đồ tư duy', icon: 'fa-diagram-project' },
-            { name: 'Thuyết trình', icon: 'fa-list-ol' },
-            { name: 'Venn', icon: 'fa-circle-nodes' },
-            { name: 'Câu hỏi ngày', icon: 'fa-circle-question' }
+        const CREATIVE_TEMPLATES = [
+            { key: 'whiteboard', name: 'Bảng trắng', desc: 'Ghi chú tự do, kéo thả', layout: 'whiteboard', theme: 'slate', gradient: 'from-zinc-500 to-zinc-900', preview: 'whiteboard', icon: 'fa-shapes' },
+            { key: 'mindmap', name: 'Sơ đồ tư duy', desc: 'Ý tưởng tỏa từ trung tâm', layout: 'mindmap', theme: 'amber', gradient: 'from-orange-600 to-stone-900', preview: 'mindmap', icon: 'fa-diagram-project', columnPreset: 'mindmap' },
+            { key: 'presentation', name: 'Thuyết trình', desc: 'Slide lớn, trình chiếu', layout: 'presentation', theme: 'blue', gradient: 'from-blue-700 to-indigo-950', preview: 'presentation', icon: 'fa-list-ol' },
+            { key: 'venn', name: 'Venn', desc: 'So sánh hai tập hợp', layout: 'venn', theme: 'violet', gradient: 'from-fuchsia-700 to-violet-950', preview: 'venn', icon: 'fa-circle-nodes' },
+            { key: 'question', name: 'Câu hỏi ngày', desc: 'Một câu hỏi, nhiều câu trả lời', layout: 'question', theme: 'rose', gradient: 'from-purple-700 to-fuchsia-950', preview: 'question', icon: 'fa-circle-question' }
         ];
+
+        function allTemplates() { return [...PADLET_TEMPLATES, ...CREATIVE_TEMPLATES]; }
 
         let state = {
             boards: [], board: null, columns: [], posts: [], user: null,
             canManage: false, classes: [], editColumns: [],
             activeCommentPost: null, postColor: 'white', linkPreviewTimer: null,
-            pendingTemplate: null, mapInstance: null
+            pendingTemplate: null, mapInstance: null,
+            settingsDraft: null, activeColumnMenu: null, postTargetColumn: null
         };
 
         const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
@@ -488,36 +756,40 @@
             if (type === 'grid') return `<div class="grid grid-cols-4 gap-1 p-3 h-full">${boxes(8)}</div>`;
             if (type === 'timeline') return `<div class="flex items-end gap-2 p-3 h-full">${[0, 1, 2, 3].map((i) => `<div class="w-8 rounded-t" style="background:rgba(255,255,255,${0.3 + i * 0.15});height:${40 + i * 18}%"></div>`).join('')}</div>`;
             if (type === 'map') return `<div class="relative h-full p-3"><div class="absolute inset-3 rounded-lg bg-white/10"></div><div class="absolute left-6 top-8 h-3 w-3 rounded-full bg-rose-300"></div><div class="absolute right-10 bottom-8 h-3 w-3 rounded-full bg-sky-300"></div></div>`;
+            if (type === 'whiteboard') return `<div class="grid grid-cols-4 gap-1 p-3 h-full" style="background:repeating-linear-gradient(#fff 0 20px,#f4f4f5 20px 21px)">${boxes(4)}</div>`;
+            if (type === 'mindmap') return `<div class="relative h-full p-3"><div class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/50"></div>${[0,1,2,3].map(i => `<div class="absolute h-2 w-2 rounded-full bg-white/40" style="left:${20+i*18}%;top:${25+(i%2)*35}%"></div>`).join('')}</div>`;
+            if (type === 'presentation') return `<div class="flex h-full flex-col gap-1 p-3"><div class="flex-1 rounded bg-white/30"></div><div class="h-2 rounded bg-white/20"></div></div>`;
+            if (type === 'venn') return `<div class="relative h-full"><div class="absolute left-3 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full bg-blue-400/50"></div><div class="absolute right-3 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full bg-rose-400/50"></div></div>`;
+            if (type === 'question') return `<div class="flex h-full flex-col items-center justify-center p-3 text-center"><div class="text-3xl font-black text-white/70">?</div><div class="mt-2 h-2 w-3/4 rounded bg-white/25"></div></div>`;
             return `<div class="grid grid-cols-3 gap-1.5 p-3 h-full">${boxes(6)}</div>`;
         }
 
         function renderTemplateGallery() {
-            return `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            return `<div class="template-scroll pb-1">
                 ${PADLET_TEMPLATES.map((t) => `
-                    <button type="button" onclick="pickTemplate('${t.key}')" class="template-card overflow-hidden rounded-2xl bg-gradient-to-br ${t.gradient} p-3 text-left">
+                    <button type="button" onclick="pickTemplate('${t.key}')" class="padlet-tpl-card template-card overflow-hidden rounded-2xl bg-gradient-to-br ${t.gradient} p-3 text-left">
                         <div class="tpl-preview mb-3 aspect-[4/3] overflow-hidden rounded-xl">${templatePreviewHtml(t.preview)}</div>
-                        <h3 class="text-lg font-black text-white">${esc(t.name)}</h3>
-                        <p class="mt-1 text-xs text-white/75">${esc(t.desc)}</p>
+                        <h3 class="text-base font-black text-white">${esc(t.name)}</h3>
+                        <p class="mt-1 text-[11px] leading-snug text-white/75">${esc(t.desc)}</p>
                     </button>`).join('')}
             </div>`;
         }
 
-        function renderComingSoon() {
-            return `<div class="mt-10">
-                <h2 class="text-lg font-black text-white/90">Sắp ra mắt</h2>
-                <p class="mt-1 text-sm text-white/50">Bảng trắng, sơ đồ tư duy, thuyết trình...</p>
-                <div class="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                    ${COMING_SOON.map((t) => `
-                        <div class="template-soon rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-center">
-                            <div class="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-white/10 text-2xl text-white/60"><i class="fas ${t.icon}"></i></div>
-                            <p class="mt-3 text-sm font-bold text-white/70">${esc(t.name)}</p>
-                        </div>`).join('')}
-                </div>
+        function renderCreativeGallery() {
+            return `<div class="template-scroll pb-1">
+                ${CREATIVE_TEMPLATES.map((t) => `
+                    <button type="button" onclick="pickTemplate('${t.key}')" class="padlet-tpl-card creative-card template-card rounded-2xl p-3 text-left">
+                        <div class="tpl-preview mb-3 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl">
+                            ${t.icon ? `<i class="fas ${t.icon} text-3xl text-white/55"></i>` : templatePreviewHtml(t.preview)}
+                        </div>
+                        <p class="text-base font-black text-white/90">${esc(t.name)}</p>
+                        <p class="mt-1 text-[11px] leading-snug text-white/50">${esc(t.desc)}</p>
+                    </button>`).join('')}
             </div>`;
         }
 
         function boardCardTheme(b) {
-            const tpl = PADLET_TEMPLATES.find((t) => t.layout === b.layout_type);
+            const tpl = allTemplates().find((t) => t.layout === b.layout_type);
             return b.bg_theme || tpl?.theme || 'teal';
         }
 
@@ -571,9 +843,15 @@
 
                 <section>
                     <h2 class="mb-1 text-sm font-extrabold uppercase tracking-wider text-white/40">Bố cục</h2>
-                    <p class="mb-4 text-sm text-white/50">Tạo bảng để thu thập và sắp xếp nội dung</p>
+                    <p class="mb-3 text-sm text-white/50">Nhấn mẫu — tạo bảng và mở ngay (giống Padlet)</p>
                     ${renderTemplateGallery()}
-                    ${renderComingSoon()}
+                </section>
+
+                <section class="mt-10">
+                    <div class="rainbow-bar mb-4 max-w-xs"></div>
+                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-white/40">Sáng tạo & tư duy</h2>
+                    <p class="mb-3 mt-1 text-sm text-white/50">Bảng trắng, sơ đồ tư duy, thuyết trình...</p>
+                    ${renderCreativeGallery()}
                 </section>
 
                 <section class="mt-12">
@@ -587,62 +865,372 @@
                 </section>`;
         }
 
-        function pickTemplate(key) {
-            const tpl = PADLET_TEMPLATES.find((t) => t.key === key);
-            if (!tpl) return;
-            state.pendingTemplate = tpl;
-            document.getElementById('quickTemplateName').textContent = tpl.name;
-            document.getElementById('quickTitle').value = '';
-            document.getElementById('quickDescription').value = '';
-            document.getElementById('quickModal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('quickTitle').focus(), 80);
-        }
+        let creatingBoard = false;
 
-        async function quickCreate(e) {
-            e.preventDefault();
-            const tpl = state.pendingTemplate;
+        async function pickTemplate(key) {
+            if (creatingBoard) return;
+            const tpl = allTemplates().find((t) => t.key === key);
             if (!tpl) return;
-            const btn = document.getElementById('quickSubmit');
-            btn.disabled = true;
-            btn.textContent = 'Đang tạo...';
-            const columns = tpl.layout === 'columns'
-                ? (COLUMN_TEMPLATES[tpl.columnPreset] || COLUMN_TEMPLATES.ideas)
-                : [{ title: 'Bài đăng', color: 'teal' }];
+            creatingBoard = true;
+            toast('Đang tạo bảng...');
+            const columns = templateColumns(tpl);
+            const defaultPrompt = tpl.layout === 'question' ? 'Hôm nay bạn học được điều gì mới?' : '';
             try {
                 const data = await api(`${API}?action=save-board`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         id: 0,
-                        title: document.getElementById('quickTitle').value.trim(),
-                        description: document.getElementById('quickDescription').value,
+                        title: `Bảng ${tpl.name}`,
+                        description: defaultPrompt,
+                        prompt_text: defaultPrompt,
                         layout_type: tpl.layout,
                         bg_theme: tpl.theme,
+                        color_mode: 'light',
+                        font_family: 'inter',
+                        post_size: 'standard',
+                        post_position: 'first',
+                        show_author: true,
                         access_mode: 'public',
                         target_class: '',
                         status: 'open',
                         academic_year: schoolYear(),
-                        moderation_enabled: true,
-                        comments_enabled: true,
-                        reactions_enabled: true,
+                        moderation_enabled: false,
+                        comments_enabled: false,
+                        reactions_enabled: false,
                         columns
                     })
                 });
-                closeModal('quickModal');
-                toast('Đã tạo bảng');
                 location.href = boardUrl(data.board.public_code);
             } catch (err) {
                 toast(err.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Tạo và mở bảng';
+                creatingBoard = false;
             }
         }
 
-        function renderThemePicker(selected = 'teal') {
+        function boardPayloadFromState(overrides = {}) {
+            const b = state.board;
+            return {
+                id: b.id,
+                title: b.title,
+                description: b.description || '',
+                prompt_text: b.prompt_text || '',
+                layout_type: b.layout_type,
+                bg_theme: b.bg_theme || 'peach',
+                color_mode: b.color_mode || 'light',
+                font_family: b.font_family || 'inter',
+                post_size: b.post_size || 'standard',
+                post_position: b.post_position || 'first',
+                show_author: b.show_author === undefined ? true : !!Number(b.show_author),
+                default_column_id: b.default_column_id || null,
+                access_mode: b.access_mode,
+                target_class: b.target_class || '',
+                status: b.status,
+                academic_year: b.academic_year || schoolYear(),
+                moderation_enabled: !!Number(b.moderation_enabled),
+                comments_enabled: !!Number(b.comments_enabled),
+                reactions_enabled: !!Number(b.reactions_enabled),
+                columns: state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color })),
+                ...overrides
+            };
+        }
+
+        function boardFontClass(b) {
+            return FONT_OPTIONS[b?.font_family || 'inter']?.class || 'font-inter';
+        }
+
+        function boardThemeClass(b) {
+            const theme = b?.bg_theme || 'peach';
+            return BOARD_THEME_CLASS[theme] || 'board-bg-peach';
+        }
+
+        function openSettings() {
+            if (!state.canManage || !state.board) return;
+            const b = state.board;
+            state.settingsDraft = {
+                title: b.title,
+                description: b.description || '',
+                layout_type: b.layout_type,
+                bg_theme: b.bg_theme || 'peach',
+                color_mode: b.color_mode || 'light',
+                font_family: b.font_family || 'inter',
+                post_size: b.post_size || 'standard',
+                post_position: b.post_position || 'first',
+                show_author: !!Number(b.show_author ?? 1),
+                comments_enabled: !!Number(b.comments_enabled),
+                reactions_enabled: !!Number(b.reactions_enabled),
+                moderation_enabled: !!Number(b.moderation_enabled),
+                status: b.status,
+                columns: state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color }))
+            };
+            document.getElementById('setTitle').value = state.settingsDraft.title;
+            document.getElementById('setDescription').value = state.settingsDraft.description;
+            document.getElementById('setLayout').value = state.settingsDraft.layout_type;
+            document.getElementById('setShowAuthor').checked = state.settingsDraft.show_author;
+            document.getElementById('setComments').checked = state.settingsDraft.comments_enabled;
+            document.getElementById('setReactions').checked = state.settingsDraft.reactions_enabled;
+            document.getElementById('setModeration').value = state.settingsDraft.moderation_enabled ? '1' : '0';
+            document.getElementById('setOpen').checked = state.settingsDraft.status === 'open';
+            document.getElementById('setShareUrl').textContent = boardUrl(b.public_code);
+            renderSettingsBgSwatches(state.settingsDraft.bg_theme);
+            renderSettingsFontPicker(state.settingsDraft.font_family);
+            setColorMode(state.settingsDraft.color_mode);
+            setPostSize(state.settingsDraft.post_size);
+            setPostPosition(state.settingsDraft.post_position);
+            renderSettingsColumns();
+            syncSettingsColumns();
+            switchSettingsTab('title');
+            document.getElementById('settingsBackdrop').classList.remove('hidden');
+            document.getElementById('settingsPanel').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsBackdrop').classList.add('hidden');
+            document.getElementById('settingsPanel').classList.add('hidden');
+            state.settingsDraft = null;
+        }
+
+        function switchSettingsTab(tab) {
+            document.querySelectorAll('.settings-tab').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab));
+            document.querySelectorAll('.settings-section').forEach((el) => el.classList.add('hidden'));
+            const map = { title: 'settingsTitle', appearance: 'settingsAppearance', layout: 'settingsLayout', posts: 'settingsPosts', interaction: 'settingsInteraction', content: 'settingsContent', advanced: 'settingsAdvanced' };
+            document.getElementById(map[tab])?.classList.remove('hidden');
+        }
+
+        function renderSettingsBgSwatches(selected) {
+            document.getElementById('setBgSwatches').innerHTML = Object.entries(BOARD_THEMES).map(([key, label]) =>
+                `<button type="button" onclick="pickSettingsBg('${key}')" class="bg-swatch ${key === selected ? 'active' : ''} ${BOARD_THEME_CLASS[key]}" title="${label}"></button>`
+            ).join('');
+        }
+
+        function pickSettingsBg(key) {
+            if (!state.settingsDraft) return;
+            state.settingsDraft.bg_theme = key;
+            renderSettingsBgSwatches(key);
+        }
+
+        function renderSettingsFontPicker(selected) {
+            document.getElementById('setFontPicker').innerHTML = Object.entries(FONT_OPTIONS).map(([key, opt]) =>
+                `<button type="button" onclick="pickSettingsFont('${key}')" class="seg-btn ${opt.class} ${key === selected ? 'active' : ''}">${opt.label}</button>`
+            ).join('');
+        }
+
+        function pickSettingsFont(key) {
+            if (!state.settingsDraft) return;
+            state.settingsDraft.font_family = key;
+            renderSettingsFontPicker(key);
+        }
+
+        function setColorMode(mode) {
+            if (state.settingsDraft) state.settingsDraft.color_mode = mode;
+            document.getElementById('setColorDark').classList.toggle('active', mode === 'dark');
+            document.getElementById('setColorLight').classList.toggle('active', mode === 'light');
+        }
+
+        function setPostSize(size) {
+            if (state.settingsDraft) state.settingsDraft.post_size = size;
+            document.getElementById('setPostStd').classList.toggle('active', size === 'standard');
+            document.getElementById('setPostWide').classList.toggle('active', size === 'wide');
+        }
+
+        function setPostPosition(pos) {
+            if (state.settingsDraft) state.settingsDraft.post_position = pos;
+            document.getElementById('setPosFirst').classList.toggle('active', pos === 'first');
+            document.getElementById('setPosLast').classList.toggle('active', pos === 'last');
+        }
+
+        function syncSettingsColumns() {
+            const layout = document.getElementById('setLayout').value;
+            if (state.settingsDraft) state.settingsDraft.layout_type = layout;
+            document.getElementById('setColumnsBox').classList.toggle('hidden', layout !== 'columns');
+        }
+
+        function renderSettingsColumns() {
+            if (!state.settingsDraft) return;
+            const colors = Object.keys(COLOR_LABELS);
+            document.getElementById('setColumnRows').innerHTML = state.settingsDraft.columns.map((c, i) => `
+                <div class="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                    <input class="field !py-2 text-sm" value="${esc(c.title)}" oninput="state.settingsDraft.columns[${i}].title=this.value">
+                    <select class="field !py-2 text-sm" onchange="state.settingsDraft.columns[${i}].color=this.value">
+                        ${colors.map((color) => `<option value="${color}" ${c.color === color ? 'selected' : ''}>${COLOR_LABELS[color]}</option>`).join('')}
+                    </select>
+                    <button type="button" onclick="settingsRemoveColumn(${i})" class="rounded-lg border border-red-900/40 px-2 text-xs font-bold text-red-300" ${state.settingsDraft.columns.length <= 1 ? 'disabled' : ''}>Xóa</button>
+                </div>`).join('');
+        }
+
+        function settingsAddColumn() {
+            if (!state.settingsDraft) return;
+            state.settingsDraft.columns.push({ title: 'Mục mới', color: 'teal' });
+            renderSettingsColumns();
+        }
+
+        function settingsRemoveColumn(i) {
+            if (!state.settingsDraft || state.settingsDraft.columns.length <= 1) return;
+            state.settingsDraft.columns.splice(i, 1);
+            renderSettingsColumns();
+        }
+
+        async function saveSettings() {
+            if (!state.settingsDraft || !state.board) return;
+            const d = state.settingsDraft;
+            try {
+                await api(`${API}?action=save-board`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: state.board.id,
+                        title: document.getElementById('setTitle').value.trim() || state.board.title,
+                        description: document.getElementById('setDescription').value.trim(),
+                        prompt_text: state.board.prompt_text || '',
+                        layout_type: document.getElementById('setLayout').value,
+                        bg_theme: d.bg_theme,
+                        color_mode: d.color_mode,
+                        font_family: d.font_family,
+                        post_size: d.post_size,
+                        post_position: d.post_position,
+                        show_author: document.getElementById('setShowAuthor').checked,
+                        access_mode: state.board.access_mode,
+                        target_class: state.board.target_class || '',
+                        status: document.getElementById('setOpen').checked ? 'open' : 'closed',
+                        academic_year: state.board.academic_year || schoolYear(),
+                        moderation_enabled: document.getElementById('setModeration').value === '1',
+                        comments_enabled: document.getElementById('setComments').checked,
+                        reactions_enabled: document.getElementById('setReactions').checked,
+                        columns: d.layout_type === 'columns' ? d.columns : [{ title: 'Bài đăng', color: 'teal' }]
+                    })
+                });
+                closeSettings();
+                toast('Đã lưu cài đặt');
+                await loadBoard();
+            } catch (err) { toast(err.message); }
+        }
+
+        function copySettingsLink() {
+            if (!state.board) return;
+            copyLink(state.board.public_code);
+        }
+
+        async function saveColumnsNow(columns) {
+            await api(`${API}?action=save-board`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(boardPayloadFromState({ columns }))
+            });
+            await loadBoard();
+        }
+
+        function closeColumnMenu() {
+            document.getElementById('columnMenu').classList.add('hidden');
+            state.activeColumnMenu = null;
+        }
+
+        function openColumnMenu(colId, btn) {
+            if (!state.canManage) return;
+            const menu = document.getElementById('columnMenu');
+            const rect = btn.getBoundingClientRect();
+            state.activeColumnMenu = colId;
+            menu.innerHTML = `
+                <button type="button" onclick="columnAction('add-left')"><i class="fas fa-arrow-left mr-2 opacity-60"></i>Mục mới bên trái</button>
+                <button type="button" onclick="columnAction('add-right')"><i class="fas fa-arrow-right mr-2 opacity-60"></i>Mục mới bên phải</button>
+                <button type="button" onclick="columnAction('move-left')"><i class="fas fa-chevron-left mr-2 opacity-60"></i>Di chuyển mục trái</button>
+                <button type="button" onclick="columnAction('move-right')"><i class="fas fa-chevron-right mr-2 opacity-60"></i>Di chuyển mục phải</button>
+                <button type="button" onclick="columnAction('rename')"><i class="fas fa-pen mr-2 opacity-60"></i>Đổi tên mục</button>
+                <button type="button" onclick="columnAction('default')"><i class="fas fa-star mr-2 opacity-60"></i>Đặt làm mục mặc định</button>
+                <button type="button" class="danger" onclick="columnAction('delete')"><i class="fas fa-trash-can mr-2"></i>Xóa mục</button>`;
+            menu.style.top = `${rect.bottom + 6}px`;
+            menu.style.left = `${Math.min(rect.left, window.innerWidth - 260)}px`;
+            menu.classList.remove('hidden');
+        }
+
+        async function columnAction(action) {
+            const colId = state.activeColumnMenu;
+            closeColumnMenu();
+            if (!state.canManage) return;
+            const cols = state.columns.map((c) => ({ id: c.id, title: c.title, color: c.color }));
+
+            if (action === 'add-end') {
+                cols.push({ title: 'Mục mới', color: 'teal' });
+                try { await saveColumnsNow(cols); toast('Đã thêm cột'); } catch (err) { toast(err.message); }
+                return;
+            }
+
+            if (!colId) return;
+            const idx = cols.findIndex((c) => Number(c.id) === Number(colId));
+            if (idx < 0) return;
+
+            if (action === 'add-left') {
+                cols.splice(idx, 0, { title: 'Mục mới', color: 'teal' });
+            } else if (action === 'add-right') {
+                cols.splice(idx + 1, 0, { title: 'Mục mới', color: 'teal' });
+            } else if (action === 'move-left' && idx > 0) {
+                [cols[idx - 1], cols[idx]] = [cols[idx], cols[idx - 1]];
+            } else if (action === 'move-right' && idx < cols.length - 1) {
+                [cols[idx + 1], cols[idx]] = [cols[idx], cols[idx + 1]];
+            } else if (action === 'rename') {
+                const name = prompt('Tên cột / mục:', cols[idx].title);
+                if (!name?.trim()) return;
+                cols[idx].title = name.trim();
+            } else if (action === 'default') {
+                await api(`${API}?action=save-board`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(boardPayloadFromState({ default_column_id: colId }))
+                });
+                toast('Đã đặt mục mặc định');
+                await loadBoard();
+                return;
+            } else if (action === 'delete') {
+                if (cols.length <= 1) { toast('Phải giữ ít nhất một cột'); return; }
+                if (!confirm('Xóa cột này? Bài đăng sẽ chuyển sang cột đầu.')) return;
+                cols.splice(idx, 1);
+            } else return;
+
+            try {
+                await saveColumnsNow(cols);
+                toast('Đã cập nhật cột');
+            } catch (err) { toast(err.message); }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#columnMenu') && !e.target.closest('[data-col-menu]')) closeColumnMenu();
+        });
+
+        async function saveInlineTitle(title) {
+            const next = title.trim();
+            if (!state.canManage || !next || next === state.board.title) return;
+            try {
+                await api(`${API}?action=save-board`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(boardPayloadFromState({ title: next }))
+                });
+                state.board.title = next;
+                document.title = `${next} · Bảng chia sẻ`;
+            } catch (err) { toast(err.message); }
+        }
+
+        async function saveInlinePrompt(text) {
+            const next = text.trim();
+            if (!state.canManage) return;
+            const current = (state.board.prompt_text || state.board.description || '').trim();
+            if (next === current) return;
+            try {
+                await api(`${API}?action=save-board`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(boardPayloadFromState({
+                        description: next,
+                        prompt_text: state.board.layout_type === 'question' ? next : (state.board.prompt_text || '')
+                    }))
+                });
+                state.board.description = next;
+                if (state.board.layout_type === 'question') state.board.prompt_text = next;
+            } catch (err) { toast(err.message); }
+        }
+
+        function renderThemePicker(selected = 'peach') {
             document.getElementById('themePicker').innerHTML = Object.entries(BOARD_THEMES).map(([key, label]) => `
                 <button type="button" onclick="pickBoardTheme('${key}')"
-                    class="theme-swatch h-10 w-10 rounded-full border-2 ${key === selected ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'} board-bg-${key}"
+                    class="theme-swatch h-10 w-10 rounded-full border-2 ${key === selected ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'} ${BOARD_THEME_CLASS[key]}"
                     title="${label}"></button>`).join('');
             document.getElementById('boardBgTheme').value = selected;
         }
@@ -705,8 +1293,9 @@
         }
 
         async function openBoardEditor(id = 0) {
-            let board = state.boards.find((x) => Number(x.id) === Number(id));
-            let columns = [];
+            let board = state.boards.find((x) => Number(x.id) === Number(id))
+                || (state.board && Number(state.board.id) === Number(id) ? state.board : null);
+            let columns = id && state.board && Number(state.board.id) === Number(id) ? state.columns : [];
 
             if (id) {
                 try {
@@ -778,7 +1367,8 @@
                 });
                 closeModal('boardModal');
                 toast('Đã lưu bảng');
-                await loadManager();
+                if (boardCode) await loadBoard();
+                else await loadManager();
             } catch (err) {
                 toast(err.message);
             }
@@ -910,9 +1500,15 @@
                 </a>` : '';
 
             const compactClass = compact ? ' min-h-[180px]' : '';
+            const wideClass = state.board?.post_size === 'wide' ? ' post-wide' : '';
+            const showAuthor = state.board?.show_author === undefined ? true : !!Number(state.board.show_author);
+            const authorLine = showAuthor ? `
+                <div class="mt-3 border-t border-slate-900/10 pt-2 text-[11px] font-bold text-slate-500">
+                    ${esc(p.author_name)}${p.author_group ? ` · ${esc(p.author_group)}` : ''} · ${esc(fmt(p.created_at))}
+                </div>` : '';
 
             return `<article draggable="${state.canManage ? 'true' : 'false'}" data-post="${p.id}"
-                data-status="${p.status}" class="padlet-card post-${esc(p.card_color)} overflow-hidden rounded-2xl border border-slate-900/10 p-4 shadow-sm${compactClass} ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
+                data-status="${p.status}" class="padlet-card post-${esc(p.card_color)} overflow-hidden rounded-2xl border border-slate-900/10 p-4 shadow-sm${compactClass}${wideClass} ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
                 ${postMediaHtml(p)}
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
@@ -928,18 +1524,31 @@
                 </div>
                 ${otherFiles ? `<div class="mt-3 flex flex-wrap gap-2">${otherFiles}</div>` : ''}
                 ${social}
-                <div class="mt-3 border-t border-slate-900/10 pt-2 text-[11px] font-bold text-slate-500">
-                    ${esc(p.author_name)}${p.author_group ? ` · ${esc(p.author_group)}` : ''} · ${esc(fmt(p.created_at))}
-                </div>
+                ${authorLine}
                 ${actions}
             </article>`;
         }
 
-        function addCardTile() {
+        function addCardTile(columnId = null) {
             if (state.board?.status !== 'open') return '';
-            return `<button type="button" onclick="openPostModal()" class="add-tile padlet-card flex w-full flex-col items-center justify-center rounded-2xl p-6 text-center text-sm font-extrabold">
-                <i class="fas fa-plus mb-2 text-2xl"></i>Thêm thẻ mới
+            const colArg = columnId ? columnId : 'null';
+            return `<button type="button" onclick="openPostModal(${colArg})" class="add-tile padlet-card flex w-full flex-col items-center justify-center rounded-2xl p-5 text-center text-sm font-extrabold">
+                <i class="fas fa-plus mb-1 text-xl"></i>Thêm
             </button>`;
+        }
+
+        function columnHeader(c, colPosts, isOpen) {
+            const manage = state.canManage ? `
+                <button type="button" data-col-menu="${c.id}" onclick="openColumnMenu(${c.id}, this)" class="padlet-col-btn" title="Tùy chọn cột"><i class="fas fa-ellipsis"></i></button>
+                <button type="button" onclick="openPostModal(${c.id})" class="padlet-col-btn" title="Thêm bài"><i class="fas fa-plus"></i></button>` : '';
+            return `<div class="padlet-column-head">
+                <div class="padlet-column-title">${esc(c.title)}</div>
+                ${manage}
+            </div>
+            <div class="min-h-[120px] space-y-3" data-post-list="${c.id}">
+                ${colPosts.map((p) => postCard(p)).join('')}
+                ${isOpen ? addCardTile(c.id) : ''}
+            </div>`;
         }
 
         function renderPostsArea(b, cols, byCol, isOpen) {
@@ -948,21 +1557,20 @@
             const posts = byCol[colId] || [];
 
             if (layout === 'columns') {
-                const gridClass = `lg:grid-cols-${Math.min(Math.max(cols.length, 1), 4)}`;
-                return `<div id="padletColumns" class="grid gap-4 ${gridClass}">
+                const addColBtn = state.canManage ? `
+                    <div class="padlet-column flex items-start justify-center pt-10">
+                        <button type="button" onclick="columnAction('add-end')" class="rounded-xl border-2 border-dashed border-slate-300 bg-white/60 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-white">
+                            <i class="fas fa-plus mr-1"></i>Thêm cột
+                        </button>
+                    </div>` : '';
+                return `<div id="padletColumns" class="columns-board -mx-1 rounded-2xl bg-white/35 px-1 py-2 backdrop-blur-sm">
                     ${cols.map((c) => {
                         const colPosts = byCol[c.id] || [];
-                        return `<div class="min-w-0 rounded-2xl border-t-4 column-${esc(c.color)} bg-white/90 p-3 shadow-sm backdrop-blur" data-column="${c.id}">
-                            <div class="mb-3 flex items-center justify-between px-1">
-                                <h2 class="font-black text-slate-800">${esc(c.title)}</h2>
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">${colPosts.length}</span>
-                            </div>
-                            <div class="min-h-20 space-y-3" data-post-list="${c.id}">
-                                ${colPosts.map((p) => postCard(p)).join('')}
-                                ${isOpen ? addCardTile() : ''}
-                            </div>
+                        return `<div class="padlet-column border-t-4 column-${esc(c.color)}" data-column="${c.id}">
+                            ${columnHeader(c, colPosts, isOpen)}
                         </div>`;
                     }).join('')}
+                    ${addColBtn}
                 </div>`;
             }
 
@@ -999,6 +1607,79 @@
                 return `<div id="padletColumns" data-post-list="${colId}">
                     <div id="padletMap" class="mb-4 border border-white/20 shadow-xl"></div>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        ${posts.map((p) => postCard(p)).join('')}
+                        ${isOpen ? addCardTile() : ''}
+                    </div>
+                </div>`;
+            }
+
+            if (layout === 'whiteboard') {
+                const notes = posts.map((p, i) => {
+                    const x = p.pos_x ?? (32 + (i % 5) * 210);
+                    const y = p.pos_y ?? (32 + Math.floor(i / 5) * 170);
+                    return `<div class="whiteboard-note" data-post="${p.id}" data-wb-x="${x}" data-wb-y="${y}" style="left:${x}px;top:${y}px">${postCard(p)}</div>`;
+                }).join('');
+                return `<div id="padletColumns" class="whiteboard-canvas" data-post-list="${colId}">
+                    ${notes}
+                    ${isOpen ? `<button type="button" onclick="openPostModal()" class="absolute bottom-4 right-4 z-10 rounded-full bg-teal-700 px-4 py-3 text-sm font-bold text-white shadow-lg"><i class="fas fa-plus mr-1"></i>Thêm ghi chú</button>` : ''}
+                </div>`;
+            }
+
+            if (layout === 'mindmap') {
+                const branches = state.columns.length ? state.columns : cols;
+                const n = Math.max(branches.length, 1);
+                const hub = esc(b.title || 'Chủ đề');
+                const branchHtml = branches.map((col, i) => {
+                    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+                    const dx = Math.round(Math.cos(angle) * 260);
+                    const dy = Math.round(Math.sin(angle) * 200);
+                    const colPosts = byCol[col.id] || [];
+                    return `<div class="mindmap-branch" style="left:calc(50% + ${dx}px);top:calc(50% + ${dy}px);transform:translate(-50%,-50%)">
+                        <div class="mb-2 rounded-full bg-white/90 px-3 py-1 text-center text-xs font-extrabold text-slate-700 shadow">${esc(col.title)}</div>
+                        <div class="space-y-2" data-post-list="${col.id}">${colPosts.map((p) => postCard(p)).join('')}</div>
+                    </div>`;
+                }).join('');
+                return `<div id="padletColumns" class="mindmap-stage" data-post-list="${colId}">
+                    <div class="mindmap-hub bg-white px-6 py-4 text-center text-sm font-black text-slate-800 shadow-xl">${hub}</div>
+                    ${branchHtml}
+                    ${isOpen ? `<button type="button" onclick="openPostModal()" class="absolute bottom-3 right-3 rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white shadow">+ Thêm ý tưởng</button>` : ''}
+                </div>`;
+            }
+
+            if (layout === 'presentation') {
+                return `<div id="padletColumns" class="presentation-deck mx-auto max-w-4xl space-y-5" data-post-list="${colId}">
+                    ${posts.map((p, i) => `
+                        <article class="presentation-slide overflow-hidden rounded-3xl border border-white/20 bg-white/95 p-8 shadow-2xl">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Slide ${i + 1}</span>
+                            <div class="mt-3">${postCard(p)}</div>
+                        </article>`).join('')}
+                    ${isOpen ? addCardTile() : ''}
+                </div>`;
+            }
+
+            if (layout === 'venn') {
+                const left = posts.filter((p) => (p.venn_zone || 'left') === 'left');
+                const both = posts.filter((p) => p.venn_zone === 'both');
+                const right = posts.filter((p) => p.venn_zone === 'right');
+                const zone = (list, label) => `<div class="space-y-2">${list.length ? list.map((p) => postCard(p)).join('') : `<p class="text-xs text-slate-500">${label}</p>`}</div>`;
+                return `<div id="padletColumns" class="venn-wrap rounded-3xl bg-white/90 p-2 shadow-inner" data-post-list="${colId}">
+                    <div class="venn-circle-left"></div><div class="venn-circle-right"></div>
+                    <div class="venn-zone venn-zone-left"><p class="mb-2 text-xs font-black text-blue-700">Vùng A</p>${zone(left, 'Chưa có bài')}</div>
+                    <div class="venn-zone venn-zone-both"><p class="mb-2 text-center text-xs font-black text-violet-700">A ∩ B</p>${zone(both, 'Giao')}</div>
+                    <div class="venn-zone venn-zone-right"><p class="mb-2 text-right text-xs font-black text-rose-700">Vùng B</p>${zone(right, 'Chưa có bài')}</div>
+                    ${isOpen ? `<div class="absolute bottom-3 left-1/2 -translate-x-1/2"><button type="button" onclick="openPostModal()" class="rounded-xl bg-violet-700 px-4 py-2 text-xs font-bold text-white shadow">+ Thêm vào Venn</button></div>` : ''}
+                </div>`;
+            }
+
+            if (layout === 'question') {
+                const q = esc(b.prompt_text || b.description || 'Câu hỏi hôm nay là gì?');
+                return `<div id="padletColumns" class="mx-auto max-w-3xl" data-post-list="${colId}">
+                    <div class="rounded-3xl border border-white/25 bg-white/15 p-8 text-center backdrop-blur-md">
+                        <p class="text-xs font-extrabold uppercase tracking-[.2em] text-white/70">Câu hỏi trong ngày</p>
+                        <h2 class="mt-3 text-2xl font-black leading-snug text-white sm:text-4xl">${q}</h2>
+                    </div>
+                    <div class="mt-6 space-y-3">
+                        <p class="text-sm font-bold text-white/80">${posts.length} câu trả lời</p>
                         ${posts.map((p) => postCard(p)).join('')}
                         ${isOpen ? addCardTile() : ''}
                     </div>
@@ -1063,10 +1744,15 @@
             const b = state.board;
             const isOpen = b.status === 'open';
             const pending = pendingCount();
-            const theme = b.bg_theme || 'teal';
+            const themeClass = boardThemeClass(b);
+            const lightClass = (b.color_mode || 'light') === 'light' ? ' board-light' : '';
+            const fontClass = boardFontClass(b);
 
             document.title = `${b.title} · Bảng chia sẻ`;
-            document.body.className = `min-h-screen board-view board-bg-${theme} text-slate-900 pb-24 sm:pb-7`;
+            const viewClass = b.layout_type === 'whiteboard'
+                ? `min-h-screen board-view board-whiteboard ${fontClass} text-slate-900 pb-24 sm:pb-7`
+                : `min-h-screen board-view ${themeClass}${lightClass} ${fontClass} text-slate-900 pb-24 sm:pb-7`;
+            document.body.className = viewClass;
 
             document.getElementById('topActions').innerHTML = `
                 ${state.canManage ? `
@@ -1081,56 +1767,110 @@
             state.columns.forEach((c) => { byCol[c.id] = []; });
             state.posts.forEach((p) => { (byCol[p.column_id] ??= []).push(p); });
 
-            const cols = b.layout_type === 'columns'
+            const cols = (b.layout_type === 'columns' || b.layout_type === 'mindmap')
                 ? state.columns
                 : [{ id: state.columns[0]?.id || 0, title: 'Bài đăng', color: 'teal' }];
             state.mapInstance = null;
 
+            const promptText = b.prompt_text || b.description || '';
+            const headerTone = b.layout_type === 'whiteboard' ? 'text-slate-900' : 'text-white';
+            const titleField = state.canManage
+                ? `<input type="text" class="board-title-input w-full max-w-3xl border-0 bg-transparent px-0 text-2xl font-black tracking-tight sm:text-4xl focus:outline-none focus:ring-0"
+                    value="${esc(b.title)}" maxlength="220" onblur="saveInlineTitle(this.value)" onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}">`
+                : `<h1 class="max-w-3xl text-2xl font-black tracking-tight sm:text-4xl">${esc(b.title)}</h1>`;
+            const promptField = state.canManage
+                ? `<input type="text" class="board-prompt-input mt-2 w-full max-w-2xl border-0 bg-transparent px-0 text-sm focus:outline-none"
+                    value="${esc(promptText)}" maxlength="500" placeholder="Thêm lời nhắn hoặc câu hỏi cho lớp..."
+                    onblur="saveInlinePrompt(this.value)">`
+                : (promptText ? `<p class="mt-2 max-w-2xl text-sm leading-6 opacity-85">${esc(promptText)}</p>` : '');
+
             document.getElementById('app').innerHTML = `
-                <section class="rounded-[28px] bg-white/15 p-6 text-white shadow-lg backdrop-blur-md sm:p-8">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                        <div>
-                            <div class="flex flex-wrap gap-2">
-                                <span class="rounded-full bg-black/20 px-3 py-1 text-xs font-extrabold">${LAYOUT_LABELS[b.layout_type] || 'Tường'}</span>
-                                <span class="rounded-full bg-black/20 px-3 py-1 text-xs font-extrabold">
-                                    ${b.access_mode === 'class' ? `Lớp ${esc(b.target_class || '')}` : 'Mở qua link'}
-                                </span>
-                                ${!isOpen ? '<span class="rounded-full bg-rose-500/40 px-3 py-1 text-xs font-extrabold">Đã đóng</span>' : ''}
+                <div class="px-1 pt-14 pb-2 sm:px-2">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1 ${headerTone}">
+                            ${titleField}
+                            ${promptField}
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="rounded-full bg-black/20 px-2.5 py-1 text-[10px] font-extrabold">${LAYOUT_LABELS[b.layout_type] || 'Tường'}</span>
+                                ${!isOpen ? '<span class="rounded-full bg-rose-500/40 px-2.5 py-1 text-[10px] font-extrabold">Đã đóng</span>' : ''}
                             </div>
-                            <h1 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">${esc(b.title)}</h1>
-                            <p class="mt-2 max-w-3xl whitespace-pre-line text-sm leading-6 text-white/85">
-                                ${esc(b.description || 'Nhấn + hoặc thả tệp để đăng — giống Padlet.')}
-                            </p>
                         </div>
-                        ${isOpen ? `
-                            <button type="button" onclick="openPostModal()" class="hidden rounded-2xl bg-white px-5 py-3 text-sm font-black text-teal-800 shadow-lg sm:inline-flex">
-                                <i class="fas fa-plus mr-1"></i>Thêm thẻ
-                            </button>` : ''}
+                        <div class="flex shrink-0 items-center gap-2">
+                            ${state.canManage ? `
+                                <button type="button" onclick="openSettings()" class="grid h-10 w-10 place-items-center rounded-full bg-white/20 text-inherit backdrop-blur hover:bg-white/30" title="Cài đặt">
+                                    <i class="fas fa-gear"></i>
+                                </button>` : ''}
+                        </div>
                     </div>
-                </section>
+                </div>
 
                 ${state.canManage && b.moderation_enabled && pending > 0 ? `
-                    <div id="pendingBanner" class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-sm text-amber-900">
-                        <span><i class="fas fa-shield-halved mr-2"></i><strong>${pending} bài</strong> đang chờ duyệt — chỉ bạn nhìn thấy.</span>
-                        <button type="button" onclick="scrollToPending()" class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white">Xem ngay</button>
+                    <div id="pendingBanner" class="mx-1 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-sm text-amber-900">
+                        <span><i class="fas fa-shield-halved mr-2"></i><strong>${pending} bài</strong> đang chờ duyệt.</span>
+                        <button type="button" onclick="scrollToPending()" class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white">Xem</button>
                     </div>` : ''}
 
-                ${!state.user && isOpen ? `
-                    <div class="mt-4 rounded-2xl border border-white/30 bg-white/90 px-4 py-3 text-sm text-slate-600">
-                        <i class="fas fa-info-circle mr-2 text-teal-700"></i>Gõ nội dung hoặc dán link YouTube/ảnh. <a href="login.html" class="font-bold text-teal-700 underline">Đăng nhập</a> để tự điền tên.
-                    </div>` : ''}
-
-                <section id="boardDropZone" class="mt-6 rounded-[28px] p-1">
+                <section id="boardDropZone" class="px-1 pb-8 sm:px-2">
                     ${renderPostsArea(b, cols, byCol, isOpen)}
                 </section>`;
 
             const fab = document.getElementById('fabPost');
             fab.classList.toggle('hidden', !isOpen);
-            fab.classList.toggle('flex', isOpen);
+            fab.classList.toggle('inline-flex', isOpen);
 
-            if (state.canManage) enableDrag();
+            if (state.canManage && !['whiteboard', 'mindmap', 'venn', 'question', 'presentation'].includes(b.layout_type)) enableDrag();
             if (isOpen) enableBoardDrop();
             if (b.layout_type === 'map') setTimeout(initMapBoard, 80);
+            if (b.layout_type === 'whiteboard' && state.canManage) enableWhiteboardDrag();
+        }
+
+        function enableWhiteboardDrag() {
+            const canvas = document.querySelector('.whiteboard-canvas');
+            if (!canvas || canvas.dataset.wbReady === '1') return;
+            canvas.dataset.wbReady = '1';
+            let active = null; let startX = 0; let startY = 0; let origX = 0; let origY = 0;
+
+            canvas.querySelectorAll('.whiteboard-note').forEach((note) => {
+                note.addEventListener('pointerdown', (e) => {
+                    if (e.target.closest('button,a,iframe,input')) return;
+                    active = note;
+                    startX = e.clientX; startY = e.clientY;
+                    origX = parseInt(note.dataset.wbX || '0', 10);
+                    origY = parseInt(note.dataset.wbY || '0', 10);
+                    note.setPointerCapture(e.pointerId);
+                    e.preventDefault();
+                });
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                if (!active) return;
+                const nx = Math.max(0, origX + e.clientX - startX);
+                const ny = Math.max(0, origY + e.clientY - startY);
+                active.style.left = `${nx}px`;
+                active.style.top = `${ny}px`;
+                active.dataset.wbX = String(nx);
+                active.dataset.wbY = String(ny);
+            });
+
+            const savePos = async (note) => {
+                try {
+                    await api(`${API}?action=save-position`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            board_id: state.board.id,
+                            post_id: Number(note.dataset.post),
+                            pos_x: parseInt(note.dataset.wbX || '0', 10),
+                            pos_y: parseInt(note.dataset.wbY || '0', 10)
+                        })
+                    });
+                } catch (err) { toast(err.message); }
+            };
+
+            canvas.addEventListener('pointerup', () => {
+                if (active) { savePos(active); active = null; }
+            });
+            canvas.addEventListener('pointercancel', () => { active = null; });
         }
 
         function scrollToPending() {
@@ -1199,7 +1939,7 @@
             window.padletPasteReady = true;
             document.addEventListener('paste', (e) => {
                 if (!state.board || state.board.status !== 'open') return;
-                if (!document.getElementById('postModal').classList.contains('hidden')) return;
+                if (!document.getElementById('postComposer').classList.contains('hidden')) return;
                 const text = e.clipboardData?.getData('text')?.trim() || '';
                 const file = [...(e.clipboardData?.files || [])][0];
                 if (file) {
@@ -1220,7 +1960,8 @@
             });
         }
 
-        function openPostModal() {
+        function openPostModal(columnId = null) {
+            state.postTargetColumn = columnId;
             const b = state.board;
             document.getElementById('postForm').reset();
             document.getElementById('postError').classList.add('hidden');
@@ -1232,6 +1973,7 @@
             document.getElementById('postMapLat').value = '';
             document.getElementById('postMapLng').value = '';
             document.getElementById('mapLocationWrap').classList.toggle('hidden', state.board?.layout_type !== 'map');
+            document.getElementById('vennZoneWrap').classList.toggle('hidden', state.board?.layout_type !== 'venn');
 
             const loggedIn = !!state.user;
             document.getElementById('guestIdentity').classList.toggle('hidden', loggedIn);
@@ -1240,13 +1982,15 @@
                 document.getElementById('loggedInName').textContent = state.user.full_name || state.user.username || 'Tài khoản của bạn';
             }
 
-            const multiCol = state.columns.length > 1;
-            document.getElementById('postColumnWrap').classList.toggle('hidden', !multiCol);
+            const showCol = state.board?.layout_type === 'mindmap' || state.columns.length > 1;
+            document.getElementById('postColumnWrap').classList.toggle('hidden', !showCol);
+            const colLabel = document.querySelector('#postColumnWrap .label');
+            if (colLabel) colLabel.textContent = state.board?.layout_type === 'mindmap' ? 'Nhánh ý tưởng' : 'Đăng vào cột';
             document.getElementById('postColumn').innerHTML = state.columns
                 .map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
-            if (state.columns.length === 1) {
-                document.getElementById('postColumn').value = state.columns[0].id;
-            }
+            const defaultCol = state.postTargetColumn || b.default_column_id || state.columns[0]?.id;
+            if (defaultCol) document.getElementById('postColumn').value = defaultCol;
+            state.postTargetColumn = null;
 
             state.postColor = 'white';
             document.getElementById('colorChoices').innerHTML = ['white', 'sky', 'amber', 'violet', 'rose', 'emerald']
@@ -1254,8 +1998,16 @@
                     class="h-8 w-8 rounded-full post-${c} border border-slate-300 ${c === 'white' ? 'ring-2 ring-slate-700' : ''}"></button>`)
                 .join('');
 
-            document.getElementById('postModal').classList.remove('hidden');
+            document.getElementById('composerBackdrop').classList.remove('hidden');
+            document.getElementById('postComposer').classList.remove('hidden');
+            document.body.classList.add('composer-open');
             setTimeout(() => document.getElementById('postBody').focus(), 100);
+        }
+
+        function closePostComposer() {
+            document.getElementById('composerBackdrop').classList.add('hidden');
+            document.getElementById('postComposer').classList.add('hidden');
+            document.body.classList.remove('composer-open');
         }
 
         function pickPostColor(color) {
@@ -1278,6 +2030,7 @@
             fd.append('location_label', document.getElementById('postLocation').value);
             fd.append('map_lat', document.getElementById('postMapLat').value);
             fd.append('map_lng', document.getElementById('postMapLng').value);
+            fd.append('venn_zone', document.getElementById('postVennZone').value);
             fd.append('card_color', state.postColor);
             fd.append('author_name', document.getElementById('postAuthorName').value);
             fd.append('author_role', document.getElementById('postAuthorRole').value);
@@ -1289,7 +2042,7 @@
             btn.textContent = 'Đang gửi...';
             try {
                 const r = await api(`${API}?action=post`, { method: 'POST', body: fd });
-                closeModal('postModal');
+                closePostComposer();
                 toast(r.message);
                 await loadBoard();
             } catch (err) {
@@ -1298,7 +2051,7 @@
                 errEl.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Đăng bài';
+                btn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Đăng';
             }
         }
 
@@ -1422,7 +2175,7 @@
         }
 
         /* ── Khởi chạy ── */
-        renderThemePicker('teal');
+        renderThemePicker('peach');
         if (boardCode) {
             loadBoard();
             setInterval(() => { if (!document.hidden) loadBoard(); }, 45000);

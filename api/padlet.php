@@ -18,8 +18,9 @@ function padlet_schema(PDO $pdo): void
         owner_id INT NOT NULL,
         title VARCHAR(220) NOT NULL,
         description TEXT DEFAULT NULL,
-        layout_type ENUM('wall','columns','stream','grid','timeline','map') NOT NULL DEFAULT 'wall',
+        layout_type ENUM('wall','columns','stream','grid','timeline','map','whiteboard','mindmap','presentation','venn','question') NOT NULL DEFAULT 'wall',
         bg_theme VARCHAR(30) NOT NULL DEFAULT 'teal',
+        prompt_text TEXT DEFAULT NULL,
         access_mode ENUM('public','class') NOT NULL DEFAULT 'public',
         target_class VARCHAR(100) DEFAULT NULL,
         status ENUM('open','closed') NOT NULL DEFAULT 'open',
@@ -57,6 +58,9 @@ function padlet_schema(PDO $pdo): void
         location_label VARCHAR(200) DEFAULT NULL,
         map_lat DECIMAL(10,7) DEFAULT NULL,
         map_lng DECIMAL(10,7) DEFAULT NULL,
+        venn_zone VARCHAR(10) DEFAULT NULL,
+        pos_x INT DEFAULT NULL,
+        pos_y INT DEFAULT NULL,
         card_color VARCHAR(30) NOT NULL DEFAULT 'white',
         status ENUM('pending','published','rejected') NOT NULL DEFAULT 'pending',
         pinned TINYINT(1) NOT NULL DEFAULT 0,
@@ -111,7 +115,7 @@ function padlet_column_exists(PDO $pdo, string $table, string $column): bool
 function padlet_migrate(PDO $pdo): void
 {
     try {
-        $pdo->exec("ALTER TABLE padlet_boards MODIFY layout_type ENUM('wall','columns','stream','grid','timeline','map') NOT NULL DEFAULT 'wall'");
+        $pdo->exec("ALTER TABLE padlet_boards MODIFY layout_type ENUM('wall','columns','stream','grid','timeline','map','whiteboard','mindmap','presentation','venn','question') NOT NULL DEFAULT 'wall'");
     } catch (Throwable $e) { /* bảng mới đã đúng ENUM */ }
     if (!padlet_column_exists($pdo, 'padlet_boards', 'bg_theme')) {
         $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN bg_theme VARCHAR(30) NOT NULL DEFAULT 'teal' AFTER layout_type");
@@ -131,16 +135,72 @@ function padlet_migrate(PDO $pdo): void
     if (!padlet_column_exists($pdo, 'padlet_posts', 'map_lng')) {
         $pdo->exec("ALTER TABLE padlet_posts ADD COLUMN map_lng DECIMAL(10,7) DEFAULT NULL AFTER map_lat");
     }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'prompt_text')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN prompt_text TEXT DEFAULT NULL AFTER bg_theme");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_posts', 'venn_zone')) {
+        $pdo->exec("ALTER TABLE padlet_posts ADD COLUMN venn_zone VARCHAR(10) DEFAULT NULL AFTER map_lng");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_posts', 'pos_x')) {
+        $pdo->exec("ALTER TABLE padlet_posts ADD COLUMN pos_x INT DEFAULT NULL AFTER venn_zone");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_posts', 'pos_y')) {
+        $pdo->exec("ALTER TABLE padlet_posts ADD COLUMN pos_y INT DEFAULT NULL AFTER pos_x");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'color_mode')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN color_mode ENUM('light','dark') NOT NULL DEFAULT 'light' AFTER bg_theme");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'font_family')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN font_family VARCHAR(30) NOT NULL DEFAULT 'inter' AFTER color_mode");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'post_size')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN post_size ENUM('standard','wide') NOT NULL DEFAULT 'standard' AFTER font_family");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'post_position')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN post_position ENUM('first','last') NOT NULL DEFAULT 'first' AFTER post_size");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'show_author')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN show_author TINYINT(1) NOT NULL DEFAULT 1 AFTER post_position");
+    }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'default_column_id')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN default_column_id INT DEFAULT NULL AFTER show_author");
+    }
 }
 
 function padlet_layout_type(string $value): string
 {
-    return in_array($value, ['wall', 'columns', 'stream', 'grid', 'timeline', 'map'], true) ? $value : 'wall';
+    $allowed = ['wall', 'columns', 'stream', 'grid', 'timeline', 'map', 'whiteboard', 'mindmap', 'presentation', 'venn', 'question'];
+    return in_array($value, $allowed, true) ? $value : 'wall';
+}
+
+function padlet_venn_zone(string $value): ?string
+{
+    return in_array($value, ['left', 'right', 'both'], true) ? $value : null;
 }
 
 function padlet_bg_theme(string $value): string
 {
-    return in_array($value, ['teal', 'blue', 'violet', 'rose', 'amber', 'slate', 'emerald'], true) ? $value : 'teal';
+    return in_array($value, ['teal', 'blue', 'violet', 'rose', 'amber', 'slate', 'emerald', 'peach'], true) ? $value : 'teal';
+}
+
+function padlet_color_mode(string $value): string
+{
+    return $value === 'dark' ? 'dark' : 'light';
+}
+
+function padlet_font_family(string $value): string
+{
+    return in_array($value, ['inter', 'serif', 'mono', 'rounded'], true) ? $value : 'inter';
+}
+
+function padlet_post_size(string $value): string
+{
+    return $value === 'wide' ? 'wide' : 'standard';
+}
+
+function padlet_post_position(string $value): string
+{
+    return $value === 'last' ? 'last' : 'first';
 }
 
 function padlet_youtube_id(string $url): ?string
@@ -302,6 +362,8 @@ function padlet_payload(PDO $pdo, array $board, bool $includeAll = false): array
     }
     foreach ($posts as &$post) {
         $post['id'] = (int)$post['id']; $post['column_id'] = $post['column_id'] ? (int)$post['column_id'] : null; $post['pinned'] = (bool)$post['pinned'];
+        $post['pos_x'] = $post['pos_x'] !== null ? (int)$post['pos_x'] : null;
+        $post['pos_y'] = $post['pos_y'] !== null ? (int)$post['pos_y'] : null;
         $post['files'] = $filesByPost[(int)$post['id']] ?? []; $post['comments'] = $commentsByPost[(int)$post['id']] ?? []; $post['reactions'] = $reactionsByPost[(int)$post['id']] ?? [];
     }
     return ['board' => $board, 'columns' => $columns, 'posts' => $posts];
@@ -351,16 +413,24 @@ if ($method === 'POST' && $action === 'save-board') {
     $columns = padlet_normalize_columns($data['columns'] ?? []);
     $academic = trim((string)($data['academic_year'] ?? ''));
     $status = ($data['status'] ?? '') === 'closed' ? 'closed' : 'open';
+    $promptText = trim((string)($data['prompt_text'] ?? ''));
+    $description = trim((string)($data['description'] ?? ''));
+    $colorMode = padlet_color_mode((string)($data['color_mode'] ?? 'light'));
+    $fontFamily = padlet_font_family((string)($data['font_family'] ?? 'inter'));
+    $postSize = padlet_post_size((string)($data['post_size'] ?? 'standard'));
+    $postPosition = padlet_post_position((string)($data['post_position'] ?? 'first'));
+    $showAuthor = !empty($data['show_author']) ? 1 : 0;
+    $defaultColumnId = (int)($data['default_column_id'] ?? 0) ?: null;
     $pdo->beginTransaction();
     try {
         if ($id) {
             $board = padlet_require_owner($pdo, $teacher, $id);
-            $stmt = $pdo->prepare('UPDATE padlet_boards SET title=?, description=?, layout_type=?, bg_theme=?, access_mode=?, target_class=?, status=?, academic_year=?, moderation_enabled=?, comments_enabled=?, reactions_enabled=? WHERE id=?');
-            $stmt->execute([$title, trim((string)($data['description'] ?? '')), $layout, $bgTheme, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0, $id]);
+            $stmt = $pdo->prepare('UPDATE padlet_boards SET title=?, description=?, prompt_text=?, layout_type=?, bg_theme=?, color_mode=?, font_family=?, post_size=?, post_position=?, show_author=?, default_column_id=?, access_mode=?, target_class=?, status=?, academic_year=?, moderation_enabled=?, comments_enabled=?, reactions_enabled=? WHERE id=?');
+            $stmt->execute([$title, $description, $promptText ?: null, $layout, $bgTheme, $colorMode, $fontFamily, $postSize, $postPosition, $showAuthor, $defaultColumnId, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0, $id]);
         } else {
             $code = padlet_code($pdo);
-            $stmt = $pdo->prepare('INSERT INTO padlet_boards (public_code, owner_id, title, description, layout_type, bg_theme, access_mode, target_class, status, academic_year, moderation_enabled, comments_enabled, reactions_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$code, (int)$teacher['id'], $title, trim((string)($data['description'] ?? '')), $layout, $bgTheme, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0]);
+            $stmt = $pdo->prepare('INSERT INTO padlet_boards (public_code, owner_id, title, description, prompt_text, layout_type, bg_theme, color_mode, font_family, post_size, post_position, show_author, default_column_id, access_mode, target_class, status, academic_year, moderation_enabled, comments_enabled, reactions_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$code, (int)$teacher['id'], $title, $description, $promptText ?: null, $layout, $bgTheme, $colorMode, $fontFamily, $postSize, $postPosition, $showAuthor, $defaultColumnId, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0]);
             $id = (int)$pdo->lastInsertId();
         }
         // Keep IDs of existing columns because posts reference them. If a column is
@@ -444,12 +514,26 @@ if ($method === 'POST' && $action === 'post') {
     $mapLng = is_numeric($mapLng) ? round((float)$mapLng, 7) : null;
     if ($mapLat !== null && ($mapLat < -90 || $mapLat > 90)) $mapLat = null;
     if ($mapLng !== null && ($mapLng < -180 || $mapLng > 180)) $mapLng = null;
+    $vennZone = padlet_venn_zone((string)($_POST['venn_zone'] ?? ''));
+    if (($board['layout_type'] ?? '') === 'venn' && !$vennZone) $vennZone = 'left';
+    $posX = null; $posY = null;
+    if (($board['layout_type'] ?? '') === 'whiteboard') {
+        $count = (int)$pdo->query('SELECT COUNT(*) FROM padlet_posts WHERE board_id = ' . (int)$board['id'])->fetchColumn();
+        $posX = 32 + ($count % 5) * 210;
+        $posY = 32 + intdiv($count, 5) * 170;
+    }
     $status = (bool)$board['moderation_enabled'] ? 'pending' : 'published';
-    $order = (int)$pdo->query('SELECT COALESCE(MAX(order_index), 0) + 1 FROM padlet_posts WHERE board_id = ' . (int)$board['id'])->fetchColumn();
+    $postAtFirst = padlet_post_position((string)($board['post_position'] ?? 'first')) === 'first';
+    if ($postAtFirst) {
+        $pdo->prepare('UPDATE padlet_posts SET order_index = order_index + 1 WHERE board_id = ? AND column_id = ?')->execute([(int)$board['id'], (int)$column['id']]);
+        $order = 0;
+    } else {
+        $order = (int)$pdo->query('SELECT COALESCE(MAX(order_index), 0) + 1 FROM padlet_posts WHERE board_id = ' . (int)$board['id'] . ' AND column_id = ' . (int)$column['id'])->fetchColumn();
+    }
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('INSERT INTO padlet_posts (board_id, column_id, author_user_id, author_name, author_role, author_group, body, link_url, link_title, link_image, location_label, map_lat, map_lng, card_color, status, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([(int)$board['id'], (int)$column['id'], $user ? (int)$user['id'] : null, $name, $role ?: null, $group ?: null, $body ?: null, $link ?: null, $linkTitle ?: null, $linkImage ?: null, $locationLabel ?: null, $mapLat, $mapLng, $cardColor, $status, $order]); $postId = (int)$pdo->lastInsertId();
+        $stmt = $pdo->prepare('INSERT INTO padlet_posts (board_id, column_id, author_user_id, author_name, author_role, author_group, body, link_url, link_title, link_image, location_label, map_lat, map_lng, venn_zone, pos_x, pos_y, card_color, status, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([(int)$board['id'], (int)$column['id'], $user ? (int)$user['id'] : null, $name, $role ?: null, $group ?: null, $body ?: null, $link ?: null, $linkTitle ?: null, $linkImage ?: null, $locationLabel ?: null, $mapLat, $mapLng, $vennZone, $posX, $posY, $cardColor, $status, $order]); $postId = (int)$pdo->lastInsertId();
         $pdo->commit();
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     if ($files) {
@@ -495,6 +579,21 @@ if ($method === 'POST' && $action === 'moderate') {
     elseif ($operation === 'pin') $pdo->prepare('UPDATE padlet_posts SET pinned = 1 - pinned WHERE id = ?')->execute([$postId]);
     elseif ($operation === 'delete') { $pdo->prepare('DELETE FROM padlet_post_files WHERE post_id = ?')->execute([$postId]); $pdo->prepare('DELETE FROM padlet_comments WHERE post_id = ?')->execute([$postId]); $pdo->prepare('DELETE FROM padlet_reactions WHERE post_id = ?')->execute([$postId]); $pdo->prepare('DELETE FROM padlet_posts WHERE id = ?')->execute([$postId]); }
     else respond(['error' => 'Thao tác không hợp lệ.'], 422);
+    respond(['ok' => true]);
+}
+
+if ($method === 'POST' && $action === 'save-position') {
+    $teacher = padlet_require_teacher($pdo);
+    $data = json_body();
+    $board = padlet_require_owner($pdo, $teacher, (int)($data['board_id'] ?? 0));
+    if (($board['layout_type'] ?? '') !== 'whiteboard') respond(['error' => 'Bảng này không hỗ trợ kéo thả vị trí.'], 422);
+    $postId = (int)($data['post_id'] ?? 0);
+    $posX = max(0, min(4000, (int)($data['pos_x'] ?? 0)));
+    $posY = max(0, min(4000, (int)($data['pos_y'] ?? 0)));
+    $check = $pdo->prepare('SELECT id FROM padlet_posts WHERE id = ? AND board_id = ? LIMIT 1');
+    $check->execute([$postId, (int)$board['id']]);
+    if (!$check->fetch()) respond(['error' => 'Không tìm thấy bài đăng.'], 404);
+    $pdo->prepare('UPDATE padlet_posts SET pos_x = ?, pos_y = ? WHERE id = ? AND board_id = ?')->execute([$posX, $posY, $postId, (int)$board['id']]);
     respond(['ok' => true]);
 }
 
