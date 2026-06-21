@@ -1,10 +1,48 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 
-/** Shared reference lists for THCS Trần Phú.
- * Administrators maintain them once from admin.html; teachers may read them
- * when creating a reporting campaign.
+/** Shared reference lists declared by Admin.
+ * Teachers pick a list when creating a submission/reporting campaign.
  */
+
+function tranphu_system_list_codes(): array
+{
+    return ['school', 'teachers', 'party'];
+}
+
+function tranphu_default_fields_json(): string
+{
+    return json_encode([
+        ['key' => 'full_name', 'label' => 'Họ và tên', 'required' => true],
+        ['key' => 'group_name', 'label' => 'Tổ/đơn vị hoặc lớp', 'required' => false],
+        ['key' => 'role_label', 'label' => 'Chức vụ/Vai trò', 'required' => false],
+        ['key' => 'contact', 'label' => 'Email/SĐT', 'required' => false],
+    ], JSON_UNESCAPED_UNICODE);
+}
+
+function tranphu_slug_code(string $title): string
+{
+    $value = $title;
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $title);
+        if (is_string($converted) && $converted !== '') $value = $converted;
+    }
+    $slug = trim(preg_replace('/[^a-z0-9]+/', '_', strtolower($value)), '_');
+    return $slug !== '' ? substr($slug, 0, 32) : 'danh_sach';
+}
+
+function tranphu_unique_list_code(PDO $pdo, string $title, string $preferred = ''): string
+{
+    $base = $preferred !== '' ? preg_replace('/[^a-z0-9_]+/', '', strtolower($preferred)) : tranphu_slug_code($title);
+    if ($base === '') $base = 'danh_sach';
+    $code = substr($base, 0, 36);
+    $suffix = 0;
+    while (tranphu_list($pdo, $code)) {
+        $suffix++;
+        $code = substr($base, 0, 30) . '_' . $suffix;
+    }
+    return $code;
+}
 
 function tranphu_schema(PDO $pdo): void
 {
@@ -132,13 +170,15 @@ $action = trim((string)($_GET['action'] ?? 'options'));
 
 if ($method === 'GET' && $action === 'options') {
     tranphu_require_reader($pdo);
+    $systemCodes = tranphu_system_list_codes();
     $rows = $pdo->query("SELECT l.id, l.list_code, l.title, l.fields_json, COUNT(p.id) AS people_count
         FROM school_reference_lists l LEFT JOIN school_reference_people p ON p.list_id = l.id
-        GROUP BY l.id ORDER BY FIELD(l.list_code, 'school', 'teachers', 'party'), l.title")->fetchAll();
+        GROUP BY l.id ORDER BY FIELD(l.list_code, 'school', 'teachers', 'party'), l.created_at, l.title")->fetchAll();
     foreach ($rows as &$row) {
         $row['id'] = (int)$row['id'];
         $row['people_count'] = (int)$row['people_count'];
         $row['fields'] = json_decode((string)$row['fields_json'], true) ?: [];
+        $row['is_system'] = in_array((string)$row['list_code'], $systemCodes, true);
         unset($row['fields_json']);
     }
     respond(['ok' => true, 'lists' => $rows]);
@@ -191,6 +231,49 @@ if ($method === 'POST' && $action === 'clear') {
     $stmt = $pdo->prepare('DELETE FROM school_reference_people WHERE list_id = ?');
     $stmt->execute([(int)$list['id']]);
     respond(['ok' => true, 'count' => $stmt->rowCount()]);
+}
+
+if ($method === 'POST' && $action === 'create-list') {
+    tranphu_require_admin();
+    $data = json_body();
+    $title = trim((string)($data['title'] ?? ''));
+    if ($title === '') respond(['error' => 'Vui lòng nhập tên danh sách.'], 422);
+    $preferred = trim((string)($data['list_code'] ?? ''));
+    $code = tranphu_unique_list_code($pdo, $title, $preferred);
+    $fields = tranphu_default_fields_json();
+    $stmt = $pdo->prepare('INSERT INTO school_reference_lists (list_code, title, fields_json) VALUES (?, ?, ?)');
+    $stmt->execute([$code, function_exists('mb_substr') ? mb_substr($title, 0, 160) : substr($title, 0, 160), $fields]);
+    $list = tranphu_list($pdo, $code);
+    respond([
+        'ok' => true,
+        'message' => 'Đã tạo danh sách báo cáo mới.',
+        'list' => [
+            'id' => (int)$list['id'],
+            'list_code' => $list['list_code'],
+            'title' => $list['title'],
+            'people_count' => 0,
+            'is_system' => false,
+            'fields' => json_decode((string)$list['fields_json'], true) ?: [],
+        ],
+    ]);
+}
+
+if ($method === 'POST' && $action === 'delete-list') {
+    tranphu_require_admin();
+    $data = json_body();
+    $code = trim((string)($data['list_code'] ?? ''));
+    $list = tranphu_list($pdo, $code);
+    if (!$list) respond(['error' => 'Danh sách không hợp lệ.'], 422);
+    if (in_array($code, tranphu_system_list_codes(), true)) {
+        respond(['error' => 'Không thể xóa danh mục hệ thống. Chỉ xóa dữ liệu bên trong.'], 422);
+    }
+    $used = $pdo->prepare("SELECT COUNT(*) FROM submission_assignments WHERE source_list_code = ?");
+    $used->execute([$code]);
+    if ((int)$used->fetchColumn() > 0) {
+        respond(['error' => 'Danh sách đang được dùng bởi một hoặc nhiều đợt nộp. Hãy đổi danh sách của các đợt đó trước.'], 409);
+    }
+    $pdo->prepare('DELETE FROM school_reference_lists WHERE id = ?')->execute([(int)$list['id']]);
+    respond(['ok' => true, 'message' => 'Đã xóa danh sách.']);
 }
 
 respond(['error' => 'Endpoint không tồn tại.'], 404);

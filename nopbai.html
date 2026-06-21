@@ -71,7 +71,7 @@
         const API='api/submissions.php';
         const params=new URLSearchParams(location.search); let code=(params.get('code')||'').trim().toUpperCase(); let participantCode=(params.get('person')||'').trim().toUpperCase(); let data=null;
         const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const modeLabel=mode=>({public:'Nộp tự do',class:'Theo lớp/nhóm',selected:'Danh sách chỉ định',school_list:'Danh sách THCS Trần Phú'}[mode]||mode);
+        const modeLabel=mode=>({public:'Nộp tự do',class:'Theo lớp/nhóm',selected:'Danh sách chỉ định',school_list:'Danh sách dùng chung'}[mode]||mode);
         const fmt=value=>value?new Intl.DateTimeFormat('vi-VN',{dateStyle:'medium',timeStyle:'short'}).format(new Date(String(value).replace(' ','T'))):'Không giới hạn thời gian';
         async function api(url,options={}){const res=await fetch(url,{credentials:'same-origin',...options});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'Không thể xử lý yêu cầu.');return body;}
         function goToCode(e){e.preventDefault();const value=document.getElementById('manualCode').value.trim().toUpperCase();if(value)location.href=`nopbai.html?code=${encodeURIComponent(value)}`;}

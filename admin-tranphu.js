@@ -33,13 +33,28 @@
             <div class="rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white p-6 shadow-sm">
                 <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                        <p class="text-xs font-extrabold uppercase tracking-[.14em] text-sky-700">Danh mục dùng chung</p>
-                        <h3 class="mt-1 text-xl font-black text-slate-900"><i class="fas fa-school mr-2 text-sky-600"></i>THCS Trần Phú</h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Khai báo một lần danh sách toàn trường, giáo viên và đảng viên. Giáo viên sẽ chọn các danh sách này khi tạo đợt báo cáo.</p>
+                        <p class="text-xs font-extrabold uppercase tracking-[.14em] text-sky-700">THCS Trần Phú</p>
+                        <h3 class="mt-1 text-xl font-black text-slate-900"><i class="fas fa-school mr-2 text-sky-600"></i>Danh mục báo cáo & nộp bài</h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Khai báo một lần danh sách toàn trường, giáo viên, đảng viên — hoặc <b>tự tạo danh sách</b> cho từng đợt báo cáo. Giáo viên chọn danh sách này khi tạo đợt nộp.</p>
                     </div>
                     <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-sky-800 shadow-sm"><i class="fas fa-file-excel mr-1.5"></i>Nhập Excel</span>
                 </div>
                 <div id="tranPhuListCards" class="mt-5 grid gap-3 md:grid-cols-3"></div>
+            </div>
+            <div class="rounded-xl border border-teal-200 bg-gradient-to-r from-teal-50 to-white p-6 shadow-sm">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-extrabold uppercase tracking-[.14em] text-teal-700">Tạo danh sách</p>
+                        <h4 class="mt-1 text-lg font-black text-slate-900"><i class="fas fa-plus-circle mr-2 text-teal-600"></i>Danh sách báo cáo tùy chỉnh</h4>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Đặt tên danh sách theo mục đích (tổ chuyên môn, đoàn viên, lớp cụ thể…). Sau khi tạo, chọn danh sách bên dưới để nhập Excel.</p>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <label class="flex-1 text-sm font-bold text-slate-700">Tên danh sách mới *
+                        <input id="tranPhuNewListTitle" class="mt-1 w-full rounded border border-slate-300 bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-teal-500" placeholder="Ví dụ: Tổ Toán — Báo cáo tháng 3, Ban CH Đoàn 2025-2026…">
+                    </label>
+                    <button type="button" id="tranPhuCreateListBtn" class="rounded bg-teal-700 px-5 py-2.5 text-sm font-bold text-white shadow hover:bg-teal-800"><i class="fas fa-plus mr-1"></i>Tạo danh sách</button>
+                </div>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -48,7 +63,8 @@
                     </label>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" id="tranPhuTemplateBtn" class="rounded border border-sky-300 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 hover:bg-sky-100"><i class="fas fa-download mr-1"></i>Tải mẫu Excel</button>
-                        <button type="button" id="tranPhuClearBtn" class="rounded border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-50"><i class="fas fa-trash-can mr-1"></i>Xóa danh sách</button>
+                        <button type="button" id="tranPhuClearBtn" class="rounded border border-amber-200 bg-white px-4 py-2.5 text-sm font-bold text-amber-800 hover:bg-amber-50"><i class="fas fa-eraser mr-1"></i>Xóa dữ liệu</button>
+                        <button type="button" id="tranPhuDeleteListBtn" class="hidden rounded border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-50"><i class="fas fa-trash-can mr-1"></i>Xóa danh sách</button>
                     </div>
                 </div>
                 <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -68,6 +84,8 @@
         node.querySelector('#tranPhuImportFile').addEventListener('change', previewImport);
         node.querySelector('#tranPhuImportBtn').addEventListener('click', importRows);
         node.querySelector('#tranPhuClearBtn').addEventListener('click', clearRows);
+        node.querySelector('#tranPhuCreateListBtn').addEventListener('click', createList);
+        node.querySelector('#tranPhuDeleteListBtn').addEventListener('click', deleteList);
         return node;
     }
 
@@ -85,7 +103,10 @@
         const previous = select.value;
         select.innerHTML = lists.map(list => `<option value="${esc(list.list_code)}">${esc(list.title)} (${list.people_count} người)</option>`).join('');
         if (lists.some(list => list.list_code === previous)) select.value = previous;
-        cards.innerHTML = lists.map(list => `<div class="rounded-lg border border-slate-200 bg-white p-4"><div class="text-xs font-bold uppercase tracking-wide text-slate-500">${esc(list.list_code)}</div><div class="mt-1 font-extrabold text-slate-900">${esc(list.title)}</div><div class="mt-2 text-2xl font-black text-sky-700">${list.people_count}</div><div class="text-xs text-slate-500">người trong danh sách</div></div>`).join('');
+        cards.innerHTML = lists.map(list => `<div class="rounded-lg border border-slate-200 bg-white p-4"><div class="flex items-center gap-2"><div class="text-xs font-bold uppercase tracking-wide text-slate-500">${esc(list.list_code)}</div>${list.is_system ? '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">Mặc định</span>' : '<span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">Tùy chỉnh</span>'}</div><div class="mt-1 font-extrabold text-slate-900">${esc(list.title)}</div><div class="mt-2 text-2xl font-black text-sky-700">${list.people_count}</div><div class="text-xs text-slate-500">người trong danh sách</div></div>`).join('');
+        const deleteBtn = document.getElementById('tranPhuDeleteListBtn');
+        const current = selectedList();
+        if (deleteBtn) deleteBtn.classList.toggle('hidden', !current || current.is_system);
         renderListHint();
     }
 
@@ -97,7 +118,7 @@
             ? 'Cột bắt buộc: <b>Họ tên</b>. Cột thứ hai: <b>Ghi chú / Chức vụ</b>. Đây là danh sách ngắn gọn dành riêng cho đảng viên.'
             : list.list_code === 'teachers'
                 ? 'Đúng ba cột: <b>STT</b>, <b>Họ và tên</b>, <b>Lớp chủ nhiệm</b>. STT chỉ để đánh số và được bỏ qua khi nhập.'
-                : 'Đúng ba cột: <b>STT</b>, <b>Họ và tên</b>, <b>Chức vụ</b>. STT chỉ để đánh số và được bỏ qua khi nhập.';
+                : 'Cột bắt buộc: <b>Họ và tên</b>. Nên có thêm <b>Tổ/đơn vị hoặc lớp</b>, <b>Chức vụ/Vai trò</b>, <b>Email/SĐT</b>. Cột <b>STT</b> nếu có sẽ được bỏ qua.';
     }
 
     function mapHeader(header) {
@@ -166,7 +187,37 @@
         const ws = XLSX.utils.aoa_to_sheet(rows);
         ws['!cols'] = list.list_code === 'party' ? [{ wch: 28 }, { wch: 28 }] : [{ wch: 8 }, { wch: 28 }, { wch: 24 }];
         XLSX.utils.book_append_sheet(wb, ws, list.title.substring(0, 30));
-        XLSX.writeFile(wb, `${list.list_code}-THCS-Tran-Phu.xlsx`);
+        XLSX.writeFile(wb, `${list.list_code}-danh-sach.xlsx`);
+    }
+
+    async function createList() {
+        const input = document.getElementById('tranPhuNewListTitle');
+        const title = input?.value.trim() || '';
+        if (!title) return show('Hãy nhập tên danh sách mới.', true);
+        const btn = document.getElementById('tranPhuCreateListBtn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang tạo...';
+        try {
+            const data = await request(`${API}?action=create-list`, { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ title }) });
+            input.value = '';
+            show(data.message || 'Đã tạo danh sách.');
+            await loadLists();
+            if (data.list?.list_code) document.getElementById('tranPhuListSelect').value = data.list.list_code;
+            renderLists();
+        } catch (error) { show(error.message, true); }
+        finally { btn.disabled = false; btn.innerHTML = original; }
+    }
+
+    async function deleteList() {
+        const list = selectedList();
+        if (!list || list.is_system) return;
+        if (!confirm(`Xóa hẳn danh sách “${list.title}”?\n\nDanh sách và toàn bộ người trong đó sẽ bị xóa. Không xóa được nếu đang có đợt nộp đang dùng.`)) return;
+        try {
+            const data = await request(`${API}?action=delete-list`, { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ list_code: list.list_code }) });
+            show(data.message || 'Đã xóa danh sách.');
+            await loadLists();
+        } catch (error) { show(error.message, true); }
     }
 
     async function previewImport(event) {

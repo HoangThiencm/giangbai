@@ -257,10 +257,79 @@ function light_ai_best_segment(string $question, string $context): ?array
         if ($intent === 'definition' && (str_contains($lowerSegment, 'là ') || str_contains($lowerSegment, 'gọi là'))) $bonus = 1;
         $score = $overlap * 2 + $bonus;
         if ($best === null || $score > $best['score']) {
-            $best = ['text' => $segment, 'score' => $score, 'intent' => $intent];
+            $best = ['text' => $segment, 'score' => $score, 'overlap' => $overlap, 'bonus' => $bonus, 'intent' => $intent];
         }
     }
-    return $best && $best['score'] >= 2 ? $best : null;
+    // Một từ chung như “giải” hoặc “bài” không đủ để lấy nhầm đoạn lý thuyết.
+    return $best && ($best['overlap'] >= 2 || ($best['overlap'] >= 1 && $best['bonus'] >= 1)) ? $best : null;
+}
+
+function light_ai_parse_linear_side(string $expression): ?array
+{
+    $expression = light_ai_lower($expression);
+    $expression = str_replace(['×', '·', ',', ' '], ['*', '*', '.', ''], $expression);
+    if ($expression === '' || !preg_match('/^[0-9x*+\-.]+$/', $expression)) return null;
+    if ($expression[0] !== '+' && $expression[0] !== '-') $expression = '+' . $expression;
+    preg_match_all('/([+-])([^+-]+)/', $expression, $terms, PREG_SET_ORDER);
+    if (empty($terms)) return null;
+
+    $xCoefficient = 0.0;
+    $constant = 0.0;
+    foreach ($terms as $termMatch) {
+        $sign = $termMatch[1] === '-' ? -1.0 : 1.0;
+        $term = $termMatch[2];
+        if ($term === '') return null;
+        if (str_contains($term, 'x')) {
+            if (substr_count($term, 'x') !== 1) return null;
+            $coefficient = str_replace(['x', '*'], '', $term);
+            if ($coefficient !== '' && !is_numeric($coefficient)) return null;
+            $xCoefficient += $sign * ($coefficient === '' ? 1.0 : (float)$coefficient);
+        } elseif (is_numeric($term)) {
+            $constant += $sign * (float)$term;
+        } else {
+            return null;
+        }
+    }
+    return ['x' => $xCoefficient, 'constant' => $constant];
+}
+
+function light_ai_number(float $number): string
+{
+    if (abs($number) < 0.0000001) $number = 0.0;
+    if (abs($number - round($number)) < 0.0000001) return (string)(int)round($number);
+    return rtrim(rtrim(number_format($number, 6, '.', ''), '0'), '.');
+}
+
+function light_ai_linear_term(float $coefficient): string
+{
+    if (abs($coefficient - 1) < 0.0000001) return 'x';
+    if (abs($coefficient + 1) < 0.0000001) return '-x';
+    return light_ai_number($coefficient) . 'x';
+}
+
+function try_light_ai_linear_equation(string $input): ?array
+{
+    if (!preg_match('/([0-9xX×*+\-.,\s]+)=([0-9xX×*+\-.,\s]+)/u', $input, $match)) return null;
+    $left = light_ai_parse_linear_side($match[1]);
+    $right = light_ai_parse_linear_side($match[2]);
+    if ($left === null || $right === null) return null;
+
+    $coefficient = $left['x'] - $right['x'];
+    $rightSide = $right['constant'] - $left['constant'];
+    if (abs($coefficient) < 0.0000001) return null;
+    $solution = $rightSide / $coefficient;
+    $equation = trim($match[1]) . ' = ' . trim($match[2]);
+    $middle = light_ai_linear_term($coefficient) . ' = ' . light_ai_number($rightSide);
+    $answer = 'Ta có ' . $equation . '. Chuyển các hạng có x về một vế và các số về vế kia: ' . $middle . '. ';
+    $answer .= abs($coefficient - 1) < 0.0000001
+        ? 'Vậy x = ' . light_ai_number($solution) . '.'
+        : 'Chia hai vế cho ' . light_ai_number($coefficient) . ', được x = ' . light_ai_number($solution) . '.';
+    return [
+        'answer' => $answer,
+        'provider' => 'light_ai_math',
+        'model' => 'bo-giai-phuong-trinh-bac-nhat',
+        'confidence' => 'high',
+    ];
 }
 
 function light_ai_answer(string $lessonTitle, string $question, string $source, string $intent): string
@@ -286,6 +355,9 @@ function light_ai_answer(string $lessonTitle, string $question, string $source, 
 function try_light_ai_explain(array $config, string $mode, string $lessonTitle, string $text, string $question, string $lessonContext): ?array
 {
     if (empty($config['light_ai_enabled'])) return null;
+
+    $mathResult = try_light_ai_linear_equation($mode === 'chat' ? $question : $text);
+    if ($mathResult !== null) return $mathResult;
 
     if ($mode !== 'chat') {
         $selected = light_ai_normalize($text);
