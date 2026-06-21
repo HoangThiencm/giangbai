@@ -7,6 +7,9 @@
   "smart_quota_critical_pct": 10,
   "smart_quota_exhausted_mode": "fallback",
   "smart_quota_avg_neurons": 750,
+  "mistral_keys": [],
+  "mistral_ocr_model": "mistral-ocr-latest",
+  "mistral_enabled": true,
   "features": {
     "gslides": true,
     "vehinh": true,

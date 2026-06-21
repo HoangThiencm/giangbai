@@ -53,6 +53,16 @@ if (isset($nextConfig['cloudflare_ai_model'])) {
 if (isset($nextConfig['gemini_enabled'])) {
     $nextConfig['gemini_enabled'] = (bool)$nextConfig['gemini_enabled'];
 }
+if (isset($nextConfig['mistral_keys'])) {
+    $keys = is_array($nextConfig['mistral_keys']) ? $nextConfig['mistral_keys'] : preg_split('/[\r\n,]+/', (string)$nextConfig['mistral_keys']);
+    $nextConfig['mistral_keys'] = array_values(array_unique(array_filter(array_map('trim', $keys ?: []))));
+}
+if (isset($nextConfig['mistral_ocr_model'])) {
+    $nextConfig['mistral_ocr_model'] = trim((string)$nextConfig['mistral_ocr_model']) ?: 'mistral-ocr-latest';
+}
+if (isset($nextConfig['mistral_enabled'])) {
+    $nextConfig['mistral_enabled'] = (bool)$nextConfig['mistral_enabled'];
+}
 if (isset($nextConfig['light_ai_enabled'])) {
     $nextConfig['light_ai_enabled'] = (bool)$nextConfig['light_ai_enabled'];
 }

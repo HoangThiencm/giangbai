@@ -369,6 +369,48 @@
                     </div>
                 </div>
 
+                <!-- Mistral OCR -->
+                <div class="rounded-lg border border-violet-200 bg-violet-50 p-4 mb-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h4 class="font-bold text-violet-900 text-sm"><i class="fas fa-file-image mr-1"></i> Mistral OCR <span class="font-normal">· quét PDF nhanh</span></h4>
+                            <p class="text-xs text-violet-800 mt-1">Dùng cho Thi trực tuyến, Ma trận đề, KTTX… Key lưu trên <strong>hosting</strong> (<code>global_config.json</code>), mọi máy dùng chung qua Cấu hình AI từng công cụ.</p>
+                            <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-violet-900">
+                                <input id="adminMistralEnabled" type="checkbox" class="h-4 w-4 rounded border-violet-300 text-violet-700 focus:ring-violet-500" checked>
+                                Bật Mistral OCR
+                            </label>
+                        </div>
+                        <span id="adminMistralStatus" class="text-xs font-semibold text-violet-700 shrink-0"></span>
+                    </div>
+                    <div class="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-violet-200 bg-white/80 px-3 py-2 text-xs text-violet-950">
+                        <span class="font-bold uppercase tracking-wide">Model đang áp dụng</span>
+                        <code id="adminMistralCurrentModel" class="rounded bg-violet-100 px-2 py-1 font-semibold text-violet-950">Đang tải…</code>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-violet-900 mb-2">Mistral API Keys</label>
+                            <textarea id="adminMistralKeysInput" rows="5" class="w-full rounded border border-violet-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500" placeholder="Mỗi key một dòng. Lấy tại console.mistral.ai"></textarea>
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-violet-900">Model OCR</label>
+                            <select id="adminMistralModelSelect" class="w-full rounded border border-violet-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500">
+                                <option value="mistral-ocr-latest">mistral-ocr-latest</option>
+                                <option value="mistral-ocr-2505">mistral-ocr-2505</option>
+                            </select>
+                            <input id="adminMistralModelCustom" type="text" class="w-full rounded border border-violet-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500" placeholder="Hoặc nhập tên model OCR khác">
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <button type="button" id="btnSaveMistralConfig" onclick="saveMistralAdminConfig()" class="rounded bg-violet-700 px-4 py-2 text-sm font-bold text-white hover:bg-violet-800">
+                                    <i class="fas fa-save mr-1"></i> Lưu Mistral
+                                </button>
+                                <button type="button" id="btnClearMistralConfig" onclick="clearMistralAdminConfig()" class="rounded border border-violet-300 bg-white px-4 py-2 text-sm font-bold text-violet-800 hover:bg-violet-100">
+                                    <i class="fas fa-trash mr-1"></i> Xóa
+                                </button>
+                            </div>
+                            <p id="adminMistralStorageDetail" class="text-xs text-violet-800"></p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ShopAIKey FALLBACK -->
                 <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
@@ -724,6 +766,7 @@
         };
 
         const GEMINI_MODEL_OPTIONS = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'];
+        const MISTRAL_OCR_MODEL_OPTIONS = ['mistral-ocr-latest', 'mistral-ocr-2505'];
         const SHOPAIKEY_MODEL_OPTIONS = ['deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner'];
         const CLOUDFLARE_AI_MODEL_OPTIONS = ['@cf/qwen/qwen3-30b-a3b-fp8', '@cf/meta/llama-3.2-3b-instruct'];
 
@@ -758,6 +801,7 @@
             if (!banner) return;
 
             const keys = Array.isArray(currentGlobalContent?.gemini_keys) ? currentGlobalContent.gemini_keys.length : 0;
+            const mistralKeys = Array.isArray(currentGlobalContent?.mistral_keys) ? currentGlobalContent.mistral_keys.length : 0;
             const cloudflareModel = String(currentGlobalContent?.cloudflare_ai_model || '@cf/qwen/qwen3-30b-a3b-fp8');
             const hasShop = !!String(currentGlobalContent?.shopaikey_api_key || '').trim();
             const source = configStorageMeta.source;
@@ -769,11 +813,11 @@
                 if (keys || hasShop) {
                     tone = 'border-emerald-200 bg-emerald-50 text-emerald-900';
                     icon = 'fa-cloud';
-                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Cloudflare Workers AI · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}${hasShop ? ', có ShopAIKey fallback' : ', chưa có ShopAIKey fallback'}.`;
+                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', có ShopAIKey fallback' : ', chưa có ShopAIKey fallback'}.`;
                 } else {
                     tone = 'border-amber-200 bg-amber-50 text-amber-900';
                     icon = 'fa-triangle-exclamation';
-                    message = 'Đã kết nối hosting nhưng <strong>chưa có key AI</strong> trong <code>global_config.json</code>. Nhập key rồi bấm <strong>Lưu Gemini</strong> / <strong>Lưu Fallback</strong>.';
+                    message = 'Đã kết nối hosting nhưng <strong>chưa có key AI</strong> trong <code>global_config.json</code>. Nhập key rồi bấm <strong>Lưu Gemini</strong> / <strong>Lưu Mistral</strong> / <strong>Lưu Fallback</strong>.';
                 }
             } else if (source === 'github') {
                 tone = 'border-sky-200 bg-sky-50 text-sky-900';
@@ -834,6 +878,46 @@
             const custom = document.getElementById('adminGeminiModelCustom')?.value?.trim() || '';
             if (custom) return custom;
             return document.getElementById('adminGeminiModuleSelect')?.value || 'gemini-2.5-flash';
+        }
+
+        function syncMistralAdminUI(content) {
+            const keys = Array.isArray(content?.mistral_keys) ? content.mistral_keys : [];
+            const model = typeof content?.mistral_ocr_model === 'string' ? content.mistral_ocr_model : 'mistral-ocr-latest';
+            const enabled = content?.mistral_enabled !== false;
+            const keyInput = document.getElementById('adminMistralKeysInput');
+            const modelSelect = document.getElementById('adminMistralModelSelect');
+            const modelCustom = document.getElementById('adminMistralModelCustom');
+            const enabledInput = document.getElementById('adminMistralEnabled');
+            const status = document.getElementById('adminMistralStatus');
+            const detail = document.getElementById('adminMistralStorageDetail');
+            const currentModel = document.getElementById('adminMistralCurrentModel');
+
+            if (keyInput) keyInput.value = keys.join('\n');
+            if (modelSelect) modelSelect.value = MISTRAL_OCR_MODEL_OPTIONS.includes(model) ? model : 'mistral-ocr-latest';
+            if (modelCustom) modelCustom.value = MISTRAL_OCR_MODEL_OPTIONS.includes(model) ? '' : model;
+            if (enabledInput) enabledInput.checked = enabled;
+            if (currentModel) currentModel.textContent = model;
+            if (status) {
+                status.innerHTML = !enabled
+                    ? '<span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-slate-700">Đang tắt</span>'
+                    : keys.length
+                    ? `<span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">Đã nạp ${keys.length} key · ${model}</span>`
+                    : '<span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-amber-800">Chưa có key trên server</span>';
+            }
+            if (detail) {
+                detail.textContent = !enabled
+                    ? 'Mistral OCR đang tắt; API key vẫn được giữ nguyên trên hosting.'
+                    : keys.length
+                    ? `Nguồn hiện tại: ${configSourceLabel(configStorageMeta.source)}. Thi trực tuyến, Ma trận đề, KTTX… đọc key từ global_config.json.`
+                    : 'Chưa có Mistral key trong global_config.json. Nhập key và bấm Lưu Mistral.';
+            }
+            renderConfigStorageBanner();
+        }
+
+        function readMistralModelFromUI() {
+            const custom = document.getElementById('adminMistralModelCustom')?.value?.trim() || '';
+            if (custom) return custom;
+            return document.getElementById('adminMistralModelSelect')?.value || 'mistral-ocr-latest';
         }
 
         function readCloudflareAiModelFromUI() {
@@ -972,6 +1056,7 @@
                 localStorage.setItem('admin_github_repo', content.github_repo);
             }
             syncGeminiAdminUI(content);
+            syncMistralAdminUI(content);
             syncCloudflareAiAdminUI(content);
             syncSmartQuotaAdminUI(content);
             syncShopaikeyAdminUI(content);
@@ -1272,6 +1357,65 @@
             } finally {
                 if (btn) {
                     btn.innerHTML = originalText || '<i class="fas fa-save mr-1"></i> Lưu model';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function saveMistralAdminConfig() {
+            const btn = document.getElementById('btnSaveMistralConfig');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu Mistral...';
+                btn.disabled = true;
+            }
+            try {
+                currentGlobalContent.mistral_keys = parseGeminiKeys(document.getElementById('adminMistralKeysInput')?.value || '');
+                currentGlobalContent.mistral_ocr_model = readMistralModelFromUI();
+                currentGlobalContent.mistral_enabled = !!document.getElementById('adminMistralEnabled')?.checked;
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback lưu Mistral lên GitHub vì API nội bộ lỗi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Cập nhật cấu hình Mistral OCR');
+                    markConfigSaved('github');
+                }
+                syncMistralAdminUI(currentGlobalContent);
+                alert(`Đã lưu Mistral OCR lên ${configSourceLabel(configStorageMeta.lastSaveTarget || configStorageMeta.source)}: ${currentGlobalContent.mistral_keys.length} key, model ${currentGlobalContent.mistral_ocr_model}`);
+            } catch (e) {
+                alert('Lỗi lưu Mistral: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText || '<i class="fas fa-save mr-1"></i> Lưu Mistral';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function clearMistralAdminConfig() {
+            if (!confirm('Xóa toàn bộ Mistral API keys?')) return;
+            const btn = document.getElementById('btnClearMistralConfig');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xóa...';
+                btn.disabled = true;
+            }
+            try {
+                currentGlobalContent.mistral_keys = [];
+                currentGlobalContent.mistral_ocr_model = 'mistral-ocr-latest';
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback xóa Mistral trên GitHub vì API nội bộ lỗi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Xóa cấu hình Mistral OCR');
+                }
+                syncMistralAdminUI(currentGlobalContent);
+                alert('Đã xóa cấu hình Mistral OCR.');
+            } catch (e) {
+                alert('Lỗi xóa Mistral: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText || '<i class="fas fa-trash mr-1"></i> Xóa';
                     btn.disabled = false;
                 }
             }

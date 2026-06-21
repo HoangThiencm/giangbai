@@ -40,6 +40,7 @@ function buildMessages(body) {
           'Chỉ dùng dữ kiện có trong văn bản; không bịa số văn bản, ngày hoặc thời hạn.',
           'Trả về DUY NHẤT một JSON hợp lệ, không Markdown, không lời dẫn.',
           'Đúng các khóa: document_number, title, organization, document_type, summary_text, document_date, report_required, report_due_at, confidence, note.',
+          'document_type ưu tiên một trong: Kế hoạch, Tờ trình, Báo cáo, Quyết định, Thông báo, Công văn, Thông tư, Hướng dẫn, Quy định. Nếu không phù hợp, dùng đúng loại ghi trong văn bản.',
           'document_date và report_due_at có dạng YYYY-MM-DD hoặc null. report_required là true/false.',
           'Nếu không thấy hạn báo cáo thì report_required=false và report_due_at=null.',
           'summary_text tối đa 2 câu ngắn; confidence chỉ low, medium hoặc high.',

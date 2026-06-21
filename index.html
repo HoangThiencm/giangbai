@@ -808,6 +808,9 @@
                     if (Array.isArray(config.mistral_keys)) {
                         localStorage.setItem('global_mistral_keys', JSON.stringify(config.mistral_keys.filter(Boolean)));
                     }
+                    if (config.mistral_ocr_model) {
+                        localStorage.setItem('default_mistral_ocr_model', String(config.mistral_ocr_model));
+                    }
 
                     const userEmail = localStorage.getItem('userEmail') || "";
                     let features = config.features || {};
