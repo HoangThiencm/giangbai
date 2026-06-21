@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Quản Lý Người Dùng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Import Config (Cùng cấp) -->
+    <script src="config.js"></script>
+</head>
+<body class="bg-slate-100 p-6 font-sans">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-user-shield text-blue-600 mr-2"></i> Quản Trị Hệ Thống</h1>
+            <a href="login.html" class="text-slate-600 hover:text-blue-600 font-medium transition-colors">
+                <i class="fas fa-sign-out-alt mr-1"></i> Trang đăng nhập
+            </a>
+        </div>
+
+        <!-- KHU VỰC ĐĂNG NHẬP ADMIN -->
+        <div id="loginSection" class="bg-white p-8 rounded-xl shadow-lg mb-6 max-w-lg mx-auto border border-slate-200">
+            <h2 class="text-xl font-bold text-slate-700 mb-4 text-center">Đăng nhập Quản trị viên</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Mã bảo mật (Secret Key)</label>
+                    <input type="password" id="adminKey" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Nhập key quản trị...">
+                </div>
+                <button onclick="checkAdminLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md transition-all transform active:scale-95">
+                    Truy cập Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- KHU VỰC DASHBOARD (ẨN KHI CHƯA ĐĂNG NHẬP) -->
+        <div id="dashboardSection" class="hidden animate-fade-in-up">
+            
+            <!-- THỐNG KÊ -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-sm font-bold text-slate-400 uppercase">Tổng người dùng</p>
+                    <h3 id="statTotal" class="text-3xl font-bold text-slate-800 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                    <p class="text-sm font-bold text-slate-400 uppercase">Chờ duyệt</p>
+                    <h3 id="statPending" class="text-3xl font-bold text-yellow-600 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-sm font-bold text-slate-400 uppercase">Đang hoạt động</p>
+                    <h3 id="statActive" class="text-3xl font-bold text-green-600 mt-1">0</h3>
+                </div>
+            </div>
+
+            <!-- DANH SÁCH -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700">Danh sách tài khoản</h3>
+                    <button onclick="loadUsers()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <i class="fas fa-sync-alt mr-1"></i> Làm mới
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Ngày đăng ký</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
+                                <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="bg-white divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const app = initializeApp(CONFIG.FIREBASE_CONFIG);
+        const db = getFirestore(app);
+        const USERS_COL = CONFIG.USERS_COLLECTION || "users";
+
+        window.checkAdminLogin = function() {
+            const key = document.getElementById('adminKey').value;
+            if (key === CONFIG.ADMIN_SECRET_KEY) {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                loadUsers();
+            } else {
+                alert("Mã bảo mật không đúng!");
+            }
+        }
+
+        window.loadUsers = async function() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Đang tải dữ liệu...</td></tr>';
+            
+            try {
+                const q = query(collection(db, USERS_COL), orderBy("created_at", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                let users = [];
+                querySnapshot.forEach((doc) => {
+                    users.push({ id: doc.id, ...doc.data() });
+                });
+
+                renderTable(users);
+                updateStats(users);
+            } catch (error) {
+                console.error("Lỗi tải users:", error);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Lỗi: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderTable(users) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-slate-400">Không có người dùng nào.</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const isPending = user.status === 'pending';
+                const statusBadge = isPending 
+                    ? '<span class="px-2 py-1 text-xs font-bold rounded bg-yellow-100 text-yellow-800">Chờ duyệt</span>'
+                    : '<span class="px-2 py-1 text-xs font-bold rounded bg-green-100 text-green-800">Hoạt động</span>';
+                
+                const dateStr = user.created_at ? new Date(user.created_at.seconds * 1000).toLocaleDateString('vi-VN') : 'N/A';
+
+                const btnHtml = isPending 
+                    ? `<button class="approve-btn bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs mr-2" data-id="${user.id}"><i class="fas fa-check"></i> Duyệt</button>`
+                    : `<button class="block-btn bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600 text-xs mr-2" data-id="${user.id}"><i class="fas fa-ban"></i> Khóa</button>`;
+                
+                const deleteBtn = `<button class="delete-btn bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs" data-id="${user.id}"><i class="fas fa-trash"></i> Xóa</button>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-slate-900">${user.email}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500">${dateStr}</td>
+                    <td class="px-6 py-4">${statusBadge}</td>
+                    <td class="px-6 py-4 text-right">${btnHtml}${deleteBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Gán sự kiện click
+            document.querySelectorAll('.approve-btn').forEach(b => b.onclick = () => updateUserStatus(b.dataset.id, 'active'));
+            document.querySelectorAll('.block-btn').forEach(b => b.onclick = () => updateUserStatus(b.dataset.id, 'pending'));
+            document.querySelectorAll('.delete-btn').forEach(b => b.onclick = () => deleteUser(b.dataset.id));
+        }
+
+        function updateStats(users) {
+            document.getElementById('statTotal').innerText = users.length;
+            document.getElementById('statPending').innerText = users.filter(u => u.status === 'pending').length;
+            document.getElementById('statActive').innerText = users.filter(u => u.status === 'active').length;
+        }
+
+        window.updateUserStatus = async function(uid, status) {
+            if(!confirm(status === 'active' ? "Duyệt tài khoản này?" : "Khóa tài khoản này?")) return;
+            try {
+                await updateDoc(doc(db, USERS_COL, uid), { status: status });
+                loadUsers();
+            } catch (e) { alert("Lỗi: " + e.message); }
+        }
+
+        window.deleteUser = async function(uid) {
+            if(!confirm("Xóa vĩnh viễn user này khỏi danh sách?")) return;
+            try {
+                await deleteDoc(doc(db, USERS_COL, uid));
+                loadUsers();
+            } catch (e) { alert("Lỗi: " + e.message); }
+        }
+    </script>
+</body>
+</html>

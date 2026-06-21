@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/hf_fallback.php';
 
 set_time_limit(180);

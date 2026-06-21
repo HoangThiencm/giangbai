@@ -14,7 +14,8 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="hf-fallback-client.js?v=20260623"></script>
+    <script src="hf-fallback-client.js?v=20260624"></script>
+    <script src="exam-vision-client.js?v=20260624"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -622,17 +623,17 @@
 
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
 
-                    const res = await aiPost('normalize_manual', {
-                        cropped_data: base64,
-                        api_keys: keys,
-                        model: model
-                    });
-
-                    if (res.data.status === 'ok') {
-                        onMerge(res.data.data);
+                    let payload = await ExamVision.normalizeManual(base64, keys, model);
+                    if (!payload || payload.status !== 'ok') {
+                        if (!GiangBaiApi.isFallbackEnabled()) throw new Error(payload?.message || 'Nhận diện thất bại.');
+                        const res = await aiPost('normalize_manual', { cropped_data: base64, api_keys: keys, model });
+                        payload = res.data;
+                    }
+                    if (payload.status === 'ok') {
+                        onMerge(payload.data);
                         onClose();
                     } else {
-                        alert("Lỗi: " + res.data.message);
+                        alert("Lỗi: " + (payload.message || 'Không nhận diện được.'));
                     }
                 } catch (err) {
                     alert("Lỗi xử lý: " + err.message);
@@ -686,9 +687,14 @@
                     const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
                     const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
-                    const res = await aiPost('import_answer_sheet', { image_data: dataUrl, api_keys: keys, model: model });
-                    if (res.data.status === 'ok') setAiResult(res.data.data);
-                    else alert("Lỗi: " + res.data.message);
+                    let payload = await ExamVision.importAnswerSheet(dataUrl, keys, model);
+                    if (!payload || payload.status !== 'ok') {
+                        if (!GiangBaiApi.isFallbackEnabled()) throw new Error(payload?.message || 'Nhận diện thất bại.');
+                        const res = await aiPost('import_answer_sheet', { image_data: dataUrl, api_keys: keys, model });
+                        payload = res.data;
+                    }
+                    if (payload.status === 'ok') setAiResult(payload.data);
+                    else alert("Lỗi: " + (payload.message || 'Không nhận diện được.'));
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
             };
 
@@ -1145,63 +1151,72 @@
 
             const runAIForPage = async (page) => {
                 const keys = getApiKeys();
-                if (!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ nạp Key.");
-
-                const progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
-                    setPageProgress(prev => ({ ...prev, [page.id]: value }));
-                });
+                if (!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ → Cấu hình → nạp Gemini Keys.");
 
                 setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'processing' } : p));
                 setActivePageId(page.id);
+                setPageProgress(prev => ({ ...prev, [page.id]: 5 }));
 
                 const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                let progressStream = null;
 
                 try {
                     const imageData = await compressPageImage(page.image_data);
-                    const { res, source } = await GiangBaiApi.axiosPostWithFallback(
-                        axios,
-                        GiangBaiApi.examAiUrl('normalize_segment'),
-                        GiangBaiApi.hfExamUrl('normalize_segment'),
-                        {
-                            image_data: imageData,
-                            api_keys: keys,
-                            model: model,
-                            page_id: page.id
-                        },
-                        { timeout: 120000 },
-                        'exam-ai'
-                    );
+                    setPageProgress(prev => ({ ...prev, [page.id]: 20 }));
 
-                    const payload = res.data || {};
-                    const via = source === 'hf-fallback' ? 'HuggingFace' : 'Hosting';
+                    let payload = null;
+                    let via = 'Gemini (trình duyệt)';
 
-                    if (payload.status !== 'ok') {
-                        throw new Error(payload.message || `Nhận diện thất bại (${via}).`);
+                    try {
+                        if (!window.ExamVision) throw new Error('Chưa tải exam-vision-client.js');
+                        payload = await ExamVision.normalizeSegment(imageData, keys, model);
+                    } catch (browserErr) {
+                        if (!GiangBaiApi.isFallbackEnabled()) {
+                            throw new Error((browserErr.message || 'Gemini lỗi.') + '\n\nBật "HF dự phòng" trên menu để thử Space HuggingFace.');
+                        }
+                        progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
+                            setPageProgress(prev => ({ ...prev, [page.id]: value }));
+                        });
+                        const { res, source } = await GiangBaiApi.axiosPostWithFallback(
+                            axios,
+                            GiangBaiApi.examAiUrl('normalize_segment'),
+                            GiangBaiApi.hfExamUrl('normalize_segment'),
+                            { image_data: imageData, api_keys: keys, model, page_id: page.id },
+                            { timeout: 120000 },
+                            'exam-ai'
+                        );
+                        payload = res.data || {};
+                        via = source === 'hf-fallback' ? 'HuggingFace' : 'Hosting';
+                    }
+
+                    setPageProgress(prev => ({ ...prev, [page.id]: 95 }));
+
+                    if (!payload || payload.status !== 'ok') {
+                        throw new Error(payload?.message || `Nhận diện thất bại (${via}).`);
                     }
 
                     const newQs = (payload.data || []).map((q) => ({ ...q, id: Date.now() + Math.random() }));
                     setPageQuestions(prev => ({ ...prev, [page.id]: newQs }));
                     setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'done', q_count: newQs.length } : p));
+                    setPageProgress(prev => ({ ...prev, [page.id]: 100 }));
 
                     if (!newQs.length) {
-                        alert(`AI (${via}) không tìm thấy câu hỏi trên trang này.\n\nThử: Quét vùng thủ công, hoặc bật "HF dự phòng" nếu đang test chỉ hosting.`);
-                    } else if (source === 'hf-fallback') {
-                        console.info(`[exam-ai] Nhận diện qua HuggingFace fallback (${newQs.length} câu).`);
+                        alert(`AI (${via}) không tìm thấy câu hỏi trên trang này.\n\nThử Quét vùng thủ công.`);
                     }
                 } catch (e) {
                     setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'error' } : p));
                     alert(formatApiError(e, e.message || 'Nhận diện AI thất bại.'));
                 } finally {
-                    progressStream.close();
-                    setPages(prev => prev.map(p => {
-                        if (p.id !== page.id || p.status !== 'processing') return p;
-                        return { ...p, status: 'error' };
-                    }));
+                    if (progressStream) progressStream.close();
                     setPageProgress(prev => {
                         const next = { ...prev };
                         delete next[page.id];
                         return next;
                     });
+                    setPages(prev => prev.map(p => {
+                        if (p.id !== page.id || p.status !== 'processing') return p;
+                        return { ...p, status: 'error' };
+                    }));
                 }
             };
 

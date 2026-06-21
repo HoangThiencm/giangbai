@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables
+.env
+backend/.env
+*.env
+
+# Google OAuth (KHÔNG commit)
+backend/service-account-key.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+
+# Uploads
+backend/uploads/
+
+"banner.jpg" 
+"*.jpg" 
+"*.png" 

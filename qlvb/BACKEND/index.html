@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống QLVB - THCS Trần Phú</title>
+    <!-- Thư viện CSS và Icon -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Thư viện xuất Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+        }
+
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-button.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .dark .tab-button.active {
+            border-bottom: 2px solid #60a5fa;
+            color: #60a5fa;
+        }
+
+        #file-viewer-iframe {
+            width: 100%;
+            height: 70vh;
+            border: 1px solid #e5e7eb;
+        }
+
+        .dark #file-viewer-iframe {
+            border-color: #4a5568;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+
+        #loading-overlay {
+            z-index: 9999;
+        }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+
+        .toast {
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay"
+        class="hidden fixed inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-black/70 backdrop-blur-sm transition-all duration-300">
+        <div
+            class="flex flex-col items-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-110">
+            <div class="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent mb-4"></div>
+            <p id="loading-text" class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4 animate-pulse">Đang
+                xử lý...</p>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="flex flex-col space-y-2"></div>
+
+    <div id="app" class="flex flex-col min-h-screen">
+
+        <!-- === BANNER === -->
+        <div class="w-full h-48 sm:h-64 md:h-80 overflow-hidden relative shadow-md group">
+            <img src="banner.jpg" alt="Trường THCS Trần Phú"
+                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                onerror="this.src='https://placehold.co/1200x400?text=Banner+Trường+THCS+Trần+Phú'">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 pb-6 md:pb-8">
+                    <h2 class="text-white text-2xl md:text-4xl font-bold mb-2 text-shadow uppercase">Trường THCS Trần
+                        Phú - xã Xuân Đông - tỉnh Đồng Nai</h2>
+                    <p class="text-gray-200 text-sm md:text-lg font-medium text-shadow">Hệ thống Quản lý Văn bản Điện tử
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- === HEADER & MENU === -->
+        <header
+            class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 bg-blue-600 rounded-lg p-1.5 text-white mr-3">
+                            <i data-lucide="files" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold text-gray-900 dark:text-white hidden md:block">Quản lý Văn bản
+                            </h1>
+                            <h1 class="text-lg font-bold text-gray-900 dark:text-white md:hidden">QLVB</h1>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        <!-- User Info & Logout -->
+                        <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1">
+                            <i data-lucide="user" class="w-4 h-4 mr-2 text-gray-500 dark:text-gray-300"></i>
+                            <span id="current-user-email"
+                                class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-[150px] hidden sm:block">...</span>
+                            <button id="logout-btn" class="ml-2 text-red-500 hover:text-red-700" title="Đăng xuất">
+                                <i data-lucide="log-out" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <div id="admin-auth" class="flex items-center space-x-2">
+                            <button id="admin-login-btn"
+                                class="flex items-center bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
+                                <i data-lucide="shield" class="w-4 h-4 mr-2"></i>
+                                <span class="hidden sm:inline">Connect Drive</span>
+                            </button>
+                            <p id="admin-status"
+                                class="text-sm font-medium text-green-600 dark:text-green-400 hidden flex items-center">
+                                <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+                                <span class="hidden sm:inline">Drive OK</span>
+                            </p>
+                        </div>
+
+                        <!-- AI Settings Button -->
+                        <button id="ai-settings-btn"
+                            class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            title="Cài đặt AI">
+                            <i data-lucide="settings" class="h-5 w-5"></i>
+                        </button>
+
+                        <button id="theme-toggle"
+                            class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i id="theme-icon" data-lucide="moon" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- === MAIN CONTENT === -->
+        <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div
+                class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 transition-colors duration-200">
+                <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+                    <div class="flex space-x-4">
+                        <button id="tab-incoming"
+                            class="tab-button active px-4 py-2 font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-b-2 border-transparent hover:border-blue-300 dark:hover:border-blue-500">
+                            <i data-lucide="inbox" class="w-4 h-4 inline mr-2"></i> Văn bản Đến
+                        </button>
+                        <button id="tab-outgoing"
+                            class="tab-button px-4 py-2 font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-b-2 border-transparent hover:border-blue-300 dark:hover:border-blue-500">
+                            <i data-lucide="send" class="w-4 h-4 inline mr-2"></i> Văn bản Đi
+                        </button>
+                        <button id="tab-reminders"
+                            class="tab-button px-4 py-2 font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-b-2 border-transparent hover:border-blue-300 dark:hover:border-blue-500">
+                            <i data-lucide="bell" class="w-4 h-4 inline mr-2"></i> Nhắc nhở báo cáo
+                            <span id="reminder-badge"
+                                class="hidden ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 mb-6">
+                    <div
+                        class="w-full md:w-auto flex-grow flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                        <div class="relative w-full flex-grow">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i data-lucide="search" class="w-5 h-5 text-gray-400 dark:text-gray-500"></i>
+                            </div>
+                            <input type="search" id="search-input"
+                                class="w-full p-2.5 pl-10 text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                placeholder="Tìm kiếm văn bản...">
+                        </div>
+                        <div class="w-full sm:w-40">
+                            <select id="doc-type-filter"
+                                class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 cursor-pointer">
+                                <option value="all">Tất cả loại</option>
+                                <option>Kế hoạch</option>
+                                <option>Báo cáo</option>
+                                <option>Quyết định</option>
+                                <option>Thông báo</option>
+                                <option>Tờ trình</option>
+                                <option>Công văn</option>
+                                <option>Thông tư</option>
+                                <option>Hướng dẫn</option>
+                                <option>Quy định</option>
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-40">
+                            <select id="status-filter"
+                                class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 cursor-pointer">
+                                <option value="all">Tất cả trạng thái</option>
+                                <option>Chờ xử lý</option>
+                                <option>Đã xử lý</option>
+                                <option>Lưu trữ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-2 w-full md:w-auto">
+                        <button id="export-excel-btn"
+                            class="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors border border-green-200 dark:border-green-800">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5 mr-2"></i> Xuất Excel
+                        </button>
+
+                        <button id="add-document-btn"
+                            class="flex-1 md:flex-none flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-colors shadow-sm">
+                            <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Thêm mới
+                        </button>
+                    </div>
+                </div>
+
+                <div id="content-incoming" class="tab-content active">
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead
+                                class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-700">
+                                <tr>
+                                    <th class="py-3 px-6">STT</th>
+                                    <th class="py-3 px-6">Trích yếu</th>
+                                    <th class="py-3 px-6">Số/Ký hiệu</th>
+                                    <th class="py-3 px-6">Ngày Nhận</th>
+                                    <th class="py-3 px-6">Nơi Gửi</th>
+                                    <th class="py-3 px-6">Tệp</th>
+                                    <th class="py-3 px-6">Trạng thái</th>
+                                    <th class="py-3 px-6 text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body-incoming"></tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Incoming -->
+                    <div id="pagination-incoming"
+                        class="flex flex-col sm:flex-row justify-between items-center mt-4 p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
+                    </div>
+                </div>
+
+                <div id="content-outgoing" class="tab-content">
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead
+                                class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-700">
+                                <tr>
+                                    <th class="py-3 px-6">STT</th>
+                                    <th class="py-3 px-6">Trích yếu</th>
+                                    <th class="py-3 px-6">Số/Ký hiệu</th>
+                                    <th class="py-3 px-6">Ngày Gửi</th>
+                                    <th class="py-3 px-6">Nơi Nhận</th>
+                                    <th class="py-3 px-6">Tệp</th>
+                                    <th class="py-3 px-6">Trạng thái</th>
+                                    <th class="py-3 px-6 text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body-outgoing"></tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Outgoing -->
+                    <div id="pagination-outgoing"
+                        class="flex flex-col sm:flex-row justify-between items-center mt-4 p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
+                    </div>
+                </div>
+
+                <!-- TAB 3: NHẮC NHỞ BÁO CÁO -->
+                <div id="content-reminders" class="tab-content">
+                    <!-- Filter Bar -->
+                    <div class="flex items-center justify-between mb-6">
+                        <select id="reminder-filter"
+                            class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 cursor-pointer">
+                            <option value="all">Tất cả</option>
+                            <option value="upcoming">Sắp đến hạn (&lt;7 ngày)</option>
+                            <option value="urgent">Khẩn cấp (&lt;3 ngày)</option>
+                            <option value="overdue">Quá hạn</option>
+                        </select>
+                        <button id="scan-all-pdfs-btn"
+                            class="flex items-center px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors">
+                            <i data-lucide="scan" class="w-4 h-4 mr-2"></i> Quét tất cả PDF
+                        </button>
+                    </div>
+
+                    <!-- Deadline Cards Container -->
+                    <div id="deadlines-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Empty state -->
+                        <div id="no-deadlines"
+                            class="col-span-full flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                            <i data-lucide="calendar-check" class="w-16 h-16 mb-4 opacity-50"></i>
+                            <p class="text-lg">Chưa có văn bản nào có thời hạn báo cáo</p>
+                            <p class="text-sm mt-2">Nhấn "Quét tất cả PDF" để phân tích văn bản</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- === FOOTER === -->
+        <footer
+            class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-200">
+            <div class="container mx-auto px-4 text-center">
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    &copy; 2026 - Copyright
+                </p>
+                <div
+                    class="inline-block text-left bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-100 dark:border-gray-700">
+                    <p
+                        class="font-bold text-blue-600 dark:text-blue-400 mb-2 text-sm uppercase tracking-wide border-b border-gray-200 dark:border-gray-600 pb-1">
+                        Nhóm Tác giả:</p>
+                    <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        <li class="flex items-center"><span class="w-5 font-semibold text-blue-800">1/</span> <span
+                                class="font-medium text-blue-800 dark:text-blue-200 mr-1">Bùi Ngọc Nam</span> - Hiệu
+                            trưởng</li>
+                        <li class="flex items-center"><span class="w-5 font-semibold text-blue-800">2/</span> <span
+                                class="font-medium text-blue-800 dark:text-blue-200 mr-1">Nguyễn Ngọc Nam</span> - Phó
+                            Hiệu trưởng</li>
+                        <li class="flex items-center"><span class="w-5 font-semibold text-blue-800">3/</span> <span
+                                class="font-medium text-blue-800 dark:text-blue-200 mr-1">Hoàng Tấn Thiên</span> - Phó
+                            Hiệu trưởng</li>
+                    </ul>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ========== MODAL: CÀI ĐẶT AI ========== -->
+    <div id="ai-settings-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg mx-4 border dark:border-gray-700">
+            <div class="flex justify-between items-center p-5 border-b dark:border-gray-700">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Cài đặt AI Gemini</h3>
+                <button id="close-ai-settings-btn"
+                    class="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <!-- Model Selection -->
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Chọn Model AI <span class="text-red-500">*</span>
+                    </label>
+                    <select id="ai-model-select"
+                        class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (Mặc định)</option>
+                        <option value="gemini-3-flash-preview">gemini-3-flash-preview (Preview)</option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Model AI để phân tích PDF và trích xuất
+                        thời hạn</p>
+                </div>
+
+                <!-- API Key File -->
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        File API Keys (.txt) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="file" id="api-key-file-input" accept=".txt"
+                        class="block w-full text-sm text-gray-900 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-600 dark:file:text-gray-300">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Mỗi dòng 1 API key. Hệ thống tự động xoay
+                        key khi hết quota.</p>
+                </div>
+
+                <!-- Status Info -->
+                <div id="ai-status-info"
+                    class="hidden p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div class="flex items-start">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5"></i>
+                        <div class="text-sm">
+                            <p class="font-medium text-blue-800 dark:text-blue-300">Trạng thái:</p>
+                            <p id="ai-status-text" class="text-blue-700 dark:text-blue-400 mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="flex items-center justify-between p-6 space-x-2 border-t border-gray-200 dark:border-gray-700 rounded-b bg-gray-50 dark:bg-gray-700/50">
+                <button id="test-ai-connection-btn"
+                    class="text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors">
+                    <i data-lucide="zap" class="w-4 h-4 inline mr-1"></i> Test Connection
+                </button>
+                <div class="flex space-x-2">
+                    <button id="save-ai-settings-btn"
+                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors">Lưu
+                        lại</button>
+                    <button id="cancel-ai-settings-btn"
+                        class="text-gray-500 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 focus:ring-4 focus:ring-blue-300 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-medium px-5 py-2.5 transition-colors">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 1: Thêm/Sửa Văn bản -->
+    <div id="document-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm transition-opacity">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border dark:border-gray-700">
+            <div
+                class="flex justify-between items-center p-5 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h3 id="modal-title" class="text-xl font-bold text-gray-900 dark:text-white">Thêm Văn bản Mới</h3>
+                <button id="close-modal-btn"
+                    class="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-lg"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="p-6">
+                <form id="document-form" class="space-y-4">
+                    <input type="hidden" id="doc-id">
+                    <input type="hidden" id="doc-type-field" value="incoming">
+                    <!-- Lưu dữ liệu file cũ khi edit -->
+                    <input type="hidden" id="existing-drive-data">
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Tên văn bản / Trích
+                            yếu <span class="text-red-500">*</span></label>
+                        <input type="text" id="doc-name"
+                            class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            required placeholder="Nhập trích yếu văn bản...">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Số/Ký
+                                hiệu</label>
+                            <input type="text" id="doc-number"
+                                class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                            <label id="doc-date-label"
+                                class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Ngày Nhận</label>
+                            <input type="date" id="doc-date"
+                                class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Loại văn
+                                bản</label>
+                            <select id="doc-type"
+                                class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                <option>Kế hoạch</option>
+                                <option>Tờ trình</option>
+                                <option>Báo cáo</option>
+                                <option>Quyết định</option>
+                                <option>Thông báo</option>
+                                <option>Công văn</option>
+                                <option>Thông tư</option>
+                                <option>Hướng dẫn</option>
+                                <option>Quy định</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Trạng
+                                thái</label>
+                            <select id="doc-status"
+                                class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                <option>Chờ xử lý</option>
+                                <option>Đã xử lý</option>
+                                <option>Lưu trữ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label id="doc-org-label"
+                            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Nơi Gửi</label>
+                        <input type="text" id="doc-organization"
+                            class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            placeholder="Tên đơn vị, tổ chức...">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Tải file lên (Google
+                            Drive 2TB)</label>
+                        <input
+                            class="block w-full text-sm text-gray-900 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                            id="file_input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">File được lưu trên Drive, Metadata lưu
+                            trên Firebase (Nhanh).</p>
+                    </div>
+                </form>
+            </div>
+
+            <div
+                class="flex items-center p-6 space-x-2 border-t border-gray-200 dark:border-gray-700 rounded-b bg-gray-50 dark:bg-gray-700/50">
+                <button id="save-btn"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors">Lưu
+                    lại</button>
+                <button id="cancel-modal-btn"
+                    class="text-gray-500 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 focus:ring-4 focus:ring-blue-300 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-medium px-5 py-2.5 transition-colors">Hủy
+                    bỏ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Xem File Đính Kèm -->
+    <div id="file-viewer-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl h-[90vh] mx-4 flex flex-col border dark:border-gray-700">
+            <div
+                class="flex justify-between items-center p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-t-lg">
+                <h3 id="file-viewer-title" class="text-lg font-semibold text-gray-900 dark:text-white truncate pr-4">Tệp
+                    đính kèm</h3>
+                <button id="close-viewer-btn"
+                    class="text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 p-1.5 rounded-lg"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
+            </div>
+            <div class="flex flex-grow overflow-hidden">
+                <div class="w-1/4 p-4 border-r dark:border-gray-700 overflow-y-auto bg-gray-50 dark:bg-gray-800">
+                    <div class="mb-3">
+                        <h4 class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Danh
+                            sách tệp</h4>
+                    </div>
+                    <ul id="file-list" class="space-y-2"></ul>
+                </div>
+                <div class="w-3/4 p-4 flex flex-col bg-gray-100 dark:bg-gray-900">
+                    <div id="viewer-placeholder"
+                        class="flex-grow flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                        <i data-lucide="eye" class="w-16 h-16 mb-4 opacity-50"></i>
+                        <p>Chọn một tệp từ danh sách bên trái để xem trước.</p>
+                    </div>
+                    <iframe id="file-viewer-iframe" class="hidden flex-grow rounded shadow-sm bg-white"
+                        src="about:blank"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- 1. CONFIG & KHỞI TẠO ---
+        const firebaseConfig = CONFIG.FIREBASE_CONFIG;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const DB_COLLECTION = CONFIG.FIRESTORE_COLLECTION || "van_ban";
+        const USERS_COL = CONFIG.USERS_COLLECTION || "users";
+
+        const GAPI_CLIENT_ID = CONFIG.GOOGLE_CLIENT_ID;
+        // Sửa đường dẫn popup.html (Cùng cấp)
+        const REDIRECT_URI = `${window.location.origin}/popup.html`;
+        const BACKEND_API_URL = CONFIG.BACKEND_API_URL;
+
+        let currentTab = 'incoming';
+        let adminGoogleToken = null;
+        let currentDocs = [];
+        let unsubscribe = null;
+        let currentUserEmail = "";
+
+        // --- CẤU HÌNH PHÂN TRANG ---
+        const ITEMS_PER_PAGE = 20;
+        let currentPage = 1;
+
+        const ui = {
+            adminLoginBtn: document.getElementById('admin-login-btn'),
+            adminStatus: document.getElementById('admin-status'),
+            docModal: document.getElementById('document-modal'),
+            docForm: document.getElementById('document-form'),
+            saveBtn: document.getElementById('save-btn'),
+            fileViewerModal: document.getElementById('file-viewer-modal'),
+            fileList: document.getElementById('file-list'),
+            fileViewerIframe: document.getElementById('file-viewer-iframe'),
+            viewerPlaceholder: document.getElementById('viewer-placeholder'),
+            fileInput: document.getElementById('file_input'),
+            docId: document.getElementById('doc-id'),
+            docName: document.getElementById('doc-name'),
+            docNumber: document.getElementById('doc-number'),
+            docDate: document.getElementById('doc-date'),
+            docType: document.getElementById('doc-type'),
+            docStatus: document.getElementById('doc-status'),
+            docOrganization: document.getElementById('doc-organization'),
+            docTypeField: document.getElementById('doc-type-field'),
+            existingDriveData: document.getElementById('existing-drive-data'),
+            searchInput: document.getElementById('search-input'),
+            docTypeFilter: document.getElementById('doc-type-filter'),
+            statusFilter: document.getElementById('status-filter'),
+            exportExcelBtn: document.getElementById('export-excel-btn'),
+            themeToggleBtn: document.getElementById('theme-toggle'),
+            loadingOverlay: document.getElementById('loading-overlay'),
+            logoutBtn: document.getElementById('logout-btn'),
+            currentUserEmailSpan: document.getElementById('current-user-email')
+        };
+
+        // --- 0. BẢO VỆ ROUTE ---
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                // Nếu chưa đăng nhập -> Chuyển hướng về login.html (Cùng cấp)
+                window.location.href = 'login.html';
+            } else {
+                // Đã đăng nhập -> Kiểm tra status lần nữa cho an toàn
+                const userRef = doc(db, USERS_COL, user.uid);
+                const userSnap = await getDoc(userRef);
+
+                if (!userSnap.exists() || userSnap.data().status !== 'active') {
+                    await signOut(auth);
+                    alert("Tài khoản của bạn chưa được kích hoạt hoặc đã bị khóa.");
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                currentUserEmail = user.email;
+                ui.currentUserEmailSpan.textContent = currentUserEmail;
+                subscribeToData(); // Chỉ tải dữ liệu khi đã xác thực an toàn
+            }
+        });
+
+        // Xử lý đăng xuất
+        ui.logoutBtn.onclick = async () => {
+            if (confirm("Bạn muốn đăng xuất?")) {
+                await signOut(auth);
+                window.location.href = 'login.html';
+            }
+        };
+
+
+        // --- UTILS ---
+        function toggleLoading(show, message = "Đang xử lý...") {
+            ui.loadingOverlay.classList.toggle('hidden', !show);
+            if (show) document.getElementById('loading-text').textContent = message;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            toast.className = `toast ${bgColor} text-white px-4 py-2 rounded shadow-lg flex items-center mb-2`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function authenticatedFetch(url, options = {}) {
+            if (adminGoogleToken && adminGoogleToken.refresh_token) {
+                options.headers = { ...options.headers, 'x-refresh-token': adminGoogleToken.refresh_token };
+            }
+            return fetch(url, options);
+        }
+
+        // --- 2. ADMIN DRIVE AUTH ---
+        ui.adminLoginBtn.onclick = () => {
+            if (!GAPI_CLIENT_ID || GAPI_CLIENT_ID.includes('YOUR_')) return showToast('Chưa cấu hình Client ID!', 'error');
+            const params = new URLSearchParams({
+                client_id: GAPI_CLIENT_ID,
+                redirect_uri: REDIRECT_URI,
+                response_type: 'code',
+                scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
+                access_type: 'offline',
+                prompt: 'consent'
+            });
+            window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 'oauthPopup', 'width=500,height=600');
+        };
+
+        window.addEventListener('message', async (e) => {
+            if (e.origin !== window.location.origin || e.data?.type !== 'oauth_callback') return;
+            const code = new URLSearchParams(e.data.payload.search).get('code');
+            if (code) {
+                try {
+                    const res = await fetch(`${BACKEND_API_URL}/api/oauth/token`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+                    });
+                    if (!res.ok) throw new Error('Lỗi lấy token');
+                    const data = await res.json();
+                    adminGoogleToken = data;
+                    localStorage.setItem('admin_google_token', JSON.stringify(data));
+                    updateAdminUI(true);
+                    showToast('Đăng nhập Admin thành công!');
+                } catch (err) { showToast(err.message, 'error'); }
+            }
+        });
+
+        function updateAdminUI(isLoggedIn) {
+            ui.adminLoginBtn.classList.toggle('hidden', isLoggedIn);
+            ui.adminStatus.classList.toggle('hidden', !isLoggedIn);
+        }
+
+        // --- 3. FIREBASE DATA LOGIC (REAL-TIME) ---
+        function subscribeToData() {
+            if (unsubscribe) unsubscribe();
+
+            toggleLoading(true, "Đang kết nối Firebase...");
+
+            const q = query(
+                collection(db, DB_COLLECTION),
+                where("type", "==", currentTab),
+                orderBy("created_at", "desc")
+            );
+
+            unsubscribe = onSnapshot(q, (snapshot) => {
+                currentDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTable(currentDocs);
+                toggleLoading(false);
+            }, (error) => {
+                console.error("Firebase Error:", error);
+                toggleLoading(false);
+                if (error.code === 'failed-precondition') {
+                    showToast("Lỗi: Cần tạo Index trên Firebase Console (Xem Console Log)", 'error');
+                } else {
+                    showToast("Lỗi tải dữ liệu: " + error.message, 'error');
+                }
+            });
+        }
+
+        function renderTable(docs) {
+            const term = ui.searchInput.value.toLowerCase();
+            const typeF = ui.docTypeFilter.value;
+            const statusF = ui.statusFilter.value;
+
+            const filtered = docs.filter(d => {
+                if (term && !String(d.name || '').toLowerCase().includes(term) && !String(d.number || '').toLowerCase().includes(term)) return false;
+                if (typeF !== 'all' && d.doc_type !== typeF) return false;
+                if (statusF !== 'all' && d.status !== statusF) return false;
+                return true;
+            });
+
+            const totalItems = filtered.length;
+            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const paginatedDocs = filtered.slice(startIndex, endIndex);
+
+            const tbody = document.getElementById(`table-body-${currentTab}`);
+
+            if (!paginatedDocs.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-gray-500 dark:text-gray-400">Không có dữ liệu</td></tr>';
+            } else {
+                tbody.innerHTML = paginatedDocs.map((doc, i) => {
+                    const files = doc.drive_data?.files?.length || 0;
+                    const statusClass = doc.status === 'Đã xử lý' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                        (doc.status === 'Lưu trữ' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300');
+                    const locked = doc.is_locked;
+                    const stt = startIndex + i + 1;
+
+                    return `<tr class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="py-4 px-6 text-center">${stt}</td>
+                        <th class="py-4 px-6 font-medium text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 view-doc" data-id="${doc.id}">
+                            <div class="line-clamp-2" title="${doc.name}">${doc.name}</div>
+                        </th>
+                        <td class="py-4 px-6 whitespace-nowrap">${doc.number || ''}</td>
+                        <td class="py-4 px-6 whitespace-nowrap">${doc.date?.split('-').reverse().join('/') || ''}</td>
+                        <td class="py-4 px-6"><div class="line-clamp-1">${doc.organization || ''}</div></td>
+                        <td class="py-4 px-6 text-center">${files > 0 ? `<span class="bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs px-2 py-0.5 rounded">${files} tệp</span>` : '-'}</td>
+                        <td class="py-4 px-6 text-center"><span class="${statusClass} text-xs px-2 py-0.5 rounded">${doc.status}</span></td>
+                        <td class="py-4 px-6 text-center">
+                            <div class="flex justify-center space-x-2">
+                                <button class="lock-btn p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 ${locked ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-500'}" data-id="${doc.id}" data-locked="${locked}" title="${locked ? 'Mở khóa' : 'Khóa'}"><i data-lucide="${locked ? 'lock' : 'unlock'}" class="w-4 h-4"></i></button>
+                                <button class="edit-btn p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded ${locked ? 'opacity-50' : ''}" data-id="${doc.id}" ${locked ? 'disabled' : ''} title="Sửa"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                                <button class="del-btn p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded ${locked ? 'opacity-50' : ''}" data-id="${doc.id}" ${locked ? 'disabled' : ''} title="Xóa"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+
+            renderPaginationControls(totalItems, totalPages, startIndex, Math.min(endIndex, totalItems));
+            lucide.createIcons();
+        }
+
+        function renderPaginationControls(totalItems, totalPages, startItem, endItem) {
+            const container = document.getElementById(`pagination-${currentTab}`);
+            if (!container) return;
+
+            if (totalItems === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <span class="text-sm text-gray-700 dark:text-gray-400">
+                    Hiển thị <span class="font-semibold text-gray-900 dark:text-white">${startItem + 1}</span> đến <span class="font-semibold text-gray-900 dark:text-white">${endItem}</span> trong số <span class="font-semibold text-gray-900 dark:text-white">${totalItems}</span> văn bản
+                </span>
+                <div class="inline-flex mt-2 sm:mt-0">
+                    <button class="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-l hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
+                        onclick="window.changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                        <i data-lucide="chevron-left" class="w-4 h-4 mr-1"></i> Trước
+                    </button>
+                    <button class="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border-l border-blue-700 rounded-r hover:bg-blue-700 dark:bg-blue-600 dark:border-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
+                        onclick="window.changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                        Sau <i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        window.changePage = (newPage) => {
+            currentPage = newPage;
+            renderTable(currentDocs);
+        };
+
+        // --- 4. CRUD OPERATIONS ---
+        ui.saveBtn.onclick = async () => {
+            if (!ui.docForm.checkValidity()) return ui.docForm.reportValidity();
+
+            ui.saveBtn.textContent = 'Đang lưu...'; ui.saveBtn.disabled = true;
+            toggleLoading(true, "Đang lưu dữ liệu...");
+
+            try {
+                let driveData = {};
+                const existingData = ui.existingDriveData.value ? JSON.parse(ui.existingDriveData.value) : {};
+                driveData = existingData;
+
+                if (ui.fileInput.files.length) {
+                    if (!adminGoogleToken) throw new Error('Cần kết nối Google Drive (Admin) để upload file!');
+                    const fd = new FormData();
+                    for (const f of ui.fileInput.files) fd.append('files', f);
+                    fd.append('docName', ui.docName.value.trim());
+                    fd.append('type', currentTab);
+                    const currentMonth = `Tháng ${new Date().getMonth() + 1}`;
+                    fd.append('month', currentMonth);
+
+                    const res = await authenticatedFetch(`${BACKEND_API_URL}/upload`, { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error('Upload file thất bại. Kiểm tra kết nối Admin.');
+                    driveData = await res.json();
+                }
+
+                const dataToSave = {
+                    user_name: currentUserEmail, // Lưu email người tạo
+                    type: currentTab,
+                    name: ui.docName.value.trim(),
+                    number: ui.docNumber.value,
+                    date: ui.docDate.value,
+                    doc_type: ui.docType.value,
+                    status: ui.docStatus.value,
+                    organization: ui.docOrganization.value,
+                    drive_data: driveData,
+                    updated_at: serverTimestamp()
+                };
+
+                const id = ui.docId.value;
+
+                if (id) {
+                    const docRef = doc(db, DB_COLLECTION, id);
+                    await updateDoc(docRef, dataToSave);
+                    showToast('Cập nhật thành công!');
+                } else {
+                    dataToSave.created_at = serverTimestamp();
+                    dataToSave.is_locked = false;
+                    await addDoc(collection(db, DB_COLLECTION), dataToSave);
+                    showToast('Thêm mới thành công!');
+                }
+
+                ui.docModal.classList.add('hidden');
+                ui.docForm.reset();
+            } catch (e) {
+                console.error(e);
+                showToast(e.message, 'error');
+            } finally {
+                ui.saveBtn.textContent = 'Lưu lại';
+                ui.saveBtn.disabled = false;
+                toggleLoading(false);
+            }
+        };
+
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button') || e.target.closest('.view-doc');
+            if (!btn) return;
+
+            if (btn.classList.contains('view-doc')) {
+                const id = btn.dataset.id;
+                const docData = currentDocs.find(d => d.id == id);
+                const files = docData?.drive_data?.files || [];
+
+                ui.fileList.innerHTML = files.length ? '' : '<li class="p-2 text-sm">Không có file</li>';
+                files.forEach(f => {
+                    ui.fileList.innerHTML += `<li class="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer rounded flex items-center" onclick="document.getElementById('viewer-placeholder').classList.add('hidden');document.getElementById('file-viewer-iframe').classList.remove('hidden');document.getElementById('file-viewer-iframe').src='${f.webViewLink.replace('view', 'preview')}'"><i data-lucide="file" class="w-4 h-4 mr-2 dark:text-gray-300"></i><span class="truncate text-sm dark:text-gray-200">${f.name}</span></li>`;
+                });
+                lucide.createIcons();
+                ui.fileViewerModal.classList.remove('hidden');
+            }
+
+            if (btn.classList.contains('lock-btn')) {
+                const id = btn.dataset.id;
+                const newLockStatus = !(btn.dataset.locked === 'true');
+                try {
+                    await updateDoc(doc(db, DB_COLLECTION, id), { is_locked: newLockStatus });
+                } catch (err) { showToast('Lỗi khóa: ' + err.message, 'error'); }
+            }
+
+            if (btn.classList.contains('edit-btn') && !btn.disabled) {
+                const id = btn.dataset.id;
+                const data = currentDocs.find(d => d.id == id);
+                if (data) {
+                    ui.docId.value = data.id;
+                    ui.docName.value = data.name;
+                    ui.docNumber.value = data.number;
+                    ui.docDate.value = data.date;
+                    ui.docType.value = data.doc_type;
+                    ui.docStatus.value = data.status;
+                    ui.docOrganization.value = data.organization;
+                    ui.docTypeField.value = data.type;
+                    ui.existingDriveData.value = JSON.stringify(data.drive_data || {});
+                    ui.docModal.classList.remove('hidden');
+                }
+            }
+
+            if (btn.classList.contains('del-btn') && !btn.disabled) {
+                if (!confirm('Xóa vĩnh viễn văn bản và file trên Drive?')) return;
+                const id = btn.dataset.id;
+                const docData = currentDocs.find(d => d.id == id);
+
+                toggleLoading(true, "Đang xóa...");
+                try {
+                    if (docData?.drive_data?.files) {
+                        for (const f of docData.drive_data.files) {
+                            await authenticatedFetch(`${BACKEND_API_URL}/delete/${f.id}`, { method: 'DELETE' });
+                        }
+                    }
+                    await deleteDoc(doc(db, DB_COLLECTION, id));
+                    showToast('Đã xóa văn bản');
+                } catch (e) { showToast('Lỗi xóa: ' + e.message, 'error'); }
+                finally { toggleLoading(false); }
+            }
+        });
+
+        // UI Helpers
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        }
+        function updateThemeIcon(isDark) {
+            const iconElement = ui.themeToggleBtn.querySelector('i');
+            iconElement.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+        ui.themeToggleBtn.onclick = () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        };
+
+        document.getElementById('tab-incoming').onclick = () => { currentTab = 'incoming'; currentPage = 1; updateTabUI(); subscribeToData(); };
+        document.getElementById('tab-outgoing').onclick = () => { currentTab = 'outgoing'; currentPage = 1; updateTabUI(); subscribeToData(); };
+
+        function updateTabUI() {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${currentTab}`).classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.getElementById(`content-${currentTab}`).style.display = 'block';
+        }
+
+        ui.searchInput.oninput = () => { currentPage = 1; renderTable(currentDocs); };
+        ui.docTypeFilter.onchange = () => { currentPage = 1; renderTable(currentDocs); };
+        ui.statusFilter.onchange = () => { currentPage = 1; renderTable(currentDocs); };
+
+        ui.exportExcelBtn.onclick = () => {
+            if (!currentDocs || currentDocs.length === 0) return showToast('Không có dữ liệu!', 'warning');
+            const dataForExcel = currentDocs.map((doc, index) => ({
+                "STT": index + 1,
+                "Trích yếu": doc.name,
+                "Số/Ký hiệu": doc.number || '',
+                "Ngày": doc.date ? doc.date.split('-').reverse().join('/') : '',
+                "Loại văn bản": doc.doc_type || '',
+                "Nơi gửi/nhận": doc.organization || '',
+                "Trạng thái": doc.status || '',
+                "Số lượng file": doc.drive_data?.files?.length || 0
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+            const wscols = [{ wch: 5 }, { wch: 50 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 10 }];
+            worksheet['!cols'] = wscols;
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, currentTab === 'incoming' ? "Văn bản Đến" : "Văn bản Đi");
+            XLSX.writeFile(workbook, `Danh_sach_${currentTab}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        };
+
+        document.getElementById('add-document-btn').onclick = () => { ui.docForm.reset(); ui.docId.value = ''; ui.existingDriveData.value = ''; ui.docModal.classList.remove('hidden'); };
+        document.getElementById('close-modal-btn').onclick = () => ui.docModal.classList.add('hidden');
+        document.getElementById('cancel-modal-btn').onclick = () => ui.docModal.classList.add('hidden');
+        document.getElementById('close-viewer-btn').onclick = () => ui.fileViewerModal.classList.add('hidden');
+
+        // Init Run
+        initTheme();
+        lucide.createIcons();
+        if (localStorage.getItem('admin_google_token')) { adminGoogleToken = JSON.parse(localStorage.getItem('admin_google_token')); updateAdminUI(true); }
+
+        // Không gọi subscribeToData() ở đây nữa, nó được gọi trong onAuthStateChanged
+
+        // ========== AI SETTINGS INTEGRATION ==========
+        const aiSettings = {
+            modal: document.getElementById('ai-settings-modal'),
+            modelSelect: document.getElementById('ai-model-select'),
+            keyFileInput: document.getElementById('api-key-file-input'),
+            statusInfo: document.getElementById('ai-status-info'),
+            statusText: document.getElementById('ai-status-text'),
+            testBtn: document.getElementById('test-ai-connection-btn'),
+            saveBtn: document.getElementById('save-ai-settings-btn'),
+            cancelBtn: document.getElementById('cancel-ai-settings-btn'),
+            closeBtn: document.getElementById('close-ai-settings-btn'),
+            apiKeys: [],
+            selectedModel: 'gemini-2.5-flash'
+        };
+
+        // Open AI Settings
+        document.getElementById('ai-settings-btn').onclick = () => {
+            const saved = localStorage.getItem('ai_settings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                aiSettings.modelSelect.value = settings.model || 'gemini-2.5-flash';
+                if (settings.keysCount) {
+                    aiSettings.statusInfo.classList.remove('hidden');
+                    aiSettings.statusText.textContent = `Đã load ${settings.keysCount} API keys`;
+                }
+            }
+            aiSettings.modal.classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        // Close AI Settings
+        [aiSettings.closeBtn, aiSettings.cancelBtn].forEach(btn => {
+            btn.onclick = () => aiSettings.modal.classList.add('hidden');
+        });
+
+        // Read API keys from file
+        aiSettings.keyFileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                aiSettings.apiKeys = text.split('\n')
+                    .map(key => key.trim())
+                    .filter(key => key && !key.startsWith('#'));
+
+                if (aiSettings.apiKeys.length === 0) {
+                    showToast('File API keys rỗng hoặc không hợp lệ', 'error');
+                    return;
+                }
+
+                aiSettings.statusInfo.classList.remove('hidden');
+                aiSettings.statusText.textContent = `Đã load ${aiSettings.apiKeys.length} API keys từ file`;
+                showToast(`Đã load ${aiSettings.apiKeys.length} keys`, 'success');
+            } catch (error) {
+                showToast('Lỗi đọc file: ' + error.message, 'error');
+            }
+        };
+
+        // Test connection
+        aiSettings.testBtn.onclick = async () => {
+            if (aiSettings.apiKeys.length === 0) {
+                showToast('Vui lòng chọn file API keys trước', 'error');
+                return;
+            }
+
+            aiSettings.testBtn.textContent = 'Đang test...';
+            aiSettings.testBtn.disabled = true;
+
+            try {
+                const res = await fetch(`${BACKEND_API_URL}/ai/test-connection`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey: aiSettings.apiKeys[0] })
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    showToast('✓ Kết nối thành công!', 'success');
+                    aiSettings.statusText.textContent = 'Kết nối OK';
+                } else {
+                    showToast('✗ Kết nối thất bại: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showToast('Lỗi: ' + error.message, 'error');
+            } finally {
+                aiSettings.testBtn.textContent = 'Test Connection';
+                aiSettings.testBtn.disabled = false;
+            }
+        };
+
+        // Save settings
+        aiSettings.saveBtn.onclick = async () => {
+            if (aiSettings.apiKeys.length === 0) {
+                showToast('Vui lòng chọn file API keys', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${BACKEND_API_URL}/ai/set-keys`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keys: aiSettings.apiKeys })
+                });
+
+                if (!res.ok) throw new Error('Backend error');
+                const result = await res.json();
+
+                localStorage.setItem('ai_settings', JSON.stringify({
+                    model: aiSettings.modelSelect.value,
+                    keysCount: aiSettings.apiKeys.length
+                }));
+
+                showToast(result.message, 'success');
+                aiSettings.modal.classList.add('hidden');
+            } catch (error) {
+                showToast('Lỗi lưu: ' + error.message, 'error');
+            }
+        };
+
+        // ========== TAB REMINDERS FUNCTIONALITY ==========
+        document.getElementById('tab-reminders').onclick = () => {
+            currentTab = 'reminders';
+            updateTabUI();
+            loadDeadlines();
+        };
+
+        function loadDeadlines() {
+            const deadlinesCol = CONFIG.DEADLINES_COLLECTION || 'deadlines';
+            const q = query(collection(db, deadlinesCol), orderBy('deadline', 'asc'));
+
+            onSnapshot(q, (snapshot) => {
+                const deadlines = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    deadline: doc.data().deadline?.toDate()
+                }));
+
+                const container = document.getElementById('deadlines-container');
+                const noDeadlines = document.getElementById('no-deadlines');
+
+                if (deadlines.length === 0) {
+                    noDeadlines.classList.remove('hidden');
+                    container.innerHTML = '';
+                    container.appendChild(noDeadlines);
+                    lucide.createIcons();
+                    return;
+                }
+
+                noDeadlines.classList.add('hidden');
+                renderDeadlineCards(deadlines);
+            });
+        }
+
+        function renderDeadlineCards(deadlines) {
+            const filter = document.getElementById('reminder-filter').value;
+            const container = document.getElementById('deadlines-container');
+            const now = new Date();
+
+            const filtered = deadlines.filter(d => {
+                if (!d.deadline) return false;
+                const daysLeft = Math.ceil((d.deadline - now) / (1000 * 60 * 60 * 24));
+
+                if (filter === 'upcoming') return daysLeft > 0 && daysLeft <= 7;
+                if (filter === 'urgent') return daysLeft > 0 && daysLeft <= 3;
+                if (filter === 'overdue') return daysLeft < 0;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-12">Không có văn bản nào</div>';
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = filtered.map(d => {
+                const daysLeft = Math.ceil((d.deadline - now) / (1000 * 60 * 60 * 24));
+                const isOverdue = daysLeft < 0;
+                const isUrgent = daysLeft <= 3 && daysLeft >= 0;
+
+                let statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+                let progressColor = 'bg-green-500';
+                let statusText = 'Sắp đến hạn';
+
+                if (isOverdue) {
+                    statusClass = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+                    progressColor = 'bg-red-500';
+                    statusText = 'Quá hạn';
+                } else if (isUrgent) {
+                    statusClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+                    progressColor = 'bg-yellow-500';
+                    statusText = 'Khẩn cấp';
+                }
+
+                const progress = isOverdue ? 100 : Math.max(0, Math.min(100, 100 - (daysLeft / 7 * 100)));
+
+                return `
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2">${d.documentName}</h4>
+                            <span class="${statusClass} text-xs px-2 py-0.5 rounded whitespace-nowrap ml-2">${statusText}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">Số: ${d.documentNumber || 'N/A'}</p>
+                        
+                        <div class="mb-2">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-600 dark:text-gray-400">Thời hạn: ${d.deadline?.toLocaleDateString('vi-VN')}</span>
+                                <span class="font-semibold ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}">
+                                    ${Math.abs(daysLeft)} ngày${isOverdue ? ' (quá hạn)' : ''}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div class="${progressColor} h-2 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+                            </div>
+                        </div>
+                        
+                        ${d.documentId ? `<button class="view-doc text-blue-600 dark:text-blue-400 hover:underline text-xs" data-id="${d.documentId}">
+                            <i data-lucide="file-text" class="w-3 h-3 inline mr-1"></i> Xem văn bản
+                        </button>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+
+            // Update badge
+            const urgentCount = filtered.filter(d => {
+                const daysLeft = Math.ceil((d.deadline - now) / (1000 * 60 * 60 * 24));
+                return daysLeft >= 0 && daysLeft <= 3;
+            }).length;
+
+            const badge = document.getElementById('reminder-badge');
+            if (urgentCount > 0) {
+                badge.textContent = urgentCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Scan all PDFs button
+        document.getElementById('scan-all-pdfs-btn').onclick = async () => {
+            if (!adminGoogleToken) {
+                showToast('Vui lòng kết nối Google Drive (Admin) trước', 'error');
+                return;
+            }
+
+
+            // Lấy TOÀN BỘ văn bản từ Firestore (cả đến và đi)
+            toggleLoading(true, 'Đang tải danh sách văn bản...');
+
+            try {
+                const allDocsSnapshot = await getDocs(collection(db, CONFIG.FIRESTORE_COLLECTION));
+                const allDocs = allDocsSnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(d => d.drive_data?.files?.some(f => f.name.toLowerCase().endsWith('.pdf')));
+
+
+                if (allDocs.length === 0) {
+                    showToast('Không tìm thấy văn bản nào có file PDF', 'error');
+                    return;
+                }
+
+                toggleLoading(true, `Đang quét ${allDocs.length} văn bản...`);
+
+                let analyzed = 0;
+                let failed = 0;
+
+                for (const doc of allDocs) {
+                    const pdfFiles = doc.drive_data.files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+
+                    for (const file of pdfFiles) {
+                        try {
+                            const model = aiSettings.modelSelect.value || 'gemini-2.5-flash';
+                            const res = await authenticatedFetch(`${BACKEND_API_URL}/ai/analyze-pdf`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ fileId: file.id, modelName: model })
+                            });
+
+                            if (!res.ok) throw new Error('API error');
+                            const result = await res.json();
+
+                            if (result.success && result.deadline) {
+                                await addDoc(collection(db, CONFIG.DEADLINES_COLLECTION || 'deadlines'), {
+                                    documentId: doc.id,
+                                    documentName: doc.name,
+                                    documentNumber: doc.number || '',
+                                    deadline: new Date(result.deadline),
+                                    extractedBy: model,
+                                    extractedAt: serverTimestamp(),
+                                    confidence: result.confidence || 0,
+                                    reminderSent: false,
+                                    userEmail: currentUserEmail,
+                                    driveLink: file.webViewLink || ''
+                                });
+
+                                analyzed++;
+                            }
+                        } catch (error) {
+                            console.error(`Error analyzing ${file.name}:`, error);
+                            failed++;
+                        }
+                    }
+                }
+
+                toggleLoading(false);
+                showToast(`Hoàn thành! Phân tích được ${analyzed} văn bản${failed > 0 ? `, ${failed} lỗi` : ''}`, analyzed > 0 ? 'success' : 'error');
+
+                if (analyzed > 0) {
+                    loadDeadlines();
+                }
+            } catch (error) {
+                toggleLoading(false);
+                showToast('Lỗi: ' + error.message, 'error');
+            }
+        };
+
+        // Filter change
+        document.getElementById('reminder-filter').onchange = () => {
+            loadDeadlines();
+        };
+
+    </script>
+</body>
+
+</html>
