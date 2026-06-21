@@ -2,6 +2,7 @@
     const ROUTES = {
         lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
         lotrinhtoan4: { url: 'lotrinhtoan4.html', label: 'Toán 4' },
+        lotrinhtoan5: { url: 'lotrinhtoan5.html', label: 'Toán 5' },
         lotrinhtoan6: { url: 'lotrinhtoan6.html', label: 'Toán 6' },
         lotrinhtoan7: { url: 'lotrinhtoan7.html', label: 'Toán 7' },
         lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8' },

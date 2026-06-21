@@ -192,12 +192,13 @@
         function landingPageFor(user) {
             const pageUrls = {
                 lotrinhtoan4: 'lotrinhtoan4.html',
+                lotrinhtoan5: 'lotrinhtoan5.html',
                 lotrinhtoan6: 'lotrinhtoan6.html',
                 lotrinhtoan7: 'lotrinhtoan7.html',
                 lotrinhtoan8: 'lotrinhtoan8.html',
                 lotrinhtoan9: 'lotrinhtoan9.html'
             };
-            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
             const allowedPages = user?.allowed_pages || [];
             const canOpen = (pageKey) => allowedPages.includes(pageKey)
                 || (pageKey === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));

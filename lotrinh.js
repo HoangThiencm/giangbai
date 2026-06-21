@@ -25,14 +25,16 @@
 
     const LOTRINH_PAGE_SUBJECTS = {
         lotrinhtoan4: 'Toán 4',
+        lotrinhtoan5: 'Toán 5',
         lotrinhtoan6: 'Toán 6',
         lotrinhtoan7: 'Toán 7',
         lotrinhtoan8: 'Toán 8',
         lotrinhtoan9: 'Toán 9',
     };
-    const LOTRINH_ROUTE_ORDER = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+    const LOTRINH_ROUTE_ORDER = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
     const LOTRINH_PAGE_URLS = {
         lotrinhtoan4: 'lotrinhtoan4.html',
+        lotrinhtoan5: 'lotrinhtoan5.html',
         lotrinhtoan6: 'lotrinhtoan6.html',
         lotrinhtoan7: 'lotrinhtoan7.html',
         lotrinhtoan8: 'lotrinhtoan8.html',

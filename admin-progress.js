@@ -11,7 +11,7 @@
     let weakThreshold = normalizeThreshold(localStorage.getItem('progress_weak_threshold') || 80);
     let inactiveDays = normalizeInactiveDays(localStorage.getItem('progress_inactive_days') || 7);
 
-    const LOTRINH_SUBJECTS = ['Toán 9', 'Toán 8', 'Toán 7', 'Toán 6', 'Toán 4'];
+    const LOTRINH_SUBJECTS = ['Toán 9', 'Toán 8', 'Toán 7', 'Toán 6', 'Toán 5', 'Toán 4'];
 
     function el(id) { return document.getElementById(id); }
 

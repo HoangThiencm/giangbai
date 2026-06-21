@@ -29,6 +29,7 @@ function page_catalog(): array
 {
     return [
         'lotrinhtoan4' => ['title' => 'Lộ trình tự học Toán 4', 'url' => 'lotrinhtoan4.html'],
+        'lotrinhtoan5' => ['title' => 'Lộ trình tự học Toán 5', 'url' => 'lotrinhtoan5.html'],
         'lotrinhtoan6' => ['title' => 'Lộ trình tự học Toán 6', 'url' => 'lotrinhtoan6.html'],
         'lotrinhtoan7' => ['title' => 'Lộ trình tự học Toán 7', 'url' => 'lotrinhtoan7.html'],
         'lotrinhtoan8' => ['title' => 'Lộ trình tự học Toán 8', 'url' => 'lotrinhtoan8.html'],
@@ -59,6 +60,7 @@ function lotrinh_page_subjects(): array
 {
     return [
         'lotrinhtoan4' => 'Toán 4',
+        'lotrinhtoan5' => 'Toán 5',
         'lotrinhtoan6' => 'Toán 6',
         'lotrinhtoan7' => 'Toán 7',
         'lotrinhtoan8' => 'Toán 8',
@@ -73,7 +75,7 @@ function subject_for_lotrinh_page(string $page): ?string
 
 function lotrinh_route_order(): array
 {
-    return ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+    return ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 }
 
 function ensure_teacher_lotrinh_scope(array $pages): array

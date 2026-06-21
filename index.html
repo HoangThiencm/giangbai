@@ -771,12 +771,13 @@
             try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
             const routeMap = {
                 lotrinhtoan4: 'lotrinhtoan4.html',
+                lotrinhtoan5: 'lotrinhtoan5.html',
                 lotrinhtoan6: 'lotrinhtoan6.html',
                 lotrinhtoan7: 'lotrinhtoan7.html',
                 lotrinhtoan8: 'lotrinhtoan8.html',
                 lotrinhtoan9: 'lotrinhtoan9.html'
             };
-            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
             const canOpen = pageKey => allowedPages.includes(pageKey)
                 || (pageKey === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
             const primary = routeOrder.find(pageKey => canOpen(pageKey) && routeMap[pageKey]);
@@ -1096,6 +1097,11 @@
                             <span class="tool-lotrinh-label">Toán 4</span>
                             <i class="fas fa-arrow-right"></i>
                         </a>
+                        <a href="lotrinhtoan5.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
+                            <span class="tool-lotrinh-grade">5</span>
+                            <span class="tool-lotrinh-label">Toán 5</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
                         <a href="lotrinhtoan6.html" data-student-lotrinh-card="1" class="tool-lotrinh-pill">
                             <span class="tool-lotrinh-grade">6</span>
                             <span class="tool-lotrinh-label">Toán 6</span>
@@ -1180,12 +1186,13 @@
             const routeMap = {
                 lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6', grade: 6 },
                 lotrinhtoan4: { url: 'lotrinhtoan4.html', label: 'Toán 4', grade: 4 },
+                lotrinhtoan5: { url: 'lotrinhtoan5.html', label: 'Toán 5', grade: 5 },
                 lotrinhtoan6: { url: 'lotrinhtoan6.html', label: 'Toán 6', grade: 6 },
                 lotrinhtoan7: { url: 'lotrinhtoan7.html', label: 'Toán 7', grade: 7 },
                 lotrinhtoan8: { url: 'lotrinhtoan8.html', label: 'Toán 8', grade: 8 },
                 lotrinhtoan9: { url: 'lotrinhtoan9.html', label: 'Toán 9', grade: 9 }
             };
-            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
             const allowedSet = new Set(
                 allowedPages.map(page => (page === 'lotrinh' ? 'lotrinhtoan6' : page))
             );
