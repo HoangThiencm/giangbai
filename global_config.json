@@ -1,4 +1,6 @@
 {
+  "hf_fallback_url": "https://hoangthiencm-giangbai.hf.space",
+  "hf_fallback_enabled": true,
   "features": {
     "gslides": true,
     "vehinh": true,

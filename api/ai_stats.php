@@ -36,22 +36,9 @@ if ($teacherUser) {
     if (!ai_stats_teacher_tab_enabled()) {
         respond(['error' => 'Admin đã tắt tab Theo dõi AI cho giáo viên.'], 403);
     }
-    $rawPages = $teacherUser['allowed_pages'] ?? null;
-    $pageList = [];
-    if ($rawPages !== null && $rawPages !== '') {
-        $decoded = json_decode((string)$rawPages, true);
-        $pageList = is_array($decoded) ? $decoded : [];
-    }
-    $allowedPages = normalize_pages($pageList);
-    $hasLotrinh = false;
-    foreach ($allowedPages as $page) {
-        if (subject_for_lotrinh_page($page) !== null) {
-            $hasLotrinh = true;
-            break;
-        }
-    }
-    if (!$hasLotrinh) {
-        respond(['error' => 'Tài khoản chưa được admin mở lộ trình nào để theo dõi AI.'], 403);
+    $allowedPages = normalize_pages(json_decode($teacherUser['allowed_pages_json'] ?? '[]', true));
+    if (!in_array('theodoiai', $allowedPages, true)) {
+        respond(['error' => 'Tài khoản chưa được admin cấp quyền xem thống kê AI.'], 403);
     }
 }
 

@@ -1401,6 +1401,9 @@
             thitructuyen: { title: 'Thi Online', url: 'thitructuyen.html' },
             kttx: { title: 'Đề kiểm tra thường xuyên', url: 'kttx.html' }
         };
+        const teacherOnlyPages = {
+            theodoiai: { title: 'Theo dõi AI lộ trình', url: 'theodoi-ai.html' }
+        };
         let editingStudent = null;
 
         function ensureStudentCreatePanel() {
@@ -1528,18 +1531,20 @@
             `;
             dashboard.insertBefore(panel, listCard);
 
-            renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
-            renderPageChecks('importAllowedPages', ['lotrinhtoan6']);
+            renderPageChecks('createAllowedPages', ['lotrinhtoan6'], 'student');
+            renderPageChecks('importAllowedPages', ['lotrinhtoan6'], 'student');
             renderDurationOptions('createDurationOption', 'forever');
             const createRoleSelect = document.querySelector('#createStudentForm select[name="role"]');
             if (createRoleSelect) {
                 createRoleSelect.addEventListener('change', () => {
                     const role = createRoleSelect.value;
+                    const preserved = selectedPagesFrom(document.getElementById('createAllowedPages'));
                     syncAllowedPagesLabels(role);
                     syncClassNameLabels(role);
                     renderPageChecks(
                         'createAllowedPages',
-                        role === 'teacher' ? mathRouteOrder : ['lotrinhtoan6']
+                        preserved.length ? preserved : (role === 'teacher' ? mathRouteOrder : ['lotrinhtoan6']),
+                        role
                     );
                 });
                 syncAllowedPagesLabels(createRoleSelect.value);
@@ -1933,11 +1938,19 @@
             }
         }
 
-        function renderPageChecks(containerId, selectedPages) {
+        function pageEntriesForRole(role = 'student') {
+            const entries = Object.entries(hostingPages);
+            if (role === 'teacher') {
+                return [...entries, ...Object.entries(teacherOnlyPages)];
+            }
+            return entries;
+        }
+
+        function renderPageChecks(containerId, selectedPages, role = 'student') {
             const normalizedPages = (selectedPages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
             const selected = new Set(normalizedPages);
-            document.getElementById(containerId).innerHTML = Object.entries(hostingPages).map(([id, page]) => `
-                <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+            document.getElementById(containerId).innerHTML = pageEntriesForRole(role).map(([id, page]) => `
+                <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700${id === 'theodoiai' ? ' border-sky-200 bg-sky-50' : ''}">
                     <input type="checkbox" value="${id}" ${selected.has(id) ? 'checked' : ''} class="allowed-page w-4 h-4 text-blue-600 rounded">
                     ${page.title}
                 </label>
@@ -2306,9 +2319,10 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
                 form.reset();
-                renderPageChecks('createAllowedPages', ['lotrinhtoan6']);
-                renderDurationOptions('createDurationOption', 'forever');
                 const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
+                const resetRole = roleSelect?.value || 'student';
+                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? mathRouteOrder : ['lotrinhtoan6'], resetRole);
+                renderDurationOptions('createDurationOption', 'forever');
                 if (roleSelect) {
                     syncAllowedPagesLabels(roleSelect.value);
                     syncClassNameLabels(roleSelect.value);
@@ -2361,15 +2375,21 @@
                 <p id="editAllowedPagesLabel" class="text-sm font-bold text-slate-700 mb-2"></p>
                 <div id="editAllowedPages" class="space-y-2"></div>
             `;
-            renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6']);
+            renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6'], editingStudent.role || 'student');
             syncAllowedPagesLabels(editingStudent.role || 'student');
             syncClassNameLabels(editingStudent.role || 'student', editingStudent.class_name || '');
             const editRoleSelect = document.getElementById('editRole');
             if (editRoleSelect) {
                 editRoleSelect.onchange = () => {
                     const preservedClass = readClassNameFromForm('edit');
+                    const preservedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
                     syncAllowedPagesLabels(editRoleSelect.value);
                     syncClassNameLabels(editRoleSelect.value, preservedClass);
+                    renderPageChecks(
+                        'editAllowedPages',
+                        preservedPages.length ? preservedPages : ['lotrinhtoan6'],
+                        editRoleSelect.value
+                    );
                 };
             }
             renderDurationOptions('editDurationOption', editingStudent.expires_option || 'forever');

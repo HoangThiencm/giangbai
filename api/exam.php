@@ -253,12 +253,22 @@ function build_exam_meta(array $data, PDO $pdo): array
         $roster = [];
     }
 
-    return [
+    $meta = [
         'google_sheet_id' => $data['google_sheet_id'] ?? null,
         'student_mode' => $mode,
         'class_name' => $className,
         'roster' => $roster,
     ];
+    if (isset($data['matrixConfig']) && is_array($data['matrixConfig'])) {
+        $meta['matrixConfig'] = $data['matrixConfig'];
+    }
+    if (!empty($data['subject'])) {
+        $meta['subject'] = trim((string)$data['subject']);
+    }
+    if (!empty($data['grade'])) {
+        $meta['grade'] = trim((string)$data['grade']);
+    }
+    return $meta;
 }
 
 function roster_matches_submission(array $roster, string $name, string $sbd): bool
@@ -295,6 +305,9 @@ function exam_to_public_payload(array $row): array
             'student_mode' => $studentMode,
             'class_name' => trim((string)($meta['class_name'] ?? '')),
             'roster' => $studentMode === 'class' ? normalize_roster($meta['roster'] ?? []) : [],
+            'matrixConfig' => $meta['matrixConfig'] ?? null,
+            'subject' => $meta['subject'] ?? '',
+            'grade' => $meta['grade'] ?? '',
         ],
         'questions' => $questions,
     ];

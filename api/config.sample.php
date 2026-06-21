@@ -14,6 +14,9 @@ define('ADMIN_KEY', 'change-this-admin-key');
 define('APP_SESSION_NAME', 'giangbai_session');
 define('APP_TIMEZONE', 'Asia/Ho_Chi_Minh');
 
+// HuggingFace fallback URL (used when hosting AI/Word processing fails).
+define('HF_FALLBACK_URL', 'https://hoangthiencm-giangbai.hf.space');
+
 // Optional Gemini AI support for lesson explanations.
 // You can set one key as a string or multiple keys as an array.
 define('GEMINI_API_KEYS', []);

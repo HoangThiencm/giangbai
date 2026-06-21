@@ -10,6 +10,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="hf-fallback-client.js?v=20260621"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
@@ -2126,8 +2127,15 @@ YÊU CẦU:
                 saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `De_Thi_Toan_${info.grade}_raw.doc`);
             };
 
-            // Lưu đề/ma trận lên backend (cùng API với thitructuyen)
-            const API_BASE = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
+            const examFetchJson = async (hostUrl, hfUrl, init = {}, label = 'exam') => {
+                const res = await GiangBaiApi.fetchWithFallback(hostUrl, hfUrl, {
+                    credentials: 'include',
+                    ...init,
+                }, label);
+                if (!res.ok) throw new Error(await res.text());
+                return res.json();
+            };
+
             const saveExamToBackend = async (isMatrixOnly = false) => {
                 const userEmail = localStorage.getItem("userEmail") || "";
                 if (!userEmail) {
@@ -2187,12 +2195,16 @@ YÊU CẦU:
                     matrixConfig: matrixConfig
                 };
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/save`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!res.ok) throw new Error(await res.text());
+                    await examFetchJson(
+                        GiangBaiApi.examUrl('save'),
+                        GiangBaiApi.hfExamUrl('save'),
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        },
+                        'exam-save'
+                    );
                     alert(isMatrixOnly ? "Đã lưu ma trận vào kho thành công!" : "Đã lưu đề vào kho thành công!");
                 } catch (e) {
                     alert("Lỗi lưu: " + (e.message || e));
@@ -2209,8 +2221,12 @@ YÊU CẦU:
                 setShowKhoDeModal(true);
                 setLoadingKhoDe(true);
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`);
-                    const data = await res.json();
+                    const data = await examFetchJson(
+                        `${GiangBaiApi.examUrl('my-exams')}&email=${encodeURIComponent(userEmail)}`,
+                        `${GiangBaiApi.hfUrl()}/api/exam/my-exams?email=${encodeURIComponent(userEmail)}`,
+                        { method: 'GET' },
+                        'exam-list'
+                    );
                     setSavedExamsList(Array.isArray(data) ? data : []);
                 } catch (e) {
                     setSavedExamsList([]);
@@ -2266,9 +2282,12 @@ YÊU CẦU:
 
             const loadExamFromKho = async (examId) => {
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/get/${examId}`);
-                    if (!res.ok) throw new Error("Không tìm thấy đề");
-                    const data = await res.json();
+                    const data = await examFetchJson(
+                        GiangBaiApi.examUrl(`get/${examId}`),
+                        GiangBaiApi.hfExamUrl(`get/${examId}`),
+                        { method: 'GET' },
+                        'exam-get'
+                    );
                     const bp = questionsToBlueprintSections(data.questions || [], data.info);
                     setInfo(prev => ({
                         ...prev,
@@ -2294,8 +2313,12 @@ YÊU CẦU:
             const deleteExamFromKho = async (examId, exTitle) => {
                 if (!window.confirm(`Xóa đề "${exTitle}"?\n\nHành động này không thể hoàn tác.`)) return;
                 try {
-                    const res = await fetch(`${API_BASE}/api/exam/delete/${examId}`, { method: 'DELETE' });
-                    if (!res.ok) throw new Error(await res.text());
+                    await examFetchJson(
+                        GiangBaiApi.examUrl(`delete/${examId}`),
+                        GiangBaiApi.hfExamUrl(`delete/${examId}`),
+                        { method: 'DELETE' },
+                        'exam-delete'
+                    );
                     setSavedExamsList(prev => prev.filter(ex => ex.id !== examId));
                 } catch (e) {
                     alert("Lỗi xóa đề: " + (e.message || e));

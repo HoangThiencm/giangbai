@@ -65,6 +65,12 @@ if (isset($nextConfig['shopaikey_model'])) {
 if (isset($nextConfig['shopaikey_enabled'])) {
     $nextConfig['shopaikey_enabled'] = (bool)$nextConfig['shopaikey_enabled'];
 }
+if (isset($nextConfig['hf_fallback_url'])) {
+    $nextConfig['hf_fallback_url'] = rtrim(trim((string)$nextConfig['hf_fallback_url']), '/');
+}
+if (array_key_exists('hf_fallback_enabled', $nextConfig)) {
+    $nextConfig['hf_fallback_enabled'] = (bool)$nextConfig['hf_fallback_enabled'];
+}
 
 $json = json_encode($nextConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if ($json === false) {

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trộn Đề Thi Word Pro - 3 Bước</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="hf-fallback-client.js?v=20260621"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
@@ -374,7 +375,15 @@
     </div>
 
     <script>
-        const BASE_API_URL = "https://hoangthiencm-giangbai.hf.space";
+        async function trondeFetch(route, init = {}, label = 'tronde') {
+            return GiangBaiApi.fetchWithFallback(
+                GiangBaiApi.trondeUrl(route),
+                GiangBaiApi.hfTrondeUrl(route),
+                init,
+                label
+            );
+        }
+
         let currentStep = 1;
         let currentFile = null;
         let currentAnswers = null;
@@ -437,10 +446,10 @@
             formData.append('file', currentFile);
 
             try {
-                const response = await fetch(`${BASE_API_URL}/check-docx-clean`, {
+                const response = await trondeFetch('check-docx-clean', {
                     method: 'POST',
                     body: formData
-                });
+                }, 'check-docx');
 
                 const result = await response.json();
 
@@ -481,10 +490,10 @@
             formData.append('file', currentFile);
 
             try {
-                const response = await fetch(`${BASE_API_URL}/auto-clean-docx`, {
+                const response = await trondeFetch('auto-clean-docx', {
                     method: 'POST',
                     body: formData
-                });
+                }, 'auto-clean');
 
                 if (response.ok) {
                     const blob = await response.blob();
@@ -551,10 +560,10 @@
             formData.append('file', currentFile);
 
             try {
-                const response = await fetch(`${BASE_API_URL}/read-answers-from-file`, {
+                const response = await trondeFetch('read-answers-from-file', {
                     method: 'POST',
                     body: formData
-                });
+                }, 'read-answers-auto');
 
                 const result = await response.json();
 
@@ -643,10 +652,10 @@
             formData.append('file', fileInput.files[0]);
 
             try {
-                const response = await fetch(`${BASE_API_URL}/read-answers-from-file`, {
+                const response = await trondeFetch('read-answers-from-file', {
                     method: 'POST',
                     body: formData
-                });
+                }, 'read-answers-manual');
 
                 const result = await response.json();
 
@@ -765,10 +774,10 @@
                 // Gửi model từ localStorage
                 formData.append('model', model);
 
-                const apiResponse = await fetch(`${BASE_API_URL}/ocr-answers-from-image`, {
+                const apiResponse = await trondeFetch('ocr-answers-from-image', {
                     method: 'POST',
                     body: formData
-                });
+                }, 'ocr-answers');
 
                 const result = await apiResponse.json();
 
@@ -827,10 +836,10 @@
             }
 
             try {
-                const response = await fetch(`${BASE_API_URL}/mix-word-exam`, {
+                const response = await trondeFetch('mix-word-exam', {
                     method: 'POST',
                     body: formData
-                });
+                }, 'mix-word');
 
                 if (response.ok) {
                     const blob = await response.blob();

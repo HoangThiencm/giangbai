@@ -789,47 +789,21 @@
                 SystemConfig.renderConfig();
             },
 
-            renderConfig: () => {
-                // 1. Render Gemini Status
-                const keys = SystemConfig.getApiKeys();
-                const geminiStatus = document.getElementById('geminiStatus');
-                if (keys.length > 0) {
-                    geminiStatus.innerHTML = `<div class="flex justify-between items-center bg-green-50 p-3 rounded border border-green-200">
-                        <span class="text-green-700 font-bold"><i class="fas fa-check-circle"></i> Đã nạp ${keys.length} API Keys</span>
-                        <span class="text-xs text-gray-500">Ưu tiên: Gemini 2.5 Flash</span>
-                    </div>`;
-                } else {
-                    geminiStatus.innerHTML = `<div class="bg-red-50 p-2 rounded border border-red-200 text-red-600 text-sm italic flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Chưa có API Key nào.</div>`;
-                }
+            loadHostingFallbackConfig: async () => {
+                try {
+                    const res = await fetch('global_config.json', { cache: 'no-store' });
+                    if (!res.ok) return;
+                    const cfg = await res.json();
+                    if (cfg.hf_fallback_url) {
+                        localStorage.setItem('hf_fallback_url', String(cfg.hf_fallback_url).replace(/\/$/, ''));
+                    }
+                    localStorage.setItem('hf_fallback_enabled', cfg.hf_fallback_enabled === false ? 'false' : 'true');
+                } catch (_) { /* noop */ }
+            },
 
-                // 2. Render HF Status
-                const hfTokens = SystemConfig.getHFTokens();
-                const hfContainer = document.getElementById('hfConfigContainer');
-                if (hfTokens.length > 0) {
-                    hfContainer.innerHTML = `
-                        <div class="flex justify-between items-center bg-purple-50 p-3 rounded border border-purple-200">
-                            <div>
-                                <span class="text-purple-700 font-bold block"><i class="fas fa-robot"></i> Hugging Face</span>
-                                <span class="text-xs text-gray-500">Đã nạp ${hfTokens.length} Tokens (Xoay vòng)</span>
-                            </div>
-                            <button onclick="SystemConfig.clearHFToken()" class="text-red-500 hover:text-red-700 text-sm underline">Xóa</button>
-                        </div>
-                    `;
-                } else {
-                    hfContainer.innerHTML = `
-                        <div class="flex items-center gap-2 mb-2">
-                            <label class="flex-1 cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-300 rounded px-4 py-2 text-sm font-medium transition text-center flex items-center justify-center gap-2">
-                                <i class="fas fa-file-upload"></i> Nạp file Tokens.txt
-                                <input type="file" onchange="SystemConfig.handleFile(this.files[0], 'hf')" class="hidden"/>
-                            </label>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="hfTokenInput" placeholder="Hoặc dán 1 Token (hf_...)" class="flex-1 border p-2 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none">
-                            <button onclick="SystemConfig.saveHFToken()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700">Lưu</button>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1">Token HF giúp chạy model Qwen 2.5 miễn phí khi Gemini quá tải.</p>
-                    `;
-                }
+            setHfFallbackEnabled: (enabled) => {
+                localStorage.setItem('hf_fallback_enabled', enabled ? 'true' : 'false');
+                SystemConfig.renderConfig();
             },
 
             toggleGuide: (id) => {
@@ -899,7 +873,23 @@
                             <input type="text" id="hfTokenInput" placeholder="Hoặc dán 1 Token (hf_...)" class="flex-1 border p-2 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none">
                             <button onclick="SystemConfig.saveHFToken()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700">Lưu</button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Token HF giúp chạy model Qwen 2.5 miễn phí khi Gemini quá tải.</p>
+                        <p class="text-xs text-gray-400 mt-1">Token HF dự phòng cho Ma trận đề (Qwen). Hosting lỗi sẽ tự fallback Space HF.</p>
+                    `;
+                }
+
+                const hfFallbackContainer = document.getElementById('hfFallbackContainer');
+                if (hfFallbackContainer) {
+                    const enabled = localStorage.getItem('hf_fallback_enabled') !== 'false';
+                    const url = localStorage.getItem('hf_fallback_url') || 'https://hoangthiencm-giangbai.hf.space';
+                    hfFallbackContainer.innerHTML = `
+                        <div class="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
+                            <label class="flex items-center gap-2 font-semibold text-slate-700">
+                                <input type="checkbox" ${enabled ? 'checked' : ''} onchange="SystemConfig.setHfFallbackEnabled(this.checked)">
+                                Bật fallback HuggingFace khi hosting lỗi
+                            </label>
+                            <p class="text-xs text-slate-500 mt-2">URL dự phòng: <code>${url}</code></p>
+                            <p class="text-xs text-slate-500 mt-1">Ưu tiên hosting (api/exam_ai.php, api/tronde.php). Tắt khi đã ổn định hoàn toàn.</p>
+                        </div>
                     `;
                 }
 
@@ -1377,6 +1367,11 @@
                     <div id="hfConfigContainer"></div>
                 </div>
 
+                <div class="mt-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Fallback hosting → HuggingFace</label>
+                    <div id="hfFallbackContainer"></div>
+                </div>
+
                 <div class="bg-yellow-50 p-3 rounded text-xs text-yellow-800 mt-4 border border-yellow-100 flex gap-2">
                     <i class="fas fa-info-circle mt-0.5"></i>
                     <span>Dữ liệu cấu hình được lưu cục bộ trên trình duyệt của bạn (Local Storage) để đảm bảo quyền
@@ -1388,7 +1383,7 @@
 
     <script src="ai-stats-panel.js?v=20260621-teacher-hub-1"></script>
     <script>
-        SystemConfig.renderConfig();
+        SystemConfig.loadHostingFallbackConfig().finally(() => SystemConfig.renderConfig());
 
         (async function setupTeacherLotrinhHub() {
             if (localStorage.getItem('userRole') !== 'teacher') return;
@@ -1501,7 +1496,8 @@
                     </a>
                 `);
             }
-            if (teacherTabs.ai_stats) {
+            const canViewAiStats = teacherTabs.ai_stats && allowedSet.has('theodoiai');
+            if (canViewAiStats) {
                 actionCards.push(`
                     <a href="theodoi-ai.html" class="lotrinh-action-card ai">
                         <span class="lotrinh-action-icon"><i class="fas fa-robot"></i></span>
@@ -1514,11 +1510,11 @@
                 `);
             }
 
-            const enabledCount = [teacherTabs.design, teacherTabs.progress_stats, teacherTabs.ai_stats].filter(Boolean).length;
+            const enabledCount = [teacherTabs.design, teacherTabs.progress_stats, canViewAiStats].filter(Boolean).length;
             const introParts = [];
             if (teacherTabs.design) introParts.push('<strong class="text-white">soạn bài</strong>');
             if (teacherTabs.progress_stats) introParts.push('<strong class="text-white">theo dõi tiến độ</strong> học sinh');
-            if (teacherTabs.ai_stats) introParts.push('<strong class="text-white">theo dõi AI</strong> lộ trình');
+            if (canViewAiStats) introParts.push('<strong class="text-white">theo dõi AI</strong> lộ trình');
             const introText = introParts.length
                 ? `${enabledCount} việc chính: ${introParts.join(', ').replace(/, ([^,]*)$/, ' và $1')}.`
                 : 'Liên hệ admin nếu cần mở thêm chức năng lộ trình.';
@@ -1540,7 +1536,7 @@
                     </div>
             ` : '';
 
-            const aiStatsSection = teacherTabs.ai_stats ? `
+            const aiStatsSection = canViewAiStats ? `
                     <div class="mt-5 border-t border-white/10 pt-5">
                         <div class="teacher-ai-stats-embed">
                             <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1585,7 +1581,7 @@
                 </div>
             `;
 
-            if (teacherTabs.ai_stats) {
+            if (canViewAiStats) {
                 const refreshAi = () => window.loadAiStats?.(true, {
                     useSession: true,
                     compact: true,

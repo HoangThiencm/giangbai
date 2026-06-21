@@ -38,6 +38,7 @@ function page_catalog(): array
         'thitructuyen' => ['title' => 'Thi Online', 'url' => 'thitructuyen.html'],
         'kttx' => ['title' => 'Đề kiểm tra thường xuyên', 'url' => 'kttx.html'],
         'rutgon' => ['title' => 'Link rút gọn & QR', 'url' => 'rutgon.html'],
+        'theodoiai' => ['title' => 'Theo dõi AI lộ trình', 'url' => 'theodoi-ai.html'],
     ];
 }
 

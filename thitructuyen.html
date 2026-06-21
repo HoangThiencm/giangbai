@@ -14,6 +14,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="hf-fallback-client.js?v=20260621"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -346,14 +347,29 @@
 
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const AI_API = localStorage.getItem("omr_backend_url") || "https://hoangthiencm-giangbai.hf.space";
-        const EXAM_API = (() => {
-            const override = localStorage.getItem("exam_api_url");
-            if (override) return override.replace(/\/$/, "");
-            const path = window.location.pathname.replace(/[^/]*$/, "");
-            return `${window.location.origin}${path}api/exam.php`;
-        })();
-        const examUrl = (route) => `${EXAM_API}?route=${encodeURIComponent(String(route || "").replace(/^\//, ""))}`;
+        const examUrl = (route) => GiangBaiApi.examUrl(route);
+
+        const aiPost = async (route, body, config = {}) => {
+            const { res } = await GiangBaiApi.axiosPostWithFallback(
+                axios,
+                GiangBaiApi.examAiUrl(route),
+                GiangBaiApi.hfExamUrl(route),
+                body,
+                config,
+                'exam-ai'
+            );
+            return res;
+        };
+
+        const aiPostForm = async (route, formData) => {
+            const res = await GiangBaiApi.fetchWithFallback(
+                GiangBaiApi.examAiUrl(route),
+                GiangBaiApi.hfExamUrl(route),
+                { method: 'POST', body: formData },
+                'process_paper'
+            );
+            return res.json();
+        };
 
         const formatApiError = (err, fallback = "Đã xảy ra lỗi.") => {
             const data = err?.response?.data;
@@ -605,7 +621,7 @@
 
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
 
-                    const res = await axios.post(`${AI_API}/api/exam/normalize_manual`, {
+                    const res = await aiPost('normalize_manual', {
                         cropped_data: base64,
                         api_keys: keys,
                         model: model
@@ -669,7 +685,7 @@
                     const keys = JSON.parse(localStorage.getItem('global_gemini_keys') || "[]");
                     const model = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
-                    const res = await axios.post(`${AI_API}/api/exam/import_answer_sheet`, { image_data: dataUrl, api_keys: keys, model: model });
+                    const res = await aiPost('import_answer_sheet', { image_data: dataUrl, api_keys: keys, model: model });
                     if (res.data.status === 'ok') setAiResult(res.data.data);
                     else alert("Lỗi: " + res.data.message);
                 } catch (err) { alert("Lỗi: " + err.message); } finally { setLoading(false); }
@@ -1069,12 +1085,12 @@
                 setLoadingMsg("Đang xử lý PDF...");
                 const fd = new FormData(); fd.append("file", file);
                 try {
-                    const res = await axios.post(`${AI_API}/api/exam/process_paper`, fd);
-                    if (res.data.status === 'ok') {
-                        setPages(res.data.pages);
-                        if (res.data.pages.length) setActivePageId(res.data.pages[0].id);
+                    const data = await aiPostForm('process_paper', fd);
+                    if (data.status === 'ok') {
+                        setPages(data.pages);
+                        if (data.pages.length) setActivePageId(data.pages[0].id);
                         setStep(2);
-                    } else alert(res.data.message);
+                    } else alert(data.message || 'Không xử lý được file.');
                 } catch (err) { alert(err.message); } finally { setLoadingMsg(""); }
             };
 
@@ -1111,12 +1127,9 @@
                 const keys = getApiKeys();
                 if (!keys.length) return alert("Thiếu API Key! Vui lòng vào trang chủ nạp Key.");
 
-                const evtSource = new EventSource(`${AI_API}/api/exam/progress/${page.id}`);
-                evtSource.onmessage = (e) => {
-                    const value = parseInt(e.data);
+                const progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
                     setPageProgress(prev => ({ ...prev, [page.id]: value }));
-                    if (value >= 100) evtSource.close();
-                };
+                });
 
                 setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'processing' } : p));
                 setActivePageId(page.id);
@@ -1124,11 +1137,13 @@
                 const model = localStorage.getItem('default_gemini_module') || 'gemini-1.5-flash';
 
                 try {
-                    const res = await axios.post(`${AI_API}/api/exam/normalize_segment`, {
+                    const res = await aiPost('normalize_segment', {
                         image_data: page.image_data,
                         api_keys: keys,
-                        model: model
+                        model: model,
+                        page_id: page.id
                     }, { timeout: 180000 });
+                    progressStream.close();
 
                     if (res.data.status === 'ok') {
                         const newQs = res.data.data.map((q, i) => ({ ...q, id: Date.now() + Math.random() }));
@@ -1136,6 +1151,7 @@
                         setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'done', q_count: newQs.length } : p));
                     }
                 } catch (e) {
+                    progressStream.close();
                     setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: 'error' } : p));
                     alert(e.message);
                 }

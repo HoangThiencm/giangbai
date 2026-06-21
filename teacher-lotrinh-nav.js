@@ -51,6 +51,15 @@
         return localStorage.getItem(flagKey) !== '0';
     }
 
+    function teacherCanViewAiStats() {
+        if (!teacherTabEnabled('teacher_ai_stats_enabled')) return false;
+        try {
+            return JSON.parse(localStorage.getItem('allowedPages') || '[]').includes('theodoiai');
+        } catch {
+            return false;
+        }
+    }
+
     function detectMode() {
         const file = currentFile();
         if (file === 'theodoi-ai.html') return 'ai-stats';
@@ -141,7 +150,7 @@
         const designActive = mode === 'design' || mode === 'preview';
         const showDesign = teacherTabEnabled('teacher_design_enabled');
         const showStats = teacherTabEnabled('teacher_progress_stats_enabled');
-        const showAiStats = teacherTabEnabled('teacher_ai_stats_enabled');
+        const showAiStats = teacherCanViewAiStats();
 
         const designLink = showDesign
             ? (mode === 'design' || mode === 'preview'

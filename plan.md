@@ -139,6 +139,7 @@
 - [ ] **HS — bài nối ô**: bấm trái rồi phải ghép cặp → nộp → chấm đúng/sai.
 
 ## Các công việc tiếp theo (To-do)
+- [x] **Báo cáo lớp gọn cho giáo viên** (`thongketientrinh.html` + `admin-progress.js`): xuất Excel theo lớp/môn/bài; lọc học sinh dưới ngưỡng điểm tùy chọn; lọc học sinh chưa đăng nhập 3/7/14/30 ngày; khối **Việc cần xử lý hôm nay** ưu tiên điểm yếu, chưa vào học và chưa bắt đầu bài.
 - [ ] Tiếp tục hoàn thiện bài tập: tự luận nâng cao, tinh chỉnh UX kéo/nối ô trên mobile.
 - [ ] Kiểm tra thực tế phần tính điểm (`score`) và các chỉ số kỹ năng (`skill_scores_json`) trên dữ liệu nhiều bài học/học sinh để đảm bảo báo cáo giáo viên khớp UI học sinh.
 - [x] Giao diện admin nhập/lưu key Gemini và ShopAIKey lên hosting (`admin.html` + `global_config.json`).

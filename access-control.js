@@ -166,8 +166,8 @@
             window.location.href = 'index.html';
             return;
         }
-        if (!hasLotrinhScope(allowedPages)) {
-            alert('Tài khoản chưa được admin mở lộ trình nào để theo dõi AI.');
+        if (!canOpenPage('theodoiai', allowedPages)) {
+            alert('Tài khoản chưa được admin cấp quyền xem Theo dõi AI.');
             window.location.href = 'index.html';
         }
         return;

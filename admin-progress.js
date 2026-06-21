@@ -8,6 +8,8 @@
     let classSubjects = {};
     let selectedLessonId = '';
     let selectedClassName = localStorage.getItem('progress_class_filter') || '';
+    let weakThreshold = normalizeThreshold(localStorage.getItem('progress_weak_threshold') || 80);
+    let inactiveDays = normalizeInactiveDays(localStorage.getItem('progress_inactive_days') || 7);
 
     const LOTRINH_SUBJECTS = ['Toán 9', 'Toán 8', 'Toán 7', 'Toán 6', 'Toán 4'];
 
@@ -199,7 +201,7 @@
                     </button>
                 </div>
             </div>
-            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
                 <label class="block text-sm font-bold text-slate-700">Bài học
                     <select id="progressLessonSelect" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none"></select>
                 </label>
@@ -211,15 +213,29 @@
                 <label class="block text-sm font-bold text-slate-700">Lọc trạng thái
                     <select id="progressStatusFilter" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none">
                         <option value="">Tất cả</option>
+                        <option value="weak">Điểm dưới ngưỡng</option>
+                        <option value="inactive">Chưa vào học</option>
                         <option value="needs">Cần luyện thêm</option>
                         <option value="mastered">Đã học xong</option>
                         <option value="not_started">Chưa bắt đầu</option>
+                    </select>
+                </label>
+                <label class="block text-sm font-bold text-slate-700">Ngưỡng điểm yếu
+                    <input id="progressWeakThreshold" type="number" min="0" max="100" step="5" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none" value="80">
+                </label>
+                <label class="block text-sm font-bold text-slate-700">Chưa vào học từ
+                    <select id="progressInactiveDays" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="3">3 ngày</option>
+                        <option value="7">7 ngày</option>
+                        <option value="14">14 ngày</option>
+                        <option value="30">30 ngày</option>
                     </select>
                 </label>
                 <label class="block text-sm font-bold text-slate-700">Tìm học sinh
                     <input id="progressSearch" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Tên, tài khoản...">
                 </label>
             </div>
+            <section id="progressTodayActions" class="mt-5 rounded-lg border border-amber-200 bg-amber-50/70 p-4"></section>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3"></div>
             <div class="mt-5 overflow-x-auto rounded border border-slate-200">
                 <table class="min-w-full table-fixed divide-y divide-slate-200">
@@ -268,6 +284,26 @@
             render();
         };
         el('progressStatusFilter').onchange = render;
+        const weakInput = el('progressWeakThreshold');
+        if (weakInput) {
+            weakInput.value = String(weakThreshold);
+            weakInput.onchange = event => {
+                weakThreshold = normalizeThreshold(event.target.value);
+                event.target.value = String(weakThreshold);
+                localStorage.setItem('progress_weak_threshold', String(weakThreshold));
+                render();
+            };
+        }
+        const inactiveSelect = el('progressInactiveDays');
+        if (inactiveSelect) {
+            inactiveSelect.value = String(inactiveDays);
+            inactiveSelect.onchange = event => {
+                inactiveDays = normalizeInactiveDays(event.target.value);
+                event.target.value = String(inactiveDays);
+                localStorage.setItem('progress_inactive_days', String(inactiveDays));
+                render();
+            };
+        }
         el('progressSearch').oninput = render;
     }
 
@@ -312,13 +348,57 @@
         }
     }
 
+    function normalizeThreshold(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 80;
+        return Math.max(0, Math.min(100, Math.round(parsed)));
+    }
+
+    function normalizeInactiveDays(value) {
+        const parsed = Number(value);
+        return [3, 7, 14, 30].includes(parsed) ? parsed : 7;
+    }
+
+    function scopeRows() {
+        return rows.filter(row => !selectedClassName || normalizeClassName(row.class_name) === selectedClassName);
+    }
+
+    function parseServerDate(value) {
+        if (!value) return null;
+        const normalized = String(value).includes('T') ? String(value) : String(value).replace(' ', 'T');
+        const parsed = new Date(normalized);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function daysSince(value) {
+        const date = parseServerDate(value);
+        if (!date) return null;
+        return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+    }
+
+    function isWeakRow(row) {
+        return row.status !== 'not_started' && Number(row.score || 0) < weakThreshold;
+    }
+
+    function isInactiveRow(row) {
+        const days = daysSince(row.last_login_at);
+        return days === null || days >= inactiveDays;
+    }
+
+    function inactiveLabel(row) {
+        const days = daysSince(row.last_login_at);
+        if (days === null) return 'Chưa từng đăng nhập';
+        return days === 0 ? 'Đã vào học hôm nay' : `${days} ngày chưa vào học`;
+    }
+
     function filteredRows() {
         const statusFilter = el('progressStatusFilter')?.value || '';
         const search = (el('progressSearch')?.value || '').toLowerCase();
-        return rows.filter(row => {
-            if (selectedClassName && normalizeClassName(row.class_name) !== selectedClassName) return false;
+        return scopeRows().filter(row => {
             const haystack = `${row.full_name} ${row.username} ${row.class_name}`.toLowerCase();
             if (search && !haystack.includes(search)) return false;
+            if (statusFilter === 'weak') return isWeakRow(row);
+            if (statusFilter === 'inactive') return isInactiveRow(row);
             if (statusFilter === 'needs') return row.needs_practice;
             if (statusFilter) return row.status === statusFilter;
             return true;
@@ -414,7 +494,13 @@
         const lessonTitle = lesson ? `${lesson.subject || ''} - ${lesson.title || ''}`.trim() : 'Chưa chọn bài';
         const classLabel = selectedClassName || (isTeacherUser() && teacherManagedClasses().length ? 'Tất cả lớp phụ trách' : 'Tất cả lớp');
         const statusFilter = el('progressStatusFilter')?.value || '';
-        const statusLabels = { needs: 'Cần luyện thêm', mastered: 'Đã học xong', not_started: 'Chưa bắt đầu' };
+        const statusLabels = {
+            weak: `Điểm dưới ${weakThreshold}%`,
+            inactive: `Chưa vào học từ ${inactiveDays} ngày`,
+            needs: 'Cần luyện thêm',
+            mastered: 'Đã học xong',
+            not_started: 'Chưa bắt đầu'
+        };
         const exportedAt = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
         const meta = [
             ['BÁO CÁO TIẾN ĐỘ HỌC SINH'],
@@ -423,7 +509,7 @@
             [`Lọc trạng thái: ${statusLabels[statusFilter] || 'Tất cả'}`],
             [`Xuất lúc: ${exportedAt}`],
             [],
-            ['STT', 'Họ và tên', 'Tài khoản', 'Lớp', 'Trạng thái', 'Điểm luyện tập (%)', 'Tiến trình (%)', 'Cần lưu ý', 'Cập nhật']
+            ['STT', 'Họ và tên', 'Tài khoản', 'Lớp', 'Trạng thái', 'Điểm luyện tập (%)', 'Tiến trình (%)', 'Cần lưu ý', 'Lần vào học gần nhất', 'Số ngày chưa vào học', 'Cập nhật tiến độ']
         ];
         const dataRows = viewRows.map((row, index) => {
             const [statusText] = statusLabel(row.status);
@@ -436,6 +522,8 @@
                 row.score ?? 0,
                 row.status === 'not_started' ? 0 : lessonCompletionFromRow(row),
                 plainText(weakSkillText(row)),
+                row.last_login_at || 'Chưa từng đăng nhập',
+                inactiveLabel(row),
                 row.updated_at || 'Chưa có'
             ];
         });
@@ -520,7 +608,7 @@
             const currentSheet = XLSX.utils.aoa_to_sheet(buildCurrentLessonSheetRows(viewRows));
             currentSheet['!cols'] = [
                 { wch: 5 }, { wch: 24 }, { wch: 16 }, { wch: 18 },
-                { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 34 }, { wch: 18 }
+                { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 34 }, { wch: 22 }, { wch: 22 }, { wch: 18 }
             ];
             XLSX.utils.book_append_sheet(workbook, currentSheet, 'Bai hien tai');
 
@@ -575,6 +663,74 @@
                 <div class="mt-1 text-2xl font-bold ${card[2]}">${card[1]}</div>
             </div>
         `).join('');
+    }
+
+    function applyQuickStatusFilter(value) {
+        const select = el('progressStatusFilter');
+        if (select) select.value = value;
+        const search = el('progressSearch');
+        if (search) search.value = '';
+        render();
+    }
+
+    function renderTodayActions() {
+        const container = el('progressTodayActions');
+        if (!container) return;
+
+        const scoped = scopeRows();
+        const weakRows = scoped.filter(isWeakRow).sort((a, b) => Number(a.score || 0) - Number(b.score || 0));
+        const inactiveRows = scoped.filter(isInactiveRow).sort((a, b) => {
+            const left = daysSince(a.last_login_at);
+            const right = daysSince(b.last_login_at);
+            return (right ?? Number.MAX_SAFE_INTEGER) - (left ?? Number.MAX_SAFE_INTEGER);
+        });
+        const notStartedRows = scoped.filter(row => row.status === 'not_started');
+        const lesson = currentLessonMeta();
+        const lessonName = lesson?.title || 'bài đang chọn';
+
+        const actions = new Map();
+        weakRows.forEach(row => {
+            actions.set(row.student_id, { row, tone: 'rose', reason: `Điểm ${row.score || 0}% dưới ngưỡng ${weakThreshold}%` });
+        });
+        inactiveRows.forEach(row => {
+            if (!actions.has(row.student_id)) {
+                actions.set(row.student_id, { row, tone: 'amber', reason: inactiveLabel(row) });
+            }
+        });
+        notStartedRows.forEach(row => {
+            if (!actions.has(row.student_id)) {
+                actions.set(row.student_id, { row, tone: 'slate', reason: `Chưa bắt đầu ${lessonName}` });
+            }
+        });
+        const priorityItems = [...actions.values()].slice(0, 6);
+
+        container.innerHTML = `
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 class="font-bold text-amber-950"><i class="fas fa-list-check mr-2 text-amber-600"></i>Việc cần xử lý hôm nay</h4>
+                    <p class="mt-1 text-xs text-amber-900">Ưu tiên theo lớp đang chọn và bài <strong>${escapeHtml(lessonName)}</strong>. Ngưỡng điểm: ${weakThreshold}% · chưa vào học: ${inactiveDays} ngày.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" data-progress-filter="weak" class="rounded border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">${weakRows.length} điểm yếu</button>
+                    <button type="button" data-progress-filter="inactive" class="rounded border border-amber-200 bg-white px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100">${inactiveRows.length} chưa vào học</button>
+                    <button type="button" data-progress-filter="not_started" class="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">${notStartedRows.length} chưa bắt đầu</button>
+                </div>
+            </div>
+            <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                ${priorityItems.length ? priorityItems.map(item => {
+                    const tone = item.tone === 'rose'
+                        ? 'border-rose-200 bg-rose-50 text-rose-900'
+                        : (item.tone === 'amber' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-800');
+                    return `<div class="rounded border p-3 ${tone}">
+                        <div class="font-bold text-sm">${escapeHtml(item.row.full_name || item.row.username)}</div>
+                        <div class="mt-1 text-xs">${escapeHtml(item.row.class_name || 'Chưa xếp lớp')} · ${escapeHtml(item.reason)}</div>
+                    </div>`;
+                }).join('') : '<div class="rounded border border-teal-200 bg-teal-50 px-3 py-3 text-sm font-semibold text-teal-800">Không có học sinh cần ưu tiên theo các ngưỡng hiện tại.</div>'}
+            </div>
+        `;
+        container.querySelectorAll('[data-progress-filter]').forEach(button => {
+            button.addEventListener('click', () => applyQuickStatusFilter(button.dataset.progressFilter || ''));
+        });
     }
 
     function compareClassNames(a, b) {
@@ -639,6 +795,7 @@
         if (!body) return;
         const filtered = sortRowsForView(filteredRows());
 
+        renderTodayActions();
         renderSummary(filtered);
 
         if (!filtered.length) {

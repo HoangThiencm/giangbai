@@ -52,6 +52,9 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - GV chỉ xem HS thuộc **lớp phụ trách** (`userClassName` từ `login.html`); dropdown lớp khóa khi chỉ có một lớp. API `admin_progress.php` cũng lọc theo lớp/môn được cấp.
    - Gọi `api/admin_progress.php`; nhóm bảng theo lớp khi xem "Tất cả lớp" (mỗi cột `<td>` thẳng header).
    - Trên trang lộ trình: lọc dropdown bài học theo `LOTRINH_SUBJECT`.
+   - Trang `thongketientrinh.html` có nút **Xuất Excel** theo lớp/bài/môn đang lọc; file gồm sheet bài hiện tại và sheet tổng hợp lớp theo các bài.
+   - Giáo viên tự đặt **ngưỡng điểm yếu** (0–100) và mốc **chưa vào học** (3/7/14/30 ngày). Hai điều kiện trở thành bộ lọc bảng và xuất hiện trong khối **Việc cần xử lý hôm nay** cùng học sinh chưa bắt đầu bài.
+   - Mỗi dòng báo cáo và file Excel hiển thị lần vào học gần nhất, số ngày chưa vào học, điểm, tiến trình và nội dung cần lưu ý.
 
 5. **Backend API (`api/`)**
    - `lessons.php`: Lấy danh sách bài học; **lưu tiến độ** HS (`save_progress`, `reset_progress`); **soạn bài** GV (`save_content` theo `id`/slug, `delete_lesson`, `duplicate_lesson`, `rename_chapter`) — server chặn nếu GV không có quyền môn (`require_lesson_manager`). Auto-migrate schema (`ensure_lesson_schema`, `ensure_progress_schema`) dùng try-catch riêng từng cột.
