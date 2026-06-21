@@ -20,9 +20,10 @@ define('GEMINI_API_KEYS', []);
 define('GEMINI_MODEL', 'gemini-2.5-flash');
 define('GEMINI_ENABLED', true);
 
-// Lightweight learning assistant: retrieves explanations from the lesson
-// content already stored in this system. It runs on ordinary PHP hosting.
-define('LIGHT_AI_ENABLED', true);
+// Cloudflare Workers AI is the primary AI provider. Keep the secret only in
+// api/config.php on the hosting; never expose it through JavaScript or JSON.
+define('CLOUDFLARE_AI_WORKER_URL', 'https://late-bird-fe3b.hoangthien-thcstranphu.workers.dev');
+define('CLOUDFLARE_AI_WORKER_SECRET', 'paste-the-same-secret-as-APP_SHARED_SECRET');
 
 // Optional fallback via ShopAIKey (OpenAI-compatible API).
 define('SHOPAIKEY_API_KEY', '');

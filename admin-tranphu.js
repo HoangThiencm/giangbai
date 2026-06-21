@@ -115,7 +115,7 @@
         const list = selectedList();
         if (!holder || !list) return;
         holder.innerHTML = list.list_code === 'party'
-            ? 'Cột bắt buộc: <b>Họ tên</b>. Cột thứ hai: <b>Ghi chú / Chức vụ</b>. Đây là danh sách ngắn gọn dành riêng cho đảng viên.'
+            ? 'Cột bắt buộc: <b>Họ tên</b> hoặc <b>Họ và tên</b>. Cột thứ hai: <b>Ghi chú / Chức vụ</b>. Đây là danh sách ngắn gọn dành riêng cho đảng viên.'
             : list.list_code === 'teachers'
                 ? 'Đúng ba cột: <b>STT</b>, <b>Họ và tên</b>, <b>Lớp chủ nhiệm</b>. STT chỉ để đánh số và được bỏ qua khi nhập.'
                 : 'Cột bắt buộc: <b>Họ và tên</b>. Nên có thêm <b>Tổ/đơn vị hoặc lớp</b>, <b>Chức vụ/Vai trò</b>, <b>Email/SĐT</b>. Cột <b>STT</b> nếu có sẽ được bỏ qua.';
@@ -123,10 +123,19 @@
 
     function mapHeader(header) {
         const value = norm(header);
-        if (value.includes('ho va ten') || value === 'ten' || value.includes('full name')) return 'full_name';
-        if (value.includes('to don vi') || value.includes('lop nhom') || value.includes('lop chu nhiem') || value === 'lop' || value.includes('nhom')) return 'group_name';
-        if (value.includes('chuc vu') || value.includes('vai tro') || value.includes('role')) return 'role_label';
-        if (value.includes('email') || value.includes('dien thoai') || value.includes('sdt') || value.includes('lien he')) return 'contact';
+        if (!value || value === 'stt') return '';
+        if (value.includes('ho va ten') || value.includes('ho ten') || value === 'hoten' || value === 'ten' || value.includes('full name') || (value.includes('ho') && value.includes('ten'))) {
+            return 'full_name';
+        }
+        if (value.includes('to don vi') || value.includes('lop nhom') || value.includes('lop chu nhiem') || value === 'lop' || value.includes('nhom') || value.includes('don vi')) {
+            return 'group_name';
+        }
+        if (value.includes('chuc vu') || value.includes('vai tro') || value.includes('ghi chu') || value.includes('chuc danh') || value.includes('role')) {
+            return 'role_label';
+        }
+        if (value.includes('email') || value.includes('dien thoai') || value.includes('sdt') || value.includes('lien he') || value.includes('phone')) {
+            return 'contact';
+        }
         return '';
     }
 
@@ -142,7 +151,7 @@
                     for (let i = 0; i < Math.min(15, rows.length); i++) {
                         if ((rows[i] || []).some(cell => mapHeader(cell) === 'full_name')) { headerIndex = i; break; }
                     }
-                    if (headerIndex < 0) throw new Error('Không tìm thấy cột “Họ và tên”. Hãy tải file mẫu để dùng đúng định dạng.');
+                    if (headerIndex < 0) throw new Error('Không tìm thấy cột “Họ tên” hoặc “Họ và tên”. Hãy tải file mẫu để dùng đúng định dạng.');
                     const headers = rows[headerIndex] || [];
                     const parsed = [];
                     for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
@@ -179,7 +188,7 @@
         const list = selectedList();
         if (!list) return;
         const rows = list.list_code === 'party'
-            ? [['Họ tên', 'Ghi chú / Chức vụ'], ['Bùi Ngọc Nam', 'Bí thư Chi bộ'], ['Nguyễn Ngọc Nam', 'Phó Bí thư'], ['Nguyễn Văn An', 'Đảng viên']]
+            ? [['Họ và tên', 'Ghi chú / Chức vụ'], ['Bùi Ngọc Nam', 'Bí thư Chi bộ'], ['Nguyễn Ngọc Nam', 'Phó Bí thư'], ['Nguyễn Văn An', 'Đảng viên']]
             : list.list_code === 'teachers'
                 ? [['STT', 'Họ và tên', 'Lớp chủ nhiệm'], [1, 'Nguyễn Văn An', '6A'], [2, 'Trần Thị Bình', '7A'], [3, 'Lê Văn Cường', '8A']]
                 : [['STT', 'Họ và tên', 'Chức vụ'], [1, 'Nguyễn Văn An', 'Hiệu trưởng'], [2, 'Trần Thị Bình', 'Phó Hiệu trưởng'], [3, 'Lê Văn Cường', 'Giáo viên']];

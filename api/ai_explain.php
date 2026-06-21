@@ -46,7 +46,8 @@ function normalize_api_keys($value): array
 function load_ai_runtime_config(): array
 {
     $config = [
-        'light_ai_enabled' => true,
+        'cloudflare_worker_url' => '',
+        'cloudflare_worker_secret' => '',
         'gemini_enabled' => true,
         'gemini_keys' => [],
         'gemini_model' => 'gemini-2.5-flash',
@@ -56,8 +57,11 @@ function load_ai_runtime_config(): array
         'shopaikey_base_url' => 'https://api.shopaikey.com/v1',
     ];
 
-    if (defined('LIGHT_AI_ENABLED')) {
-        $config['light_ai_enabled'] = (bool)LIGHT_AI_ENABLED;
+    if (defined('CLOUDFLARE_AI_WORKER_URL') && is_string(CLOUDFLARE_AI_WORKER_URL)) {
+        $config['cloudflare_worker_url'] = rtrim(trim(CLOUDFLARE_AI_WORKER_URL), '/');
+    }
+    if (defined('CLOUDFLARE_AI_WORKER_SECRET') && is_string(CLOUDFLARE_AI_WORKER_SECRET)) {
+        $config['cloudflare_worker_secret'] = trim(CLOUDFLARE_AI_WORKER_SECRET);
     }
     if (defined('GEMINI_ENABLED')) {
         $config['gemini_enabled'] = (bool)GEMINI_ENABLED;
@@ -93,9 +97,6 @@ function load_ai_runtime_config(): array
             }
             if (!empty($globalConfig['gemini_model']) && is_string($globalConfig['gemini_model'])) {
                 $config['gemini_model'] = trim($globalConfig['gemini_model']);
-            }
-            if (array_key_exists('light_ai_enabled', $globalConfig)) {
-                $config['light_ai_enabled'] = (bool)$globalConfig['light_ai_enabled'];
             }
             if (array_key_exists('gemini_enabled', $globalConfig)) {
                 $config['gemini_enabled'] = (bool)$globalConfig['gemini_enabled'];
@@ -419,6 +420,27 @@ function call_shopaikey(string $baseUrl, string $key, string $payload): array
     return [$raw, $status, $curlError];
 }
 
+function call_cloudflare_worker(string $workerUrl, string $secret, array $payload): array
+{
+    $ch = curl_init(rtrim($workerUrl, '/') . '/chat');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'X-Giangbai-Worker-Secret: ' . $secret,
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT => 35,
+    ]);
+    $raw = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    return [$raw, $status, $curlError];
+}
+
 function extract_gemini_answer(array $response): string
 {
     $parts = $response['candidates'][0]['content']['parts'] ?? [];
@@ -562,20 +584,52 @@ $prompt = $mode === 'chat'
     ? build_chat_prompt($subject, $lessonTitle, $lessonContext, $history, $question)
     : build_explain_prompt($subject, $lessonTitle, $text);
 
-$lightResult = try_light_ai_explain($runtime, $mode, $lessonTitle, $text, $question, $lessonContext);
-if (is_array($lightResult) && !empty($lightResult['answer'])) {
+function try_cloudflare_ai_explain(array $config, array $payload): ?array
+{
+    $workerUrl = trim((string)($config['cloudflare_worker_url'] ?? ''));
+    $secret = trim((string)($config['cloudflare_worker_secret'] ?? ''));
+    if ($workerUrl === '' || $secret === '') return null;
+
+    [$raw, $status, $curlError] = call_cloudflare_worker($workerUrl, $secret, $payload);
+    $response = is_string($raw) && $raw !== '' ? (json_decode($raw, true) ?: []) : [];
+    if ($status >= 200 && $status < 300) {
+        $answer = trim((string)($response['answer'] ?? ''));
+        if ($answer !== '') {
+            return [
+                'answer' => $answer,
+                'provider' => 'cloudflare_workers_ai',
+                'model' => trim((string)($response['model'] ?? 'Workers AI')),
+            ];
+        }
+    }
+    return [
+        'error' => $response['error'] ?? ($curlError ?: 'Cloudflare Workers AI không phản hồi.'),
+        'provider' => 'cloudflare_workers_ai',
+    ];
+}
+
+$workerPayload = [
+    'mode' => $mode,
+    'subject' => $subject,
+    'lesson_title' => $lessonTitle,
+    'text' => $text,
+    'question' => $question,
+    'lesson_context' => $lessonContext,
+    'history' => $history,
+];
+$cloudflareResult = try_cloudflare_ai_explain($runtime, $workerPayload);
+if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {
     respond([
         'ok' => true,
-        'answer' => trim($lightResult['answer']),
-        'complete' => true,
-        'provider' => 'light_ai',
-        'model' => $lightResult['model'] ?? 'noi-dung-bai-hoc',
-        'confidence' => $lightResult['confidence'] ?? 'medium',
+        'answer' => trim($cloudflareResult['answer']),
+        'complete' => answer_looks_complete($cloudflareResult['answer']),
+        'provider' => 'cloudflare_workers_ai',
+        'model' => $cloudflareResult['model'] ?? 'Workers AI',
     ]);
 }
 
-if ((empty($runtime['gemini_enabled']) || empty($runtime['gemini_keys'])) && (empty($runtime['shopaikey_enabled']) || trim((string)$runtime['shopaikey_api_key']) === '')) {
-    respond(['error' => 'AI học tập nhẹ chưa tìm được nội dung phù hợp và chưa có Gemini hoặc ShopAIKey dự phòng.'], 503);
+if ($cloudflareResult === null && (empty($runtime['gemini_enabled']) || empty($runtime['gemini_keys'])) && (empty($runtime['shopaikey_enabled']) || trim((string)$runtime['shopaikey_api_key']) === '')) {
+    respond(['error' => 'Chưa cấu hình Cloudflare Workers AI, Gemini hoặc ShopAIKey.'], 503);
 }
 
 $geminiResult = try_gemini_explain($runtime, $prompt);
@@ -586,6 +640,7 @@ if (is_array($geminiResult) && !empty($geminiResult['answer'])) {
         'complete' => answer_looks_complete($geminiResult['answer']),
         'provider' => $geminiResult['provider'] ?? 'gemini',
         'model' => $geminiResult['model'] ?? $runtime['gemini_model'],
+        'fallback' => is_array($cloudflareResult),
     ]);
 }
 
@@ -602,6 +657,7 @@ if (is_array($fallbackResult) && !empty($fallbackResult['answer'])) {
 }
 
 $errors = [];
+if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) $errors[] = 'Cloudflare Workers AI: ' . $cloudflareResult['error'];
 if (is_array($geminiResult) && !empty($geminiResult['error'])) $errors[] = $geminiResult['error'];
 if (is_array($fallbackResult) && !empty($fallbackResult['error'])) $errors[] = $fallbackResult['error'];
 $lastError = $errors ? implode(' | ', $errors) : 'Khong goi duoc AI.';

@@ -198,27 +198,6 @@
 
                 <div id="adminConfigStorageBanner" class="hidden rounded-lg border p-3 mb-4 text-sm"></div>
 
-                <!-- LIGHTWEIGHT LEARNING AI -->
-                <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 mb-4">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <h4 class="font-bold text-sky-900 text-sm">AI học tập nhẹ <span class="font-normal">· ưu tiên số 1</span></h4>
-                            <p class="text-xs text-sky-800 mt-1">Chạy ngay trên hosting: tìm khái niệm, công thức và ví dụ trong bài giáo viên đã soạn. Không dùng API key, không gửi dữ liệu ra ngoài; không tìm được mới chuyển Gemini rồi ShopAIKey.</p>
-                        </div>
-                        <span id="adminLightAiStatus" class="text-xs font-semibold text-sky-700 shrink-0"></span>
-                    </div>
-                    <div class="mt-3 flex flex-wrap items-center gap-3">
-                        <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-sky-900">
-                            <input id="adminLightAiEnabled" type="checkbox" class="h-4 w-4 rounded border-sky-300 text-sky-700 focus:ring-sky-500" checked>
-                            Bật AI học tập nhẹ
-                        </label>
-                        <button type="button" id="btnSaveLightAiConfig" onclick="saveLightAiAdminConfig()" class="rounded bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-800">
-                            <i class="fas fa-save mr-1"></i> Lưu trạng thái
-                        </button>
-                    </div>
-                    <p id="adminLightAiStorageDetail" class="mt-3 text-xs text-sky-800"></p>
-                </div>
-
                 <!-- Gemini AI CONFIG -->
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
@@ -638,7 +617,6 @@
             if (!banner) return;
 
             const keys = Array.isArray(currentGlobalContent?.gemini_keys) ? currentGlobalContent.gemini_keys.length : 0;
-            const lightAiEnabled = currentGlobalContent?.light_ai_enabled !== false;
             const hasShop = !!String(currentGlobalContent?.shopaikey_api_key || '').trim();
             const source = configStorageMeta.source;
             let tone = 'border-amber-200 bg-amber-50 text-amber-900';
@@ -646,10 +624,10 @@
             let message = '';
 
             if (source === 'hosting') {
-                if (lightAiEnabled || keys || hasShop) {
+                if (keys || hasShop) {
                     tone = 'border-emerald-200 bg-emerald-50 text-emerald-900';
                     icon = 'fa-cloud';
-                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: AI học tập nhẹ ${lightAiEnabled ? 'đang bật' : 'đang tắt'}, ${keys} Gemini key${keys === 1 ? '' : 's'}${hasShop ? ', có ShopAIKey fallback' : ', chưa có ShopAIKey fallback'}.`;
+                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Cloudflare Workers AI chạy bằng cấu hình server, ${keys} Gemini key${keys === 1 ? '' : 's'}${hasShop ? ', có ShopAIKey fallback' : ', chưa có ShopAIKey fallback'}.`;
                 } else {
                     tone = 'border-amber-200 bg-amber-50 text-amber-900';
                     icon = 'fa-triangle-exclamation';
@@ -698,29 +676,10 @@
             }
             if (detail) {
                 detail.textContent = !enabled
-                    ? 'Gemini đang tắt để kiểm tra AI học tập nhẹ; API key vẫn được giữ nguyên.'
+                    ? 'Gemini đang tắt để kiểm tra Cloudflare Workers AI; API key vẫn được giữ nguyên.'
                     : keys.length
                     ? `Nguồn hiện tại: ${configSourceLabel(configStorageMeta.source)}. AI lộ trình Toán 4-9 và các công cụ đọc từ file trên hosting.`
                     : 'Chưa có Gemini key trong global_config.json trên hosting. Nhập key và bấm Lưu Gemini.';
-            }
-            renderConfigStorageBanner();
-        }
-
-        function syncLightAiAdminUI(content) {
-            const enabled = content?.light_ai_enabled !== false;
-            const checkbox = document.getElementById('adminLightAiEnabled');
-            const status = document.getElementById('adminLightAiStatus');
-            const detail = document.getElementById('adminLightAiStorageDetail');
-            if (checkbox) checkbox.checked = enabled;
-            if (status) {
-                status.innerHTML = enabled
-                    ? '<span class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-sky-800">Đang ưu tiên</span>'
-                    : '<span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-amber-800">Đã tắt</span>';
-            }
-            if (detail) {
-                detail.textContent = enabled
-                    ? `AI học tập nhẹ đang chạy từ nội dung bài học trên ${configSourceLabel(configStorageMeta.source)}. Chỉ các câu chưa đủ dữ liệu mới gọi AI bên ngoài.`
-                    : 'AI học tập nhẹ đang tắt; mọi câu hỏi sẽ đi thẳng tới Gemini, rồi ShopAIKey nếu cần.';
             }
             renderConfigStorageBanner();
         }
@@ -754,7 +713,7 @@
             }
             if (document.getElementById('adminShopaikeyStorageDetail')) {
                 document.getElementById('adminShopaikeyStorageDetail').textContent = !enabled
-                    ? 'DeepSeek / ShopAIKey đang tắt để kiểm tra AI học tập nhẹ; API key vẫn được giữ nguyên.'
+                    ? 'DeepSeek / ShopAIKey đang tắt để kiểm tra Cloudflare Workers AI; API key vẫn được giữ nguyên.'
                     : apiKey
                     ? `ShopAIKey fallback đã lưu trên ${configSourceLabel(configStorageMeta.source)}. Dùng khi Gemini hết lượt hoặc lỗi.`
                     : 'Chưa có ShopAIKey trên hosting. Nhập key và bấm Lưu Fallback nếu cần dự phòng cho AI lộ trình.';
@@ -784,7 +743,6 @@
                 localStorage.setItem('admin_github_repo', content.github_repo);
             }
             syncGeminiAdminUI(content);
-            syncLightAiAdminUI(content);
             syncShopaikeyAdminUI(content);
             if (cachedUsers.length > 0) renderTable(cachedUsers, cachedKey);
         }
@@ -919,7 +877,6 @@
 
                     configStorageMeta.source = 'github';
                     syncGeminiAdminUI(content);
-                    syncLightAiAdminUI(content);
                     syncShopaikeyAdminUI(content);
 
                     console.log("Loaded global config from GitHub API!");
@@ -935,7 +892,6 @@
 
             if (configStorageMeta.source === 'none') {
                 syncGeminiAdminUI(currentGlobalContent);
-                syncLightAiAdminUI(currentGlobalContent);
                 syncShopaikeyAdminUI(currentGlobalContent);
             }
         }
@@ -998,7 +954,6 @@
                 currentGlobalContent.features = features;
                 currentGlobalContent.github_repo = document.getElementById('cfg_github_repo').value.trim();
                 currentGlobalContent.github_pat = document.getElementById('cfg_github_token').value.trim();
-                currentGlobalContent.light_ai_enabled = !!document.getElementById('adminLightAiEnabled')?.checked;
                 currentGlobalContent.gemini_keys = parseGeminiKeys(document.getElementById('adminGeminiKeysInput')?.value || '');
                 currentGlobalContent.gemini_model = document.getElementById('adminGeminiModuleSelect')?.value || 'gemini-2.5-flash';
                 currentGlobalContent.gemini_enabled = !!document.getElementById('adminGeminiEnabled')?.checked;
@@ -1021,34 +976,6 @@
             } finally {
                 btn.innerHTML = '<i class="fas fa-save"></i> Lưu cài đặt lên GitHub';
                 btn.disabled = false;
-            }
-        }
-
-        async function saveLightAiAdminConfig() {
-            const btn = document.getElementById('btnSaveLightAiConfig');
-            const originalText = btn ? btn.innerHTML : '';
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
-                btn.disabled = true;
-            }
-            try {
-                currentGlobalContent.light_ai_enabled = !!document.getElementById('adminLightAiEnabled')?.checked;
-                try {
-                    await saveConfigToLocalApi(currentGlobalContent);
-                } catch (localError) {
-                    console.warn('Fallback lưu AI học tập nhẹ lên GitHub vì API nội bộ lỗi:', localError);
-                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Cập nhật AI học tập nhẹ');
-                    markConfigSaved('github');
-                }
-                syncLightAiAdminUI(currentGlobalContent);
-                alert(currentGlobalContent.light_ai_enabled ? 'Đã bật AI học tập nhẹ.' : 'Đã tắt AI học tập nhẹ.');
-            } catch (e) {
-                alert('Lỗi lưu AI học tập nhẹ: ' + e.message);
-            } finally {
-                if (btn) {
-                    btn.innerHTML = originalText || '<i class="fas fa-save mr-1"></i> Lưu trạng thái';
-                    btn.disabled = false;
-                }
             }
         }
 
