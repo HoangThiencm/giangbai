@@ -2025,7 +2025,7 @@
                 const value = String(slots[slotIndex] || '').trim();
                 const chipHtml = value
                     ? `<button type="button" class="drag-chip fill-slot-chip" data-chip-value="${escapeHtml(value)}" data-chip-id="${escapeHtml(`${key}-slot-${slotIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(value)}</button>`
-                    : '<span class="fill-slot-placeholder">kéo vào đây</span>';
+                    : '<span class="fill-slot-placeholder">nhấn để điền</span>';
                 const slotAttrs = practiceDone ? '' : ' role="button" tabindex="0"';
                 html += `<span class="fill-drop-slot" data-fill-key="${escapeHtml(key)}" data-slot-index="${slotIndex}" data-drop-slot="1"${slotAttrs}>${chipHtml}</span>`;
                 slotIndex += 1;
@@ -2065,7 +2065,7 @@
                         <div class="question-text practice-q-text fill-prompt-line">${renderPromptWithFillSlots(normalized.prompt, key, slots, practiceDone)}</div>
                     </div>
                     <div class="practice-card-content">
-                        <p class="fill-pool-label practice-zone-label"><i class="fas fa-grip-lines" aria-hidden="true"></i> Kéo một mảnh vào từng ô trống</p>
+                        <p class="fill-pool-label practice-zone-label"><i class="fas fa-hand-pointer" aria-hidden="true"></i> Chọn mảnh rồi nhấn vào ô trống để điền</p>
                         <div class="drag-pool fill-chip-pool practice-chip-pool" data-fill-pool="${escapeHtml(key)}">
                             ${poolItems.map((piece, pieceIndex) => `<button type="button" class="drag-chip" data-chip-value="${escapeHtml(piece)}" data-chip-id="${escapeHtml(`${key}-pool-${pieceIndex}`)}" ${practiceDone ? 'disabled' : ''}>${escapeHtml(piece)}</button>`).join('')}
                         </div>
@@ -3243,6 +3243,32 @@
                 if (!selection || selection.isCollapsed) hideAiSelectionToolbar();
             }, 120);
         });
+
+        // Tránh menu copy/paste đè lên toolbar AI trên Android/iOS
+        if (els.tabContent) {
+            els.tabContent.addEventListener('contextmenu', e => {
+                if (isSelectableAiRegion(e.target)) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // Trên thiết bị chạm, toolbar AI nổi bật hơn và tránh xung đột
+        if (prefersTouchPlacement()) {
+            const style = document.createElement('style');
+            style.textContent = `
+                .ai-selection-toolbar {
+                    font-size: 1rem;
+                    padding: 8px 14px;
+                    box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+                }
+                .ai-selection-toolbar button {
+                    padding: 8px 16px;
+                    font-size: 0.9rem;
+                }
+            `;
+            document.head.appendChild(style);
+        }
         ensureLessonChatbot();
     }
 
@@ -4281,21 +4307,23 @@
     }
 
     function fillSlotPlaceholderText() {
-        return prefersTouchPlacement() ? 'chạm để đặt' : 'kéo vào đây';
+        // Prefer tap-to-place for fill (even on desktop)
+        return 'nhấn để điền';
     }
 
     function updateTouchDragHints(card, mode) {
-        if (!prefersTouchPlacement()) return;
         if (mode === 'fill') {
+            // Always use tap hint for fill (including desktop)
             const poolLabel = card.querySelector('.fill-pool-label');
             if (poolLabel) {
-                poolLabel.innerHTML = '<i class="fas fa-hand-pointer" aria-hidden="true"></i> Chạm một mảnh, rồi chạm ô trống để đặt vào';
+                poolLabel.innerHTML = '<i class="fas fa-hand-pointer" aria-hidden="true"></i> Chọn một mảnh rồi nhấn vào ô trống';
             }
             card.querySelectorAll('.fill-slot-placeholder').forEach(node => {
                 node.textContent = fillSlotPlaceholderText();
             });
-            return;
+            if (!prefersTouchPlacement()) return;
         }
+        if (!prefersTouchPlacement()) return;
         if (mode === 'sort') {
             const poolLabel = card.querySelector('.sort-pool-label');
             const zoneLabel = card.querySelector('.sort-zone-label');
@@ -4329,7 +4357,9 @@
             const item = (lesson.fill_exercises || []).map(normalizeFillExercise).find((entry, index) => String(entry.id || `fill_${index + 1}`) === key);
             const blankCount = item?.blankCount || 1;
             const practiceDone = !!currentUiState(lesson).practiceDone;
-            if (touchPlacement) card.classList.add('touch-placement');
+            // Force tap-to-place on desktop too (preferred over drag for fill blanks)
+            card.classList.add('touch-placement');
+            const useTapPlacement = true;
             updateTouchDragHints(card, 'fill');
 
             const getSlots = () => collectFillSlotsFromCard(card, blankCount);
@@ -4374,7 +4404,12 @@
                 chip.dataset.boundFillChip = '1';
                 configureChipDrag(chip, !practiceDone);
 
-                if (!touchPlacement) {
+                if (useTapPlacement) {
+                    chip.draggable = false;
+                    chip.removeAttribute('draggable');
+                }
+
+                if (!useTapPlacement) {
                     chip.addEventListener('dragstart', e => {
                         e.dataTransfer?.setData('application/x-lotrinh-chip', chip.dataset.chipId || '');
                         e.dataTransfer?.setData('text/plain', chip.dataset.chipValue || chip.textContent || '');
@@ -4386,7 +4421,7 @@
                 const onFillChipTap = async () => {
                     if (practiceDone) return;
                     const slot = chip.closest('.fill-drop-slot');
-                    if (touchPlacement) {
+                    if (useTapPlacement) {
                         if (slot) {
                             await returnChipToPool(chip, slot);
                             return;
@@ -4399,7 +4434,7 @@
                     }
                 };
 
-                if (touchPlacement) {
+                if (useTapPlacement) {
                     bindTouchTap(chip, onFillChipTap, { disabled: () => practiceDone });
                 } else {
                     chip.addEventListener('click', onFillChipTap);
@@ -4407,7 +4442,7 @@
             };
 
             const allowDrop = target => {
-                if (touchPlacement) return;
+                if (useTapPlacement) return;
                 target?.addEventListener('dragover', e => {
                     e.preventDefault();
                     target.classList.add('drag-over');
@@ -4418,7 +4453,7 @@
             allowDrop(pool);
             card.querySelectorAll('.fill-drop-slot').forEach(allowDrop);
 
-            if (touchPlacement) {
+            if (useTapPlacement) {
                 card.querySelectorAll('.fill-drop-slot').forEach(slot => {
                     bindTouchTap(slot, async () => {
                         if (practiceDone || slot.querySelector('.fill-slot-chip')) return;
