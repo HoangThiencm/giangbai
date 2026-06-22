@@ -848,6 +848,96 @@
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
 
+            <!-- Tab navigation for visual lesson design -->
+            <div class="flex border-b border-slate-200 mb-4" id="lessonTabs">
+                <button data-tab="lythuyet" class="lesson-tab px-4 py-2 font-bold text-sm border-b-2 border-teal-600 text-teal-700 active">Lý thuyết</button>
+                <button data-tab="vidu" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Ví dụ</button>
+                <button data-tab="baitap" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Bài tập tương tác</button>
+                <button data-tab="tracnghiem" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Trắc nghiệm</button>
+                <button data-tab="khac" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Khác</button>
+            </div>
+
+            <!-- Tab contents (visual tabbed design) -->
+            <div id="tab-lythuyet" class="lesson-tab-content">
+                <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
+                    <textarea id="lessonGoalInput" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
+                </label>
+
+                <label class="block text-sm font-bold text-slate-700">Lý thuyết
+                    <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn. Hỗ trợ ảnh: dán trực tiếp hoặc dùng nút ảnh. Công thức: $...$.</span>
+                    ${richToolbarHtml('lessonTheory')}
+                    <textarea id="lessonTheory" rows="12" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                </label>
+            </div>
+
+            <div id="tab-vidu" class="lesson-tab-content hidden">
+                <label class="block text-sm font-bold text-slate-700">Ví dụ (theo Dạng toán - dán hình minh họa khi cần)
+                    <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi Dạng một khối. Dán ảnh minh họa cho dạng (hình vẽ, sơ đồ...). Sử dụng heading **DẠNG 1:** </span>
+                    ${richToolbarHtml('lessonExamples')}
+                    <textarea id="lessonExamples" rows="12" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                </label>
+            </div>
+
+            <div id="tab-baitap" class="lesson-tab-content hidden">
+                <!-- Bài tập tương tác with flexible items -->
+                <label class="block text-sm font-bold text-slate-700">Bài tập nộp giáo viên (rich text, dán hình cho từng dạng)
+                    ${richToolbarHtml('lessonSelfPractice')}
+                    <textarea id="lessonSelfPractice" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                </label>
+
+                <div class="space-y-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700">Bài tập tự luận (thêm từng bài, dán hình vào Đề)
+                        </label>
+                        <div id="essayItems" class="space-y-3"></div>
+                        <button type="button" onclick="addEssayItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài tập tự luận</button>
+                        <textarea id="lessonEssay" class="hidden"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
+                        </label>
+                        <div id="fillItems" class="space-y-3"></div>
+                        <button type="button" onclick="addFillItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm</button>
+                        <textarea id="lessonFill" class="hidden"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700">Nối ô / sắp xếp
+                        </label>
+                        <div id="dragItems" class="space-y-3"></div>
+                        <button type="button" onclick="addDragItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm</button>
+                        <textarea id="lessonDrag" class="hidden"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-tracnghiem" class="lesson-tab-content hidden">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm (thêm từng câu, dán hình vào câu hỏi)
+                    </label>
+                    <div id="questionItems" class="space-y-3"></div>
+                    <button type="button" onclick="addQuestionItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm câu hỏi</button>
+                    <textarea id="lessonQuestions" class="hidden"></textarea>
+                </div>
+            </div>
+
+            <div id="tab-khac" class="lesson-tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: id | Tên kỹ năng | target</span>
+                        <textarea id="lessonSkills" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    </label>
+                    <label class="block text-sm font-bold text-slate-700">Nhiệm vụ học sinh
+                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng là một việc cần làm.</span>
+                        <textarea id="lessonTasks" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    </label>
+                </div>
+
+                <label class="block text-sm font-bold text-slate-700 mt-4">Video YouTube bài giảng
+                    <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Tiêu đề | Link YouTube.</span>
+                    <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài giảng Tập hợp | https://www.youtube.com/watch?v=..."></textarea>
+                </label>
+            </div>
+
             <div class="mt-5 grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-5">
                 <aside class="space-y-4">
                     <div>
@@ -906,21 +996,17 @@
                         <span>Mở bài này cho học sinh <span class="block text-xs font-medium text-teal-800">Mặc định tắt — chỉ bật khi bạn sẵn sàng cho lớp học bài này.</span></span>
                     </label>
 
-                    <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
-                        <textarea id="lessonGoalInput" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
-                    </label>
+                    <!-- Tab Lý thuyết content -->
+                    <div id="tab-lythuyet-content">
+                        <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
+                            <textarea id="lessonGoalInput" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
+                        </label>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <label class="block text-sm font-bold text-slate-700">Lý thuyết
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn (dùng với <code class="font-mono text-[11px]">[AI]</code>). Định dạng: <code class="font-mono text-[11px]">**đậm**</code>, <code class="font-mono text-[11px]">*nghiêng*</code>, <code class="font-mono text-[11px]">++gạch chân++</code>, ảnh: <code class="font-mono text-[11px]">![mô tả](link)</code>. Công thức: <code class="font-mono text-[11px]">$...$</code>.</span>
-                        ${richToolbarHtml('lessonTheory')}
-                        <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                    </label>
-                    <label class="block text-sm font-bold text-slate-700">Ví dụ
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Enter 2 lần = tách ví dụ. Dòng đầu là tiêu đề; Enter 1 lần trong lời giải = xuống dòng. Cùng quy tắc định dạng và <code class="font-mono text-[11px]">[AI]</code> như nội dung bài học.</span>
-                        ${richToolbarHtml('lessonExamples')}
-                        <textarea id="lessonExamples" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                    </label>
+                        <label class="block text-sm font-bold text-slate-700">Lý thuyết
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn (dùng với <code class="font-mono text-[11px]">[AI]</code>). Định dạng: <code class="font-mono text-[11px]">**đậm**</code>, <code class="font-mono text-[11px]">*nghiêng*</code>, <code class="font-mono text-[11px]">++gạch chân++</code>, ảnh: <code class="font-mono text-[11px]">![mô tả](link)</code>. Công thức: <code class="font-mono text-[11px]">$...$</code>.</span>
+                            ${richToolbarHtml('lessonTheory')}
+                            <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                        </label>
                     </div>
 
                     <label class="block text-sm font-bold text-slate-700">Bài tập nộp giáo viên
@@ -993,8 +1079,6 @@
                         <div id="questionItems" class="space-y-3"></div>
                         <button type="button" onclick="addQuestionItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm câu hỏi trắc nghiệm</button>
                         <textarea id="lessonQuestions" class="hidden"></textarea>
-                    </div>
-
                     <div id="lessonPreview" class="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"></div>
 
                     <div class="flex flex-wrap gap-3">
@@ -1052,6 +1136,26 @@
         renderDragItems();
         renderQuestionItems();
 
+        // Tab switching for visual design
+        const tabButtons = panel.querySelectorAll('.lesson-tab');
+        const tabContents = panel.querySelectorAll('.lesson-tab-content');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.tab;
+                tabButtons.forEach(b => b.classList.remove('active', 'border-b-2', 'border-teal-600', 'text-teal-700'));
+                tabButtons.forEach(b => b.classList.add('text-slate-600'));
+                btn.classList.add('active', 'border-b-2', 'border-teal-600', 'text-teal-700');
+                btn.classList.remove('text-slate-600');
+
+                tabContents.forEach(c => c.classList.add('hidden'));
+                const activeContent = panel.querySelector(`#tab-${target}`);
+                if (activeContent) activeContent.classList.remove('hidden');
+            });
+        });
+
+        // Show first tab by default
+        if (tabButtons.length) tabButtons[0].click();
+
         applyPageScopeUi();
         renderSubjectPills();
     }
@@ -1106,6 +1210,29 @@
                 background: #fff; color: #334155; font-size: 0.78rem; font-weight: 700; cursor: pointer;
             }
             .lesson-rich-toolbar button:hover { background: #f8fafc; border-color: #94a3b8; }
+
+        .lesson-tab.active {
+            border-bottom: 2px solid #0f766e;
+            color: #0f766e;
+            font-weight: 700;
+        }
+        .lesson-tab-content {
+            display: block;
+        }
+        .lesson-tab-content.hidden {
+            display: none;
+        }
+        .lesson-tab {
+            transition: all 0.1s;
+        }
+        .lesson-tab:hover {
+            color: #0f766e;
+        }
+        /* Make the rich editor feel more visual */
+        #lessonTheory, #lessonExamples, #lessonSelfPractice, #essayItems textarea, #fillItems textarea, #dragItems textarea, #questionItems textarea {
+            min-height: 120px;
+            font-family: ui-sans-serif, system-ui;
+        }
         `;
         document.head.appendChild(style);
     }
