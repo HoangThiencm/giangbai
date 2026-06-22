@@ -46,14 +46,66 @@
         return (byModule && byModule[id]) || { calls: 0, success: 0, error: 0, providers: {} };
     }
 
+    function modeCount(byMode, key) {
+        const value = byMode?.[key];
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0 ? num : 0;
+    }
+
     function sumByMode(byMode) {
-        return Object.values(byMode || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+        if (!byMode || typeof byMode !== 'object') return 0;
+        return Object.values(byMode).reduce((sum, value) => {
+            const num = Number(value);
+            return sum + (Number.isFinite(num) && num > 0 ? num : 0);
+        }, 0);
+    }
+
+    function sumModuleSuccess(byModule) {
+        if (!byModule || typeof byModule !== 'object') return 0;
+        return Object.values(byModule).reduce((sum, bucket) => {
+            if (!bucket || typeof bucket !== 'object') return sum;
+            const num = Number(bucket.success);
+            return sum + (Number.isFinite(num) && num > 0 ? num : 0);
+        }, 0);
     }
 
     function resolveTotalSuccess(summary) {
-        const providerTotal = Number(summary?.total_success) || 0;
-        const modeTotal = sumByMode(summary?.by_mode || {});
-        return Math.max(providerTotal, modeTotal);
+        if (!summary || typeof summary !== 'object') return 0;
+        const byMode = summary.by_mode || {};
+        const providerTotal = Math.max(0, Number(summary.total_success) || 0);
+        const modeTotal = sumByMode(byMode);
+        const moduleTotal = sumModuleSuccess(summary.by_module || {});
+        const visibleModeTotal = modeCount(byMode, 'explain')
+            + modeCount(byMode, 'chat')
+            + modeCount(byMode, 'ocr');
+        return Math.max(providerTotal, modeTotal, moduleTotal, visibleModeTotal);
+    }
+
+    function normalizeStatsPayload(data) {
+        if (!data || typeof data !== 'object') return data;
+        const summary = data.internal?.summary;
+        if (summary && typeof summary === 'object') {
+            summary.total_success = resolveTotalSuccess(summary);
+        }
+        if (Array.isArray(data.history)) {
+            data.history = data.history.map(row => {
+                if (!row || typeof row !== 'object') return row;
+                const providers = row.providers || {};
+                let providerTotal = 0;
+                Object.values(providers).forEach(bucket => {
+                    if (!bucket || typeof bucket !== 'object') return;
+                    providerTotal += Math.max(0, Number(bucket.success) || 0);
+                });
+                return {
+                    ...row,
+                    total_success: Math.max(
+                        Math.max(0, Number(row.total_success) || 0),
+                        providerTotal
+                    ),
+                };
+            });
+        }
+        return data;
     }
 
     function providerInModule(mod, providerId) {
@@ -185,7 +237,13 @@
         const providers = summary.providers || {};
         const byModule = summary.by_module || {};
         const byMode = summary.by_mode || {};
-        const totalSuccessToday = resolveTotalSuccess(summary);
+        const explainCount = modeCount(byMode, 'explain');
+        const chatCount = modeCount(byMode, 'chat');
+        const ocrCount = modeCount(byMode, 'ocr');
+        const totalSuccessToday = Math.max(
+            resolveTotalSuccess(summary),
+            explainCount + chatCount + ocrCount
+        );
         const history = Array.isArray(data.history) ? data.history : [];
         const recent = Array.isArray(internal.recent) ? internal.recent : [];
         const generatedAt = data.generated_at || '';
@@ -281,7 +339,7 @@
                     <div class="text-xs font-bold uppercase text-sky-700">Tổng hôm nay (${escapeHtml(data.today || '')})</div>
                     <div class="mt-2 text-3xl font-black text-sky-950">${formatNumber(totalSuccessToday)}</div>
                     <div class="text-xs text-sky-800">phản hồi AI thành công (mọi module)</div>
-                    <div class="mt-3 text-xs text-sky-800">Giải thích: <strong>${formatNumber(byMode.explain || 0)}</strong> · Chat: <strong>${formatNumber(byMode.chat || 0)}</strong> · OCR: <strong>${formatNumber(byMode.ocr || 0)}</strong></div>
+                    <div class="mt-3 text-xs text-sky-800">Giải thích: <strong>${formatNumber(explainCount)}</strong> · Chat: <strong>${formatNumber(chatCount)}</strong> · OCR: <strong>${formatNumber(ocrCount)}</strong></div>
                 </div>
                 <div class="md:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-700">
                     <div class="font-bold text-slate-800 mb-2">Bản đồ AI theo chức năng</div>
@@ -411,9 +469,9 @@
             const res = await fetch('api/ai_stats.php', {
                 headers,
                 credentials: adminKey ? 'same-origin' : 'include',
-                cache: force ? 'no-store' : 'default'
+                cache: 'no-store'
             });
-            const data = await res.json();
+            const data = normalizeStatsPayload(await res.json());
             if (!res.ok) throw new Error(data.error || 'Không tải được thống kê AI.');
             if (isCompact) {
                 renderAiStatsCompact(data, compactMount);
