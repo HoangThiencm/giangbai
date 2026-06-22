@@ -74,6 +74,58 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
         return list;
     }
 
+    async function callGeminiText(prompt, keys, model, timeoutMs) {
+        const apiKeys = getKeys(keys);
+        if (!apiKeys.length) throw new Error('Thiếu Gemini API Key. Bấm Cấu hình AI trên trang này để nạp key.');
+        const models = [getModel(model)];
+        if (!models.includes('gemini-2.5-flash')) models.push('gemini-2.5-flash');
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs || 90000);
+        let lastError = 'Gemini không phản hồi.';
+
+        try {
+            for (const currentModel of models) {
+                const shuffled = [...apiKeys].sort(() => Math.random() - 0.5);
+                for (let i = 0; i < Math.min(shuffled.length, 4); i++) {
+                    const key = shuffled[i];
+                    try {
+                        const res = await fetch(
+                            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(currentModel)}:generateContent?key=${encodeURIComponent(key)}`,
+                            {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                signal: controller.signal,
+                                body: JSON.stringify({
+                                    contents: [{ parts: [{ text: prompt }] }],
+                                    generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+                                }),
+                            }
+                        );
+                        const raw = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            lastError = raw.error?.message || `Gemini HTTP ${res.status}`;
+                            if (res.status === 429 || res.status >= 500) continue;
+                            throw new Error(lastError);
+                        }
+                        const parts = raw.candidates?.[0]?.content?.parts || [];
+                        let text = '';
+                        parts.forEach((p) => { if (p.text) text += p.text; });
+                        text = text.trim();
+                        if (!text) throw new Error('Gemini trả về rỗng.');
+                        return text;
+                    } catch (err) {
+                        if (err.name === 'AbortError') throw new Error('Hết thời gian chờ Gemini (90s). Thử lại.');
+                        lastError = err.message || lastError;
+                    }
+                }
+            }
+        } finally {
+            clearTimeout(timer);
+        }
+        throw new Error(lastError);
+    }
+
     async function callGeminiVision(dataUrl, prompt, keys, model, timeoutMs) {
         const apiKeys = getKeys(keys);
         if (!apiKeys.length) throw new Error('Thiếu Gemini API Key. Bấm Cấu hình AI trên trang này để nạp key.');
@@ -121,7 +173,7 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
                         if (!text) throw new Error('Gemini trả về rỗng.');
                         return text;
                     } catch (err) {
-                        if (err.name === 'AbortError') throw new Error('Hết thời gian chờ Gemini (90s). Thử lại hoặc bật HF dự phòng.');
+                        if (err.name === 'AbortError') throw new Error('Hết thời gian chờ Gemini (90s). Thử lại.');
                         lastError = err.message || lastError;
                     }
                 }
@@ -136,6 +188,20 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
         const text = await callGeminiVision(imageDataUrl, SEGMENT_PROMPT, keys, model);
         const rows = parseVisionJson(text);
         return { status: 'ok', data: mergeSegmentQuestions(rows), source: 'browser-gemini' };
+    }
+
+    async function normalizeSegmentFromText(ocrText, keys, model) {
+        const body = String(ocrText || '').trim();
+        if (!body) throw new Error('Trang PDF chưa có văn bản OCR.');
+        const prompt = `${SEGMENT_PROMPT}
+
+VĂN BẢN ĐÃ QUÉT BẰNG MISTRAL OCR (markdown):
+---
+${body}
+---`;
+        const text = await callGeminiText(prompt, keys, model);
+        const rows = parseVisionJson(text);
+        return { status: 'ok', data: mergeSegmentQuestions(rows), source: 'mistral-ocr+gemini' };
     }
 
     async function normalizeManual(imageDataUrl, keys, model) {
@@ -157,7 +223,9 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
 
     global.ExamVision = {
         callGeminiVision,
+        callGeminiText,
         normalizeSegment,
+        normalizeSegmentFromText,
         normalizeManual,
         importAnswerSheet,
     };

@@ -695,6 +695,9 @@
                     <button id="lessonReloadBtn" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
                         <i class="fas fa-rotate-right mr-1"></i>Tải lại dữ liệu
                     </button>
+                    <button id="viewSubmissionsBtn" type="button" class="w-full bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded font-bold text-sm shadow">
+                        <i class="fas fa-cloud-arrow-down mr-1"></i>Xem bài nộp HS
+                    </button>
                     <div class="rounded border border-teal-100 bg-teal-50 p-3 text-sm leading-6 text-teal-900">
                         Ví dụ công thức: <code>$A=\\{1,2,3\\}$</code>, <code>$x \\in A$</code>. Học sinh sẽ nhìn thấy công thức đã render.
                     </div>
@@ -755,12 +758,15 @@
                         <textarea id="lessonSelfPractice" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
 
-                    <section id="selfPracticeSubmissionsPanel" class="hidden rounded-xl border border-sky-200 bg-sky-50 p-4">
+                    <section id="selfPracticeSubmissionsPanel" class="rounded-xl border-2 border-sky-300 bg-sky-50 p-4 scroll-mt-24">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <h4 class="text-sm font-bold text-sky-900"><i class="fas fa-cloud-arrow-up mr-1"></i> Bài nộp giáo viên (Google Drive)</h4>
+                            <div>
+                                <h4 class="text-base font-bold text-sky-950"><i class="fas fa-folder-open mr-1"></i> Bài nộp học sinh (Google Drive)</h4>
+                                <p class="text-xs text-sky-800 mt-1">Học sinh lớp bạn dạy nộp ở tab <strong>Bài tập nộp giáo viên</strong> trong lộ trình. Bấm link tệp để xem trên Drive.</p>
+                            </div>
                             <button type="button" id="reloadSelfPracticeSubmissionsBtn" class="rounded border border-sky-300 bg-white px-3 py-1.5 text-xs font-bold text-sky-800 hover:bg-sky-100">Tải lại</button>
                         </div>
-                        <div id="selfPracticeSubmissionsBody" class="mt-3 text-sm text-sky-900">Chưa có bài nộp.</div>
+                        <div id="selfPracticeSubmissionsBody" class="mt-3 text-sm text-sky-900">Chọn bài học để xem bài nộp.</div>
                     </section>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -838,6 +844,10 @@
             if (field) field.addEventListener('input', renderPreview);
         });
         el('reloadSelfPracticeSubmissionsBtn')?.addEventListener('click', () => loadSelfPracticeSubmissions());
+        el('viewSubmissionsBtn')?.addEventListener('click', () => {
+            el('selfPracticeSubmissionsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            loadSelfPracticeSubmissions();
+        });
         setupEditorFieldShortcuts();
         setupRichToolbars();
         injectLessonEditorStyles();
@@ -1007,10 +1017,9 @@
         const body = el('selfPracticeSubmissionsBody');
         if (!panel || !body) return;
         if (!currentLessonId) {
-            panel.classList.add('hidden');
+            body.innerHTML = '<p class="text-sky-800">Chọn hoặc lưu một bài học để xem bài nộp của học sinh.</p>';
             return;
         }
-        panel.classList.remove('hidden');
         body.innerHTML = '<span class="text-slate-500"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải bài nộp...</span>';
         try {
             const res = await fetch(`api/lesson_self_practice.php?action=list&lesson_id=${encodeURIComponent(currentLessonId)}`, {
@@ -1021,7 +1030,7 @@
             if (!res.ok) throw new Error(data.error || 'Không tải được bài nộp.');
             const submissions = Array.isArray(data.submissions) ? data.submissions : [];
             if (!submissions.length) {
-                body.innerHTML = '<p class="text-sky-800">Chưa có học sinh nộp bài tập.</p>';
+                body.innerHTML = '<p class="text-sky-800">Chưa có học sinh lớp bạn dạy nộp bài cho bài học này. (Kiểm tra Admin đã gán <strong>lớp</strong> cho tài khoản giáo viên chưa.)</p>';
                 return;
             }
             body.innerHTML = `

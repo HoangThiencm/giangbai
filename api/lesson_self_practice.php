@@ -191,6 +191,11 @@ if ($method === 'GET' && $action === 'list') {
             ORDER BY s.submitted_at DESC, s.id DESC");
         $stmt->execute([$lessonId]);
         $rows = $stmt->fetchAll();
+        if ($role === 'teacher') {
+            $rows = array_values(array_filter($rows, function ($row) use ($user) {
+                return teacher_can_view_student_class($user, (string)($row['class_name'] ?? ''));
+            }));
+        }
         $ids = array_map(fn($row) => (int)$row['id'], $rows);
         $fileMap = lsp_files_for_submissions($pdo, $ids);
         $submissions = array_map(fn($row) => lsp_submission_row($row, $fileMap[(int)$row['id']] ?? []), $rows);

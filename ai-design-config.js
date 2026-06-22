@@ -253,9 +253,14 @@
             const host = document.getElementById(containerId);
             if (!host) return;
             const isTeacher = localStorage.getItem('userRole') === 'teacher';
-            host.className = (opts.className || 'flex flex-wrap items-center justify-end gap-2 px-3 py-2') + (host.className ? ` ${host.className}` : '');
+            host.className = (opts.className || 'flex flex-nowrap items-center justify-end gap-2 px-3 py-2 min-h-[40px]') + (host.className ? ` ${host.className}` : '');
+            const mistralCount = AiDesignConfig.getMistralKeys().length;
+            const mistralOn = AiDesignConfig.isMistralEnabled();
             host.innerHTML = `
-                ${isTeacher ? '' : `<button type="button" id="${containerId}-cfg-btn" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+                <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold whitespace-nowrap ${mistralOn && mistralCount ? 'border-violet-200 bg-violet-50 text-violet-800' : 'border-amber-200 bg-amber-50 text-amber-800'}">
+                    <i class="fas fa-file-image"></i> Mistral OCR: ${mistralOn && mistralCount ? `${mistralCount} key` : 'chưa có key'}
+                </span>
+                ${isTeacher ? '' : `<button type="button" id="${containerId}-cfg-btn" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 whitespace-nowrap">
                     <i class="fas fa-sliders-h text-indigo-500"></i> Cấu hình AI
                 </button>`}
                 `;

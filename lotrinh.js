@@ -766,21 +766,39 @@
         return '';
     }
 
+    const API_TIMEOUT_MS = 25000;
+
     async function api(url, options = {}) {
-        const res = await fetch(url, { cache: 'no-store', ...options });
-        const text = await res.text();
-        let data = null;
-        try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
-        if (!res.ok) {
-            const base = data && (data.error || data.message) ? (data.error || data.message) : `HTTP ${res.status}`;
-            const detail = data && data.detail ? String(data.detail) : '';
-            const message = detail && detail !== base ? `${base} (${detail})` : (detail || base);
-            const err = new Error(message);
-            err.code = data?.code || '';
-            err.quota = data?.quota || null;
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+        try {
+            const res = await fetch(url, {
+                cache: 'no-store',
+                credentials: 'include',
+                ...options,
+                signal: options.signal || controller.signal,
+            });
+            const text = await res.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+            if (!res.ok) {
+                const base = data && (data.error || data.message) ? (data.error || data.message) : `HTTP ${res.status}`;
+                const detail = data && data.detail ? String(data.detail) : '';
+                const message = detail && detail !== base ? `${base} (${detail})` : (detail || base);
+                const err = new Error(message);
+                err.code = data?.code || '';
+                err.quota = data?.quota || null;
+                throw err;
+            }
+            return data;
+        } catch (err) {
+            if (err?.name === 'AbortError') {
+                throw new Error('Mạng chậm hoặc máy chủ không phản hồi. Vui lòng thử lại.');
+            }
             throw err;
+        } finally {
+            window.clearTimeout(timer);
         }
-        return data;
     }
 
     function formatAiErrorMessage(err) {
@@ -914,6 +932,7 @@
             els.studentName.textContent = 'Đang tải...';
             if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
             if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
+            if (els.routeChapter) els.routeChapter.textContent = 'Đang tải bài học...';
             els.lessonTitle.textContent = 'Đang tải dữ liệu';
             els.lessonGoal.textContent = '';
             els.lessonList.innerHTML = '<div class="text-sm text-slate-500">Đang tải bài học...</div>';
@@ -924,8 +943,23 @@
             els.studentName.textContent = 'Lỗi tải dữ liệu';
             if (els.routeTitle) els.routeTitle.textContent = PAGE_TITLE;
             if (els.routeSubject) els.routeSubject.textContent = PAGE_SUBJECT;
+            if (els.routeChapter) els.routeChapter.textContent = 'Không tải được dữ liệu';
             els.lessonTitle.textContent = 'Không thể mở lộ trình';
             els.lessonGoal.textContent = state.error;
+            els.lessonList.innerHTML = `
+                <div class="space-y-3 text-sm">
+                    <p class="leading-6 text-rose-700">${escapeHtml(state.error)}</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="lotrinhRetryBtn" class="inline-flex items-center gap-2 rounded border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100">
+                            <i class="fas fa-rotate-right"></i>Thử lại
+                        </button>
+                        <button type="button" id="lotrinhReloginBtn" class="inline-flex items-center gap-2 rounded border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">
+                            <i class="fas fa-right-from-bracket"></i>Đăng nhập lại
+                        </button>
+                    </div>
+                </div>`;
+            document.getElementById('lotrinhRetryBtn')?.addEventListener('click', () => { void bootstrapLotrinhPage(); });
+            document.getElementById('lotrinhReloginBtn')?.addEventListener('click', logout);
             return;
         }
 
@@ -3262,7 +3296,7 @@
 
     async function logout() {
         try {
-            await fetch('api/logout.php', { method: 'POST', cache: 'no-store' });
+            await fetch('api/logout.php', { method: 'POST', cache: 'no-store', credentials: 'include' });
         } catch {
             // Still clear local state below.
         }
@@ -4724,25 +4758,9 @@
 
     initStudentAiAssist();
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState !== 'visible' || isTeacher()) return;
-            reloadLessons(false).then(() => render()).catch(console.warn);
-        });
-
-        try {
-            await reloadLessons(true);
-            if (!state.selectedLessonId && state.lessons[0]) {
-            state.selectedLessonId = state.lessons[0].id;
-            localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
-        }
-        if (state.user?.full_name) {
-            els.studentName.textContent = state.user.full_name;
-        }
-        if (!state.selectedLessonId && state.lessons[0]) state.selectedLessonId = state.lessons[0].id;
-        if (!isTeacher()) await markLessonStarted(currentLesson());
-    } catch (err) {
-        state.error = err.message;
-        if (err.message.toLowerCase().includes('chưa đăng nhập') || err.message.toLowerCase().includes('not logged in')) {
+    function handleAuthLoadError(err) {
+        const message = String(err?.message || 'Không tải được lộ trình.');
+        if (message.toLowerCase().includes('chưa đăng nhập') || message.toLowerCase().includes('not logged in')) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
@@ -4750,12 +4768,46 @@
             localStorage.removeItem('allowedPages');
             localStorage.removeItem('userClassName');
             window.location.href = 'login.html';
-            return;
+            return true;
         }
-    } finally {
-        state.loading = false;
-        render();
+        state.error = message;
+        return false;
     }
+
+    async function bootstrapLotrinhPage() {
+        state.loading = true;
+        state.error = '';
+        render();
+        let lessonToStart = null;
+        try {
+            await reloadLessons(true);
+            if (!state.selectedLessonId && state.lessons[0]) {
+                state.selectedLessonId = state.lessons[0].id;
+                localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
+            }
+            if (!state.selectedLessonId && state.lessons[0]) {
+                state.selectedLessonId = state.lessons[0].id;
+            }
+            if (!isTeacher()) {
+                lessonToStart = currentLesson();
+            }
+        } catch (err) {
+            if (handleAuthLoadError(err)) return;
+        } finally {
+            state.loading = false;
+            render();
+        }
+        if (lessonToStart) {
+            markLessonStarted(lessonToStart).catch(console.warn);
+        }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || isTeacher()) return;
+        reloadLessons(false).then(() => render()).catch(console.warn);
+    });
+
+    await bootstrapLotrinhPage();
 
     els.resetBtn.onclick = async () => {
         const lesson = currentLesson();

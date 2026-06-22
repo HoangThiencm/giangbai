@@ -878,7 +878,7 @@
 <body class="page-shell font-sans min-h-screen text-slate-800">
 
     <nav class="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6">
-        <div class="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="mx-auto flex max-w-7xl flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <div class="flex items-center gap-3">
                 <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300">
                     <i class="fas fa-robot text-lg"></i>
@@ -888,8 +888,8 @@
                     <p class="text-xs font-medium text-slate-500">Tác giả: Hoàng Tấn Thiên</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="nav-chip rounded-full px-3 py-2 text-xs font-semibold">
+            <div class="flex shrink-0 flex-nowrap items-center gap-2">
+                <span class="nav-chip rounded-full px-3 py-2 text-xs font-semibold whitespace-nowrap">
                     <i class="fas fa-sparkles mr-1 text-indigo-300"></i> Cập nhật đồng bộ
                 </span>
 
@@ -931,7 +931,7 @@
                             <p class="mb-2">API key và model được Admin cấu hình tập trung, rồi tự đồng bộ đến các công cụ:</p>
                             <ul class="list-disc space-y-1 pl-5">
                                 <li><b>Gemini Keys:</b> Nhận diện ảnh, sinh đề, vẽ hình.</li>
-                                <li><b>Thi trực tuyến:</b> Tách PDF trên trình duyệt, nhận diện câu hỏi bằng Gemini.</li>
+                                <li><b>Thi trực tuyến:</b> Mistral OCR quét PDF → Gemini nhận diện câu hỏi.</li>
                                 <li><b>Groq / Hugging Face:</b> Dự phòng khi dịch vụ chính quá tải hoặc lỗi.</li>
                             </ul>
                         </div>
@@ -1315,7 +1315,7 @@
                             <div class="tool-tile-content">
                                 <span class="tool-tile-eyebrow">Lộ trình Toán</span>
                                 <h3 class="tool-tile-title">Soạn bài lộ trình</h3>
-                                <p class="tool-tile-desc">Kiến thức cần nhớ, ví dụ, bài giảng, luyện tập và nộp bài theo từng bài.</p>
+                                <p class="tool-tile-desc">Soạn bài lộ trình; xem bài HS nộp Drive qua nút <strong>Xem bài nộp HS</strong>.</p>
                             </div>
                             <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                         </a>

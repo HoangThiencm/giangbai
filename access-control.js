@@ -85,7 +85,7 @@
 
     async function refreshSessionPages() {
         try {
-            const res = await fetch('api/me.php', { cache: 'no-store', credentials: 'same-origin' });
+            const res = await fetch('api/me.php', { cache: 'no-store', credentials: 'include' });
             if (!res.ok) return getAllowedPages();
             const data = await res.json();
             const user = data.user || {};

@@ -215,7 +215,7 @@
         async function redirectIfSessionIsValid() {
             if (!localStorage.getItem('authToken')) return;
             try {
-                const response = await fetch('api/me.php', { cache: 'no-store' });
+                const response = await fetch('api/me.php', { cache: 'no-store', credentials: 'include' });
                 if (!response.ok) throw new Error('Phiên đăng nhập đã hết hạn.');
                 const data = await response.json();
                 localStorage.setItem('userEmail', data.user.username);
@@ -273,6 +273,7 @@
                 const response = await fetch('api/login.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ username, password })
                 });
                 const data = await response.json();

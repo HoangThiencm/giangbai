@@ -19,7 +19,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="pdf-page-client.js?v=20260621"></script>
-
+    <script src="mistral-ocr-client.js?v=20260621"></script>
     <script src="exam-stitch-client.js?v=20260621"></script>
     <script src="exam-vision-client.js?v=20260624"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -293,7 +293,7 @@
 </head>
 
 <body class="noselect" oncontextmenu="return false;">
-    <div id="gb-ai-toolbar"></div>
+    <div id="gb-ai-toolbar" class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur"></div>
     <div id="root"></div>
     <div id="react-error"></div>
 
@@ -1108,13 +1108,29 @@
                 return { total, hasAns };
             }, [allQuestions]);
 
+            const hasMistralOcr = () => (
+                window.MistralOcr
+                && window.AiDesignConfig
+                && AiDesignConfig.isMistralEnabled()
+                && AiDesignConfig.getMistralKeys().length > 0
+            );
+
             const processPdfUpload = async (file) => {
                 if (!window.PdfPageClient) {
                     throw new Error('Không tải được pdf-page-client.js. Kiểm tra mạng rồi tải lại trang.');
                 }
-                setLoadingMsg('Đang tách PDF trên trình duyệt...');
-                const pages = await PdfPageClient.splitPdfFile(file);
-                return { status: 'ok', pages, source: 'browser' };
+                if (!hasMistralOcr()) {
+                    throw new Error('Thiếu Mistral OCR. Admin cần nhập key Mistral trong global_config.json (hoặc đăng nhập qua trang chủ để đồng bộ).');
+                }
+                setLoadingMsg('Đang tách PDF và quét Mistral OCR...');
+                const [pages, mistralResult] = await Promise.all([
+                    PdfPageClient.splitPdfFile(file),
+                    MistralOcr.ocrPdfFile(file),
+                ]);
+                pages.forEach((p, i) => {
+                    p.ocr_text = mistralResult.pages[i]?.ocr_text || '';
+                });
+                return { status: 'ok', pages, source: 'mistral+browser' };
             };
 
             const handleUpload = async (e) => {
@@ -1194,11 +1210,16 @@
                     setPageProgress(prev => ({ ...prev, [page.id]: 20 }));
 
                     let payload = null;
-                    let via = 'Gemini (trình duyệt)';
+                    let via = 'Mistral OCR + Gemini';
 
                     try {
                         if (!window.ExamVision) throw new Error('Chưa tải exam-vision-client.js');
-                        payload = await ExamVision.normalizeSegment(imageData, keys, model);
+                        if (page.ocr_text && String(page.ocr_text).trim()) {
+                            payload = await ExamVision.normalizeSegmentFromText(page.ocr_text, keys, model);
+                        } else {
+                            payload = await ExamVision.normalizeSegment(imageData, keys, model);
+                            via = 'Gemini Vision (không có OCR)';
+                        }
                     } catch (browserErr) {
                         progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
                             setPageProgress(prev => ({ ...prev, [page.id]: value }));
@@ -1380,7 +1401,7 @@
                                     <input type="file" className="hidden" accept=".pdf" onChange={handleUpload} />
                                     <i className="fas fa-file-pdf text-4xl text-indigo-500 mb-3"></i>
                                     <div className="font-bold text-indigo-700">Chọn file PDF</div>
-                                    <div className="text-sm text-indigo-500 mt-1">Tách trang rồi bấm Nhận diện AI</div>
+                                    <div className="text-sm text-indigo-500 mt-1">Mistral OCR tách văn bản → Gemini nhận diện câu hỏi</div>
                                 </label>
                                 <label className="block border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-xl p-6 cursor-pointer hover:bg-emerald-100 transition">
                                     <input type="file" className="hidden" accept=".docx" onChange={handleWordLatexImport} />
