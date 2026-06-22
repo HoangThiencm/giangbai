@@ -456,12 +456,60 @@
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
         const pages = [];
-        for (let i = 1; i <= Math.min(pdf.numPages, 12); i++) {
+
+        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {  // chỉ cần 3 trang đầu cho header
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            pages.push(content.items.map(item => item.str).join(' '));
+
+            // Cải thiện: nhóm text theo vị trí y để tái tạo layout header tốt hơn (hai cột, dòng trên)
+            const items = content.items
+                .filter(it => it.str && it.str.trim())
+                .map(it => {
+                    const t = it.transform || [1,0,0,1,0,0];
+                    return {
+                        str: it.str,
+                        x: t[4] || 0,
+                        y: t[5] || 0,
+                        height: Math.abs(t[3] || 10)
+                    };
+                });
+
+            // Sắp xếp từ trên xuống (y cao trước), rồi trái sang phải
+            items.sort((a, b) => {
+                if (Math.abs(a.y - b.y) > 5) return b.y - a.y; // y cao hơn (trên) trước
+                return a.x - b.x;
+            });
+
+            // Gom thành dòng: các item có y gần nhau coi là cùng dòng
+            const lines = [];
+            let currentLine = [];
+            let lastY = null;
+
+            for (const item of items) {
+                if (lastY === null || Math.abs(item.y - lastY) <= 8) {
+                    currentLine.push(item);
+                } else {
+                    if (currentLine.length) {
+                        currentLine.sort((a,b) => a.x - b.x);
+                        lines.push(currentLine.map(it => it.str).join(' '));
+                    }
+                    currentLine = [item];
+                }
+                lastY = item.y;
+            }
+            if (currentLine.length) {
+                currentLine.sort((a,b) => a.x - b.x);
+                lines.push(currentLine.map(it => it.str).join(' '));
+            }
+
+            // Chỉ lấy các dòng đầu của trang (header thường ở 15 dòng đầu)
+            const headerLines = lines.slice(0, 20);
+            pages.push(headerLines.join('\n'));
         }
-        return pages.join('\n').replace(/[ \t]+/g, ' ').trim();
+
+        let text = pages.join('\n\n');
+        text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+        return text;
     }
 
     function hasMistralOcr() {

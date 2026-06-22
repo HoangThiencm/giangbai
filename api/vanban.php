@@ -249,11 +249,18 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    // Cứu hộ cuối cùng: nếu trong head có "Số:" nhưng document_number vẫn trống hoặc thiếu chữ số,
-    // lấy số đầu tiên dạng NNNN/XXXX trong 600 ký tự đầu
-    if (empty($result['document_number']) && preg_match('/Số\s*[:\.]?/iu', $head)) {
-        if (preg_match('/\b([0-9]{3,6}\/[A-ZĐA-Z0-9.\-]{2,})\b/u', mb_substr($head, 0, 600), $match)) {
-            $result['document_number'] = $match[1];
+    // Cứu hộ mạnh cho ký số / text layer lỗi: 
+    // Nếu thấy "Số" hoặc tên cơ quan ở đầu, quét toàn bộ head để tìm số chính (ưu tiên số đầu tiên sau org)
+    if (empty($result['document_number'])) {
+        // Tìm số ngay sau "Số:" bất kể có khoảng trắng hay ký tự lạ
+        if (preg_match('/Số\s*[:\.]?\s*([0-9]{3,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu', $head, $match)) {
+            $result['document_number'] = trim(preg_replace('/\s+/u', '', $match[1]));
+        } elseif (preg_match('/\b([0-9]{3,6}\/[A-ZĐA-Z0-9.\-]{3,})\b/u', mb_substr($head, 0, 700), $match)) {
+            // Lấy số đầu tiên kiểu NNNN/XXXX nếu có "Số" hoặc org name gần đầu
+            $earlyContext = mb_substr($head, 0, 400);
+            if (preg_match('/(Số|ỦY BAN|PHƯỜNG|PHÒNG)/iu', $earlyContext)) {
+                $result['document_number'] = $match[1];
+            }
         }
     }
 
@@ -282,24 +289,22 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    // Tìm ngày ban hành ở phần đầu (thường "Hồ Nai, ngày 22 tháng 6 năm 2026" hoặc "ngày 22 tháng 6 năm 2026")
-    // Ưu tiên ngày sớm nhất trong 900 ký tự đầu, bỏ qua ngày trong tham chiếu
+    // Tìm NGÀY BAN HÀNH sớm nhất ở header (bỏ ngày trong tham chiếu bên dưới)
     $dateHead = mb_substr($head, 0, 900);
-    $dateMatch = null;
 
-    // Pattern 1: có địa danh trước
-    if (preg_match('/[A-Za-zÀ-ỹ\.\s,]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
-        $dateMatch = $m;
-    } 
-    // Pattern 2: "ngày DD tháng MM năm YYYY" sớm
-    elseif (preg_match('/ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
-        // Kiểm tra không phải ngày trong tham chiếu (nếu có "12/6" hoặc tương tự gần đó)
-        $dateMatch = $m;
+    // Ưu tiên pattern có "Hồ Nai, ngày" hoặc tương tự ngay đầu
+    if (preg_match('/[A-Za-zÀ-ỹ\.\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
+        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+    } elseif (preg_match('/ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
+        // Kiểm tra không nằm sau dòng tham chiếu
+        $pos = mb_strpos($dateHead, $m[0]);
+        $before = $pos !== false ? mb_substr($dateHead, 0, $pos) : '';
+        if (!preg_match('/(Căn cứ|Trên cơ sở|theo|Công văn số)/iu', $before)) {
+            $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+        }
     }
 
-    if ($dateMatch) {
-        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$dateMatch[3], (int)$dateMatch[2], (int)$dateMatch[1]);
-    } else {
+    if (empty($result['document_date'])) {
         $result['document_date'] = vbd_parse_vn_date($dateHead);
     }
 
@@ -320,6 +325,11 @@ function vbd_regex_extract(string $source): array
         $result['summary_text'] = vbd_truncate($result['title'], 500);
     }
 
+    // Luôn giữ summary ngắn gọn, không đổ cả thân văn bản
+    if (!empty($result['summary_text']) && mb_strlen($result['summary_text']) > 250) {
+        $result['summary_text'] = mb_substr(trim($result['summary_text']), 0, 220) . '...';
+    }
+
     return $result;
 }
 
@@ -337,37 +347,24 @@ function vbd_parse_document(string $source): array
         $parsed['summary_text'] = mb_substr($parsed['summary_text'], 0, 280) . '...';
     }
 
-    // Trigger AI nếu:
-    // - Không lấy được số/ngày, hoặc
-    // - Có dấu hiệu trích dẫn văn bản khác (rất hay nhầm số của văn bản được dẫn chiếu)
-    $headForCheck = mb_substr($cleanSource, 0, 900);
-    $hasReference = (bool)preg_match('/(Căn cứ|Trên cơ sở|theo Công văn số|Công văn số)\s*\d/i', $headForCheck);
-    $numBad = empty($parsed['document_number']) || 
-              str_starts_with($parsed['document_number'], '/') || 
-              strlen($parsed['document_number']) < 5;
-    $needsAi = $numBad || empty($parsed['document_date']) || $hasReference;
-    if ($needsAi) {
-        $aiResult = vbd_try_ai_document_extract($cleanSource);
-        if ($aiResult) {
-            // Ưu tiên AI cho các trường còn thiếu
-            if (empty($parsed['document_number']) && !empty($aiResult['document_number'])) {
-                $parsed['document_number'] = $aiResult['document_number'];
-            }
-            if (empty($parsed['document_date']) && !empty($aiResult['document_date'])) {
-                $parsed['document_date'] = $aiResult['document_date'];
-            }
-            if (empty($parsed['title']) && !empty($aiResult['title'])) {
-                $parsed['title'] = $aiResult['title'];
-            }
-            if (empty($parsed['organization']) && !empty($aiResult['organization'])) {
-                $parsed['organization'] = $aiResult['organization'];
-            }
-            if (empty($parsed['document_type']) && !empty($aiResult['document_type'])) {
-                $parsed['document_type'] = $aiResult['document_type'];
-            }
+    // Luôn thử AI cho vanban (quan trọng với ký số / text layer hỗn loạn)
+    $aiResult = vbd_try_ai_document_extract($cleanSource);
+    if ($aiResult && is_array($aiResult)) {
+        $numBad = empty($parsed['document_number']) || 
+                  str_starts_with((string)$parsed['document_number'], '/') || 
+                  strlen((string)$parsed['document_number']) < 6;
+
+        $hasBodyReference = (bool)preg_match('/(Căn cứ|Trên cơ sở|Công văn số|theo Công văn)/iu', mb_substr($cleanSource, 0, 1200));
+
+        // Dùng AI để sửa nếu regex lấy số kém hoặc có dấu hiệu tham chiếu bên trong
+        if ($numBad || empty($parsed['document_date']) || $hasBodyReference) {
+            if (!empty($aiResult['document_number'])) $parsed['document_number'] = $aiResult['document_number'];
+            if (!empty($aiResult['document_date']))   $parsed['document_date']   = $aiResult['document_date'];
+            if (!empty($aiResult['title']) && empty($parsed['title'])) $parsed['title'] = $aiResult['title'];
+            if (!empty($aiResult['organization']) && empty($parsed['organization'])) $parsed['organization'] = $aiResult['organization'];
             $parsed['provider'] = 'cloudflare_workers_ai';
             $parsed['model'] = $aiResult['model'] ?? 'document';
-            $parsed['note'] = 'Tự nhận diện bằng AI (khuyến nghị kiểm tra lại với văn bản ký số).';
+            $parsed['note'] = 'Tự nhận diện bằng AI (đã sửa header bị lỗi do ký số / text layer).';
         }
     }
 
