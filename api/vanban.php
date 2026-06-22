@@ -153,12 +153,16 @@ function vbd_files(PDO $pdo, array $ids): array
 
 function vbd_preprocess_source(string $source): string
 {
+    // Chỉ lấy phần đầu văn bản (header thường nằm trong 2000-2500 ký tự đầu)
+    $source = function_exists('mb_substr') ? mb_substr($source, 0, 2500) : substr($source, 0, 2500);
+
     $lines = preg_split('/\R/u', $source) ?: [];
     $skipKeywords = [
         'ký bởi', 'ngày ký', 'ky boi', 'ngay ky', 'digitally signed', 'certificate',
         'mã xác thực', 'ma xac thuc', 'signature valid', 'signed by', 'chữ ký số',
         'chu ky so', 'xác thực bởi', 'xac thuc boi', 'valid from', 'signing time',
-        'timestamp', 'ocsp', 'certificate authority',
+        'timestamp', 'ocsp', 'certificate authority', 'ký số', 'ky so',
+        'ngày ký số', 'ngay ky so', 'thời gian ký', 'thoi gian ky',
     ];
     $filtered = [];
     foreach ($lines as $line) {
@@ -194,7 +198,11 @@ function vbd_parse_vn_date(string $text): ?string
 function vbd_regex_extract(string $source): array
 {
     $text = vbd_preprocess_source($source);
-    $head = function_exists('mb_substr') ? mb_substr($text, 0, 3200) : substr($text, 0, 3200);
+
+    // Chỉ tìm ở phần đầu văn bản (header) để tránh nhầm với nội dung bên trong hoặc chữ ký số
+    $head = function_exists('mb_substr') ? mb_substr($text, 0, 1400) : substr($text, 0, 1400);
+    $fullForTitle = function_exists('mb_substr') ? mb_substr($text, 0, 2200) : substr($text, 0, 2200);
+
     $result = [
         'document_number' => '',
         'title' => '',
@@ -206,11 +214,12 @@ function vbd_regex_extract(string $source): array
         'report_due_at' => null,
     ];
 
+    // Ưu tiên tìm "Số:" ngay đầu văn bản, đặc biệt với văn bản ký số
     $numberPatterns = [
+        '/(?:^|[\n\r])\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:Số|So)\s*(?:văn bản|van ban)?\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:Ký hiệu|Ky hieu)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
-        '/\b([0-9]{1,6}\/[A-ZĐ]{2,}(?:-[A-Z0-9]+)*(?:\/[A-Z0-9.\-]+)?)\b/u',
-        '/\b([0-9]{1,6}-[A-Z]{2,}(?:-[A-Z0-9]+)+)\b/u',
+        '/\b([0-9]{1,6}\/[A-ZĐ]{2,}(?:-[A-Z0-9.-]+)+)\b/u',
     ];
     foreach ($numberPatterns as $pattern) {
         if (preg_match($pattern, $head, $match)) {
@@ -240,15 +249,19 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    if (preg_match('/,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $head, $match)) {
+    // Ngày ban hành thường ở đầu bên phải: "Hồ Nai, ngày 22 tháng 6 năm 2026"
+    // Ưu tiên pattern có địa danh + ngày, chỉ tìm trong header
+    if (preg_match('/[A-Za-zÀ-ỹ\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $head, $match)) {
+        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
+    } elseif (preg_match('/,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $head, $match)) {
         $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
     } else {
         $result['document_date'] = vbd_parse_vn_date($head);
     }
 
-    if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,240})/iu', $text, $match)) {
+    if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,300})/iu', $fullForTitle, $match)) {
         $result['title'] = vbd_truncate(trim($match[1]), 500);
-    } elseif (preg_match('/(?:V\/v|Về việc)\s*([^\n]{8,240})/iu', $text, $match)) {
+    } elseif (preg_match('/(?:V\/v|Về việc)\s*([^\n]{8,300})/iu', $fullForTitle, $match)) {
         $result['title'] = vbd_truncate(trim($match[1]), 500);
     }
 
@@ -274,10 +287,42 @@ function vbd_parse_document(string $source): array
     }
 
     $parsed = vbd_regex_extract($cleanSource);
+
+    // Nếu regex không lấy được số văn bản hoặc ngày (thường gặp với văn bản ký số),
+    // fallback sang AI document extraction (Cloudflare Worker)
+    $needsAi = empty($parsed['document_number']) || empty($parsed['document_date']);
+    if ($needsAi) {
+        $aiResult = vbd_try_ai_document_extract($cleanSource);
+        if ($aiResult) {
+            // Ưu tiên AI cho các trường còn thiếu
+            if (empty($parsed['document_number']) && !empty($aiResult['document_number'])) {
+                $parsed['document_number'] = $aiResult['document_number'];
+            }
+            if (empty($parsed['document_date']) && !empty($aiResult['document_date'])) {
+                $parsed['document_date'] = $aiResult['document_date'];
+            }
+            if (empty($parsed['title']) && !empty($aiResult['title'])) {
+                $parsed['title'] = $aiResult['title'];
+            }
+            if (empty($parsed['organization']) && !empty($aiResult['organization'])) {
+                $parsed['organization'] = $aiResult['organization'];
+            }
+            if (empty($parsed['document_type']) && !empty($aiResult['document_type'])) {
+                $parsed['document_type'] = $aiResult['document_type'];
+            }
+            $parsed['provider'] = 'cloudflare_workers_ai';
+            $parsed['model'] = $aiResult['model'] ?? 'document';
+            $parsed['note'] = 'Tự nhận diện bằng AI (khuyến nghị kiểm tra lại với văn bản ký số).';
+        }
+    }
+
     $parsed['document_date'] = vbd_date($parsed['document_date'] ?? null);
     $parsed['report_due_at'] = vbd_date($parsed['report_due_at'] ?? null);
-    $parsed['provider'] = 'parser';
-    $parsed['model'] = '';
+
+    if (empty($parsed['provider'])) {
+        $parsed['provider'] = 'parser';
+        $parsed['model'] = '';
+    }
 
     $filled = array_filter([
         $parsed['document_number'] ?? '',
@@ -287,11 +332,93 @@ function vbd_parse_document(string $source): array
     ], static fn($v) => trim((string)$v) !== '');
     $count = count($filled);
     $parsed['confidence'] = $count >= 3 ? 'high' : ($count >= 2 ? 'medium' : 'low');
-    $parsed['note'] = $count >= 2
-        ? 'Tự nhận diện từ nội dung văn bản. Kiểm tra trước khi lưu.'
-        : 'Chỉ nhận diện được ít trường — bổ sung thủ công số văn bản, ngày ban hành, trích yếu.';
+    if (empty($parsed['note'])) {
+        $parsed['note'] = $count >= 2
+            ? 'Tự nhận diện từ nội dung văn bản. Kiểm tra trước khi lưu.'
+            : 'Chỉ nhận diện được ít trường — bổ sung thủ công số văn bản, ngày ban hành, trích yếu.';
+    }
 
     return $parsed;
+}
+
+function vbd_try_ai_document_extract(string $source): ?array
+{
+    // Lấy cấu hình Worker từ config (giống ai_explain)
+    $workerUrl = '';
+    $secret = '';
+
+    if (defined('CLOUDFLARE_AI_WORKER_URL')) {
+        $workerUrl = rtrim(trim((string)CLOUDFLARE_AI_WORKER_URL), '/');
+    }
+    if (defined('CLOUDFLARE_AI_WORKER_SECRET')) {
+        $secret = trim((string)CLOUDFLARE_AI_WORKER_SECRET);
+    }
+
+    // Fallback đọc từ global_config.json nếu chưa có
+    if (!$workerUrl || !$secret) {
+        $globalFile = dirname(__DIR__) . '/global_config.json';
+        if (is_file($globalFile)) {
+            $g = json_decode((string)@file_get_contents($globalFile), true);
+            if (is_array($g)) {
+                if (empty($workerUrl) && !empty($g['cloudflare_worker_url'])) {
+                    $workerUrl = rtrim(trim($g['cloudflare_worker_url']), '/');
+                }
+                if (empty($secret) && !empty($g['cloudflare_worker_secret'])) {
+                    $secret = trim($g['cloudflare_worker_secret']);
+                }
+            }
+        }
+    }
+
+    if (!$workerUrl || !$secret) {
+        return null;
+    }
+
+    $payload = [
+        'mode' => 'document',
+        'text' => mb_substr($source, 0, 4500),
+    ];
+
+    $ch = curl_init($workerUrl . '/chat');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_TIMEOUT => 35,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'X-Giangbai-Worker-Secret: ' . $secret,
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+    ]);
+
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($status < 200 || $status >= 300 || !$raw) {
+        return null;
+    }
+
+    $resp = json_decode($raw, true);
+    if (!is_array($resp) || empty($resp['ok']) || empty($resp['answer'])) {
+        return null;
+    }
+
+    // Worker trả về JSON string trong answer
+    $json = json_decode($resp['answer'], true);
+    if (!is_array($json)) {
+        return null;
+    }
+
+    return [
+        'document_number' => trim((string)($json['document_number'] ?? '')),
+        'title' => trim((string)($json['title'] ?? '')),
+        'organization' => trim((string)($json['organization'] ?? '')),
+        'document_type' => trim((string)($json['document_type'] ?? '')),
+        'document_date' => $json['document_date'] ?? null,
+        'summary_text' => trim((string)($json['summary_text'] ?? '')),
+        'model' => $resp['model'] ?? 'document',
+    ];
 }
 
 function vbd_drive_folder(array $document): string
