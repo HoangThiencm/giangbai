@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-21 — Tab Theo dõi AI (log lượt sử dụng, ShopAIKey USD, Cloudflare GraphQL), sửa đăng nhập admin không hỏi lưu mật khẩu.*
+*Cập nhật: 2026-06-22 — Major redesign giao diện soạn bài giáo viên (`admin-lesson-manager.js`): tabbed visual lesson designer (Lý thuyết / Ví dụ / Bài tập tương tác / Trắc nghiệm / Khác) + rich per-item editors hỗ trợ dán ảnh linh hoạt; dọn dẹp UI rối rắm + duplicate.*
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -49,6 +49,15 @@
   - **Xóa**: `delete_lesson` — xóa bài và tiến độ HS liên quan (có xác nhận).
   - **Nhân bản**: `duplicate_lesson` — bản sao `(bản sao)`, slug mới, mặc định chưa mở cho HS.
   - **Chương**: sửa từng bài qua ô Chương; **đổi tên hàng loạt** qua `rename_chapter` (cập nhật tất cả bài cùng tên chương trong môn). Dropdown bài hiển thị `Chương · Tên bài`; ô Chương có gợi ý từ `datalist`.
+
+- [x] **Redesign giao diện thiết kế bài học** (`admin-lesson-manager.js` — phản hồi trực tiếp "Giao diện gì rối rắm vậy"):
+  - Thay form cũ (sidebar + tất cả field dồn một chỗ + duplicate HTML từ edit dần) bằng **giao diện tab trực quan, linh hoạt**.
+  - Tabs rõ: **Lý thuyết** (mục tiêu + rich editor), **Ví dụ** (Dạng toán, dùng **DẠNG X:** + ảnh minh họa), **Bài tập tương tác** (rich self-practice + 3 loại dynamic: tự luận / kéo thả / nối-sắp xếp), **Trắc nghiệm**, **Khác** (kỹ năng, nhiệm vụ, video).
+  - **Mỗi item / Dạng / Câu** thêm riêng lẻ qua nút "+ Thêm"; mỗi cái có thẻ card + rich toolbar riêng (đậm / nghiêng / gạch / ảnh / [AI]).
+  - **Chèn ảnh linh hoạt**: Toolbar chèn link; hỗ trợ **dán trực tiếp** URL ảnh (tự chuyển thành `![ảnh](url)`). Người dùng quyết định chèn ở mục nào (không bắt buộc).
+  - Top bar gọn (Chọn bài + Nút CRUD), metadata compact luôn hiện (Chương/Tên/Slug/Order/Published), preview nhanh bên dưới.
+  - Submissions panel dời vào tab Bài tập. Xóa toàn bộ duplicate fields/IDs. Styles toolbar/tab/card sạch hơn.
+  - Phù hợp yêu cầu: "tạo giao diện thiết kế bài học... Mỗi tab có công cụ soạn thảo trực quan", "Thiết kế bài học một cách linh hoạt... Việc chèn hay không là do người dùng... chèn từng câu".
 - [x] **Thi trực tuyến (`thitructuyen.html`)** — sửa lỗi nộp bài & kết quả:
   - Fix lỗi `[object Object]` khi nộp bài: API bắt buộc `student_class` → luôn gửi `""` nếu trống; thêm `formatApiError()` hiển thị lỗi API dạng text.
   - Fix nộp bài trên **điện thoại / Zalo**: tắt chống gian lận toàn màn hình trên mobile; dùng `ref` + `sessionStorage` tránh mất đáp án/tên khi hết giờ; modal xác nhận nộp thay `confirm()`; `safeExitFullscreen()` có timeout; chặn nộp trùng.
@@ -112,6 +121,7 @@
 - [ ] Ô **Tìm bài học**: gõ liên tục nhiều ký tự — input không bị mất focus.
 - [ ] Giáo viên trên `lotrinhtoan7.html`: chỉ thấy soạn bài Toán 7, không lẫn Toán 6/8/9.
 - [ ] Soạn bài: nhập mục tiêu → Lưu → tải lại vẫn còn mục tiêu; học sinh thấy ở phần mô tả bài.
+- [ ] **Giao diện soạn bài mới (tabbed)**: đăng nhập GV → vào lộ trình → panel soạn: thử chuyển tab, + thêm 2-3 item tự luận + trắc nghiệm, dán ảnh (hoặc dùng nút ảnh) vào 1-2 mục (không chèn hết), dùng format **DẠNG**, lưu, kiểm tra preview + dữ liệu vẫn đúng định dạng | cũ.
 - [ ] Bài mới mặc định **chưa mở** cho học sinh; chỉ hiện sau khi giáo viên tick "Mở bài này cho học sinh" và lưu.
 - [ ] Giáo viên: **Nhân bản bài đang chọn** — bản sao xuất hiện trong dropdown, chưa mở cho HS, nội dung giống bài gốc.
 - [ ] Giáo viên: **Xóa bài đang chọn** — bài biến mất khỏi lộ trình; tiến độ HS của bài đó cũng mất (cần cân nhắc trước khi xóa).

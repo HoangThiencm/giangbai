@@ -9,7 +9,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Layout học sinh: cột trái (tiến độ + danh sách/bản đồ bài), cột giữa (nội dung bài), cột phải (kế hoạch tự học, động lực, kỹ năng, nhiệm vụ).
    - Định dạng CSS nội bộ (`<style>`) giúp render MathJax SVG và bong bóng chat AI giải thích.
    - Đã thêm style `.ai-chat-bubble` đồng bộ cho cả Toán 6, 7, 8, 9; bong bóng có nút `x`, mũi nhọn chat, và không bị cắt nội dung.
-   - Cache script gần nhất: `access-control.js?v=20260619-teacher-scope1`, `lotrinh.js?v=20260619-drag-fill1`, `admin-lesson-manager.js?v=20260619-teacher-scope1`, `admin-progress.js?v=20260619-teacher-class1` (trên `lotrinhtoan6–9.html` và `index.html`).
+   - Cache script gần nhất: `access-control.js?v=20260619-teacher-scope1`, `lotrinh.js?v=20260619-drag-fill1`, `admin-lesson-manager.js?v=20260622-lesson-tab-ui`, `admin-progress.js?v=20260619-teacher-class1` (trên `lotrinhtoan6–9.html` và `index.html`).
 
 2. **Logic Frontend (`lotrinh.js`)**
    - Quản lý trạng thái học tập của học sinh.
@@ -22,7 +22,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Tiến độ chương được tính bằng trung bình phần trăm hoàn thành của các bài trong lộ trình, không chỉ dựa vào số bài `mastered`; vì vậy đánh dấu đã học từng phần sẽ làm thanh tiến trình chương thay đổi.
    - Bảng kỹ năng không còn hiển thị `--` khi học sinh vào luyện tập; mặc định hiển thị `0%`, lấy tiến độ hoàn thành bài làm mức tối thiểu, và cập nhật theo thao tác đánh dấu/nộp bài.
    - Khi bài đã học xong (`mastered`), nút trên header bài học đổi thành "Học lại"; bấm nút này sẽ reset tiến trình bài hiện tại để học sinh làm lại.
-   - Giao diện giáo viên (`lessonDesignerMount`) có panel soạn bài (`admin-lesson-manager.js`, chỉ khi `userRole === 'teacher'`) và panel theo dõi tiến độ (`admin-progress.js`). Trang `admin.html` không mount hai panel này — admin chỉ quản lý tài khoản và cài đặt hệ thống.
+   - Giao diện giáo viên (`lessonDesignerMount`) có **panel soạn bài tabbed visual** (`admin-lesson-manager.js`, chỉ khi `userRole === 'teacher'`) và panel theo dõi tiến độ (`admin-progress.js`). Trang `admin.html` không mount hai panel này — admin chỉ quản lý tài khoản và cài đặt hệ thống.
    - Marker `[AI]` / `[[AI]]` trong nội dung lý thuyết quyết định vị trí nút **AI giải thích**; không tự gắn theo ngắt đoạn.
    - `lessonRichText()` render định dạng soạn bài: xuống dòng, đoạn, đậm/nghiêng/gạch chân, ảnh.
    - `renderNextAction()` gợi ý bước tiếp theo theo tab (lý thuyết / ví dụ / luyện tập) và tiến độ hiện tại.
@@ -39,9 +39,27 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Trên trang `lotrinhtoan6–9`: khóa theo `LOTRINH_SUBJECT` — không chuyển sang môn khác.
    - Mục tiêu bài: textarea `#lessonGoalInput` (không trùng `#lessonGoal` hiển thị HS); lưu field `goal_text`.
    - **Mở cho học sinh** (`is_published`): mặc định **tắt** khi tạo bài mới / nhân bản; giáo viên chủ động bật khi muốn lộ trình tới bài đó. Học sinh chỉ nhận bài `is_published` từ API.
-   - **Quản lý bài & chương** (panel soạn bài):
-     - **Thêm**: nút *Tạo bài mới* → điền nội dung → *Lưu bài học* (`save_content`).
-     - **Sửa**: chọn bài trong dropdown → chỉnh mọi trường (chương, tên, slug, nội dung…) → Lưu. Lưu theo `id` — đổi slug không tạo bài trùng.
+
+   - **Giao diện thiết kế bài học (tabbed visual editor — cập nhật 2026-06)**:
+     - Layout sạch: thanh chọn bài + CRUD gọn trên cùng + metadata compact (Chương, Tên bài, Slug, Thứ tự, Công khai) luôn hiện.
+     - **5 tab trực quan**:
+       - **Lý thuyết**: mục tiêu + rich editor (hỗ trợ Enter xuống dòng/đoạn, **đậm**, *nghiêng*, ảnh, công thức LaTeX `$...$`, marker `[AI]`).
+       - **Ví dụ**: dành cho "Dạng toán"; khuyến khích dùng **DẠNG 1:** làm heading; dán ảnh minh họa (hình vẽ, sơ đồ) vào từng khối khi cần.
+       - **Bài tập tương tác**: rich "Bài tập nộp giáo viên" + 3 nhóm linh hoạt (thêm từng cái một):
+         - Bài tập tự luận, Kéo vào ô trống, Nối ô / sắp xếp.
+         - Mỗi item = 1 card riêng với **toolbar ảnh/format riêng** → người dùng quyết định chèn ảnh hay không, chèn vào mục nào.
+       - **Trắc nghiệm**: thêm từng câu; mỗi câu có textarea rich cho câu hỏi (dán ảnh) + A/B/C/D + đáp án.
+       - **Khác**: Kỹ năng, Nhiệm vụ học sinh, Video YouTube.
+     - **Công cụ soạn thảo** (`richToolbarHtml`): nút đậm/nghiêng/gạch chân, **Chèn ảnh** (hỏi link hoặc dán trực tiếp URL ảnh → tự thành `![alt](url)`), thêm `[AI]`.
+     - Hỗ trợ **dán ảnh linh hoạt**: paste link ảnh trực tiếp vào khung chính hoặc per-item sẽ tự wrap markdown. Không bắt buộc chèn ảnh ở mọi chỗ.
+     - Dynamic items (essay/fill/drag/question) sync về hidden textarea dạng `|` (giữ tương thích backend `parse*` / `format*`).
+     - Preview tóm tắt số đoạn / mục / dạng / câu ngay dưới tabs.
+     - Submissions "Bài nộp học sinh (Google Drive)" nằm gọn trong tab Bài tập tương tác.
+     - Vẫn giữ đầy đủ CRUD: Tạo mới, Lưu, Nhân bản, Xóa, Đổi tên chương hàng loạt, scoped theo môn.
+
+   - **Quản lý bài & chương** (backend):
+     - **Thêm**: nút *Tạo bài mới* → điền nội dung theo tab → *Lưu bài học* (`save_content`).
+     - **Sửa**: chọn bài trong dropdown → chỉnh metadata + nội dung qua tabs → Lưu. Lưu theo `id` — đổi slug không tạo bài trùng.
      - **Xóa**: nút *Xóa bài đang chọn* → xác nhận → `delete_lesson` (xóa cả `student_lesson_progress` của bài đó).
      - **Nhân bản**: nút *Nhân bản bài đang chọn* → `duplicate_lesson` (tiêu đề thêm `(bản sao)`, slug mới, `is_published` tắt).
      - **Chương**: không có bảng chương riêng — mỗi bài có trường `chapter` (text). Ô Chương có `datalist` gợi ý chương đã có; nút *Đổi tên chương cho tất cả bài trong chương này* gọi `rename_chapter` (cập nhật hàng loạt theo môn). Dropdown bài hiển thị `Chương · Tên bài`.
@@ -140,4 +158,4 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Bảo mật:** `global_config.json` trong repo có thể chứa GitHub PAT plaintext — nên rotate token, không commit secret.
 
 ---
-*Cập nhật lần cuối: 2026-06-21. File này đồng bộ trạng thái dự án khi chuyển môi trường làm việc.*
+*Cập nhật lần cuối: 2026-06-22. Redesign giao diện soạn bài thành tabbed visual editor (admin-lesson-manager.js).*

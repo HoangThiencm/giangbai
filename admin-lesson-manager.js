@@ -679,7 +679,7 @@
             d.innerHTML = `
                 <div class="flex items-center mb-1">
                     <span class="font-bold text-teal-700">Tự luận ${i+1}</span>
-                    <button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeEssayItem(${i})">✕</button>
+                    <button type="button" class="remove-item-btn ml-auto text-rose-500 hover:text-rose-700">✕</button>
                 </div>
                 ${richToolbarHtml(`essay-de-${i}`)}
                 <textarea id="essay-de-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Đề (dán ảnh hoặc viết trực tiếp)"></textarea>
@@ -689,6 +689,9 @@
                 </div>
             `;
             cont.appendChild(d);
+            const removeBtn = d.querySelector('.remove-item-btn');
+            if (removeBtn) removeBtn.onclick = () => removeEssayItem(i);
+
             const de = d.querySelector(`#essay-de-${i}`);
             de.value = it.de || '';
             de.oninput = () => { essayItems[i].de = de.value; syncEssayToTextarea(); };
@@ -719,7 +722,7 @@
             const d = document.createElement('div');
             d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
-                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Kéo thả ${i+1}</span><button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeFillItem(${i})">✕</button></div>
+                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Kéo thả ${i+1}</span><button type="button" class="remove-item-btn ml-auto text-rose-500 hover:text-rose-700">✕</button></div>
                 ${richToolbarHtml(`fill-de-${i}`)}
                 <textarea id="fill-de-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Câu có ___ (dán ảnh nếu cần)"></textarea>
                 <div class="grid grid-cols-3 gap-1 mt-1">
@@ -729,6 +732,9 @@
                 </div>
             `;
             cont.appendChild(d);
+            const removeBtn = d.querySelector('.remove-item-btn');
+            if (removeBtn) removeBtn.onclick = () => removeFillItem(i);
+
             const de = d.querySelector(`#fill-de-${i}`); de.value = it.de||''; de.oninput = ()=>{fillItems[i].de=de.value; syncFillToTextarea();};
             ['manh','dap','goi'].forEach(k=>{ const inp=d.querySelector(`#fill-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{fillItems[i][k]=inp.value; syncFillToTextarea();}; });
         });
@@ -752,7 +758,7 @@
             const d = document.createElement('div');
             d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
-                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Nối/Sắp xếp ${i+1}</span><button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeDragItem(${i})">✕</button></div>
+                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Nối/Sắp xếp ${i+1}</span><button type="button" class="remove-item-btn ml-auto text-rose-500 hover:text-rose-700">✕</button></div>
                 ${richToolbarHtml(`drag-de-${i}`)}
                 <textarea id="drag-de-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Đề (dán ảnh nếu cần)"></textarea>
                 <div class="grid grid-cols-4 gap-1 mt-1">
@@ -763,6 +769,9 @@
                 </div>
             `;
             cont.appendChild(d);
+            const removeBtn = d.querySelector('.remove-item-btn');
+            if (removeBtn) removeBtn.onclick = () => removeDragItem(i);
+
             const de = d.querySelector(`#drag-de-${i}`); de.value = it.de||''; de.oninput = ()=>{dragItems[i].de=de.value; syncDragToTextarea();};
             ['trai','phai','map','goi'].forEach(k=>{ const inp=d.querySelector(`#drag-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{dragItems[i][k]=inp.value; syncDragToTextarea();}; });
         });
@@ -786,7 +795,7 @@
             const d = document.createElement('div');
             d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
-                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Câu ${i+1}</span><button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeQuestionItem(${i})">✕</button></div>
+                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Câu ${i+1}</span><button type="button" class="remove-item-btn ml-auto text-rose-500 hover:text-rose-700">✕</button></div>
                 ${richToolbarHtml(`q-cau-${i}`)}
                 <textarea id="q-cau-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Câu hỏi (dán ảnh nếu cần)"></textarea>
                 <div class="grid grid-cols-5 gap-1 mt-1">
@@ -798,6 +807,9 @@
                 </div>
             `;
             cont.appendChild(d);
+            const removeBtn = d.querySelector('.remove-item-btn');
+            if (removeBtn) removeBtn.onclick = () => removeQuestionItem(i);
+
             const cau = d.querySelector(`#q-cau-${i}`); cau.value=it.cau||''; cau.oninput=()=>{questionItems[i].cau=cau.value; syncQuestionsToTextarea();};
             ['a','b','c','d','dung'].forEach(k=>{ const inp=d.querySelector(`#q-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{questionItems[i][k]=inp.value; syncQuestionsToTextarea();}; });
         });
@@ -976,7 +988,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-sm font-bold text-slate-700">Bài tập tự luận (thêm từng bài)</span>
-                            <button type="button" onclick="addEssayItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm bài</button>
+                            <button type="button" id="addEssayBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm bài</button>
                         </div>
                         <div id="essayItems" class="space-y-2"></div>
                         <textarea id="lessonEssay" class="hidden"></textarea>
@@ -984,7 +996,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-sm font-bold text-slate-700">Kéo thả vào ô trống (thêm từng bài)</span>
-                            <button type="button" onclick="addFillItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
+                            <button type="button" id="addFillBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
                         </div>
                         <div id="fillItems" class="space-y-2"></div>
                         <textarea id="lessonFill" class="hidden"></textarea>
@@ -992,7 +1004,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-sm font-bold text-slate-700">Nối ô / sắp xếp (thêm từng bài)</span>
-                            <button type="button" onclick="addDragItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
+                            <button type="button" id="addDragBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
                         </div>
                         <div id="dragItems" class="space-y-2"></div>
                         <textarea id="lessonDrag" class="hidden"></textarea>
@@ -1012,7 +1024,7 @@
             <div id="tab-tracnghiem" class="lesson-tab-content hidden">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-sm font-bold text-slate-700">Trắc nghiệm (thêm từng câu, dán ảnh vào câu nếu cần)</span>
-                    <button type="button" onclick="addQuestionItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm câu</button>
+                    <button type="button" id="addQuestionBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm câu</button>
                 </div>
                 <div id="questionItems" class="space-y-2"></div>
                 <textarea id="lessonQuestions" class="hidden"></textarea>
@@ -1060,6 +1072,13 @@
         el('renameChapterBtn').onclick = renameChapter;
         el('saveLessonBtn').onclick = saveLesson;
         el('seedLessonBtn').onclick = fillSeed;
+
+        // Attach add buttons (no inline onclick because functions are in IIFE scope)
+        const addEssay = el('addEssayBtn'); if (addEssay) addEssay.onclick = addEssayItem;
+        const addFill = el('addFillBtn'); if (addFill) addFill.onclick = addFillItem;
+        const addDrag = el('addDragBtn'); if (addDrag) addDrag.onclick = addDragItem;
+        const addQ = el('addQuestionBtn'); if (addQ) addQ.onclick = addQuestionItem;
+
         el('lessonTitleInput').addEventListener('blur', suggestSlug);
         el('lessonChapter').addEventListener('blur', suggestSlug);
         el('lessonSubject').addEventListener('change', event => {
@@ -1678,4 +1697,16 @@
     } else {
         bootIfReady();
     }
+
+    // Expose the dynamic item add/remove functions on window.
+    // This ensures `onclick="addXXXItem()"` (if any old/cached HTML remains) works,
+    // even though the preferred method is direct property assignment from inside the IIFE.
+    window.addEssayItem = addEssayItem;
+    window.addFillItem = addFillItem;
+    window.addDragItem = addDragItem;
+    window.addQuestionItem = addQuestionItem;
+    window.removeEssayItem = removeEssayItem;
+    window.removeFillItem = removeFillItem;
+    window.removeDragItem = removeDragItem;
+    window.removeQuestionItem = removeQuestionItem;
 })();
