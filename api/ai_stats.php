@@ -334,13 +334,44 @@ function ai_stats_count_recent_module_success(array $recent, string $todayKey, s
     return $total;
 }
 
-function ai_stats_enrich_by_module(array $byModule, array $byMode, array $recent = [], string $todayKey = ''): array
+function ai_stats_providers_for_module(string $moduleId): array
+{
+    return [
+        'lotrinh' => ['cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
+        'thitructuyen' => ['mistral_ocr', 'gemini_browser'],
+        'vanban' => ['cloudflare_workers_ai'],
+    ][$moduleId] ?? [];
+}
+
+function ai_stats_provider_module_totals(array $providers, string $moduleId): array
+{
+    $success = 0;
+    $providerHits = [];
+    foreach (ai_stats_providers_for_module($moduleId) as $providerId) {
+        $bucket = $providers[$providerId] ?? null;
+        if (!is_array($bucket)) {
+            continue;
+        }
+        $count = max(0, (int)($bucket['success'] ?? 0));
+        if ($count <= 0) {
+            continue;
+        }
+        $providerHits[$providerId] = $count;
+        $success += $count;
+    }
+
+    return ['success' => $success, 'providers' => $providerHits];
+}
+
+function ai_stats_enrich_by_module(array $byModule, array $byMode, array $recent = [], string $todayKey = '', array $providers = []): array
 {
     foreach (['lotrinh', 'thitructuyen', 'vanban'] as $moduleId) {
+        $providerTotals = ai_stats_provider_module_totals($providers, $moduleId);
         $targetSuccess = max(
             (int)($byModule[$moduleId]['success'] ?? 0),
             ai_stats_infer_module_success_from_modes($byMode, $moduleId),
-            ai_stats_count_recent_module_success($recent, $todayKey, $moduleId)
+            ai_stats_count_recent_module_success($recent, $todayKey, $moduleId),
+            (int)($providerTotals['success'] ?? 0)
         );
         if ($targetSuccess <= 0) {
             continue;
@@ -351,6 +382,24 @@ function ai_stats_enrich_by_module(array $byModule, array $byMode, array $recent
         }
         $byModule[$moduleId]['success'] = $targetSuccess;
         $byModule[$moduleId]['calls'] = max((int)($byModule[$moduleId]['calls'] ?? 0), $targetSuccess);
+
+        $moduleProviders = is_array($byModule[$moduleId]['providers'] ?? null)
+            ? $byModule[$moduleId]['providers']
+            : [];
+        foreach ($providerTotals['providers'] as $providerId => $count) {
+            if (!isset($moduleProviders[$providerId]) || !is_array($moduleProviders[$providerId])) {
+                $moduleProviders[$providerId] = ['calls' => 0, 'success' => 0, 'error' => 0];
+            }
+            $moduleProviders[$providerId]['success'] = max(
+                (int)($moduleProviders[$providerId]['success'] ?? 0),
+                (int)$count
+            );
+            $moduleProviders[$providerId]['calls'] = max(
+                (int)($moduleProviders[$providerId]['calls'] ?? 0),
+                (int)$count
+            );
+        }
+        $byModule[$moduleId]['providers'] = $moduleProviders;
     }
 
     return $byModule;
@@ -370,7 +419,7 @@ function ai_stats_summarize_day(?array $day, array $recent = [], string $todayKe
     $providers = is_array($day['providers'] ?? null) ? $day['providers'] : [];
     $byMode = is_array($day['by_mode'] ?? null) ? $day['by_mode'] : [];
     $byModule = is_array($day['by_module'] ?? null) ? $day['by_module'] : [];
-    $byModule = ai_stats_enrich_by_module($byModule, $byMode, $recent, $todayKey);
+    $byModule = ai_stats_enrich_by_module($byModule, $byMode, $recent, $todayKey, $providers);
     $totalSuccess = 0;
     $totalCalls = 0;
     foreach ($providers as $bucket) {

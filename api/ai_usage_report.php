@@ -10,16 +10,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
 $isAdmin = defined('ADMIN_KEY') && is_string(ADMIN_KEY) && ADMIN_KEY !== '' && hash_equals(ADMIN_KEY, (string)$key);
 
-$teacherOk = false;
+$sessionOk = false;
 if (!$isAdmin && !empty($_SESSION['user_id'])) {
-    $userStmt = $pdo->prepare('SELECT role, is_active FROM users WHERE id = ? LIMIT 1');
+    $userStmt = $pdo->prepare('SELECT is_active FROM users WHERE id = ? LIMIT 1');
     $userStmt->execute([(int)$_SESSION['user_id']]);
     $user = $userStmt->fetch();
-    $teacherOk = $user && (bool)$user['is_active'] && in_array((string)($user['role'] ?? ''), ['teacher', 'admin'], true);
+    $sessionOk = $user && (bool)$user['is_active'];
 }
 
-if (!$isAdmin && !$teacherOk) {
-    respond(['error' => 'Tài khoản không có quyền ghi log AI.'], 403);
+if (!$isAdmin && !$sessionOk) {
+    respond(['error' => 'Cần đăng nhập để ghi log AI (Mistral/Gemini trình duyệt).'], 403);
 }
 
 $data = json_body();

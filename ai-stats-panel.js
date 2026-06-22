@@ -49,18 +49,48 @@
         vanban: ['document'],
     };
 
+    const MODULE_PROVIDER_MAP = {
+        lotrinh: ['cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
+        thitructuyen: ['mistral_ocr', 'gemini_browser'],
+        vanban: ['cloudflare_workers_ai'],
+    };
+
     function moduleBucket(byModule, id) {
         return (byModule && byModule[id]) || { calls: 0, success: 0, error: 0, providers: {} };
     }
 
-    function enrichedModuleBucket(byModule, byMode, id) {
+    function providerModuleSuccess(providers, id) {
+        return (MODULE_PROVIDER_MAP[id] || []).reduce((sum, providerId) => {
+            const bucket = providers?.[providerId];
+            const count = Number(bucket?.success);
+            return sum + (Number.isFinite(count) && count > 0 ? count : 0);
+        }, 0);
+    }
+
+    function enrichedModuleBucket(byModule, byMode, id, providers = {}) {
         const mod = moduleBucket(byModule, id);
         const inferred = (MODULE_MODE_MAP[id] || []).reduce((sum, key) => sum + modeCount(byMode, key), 0);
-        if (inferred <= (Number(mod.success) || 0)) return mod;
+        const fromProviders = providerModuleSuccess(providers, id);
+        const success = Math.max(Number(mod.success) || 0, inferred, fromProviders);
+        if (success <= (Number(mod.success) || 0) && fromProviders <= 0 && inferred <= (Number(mod.success) || 0)) {
+            return mod;
+        }
+        const mergedProviders = { ...(mod.providers || {}) };
+        (MODULE_PROVIDER_MAP[id] || []).forEach(providerId => {
+            const count = Math.max(0, Number(providers?.[providerId]?.success) || 0);
+            if (!count) return;
+            const existing = mergedProviders[providerId] || { calls: 0, success: 0, error: 0 };
+            mergedProviders[providerId] = {
+                ...existing,
+                success: Math.max(Number(existing.success) || 0, count),
+                calls: Math.max(Number(existing.calls) || 0, count),
+            };
+        });
         return {
             ...mod,
-            success: inferred,
-            calls: Math.max(Number(mod.calls) || 0, inferred),
+            success,
+            calls: Math.max(Number(mod.calls) || 0, success),
+            providers: mergedProviders,
         };
     }
 
@@ -103,8 +133,9 @@
         if (!summary || typeof summary !== 'object') return summary;
         const byMode = summary.by_mode || {};
         const byModule = { ...(summary.by_module || {}) };
+        const providers = summary.providers || {};
         Object.keys(MODULE_MODE_MAP).forEach(id => {
-            const enriched = enrichedModuleBucket(byModule, byMode, id);
+            const enriched = enrichedModuleBucket(byModule, byMode, id, providers);
             if ((Number(enriched.success) || 0) > 0) {
                 byModule[id] = enriched;
             }
@@ -235,7 +266,7 @@
             vanban: 'rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900',
         };
         return items.map((item) => {
-            const mod = enrichedModuleBucket(byModule, options.byMode || {}, item.id);
+            const mod = enrichedModuleBucket(byModule, options.byMode || {}, item.id, options.providers || {});
             const cardClass = toneClasses[item.id] || 'rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-900';
             const providerLines = (item.providers || []).map((pid) => {
                 const count = providerInModule(mod, pid);
@@ -324,7 +355,7 @@
 
             <div>
                 <h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fas fa-layer-group text-sky-600 mr-1"></i> Theo module hôm nay</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule, { byMode })}</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule, { byMode, providers })}</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
@@ -432,9 +463,10 @@
         const summary = data.internal?.summary || {};
         const byModule = summary.by_module || {};
         const byMode = summary.by_mode || {};
-        const lotrinh = enrichedModuleBucket(byModule, byMode, 'lotrinh');
-        const thitt = enrichedModuleBucket(byModule, byMode, 'thitructuyen');
-        const vanban = enrichedModuleBucket(byModule, byMode, 'vanban');
+        const summaryProviders = summary.providers || {};
+        const lotrinh = enrichedModuleBucket(byModule, byMode, 'lotrinh', summaryProviders);
+        const thitt = enrichedModuleBucket(byModule, byMode, 'thitructuyen', summaryProviders);
+        const vanban = enrichedModuleBucket(byModule, byMode, 'vanban', summaryProviders);
         const cfWorker = cf.available ? cf.requests_today : null;
 
         const smartQuota = data.smart_quota || null;
