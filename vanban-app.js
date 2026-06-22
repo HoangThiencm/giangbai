@@ -579,8 +579,11 @@
     async function extractPdf(file) {
         if (!file) throw new Error('Không có file.');
 
-        // Hỗ trợ ảnh trực tiếp (không phải pdf)
-        if (file.type && file.type.startsWith('image/')) {
+        const fileName = file.name.toLowerCase();
+        const isPdfFile = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+        const isImageFile = file.type.startsWith('image/') || fileName.match(/\.(jpg|jpeg|png|webp|gif)$/);
+
+        if (isImageFile) {
             if (!hasMistralOcr()) {
                 throw new Error('Cần bật Mistral OCR để đọc ảnh.');
             }
@@ -591,37 +594,39 @@
             return { text: txt, mode: 'mistral-ocr' };
         }
 
+        if (!isPdfFile) {
+            throw new Error('Chỉ hỗ trợ file PDF hoặc ảnh.');
+        }
+
+        // PDF: ưu tiên thử text layer, nếu header kém (rất phổ biến với PDF ký số trên Android) thì ngay lập tức thử render trang đầu + OCR
         let text = '';
         let mode = 'text-layer';
         try {
             text = await extractPdfTextLayer(file);
-        } catch {
+        } catch (e) {
             text = '';
         }
 
-        // Kiểm tra header có bị lỗi không (đặc biệt với file ký số)
         const headerCheck = text.substring(0, 700);
-        const hasMangledSo = /Số\s*[:\.]?\s*[^0-9\w]/i.test(headerCheck) ||
-                             /Số\s*:\s*\//i.test(headerCheck) ||
-                             /Số\s*:\s*[^\d]/i.test(headerCheck);
+        const headerLooksBad = meaningfulTextLength(text) < 80 ||
+                               /Số\s*[:\.]?\s*[^0-9\w]/i.test(headerCheck) ||
+                               /Số\s*:\s*\//i.test(headerCheck);
 
-        if (hasMangledSo && meaningfulTextLength(text) >= 30 && hasMistralOcr()) {
-            // Header bị lỗi → OCR chỉ trang đầu để tiết kiệm quota
+        if (headerLooksBad && hasMistralOcr()) {
             try {
                 const imgDataUrl = await extractPdfFirstPageImage(file);
                 const ocrRes = await window.MistralOcr.ocrImageDataUrl(imgDataUrl);
                 const ocrText = ocrRes.text || '';
-                if (meaningfulTextLength(ocrText) > 50) {
+                if (meaningfulTextLength(ocrText) > 15) {
                     text = ocrText;
                     mode = 'mistral-ocr';
                 }
             } catch (e) {
-                // fallback to full if needed, but try full ocr only if necessary
+                // sẽ thử extractPdfOcr ở dưới
             }
         }
 
-        if (meaningfulTextLength(text) < 80 && hasMistralOcr()) {
-            // Cho vanban, nếu cần OCR full, vẫn thử first page trước để tiết kiệm
+        if (meaningfulTextLength(text) < 60 && hasMistralOcr()) {
             try {
                 const img = await extractPdfFirstPageImage(file);
                 const res = await window.MistralOcr.ocrImageDataUrl(img);
@@ -632,7 +637,8 @@
                 mode = 'mistral-ocr';
             }
         }
-        if (meaningfulTextLength(text) < 20) {
+
+        if (meaningfulTextLength(text) < 15) {
             throw new Error('Không đọc được nội dung PDF. Dán thủ công phần đầu văn bản (số, ngày, trích yếu).');
         }
         return { text, mode };
@@ -778,29 +784,21 @@
         $('sourceText')?.addEventListener('input', scheduleAutoParse);
 
         $('files')?.addEventListener('change', async event => {
-            const file = [...event.target.files][0]; // lấy file đầu tiên (pdf hoặc ảnh)
+            const file = [...event.target.files][0];
             if (!file || !$('parseNote') || !$('sourceText')) return;
 
-            const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-            const isImg = file.type && file.type.startsWith('image/');
-
-            if (!isPdf && !isImg) {
-                $('parseNote').textContent = 'Chỉ hỗ trợ PDF hoặc ảnh (jpg, png...)';
-                return;
-            }
-
-            $('parseNote').textContent = `Đang đọc ${isPdf ? 'PDF' : 'ảnh'} (chỉ trang đầu)...`;
+            $('parseNote').textContent = `Đang đọc file ${file.name} (chỉ trang đầu)...`;
             $('parseNote').classList.remove('hidden');
 
             try {
                 const extracted = await extractPdf(file);
                 const modeLabel = extracted.mode === 'mistral-ocr' ? 'Mistral OCR' : 'lớp chữ';
                 $('sourceText').value = extracted.text;
-                $('parseNote').textContent = `Đã đọc bằng ${modeLabel}. Đang tự điền...`;
+                $('parseNote').textContent = `Đã đọc bằng ${modeLabel}. Đang tự điền thông tin...`;
                 await runAutoParse({ silent: true });
             } catch (error) {
-                $('parseNote').textContent = error.message || 'Lỗi khi đọc file trên Android. Thử file khác hoặc dán text.';
-                toast(error.message || 'Không đọc được file trên thiết bị này. Kiểm tra quyền hoặc thử PDF text layer.', 'rose');
+                $('parseNote').textContent = error.message || 'Không đọc được file. Thử lại hoặc dán text thủ công.';
+                toast(error.message || 'Lỗi đọc PDF trên Android. Thử file khác hoặc dùng ảnh.', 'rose');
             }
         });
 
