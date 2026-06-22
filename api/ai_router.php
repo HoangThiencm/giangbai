@@ -2,8 +2,14 @@
 /**
  * AI Router — miễn phí trước, ShopAIKey/DeepSeek chỉ khi thật sự cần.
  *
- * Thứ tự: light_ai (miễn phí) → Cloudflare → Gemini → ShopAIKey (trả phí rẻ).
- * Escalation khi câu trả lời kém chất lượng, không gọi tier cao nếu tier thấp đã đủ.
+ * Thứ tự chính:
+ *   light_ai (miễn phí) → Cloudflare (với quota neurons)
+ *
+ * Khi hết hạn ngạch Cloudflare:
+ *   → Gemini (ưu tiên chính)
+ *   → ShopAIKey / DeepSeek (chỉ khi Gemini không được hoặc không có key)
+ *
+ * Escalation chỉ khi tier trước không cho câu trả lời chấp nhận được.
  */
 require_once __DIR__ . '/ai_smart_quota.php';
 
@@ -119,6 +125,7 @@ function ai_router_run(array $ctx): array
     $quotaStatus = ai_smart_quota_status();
     $usedFallback = false;
     $tiersTried = [];
+    $geminiTriedAsCfFallback = false;
 
     $tryLight = $providers['light'] ?? null;
     if (is_callable($tryLight)) {
@@ -190,6 +197,10 @@ function ai_router_run(array $ctx): array
         ];
     }
 
+    // === Fallback after Cloudflare ===
+    // When Cloudflare quota exhausted or low quality:
+    //   1. Gemini is the primary fallback (as requested)
+    //   2. ShopAIKey / DeepSeek only as last resort if Gemini fails
     $tryGemini = $providers['gemini'] ?? null;
     if (is_callable($tryGemini)) {
         $gemini = $tryGemini();
@@ -197,7 +208,11 @@ function ai_router_run(array $ctx): array
             $tiersTried[] = 'gemini';
             $gemini['complete'] = !empty($gemini['complete']) || (function_exists('answer_looks_complete') && answer_looks_complete((string)$gemini['answer']));
             $gemini['fallback'] = $usedFallback || $cloudflareSkippedQuota;
-            if (ai_router_quality_acceptable($gemini, $mode, $question, $text)) {
+            $isCfQuotaFallback = $cloudflareSkippedQuota || $usedFallback;
+
+            // When this is fallback due to Cloudflare quota, accept Gemini answer readily
+            // (only skip to DeepSeek if Gemini completely failed to produce content)
+            if ($isCfQuotaFallback || ai_router_quality_acceptable($gemini, $mode, $question, $text)) {
                 if (is_callable($log)) {
                     $log($mode, $gemini, true, !empty($gemini['fallback']));
                 }
@@ -212,6 +227,9 @@ function ai_router_run(array $ctx): array
             }
             $candidates[] = $gemini;
             $usedFallback = true;
+            if ($isCfQuotaFallback) {
+                $geminiTriedAsCfFallback = true;
+            }
         } elseif (is_array($gemini) && !empty($gemini['error'])) {
             $errors[] = (string)$gemini['error'];
             if (is_callable($log)) {
@@ -220,30 +238,34 @@ function ai_router_run(array $ctx): array
         }
     }
 
+    // ShopAIKey (DeepSeek) — last resort only (after Gemini failed or no Gemini keys)
     $shopaikeyEnabled = !empty($config['shopaikey_enabled']) && trim((string)($config['shopaikey_api_key'] ?? '')) !== '';
     $tryShopaikey = $providers['shopaikey'] ?? null;
     if ($shopaikeyEnabled && is_callable($tryShopaikey)) {
-        $shop = $tryShopaikey();
-        if (is_array($shop) && !empty($shop['answer'])) {
-            $tiersTried[] = 'shopaikey';
-            $shop['complete'] = !empty($shop['complete']) || (function_exists('answer_looks_complete') && answer_looks_complete((string)$shop['answer']));
-            $shop['fallback'] = true;
-            if (is_callable($log)) {
-                $log($mode, $shop, true, true);
+        // Only attempt ShopAIKey if we are intentionally falling back past Gemini
+        if ($cloudflareSkippedQuota || $usedFallback || $geminiTriedAsCfFallback) {
+            $shop = $tryShopaikey();
+            if (is_array($shop) && !empty($shop['answer'])) {
+                $tiersTried[] = 'shopaikey';
+                $shop['complete'] = !empty($shop['complete']) || (function_exists('answer_looks_complete') && answer_looks_complete((string)$shop['answer']));
+                $shop['fallback'] = true;
+                if (is_callable($log)) {
+                    $log($mode, $shop, true, true);
+                }
+                return [
+                    'result' => array_merge($shop, [
+                        'router_tier' => 'shopaikey',
+                        'tiers_tried' => $tiersTried,
+                    ]),
+                    'quota' => $quotaStatus,
+                    'used_api' => true,
+                ];
             }
-            return [
-                'result' => array_merge($shop, [
-                    'router_tier' => 'shopaikey',
-                    'tiers_tried' => $tiersTried,
-                ]),
-                'quota' => $quotaStatus,
-                'used_api' => true,
-            ];
-        }
-        if (is_array($shop) && !empty($shop['error'])) {
-            $errors[] = (string)$shop['error'];
-            if (is_callable($log)) {
-                $log($mode, $shop, false, true);
+            if (is_array($shop) && !empty($shop['error'])) {
+                $errors[] = (string)$shop['error'];
+                if (is_callable($log)) {
+                    $log($mode, $shop, false, true);
+                }
             }
         }
     }

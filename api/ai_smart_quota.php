@@ -158,10 +158,10 @@ function ai_smart_quota_status(?array $cfg = null): array
         $teacherNotice = 'Hôm nay đã hết quota Cloudflare (0 Neurons). '
             . ($cfg['exhausted_mode'] === 'block'
                 ? 'AI lộ trình tạm tắt — thử lại sau 00:00 UTC hoặc bật fallback Gemini trong cấu hình.'
-                : 'Hệ thống tự chuyển sang Gemini / ShopAIKey.');
+                : 'Hệ thống chuyển sang Gemini trước, DeepSeek (ShopAIKey) chỉ khi Gemini không được.');
         $studentNotice = $cfg['exhausted_mode'] === 'block'
             ? 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai hoặc hỏi giáo viên.'
-            : 'Cloudflare tạm hết quota — đang dùng nguồn AI dự phòng.';
+            : 'Cloudflare hết quota — đang chuyển sang Gemini (sau đó DeepSeek nếu cần).';
     } elseif ($remainingPct <= (float)$cfg['critical_remaining_pct']) {
         $level = 'critical';
         $teacherNotice = "Cloudflare còn ~{$remainingPct}% quota ({$remaining}/{$limit} Neurons). Sắp chuyển fallback.";
