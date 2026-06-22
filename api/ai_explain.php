@@ -581,6 +581,13 @@ $cacheKey = ai_explain_cache_make_key($mode, $lessonId, $subject, $lessonTitle, 
 if (ai_explain_cache_eligible($mode, $text, $question)) {
     $cached = ai_explain_cache_get($cacheKey);
     if (is_array($cached) && trim((string)($cached['answer'] ?? '')) !== '') {
+        ai_usage_record([
+            'provider' => 'explain_cache',
+            'module' => 'lotrinh',
+            'mode' => $mode,
+            'model' => (string)($cached['model'] ?? 'cache'),
+            'ok' => true,
+        ]);
         ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, $cached, true);
     }
 }

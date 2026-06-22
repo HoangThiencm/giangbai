@@ -28,6 +28,7 @@
             shopaikey: 'ShopAIKey / DeepSeek',
             light_ai: 'Light AI (nội dung bài)',
             light_ai_math: 'Light AI (phương trình)',
+            explain_cache: 'Cache lộ trình',
         })[id] || id;
     }
 
@@ -42,8 +43,25 @@
         })[id] || id;
     }
 
+    const MODULE_MODE_MAP = {
+        lotrinh: ['explain', 'chat'],
+        thitructuyen: ['ocr', 'vision', 'normalize', 'answer_sheet', 'manual'],
+        vanban: ['document'],
+    };
+
     function moduleBucket(byModule, id) {
         return (byModule && byModule[id]) || { calls: 0, success: 0, error: 0, providers: {} };
+    }
+
+    function enrichedModuleBucket(byModule, byMode, id) {
+        const mod = moduleBucket(byModule, id);
+        const inferred = (MODULE_MODE_MAP[id] || []).reduce((sum, key) => sum + modeCount(byMode, key), 0);
+        if (inferred <= (Number(mod.success) || 0)) return mod;
+        return {
+            ...mod,
+            success: inferred,
+            calls: Math.max(Number(mod.calls) || 0, inferred),
+        };
     }
 
     function modeCount(byMode, key) {
@@ -81,11 +99,26 @@
         return Math.max(providerTotal, modeTotal, moduleTotal, visibleModeTotal);
     }
 
+    function enrichSummaryModules(summary) {
+        if (!summary || typeof summary !== 'object') return summary;
+        const byMode = summary.by_mode || {};
+        const byModule = { ...(summary.by_module || {}) };
+        Object.keys(MODULE_MODE_MAP).forEach(id => {
+            const enriched = enrichedModuleBucket(byModule, byMode, id);
+            if ((Number(enriched.success) || 0) > 0) {
+                byModule[id] = enriched;
+            }
+        });
+        summary.by_module = byModule;
+        summary.total_success = resolveTotalSuccess(summary);
+        return summary;
+    }
+
     function normalizeStatsPayload(data) {
         if (!data || typeof data !== 'object') return data;
         const summary = data.internal?.summary;
         if (summary && typeof summary === 'object') {
-            summary.total_success = resolveTotalSuccess(summary);
+            enrichSummaryModules(summary);
         }
         if (Array.isArray(data.history)) {
             data.history = data.history.map(row => {
@@ -188,7 +221,7 @@
         `;
     }
 
-    function renderModuleCards(catalog, byModule) {
+    function renderModuleCards(catalog, byModule, options = {}) {
         const items = Array.isArray(catalog) && catalog.length
             ? catalog
             : [
@@ -202,7 +235,7 @@
             vanban: 'rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900',
         };
         return items.map((item) => {
-            const mod = moduleBucket(byModule, item.id);
+            const mod = enrichedModuleBucket(byModule, options.byMode || {}, item.id);
             const cardClass = toneClasses[item.id] || 'rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-900';
             const providerLines = (item.providers || []).map((pid) => {
                 const count = providerInModule(mod, pid);
@@ -291,7 +324,7 @@
 
             <div>
                 <h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fas fa-layer-group text-sky-600 mr-1"></i> Theo module hôm nay</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule)}</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule, { byMode })}</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
@@ -398,9 +431,10 @@
         const mistral = data.providers?.mistral_ocr || {};
         const summary = data.internal?.summary || {};
         const byModule = summary.by_module || {};
-        const lotrinh = moduleBucket(byModule, 'lotrinh');
-        const thitt = moduleBucket(byModule, 'thitructuyen');
-        const vanban = moduleBucket(byModule, 'vanban');
+        const byMode = summary.by_mode || {};
+        const lotrinh = enrichedModuleBucket(byModule, byMode, 'lotrinh');
+        const thitt = enrichedModuleBucket(byModule, byMode, 'thitructuyen');
+        const vanban = enrichedModuleBucket(byModule, byMode, 'vanban');
         const cfWorker = cf.available ? cf.requests_today : null;
 
         const smartQuota = data.smart_quota || null;

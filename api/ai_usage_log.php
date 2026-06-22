@@ -140,6 +140,7 @@ function ai_usage_allowed_providers(): array
         'shopaikey',
         'light_ai',
         'light_ai_math',
+        'explain_cache',
     ];
 }
 

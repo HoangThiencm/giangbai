@@ -297,7 +297,66 @@ function ai_stats_sum_module_success(array $byModule): int
     return $total;
 }
 
-function ai_stats_summarize_day(?array $day): array
+function ai_stats_modes_for_module(string $module): array
+{
+    return [
+        'lotrinh' => ['explain', 'chat'],
+        'thitructuyen' => ['ocr', 'vision', 'normalize', 'answer_sheet', 'manual'],
+        'vanban' => ['document'],
+    ][$module] ?? [];
+}
+
+function ai_stats_infer_module_success_from_modes(array $byMode, string $module): int
+{
+    $total = 0;
+    foreach (ai_stats_modes_for_module($module) as $mode) {
+        $total += max(0, (int)($byMode[$mode] ?? 0));
+    }
+    return $total;
+}
+
+function ai_stats_count_recent_module_success(array $recent, string $todayKey, string $module): int
+{
+    $total = 0;
+    foreach ($recent as $item) {
+        if (!is_array($item) || empty($item['ok'])) {
+            continue;
+        }
+        $ts = (string)($item['ts'] ?? '');
+        if ($todayKey !== '' && !str_starts_with($ts, $todayKey)) {
+            continue;
+        }
+        if (ai_usage_normalize_module((string)($item['module'] ?? 'other')) !== $module) {
+            continue;
+        }
+        $total++;
+    }
+    return $total;
+}
+
+function ai_stats_enrich_by_module(array $byModule, array $byMode, array $recent = [], string $todayKey = ''): array
+{
+    foreach (['lotrinh', 'thitructuyen', 'vanban'] as $moduleId) {
+        $targetSuccess = max(
+            (int)($byModule[$moduleId]['success'] ?? 0),
+            ai_stats_infer_module_success_from_modes($byMode, $moduleId),
+            ai_stats_count_recent_module_success($recent, $todayKey, $moduleId)
+        );
+        if ($targetSuccess <= 0) {
+            continue;
+        }
+
+        if (!isset($byModule[$moduleId]) || !is_array($byModule[$moduleId])) {
+            $byModule[$moduleId] = ['calls' => 0, 'success' => 0, 'error' => 0, 'providers' => []];
+        }
+        $byModule[$moduleId]['success'] = $targetSuccess;
+        $byModule[$moduleId]['calls'] = max((int)($byModule[$moduleId]['calls'] ?? 0), $targetSuccess);
+    }
+
+    return $byModule;
+}
+
+function ai_stats_summarize_day(?array $day, array $recent = [], string $todayKey = ''): array
 {
     if (!is_array($day)) {
         return [
@@ -311,6 +370,7 @@ function ai_stats_summarize_day(?array $day): array
     $providers = is_array($day['providers'] ?? null) ? $day['providers'] : [];
     $byMode = is_array($day['by_mode'] ?? null) ? $day['by_mode'] : [];
     $byModule = is_array($day['by_module'] ?? null) ? $day['by_module'] : [];
+    $byModule = ai_stats_enrich_by_module($byModule, $byMode, $recent, $todayKey);
     $totalSuccess = 0;
     $totalCalls = 0;
     foreach ($providers as $bucket) {
@@ -323,6 +383,7 @@ function ai_stats_summarize_day(?array $day): array
         ai_stats_sum_by_mode($byMode),
         ai_stats_sum_module_success($byModule)
     );
+    $totalCalls = max($totalCalls, $totalSuccess);
     return [
         'providers' => $providers,
         'by_mode' => $byMode,
@@ -338,8 +399,8 @@ function ai_stats_module_catalog(): array
         [
             'id' => 'lotrinh',
             'label' => ai_usage_module_label('lotrinh'),
-            'providers' => ['cloudflare_workers_ai', 'gemini', 'shopaikey'],
-            'note' => 'Giải thích & chat bài học qua api/ai_explain.php',
+            'providers' => ['cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
+            'note' => 'Giải thích & chat · cache, Light AI, Cloudflare, Gemini, ShopAIKey',
         ],
         [
             'id' => 'thitructuyen',
@@ -394,7 +455,7 @@ function ai_stats_build_history(array $byDay, int $days = 14): array
 $runtime = load_ai_runtime_config();
 $store = ai_usage_load_store();
 $todayKey = ai_usage_today_key();
-$today = ai_stats_summarize_day($store['by_day'][$todayKey] ?? null);
+$today = ai_stats_summarize_day($store['by_day'][$todayKey] ?? null, $store['recent'] ?? [], $todayKey);
 
 $accountId = defined('CLOUDFLARE_ACCOUNT_ID') && is_string(CLOUDFLARE_ACCOUNT_ID) ? trim(CLOUDFLARE_ACCOUNT_ID) : '';
 $apiToken = defined('CLOUDFLARE_API_TOKEN') && is_string(CLOUDFLARE_API_TOKEN) ? trim(CLOUDFLARE_API_TOKEN) : '';

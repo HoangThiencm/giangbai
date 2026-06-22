@@ -90,7 +90,7 @@ function ai_smart_quota_add_neurons(int $neurons): void
     ai_usage_mutate_store(function (array &$store) use ($neurons) {
         $dayKey = ai_usage_today_key();
         if (!isset($store['by_day'][$dayKey]) || !is_array($store['by_day'][$dayKey])) {
-            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => ['explain' => 0, 'chat' => 0]];
+            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => [], 'by_module' => []];
         }
         $current = max(0, (int)($store['by_day'][$dayKey]['cloudflare_neurons'] ?? 0));
         $store['by_day'][$dayKey]['cloudflare_neurons'] = $current + $neurons;
@@ -103,7 +103,7 @@ function ai_smart_quota_force_exhausted(): void
     ai_usage_mutate_store(function (array &$store) use ($cfg) {
         $dayKey = ai_usage_today_key();
         if (!isset($store['by_day'][$dayKey]) || !is_array($store['by_day'][$dayKey])) {
-            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => ['explain' => 0, 'chat' => 0]];
+            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => [], 'by_module' => []];
         }
         $store['by_day'][$dayKey]['cloudflare_neurons'] = (int)$cfg['daily_limit'];
         $store['by_day'][$dayKey]['cloudflare_quota_forced'] = true;
