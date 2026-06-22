@@ -1,6 +1,6 @@
 {
   "hf_fallback_url": "https://hoangthiencm-giangbai.hf.space",
-  "hf_fallback_enabled": true,
+  "hf_fallback_enabled": false,
   "smart_quota_enabled": true,
   "cloudflare_neurons_daily_limit": 10000,
   "smart_quota_warn_pct": 20,

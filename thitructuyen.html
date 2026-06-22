@@ -19,7 +19,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="pdf-page-client.js?v=20260621"></script>
-    <script src="mistral-ocr-client.js?v=20260621"></script>
+
     <script src="exam-stitch-client.js?v=20260621"></script>
     <script src="exam-vision-client.js?v=20260624"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -635,7 +635,6 @@
 
                     let payload = await ExamVision.normalizeManual(base64, keys, model);
                     if (!payload || payload.status !== 'ok') {
-                        if (!GiangBaiApi.isFallbackEnabled()) throw new Error(payload?.message || 'Nhận diện thất bại.');
                         const res = await aiPost('normalize_manual', { cropped_data: base64, api_keys: keys, model });
                         payload = res.data;
                     }
@@ -699,7 +698,6 @@
                     if (!keys.length) throw new Error("Chưa nạp API Key!");
                     let payload = await ExamVision.importAnswerSheet(dataUrl, keys, model);
                     if (!payload || payload.status !== 'ok') {
-                        if (!GiangBaiApi.isFallbackEnabled()) throw new Error(payload?.message || 'Nhận diện thất bại.');
                         const res = await aiPost('import_answer_sheet', { image_data: dataUrl, api_keys: keys, model });
                         payload = res.data;
                     }
@@ -1111,43 +1109,12 @@
             }, [allQuestions]);
 
             const processPdfUpload = async (file) => {
-                const engine = (window.AiDesignConfig && AiDesignConfig.getPdfEngine()) || 'browser';
-                const hasMistral = window.MistralOcr && AiDesignConfig && AiDesignConfig.isMistralEnabled() && AiDesignConfig.getMistralKeys().length > 0;
-
-                if (engine === 'server') {
-                    const fd = new FormData(); fd.append('file', file);
-                    return aiPostForm('process_paper', fd);
+                if (!window.PdfPageClient) {
+                    throw new Error('Không tải được pdf-page-client.js. Kiểm tra mạng rồi tải lại trang.');
                 }
-
-                if (engine === 'mistral' && hasMistral) {
-                    setLoadingMsg('Đang quét PDF bằng Mistral OCR...');
-                    const [mistralResult, browserPages] = await Promise.all([
-                        MistralOcr.ocrPdfFile(file),
-                        PdfPageClient.splitPdfFile(file),
-                    ]);
-                    browserPages.forEach((p, i) => {
-                        p.ocr_text = mistralResult.pages[i]?.ocr_text || '';
-                    });
-                    return { status: 'ok', pages: browserPages, source: 'mistral+browser' };
-                }
-
-                if (window.PdfPageClient) {
-                    setLoadingMsg('Đang tách PDF trên trình duyệt...');
-                    const pages = await PdfPageClient.splitPdfFile(file);
-                    if (hasMistral) {
-                        try {
-                            setLoadingMsg('Đang quét văn bản Mistral OCR...');
-                            const mistralResult = await MistralOcr.ocrPdfFile(file);
-                            pages.forEach((p, i) => { p.ocr_text = mistralResult.pages[i]?.ocr_text || ''; });
-                        } catch (ocrErr) {
-                            console.warn('[Mistral OCR]', ocrErr);
-                        }
-                    }
-                    return { status: 'ok', pages, source: 'browser' };
-                }
-
-                const fd = new FormData(); fd.append('file', file);
-                return aiPostForm('process_paper', fd);
+                setLoadingMsg('Đang tách PDF trên trình duyệt...');
+                const pages = await PdfPageClient.splitPdfFile(file);
+                return { status: 'ok', pages, source: 'browser' };
             };
 
             const handleUpload = async (e) => {
@@ -1233,22 +1200,22 @@
                         if (!window.ExamVision) throw new Error('Chưa tải exam-vision-client.js');
                         payload = await ExamVision.normalizeSegment(imageData, keys, model);
                     } catch (browserErr) {
-                        if (!GiangBaiApi.isFallbackEnabled()) {
-                            throw new Error((browserErr.message || 'Gemini lỗi.') + '\n\nBật "HF dự phòng" trên menu để thử Space HuggingFace.');
-                        }
                         progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
                             setPageProgress(prev => ({ ...prev, [page.id]: value }));
                         });
-                        const { res, source } = await GiangBaiApi.axiosPostWithFallback(
+                        const { res } = await GiangBaiApi.axiosPostWithFallback(
                             axios,
                             GiangBaiApi.examAiUrl('normalize_segment'),
-                            GiangBaiApi.hfExamUrl('normalize_segment'),
+                            null,
                             { image_data: imageData, api_keys: keys, model, page_id: page.id },
                             { timeout: 120000 },
                             'exam-ai'
                         );
                         payload = res.data || {};
-                        via = source === 'hf-fallback' ? 'HuggingFace' : 'Hosting';
+                        via = 'Hosting';
+                        if (!payload || payload.status !== 'ok') {
+                            throw new Error(payload?.message || browserErr.message || 'Gemini và hosting đều lỗi.');
+                        }
                     }
 
                     setPageProgress(prev => ({ ...prev, [page.id]: 95 }));

@@ -374,7 +374,7 @@
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <h4 class="font-bold text-violet-900 text-sm"><i class="fas fa-file-image mr-1"></i> Mistral OCR <span class="font-normal">· quét PDF nhanh</span></h4>
-                            <p class="text-xs text-violet-800 mt-1">Chỉ gọi endpoint <code>/v1/ocr</code> để quét PDF/ảnh → văn bản. <strong>Không</strong> dùng cho soạn bài, giải thích lộ trình hay tạo câu hỏi (các tác vụ đó dùng Cloudflare / Gemini / Groq). Key lưu trên <strong>hosting</strong> (<code>global_config.json</code>).</p>
+                            <p class="text-xs text-violet-800 mt-1">Dự phòng cho quét PDF/ảnh (endpoint <code>/v1/ocr</code>). Hiện Thi trực tuyến dùng pdf.js + Gemini; Mistral sẽ bật khi tích hợp OCR vào nhận diện câu hỏi. Key lưu trên <strong>hosting</strong> (<code>global_config.json</code>).</p>
                             <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-violet-900">
                                 <input id="adminMistralEnabled" type="checkbox" class="h-4 w-4 rounded border-violet-300 text-violet-700 focus:ring-violet-500" checked>
                                 Bật Mistral OCR

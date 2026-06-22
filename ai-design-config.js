@@ -61,26 +61,6 @@
                     </div>
                     <hr class="border-slate-200" />
                     <div>
-                        <label class="mb-2 block text-sm font-bold text-slate-700">Mistral OCR (API Keys)</label>
-                        <p class="mb-2 text-xs text-slate-500">Chỉ quét PDF/ảnh → văn bản (endpoint OCR). Không dùng cho chat, soạn bài hay tạo câu hỏi.</p>
-                        <div id="adcMistralStatus" class="mb-2"></div>
-                        <label class="flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-300 hover:bg-sky-50">
-                            <i class="fas fa-file-upload text-sky-500"></i> Chọn file Mistral Keys.txt
-                            <input type="file" id="adcMistralFile" class="hidden" accept=".txt,text/plain" />
-                        </label>
-                        <div class="mt-2 flex gap-2">
-                            <input type="text" id="adcMistralPaste" placeholder="Hoặc dán 1 API key Mistral" class="flex-1 rounded border p-2 text-sm outline-none focus:ring-2 focus:ring-sky-500" />
-                            <button type="button" id="adcMistralSave" class="rounded bg-sky-600 px-3 py-2 text-sm font-bold text-white hover:bg-sky-700">Lưu</button>
-                        </div>
-                        <label class="mt-2 block text-sm font-bold text-slate-700">Quét PDF</label>
-                        <select id="adcPdfEngine" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                            <option value="browser">Trình duyệt (pdf.js) — mặc định</option>
-                            <option value="mistral">Mistral OCR — nhanh, ra văn bản</option>
-                            <option value="server">Hosting / HuggingFace — khi không có Mistral</option>
-                        </select>
-                    </div>
-                    <hr class="border-slate-200" />
-                    <div>
                         <label class="mb-2 block text-sm font-bold text-slate-700">Groq AI (API Keys)</label>
                         <div id="adcGroqStatus" class="mb-2"></div>
                         <label class="flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-orange-300 hover:bg-orange-50">
@@ -94,15 +74,6 @@
                             <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
                             <option value="llama-3.1-8b-instant">Llama 3.1 8B (Nhanh)</option>
                         </select>
-                    </div>
-                    <hr class="border-slate-200" />
-                    <div>
-                        <label class="mb-2 block text-sm font-bold text-slate-700">Hugging Face (Tokens)</label>
-                        <div id="adcHfContainer"></div>
-                    </div>
-                    <div>
-                        <label class="mb-2 block text-sm font-bold text-slate-700">Fallback hosting → HuggingFace</label>
-                        <div id="adcHfFallbackContainer"></div>
                     </div>
                     <div class="flex gap-2 rounded border border-amber-100 bg-amber-50 p-3 text-xs text-amber-900">
                         <i class="fas fa-info-circle mt-0.5"></i>
@@ -120,16 +91,11 @@
         document.getElementById('adcDoneBtn').addEventListener('click', () => AiDesignConfig.closeModal());
         document.getElementById('adcGeminiFile').addEventListener('change', (e) => AiDesignConfig.handleFile(e.target.files[0], 'gemini'));
         document.getElementById('adcGroqFile').addEventListener('change', (e) => AiDesignConfig.handleFile(e.target.files[0], 'groq'));
-        document.getElementById('adcMistralFile').addEventListener('change', (e) => AiDesignConfig.handleFile(e.target.files[0], 'mistral'));
-        document.getElementById('adcMistralSave').addEventListener('click', () => AiDesignConfig.saveMistralKey());
         document.getElementById('adcGeminiModel').addEventListener('change', (e) => {
             localStorage.setItem(LS.geminiModel, e.target.value);
         });
         document.getElementById('adcGroqModel').addEventListener('change', (e) => {
             localStorage.setItem(LS.groqModel, e.target.value);
-        });
-        document.getElementById('adcPdfEngine').addEventListener('change', (e) => {
-            localStorage.setItem(LS.pdfEngine, e.target.value);
         });
     }
 
@@ -175,10 +141,7 @@
                 }
                 if (cfg.mistral_ocr_model) localStorage.setItem(LS.mistralModel, String(cfg.mistral_ocr_model));
                 localStorage.setItem(LS.mistralEnabled, cfg.mistral_enabled === false ? 'false' : 'true');
-                if (cfg.hf_fallback_url) {
-                    localStorage.setItem(LS.hfUrl, String(cfg.hf_fallback_url).replace(/\/$/, ''));
-                }
-                localStorage.setItem(LS.hfFallback, cfg.hf_fallback_enabled === false ? 'false' : 'true');
+                localStorage.setItem(LS.hfFallback, 'false');
             } catch (_) { /* noop */ }
         },
 
@@ -276,55 +239,13 @@
             ensureModal();
             const gemini = document.getElementById('adcGeminiStatus');
             const groq = document.getElementById('adcGroqStatus');
-            const mistral = document.getElementById('adcMistralStatus');
-            const hf = document.getElementById('adcHfContainer');
-            const hfFb = document.getElementById('adcHfFallbackContainer');
             if (gemini) gemini.innerHTML = AiDesignConfig.statusHtml(AiDesignConfig.getApiKeys().length, 'green', 'Gemini');
             if (groq) groq.innerHTML = AiDesignConfig.statusHtml(AiDesignConfig.getGroqKeys().length, 'orange', 'Groq');
-            if (mistral) mistral.innerHTML = AiDesignConfig.statusHtml(AiDesignConfig.getMistralKeys().length, 'sky', 'Mistral OCR');
 
             const geminiSel = document.getElementById('adcGeminiModel');
             const groqSel = document.getElementById('adcGroqModel');
-            const pdfSel = document.getElementById('adcPdfEngine');
             if (geminiSel) geminiSel.value = AiDesignConfig.getModule();
             if (groqSel) groqSel.value = AiDesignConfig.getGroqModule();
-            if (pdfSel) pdfSel.value = AiDesignConfig.getPdfEngine();
-
-            if (hf) {
-                const tokens = AiDesignConfig.getHFTokens();
-                if (tokens.length) {
-                    hf.innerHTML = `<div class="flex items-center justify-between rounded border border-purple-200 bg-purple-50 p-2.5 text-sm">
-                        <span class="font-bold text-purple-700"><i class="fas fa-robot"></i> HF: ${tokens.length} token</span>
-                        <button type="button" onclick="AiDesignConfig.clearHFToken()" class="text-xs text-red-500 underline">Xóa</button>
-                    </div>`;
-                } else {
-                    hf.innerHTML = `
-                        <label class="mb-2 flex cursor-pointer items-center justify-center gap-2 rounded border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700">
-                            <i class="fas fa-file-upload"></i> Nạp Tokens.txt
-                            <input type="file" id="adcHfFile" class="hidden" accept=".txt,text/plain" />
-                        </label>
-                        <div class="flex gap-2">
-                            <input type="text" id="adcHfTokenInput" placeholder="Hoặc dán token hf_..." class="flex-1 rounded border p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500" />
-                            <button type="button" onclick="AiDesignConfig.saveHFToken()" class="rounded bg-purple-600 px-3 py-2 text-sm font-bold text-white">Lưu</button>
-                        </div>`;
-                    const hfFile = document.getElementById('adcHfFile');
-                    if (hfFile) hfFile.onchange = (e) => AiDesignConfig.handleFile(e.target.files[0], 'hf');
-                }
-            }
-
-            if (hfFb) {
-                const enabled = localStorage.getItem(LS.hfFallback) !== 'false';
-                const url = localStorage.getItem(LS.hfUrl) || 'https://hoangthiencm-giangbai.hf.space';
-                hfFb.innerHTML = `
-                    <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-                        <label class="flex cursor-pointer items-center gap-2 font-semibold text-slate-700">
-                            <input type="checkbox" ${enabled ? 'checked' : ''} onchange="AiDesignConfig.onHfFallbackCheckbox(this)" />
-                            Bật fallback HuggingFace khi hosting lỗi
-                        </label>
-                        <p id="adcHfFallbackNote" class="hidden text-xs font-bold text-emerald-700 mt-1"></p>
-                        <p class="mt-2 text-xs text-slate-500">URL: <code>${url}</code></p>
-                    </div>`;
-            }
         },
 
         mountBar(containerId, options) {
@@ -337,11 +258,8 @@
                 ${isTeacher ? '' : `<button type="button" id="${containerId}-cfg-btn" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50">
                     <i class="fas fa-sliders-h text-indigo-500"></i> Cấu hình AI
                 </button>`}
-                <span id="${containerId}-hf-slot"></span>`;
+                `;
             document.getElementById(`${containerId}-cfg-btn`)?.addEventListener('click', () => AiDesignConfig.openModal());
-            if (global.GiangBaiApi) {
-                GiangBaiApi.mountFallbackToggle(`${containerId}-hf-slot`, { compact: true, ...(opts.hfToggle || {}) });
-            }
             AiDesignConfig.loadHostingFallbackConfig().finally(() => AiDesignConfig.render());
         },
     };
