@@ -139,8 +139,6 @@
         const reloadBtn = el('progressReloadBtn');
         const syncBtn = el('progressSyncBtn');
         const exportBtn = el('progressExportBtn');
-        const viewSubmissionsBtn = el('progressViewSubmissionsBtn');
-        const reloadSubmissionsBtn = el('progressReloadSubmissionsBtn');
         if (reloadBtn && reloadBtn.dataset.boundProgressReload !== '1') {
             reloadBtn.dataset.boundProgressReload = '1';
             reloadBtn.onclick = () => refresh();
@@ -152,17 +150,6 @@
         if (exportBtn && exportBtn.dataset.boundProgressExport !== '1') {
             exportBtn.dataset.boundProgressExport = '1';
             exportBtn.onclick = () => exportProgressExcel();
-        }
-        if (viewSubmissionsBtn && viewSubmissionsBtn.dataset.boundProgressViewSubmissions !== '1') {
-            viewSubmissionsBtn.dataset.boundProgressViewSubmissions = '1';
-            viewSubmissionsBtn.onclick = () => {
-                el('progressSubmissionsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                loadSubmissions();
-            };
-        }
-        if (reloadSubmissionsBtn && reloadSubmissionsBtn.dataset.boundProgressReloadSubmissions !== '1') {
-            reloadSubmissionsBtn.dataset.boundProgressReloadSubmissions = '1';
-            reloadSubmissionsBtn.onclick = () => loadSubmissions();
         }
     }
 
@@ -204,9 +191,6 @@
                     <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp. Bấm <strong>Cập nhật tiến trình</strong> để hệ thống tính lại điểm luyện tập từ đáp án đã lưu của học sinh.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <button id="progressViewSubmissionsBtn" type="button" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-cloud-arrow-down mr-1"></i>Xem bài nộp HS
-                    </button>
                     <button id="progressExportBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded font-bold text-sm">
                         <i class="fas fa-file-excel mr-1"></i>Xuất Excel
                     </button>
@@ -254,34 +238,21 @@
             </div>
             <section id="progressTodayActions" class="mt-5 rounded-lg border border-amber-200 bg-amber-50/70 p-4"></section>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-5 gap-3"></div>
-            <section id="progressSubmissionsPanel" class="mt-5 rounded-xl border-2 border-sky-300 bg-sky-50 p-4 scroll-mt-24">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h4 class="text-base font-bold text-sky-950"><i class="fas fa-folder-open mr-1"></i> Bài nộp học sinh (Google Drive)</h4>
-                        <p class="mt-1 text-xs text-sky-800">Học sinh nộp ở tab <strong>Bài tập nộp giáo viên</strong> trong lộ trình. Danh sách theo bài học đang chọn.</p>
-                    </div>
-                    <button id="progressReloadSubmissionsBtn" type="button" class="shrink-0 rounded border border-sky-300 bg-white px-3 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100">
-                        <i class="fas fa-rotate-right mr-1"></i>Tải lại bài nộp
-                    </button>
-                </div>
-                <div id="progressSubmissionsBody" class="mt-3 text-sm text-sky-900">Chọn bài học để xem bài nộp.</div>
-            </section>
-            <div class="mt-5 overflow-x-auto rounded border border-slate-200">
+            <p class="mt-4 text-xs text-slate-500"><i class="fas fa-folder-open mr-1 text-sky-600"></i>Mỗi học sinh một dòng: tiến độ luyện tập và bài nộp Drive (tab <strong>Bài tập nộp giáo viên</strong> trong lộ trình).</p>
+            <div class="mt-2 overflow-x-auto rounded border border-slate-200">
                 <table class="min-w-full table-fixed divide-y divide-slate-200">
                     <colgroup>
+                        <col style="width:20%">
                         <col style="width:22%">
-                        <col style="width:12%">
-                        <col style="width:10%">
-                        <col style="width:16%">
+                        <col style="width:22%">
                         <col style="width:24%">
-                        <col style="width:16%">
+                        <col style="width:12%">
                     </colgroup>
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh / Lớp</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Trạng thái</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Điểm luyện tập</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Bài nộp Drive</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Tiến độ học tập</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Bài nộp giáo viên</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cần lưu ý</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cập nhật</th>
                         </tr>
@@ -476,17 +447,33 @@
         }).join('');
     }
 
+    function renderProgressCell(row) {
+        const [label, tone] = statusLabel(row.status);
+        const scoreTone = row.score >= 80 ? 'text-teal-700' : (row.score >= 50 ? 'text-amber-700' : 'text-rose-700');
+        return `
+            <div class="space-y-1">
+                <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
+                <div class="font-bold ${scoreTone}">${row.score}%</div>
+                ${row.status !== 'not_started' ? `<div class="text-xs text-slate-500">Tiến trình ${lessonCompletionFromRow(row)}%</div>` : ''}
+                ${row.practice_score_state !== null && row.practice_score_state !== undefined && row.practice_score_state !== row.score
+                    ? `<div class="text-xs text-amber-700">Làm bài: ${row.practice_score_state}% · DB: ${row.score}%</div>`
+                    : ''}
+            </div>
+        `;
+    }
+
     function renderSubmissionCell(row, submissionMap) {
         const submission = submissionMap.get(Number(row.student_id));
         if (!submission) {
-            return '<span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">Chưa nộp</span>';
+            return '<span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">Chưa nộp Drive</span>';
         }
         const when = String(submission.submitted_at || '').replace('T', ' ').slice(0, 16);
+        const note = submission.note ? `<div class="mt-1 text-xs text-slate-600 italic">${escapeHtml(submission.note)}</div>` : '';
         return `
             <div>
-                <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Đã nộp</span>
-                <div class="mt-1 text-[11px] text-slate-500">${escapeHtml(when)}</div>
-                <div class="mt-1">${renderSubmissionFiles(submission.files)}</div>
+                <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Đã nộp · ${escapeHtml(when)}</span>
+                <div class="mt-1.5">${renderSubmissionFiles(submission.files)}</div>
+                ${note}
             </div>
         `;
     }
@@ -502,16 +489,12 @@
     }
 
     async function loadSubmissions() {
-        const body = el('progressSubmissionsBody');
-        if (!body) return;
         const lessonId = selectedLessonId || el('progressLessonSelect')?.value || '';
         if (!lessonId) {
             submissions = [];
-            body.innerHTML = '<p class="text-sky-800">Chọn bài học để xem bài nộp của học sinh.</p>';
             render();
             return;
         }
-        body.innerHTML = '<span class="text-slate-500"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải bài nộp...</span>';
         try {
             const res = await fetch(`api/lesson_self_practice.php?action=list&lesson_id=${encodeURIComponent(lessonId)}`, {
                 credentials: 'include',
@@ -520,50 +503,12 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Không tải được bài nộp.');
             submissions = Array.isArray(data.submissions) ? data.submissions : [];
-            renderSubmissionsPanel();
             render();
         } catch (err) {
             submissions = [];
-            body.innerHTML = `<p class="text-rose-700">${escapeHtml(err.message || 'Không tải được bài nộp.')}</p>`;
+            console.warn('loadSubmissions:', err);
             render();
         }
-    }
-
-    function renderSubmissionsPanel() {
-        const body = el('progressSubmissionsBody');
-        if (!body) return;
-        const items = scopedSubmissions();
-        if (!items.length) {
-            body.innerHTML = '<p class="text-sky-800">Chưa có học sinh lớp bạn dạy nộp bài cho bài học này. Học sinh nộp ở tab <strong>Bài tập nộp giáo viên</strong> trong lộ trình.</p>';
-            return;
-        }
-        body.innerHTML = `
-            <div class="overflow-x-auto rounded-lg border border-sky-200 bg-white">
-                <table class="min-w-full text-left text-xs">
-                    <thead class="bg-sky-100 font-bold uppercase text-sky-800">
-                        <tr>
-                            <th class="px-3 py-2">Thời gian</th>
-                            <th class="px-3 py-2">Học sinh</th>
-                            <th class="px-3 py-2">Lớp</th>
-                            <th class="px-3 py-2">Tệp nộp</th>
-                            <th class="px-3 py-2">Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${items.map(row => `
-                            <tr class="border-t border-sky-100">
-                                <td class="px-3 py-2 whitespace-nowrap">${String(row.submitted_at || '').replace('T', ' ').slice(0, 16)}</td>
-                                <td class="px-3 py-2 font-semibold">${escapeHtml(row.student_name || '')}</td>
-                                <td class="px-3 py-2 text-sky-700">${escapeHtml(row.class_name || '')}</td>
-                                <td class="px-3 py-2">${renderSubmissionFiles(row.files)}</td>
-                                <td class="px-3 py-2 text-slate-600">${escapeHtml(row.note || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-        bindSubmissionPreviewButtons(body);
     }
 
     function parseServerDate(value) {
@@ -957,24 +902,13 @@
     }
 
     function renderRow(row, submissionMap) {
-        const [label, tone] = statusLabel(row.status);
-        const scoreTone = row.score >= 80 ? 'text-teal-700' : (row.score >= 50 ? 'text-amber-700' : 'text-rose-700');
         return `
             <tr class="hover:bg-slate-50">
                 <td class="px-4 py-3 text-sm">
                     <div class="font-bold text-slate-900">${escapeHtml(row.full_name)}</div>
                     <div class="text-xs text-slate-500">${escapeHtml(row.username)}${selectedClassName ? '' : ` · ${escapeHtml(row.class_name || 'Chưa xếp lớp')}`}</div>
                 </td>
-                <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}">${label}</span>
-                </td>
-                <td class="px-4 py-3 text-sm">
-                    <div class="font-bold ${scoreTone}">${row.score}%</div>
-                    ${row.status !== 'not_started' ? `<div class="text-xs text-slate-500 mt-0.5">Tiến trình ${lessonCompletionFromRow(row)}%</div>` : ''}
-                    ${row.practice_score_state !== null && row.practice_score_state !== undefined && row.practice_score_state !== row.score
-                        ? `<div class="text-xs text-amber-700 mt-0.5">Làm bài: ${row.practice_score_state}% · DB: ${row.score}%</div>`
-                        : ''}
-                </td>
+                <td class="px-4 py-3 text-sm">${renderProgressCell(row)}</td>
                 <td class="px-4 py-3 text-sm">${renderSubmissionCell(row, submissionMap)}</td>
                 <td class="px-4 py-3 text-sm text-slate-700 leading-6">${mathText(weakSkillText(row))}</td>
                 <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(row.updated_at || 'Chưa có')}</td>
@@ -982,16 +916,16 @@
         `;
     }
 
-    function renderClassGroupHeader(className, groupRows) {
+    function renderClassGroupHeader(className, groupRows, submissionMap) {
         const needs = groupRows.filter(row => row.needs_practice).length;
         const mastered = groupRows.filter(row => row.status === 'mastered').length;
+        const submitted = groupRows.filter(row => submissionMap.has(Number(row.student_id))).length;
         return `
             <tr class="bg-amber-50 border-t border-amber-100">
                 <td class="px-4 py-2.5 text-sm font-bold text-amber-900">Lớp ${escapeHtml(className)}</td>
-                <td class="px-4 py-2.5 text-sm text-amber-800">${groupRows.length} học sinh</td>
-                <td class="px-4 py-2.5 text-sm font-semibold text-teal-700">${mastered} đã học xong</td>
+                <td class="px-4 py-2.5 text-sm text-amber-800">${groupRows.length} HS · ${mastered} xong · ${needs} cần luyện</td>
+                <td class="px-4 py-2.5 text-sm font-semibold text-sky-700">${submitted} đã nộp Drive</td>
                 <td class="px-4 py-2.5 text-xs text-slate-400">—</td>
-                <td class="px-4 py-2.5 text-sm font-semibold text-amber-700">${needs} cần luyện</td>
                 <td class="px-4 py-2.5 text-xs text-slate-400">—</td>
             </tr>
         `;
@@ -1005,10 +939,9 @@
 
         renderTodayActions();
         renderSummary(filtered);
-        renderSubmissionsPanel();
 
         if (!filtered.length) {
-            body.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400 italic">Chưa có dữ liệu phù hợp.</td></tr>';
+            body.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400 italic">Chưa có dữ liệu phù hợp.</td></tr>';
             return;
         }
 
@@ -1020,7 +953,7 @@
                 groups.get(key).push(row);
             });
             body.innerHTML = [...groups.entries()].map(([className, groupRows]) => (
-                renderClassGroupHeader(className, groupRows) + groupRows.map(row => renderRow(row, submissionMap)).join('')
+                renderClassGroupHeader(className, groupRows, submissionMap) + groupRows.map(row => renderRow(row, submissionMap)).join('')
             )).join('');
         } else {
             body.innerHTML = filtered.map(row => renderRow(row, submissionMap)).join('');
