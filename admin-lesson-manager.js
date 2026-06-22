@@ -591,14 +591,52 @@
     function insertEditorImage(targetId) {
         const field = el(targetId);
         if (!field) return;
-        const url = window.prompt('Dán link ảnh (https://...)');
+        const url = window.prompt('Dán link ảnh (https://...)\nHoặc dán ảnh từ Drive / web vào khung soạn thảo trực tiếp.', '');
         if (!url) return;
-        const alt = window.prompt('Mô tả ảnh (có thể để trống)', '') || '';
+        const alt = window.prompt('Mô tả ảnh (có thể để trống)', '') || 'ảnh';
         const insert = `\n![${alt}](${url.trim()})\n`;
         const start = field.selectionStart ?? field.value.length;
         field.setRangeText(insert, start, start, 'end');
         field.focus();
         field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Support pasting image URLs directly into rich textareas (convenient for "dán ảnh")
+    function setupImagePasteHandlers() {
+        const ids = ['lessonTheory', 'lessonExamples', 'lessonSelfPractice'];
+        ids.forEach(id => {
+            const ta = el(id);
+            if (!ta || ta.dataset.imagePasteReady) return;
+            ta.dataset.imagePasteReady = '1';
+            ta.addEventListener('paste', (e) => {
+                const text = e.clipboardData?.getData('text/plain') || '';
+                if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(text.trim())) {
+                    e.preventDefault();
+                    const start = ta.selectionStart ?? ta.value.length;
+                    const md = `\n![ảnh](${text.trim()})\n`;
+                    ta.setRangeText(md, start, start, 'end');
+                    ta.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        });
+    }
+
+    function setupDynamicImagePaste() {
+        // Attach to any current per-item rich textareas for fill/essay etc
+        document.querySelectorAll('.lesson-tab-content textarea[id^="essay-de-"], .lesson-tab-content textarea[id^="fill-de-"], .lesson-tab-content textarea[id^="drag-de-"], .lesson-tab-content textarea[id^="q-cau-"]').forEach(ta => {
+            if (ta.dataset.imagePasteReady) return;
+            ta.dataset.imagePasteReady = '1';
+            ta.addEventListener('paste', (e) => {
+                const text = e.clipboardData?.getData('text/plain') || '';
+                if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(text.trim())) {
+                    e.preventDefault();
+                    const start = ta.selectionStart ?? ta.value.length;
+                    const md = `\n![ảnh](${text.trim()})\n`;
+                    ta.setRangeText(md, start, start, 'end');
+                    ta.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        });
     }
 
     function insertEditorAiMarker(targetId) {
@@ -637,17 +675,17 @@
         cont.innerHTML = '';
         essayItems.forEach((it, i) => {
             const d = document.createElement('div');
-            d.className = 'p-2 border rounded bg-white text-xs';
+            d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
                 <div class="flex items-center mb-1">
-                    <span class="font-bold">Bài ${i+1}</span>
-                    <button type="button" class="ml-auto text-rose-600" onclick="removeEssayItem(${i})">×</button>
+                    <span class="font-bold text-teal-700">Tự luận ${i+1}</span>
+                    <button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeEssayItem(${i})">✕</button>
                 </div>
                 ${richToolbarHtml(`essay-de-${i}`)}
-                <textarea id="essay-de-${i}" class="w-full p-1 border text-xs" placeholder="Đề bài (dán ảnh nếu cần)"></textarea>
+                <textarea id="essay-de-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Đề (dán ảnh hoặc viết trực tiếp)"></textarea>
                 <div class="flex gap-1 mt-1">
-                    <input id="essay-dap-${i}" class="flex-1 p-1 border text-xs" placeholder="Đáp án (số)">
-                    <input id="essay-goi-${i}" class="flex-1 p-1 border text-xs" placeholder="Gợi ý">
+                    <input id="essay-dap-${i}" class="flex-1 p-1 border border-slate-300 rounded text-xs" placeholder="Đáp án">
+                    <input id="essay-goi-${i}" class="flex-1 p-1 border border-slate-300 rounded text-xs" placeholder="Gợi ý">
                 </div>
             `;
             cont.appendChild(d);
@@ -662,6 +700,7 @@
             goi.oninput = () => { essayItems[i].goi = goi.value; syncEssayToTextarea(); };
         });
         setupRichToolbars();
+        setupDynamicImagePaste();
     }
     function addEssayItem() { essayItems.push({de:'', dap:'', goi:''}); renderEssayItems(); syncEssayToTextarea(); }
     function removeEssayItem(i) { essayItems.splice(i,1); renderEssayItems(); syncEssayToTextarea(); }
@@ -678,15 +717,15 @@
         cont.innerHTML = '';
         fillItems.forEach((it, i) => {
             const d = document.createElement('div');
-            d.className = 'p-2 border rounded bg-white text-xs';
+            d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
-                <div class="flex items-center mb-1"><span class="font-bold">Bài ${i+1}</span><button type="button" class="ml-auto text-rose-600" onclick="removeFillItem(${i})">×</button></div>
+                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Kéo thả ${i+1}</span><button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeFillItem(${i})">✕</button></div>
                 ${richToolbarHtml(`fill-de-${i}`)}
-                <textarea id="fill-de-${i}" class="w-full p-1 border text-xs" placeholder="Câu có ___ (dán ảnh)"></textarea>
+                <textarea id="fill-de-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Câu có ___ (dán ảnh nếu cần)"></textarea>
                 <div class="grid grid-cols-3 gap-1 mt-1">
-                    <input id="fill-manh-${i}" class="p-1 border text-xs" placeholder="Mảnh » ...">
-                    <input id="fill-dap-${i}" class="p-1 border text-xs" placeholder="Đáp án">
-                    <input id="fill-goi-${i}" class="p-1 border text-xs" placeholder="Gợi ý">
+                    <input id="fill-manh-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Mảnh » ...">
+                    <input id="fill-dap-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Đáp án">
+                    <input id="fill-goi-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Gợi ý">
                 </div>
             `;
             cont.appendChild(d);
@@ -694,6 +733,7 @@
             ['manh','dap','goi'].forEach(k=>{ const inp=d.querySelector(`#fill-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{fillItems[i][k]=inp.value; syncFillToTextarea();}; });
         });
         setupRichToolbars();
+        setupDynamicImagePaste();
     }
     function addFillItem(){ fillItems.push({de:'',manh:'',dap:'',goi:''}); renderFillItems(); syncFillToTextarea(); }
     function removeFillItem(i){ fillItems.splice(i,1); renderFillItems(); syncFillToTextarea(); }
@@ -710,16 +750,16 @@
         cont.innerHTML = '';
         dragItems.forEach((it, i) => {
             const d = document.createElement('div');
-            d.className = 'p-2 border rounded bg-white text-xs';
+            d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
-                <div class="flex items-center mb-1"><span class="font-bold">Bài ${i+1}</span><button type="button" class="ml-auto text-rose-600" onclick="removeDragItem(${i})">×</button></div>
+                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Nối/Sắp xếp ${i+1}</span><button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeDragItem(${i})">✕</button></div>
                 ${richToolbarHtml(`drag-de-${i}`)}
-                <textarea id="drag-de-${i}" class="w-full p-1 border text-xs" placeholder="Đề (dán ảnh)"></textarea>
+                <textarea id="drag-de-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Đề (dán ảnh nếu cần)"></textarea>
                 <div class="grid grid-cols-4 gap-1 mt-1">
-                    <input id="drag-trai-${i}" class="p-1 border text-xs" placeholder="Trái »">
-                    <input id="drag-phai-${i}" class="p-1 border text-xs" placeholder="Phải »">
-                    <input id="drag-map-${i}" class="p-1 border text-xs" placeholder="0-0,1-1">
-                    <input id="drag-goi-${i}" class="p-1 border text-xs" placeholder="Gợi ý">
+                    <input id="drag-trai-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Trái »">
+                    <input id="drag-phai-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Phải »">
+                    <input id="drag-map-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="0-0,1-1">
+                    <input id="drag-goi-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Gợi ý">
                 </div>
             `;
             cont.appendChild(d);
@@ -727,6 +767,7 @@
             ['trai','phai','map','goi'].forEach(k=>{ const inp=d.querySelector(`#drag-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{dragItems[i][k]=inp.value; syncDragToTextarea();}; });
         });
         setupRichToolbars();
+        setupDynamicImagePaste();
     }
     function addDragItem(){ dragItems.push({de:'',trai:'',phai:'',map:'',goi:''}); renderDragItems(); syncDragToTextarea(); }
     function removeDragItem(i){ dragItems.splice(i,1); renderDragItems(); syncDragToTextarea(); }
@@ -743,17 +784,17 @@
         cont.innerHTML = '';
         questionItems.forEach((it, i) => {
             const d = document.createElement('div');
-            d.className = 'p-2 border rounded bg-white text-xs';
+            d.className = 'p-2.5 border border-slate-200 rounded-lg bg-white text-xs shadow-sm';
             d.innerHTML = `
-                <div class="flex items-center mb-1"><span class="font-bold">Câu ${i+1}</span><button type="button" class="ml-auto text-rose-600" onclick="removeQuestionItem(${i})">×</button></div>
+                <div class="flex items-center mb-1"><span class="font-bold text-teal-700">Câu ${i+1}</span><button type="button" class="ml-auto text-rose-500 hover:text-rose-700" onclick="removeQuestionItem(${i})">✕</button></div>
                 ${richToolbarHtml(`q-cau-${i}`)}
-                <textarea id="q-cau-${i}" class="w-full p-1 border text-xs" placeholder="Câu hỏi (dán ảnh nếu cần)"></textarea>
+                <textarea id="q-cau-${i}" class="w-full p-1.5 border border-slate-300 rounded text-xs" placeholder="Câu hỏi (dán ảnh nếu cần)"></textarea>
                 <div class="grid grid-cols-5 gap-1 mt-1">
-                    <input id="q-a-${i}" class="p-1 border text-xs" placeholder="A">
-                    <input id="q-b-${i}" class="p-1 border text-xs" placeholder="B">
-                    <input id="q-c-${i}" class="p-1 border text-xs" placeholder="C">
-                    <input id="q-d-${i}" class="p-1 border text-xs" placeholder="D">
-                    <input id="q-dung-${i}" class="p-1 border text-xs" placeholder="Đúng (A/B/C/D)">
+                    <input id="q-a-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="A">
+                    <input id="q-b-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="B">
+                    <input id="q-c-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="C">
+                    <input id="q-d-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="D">
+                    <input id="q-dung-${i}" class="p-1 border border-slate-300 rounded text-xs" placeholder="Đúng (A/B/C/D)">
                 </div>
             `;
             cont.appendChild(d);
@@ -761,6 +802,7 @@
             ['a','b','c','d','dung'].forEach(k=>{ const inp=d.querySelector(`#q-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{questionItems[i][k]=inp.value; syncQuestionsToTextarea();}; });
         });
         setupRichToolbars();
+        setupDynamicImagePaste();
     }
     function addQuestionItem(){ questionItems.push({cau:'',a:'',b:'',c:'',d:'',dung:''}); renderQuestionItems(); syncQuestionsToTextarea(); }
     function removeQuestionItem(i){ questionItems.splice(i,1); renderQuestionItems(); syncQuestionsToTextarea(); }
@@ -838,258 +880,174 @@
         panel.id = 'lessonEditorPanel';
         panel.className = 'bg-white rounded-xl shadow-lg border border-slate-200 mb-8 p-6';
         panel.innerHTML = `
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between mb-2">
                 <div>
                     <h3 class="font-bold text-slate-800 text-lg">
-                        <i class="fas fa-book-open text-teal-600 mr-2"></i>Tạo bài học cho lộ trình
+                        <i class="fas fa-book-open text-teal-600 mr-2"></i>Thiết kế bài học
                     </h3>
-                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500 mt-1">Nhập nội dung theo từng mục. Công thức viết bằng LaTeX trong dấu <code>$...$</code>.</p>
+                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. Dùng toolbar chèn ảnh hoặc dán trực tiếp markdown ảnh. Thêm từng mục một.</p>
                 </div>
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
 
-            <!-- Tab navigation for visual lesson design -->
-            <div class="flex border-b border-slate-200 mb-4" id="lessonTabs">
-                <button data-tab="lythuyet" class="lesson-tab px-4 py-2 font-bold text-sm border-b-2 border-teal-600 text-teal-700 active">Lý thuyết</button>
-                <button data-tab="vidu" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Ví dụ</button>
-                <button data-tab="baitap" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Bài tập tương tác</button>
-                <button data-tab="tracnghiem" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Trắc nghiệm</button>
-                <button data-tab="khac" class="lesson-tab px-4 py-2 font-bold text-sm text-slate-600 hover:text-slate-800">Khác</button>
+            <!-- Lesson picker + actions (clean top bar, no mixing with fields) -->
+            <div class="flex flex-wrap items-center gap-2 mb-3 p-2 bg-slate-50 border border-slate-200 rounded">
+                <div class="flex-1 min-w-[240px]">
+                    <select id="lessonSelect" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none"></select>
+                </div>
+                <button id="newLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-slate-800 text-white rounded font-bold"><i class="fas fa-plus mr-1"></i>Mới</button>
+                <button id="duplicateLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-copy mr-1"></i>Nhân bản</button>
+                <button id="deleteLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded font-bold"><i class="fas fa-trash mr-1"></i>Xóa</button>
+                <button id="lessonReloadBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-rotate-right mr-1"></i>Tải lại</button>
+                <button id="viewSubmissionsBtn" type="button" class="px-3 py-1.5 text-xs bg-sky-600 text-white rounded font-bold"><i class="fas fa-cloud-arrow-down mr-1"></i>Bài nộp HS</button>
             </div>
 
-            <!-- Tab contents (visual tabbed design) -->
-            <div id="tab-lythuyet" class="lesson-tab-content">
-                <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
-                    <textarea id="lessonGoalInput" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
+            <!-- Compact metadata (always visible, above tabs) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mb-4">
+                <label class="block text-xs font-bold text-slate-700">Môn học
+                    <select id="lessonSubject" class="mt-0.5 w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                        ${SUBJECTS.map(item => `<option value="${item.title}">${item.label}</option>`).join('')}
+                    </select>
                 </label>
+                <label class="block text-xs font-bold text-slate-700">Chương
+                    <div class="flex gap-2">
+                        <input id="lessonChapter" list="lessonChapterOptions" class="flex-1 p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Chương 1: ...">
+                        <button id="renameChapterBtn" type="button" class="text-[10px] px-2 border border-teal-200 text-teal-700 rounded hover:bg-teal-50">Đổi tên</button>
+                    </div>
+                    <datalist id="lessonChapterOptions"></datalist>
+                </label>
+                <label class="block text-xs font-bold text-slate-700">Tên bài
+                    <input id="lessonTitleInput" class="mt-0.5 w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1: ...">
+                </label>
+                <label class="block text-xs font-bold text-slate-700">Slug
+                    <input id="lessonSlug" class="mt-0.5 w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="math6-c1-b1-xxx">
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-xs font-bold text-slate-700">Thứ tự
+                        <input id="lessonOrder" type="number" class="mt-0.5 w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" value="1">
+                    </label>
+                    <label class="block text-xs font-bold text-slate-700 mt-0.5">Công khai
+                        <div class="mt-1">
+                            <input id="lessonPublished" type="checkbox" class="w-4 h-4 text-teal-600 rounded">
+                            <span class="ml-1 text-xs text-slate-600">Mở cho HS</span>
+                        </div>
+                    </label>
+                </div>
+                <div class="text-[11px] text-slate-500 self-end pb-1 hidden xl:block">Dùng tab bên dưới để soạn nội dung linh hoạt. Dán ảnh khi cần.</div>
+            </div>
 
+            <!-- Tab navigation -->
+            <div class="flex border-b border-slate-200 mb-3 overflow-x-auto" id="lessonTabs">
+                <button data-tab="lythuyet" class="lesson-tab px-5 py-2 font-bold text-sm border-b-2 border-teal-600 text-teal-700 active whitespace-nowrap">Lý thuyết</button>
+                <button data-tab="vidu" class="lesson-tab px-5 py-2 font-bold text-sm text-slate-600 hover:text-slate-800 whitespace-nowrap">Ví dụ</button>
+                <button data-tab="baitap" class="lesson-tab px-5 py-2 font-bold text-sm text-slate-600 hover:text-slate-800 whitespace-nowrap">Bài tập tương tác</button>
+                <button data-tab="tracnghiem" class="lesson-tab px-5 py-2 font-bold text-sm text-slate-600 hover:text-slate-800 whitespace-nowrap">Trắc nghiệm</button>
+                <button data-tab="khac" class="lesson-tab px-5 py-2 font-bold text-sm text-slate-600 hover:text-slate-800 whitespace-nowrap">Khác</button>
+            </div>
+
+            <!-- Tab contents: clean, no duplication. One editor set only. -->
+            <div id="tab-lythuyet" class="lesson-tab-content">
+                <label class="block text-sm font-bold text-slate-700 mb-1">Mục tiêu bài học
+                    <textarea id="lessonGoalInput" rows="2" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none text-sm" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
+                </label>
                 <label class="block text-sm font-bold text-slate-700">Lý thuyết
-                    <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn. Hỗ trợ ảnh: dán trực tiếp hoặc dùng nút ảnh. Công thức: $...$.</span>
+                    <span class="block text-[11px] text-slate-500 mb-1">Dùng Enter 2 lần tách đoạn. Dùng nút ảnh hoặc dán <code>![alt](url)</code>. Công thức $...$.</span>
                     ${richToolbarHtml('lessonTheory')}
-                    <textarea id="lessonTheory" rows="12" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    <textarea id="lessonTheory" rows="11" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>
             </div>
 
             <div id="tab-vidu" class="lesson-tab-content hidden">
-                <label class="block text-sm font-bold text-slate-700">Ví dụ (theo Dạng toán - dán hình minh họa khi cần)
-                    <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi Dạng một khối. Dán ảnh minh họa cho dạng (hình vẽ, sơ đồ...). Sử dụng heading **DẠNG 1:** </span>
+                <label class="block text-sm font-bold text-slate-700">Ví dụ / Dạng toán (dán hình minh họa khi cần)
+                    <span class="block text-[11px] text-slate-500 mb-1">Mỗi Dạng một khối (dùng **DẠNG 1:**). Dán ảnh vào khối đó nếu cần. Thêm hình riêng cho từng dạng.</span>
                     ${richToolbarHtml('lessonExamples')}
                     <textarea id="lessonExamples" rows="12" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>
             </div>
 
             <div id="tab-baitap" class="lesson-tab-content hidden">
-                <!-- Bài tập tương tác with flexible items -->
-                <label class="block text-sm font-bold text-slate-700">Bài tập nộp giáo viên (rich text, dán hình cho từng dạng)
+                <label class="block text-sm font-bold text-slate-700">Bài tập nộp giáo viên (rich text)
+                    <span class="block text-[11px] text-slate-500 mb-1">Học sinh làm xong các dạng rồi nộp chung. Dán hình cho từng dạng nếu cần.</span>
                     ${richToolbarHtml('lessonSelfPractice')}
-                    <textarea id="lessonSelfPractice" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                    <textarea id="lessonSelfPractice" rows="5" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>
 
-                <div class="space-y-6 mt-4">
+                <div class="mt-4 space-y-4">
                     <div>
-                        <label class="block text-sm font-bold text-slate-700">Bài tập tự luận (thêm từng bài, dán hình vào Đề)
-                        </label>
-                        <div id="essayItems" class="space-y-3"></div>
-                        <button type="button" onclick="addEssayItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài tập tự luận</button>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-slate-700">Bài tập tự luận (thêm từng bài)</span>
+                            <button type="button" onclick="addEssayItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm bài</button>
+                        </div>
+                        <div id="essayItems" class="space-y-2"></div>
                         <textarea id="lessonEssay" class="hidden"></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
-                        </label>
-                        <div id="fillItems" class="space-y-3"></div>
-                        <button type="button" onclick="addFillItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm</button>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-slate-700">Kéo thả vào ô trống (thêm từng bài)</span>
+                            <button type="button" onclick="addFillItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
+                        </div>
+                        <div id="fillItems" class="space-y-2"></div>
                         <textarea id="lessonFill" class="hidden"></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-700">Nối ô / sắp xếp
-                        </label>
-                        <div id="dragItems" class="space-y-3"></div>
-                        <button type="button" onclick="addDragItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm</button>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-slate-700">Nối ô / sắp xếp (thêm từng bài)</span>
+                            <button type="button" onclick="addDragItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
+                        </div>
+                        <div id="dragItems" class="space-y-2"></div>
                         <textarea id="lessonDrag" class="hidden"></textarea>
                     </div>
                 </div>
+
+                <!-- Submissions inside Bài tập tab for visual grouping -->
+                <section id="selfPracticeSubmissionsPanel" class="mt-4 rounded border border-sky-200 bg-sky-50 p-3 text-xs">
+                    <div class="flex items-center justify-between">
+                        <div class="font-bold text-sky-900"><i class="fas fa-folder-open mr-1"></i>Bài nộp học sinh (Drive)</div>
+                        <button type="button" id="reloadSelfPracticeSubmissionsBtn" class="px-2 py-0.5 border border-sky-300 bg-white rounded text-sky-700">Tải</button>
+                    </div>
+                    <div id="selfPracticeSubmissionsBody" class="mt-2 text-sky-800">Chọn bài để xem bài nộp của học sinh.</div>
+                </section>
             </div>
 
             <div id="tab-tracnghiem" class="lesson-tab-content hidden">
-                <div>
-                    <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm (thêm từng câu, dán hình vào câu hỏi)
-                    </label>
-                    <div id="questionItems" class="space-y-3"></div>
-                    <button type="button" onclick="addQuestionItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm câu hỏi</button>
-                    <textarea id="lessonQuestions" class="hidden"></textarea>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-bold text-slate-700">Trắc nghiệm (thêm từng câu, dán ảnh vào câu nếu cần)</span>
+                    <button type="button" onclick="addQuestionItem()" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm câu</button>
                 </div>
+                <div id="questionItems" class="space-y-2"></div>
+                <textarea id="lessonQuestions" class="hidden"></textarea>
             </div>
 
             <div id="tab-khac" class="lesson-tab-content hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: id | Tên kỹ năng | target</span>
-                        <textarea id="lessonSkills" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                        <span class="block text-[11px] text-slate-500">id | Tên | target</span>
+                        <textarea id="lessonSkills" rows="5" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                     <label class="block text-sm font-bold text-slate-700">Nhiệm vụ học sinh
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng là một việc cần làm.</span>
-                        <textarea id="lessonTasks" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                        <span class="block text-[11px] text-slate-500">Mỗi dòng = 1 việc cần làm</span>
+                        <textarea id="lessonTasks" rows="5" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                     </label>
                 </div>
-
-                <label class="block text-sm font-bold text-slate-700 mt-4">Video YouTube bài giảng
-                    <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Tiêu đề | Link YouTube.</span>
-                    <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài giảng Tập hợp | https://www.youtube.com/watch?v=..."></textarea>
+                <label class="block text-sm font-bold text-slate-700 mt-3">Video YouTube
+                    <span class="block text-[11px] text-slate-500">Tiêu đề | https://youtube...</span>
+                    <textarea id="lessonVideos" rows="3" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1 | https://..."></textarea>
                 </label>
+                <div class="mt-3 rounded border border-teal-100 bg-teal-50 p-2 text-[11px] text-teal-800">
+                    Mẹo: Dùng nút <b>ảnh</b> trên toolbar để chèn link. Hoặc dán thẳng <code>![mô tả](https://...)</code> vào khung soạn. Mỗi mục một ảnh nếu cần.
+                </div>
             </div>
 
-            <div class="mt-5 grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-5">
-                <aside class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Chọn bài học</label>
-                        <select id="lessonSelect" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></select>
-                    </div>
-                    <button id="newLessonBtn" type="button" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-plus mr-1"></i>Tạo bài mới
-                    </button>
-                    <button id="duplicateLessonBtn" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-copy mr-1"></i>Nhân bản bài đang chọn
-                    </button>
-                    <button id="deleteLessonBtn" type="button" class="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-trash mr-1"></i>Xóa bài đang chọn
-                    </button>
-                    <button id="lessonReloadBtn" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded font-bold text-sm">
-                        <i class="fas fa-rotate-right mr-1"></i>Tải lại dữ liệu
-                    </button>
-                    <button id="viewSubmissionsBtn" type="button" class="w-full bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded font-bold text-sm shadow">
-                        <i class="fas fa-cloud-arrow-down mr-1"></i>Xem bài nộp HS
-                    </button>
-                    <div class="rounded border border-teal-100 bg-teal-50 p-3 text-sm leading-6 text-teal-900">
-                        Ví dụ công thức: <code>$A=\\{1,2,3\\}$</code>, <code>$x \\in A$</code>. Học sinh sẽ nhìn thấy công thức đã render.
-                    </div>
-                </aside>
+            <div id="lessonPreview" class="mt-3 rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600"></div>
 
-                <form id="lessonForm" class="space-y-5">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Môn học
-                            <select id="lessonSubject" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none">
-                                ${SUBJECTS.map(item => `<option value="${item.title}">${item.label}</option>`).join('')}
-                            </select>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">Chương
-                            <input id="lessonChapter" list="lessonChapterOptions" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Chương 1: Số tự nhiên">
-                            <datalist id="lessonChapterOptions"></datalist>
-                            <button id="renameChapterBtn" type="button" class="mt-2 text-xs font-bold text-teal-700 hover:text-teal-900 underline">
-                                Đổi tên chương cho tất cả bài trong chương này
-                            </button>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">Tên bài
-                            <input id="lessonTitleInput" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1: Tập hợp">
-                        </label>
-                        <div class="grid grid-cols-[1fr_110px] gap-3">
-                            <label class="block text-sm font-bold text-slate-700">Slug
-                                <input id="lessonSlug" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="math6-c1-b1-tap-hop">
-                            </label>
-                            <label class="block text-sm font-bold text-slate-700">Thứ tự
-                                <input id="lessonOrder" type="number" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" value="1">
-                            </label>
-                        </div>
-                    </div>
-
-                    <label class="flex items-start gap-2 rounded border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-900">
-                        <input id="lessonPublished" type="checkbox" class="mt-0.5 w-4 h-4 text-teal-600 rounded">
-                        <span>Mở bài này cho học sinh <span class="block text-xs font-medium text-teal-800">Mặc định tắt — chỉ bật khi bạn sẵn sàng cho lớp học bài này.</span></span>
-                    </label>
-
-                    <!-- Tab Lý thuyết content -->
-                    <div id="tab-lythuyet-content">
-                        <label class="block text-sm font-bold text-slate-700">Mục tiêu bài học
-                            <textarea id="lessonGoalInput" rows="2" class="mt-1 w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
-                        </label>
-
-                        <label class="block text-sm font-bold text-slate-700">Lý thuyết
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn (dùng với <code class="font-mono text-[11px]">[AI]</code>). Định dạng: <code class="font-mono text-[11px]">**đậm**</code>, <code class="font-mono text-[11px]">*nghiêng*</code>, <code class="font-mono text-[11px]">++gạch chân++</code>, ảnh: <code class="font-mono text-[11px]">![mô tả](link)</code>. Công thức: <code class="font-mono text-[11px]">$...$</code>.</span>
-                            ${richToolbarHtml('lessonTheory')}
-                            <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                        </label>
-                    </div>
-
-                    <label class="block text-sm font-bold text-slate-700">Bài tập nộp giáo viên
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Cùng cấu trúc ví dụ — mỗi dạng một khối (Enter 2 lần). Học sinh làm xong tất cả dạng rồi <strong>nộp chung một lần</strong> lên Google Drive. Không cần <code class="font-mono text-[11px]">[AI]</code> trừ khi muốn nút giải thích.</span>
-                        ${richToolbarHtml('lessonSelfPractice')}
-                        <textarea id="lessonSelfPractice" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                    </label>
-
-                    <section id="selfPracticeSubmissionsPanel" class="rounded-xl border-2 border-sky-300 bg-sky-50 p-4 scroll-mt-24">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <h4 class="text-base font-bold text-sky-950"><i class="fas fa-folder-open mr-1"></i> Bài nộp học sinh (Google Drive)</h4>
-                                <p class="text-xs text-sky-800 mt-1">Học sinh lớp bạn dạy nộp ở tab <strong>Bài tập</strong> trong lộ trình. Bấm link tệp để xem trên Drive.</p>
-                            </div>
-                            <button type="button" id="reloadSelfPracticeSubmissionsBtn" class="rounded border border-sky-300 bg-white px-3 py-1.5 text-xs font-bold text-sky-800 hover:bg-sky-100">Tải lại</button>
-                        </div>
-                        <div id="selfPracticeSubmissionsBody" class="mt-3 text-sm text-sky-900">Chọn bài học để xem bài nộp.</div>
-                    </section>
-
-                    <div class="space-y-6">
-                        <!-- Bài tập tự luận (linh hoạt, có thể dán hình vào Đề) -->
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700">Bài tập tự luận
-                                <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi item: Đề (hỗ trợ ảnh) | Đáp án (số) | Gợi ý. Thêm từng bài một, dán hình vào phần Đề nếu cần.</span>
-                            </label>
-                            <div id="essayItems" class="space-y-3"></div>
-                            <button type="button" onclick="addEssayItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài tập tự luận</button>
-                            <textarea id="lessonEssay" class="hidden"></textarea>
-                        </div>
-                        <!-- Kéo vào ô trống -->
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
-                                <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi item: Đề (hỗ trợ ảnh) | Mảnh » ... | Đáp án | Gợi ý</span>
-                            </label>
-                            <div id="fillItems" class="space-y-3"></div>
-                            <button type="button" onclick="addFillItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài kéo thả</button>
-                            <textarea id="lessonFill" class="hidden"></textarea>
-                        </div>
-                        <!-- Nối / sắp xếp -->
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700">Nối ô / sắp xếp
-                                <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi item: Đề (hỗ trợ ảnh) | ... | ... | map | Gợi ý</span>
-                            </label>
-                            <div id="dragItems" class="space-y-3"></div>
-                            <button type="button" onclick="addDragItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài nối/sắp xếp</button>
-                            <textarea id="lessonDrag" class="hidden"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: id | Tên kỹ năng | target</span>
-                            <textarea id="lessonSkills" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">Nhiệm vụ học sinh
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng là một việc cần làm.</span>
-                            <textarea id="lessonTasks" rows="6" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
-                        </label>
-                    </div>
-
-                    <label class="block text-sm font-bold text-slate-700">Video YouTube bài giảng
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Tiêu đề | Link YouTube. Có thể để trống nếu bài chưa có video.</span>
-                        <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài giảng Tập hợp | https://www.youtube.com/watch?v=..."></textarea>
-                    </label>
-
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi câu: Câu hỏi (hỗ trợ ảnh) | A | B | C | D | đáp án. Thêm từng câu, dán hình vào Câu hỏi nếu cần.</span>
-                        </label>
-                        <div id="questionItems" class="space-y-3"></div>
-                        <button type="button" onclick="addQuestionItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm câu hỏi trắc nghiệm</button>
-                        <textarea id="lessonQuestions" class="hidden"></textarea>
-                    <div id="lessonPreview" class="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"></div>
-
-                    <div class="flex flex-wrap gap-3">
-                        <button id="saveLessonBtn" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded shadow font-bold text-sm transition flex items-center gap-2">
-                            <i class="fas fa-save"></i>Lưu bài học
-                        </button>
-                        <button id="seedLessonBtn" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded shadow-sm font-bold text-sm transition">
-                            Điền mẫu Bài 1
-                        </button>
-                    </div>
-                </form>
+            <div class="mt-3 flex flex-wrap gap-3">
+                <button id="saveLessonBtn" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded font-bold text-sm flex items-center gap-2">
+                    <i class="fas fa-save"></i> Lưu bài học
+                </button>
+                <button id="seedLessonBtn" type="button" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded font-bold text-sm">
+                    Điền mẫu
+                </button>
+                <span class="self-center text-xs text-slate-500">Ảnh và nội dung linh hoạt theo ý bạn — chèn hay không là do bạn quyết định khi soạn từng mục.</span>
             </div>
         `;
         dashboard.prepend(panel);
@@ -1119,11 +1077,17 @@
         });
         el('reloadSelfPracticeSubmissionsBtn')?.addEventListener('click', () => loadSelfPracticeSubmissions());
         el('viewSubmissionsBtn')?.addEventListener('click', () => {
-            el('selfPracticeSubmissionsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            loadSelfPracticeSubmissions();
+            // Activate the Bài tập tab so the submissions panel inside is visible
+            const baitapBtn = panel.querySelector('button[data-tab="baitap"]');
+            if (baitapBtn) baitapBtn.click();
+            setTimeout(() => {
+                el('selfPracticeSubmissionsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                loadSelfPracticeSubmissions();
+            }, 80);
         });
         setupEditorFieldShortcuts();
         setupRichToolbars();
+        setupImagePasteHandlers();
         injectLessonEditorStyles();
 
         // init dynamic flexible lists (empty for new)
@@ -1135,6 +1099,7 @@
         renderFillItems();
         renderDragItems();
         renderQuestionItems();
+        setupDynamicImagePaste();
 
         // Tab switching for visual design
         const tabButtons = panel.querySelectorAll('.lesson-tab');
@@ -1203,36 +1168,23 @@
         const style = document.createElement('style');
         style.id = 'lessonEditorStyles';
         style.textContent = `
-            .lesson-rich-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+            .lesson-rich-toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
             .lesson-rich-toolbar button {
-                display: inline-flex; align-items: center; gap: 4px;
-                padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
-                background: #fff; color: #334155; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+                display: inline-flex; align-items: center; gap: 3px;
+                padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 5px;
+                background: #fff; color: #334155; font-size: 0.7rem; font-weight: 700; cursor: pointer;
             }
-            .lesson-rich-toolbar button:hover { background: #f8fafc; border-color: #94a3b8; }
+            .lesson-rich-toolbar button:hover { background: #f1f5f9; border-color: #94a3b8; }
 
-        .lesson-tab.active {
-            border-bottom: 2px solid #0f766e;
-            color: #0f766e;
-            font-weight: 700;
-        }
-        .lesson-tab-content {
-            display: block;
-        }
-        .lesson-tab-content.hidden {
-            display: none;
-        }
-        .lesson-tab {
-            transition: all 0.1s;
-        }
-        .lesson-tab:hover {
-            color: #0f766e;
-        }
-        /* Make the rich editor feel more visual */
-        #lessonTheory, #lessonExamples, #lessonSelfPractice, #essayItems textarea, #fillItems textarea, #dragItems textarea, #questionItems textarea {
-            min-height: 120px;
-            font-family: ui-sans-serif, system-ui;
-        }
+            .lesson-tab.active { border-bottom: 3px solid #0f766e; color: #0f766e; font-weight: 700; }
+            .lesson-tab-content { display: block; }
+            .lesson-tab-content.hidden { display: none; }
+            .lesson-tab { transition: all 0.1s; padding-bottom: 6px; margin-right: 6px; }
+            .lesson-tab:hover { color: #0f766e; }
+
+            .lesson-tab-content textarea { min-height: 160px; font-size: 0.95rem; line-height: 1.45; }
+            #lessonTheory, #lessonExamples { min-height: 240px; }
+            .lesson-rich-toolbar { background: #f8fafc; border-radius: 4px; padding: 2px; }
         `;
         document.head.appendChild(style);
     }
@@ -1490,12 +1442,12 @@
         const fillCount = parseFillExercises(el('lessonFill').value).length;
         const dragCount = parseDragExercises(el('lessonDrag').value).length;
         preview.innerHTML = `
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn · ${blocks.filter(block => block.ai).length} có AI`; })()}</div></div>
-                <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
-                <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
-                <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
-                <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${essayCount + fillCount + dragCount + questionCount}</div></div>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+                <div><div class="text-[10px] text-slate-500">Lý thuyết</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn`; })()}</div></div>
+                <div><div class="text-[10px] text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length}</div></div>
+                <div><div class="text-[10px] text-slate-500">Bài tập nộp</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
+                <div><div class="text-[10px] text-slate-500">Tương tác</div><div class="font-bold">${essayCount + fillCount + dragCount}</div></div>
+                <div><div class="text-[10px] text-slate-500">Trắc nghiệm</div><div class="font-bold">${questionCount}</div></div>
             </div>
         `;
     }
