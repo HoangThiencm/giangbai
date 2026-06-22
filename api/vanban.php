@@ -264,6 +264,13 @@ function vbd_regex_extract(string $source): array
         }
     }
 
+    // Siêu cứu hộ cuối cùng: quét 500 ký tự đầu cho bất kỳ số văn bản nào nếu có "Số:" nhưng chưa có số
+    if (empty($result['document_number']) && preg_match('/Số\s*[:\.]?/iu', $head)) {
+        if (preg_match('/\b(\d{3,6}\/[A-ZĐA-Z0-9.\-]{2,})\b/u', mb_substr($head, 0, 500), $match)) {
+            $result['document_number'] = $match[1];
+        }
+    }
+
     // Organization: lấy tên cơ quan ở rất đầu, cắt trước khi gặp "Số:"
     $orgPatterns = [
         '/((?:ỦY BAN NHÂN DÂN|UBND|PHÒNG GIÁO DỤC|PHÒNG GD|PHONG GD|PHÒNG|PHONG|TRƯỜNG|TRUONG|BAN THƯỜNG VỤ|BAN CHẤP HÀNH|ĐẢNG ỦY|DANG UY|ĐẢNG BỘ|CHI BỘ|CHI UY|SỞ GD|PGD|BỘ GD)[^\n]{0,80}?)(?:\n|Số|:)/iu',

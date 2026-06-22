@@ -539,7 +539,28 @@
         } catch {
             text = '';
         }
-        if (meaningfulTextLength(text) < 80) {
+
+        // Kiểm tra header có bị lỗi không (đặc biệt với file ký số)
+        // Nếu "Số:" xuất hiện nhưng ngay sau không có chữ số (ví dụ "Số: /UBND" hoặc "Số:" + không phải số)
+        const headerCheck = text.substring(0, 700);
+        const hasMangledSo = /Số\s*[:\.]?\s*[^0-9\w]/i.test(headerCheck) ||
+                             /Số\s*:\s*\//i.test(headerCheck) ||
+                             /Số\s*:\s*[^\d]/i.test(headerCheck);
+
+        if (hasMangledSo && meaningfulTextLength(text) >= 30 && hasMistralOcr()) {
+            // Header bị lỗi do text layer → thử OCR để đọc chính xác số và ngày
+            try {
+                const ocrText = await extractPdfOcr(file);
+                if (meaningfulTextLength(ocrText) > 50) {
+                    text = ocrText;
+                    mode = 'mistral-ocr';
+                }
+            } catch (e) {
+                // giữ text layer nếu OCR fail
+            }
+        }
+
+        if (meaningfulTextLength(text) < 80 && hasMistralOcr()) {
             text = await extractPdfOcr(file);
             mode = 'mistral-ocr';
         }

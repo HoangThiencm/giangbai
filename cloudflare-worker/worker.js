@@ -37,8 +37,8 @@ function buildMessages(body) {
         role: 'system',
         content: [
           'Bạn là trợ lý trích xuất văn bản hành chính Việt Nam. Nhiệm vụ: CHỈ trích xuất của VĂN BẢN CHÍNH ở phần ĐẦU. Bỏ qua mọi số/ngày của văn bản được trích dẫn bên trong.',
-          'QUY TẮC BẮT BUỘC:',
-          '- document_number: Tìm số sau "Số:" (ví dụ 1176/UBND-VHXH). Nếu "Số:" và số bị tách (do text layer/OCR/ký số), vẫn lấy số dạng NNNN/XXXX gần "Số" hoặc tên cơ quan ở trên cùng. KHÔNG lấy số sau "Căn cứ", "Trên cơ sở", "Công văn số", "theo".',
+          'QUY TẮC BẮT BUỘC (rất quan trọng với text layer lỗi):',
+          '- document_number: Tìm số sau "Số:". Nếu text bị lỗi như "Số: /UBND-VHXH" hoặc "Số:" không có số, tìm số dạng 1176/UBND-VHXH ngay sau tên cơ quan ở dòng trên cùng (ví dụ ngay sau "ỦY BAN NHÂN DÂN PHƯỜNG HỐ NAI"). KHÔNG lấy số từ thân văn bản.',
           '- BỎ QUA hoàn toàn chữ ký số, ngày ký, "Ký bởi".',
           '- document_date: NGÀY BAN HÀNH ở góc phải trên cùng ("Hồ Nai, ngày 22 tháng 6 năm 2026").',
           '- organization: Tên cơ quan ban hành (ỦY BAN NHÂN DÂN PHƯỜNG HỐ NAI...).',
@@ -49,7 +49,7 @@ function buildMessages(body) {
       },
       {
         role: 'user',
-        content: `Văn bản (chỉ lấy số chính sau Số:, ngày ban hành, cơ quan, trích yếu. Bỏ tham chiếu và chữ ký số):\n${selectedText}`,
+        content: `Văn bản (chỉ lấy số chính của VĂN BẢN này. Nếu Số bị lỗi thì tìm số sau tên cơ quan ở đầu):\n${selectedText}`,
       },
     ];
   }
