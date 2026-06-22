@@ -59,6 +59,16 @@ function vbd_ensure_schema(PDO $pdo): void
         // Existing installations may need the column added manually if ALTER TABLE is restricted.
     }
 
+    try {
+        $column = $pdo->query("SHOW COLUMNS FROM office_documents LIKE 'sector'")->fetch();
+        if (!$column) {
+            $pdo->exec("ALTER TABLE office_documents ADD COLUMN sector VARCHAR(20) NOT NULL DEFAULT 'hanhchinh' AFTER academic_year");
+            $pdo->exec("UPDATE office_documents SET sector = 'hanhchinh' WHERE sector IS NULL OR TRIM(sector) = ''");
+        }
+    } catch (Throwable $e) {
+        // Existing installations may need the column added manually if ALTER TABLE is restricted.
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS office_document_files (
         id INT AUTO_INCREMENT PRIMARY KEY,
         document_id INT NOT NULL,
@@ -77,6 +87,16 @@ function vbd_ensure_schema(PDO $pdo): void
 function vbd_direction(string $value): string
 {
     return in_array($value, ['incoming', 'outgoing'], true) ? $value : 'incoming';
+}
+
+function vbd_sector(string $value): string
+{
+    return in_array($value, ['hanhchinh', 'dang'], true) ? $value : 'hanhchinh';
+}
+
+function vbd_sector_label(string $sector): string
+{
+    return $sector === 'dang' ? 'Đảng' : 'Hành chính';
 }
 
 function vbd_status(string $value, bool $required): string
@@ -214,7 +234,8 @@ function vbd_drive_folder(array $document): string
     $rootFolder = drive_get_or_create_folder($root, '04_QUAN_LY_VAN_BAN');
     $year = vbd_academic_year($document['academic_year'] ?? '');
     if ($year === '') throw new RuntimeException('Cần chọn năm học trước khi tải tệp lên Google Drive.');
-    $yearFolder = drive_get_or_create_folder($rootFolder, 'NAM_HOC_' . drive_safe_name($year, 'NAM_HOC'));
+    $sectorFolder = drive_get_or_create_folder($rootFolder, vbd_sector((string)($document['sector'] ?? 'hanhchinh')) === 'dang' ? 'DANG' : 'HANH_CHINH');
+    $yearFolder = drive_get_or_create_folder($sectorFolder, 'NAM_HOC_' . drive_safe_name($year, 'NAM_HOC'));
     $kindFolder = drive_get_or_create_folder($yearFolder, $document['direction'] === 'outgoing' ? 'VAN_BAN_DI' : 'VAN_BAN_DEN');
     $label = trim((string)($document['document_number'] ?? '')) ?: ('VB-' . (int)$document['id']);
     return drive_get_or_create_folder($kindFolder, drive_safe_name($label . ' - ' . $document['title'], 'Van ban'));
@@ -243,8 +264,15 @@ $user = vbd_current_user($pdo);
 $action = (string)($_GET['action'] ?? $_POST['action'] ?? 'list');
 
 if ($action === 'list') {
-    $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
-    $stmt->execute([(int)$user['id']]);
+    $sectorFilter = trim((string)($_GET['sector'] ?? ''));
+    if ($sectorFilter !== '') {
+        $sectorFilter = vbd_sector($sectorFilter);
+        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? AND sector = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
+        $stmt->execute([(int)$user['id'], $sectorFilter]);
+    } else {
+        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
+        $stmt->execute([(int)$user['id']]);
+    }
     $documents = $stmt->fetchAll();
     $files = vbd_files($pdo, array_map(static fn(array $row): int => (int)$row['id'], $documents));
     foreach ($documents as &$document) {
@@ -307,10 +335,12 @@ if ($action === 'save') {
     $yearStmt->execute([$academicYear]);
     if (!$yearStmt->fetch()) respond(['error' => 'Năm học chưa có trong danh mục. Hãy tạo năm học trước.'], 422);
     $direction = vbd_direction((string)($input['direction'] ?? 'incoming'));
+    $sector = vbd_sector((string)($input['sector'] ?? $_GET['sector'] ?? 'hanhchinh'));
     $required = !empty($input['report_required']);
     $status = vbd_status((string)($input['report_status'] ?? ''), $required);
     $values = [
         $academicYear,
+        $sector,
         $direction,
         trim((string)($input['document_number'] ?? '')) ?: null,
         vbd_truncate($title, 500),
@@ -327,11 +357,11 @@ if ($action === 'save') {
     if ($id > 0) {
         if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản cần sửa.'], 404);
         $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
-        $stmt = $pdo->prepare('UPDATE office_documents SET academic_year=?, direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
+        $stmt = $pdo->prepare('UPDATE office_documents SET academic_year=?, sector=?, direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
         $stmt->execute(array_merge($values, [$reportedAt, $id, (int)$user['id']]));
     } else {
         $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
-        $stmt = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, sector, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute(array_merge([(int)$user['id']], $values, [$reportedAt]));
         $id = (int)$pdo->lastInsertId();
     }

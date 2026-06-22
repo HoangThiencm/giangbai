@@ -61,11 +61,17 @@
         }
     }
 
+    function isVanbanPage() {
+        const file = currentFile();
+        return file === 'quanlyvanban.html'
+            || file === 'quanlyvanban-hanhchinh.html'
+            || file === 'quanlyvanban-dang.html';
+    }
+
     function detectMode() {
         const file = currentFile();
         if (file === 'theodoi-ai.html') return 'ai-stats';
         if (file === 'thongketientrinh.html') return 'stats';
-        if (file === 'quanlyvanban.html') return 'documents';
         if (file.startsWith('lotrinhtoan')) return 'design';
         return 'hub';
     }
@@ -239,6 +245,7 @@
 
     function mountTeacherLotrinhNav(options = {}) {
         if (!isTeacher()) return null;
+        if (isVanbanPage()) return null;
         if (!getAllowedLotrinhPages().length) return null;
 
         ensureStyles();

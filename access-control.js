@@ -9,6 +9,8 @@
         'lotrinhtoan9.html': 'lotrinhtoan9',
         'thongketientrinh.html': 'thongketientrinh',
         'quanlyvanban.html': 'quanlyvanban',
+        'quanlyvanban-hanhchinh.html': 'quanlyvanban',
+        'quanlyvanban-dang.html': 'quanlyvanban',
         'theodoi-ai.html': 'theodoiai',
         'gslides.html': 'gslides',
         'smartquiz.html': 'smartquiz',
