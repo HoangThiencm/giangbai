@@ -9,6 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="ai-design-config.js?v=20260624-admin-sync"></script>
+    <script src="ai-usage-reporter.js?v=20260622-ai-track1"></script>
+    <script src="mistral-ocr-client.js?v=20260622-ai-track1"></script>
     <style>
         body { font-family: "Segoe UI", Arial, sans-serif; background: #f6f8fb; }
         .modal-backdrop { background: rgba(15, 23, 42, .58); backdrop-filter: blur(2px); }
@@ -124,7 +127,7 @@
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h3 class="font-bold text-violet-950"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI đọc và tự điền</h3>
-                            <p class="mt-1 text-xs text-violet-800">Dán trích văn bản hoặc chọn PDF để AI gợi ý thông tin.</p>
+                            <p class="mt-1 text-xs text-violet-800">Dán trích văn bản hoặc chọn PDF — tự đọc chữ/OCR rồi điền số văn bản, cơ quan, ngày ban hành (bỏ qua ngày ký số).</p>
                         </div>
                         <button id="aiSuggestBtn" type="button" class="shrink-0 rounded-lg bg-violet-700 px-3 py-2 text-sm font-bold text-white hover:bg-violet-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI tự điền</button>
                     </div>
@@ -167,6 +170,6 @@
     </div>
 
     <div id="toast" class="fixed bottom-4 right-4 z-[70] hidden max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-xl"></div>
-    <script src="vanban-app.js?v=20260622-drive-delete1"></script>
+    <script src="vanban-app.js?v=20260622-vanban-ai1"></script>
 </body>
 </html>

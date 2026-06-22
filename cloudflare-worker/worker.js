@@ -38,12 +38,16 @@ function buildMessages(body) {
         content: [
           'Bạn là trợ lý trích xuất văn bản hành chính Việt Nam cho trường học.',
           'Chỉ dùng dữ kiện có trong văn bản; không bịa số văn bản, ngày hoặc thời hạn.',
+          'BỎ QUA hoàn toàn thông tin chữ ký số: ngày ký, ký bởi, certificate, timestamp, mã xác thực.',
+          'document_date là NGÀY BAN HÀNH ở phần đầu văn bản (thường "ngày ... tháng ... năm ..." dưới số/ký hiệu), KHÔNG phải ngày giờ ký số.',
+          'document_number lấy từ "Số:", "Số văn bản:", "Ký hiệu:" hoặc dạng 123/PGD-GDTrH, 01/QĐ-UBND.',
+          'organization là cơ quan ban hành/gửi (UBND, Phòng GD, Trường, Đảng ủy...) ở phần đầu.',
+          'title là trích yếu sau "V/v", "Về việc" hoặc dòng tiêu đề chính.',
           'Trả về DUY NHẤT một JSON hợp lệ, không Markdown, không lời dẫn.',
           'Đúng các khóa: document_number, title, organization, document_type, summary_text, document_date, report_required, report_due_at, confidence, note.',
-          'document_type ưu tiên một trong: Kế hoạch, Tờ trình, Báo cáo, Quyết định, Thông báo, Công văn, Thông tư, Hướng dẫn, Quy định. Nếu không phù hợp, dùng đúng loại ghi trong văn bản.',
-          'document_date và report_due_at có dạng YYYY-MM-DD hoặc null. report_required là true/false.',
-          'Nếu không thấy hạn báo cáo thì report_required=false và report_due_at=null.',
-          'summary_text tối đa 2 câu ngắn; confidence chỉ low, medium hoặc high.',
+          'document_type ưu tiên: Kế hoạch, Tờ trình, Báo cáo, Quyết định, Thông báo, Công văn, Thông tư, Hướng dẫn, Quy định, Chỉ thị, Nghị quyết.',
+          'document_date và report_due_at dạng YYYY-MM-DD hoặc null. report_required là true/false.',
+          'summary_text tối đa 2 câu; confidence chỉ low, medium hoặc high.',
         ].join(' '),
       },
       {
@@ -138,7 +142,7 @@ export default {
       const result = await env.AI.run(model, {
         messages: buildMessages(body),
         temperature: 0.25,
-        max_tokens: mode === 'document' ? 520 : 360,
+        max_tokens: mode === 'document' ? 680 : 360,
       });
       const answer = extractAnswer(result);
       if (!answer) {
