@@ -429,8 +429,8 @@
             const count = (doc.files || []).length;
             if (!confirm(`XÓA VĨNH VIỄN văn bản “${doc.title}”?\n\nThao tác này sẽ xóa danh mục và ${count} tệp đính kèm trên Google Drive.`)) return;
             try {
-                await api('delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
-                toast('Đã xóa văn bản.');
+                const data = await api('delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+                toast(data.message || 'Đã xóa văn bản và tệp trên Google Drive.');
                 load();
             } catch (error) {
                 toast(error.message, 'rose');

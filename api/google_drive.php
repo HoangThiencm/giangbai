@@ -539,16 +539,68 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
     ];
 }
 
+function drive_resolve_file_id(string $directId = '', string $viewUrl = '', string $downloadUrl = ''): string
+{
+    $id = trim($directId);
+    if ($id !== '') {
+        return $id;
+    }
+    foreach ([$viewUrl, $downloadUrl] as $url) {
+        $url = trim((string)$url);
+        if ($url === '') {
+            continue;
+        }
+        if (preg_match('/\/d\/([A-Za-z0-9_-]+)/', $url, $match)) {
+            return (string)$match[1];
+        }
+        if (preg_match('/[?&]id=([A-Za-z0-9_-]+)/', $url, $match)) {
+            return (string)$match[1];
+        }
+    }
+    return '';
+}
+
+function drive_trash_file(string $fileId): void
+{
+    $fileId = trim($fileId);
+    if ($fileId === '') {
+        return;
+    }
+    drive_api(
+        'PATCH',
+        'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?supportsAllDrives=true&fields=id,trashed',
+        ['trashed' => true]
+    );
+}
+
 function drive_delete_file(string $fileId): void
 {
     $fileId = trim($fileId);
-    if ($fileId === '') return;
+    if ($fileId === '') {
+        throw new RuntimeException('Thiếu mã tệp Google Drive.');
+    }
+
+    $deleteUrl = 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?' . http_build_query([
+        'supportsAllDrives' => 'true',
+    ]);
+
     try {
-        drive_api('DELETE', 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?supportsAllDrives=true');
+        drive_api('DELETE', $deleteUrl);
+        return;
     } catch (RuntimeException $e) {
         $message = $e->getMessage();
-        if (str_contains($message, 'File not found') || str_contains($message, 'HTTP 404')) return;
-        throw $e;
+        if (str_contains($message, 'File not found') || str_contains($message, 'HTTP 404')) {
+            return;
+        }
+        try {
+            drive_trash_file($fileId);
+            return;
+        } catch (RuntimeException $trashError) {
+            throw new RuntimeException(
+                'Không xóa được tệp trên Google Drive (mã ' . $fileId . '): ' . $message
+                . ($trashError->getMessage() !== $message ? ' · Thử đưa vào thùng rác cũng thất bại: ' . $trashError->getMessage() : '')
+            );
+        }
     }
 }
 

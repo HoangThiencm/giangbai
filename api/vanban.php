@@ -417,14 +417,35 @@ if ($action === 'delete') {
     $input = json_body();
     $id = (int)($input['id'] ?? 0);
     if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản.'], 404);
-    $fileStmt = $pdo->prepare('SELECT drive_file_id FROM office_document_files WHERE document_id=?');
+    $fileStmt = $pdo->prepare('SELECT drive_file_id, view_url, download_url, original_name FROM office_document_files WHERE document_id=?');
     $fileStmt->execute([$id]);
     $files = $fileStmt->fetchAll();
     try {
         if ($files) {
             require_once __DIR__ . '/google_drive.php';
+            $driveErrors = [];
             foreach ($files as $file) {
-                drive_delete_file((string)$file['drive_file_id']);
+                $label = trim((string)($file['original_name'] ?? 'Tệp đính kèm'));
+                $fileId = drive_resolve_file_id(
+                    (string)($file['drive_file_id'] ?? ''),
+                    (string)($file['view_url'] ?? ''),
+                    (string)($file['download_url'] ?? '')
+                );
+                if ($fileId === '') {
+                    $driveErrors[] = $label . ': không xác định được mã tệp trên Drive';
+                    continue;
+                }
+                try {
+                    drive_delete_file($fileId);
+                } catch (Throwable $fileError) {
+                    $driveErrors[] = $label . ': ' . $fileError->getMessage();
+                }
+            }
+            if ($driveErrors) {
+                respond([
+                    'error' => 'Không xóa hết tệp trên Google Drive. Danh mục văn bản được giữ nguyên. '
+                        . implode(' | ', $driveErrors),
+                ], 502);
             }
         }
         $pdo->beginTransaction();
