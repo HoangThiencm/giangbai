@@ -591,51 +591,145 @@
     function insertEditorImage(targetId) {
         const field = el(targetId);
         if (!field) return;
-        const url = window.prompt('Dán link ảnh (https://...)\nHoặc dán ảnh từ Drive / web vào khung soạn thảo trực tiếp.', '');
-        if (!url) return;
-        const alt = window.prompt('Mô tả ảnh (có thể để trống)', '') || 'ảnh';
-        const insert = `\n![${alt}](${url.trim()})\n`;
-        const start = field.selectionStart ?? field.value.length;
-        field.setRangeText(insert, start, start, 'end');
-        field.focus();
-        field.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // Offer two ways: URL or local file (which will auto-upload to Drive)
+        const choice = window.prompt('1 = Dán link ảnh sẵn có\n2 = Chọn file ảnh từ máy (sẽ tự upload lên Google Drive)', '2');
+        if (choice === '1') {
+            const url = window.prompt('Dán link ảnh (https://...)');
+            if (!url) return;
+            const alt = window.prompt('Mô tả ảnh (có thể để trống)', '') || 'ảnh';
+            const insert = `\n![${alt}](${url.trim()})\n`;
+            const start = field.selectionStart ?? field.value.length;
+            field.setRangeText(insert, start, start, 'end');
+            field.focus();
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            return;
+        }
+
+        // File picker + upload to Drive
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async () => {
+            const file = input.files && input.files[0];
+            if (file) await uploadImageFileToDrive(file, field);
+        };
+        input.click();
     }
 
-    // Support pasting image URLs directly into rich textareas (convenient for "dán ảnh")
-    function setupImagePasteHandlers() {
-        const ids = ['lessonTheory', 'lessonExamples', 'lessonSelfPractice'];
-        ids.forEach(id => {
-            const ta = el(id);
-            if (!ta || ta.dataset.imagePasteReady) return;
-            ta.dataset.imagePasteReady = '1';
-            ta.addEventListener('paste', (e) => {
-                const text = e.clipboardData?.getData('text/plain') || '';
-                if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(text.trim())) {
-                    e.preventDefault();
-                    const start = ta.selectionStart ?? ta.value.length;
-                    const md = `\n![ảnh](${text.trim()})\n`;
-                    ta.setRangeText(md, start, start, 'end');
-                    ta.dispatchEvent(new Event('input', { bubbles: true }));
-                }
+    async function uploadImageFileToDrive(file, targetField) {
+        if (!file || !targetField) return;
+
+        const originalText = targetField.value;
+        const cursor = targetField.selectionStart ?? originalText.length;
+
+        // Temporary placeholder
+        const placeholder = `\n![Đang tải ảnh... ${file.name}]()\n`;
+        targetField.setRangeText(placeholder, cursor, cursor, 'end');
+        targetField.dispatchEvent(new Event('input', { bubbles: true }));
+
+        const form = new FormData();
+        form.append('image', file);
+        form.append('action', 'upload_image');
+
+        try {
+            const res = await fetch('api/lessons.php', {
+                method: 'POST',
+                credentials: 'include',
+                body: form
             });
+            const data = await res.json();
+
+            if (!data.ok || !data.url) {
+                throw new Error(data.error || 'Upload thất bại');
+            }
+
+            // Replace placeholder with real markdown
+            const finalMd = `\n![${file.name || 'ảnh'}](${data.url})\n`;
+            const currentVal = targetField.value;
+            const idx = currentVal.indexOf(placeholder);
+            if (idx !== -1) {
+                targetField.value = currentVal.slice(0, idx) + finalMd + currentVal.slice(idx + placeholder.length);
+            } else {
+                // fallback
+                targetField.value = originalText + finalMd;
+            }
+
+            targetField.focus();
+            targetField.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (err) {
+            // revert
+            targetField.value = originalText;
+            alert('Không thể tải ảnh lên Google Drive: ' + (err.message || err));
+            targetField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+
+    // Full support: paste image *file* (Ctrl+V screenshot) → auto upload to Google Drive + insert link
+    // Also still supports pasting a plain image URL
+    async function handleRichImagePaste(e, ta) {
+        if (!ta) return;
+        const clipboard = e.clipboardData;
+        if (!clipboard) return;
+
+        // 1. Check for actual image files in clipboard (the main feature requested)
+        const items = clipboard.items || [];
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.kind === 'file' && item.type.indexOf('image') === 0) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    await uploadImageFileToDrive(file, ta);
+                }
+                return;
+            }
+        }
+
+        // 2. Also support files from clipboardData.files (some browsers)
+        if (clipboard.files && clipboard.files.length) {
+            for (let f of clipboard.files) {
+                if (f.type.indexOf('image') === 0) {
+                    e.preventDefault();
+                    await uploadImageFileToDrive(f, ta);
+                    return;
+                }
+            }
+        }
+
+        // 3. Fallback: plain URL paste (text link to image)
+        const text = clipboard.getData('text/plain') || '';
+        if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(text.trim())) {
+            e.preventDefault();
+            const start = ta.selectionStart ?? ta.value.length;
+            const md = `\n![ảnh](${text.trim()})\n`;
+            ta.setRangeText(md, start, start, 'end');
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+
+    function setupRichImagePaste(ta) {
+        if (!ta || ta.dataset.richImagePasteReady) return;
+        ta.dataset.richImagePasteReady = '1';
+        ta.addEventListener('paste', (e) => {
+            handleRichImagePaste(e, ta);
+        });
+    }
+
+    function setupImagePasteHandlers() {
+        ['lessonTheory', 'lessonExamples', 'lessonSelfPractice'].forEach(id => {
+            const ta = el(id);
+            if (ta) setupRichImagePaste(ta);
         });
     }
 
     function setupDynamicImagePaste() {
-        // Attach to any current per-item rich textareas for fill/essay etc
-        document.querySelectorAll('.lesson-tab-content textarea[id^="essay-de-"], .lesson-tab-content textarea[id^="fill-de-"], .lesson-tab-content textarea[id^="drag-de-"], .lesson-tab-content textarea[id^="q-cau-"]').forEach(ta => {
-            if (ta.dataset.imagePasteReady) return;
-            ta.dataset.imagePasteReady = '1';
-            ta.addEventListener('paste', (e) => {
-                const text = e.clipboardData?.getData('text/plain') || '';
-                if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(text.trim())) {
-                    e.preventDefault();
-                    const start = ta.selectionStart ?? ta.value.length;
-                    const md = `\n![ảnh](${text.trim()})\n`;
-                    ta.setRangeText(md, start, start, 'end');
-                    ta.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-            });
+        // Main fields + any current dynamic per-item textareas
+        setupImagePasteHandlers();
+
+        const selectors = '.lesson-tab-content textarea[id^="essay-de-"], .lesson-tab-content textarea[id^="fill-de-"], .lesson-tab-content textarea[id^="drag-de-"], .lesson-tab-content textarea[id^="q-cau-"]';
+        document.querySelectorAll(selectors).forEach(ta => {
+            setupRichImagePaste(ta);
         });
     }
 
@@ -897,7 +991,7 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-book-open text-teal-600 mr-2"></i>Thiết kế bài học
                     </h3>
-                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. Dùng toolbar chèn ảnh hoặc dán trực tiếp markdown ảnh. Thêm từng mục một.</p>
+                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. <strong>Dán ảnh trực tiếp (Ctrl+V) sẽ tự upload lên Google Drive</strong> và chèn link. Thêm từng mục một.</p>
                 </div>
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
@@ -963,7 +1057,7 @@
                     <textarea id="lessonGoalInput" rows="2" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none text-sm" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
                 </label>
                 <label class="block text-sm font-bold text-slate-700">Lý thuyết
-                    <span class="block text-[11px] text-slate-500 mb-1">Dùng Enter 2 lần tách đoạn. Dùng nút ảnh hoặc dán <code>![alt](url)</code>. Công thức $...$.</span>
+                    <span class="block text-[11px] text-slate-500 mb-1">Dùng Enter 2 lần tách đoạn. <strong>Dán ảnh (Ctrl+V) tự upload Drive</strong> hoặc dùng nút ảnh. Công thức $...$.</span>
                     ${richToolbarHtml('lessonTheory')}
                     <textarea id="lessonTheory" rows="11" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>
@@ -1046,7 +1140,7 @@
                     <textarea id="lessonVideos" rows="3" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1 | https://..."></textarea>
                 </label>
                 <div class="mt-3 rounded border border-teal-100 bg-teal-50 p-2 text-[11px] text-teal-800">
-                    Mẹo: Dùng nút <b>ảnh</b> trên toolbar để chèn link. Hoặc dán thẳng <code>![mô tả](https://...)</code> vào khung soạn. Mỗi mục một ảnh nếu cần.
+                    Mẹo: <strong>Dán ảnh trực tiếp (Ctrl+V)</strong> vào khung sẽ tự upload lên Google Drive & chèn link. Hoặc nhấn nút ảnh chọn file từ máy. Mỗi mục một ảnh nếu cần.
                 </div>
             </div>
 

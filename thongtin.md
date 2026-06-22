@@ -9,7 +9,7 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
    - Layout học sinh: cột trái (tiến độ + danh sách/bản đồ bài), cột giữa (nội dung bài), cột phải (kế hoạch tự học, động lực, kỹ năng, nhiệm vụ).
    - Định dạng CSS nội bộ (`<style>`) giúp render MathJax SVG và bong bóng chat AI giải thích.
    - Đã thêm style `.ai-chat-bubble` đồng bộ cho cả Toán 6, 7, 8, 9; bong bóng có nút `x`, mũi nhọn chat, và không bị cắt nội dung.
-   - Cache script gần nhất: `access-control.js?v=20260619-teacher-scope1`, `lotrinh.js?v=20260619-drag-fill1`, `admin-lesson-manager.js?v=20260622-lesson-tab-ui`, `admin-progress.js?v=20260619-teacher-class1` (trên `lotrinhtoan6–9.html` và `index.html`).
+   - Cache script gần nhất: `access-control.js?v=20260619-teacher-scope1`, `lotrinh.js?v=20260619-drag-fill1`, `admin-lesson-manager.js?v=20260622-lesson-tab-ui-drive-upload`, `admin-progress.js?v=20260619-teacher-class1` (trên `lotrinhtoan6–9.html` và `index.html`).
 
 2. **Logic Frontend (`lotrinh.js`)**
    - Quản lý trạng thái học tập của học sinh.
@@ -50,8 +50,8 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
          - Mỗi item = 1 card riêng với **toolbar ảnh/format riêng** → người dùng quyết định chèn ảnh hay không, chèn vào mục nào.
        - **Trắc nghiệm**: thêm từng câu; mỗi câu có textarea rich cho câu hỏi (dán ảnh) + A/B/C/D + đáp án.
        - **Khác**: Kỹ năng, Nhiệm vụ học sinh, Video YouTube.
-     - **Công cụ soạn thảo** (`richToolbarHtml`): nút đậm/nghiêng/gạch chân, **Chèn ảnh** (hỏi link hoặc dán trực tiếp URL ảnh → tự thành `![alt](url)`), thêm `[AI]`.
-     - Hỗ trợ **dán ảnh linh hoạt**: paste link ảnh trực tiếp vào khung chính hoặc per-item sẽ tự wrap markdown. Không bắt buộc chèn ảnh ở mọi chỗ.
+     - **Công cụ soạn thảo** (`richToolbarHtml`): nút đậm/nghiêng/gạch chân, **Chèn ảnh** (chọn file từ máy hoặc dán link), thêm `[AI]`.
+     - **Dán ảnh trực tiếp**: Ctrl+V ảnh (screenshot hoặc từ clipboard) vào bất kỳ khung rich text (Lý thuyết, Ví dụ, từng item bài tập/trắc nghiệm) → tự động upload lên Google Drive (thư mục LESSON_IMAGES) → chèn link markdown `![tên](https://drive.google.com/uc?export=view&id=...)`. Nút ảnh trên toolbar cũng hỗ trợ chọn file upload. Vẫn hỗ trợ dán URL thuần. Không bắt buộc chèn ảnh.
      - Dynamic items (essay/fill/drag/question) sync về hidden textarea dạng `|` (giữ tương thích backend `parse*` / `format*`).
      - Preview tóm tắt số đoạn / mục / dạng / câu ngay dưới tabs.
      - Submissions "Bài nộp học sinh (Google Drive)" nằm gọn trong tab Bài tập tương tác.
@@ -158,4 +158,4 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Bảo mật:** `global_config.json` trong repo có thể chứa GitHub PAT plaintext — nên rotate token, không commit secret.
 
 ---
-*Cập nhật lần cuối: 2026-06-22. Redesign giao diện soạn bài thành tabbed visual editor (admin-lesson-manager.js).*
+*Cập nhật lần cuối: 2026-06-22. Tabbed visual editor + dán ảnh trực tiếp tự upload Google Drive + fix add/remove item buttons (admin-lesson-manager.js).*

@@ -1,6 +1,6 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-22 — Major redesign giao diện soạn bài giáo viên (`admin-lesson-manager.js`): tabbed visual lesson designer (Lý thuyết / Ví dụ / Bài tập tương tác / Trắc nghiệm / Khác) + rich per-item editors hỗ trợ dán ảnh linh hoạt; dọn dẹp UI rối rắm + duplicate.*
+*Cập nhật: 2026-06-22 — Direct image paste tự upload Google Drive (Ctrl+V ảnh → Drive folder LESSON_IMAGES → chèn link) + fix lỗi nút "Thêm bài" (ReferenceError do IIFE).
 
 ## Các công việc đã hoàn thành gần đây
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
@@ -58,6 +58,19 @@
   - Top bar gọn (Chọn bài + Nút CRUD), metadata compact luôn hiện (Chương/Tên/Slug/Order/Published), preview nhanh bên dưới.
   - Submissions panel dời vào tab Bài tập. Xóa toàn bộ duplicate fields/IDs. Styles toolbar/tab/card sạch hơn.
   - Phù hợp yêu cầu: "tạo giao diện thiết kế bài học... Mỗi tab có công cụ soạn thảo trực quan", "Thiết kế bài học một cách linh hoạt... Việc chèn hay không là do người dùng... chèn từng câu".
+
+- [x] **Fix lỗi "addEssayItem / addFillItem is not defined"** (`admin-lesson-manager.js`):
+  - Nguyên nhân: các nút "+ Thêm" và remove dùng `onclick="..."` inline, nhưng hàm nằm trong IIFE → không global.
+  - Sửa: loại bỏ inline onclick khỏi HTML template, attach bằng `.onclick = fn` sau khi tạo DOM (programmatic, giữ closure). Cập nhật cả 4 render*Items() và các static add buttons (id="add*Btn").
+  - Thêm global fallback `window.add*Item = ...` để an toàn với cached HTML cũ.
+  - Bây giờ nhấn "+ Thêm bài" / "×" hoạt động ổn định.
+
+- [x] **Dán ảnh trực tiếp tự upload Google Drive** (lesson editor):
+  - Backend: `api/lessons.php?action=upload_image` (yêu cầu teacher, dùng `drive_upload_file` → folder `LESSON_IMAGES` trong Drive root, trả về link `uc?export=view&id=...`).
+  - Frontend: `setupRichImagePaste` + `handleRichImagePaste` bắt event paste ảnh thật từ clipboard (file blob). Gọi FormData POST. 
+  - Hàm `uploadImageFileToDrive`: upload async, hiện placeholder, thay bằng markdown link sau khi thành công. Hoạt động ở mọi khung (Lý thuyết, per-item card).
+  - Nút toolbar ảnh cũng hỗ trợ chọn file upload. Cập nhật hint: "Dán ảnh trực tiếp (Ctrl+V) sẽ tự upload Google Drive".
+  - Vẫn tương thích dán URL cũ.
 - [x] **Thi trực tuyến (`thitructuyen.html`)** — sửa lỗi nộp bài & kết quả:
   - Fix lỗi `[object Object]` khi nộp bài: API bắt buộc `student_class` → luôn gửi `""` nếu trống; thêm `formatApiError()` hiển thị lỗi API dạng text.
   - Fix nộp bài trên **điện thoại / Zalo**: tắt chống gian lận toàn màn hình trên mobile; dùng `ref` + `sessionStorage` tránh mất đáp án/tên khi hết giờ; modal xác nhận nộp thay `confirm()`; `safeExitFullscreen()` có timeout; chặn nộp trùng.
@@ -121,7 +134,7 @@
 - [ ] Ô **Tìm bài học**: gõ liên tục nhiều ký tự — input không bị mất focus.
 - [ ] Giáo viên trên `lotrinhtoan7.html`: chỉ thấy soạn bài Toán 7, không lẫn Toán 6/8/9.
 - [ ] Soạn bài: nhập mục tiêu → Lưu → tải lại vẫn còn mục tiêu; học sinh thấy ở phần mô tả bài.
-- [ ] **Giao diện soạn bài mới (tabbed)**: đăng nhập GV → vào lộ trình → panel soạn: thử chuyển tab, + thêm 2-3 item tự luận + trắc nghiệm, dán ảnh (hoặc dùng nút ảnh) vào 1-2 mục (không chèn hết), dùng format **DẠNG**, lưu, kiểm tra preview + dữ liệu vẫn đúng định dạng | cũ.
+- [ ] **Giao diện soạn bài mới (tabbed + ảnh Drive)**: đăng nhập GV → panel soạn: + item, Ctrl+V ảnh trực tiếp vào khung Lý thuyết / Ví dụ / item bài tập / câu trắc nghiệm → tự upload Drive + chèn link (kiểm tra src hoạt động ở HS view). Thử nút ảnh chọn file. Đảm bảo add/remove item không lỗi.
 - [ ] Bài mới mặc định **chưa mở** cho học sinh; chỉ hiện sau khi giáo viên tick "Mở bài này cho học sinh" và lưu.
 - [ ] Giáo viên: **Nhân bản bài đang chọn** — bản sao xuất hiện trong dropdown, chưa mở cho HS, nội dung giống bài gốc.
 - [ ] Giáo viên: **Xóa bài đang chọn** — bài biến mất khỏi lộ trình; tiến độ HS của bài đó cũng mất (cần cân nhắc trước khi xóa).

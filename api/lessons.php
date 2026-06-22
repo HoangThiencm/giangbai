@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/google_drive.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -209,6 +210,55 @@ $adminKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
 $isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $adminKey);
 $sessionUser = current_session_user($pdo);
 $canManageLessons = $isAdmin || (($sessionUser['role'] ?? '') === 'teacher');
+
+// Image upload for rich text editor (teacher pastes image directly -> auto upload to Drive)
+if ($method === 'POST' && $action === 'upload_image') {
+    $user = ensure_login();
+    if (!($isAdmin || ($user['role'] ?? '') === 'teacher')) {
+        respond(['error' => 'Chỉ giáo viên được phép upload ảnh minh họa.'], 403);
+    }
+
+    if (empty($_FILES['image']) && empty($_FILES['file'])) {
+        respond(['error' => 'Không tìm thấy file ảnh.'], 422);
+    }
+
+    $file = !empty($_FILES['image']) ? $_FILES['image'] : $_FILES['file'];
+
+    if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+        respond(['error' => 'Upload ảnh thất bại.'], 422);
+    }
+    if ($file['size'] > 8 * 1024 * 1024) {
+        respond(['error' => 'Ảnh quá lớn (tối đa 8MB).'], 422);
+    }
+
+    $mime = $file['type'] ?? '';
+    if (strpos($mime, 'image/') !== 0) {
+        respond(['error' => 'Chỉ hỗ trợ file ảnh (png, jpg, gif, webp...).'], 422);
+    }
+
+    drive_assert_upload_ready();
+
+    $root = drive_root_folder_id();
+    $folderId = drive_get_or_create_folder($root, 'LESSON_IMAGES');
+
+    $original = $file['name'] ?? 'pasted-image.png';
+    $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION) ?: 'png');
+    $stored = 'lesson-' . date('Ymd-His') . '-' . substr(md5(uniqid()), 0, 6) . '.' . $ext;
+
+    $driveResult = drive_upload_file($folderId, $stored, $mime, $file['tmp_name']);
+
+    $fileId = $driveResult['file_id'];
+    // Good link for embedding in markdown / rendered lessons (works for public images)
+    $embedUrl = 'https://drive.google.com/uc?export=view&id=' . $fileId;
+
+    respond([
+        'ok' => true,
+        'url' => $embedUrl,
+        'file_id' => $fileId,
+        'view_url' => $driveResult['view_url'] ?? $embedUrl,
+        'name' => $driveResult['stored_name'] ?? $original,
+    ]);
+}
 
 if ($method === 'GET' && $canManageLessons && !empty($_GET['admin'])) {
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
