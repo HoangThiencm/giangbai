@@ -214,26 +214,45 @@ function vbd_regex_extract(string $source): array
         'report_due_at' => null,
     ];
 
-    // Ưu tiên tìm "Số:" ngay đầu văn bản, đặc biệt với văn bản ký số
+    // Tìm số văn bản CHÍNH ở phần rất đầu, bỏ qua số của văn bản được dẫn chiếu
+    // Loại trừ các dòng có "Căn cứ", "Trên cơ sở", "theo", "Công văn số", "số 1651"
     $numberPatterns = [
+        // Ưu tiên dòng ngay sau tên cơ quan hoặc dòng đầu có Số:
+        '/(?:ỦY BAN|PHÒNG|TRƯỜNG|BAN)[^\n]{0,80}?\n\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:^|[\n\r])\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:Số|So)\s*(?:văn bản|van ban)?\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
-        '/(?:Ký hiệu|Ky hieu)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
-        '/\b([0-9]{1,6}\/[A-ZĐ]{2,}(?:-[A-Z0-9.-]+)+)\b/u',
     ];
     foreach ($numberPatterns as $pattern) {
         if (preg_match($pattern, $head, $match)) {
-            $result['document_number'] = trim(preg_replace('/\s+/u', '', $match[1]) ?? $match[1]);
-            break;
+            $num = trim(preg_replace('/\s+/u', '', $match[1]) ?? $match[1]);
+            // Bỏ qua nếu trông giống số được dẫn trong thân văn bản
+            if (!preg_match('/Căn cứ|Trên cơ sở|theo Công văn|Công văn số/i', $head)) {
+                $result['document_number'] = $num;
+                break;
+            }
         }
     }
 
+    // Fallback: tìm số dạng XXXX/XXXX-XXXX trong 800 ký tự đầu, nhưng bỏ nếu nằm sau từ chỉ dẫn chiếu
+    if (empty($result['document_number'])) {
+        if (preg_match('/\b([0-9]{1,6}\/[A-ZĐ]{2,}[A-Z0-9.\-]*)\b/u', $head, $match)) {
+            $contextBefore = mb_substr($head, 0, mb_strpos($head, $match[0]));
+            if (!preg_match('/(Căn cứ|Trên cơ sở|theo|Công văn số)\s*[^.]{0,30}$/iu', $contextBefore)) {
+                $result['document_number'] = $match[1];
+            }
+        }
+    }
+
+    // Organization: lấy tên cơ quan ở rất đầu, cắt trước khi gặp "Số:"
     $orgPatterns = [
-        '/((?:ỦY BAN NHÂN DÂN|UBND|PHÒNG GIÁO DỤC|PHÒNG GD|PHONG GD|PHÒNG|PHONG|TRƯỜNG|TRUONG|BAN THƯỜNG VỤ|BAN CHẤP HÀNH|ĐẢNG ỦY|DANG UY|ĐẢNG BỘ|CHI BỘ|CHI UY|SỞ GD|PGD|BỘ GD)[^\n]{0,120})/iu',
+        '/((?:ỦY BAN NHÂN DÂN|UBND|PHÒNG GIÁO DỤC|PHÒNG GD|PHONG GD|PHÒNG|PHONG|TRƯỜNG|TRUONG|BAN THƯỜNG VỤ|BAN CHẤP HÀNH|ĐẢNG ỦY|DANG UY|ĐẢNG BỘ|CHI BỘ|CHI UY|SỞ GD|PGD|BỘ GD)[^\n]{0,80}?)(?:\n|Số|:)/iu',
+        '/((?:ỦY BAN NHÂN DÂN|UBND|PHÒNG GIÁO DỤC|PHÒNG GD|PHONG GD|PHÒNG|PHONG|TRƯỜNG|TRUONG)[^\n]{0,100})/iu',
     ];
     foreach ($orgPatterns as $pattern) {
         if (preg_match($pattern, $head, $match)) {
             $org = trim(preg_replace('/\s+/u', ' ', $match[1]) ?? $match[1]);
+            // Loại bỏ phần "Số" nếu bị dính
+            $org = preg_replace('/\s*Số\s*:?\s*.*$/iu', '', $org);
             if (strlen($org) >= 4) {
                 $result['organization'] = vbd_truncate($org, 300);
                 break;
@@ -249,14 +268,15 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    // Ngày ban hành thường ở đầu bên phải: "Hồ Nai, ngày 22 tháng 6 năm 2026"
-    // Ưu tiên pattern có địa danh + ngày, chỉ tìm trong header
-    if (preg_match('/[A-Za-zÀ-ỹ\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $head, $match)) {
+    // Ngày ban hành thường ở góc phải phần đầu: "Hồ Nai, ngày 22 tháng 6 năm 2026"
+    // Ưu tiên ngày xuất hiện sớm, trước các dòng "Căn cứ", "Trên cơ sở"
+    $dateHead = mb_substr($head, 0, 900);
+    if (preg_match('/[A-Za-zÀ-ỹ\.\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $match)) {
         $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
-    } elseif (preg_match('/,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $head, $match)) {
+    } elseif (preg_match('/,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $match)) {
         $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
     } else {
-        $result['document_date'] = vbd_parse_vn_date($head);
+        $result['document_date'] = vbd_parse_vn_date($dateHead);
     }
 
     if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,300})/iu', $fullForTitle, $match)) {
@@ -288,9 +308,17 @@ function vbd_parse_document(string $source): array
 
     $parsed = vbd_regex_extract($cleanSource);
 
-    // Nếu regex không lấy được số văn bản hoặc ngày (thường gặp với văn bản ký số),
-    // fallback sang AI document extraction (Cloudflare Worker)
-    $needsAi = empty($parsed['document_number']) || empty($parsed['document_date']);
+    // Dọn dẹp summary nếu bị tràn (tránh đổ cả thân văn bản vào tóm tắt)
+    if (!empty($parsed['summary_text']) && mb_strlen($parsed['summary_text']) > 280) {
+        $parsed['summary_text'] = mb_substr($parsed['summary_text'], 0, 280) . '...';
+    }
+
+    // Trigger AI nếu:
+    // - Không lấy được số/ngày, hoặc
+    // - Có dấu hiệu trích dẫn văn bản khác (rất hay nhầm số của văn bản được dẫn chiếu)
+    $headForCheck = mb_substr($cleanSource, 0, 900);
+    $hasReference = (bool)preg_match('/(Căn cứ|Trên cơ sở|theo Công văn số|Công văn số)\s*\d/i', $headForCheck);
+    $needsAi = empty($parsed['document_number']) || empty($parsed['document_date']) || $hasReference;
     if ($needsAi) {
         $aiResult = vbd_try_ai_document_extract($cleanSource);
         if ($aiResult) {
@@ -376,7 +404,7 @@ function vbd_try_ai_document_extract(string $source): ?array
 
     $payload = [
         'mode' => 'document',
-        'text' => mb_substr($source, 0, 4500),
+        'text' => mb_substr($source, 0, 1800),  // Chỉ gửi phần đầu để AI tập trung header
     ];
 
     $ch = curl_init($workerUrl . '/chat');
