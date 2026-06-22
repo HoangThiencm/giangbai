@@ -26,6 +26,8 @@
             gemini_browser: 'Gemini (trình duyệt)',
             mistral_ocr: 'Mistral OCR',
             shopaikey: 'ShopAIKey / DeepSeek',
+            light_ai: 'Light AI (nội dung bài)',
+            light_ai_math: 'Light AI (phương trình)',
         })[id] || id;
     }
 
@@ -42,6 +44,16 @@
 
     function moduleBucket(byModule, id) {
         return (byModule && byModule[id]) || { calls: 0, success: 0, error: 0, providers: {} };
+    }
+
+    function sumByMode(byMode) {
+        return Object.values(byMode || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    }
+
+    function resolveTotalSuccess(summary) {
+        const providerTotal = Number(summary?.total_success) || 0;
+        const modeTotal = sumByMode(summary?.by_mode || {});
+        return Math.max(providerTotal, modeTotal);
     }
 
     function providerInModule(mod, providerId) {
@@ -173,6 +185,7 @@
         const providers = summary.providers || {};
         const byModule = summary.by_module || {};
         const byMode = summary.by_mode || {};
+        const totalSuccessToday = resolveTotalSuccess(summary);
         const history = Array.isArray(data.history) ? data.history : [];
         const recent = Array.isArray(internal.recent) ? internal.recent : [];
         const generatedAt = data.generated_at || '';
@@ -266,7 +279,7 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 md:col-span-1">
                     <div class="text-xs font-bold uppercase text-sky-700">Tổng hôm nay (${escapeHtml(data.today || '')})</div>
-                    <div class="mt-2 text-3xl font-black text-sky-950">${formatNumber(summary.total_success || 0)}</div>
+                    <div class="mt-2 text-3xl font-black text-sky-950">${formatNumber(totalSuccessToday)}</div>
                     <div class="text-xs text-sky-800">phản hồi AI thành công (mọi module)</div>
                     <div class="mt-3 text-xs text-sky-800">Giải thích: <strong>${formatNumber(byMode.explain || 0)}</strong> · Chat: <strong>${formatNumber(byMode.chat || 0)}</strong> · OCR: <strong>${formatNumber(byMode.ocr || 0)}</strong></div>
                 </div>
@@ -357,7 +370,7 @@
                 <div class="rounded-xl border border-orange-200 bg-orange-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-orange-800">Worker CF</div>
                     <div class="mt-1 text-2xl font-black text-orange-950">${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
-                    <div class="text-[11px] text-orange-800">Dashboard · tổng log ${formatNumber(summary.total_success || 0)}</div>
+                    <div class="text-[11px] text-orange-800">Dashboard · tổng log ${formatNumber(resolveTotalSuccess(summary))}</div>
                 </div>
             </div>
             </div>

@@ -276,6 +276,27 @@ GQL;
     ];
 }
 
+function ai_stats_sum_by_mode(array $byMode): int
+{
+    $total = 0;
+    foreach ($byMode as $count) {
+        $total += max(0, (int)$count);
+    }
+    return $total;
+}
+
+function ai_stats_sum_module_success(array $byModule): int
+{
+    $total = 0;
+    foreach ($byModule as $bucket) {
+        if (!is_array($bucket)) {
+            continue;
+        }
+        $total += max(0, (int)($bucket['success'] ?? 0));
+    }
+    return $total;
+}
+
 function ai_stats_summarize_day(?array $day): array
 {
     if (!is_array($day)) {
@@ -297,6 +318,11 @@ function ai_stats_summarize_day(?array $day): array
         $totalSuccess += (int)($bucket['success'] ?? 0);
         $totalCalls += (int)($bucket['calls'] ?? 0);
     }
+    $totalSuccess = max(
+        $totalSuccess,
+        ai_stats_sum_by_mode($byMode),
+        ai_stats_sum_module_success($byModule)
+    );
     return [
         'providers' => $providers,
         'by_mode' => $byMode,

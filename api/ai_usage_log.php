@@ -138,6 +138,8 @@ function ai_usage_allowed_providers(): array
         'gemini_browser',
         'mistral_ocr',
         'shopaikey',
+        'light_ai',
+        'light_ai_math',
     ];
 }
 
