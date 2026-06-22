@@ -2447,6 +2447,20 @@
             });
         }
 
+        function ensureTeacherToolPages(allowedPages) {
+            const pages = Array.isArray(allowedPages) ? [...allowedPages] : [];
+            const hasLotrinh = mathRouteOrder.some(id => pages.includes(id));
+            const hasHub = pages.includes('quanlyvanban') || pages.includes('theodoiai') || pages.includes('thongketientrinh');
+            const hasTool = CLIENT_FEATURE_CHECKS.some(id => pages.includes(id));
+            if (!hasLotrinh || !hasHub || hasTool) {
+                return pages;
+            }
+            CLIENT_FEATURE_CHECKS.forEach(id => {
+                if (!pages.includes(id)) pages.push(id);
+            });
+            return pages;
+        }
+
         function normalizeAllowedPagesForAdmin(pages) {
             return (pages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
         }
@@ -2902,7 +2916,10 @@
         window.saveUserConfig = async function () {
             if (!editingStudent) return;
             const role = document.getElementById('editRole').value;
-            const allowedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
+            let allowedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
+            if (role === 'teacher') {
+                allowedPages = ensureTeacherToolPages(allowedPages);
+            }
             const className = readClassNameFromForm('edit');
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Bật ít nhất một chức năng cho giáo viên.');

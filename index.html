@@ -857,10 +857,24 @@
             setToolCardsVisible('a[href="theodoi-ai.html"]', features.teacher_ai_stats !== false);
         }
 
+        function teacherHasWorkspaceHub(allowedSet) {
+            const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
+            const hasHub = allowedSet.has('quanlyvanban')
+                || allowedSet.has('theodoiai')
+                || allowedSet.has('thongketientrinh');
+            return hasLotrinh && hasHub;
+        }
+
+        function teacherHasAnyToolPage(allowedSet) {
+            return Object.values(TOOL_PAGE_LINKS).some(pageKey => allowedSet.has(pageKey));
+        }
+
         function applyTeacherAllowedPagesVisibility(allowedSet, features) {
             if (localStorage.getItem('userRole') !== 'teacher' || !allowedSet.size) return;
+            const grantWorkspaceTools = teacherHasWorkspaceHub(allowedSet) && !teacherHasAnyToolPage(allowedSet);
             Object.entries(TOOL_PAGE_LINKS).forEach(([tool, pageKey]) => {
-                const visible = allowedSet.has(pageKey) && features[tool] !== false;
+                const allowed = allowedSet.has(pageKey) || grantWorkspaceTools;
+                const visible = allowed && features[tool] !== false;
                 setToolCardsVisible(`#mainToolsGrid > [data-tool="${tool}"]`, visible);
             });
             const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
@@ -879,7 +893,6 @@
         function applyTeacherHubVisibility(features, allowedSet) {
             if (localStorage.getItem('userRole') !== 'teacher') return;
             resetMainToolsGridVisibility();
-            applyFeatureToolVisibility(features);
             applyTeacherAllowedPagesVisibility(allowedSet, features);
         }
 

@@ -217,6 +217,24 @@ function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
 
     $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
     $upgraded = ensure_teacher_lotrinh_scope($current);
+
+    $toolPages = teacher_workspace_page_ids();
+    $hasTools = (bool) array_intersect($upgraded, $toolPages);
+    $lotrinhKeys = array_keys(lotrinh_page_subjects());
+    $hasLotrinh = (bool) array_intersect($upgraded, $lotrinhKeys);
+    $hasTeacherHub = in_array('quanlyvanban', $upgraded, true)
+        || in_array('theodoiai', $upgraded, true)
+        || in_array('thongketientrinh', $upgraded, true);
+
+    // GV đã có lộ trình + tab quản lý nhưng DB thiếu mã công cụ (Thi Online, Ma trận…)
+    if ($hasLotrinh && $hasTeacherHub && !$hasTools) {
+        $fromFeatures = teacher_tool_pages_from_user_features((string)($user['username'] ?? ''));
+        $upgraded = normalize_pages(array_merge(
+            $upgraded,
+            $fromFeatures ?: $toolPages
+        ));
+    }
+
     if ($upgraded === $current) {
         return $user;
     }
