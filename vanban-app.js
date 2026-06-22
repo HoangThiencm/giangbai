@@ -38,6 +38,27 @@
 
     const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '—';
 
+    function formatYMDToDMY(ymd) {
+        if (!ymd || typeof ymd !== 'string') return '';
+        const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+        return ymd;
+    }
+
+    function parseDMYToYMD(dmy) {
+        if (!dmy || typeof dmy !== 'string') return '';
+        const m = dmy.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) {
+            const d = m[1].padStart(2, '0');
+            const mo = m[2].padStart(2, '0');
+            const y = m[3];
+            return `${y}-${mo}-${d}`;
+        }
+        // fallback if already YMD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dmy)) return dmy;
+        return '';
+    }
+
     function accentBtn(active = false) {
         const map = {
             teal: active ? 'bg-teal-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
@@ -403,13 +424,13 @@
         if ($('direction')) $('direction').value = doc?.direction || state.activeDirection || 'incoming';
         if ($('documentNumber')) $('documentNumber').value = doc?.document_number || '';
         if ($('title')) $('title').value = doc?.title || '';
-        if ($('documentDate')) $('documentDate').value = doc?.document_date || '';
+        if ($('documentDate')) $('documentDate').value = formatYMDToDMY(doc?.document_date) || '';
         setDocumentType(doc?.document_type);
         if ($('organization')) $('organization').value = doc?.organization || '';
         if ($('summaryText')) $('summaryText').value = doc?.summary_text || '';
         if ($('sourceText')) $('sourceText').value = doc?.source_text || '';
         if ($('reportRequired')) $('reportRequired').checked = !!Number(doc?.report_required || 0);
-        if ($('reportDueAt')) $('reportDueAt').value = doc?.report_due_at || '';
+        if ($('reportDueAt')) $('reportDueAt').value = formatYMDToDMY(doc?.report_due_at) || '';
         if ($('reportStatus')) $('reportStatus').value = ['pending', 'in_progress', 'completed'].includes(doc?.report_status) ? doc.report_status : 'pending';
         if ($('reportNote')) $('reportNote').value = doc?.report_note || '';
         $('parseNote')?.classList.add('hidden');
@@ -531,6 +552,21 @@
         return text;
     }
 
+    async function extractPdfFirstPageImage(file) {
+        if (!window.pdfjsLib) throw new Error('pdfjs not loaded');
+        const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        if (!pdf.numPages) throw new Error('No pages');
+        const page = await pdf.getPage(1);
+        const scale = 1.8;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        return canvas.toDataURL('image/jpeg', 0.85);
+    }
+
     async function extractPdf(file) {
         let text = '';
         let mode = 'text-layer';
@@ -541,28 +577,37 @@
         }
 
         // Kiểm tra header có bị lỗi không (đặc biệt với file ký số)
-        // Nếu "Số:" xuất hiện nhưng ngay sau không có chữ số (ví dụ "Số: /UBND" hoặc "Số:" + không phải số)
         const headerCheck = text.substring(0, 700);
         const hasMangledSo = /Số\s*[:\.]?\s*[^0-9\w]/i.test(headerCheck) ||
                              /Số\s*:\s*\//i.test(headerCheck) ||
                              /Số\s*:\s*[^\d]/i.test(headerCheck);
 
         if (hasMangledSo && meaningfulTextLength(text) >= 30 && hasMistralOcr()) {
-            // Header bị lỗi do text layer → thử OCR để đọc chính xác số và ngày
+            // Header bị lỗi → OCR chỉ trang đầu để tiết kiệm quota
             try {
-                const ocrText = await extractPdfOcr(file);
+                const imgDataUrl = await extractPdfFirstPageImage(file);
+                const ocrRes = await window.MistralOcr.ocrImageDataUrl(imgDataUrl);
+                const ocrText = ocrRes.text || '';
                 if (meaningfulTextLength(ocrText) > 50) {
                     text = ocrText;
                     mode = 'mistral-ocr';
                 }
             } catch (e) {
-                // giữ text layer nếu OCR fail
+                // fallback to full if needed, but try full ocr only if necessary
             }
         }
 
         if (meaningfulTextLength(text) < 80 && hasMistralOcr()) {
-            text = await extractPdfOcr(file);
-            mode = 'mistral-ocr';
+            // Cho vanban, nếu cần OCR full, vẫn thử first page trước để tiết kiệm
+            try {
+                const img = await extractPdfFirstPageImage(file);
+                const res = await window.MistralOcr.ocrImageDataUrl(img);
+                text = res.text || text;
+                mode = 'mistral-ocr';
+            } catch {
+                text = await extractPdfOcr(file);
+                mode = 'mistral-ocr';
+            }
         }
         if (meaningfulTextLength(text) < 20) {
             throw new Error('Không đọc được nội dung PDF. Dán thủ công phần đầu văn bản (số, ngày, trích yếu).');
@@ -588,9 +633,9 @@
         setValue('organization', item.organization);
         if (item.document_type) setDocumentType(item.document_type);
         setValue('summaryText', item.summary_text);
-        setValue('documentDate', item.document_date);
+        setValue('documentDate', formatYMDToDMY(item.document_date));
         if ($('reportRequired')) $('reportRequired').checked = !!item.report_required;
-        setValue('reportDueAt', item.report_due_at);
+        setValue('reportDueAt', formatYMDToDMY(item.report_due_at));
         setReportVisibility();
         return filled;
     }
@@ -610,6 +655,8 @@
             if (!options.silent) toast('Hãy dán nội dung văn bản hoặc chọn PDF trước.', 'rose');
             return null;
         }
+        // Chỉ gửi phần đầu cho nhận diện (tiết kiệm quota AI)
+        const forParse = source.substring(0, 1800);
         if (parseBusy) return null;
         parseBusy = true;
         const note = $('parseNote');
@@ -621,7 +668,7 @@
             const data = await api('parse_document', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source_text: source }),
+                body: JSON.stringify({ source_text: forParse }),
             });
             const item = data.suggestion || {};
             const filled = applyParsedFields(item);
@@ -677,13 +724,13 @@
                         direction: $('direction')?.value,
                         document_number: $('documentNumber')?.value,
                         title: $('title')?.value,
-                        document_date: $('documentDate')?.value,
+                        document_date: parseDMYToYMD($('documentDate')?.value),
                         document_type: $('documentType')?.value,
                         organization: $('organization')?.value,
                         summary_text: $('summaryText')?.value,
                         source_text: $('sourceText')?.value,
                         report_required: $('reportRequired')?.checked,
-                        report_due_at: $('reportDueAt')?.value,
+                        report_due_at: parseDMYToYMD($('reportDueAt')?.value),
                         report_status: $('reportStatus')?.value,
                         report_note: $('reportNote')?.value,
                     }),
