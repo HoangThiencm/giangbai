@@ -85,6 +85,35 @@
             background: #ffffff;
             overflow: hidden;
         }
+        .lesson-tab-bar {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+        .lesson-tab-bar .tab-btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 6px 8px;
+            font-size: 0.72rem;
+            line-height: 1.2;
+        }
+        .lesson-tab-bar .tab-btn i { margin-right: 4px; }
+        .lesson-tab-bar .tab-text-full { display: none; }
+        .lesson-tab-bar .tab-text-short { display: inline; }
+        @media (min-width: 768px) {
+            .lesson-tab-bar { gap: 8px; }
+            .lesson-tab-bar .tab-btn {
+                padding: 8px 12px;
+                font-size: 0.875rem;
+            }
+            .lesson-tab-bar .tab-btn i { margin-right: 8px; }
+            .lesson-tab-bar .tab-text-full { display: inline; }
+            .lesson-tab-bar .tab-text-short { display: none; }
+        }
         .question-head {
             border-bottom: 1px solid #e2e8f0;
             background: #f8fafc;
@@ -547,21 +576,21 @@
 
                 <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
                     <section class="panel p-5">
-                        <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-4">
-                            <button data-tab="learn" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-book-open mr-2"></i>Kiến thức cần nhớ
+                        <div class="lesson-tab-bar border-b border-slate-200 pb-3 md:pb-4">
+                            <button data-tab="learn" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fas fa-book-open"></i><span class="tab-text-short">Cần nhớ</span><span class="tab-text-full">Kiến thức cần nhớ</span>
                             </button>
-                            <button data-tab="examples" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-lightbulb mr-2"></i>Ví dụ
+                            <button data-tab="examples" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fas fa-lightbulb"></i>Ví dụ
                             </button>
-                            <button data-tab="videos" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-circle-play mr-2"></i>Bài giảng
+                            <button data-tab="videos" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fas fa-circle-play"></i>Bài giảng
                             </button>
-                            <button data-tab="practice" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-pen-to-square mr-2"></i>Luyện tập
+                            <button data-tab="practice" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fas fa-pen-to-square"></i>Luyện tập
                             </button>
-                            <button data-tab="self_practice" class="tab-btn rounded px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-cloud-arrow-up mr-2"></i>Bài tập nộp giáo viên
+                            <button data-tab="self_practice" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fas fa-cloud-arrow-up"></i><span class="tab-text-short">Nộp GV</span><span class="tab-text-full">Bài tập nộp giáo viên</span>
                             </button>
                         </div>
                         <div id="tabContent" class="pt-5"></div>
