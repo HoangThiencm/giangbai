@@ -2,7 +2,10 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
 require_once __DIR__ . '/ai_smart_quota.php';
+require_once __DIR__ . '/ai_runtime_config.php';
 require_once __DIR__ . '/ai_explain_cache.php';
+require_once __DIR__ . '/ai_student_quota.php';
+require_once __DIR__ . '/ai_router.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -16,6 +19,15 @@ $question = trim($data['question'] ?? '');
 $lessonTitle = trim($data['lesson_title'] ?? 'bai hoc');
 $subject = trim($data['subject'] ?? 'Toan');
 $lessonContext = trim($data['lesson_context'] ?? '');
+$lessonId = (int)($data['lesson_id'] ?? 0);
+
+$currentUserId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+$currentUserRole = '';
+if ($currentUserId) {
+    $userStmt = $pdo->prepare('SELECT role FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
+    $userStmt->execute([$currentUserId]);
+    $currentUserRole = (string)($userStmt->fetchColumn() ?: '');
+}
 
 $history = [];
 if (!empty($data['history']) && is_array($data['history'])) {
@@ -35,95 +47,6 @@ if ($mode === 'chat') {
     }
 } elseif ($text === '') {
     respond(['error' => 'Thieu noi dung can giai thich.'], 422);
-}
-
-function normalize_api_keys($value): array
-{
-    if (is_string($value)) {
-        $value = preg_split('/[\s,]+/', $value) ?: [];
-    }
-    if (!is_array($value)) return [];
-    return array_values(array_unique(array_filter(array_map('trim', $value))));
-}
-
-function load_ai_runtime_config(): array
-{
-    $config = [
-        'cloudflare_worker_url' => '',
-        'cloudflare_worker_secret' => '',
-        'cloudflare_ai_model' => '@cf/qwen/qwen3-30b-a3b-fp8',
-        'gemini_enabled' => true,
-        'gemini_keys' => [],
-        'gemini_model' => 'gemini-2.5-flash',
-        'shopaikey_api_key' => '',
-        'shopaikey_enabled' => true,
-        'shopaikey_model' => 'deepseek-v4-flash',
-        'shopaikey_base_url' => 'https://api.shopaikey.com/v1',
-    ];
-
-    if (defined('CLOUDFLARE_AI_WORKER_URL') && is_string(CLOUDFLARE_AI_WORKER_URL)) {
-        $config['cloudflare_worker_url'] = rtrim(trim(CLOUDFLARE_AI_WORKER_URL), '/');
-    }
-    if (defined('CLOUDFLARE_AI_WORKER_SECRET') && is_string(CLOUDFLARE_AI_WORKER_SECRET)) {
-        $config['cloudflare_worker_secret'] = trim(CLOUDFLARE_AI_WORKER_SECRET);
-    }
-    if (defined('CLOUDFLARE_AI_MODEL') && is_string(CLOUDFLARE_AI_MODEL) && trim(CLOUDFLARE_AI_MODEL) !== '') {
-        $config['cloudflare_ai_model'] = trim(CLOUDFLARE_AI_MODEL);
-    }
-    if (defined('GEMINI_ENABLED')) {
-        $config['gemini_enabled'] = (bool)GEMINI_ENABLED;
-    }
-    if (defined('SHOPAIKEY_ENABLED')) {
-        $config['shopaikey_enabled'] = (bool)SHOPAIKEY_ENABLED;
-    }
-    if (defined('GEMINI_API_KEYS')) {
-        $config['gemini_keys'] = normalize_api_keys(GEMINI_API_KEYS);
-    }
-    if (defined('GEMINI_MODEL') && is_string(GEMINI_MODEL) && trim(GEMINI_MODEL) !== '') {
-        $config['gemini_model'] = trim(GEMINI_MODEL);
-    }
-    if (defined('SHOPAIKEY_API_KEY') && is_string(SHOPAIKEY_API_KEY) && trim(SHOPAIKEY_API_KEY) !== '') {
-        $config['shopaikey_api_key'] = trim(SHOPAIKEY_API_KEY);
-    }
-    if (defined('SHOPAIKEY_MODEL') && is_string(SHOPAIKEY_MODEL) && trim(SHOPAIKEY_MODEL) !== '') {
-        $config['shopaikey_model'] = trim(SHOPAIKEY_MODEL);
-    }
-
-    $globalConfigFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'global_config.json';
-    if (is_file($globalConfigFile)) {
-        $globalConfig = json_decode((string)@file_get_contents($globalConfigFile), true);
-        if (is_array($globalConfig)) {
-            $fileKeys = [];
-            if (array_key_exists('gemini_keys', $globalConfig)) {
-                $fileKeys = normalize_api_keys($globalConfig['gemini_keys']);
-            } elseif (array_key_exists('global_gemini_keys', $globalConfig)) {
-                $fileKeys = normalize_api_keys($globalConfig['global_gemini_keys']);
-            }
-            if (!empty($fileKeys)) {
-                $config['gemini_keys'] = $fileKeys;
-            }
-            if (!empty($globalConfig['gemini_model']) && is_string($globalConfig['gemini_model'])) {
-                $config['gemini_model'] = trim($globalConfig['gemini_model']);
-            }
-            if (array_key_exists('gemini_enabled', $globalConfig)) {
-                $config['gemini_enabled'] = (bool)$globalConfig['gemini_enabled'];
-            }
-            if (!empty($globalConfig['cloudflare_ai_model']) && is_string($globalConfig['cloudflare_ai_model'])) {
-                $config['cloudflare_ai_model'] = trim($globalConfig['cloudflare_ai_model']);
-            }
-            if (!empty($globalConfig['shopaikey_api_key']) && is_string($globalConfig['shopaikey_api_key'])) {
-                $config['shopaikey_api_key'] = trim($globalConfig['shopaikey_api_key']);
-            }
-            if (!empty($globalConfig['shopaikey_model']) && is_string($globalConfig['shopaikey_model'])) {
-                $config['shopaikey_model'] = trim($globalConfig['shopaikey_model']);
-            }
-            if (array_key_exists('shopaikey_enabled', $globalConfig)) {
-                $config['shopaikey_enabled'] = (bool)$globalConfig['shopaikey_enabled'];
-            }
-        }
-    }
-
-    return $config;
 }
 
 function build_explain_prompt(string $subject, string $lessonTitle, string $text): string
@@ -629,7 +552,11 @@ function ai_explain_respond_success(
         'provider' => (string)($result['provider'] ?? ($fromCache ? 'cache' : '')),
         'model' => (string)($result['model'] ?? ''),
         'quota' => $quotaStatus ?? ai_smart_quota_status(),
+        'student_quota' => ai_student_quota_status($GLOBALS['ai_explain_user_id'] ?? null, (string)($GLOBALS['ai_explain_user_role'] ?? '')),
     ];
+    if (!empty($result['router_tier'])) {
+        $payload['router_tier'] = (string)$result['router_tier'];
+    }
     if ($fromCache) {
         $payload['cached'] = true;
         if (!empty($result['hits'])) {
@@ -643,17 +570,22 @@ function ai_explain_respond_success(
 }
 
 $runtime = load_ai_runtime_config();
+$GLOBALS['ai_explain_user_id'] = $currentUserId;
+$GLOBALS['ai_explain_user_role'] = $currentUserRole;
+
 $prompt = $mode === 'chat'
     ? build_chat_prompt($subject, $lessonTitle, $lessonContext, $history, $question)
     : build_explain_prompt($subject, $lessonTitle, $text);
 
-$cacheKey = ai_explain_cache_make_key($mode, $subject, $lessonTitle, $text, $question, $lessonContext, $history);
+$cacheKey = ai_explain_cache_make_key($mode, $lessonId, $subject, $lessonTitle, $text, $question, $lessonContext, $history);
 if (ai_explain_cache_eligible($mode, $text, $question)) {
     $cached = ai_explain_cache_get($cacheKey);
     if (is_array($cached) && trim((string)($cached['answer'] ?? '')) !== '') {
         ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, $cached, true);
     }
 }
+
+ai_student_quota_require($currentUserId, $currentUserRole);
 
 function try_cloudflare_ai_explain(array $config, array $payload): ?array
 {
@@ -716,102 +648,67 @@ function ai_explain_log_result(string $mode, array $result, bool $ok, bool $fall
     ]);
 }
 
-$quotaStatus = ai_smart_quota_status();
 $quotaCfg = ai_smart_quota_load_config();
 
-if (ai_smart_quota_should_block_all()) {
+$routerOut = ai_router_run([
+    'config' => $runtime,
+    'mode' => $mode,
+    'subject' => $subject,
+    'lessonTitle' => $lessonTitle,
+    'text' => $text,
+    'question' => $question,
+    'lessonContext' => $lessonContext,
+    'history' => $history,
+    'prompt' => $prompt,
+    'workerPayload' => $workerPayload,
+    'log' => 'ai_explain_log_result',
+    'providers' => [
+        'light' => function () use ($runtime, $mode, $lessonTitle, $text, $question, $lessonContext) {
+            return try_light_ai_explain($runtime, $mode, $lessonTitle, $text, $question, $lessonContext);
+        },
+        'cloudflare' => function () use ($runtime, $workerPayload) {
+            return try_cloudflare_ai_explain($runtime, $workerPayload);
+        },
+        'gemini' => function () use ($runtime, $prompt) {
+            return try_gemini_explain($runtime, $prompt);
+        },
+        'shopaikey' => function () use ($runtime, $prompt) {
+            return try_shopaikey_explain($runtime, $prompt);
+        },
+    ],
+]);
+
+if (!empty($routerOut['blocked'])) {
     respond([
-        'error' => $quotaStatus['student_notice'] ?: 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai.',
-        'code' => 'quota_exhausted_block',
-        'quota' => $quotaStatus,
+        'error' => $routerOut['error'] ?? 'Hôm nay đã hết quota AI miễn phí.',
+        'code' => $routerOut['code'] ?? 'quota_exhausted_block',
+        'quota' => $routerOut['quota'] ?? ai_smart_quota_status(),
+        'student_quota' => ai_student_quota_status($currentUserId, $currentUserRole),
     ], 503);
 }
 
-$cloudflareResult = null;
-$cloudflareSkippedQuota = false;
+if (!empty($routerOut['error'])) {
+    respond([
+        'error' => $routerOut['error'],
+        'quota' => $routerOut['quota'] ?? ai_smart_quota_status(),
+        'student_quota' => ai_student_quota_status($currentUserId, $currentUserRole),
+        'tiers_tried' => $routerOut['tiers_tried'] ?? [],
+    ], 502);
+}
 
-if (ai_smart_quota_allows_cloudflare()) {
-    $cloudflareResult = try_cloudflare_ai_explain($runtime, $workerPayload);
-    if (is_array($cloudflareResult) && !empty($cloudflareResult['answer'])) {
+$result = $routerOut['result'] ?? [];
+if (!empty($routerOut['used_api'])) {
+    ai_student_quota_consume($currentUserId, $currentUserRole);
+    if (($result['provider'] ?? '') === 'cloudflare_workers_ai') {
         $neurons = ai_smart_quota_estimate_neurons(
-            (string)($cloudflareResult['model'] ?? $runtime['cloudflare_ai_model']),
-            (int)($cloudflareResult['prompt_tokens'] ?? 0),
-            (int)($cloudflareResult['completion_tokens'] ?? 0),
+            (string)($result['model'] ?? $runtime['cloudflare_ai_model']),
+            (int)($result['prompt_tokens'] ?? 0),
+            (int)($result['completion_tokens'] ?? 0),
             (int)$quotaCfg['avg_neurons_per_call']
         );
         ai_smart_quota_add_neurons($neurons);
-        $quotaStatus = ai_smart_quota_status();
-        ai_explain_log_result($mode, $cloudflareResult, true, false);
-        ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, [
-            'answer' => trim($cloudflareResult['answer']),
-            'complete' => answer_looks_complete($cloudflareResult['answer']),
-            'provider' => 'cloudflare_workers_ai',
-            'model' => $cloudflareResult['model'] ?? 'Workers AI',
-        ], false, $quotaStatus);
     }
-    if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) {
-        if (ai_smart_quota_is_exhaustion_error((string)$cloudflareResult['error'])) {
-            ai_smart_quota_force_exhausted();
-            $quotaStatus = ai_smart_quota_status();
-        }
-        ai_explain_log_result($mode, $cloudflareResult, false, false);
-    }
-} else {
-    $cloudflareSkippedQuota = true;
-    $cloudflareResult = [
-        'error' => $quotaStatus['teacher_notice'] ?: 'Cloudflare tạm tắt do hết quota Neurons hôm nay.',
-        'provider' => 'cloudflare_workers_ai',
-        'quota_exhausted' => true,
-    ];
 }
 
-if ($cloudflareSkippedQuota && ai_smart_quota_should_block_all()) {
-    respond([
-        'error' => $quotaStatus['student_notice'] ?: 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai.',
-        'code' => 'quota_exhausted_block',
-        'quota' => $quotaStatus,
-    ], 503);
-}
-
-if ($cloudflareResult === null && (empty($runtime['gemini_enabled']) || empty($runtime['gemini_keys'])) && (empty($runtime['shopaikey_enabled']) || trim((string)$runtime['shopaikey_api_key']) === '')) {
-    respond(['error' => 'Chưa cấu hình Cloudflare Workers AI, Gemini hoặc ShopAIKey.'], 503);
-}
-
-$geminiResult = try_gemini_explain($runtime, $prompt);
-if (is_array($geminiResult) && !empty($geminiResult['answer'])) {
-    $usedFallback = $cloudflareSkippedQuota
-        || (is_array($cloudflareResult) && !empty($cloudflareResult['error']));
-    ai_explain_log_result($mode, $geminiResult, true, $usedFallback);
-    ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, [
-        'answer' => trim($geminiResult['answer']),
-        'complete' => answer_looks_complete($geminiResult['answer']),
-        'provider' => $geminiResult['provider'] ?? 'gemini',
-        'model' => $geminiResult['model'] ?? $runtime['gemini_model'],
-        'fallback' => $usedFallback,
-    ]);
-}
-if (is_array($geminiResult) && !empty($geminiResult['error'])) {
-    ai_explain_log_result($mode, $geminiResult, false, false);
-}
-
-$fallbackResult = try_shopaikey_explain($runtime, $prompt);
-if (is_array($fallbackResult) && !empty($fallbackResult['answer'])) {
-    ai_explain_log_result($mode, $fallbackResult, true, true);
-    ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, [
-        'answer' => trim($fallbackResult['answer']),
-        'complete' => answer_looks_complete($fallbackResult['answer']),
-        'provider' => $fallbackResult['provider'] ?? 'shopaikey',
-        'model' => $fallbackResult['model'] ?? $runtime['shopaikey_model'],
-        'fallback' => true,
-    ]);
-}
-if (is_array($fallbackResult) && !empty($fallbackResult['error'])) {
-    ai_explain_log_result($mode, $fallbackResult, false, false);
-}
-
-$errors = [];
-if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) $errors[] = 'Cloudflare Workers AI: ' . $cloudflareResult['error'];
-if (is_array($geminiResult) && !empty($geminiResult['error'])) $errors[] = $geminiResult['error'];
-if (is_array($fallbackResult) && !empty($fallbackResult['error'])) $errors[] = $fallbackResult['error'];
-$lastError = $errors ? implode(' | ', $errors) : 'Khong goi duoc AI.';
-respond(['error' => $lastError], 502);
+$quotaStatus = $routerOut['quota'] ?? ai_smart_quota_status();
+ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, $result, false, $quotaStatus);

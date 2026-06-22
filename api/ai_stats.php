@@ -3,6 +3,8 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
 require_once __DIR__ . '/ai_smart_quota.php';
 require_once __DIR__ . '/ai_explain_cache.php';
+require_once __DIR__ . '/ai_runtime_config.php';
+require_once __DIR__ . '/ai_student_quota.php';
 session_start();
 
 $key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
@@ -44,61 +46,7 @@ if ($teacherUser) {
     }
 }
 
-function ai_stats_load_runtime(): array
-{
-    $config = [
-        'shopaikey_api_key' => defined('SHOPAIKEY_API_KEY') && is_string(SHOPAIKEY_API_KEY) ? trim(SHOPAIKEY_API_KEY) : '',
-        'shopaikey_base_url' => 'https://api.shopaikey.com/v1',
-        'cloudflare_ai_model' => defined('CLOUDFLARE_AI_MODEL') && is_string(CLOUDFLARE_AI_MODEL) ? trim(CLOUDFLARE_AI_MODEL) : '@cf/qwen/qwen3-30b-a3b-fp8',
-        'cloudflare_worker_url' => defined('CLOUDFLARE_AI_WORKER_URL') && is_string(CLOUDFLARE_AI_WORKER_URL) ? rtrim(trim(CLOUDFLARE_AI_WORKER_URL), '/') : '',
-        'gemini_keys' => defined('GEMINI_API_KEYS') ? (array)GEMINI_API_KEYS : [],
-        'gemini_model' => defined('GEMINI_MODEL') && is_string(GEMINI_MODEL) ? trim(GEMINI_MODEL) : 'gemini-2.5-flash',
-        'gemini_enabled' => !defined('GEMINI_ENABLED') || (bool)GEMINI_ENABLED,
-        'shopaikey_enabled' => !defined('SHOPAIKEY_ENABLED') || (bool)SHOPAIKEY_ENABLED,
-        'shopaikey_model' => defined('SHOPAIKEY_MODEL') && is_string(SHOPAIKEY_MODEL) ? trim(SHOPAIKEY_MODEL) : 'deepseek-v4-flash',
-    ];
 
-    $globalConfigFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'global_config.json';
-    if (is_file($globalConfigFile)) {
-        $globalConfig = json_decode((string)@file_get_contents($globalConfigFile), true);
-        if (is_array($globalConfig)) {
-            if (!empty($globalConfig['shopaikey_api_key']) && is_string($globalConfig['shopaikey_api_key'])) {
-                $config['shopaikey_api_key'] = trim($globalConfig['shopaikey_api_key']);
-            }
-            if (!empty($globalConfig['cloudflare_ai_model']) && is_string($globalConfig['cloudflare_ai_model'])) {
-                $config['cloudflare_ai_model'] = trim($globalConfig['cloudflare_ai_model']);
-            }
-            if (!empty($globalConfig['gemini_model']) && is_string($globalConfig['gemini_model'])) {
-                $config['gemini_model'] = trim($globalConfig['gemini_model']);
-            }
-            if (array_key_exists('gemini_enabled', $globalConfig)) {
-                $config['gemini_enabled'] = (bool)$globalConfig['gemini_enabled'];
-            }
-            if (array_key_exists('shopaikey_enabled', $globalConfig)) {
-                $config['shopaikey_enabled'] = (bool)$globalConfig['shopaikey_enabled'];
-            }
-            if (!empty($globalConfig['shopaikey_model']) && is_string($globalConfig['shopaikey_model'])) {
-                $config['shopaikey_model'] = trim($globalConfig['shopaikey_model']);
-            }
-            $fileKeys = [];
-            if (array_key_exists('gemini_keys', $globalConfig)) {
-                $fileKeys = is_array($globalConfig['gemini_keys'])
-                    ? $globalConfig['gemini_keys']
-                    : (preg_split('/[\s,]+/', (string)$globalConfig['gemini_keys']) ?: []);
-            } elseif (array_key_exists('global_gemini_keys', $globalConfig)) {
-                $fileKeys = is_array($globalConfig['global_gemini_keys'])
-                    ? $globalConfig['global_gemini_keys']
-                    : (preg_split('/[\s,]+/', (string)$globalConfig['global_gemini_keys']) ?: []);
-            }
-            $fileKeys = array_values(array_unique(array_filter(array_map('trim', $fileKeys))));
-            if (!empty($fileKeys)) {
-                $config['gemini_keys'] = $fileKeys;
-            }
-        }
-    }
-
-    return $config;
-}
 
 function ai_stats_http_get(string $url, array $headers = [], int $timeout = 20): array
 {
@@ -417,7 +365,7 @@ function ai_stats_build_history(array $byDay, int $days = 14): array
     return $history;
 }
 
-$runtime = ai_stats_load_runtime();
+$runtime = load_ai_runtime_config();
 $store = ai_usage_load_store();
 $todayKey = ai_usage_today_key();
 $today = ai_stats_summarize_day($store['by_day'][$todayKey] ?? null);
@@ -519,12 +467,16 @@ respond([
         'shopaikey' => $shopaikeyStats,
     ],
     'explain_cache' => ai_explain_cache_stats(),
+    'ai_router' => ai_router_runtime_status($runtime),
+    'student_quota_defaults' => ai_student_quota_load_config(),
     'notes' => [
         'Log nội bộ lưu tại data/ai_usage.json trên hosting.',
         'Cloudflare GraphQL đếm mọi request Worker; log nội bộ tách theo module (lộ trình, thi trực tuyến…).',
-        'Lộ trình: câu hỏi trùng được cache tại data/ai_explain_cache.json — không tốn quota AI.',
+        'Lộ trình: Router AI — cache → light_ai (miễn phí) → Cloudflare → Gemini → ShopAIKey/DeepSeek (cuối cùng).',
+        'Cache theo lesson_id + câu hỏi tại data/ai_explain_cache.json — không tốn quota.',
+        'Quota học sinh: data/ai_student_quota.json — mặc định 25 lượt API/ngày (cache không tính).',
         'Thi trực tuyến: Mistral OCR + Gemini trình duyệt được ghi qua api/ai_usage_report.php.',
-        'Smart Quota: Neurons từ Cloudflare lộ trình (ước tính ~10.000 Neurons/ngày free).',
+        'Smart Quota: Neurons Cloudflare ~10.000/ngày free; hết thì fallback Gemini, cuối cùng ShopAIKey.',
         'Ma trận đề / KTTX / game gọi Gemini trực tiếp — chưa ghi log (sẽ bổ sung sau nếu cần).',
     ],
 ]);

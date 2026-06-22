@@ -110,6 +110,18 @@ if (isset($nextConfig['smart_quota_exhausted_mode'])) {
 if (isset($nextConfig['smart_quota_avg_neurons'])) {
     $nextConfig['smart_quota_avg_neurons'] = max(50, (int)$nextConfig['smart_quota_avg_neurons']);
 }
+if (array_key_exists('light_ai_enabled', $nextConfig)) {
+    $nextConfig['light_ai_enabled'] = (bool)$nextConfig['light_ai_enabled'];
+}
+if (array_key_exists('ai_student_quota_enabled', $nextConfig)) {
+    $nextConfig['ai_student_quota_enabled'] = (bool)$nextConfig['ai_student_quota_enabled'];
+}
+if (isset($nextConfig['ai_student_daily_limit'])) {
+    $nextConfig['ai_student_daily_limit'] = max(5, min(200, (int)$nextConfig['ai_student_daily_limit']));
+}
+if (array_key_exists('ai_student_teacher_unlimited', $nextConfig)) {
+    $nextConfig['ai_student_teacher_unlimited'] = (bool)$nextConfig['ai_student_teacher_unlimited'];
+}
 
 $json = json_encode($nextConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if ($json === false) {

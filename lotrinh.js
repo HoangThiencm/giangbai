@@ -808,9 +808,11 @@
     }
 
     function formatAiErrorMessage(err) {
+        if (err?.code === 'student_quota_exhausted') {
+            return err?.message || 'Hôm nay em đã hết lượt hỏi AI. Mai hỏi tiếp hoặc xem lại phần đã giải thích nhé.';
+        }
         if (err?.code === 'quota_exhausted_block') {
-            return 'Hôm nay đã hết quota Cloudflare, vui lòng thử lại ngày mai. '
-                + 'Giáo viên có thể dùng Gemini trên các công cụ Thi trực tuyến / Ma trận đề.';
+            return 'Hôm nay đã hết quota AI miễn phí, vui lòng thử lại ngày mai.';
         }
         return err?.message || 'Chưa gọi được AI.';
     }
@@ -2472,6 +2474,7 @@
 
     function lessonAiPayload(lesson, extra = {}) {
         return {
+            lesson_id: lesson?.id ? Number(lesson.id) : 0,
             subject: lesson?.subject || PAGE_SUBJECT,
             lesson_title: lesson?.title || PAGE_TITLE,
             ...extra

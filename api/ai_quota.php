@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_smart_quota.php';
+require_once __DIR__ . '/ai_student_quota.php';
 session_start();
 
 if (empty($_SESSION['user_id'])) {
@@ -23,4 +24,5 @@ respond([
     'ok' => true,
     'today' => ai_usage_today_key(),
     'smart_quota' => ai_smart_quota_status(),
+    'student_quota' => ai_student_quota_status((int)$_SESSION['user_id'], $role),
 ]);

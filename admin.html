@@ -823,7 +823,7 @@
                 if (keys || hasShop) {
                     tone = 'border-emerald-200 bg-emerald-50 text-emerald-900';
                     icon = 'fa-cloud';
-                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', có ShopAIKey fallback' : ', chưa có ShopAIKey fallback'}.`;
+                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Router lộ trình dùng ngay cấu hình này — Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', ShopAIKey cuối cùng' : ''}. Worker URL/secret lấy từ <code>api/config.php</code>.`;
                 } else {
                     tone = 'border-amber-200 bg-amber-50 text-amber-900';
                     icon = 'fa-triangle-exclamation';

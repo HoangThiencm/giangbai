@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/ai_usage_log.php';
 
-const AI_EXPLAIN_CACHE_VERSION = 'v1';
+const AI_EXPLAIN_CACHE_VERSION = 'v2';
 
 function ai_explain_cache_file_path(): string
 {
@@ -80,6 +80,7 @@ function ai_explain_cache_history_fingerprint(array $history): string
 
 function ai_explain_cache_make_key(
     string $mode,
+    int $lessonId,
     string $subject,
     string $lessonTitle,
     string $text,
@@ -90,6 +91,7 @@ function ai_explain_cache_make_key(
     $mode = $mode === 'chat' ? 'chat' : 'explain';
     $subject = ai_explain_cache_normalize($subject);
     $lessonTitle = ai_explain_cache_normalize($lessonTitle);
+    $lessonKey = $lessonId > 0 ? (string)$lessonId : ai_explain_cache_normalize($lessonTitle);
 
     if ($mode === 'chat') {
         $question = ai_explain_cache_normalize($question);
@@ -98,8 +100,8 @@ function ai_explain_cache_make_key(
         $payload = implode("\n", [
             AI_EXPLAIN_CACHE_VERSION,
             $mode,
+            $lessonKey,
             $subject,
-            $lessonTitle,
             $question,
             $contextHash,
             $historyHash,
@@ -109,8 +111,8 @@ function ai_explain_cache_make_key(
         $payload = implode("\n", [
             AI_EXPLAIN_CACHE_VERSION,
             $mode,
+            $lessonKey,
             $subject,
-            $lessonTitle,
             $text,
         ]);
     }
