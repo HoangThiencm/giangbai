@@ -130,7 +130,7 @@
             : [
                 { id: 'lotrinh', label: moduleLabel('lotrinh'), note: 'api/ai_explain.php' },
                 { id: 'thitructuyen', label: moduleLabel('thitructuyen'), note: 'Mistral OCR + Gemini' },
-                { id: 'vanban', label: moduleLabel('vanban'), note: 'Cloudflare Worker' },
+                { id: 'vanban', label: moduleLabel('vanban'), note: 'Tự nhận diện mẫu, không AI' },
             ];
         const toneClasses = {
             lotrinh: 'rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-900',

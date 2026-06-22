@@ -151,19 +151,6 @@ function vbd_files(PDO $pdo, array $ids): array
     return $result;
 }
 
-function vbd_runtime_model(): string
-{
-    $model = defined('CLOUDFLARE_AI_MODEL') ? trim((string)CLOUDFLARE_AI_MODEL) : '@cf/qwen/qwen3-30b-a3b-fp8';
-    $configPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'global_config.json';
-    if (is_file($configPath)) {
-        $config = json_decode((string)@file_get_contents($configPath), true);
-        if (is_array($config) && !empty($config['cloudflare_ai_model']) && is_string($config['cloudflare_ai_model'])) {
-            $model = trim($config['cloudflare_ai_model']);
-        }
-    }
-    return preg_match('#^@cf/[a-z0-9._-]+/[a-z0-9._-]+$#i', $model) ? $model : '@cf/qwen/qwen3-30b-a3b-fp8';
-}
-
 function vbd_preprocess_source(string $source): string
 {
     $lines = preg_split('/\R/u', $source) ?: [];
@@ -233,7 +220,7 @@ function vbd_regex_extract(string $source): array
     }
 
     $orgPatterns = [
-        '/((?:ỦY BAN NHÂN DÂN|UBND|PHÒNG|PHONG|TRƯỜNG|TRUONG|BAN THƯỜNG VỤ|ĐẢNG ỦY|DANG UY|SỞ|SỞ GD|PGD|BỘ GD)[^\n]{0,100})/iu',
+        '/((?:ỦY BAN NHÂN DÂN|UBND|PHÒNG GIÁO DỤC|PHÒNG GD|PHONG GD|PHÒNG|PHONG|TRƯỜNG|TRUONG|BAN THƯỜNG VỤ|BAN CHẤP HÀNH|ĐẢNG ỦY|DANG UY|ĐẢNG BỘ|CHI BỘ|CHI UY|SỞ GD|PGD|BỘ GD)[^\n]{0,120})/iu',
     ];
     foreach ($orgPatterns as $pattern) {
         if (preg_match($pattern, $head, $match)) {
@@ -253,7 +240,11 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    $result['document_date'] = vbd_parse_vn_date($head);
+    if (preg_match('/,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $head, $match)) {
+        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
+    } else {
+        $result['document_date'] = vbd_parse_vn_date($head);
+    }
 
     if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,240})/iu', $text, $match)) {
         $result['title'] = vbd_truncate(trim($match[1]), 500);
@@ -268,151 +259,39 @@ function vbd_regex_extract(string $source): array
         $result['report_due_at'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
     }
 
+    if ($result['title'] !== '' && $result['summary_text'] === '') {
+        $result['summary_text'] = vbd_truncate($result['title'], 500);
+    }
+
     return $result;
 }
 
-function vbd_merge_suggestion(array $ai, array $regex): array
-{
-    foreach (['document_number', 'title', 'organization', 'document_type', 'summary_text'] as $key) {
-        $aiValue = trim((string)($ai[$key] ?? ''));
-        $regexValue = trim((string)($regex[$key] ?? ''));
-        if ($aiValue === '' && $regexValue !== '') {
-            $ai[$key] = $regexValue;
-        }
-    }
-    if (empty($ai['document_date']) && !empty($regex['document_date'])) {
-        $ai['document_date'] = $regex['document_date'];
-    }
-    if (empty($ai['report_due_at']) && !empty($regex['report_due_at'])) {
-        $ai['report_due_at'] = $regex['report_due_at'];
-    }
-    if (empty($ai['report_required']) && !empty($regex['report_required'])) {
-        $ai['report_required'] = true;
-    }
-    if (!empty($regex['document_number']) && empty($ai['document_number'])) {
-        $ai['document_number'] = $regex['document_number'];
-    }
-    return $ai;
-}
-
-function vbd_log_ai_usage(bool $ok, string $model, string $error = ''): void
-{
-    require_once __DIR__ . '/ai_usage_log.php';
-    ai_usage_record([
-        'provider' => 'cloudflare_workers_ai',
-        'module' => 'vanban',
-        'mode' => 'document',
-        'model' => $model,
-        'ok' => $ok,
-        'error' => $ok ? '' : $error,
-    ]);
-    if ($ok) {
-        require_once __DIR__ . '/ai_smart_quota.php';
-        $cfg = ai_smart_quota_load_config();
-        $neurons = ai_smart_quota_estimate_neurons($model, 0, 0, (int)$cfg['avg_neurons_per_call']);
-        ai_smart_quota_add_neurons($neurons);
-    }
-}
-
-function vbd_ai_extract(string $source): array
+function vbd_parse_document(string $source): array
 {
     $cleanSource = vbd_preprocess_source($source);
     if (mb_strlen($cleanSource) < 20) {
-        throw new RuntimeException('Nội dung văn bản quá ngắn sau khi lọc chữ ký số. Thử Mistral OCR hoặc dán thủ công phần đầu văn bản.');
-    }
-    $regexHint = vbd_regex_extract($cleanSource);
-
-    $workerUrl = defined('CLOUDFLARE_AI_WORKER_URL') ? rtrim(trim((string)CLOUDFLARE_AI_WORKER_URL), '/') : '';
-    $secret = defined('CLOUDFLARE_AI_WORKER_SECRET') ? trim((string)CLOUDFLARE_AI_WORKER_SECRET) : '';
-    if ($workerUrl === '' || $secret === '') {
-        throw new RuntimeException('Chưa cấu hình Cloudflare Worker cho AI trên hosting.');
-    }
-    if (!function_exists('curl_init')) throw new RuntimeException('Hosting chưa bật cURL để gọi AI.');
-
-    $model = vbd_runtime_model();
-    $hintBlock = '';
-    if ($regexHint['document_number'] !== '') {
-        $hintBlock .= "Số/Ký hiệu gợi ý: {$regexHint['document_number']}\n";
-    }
-    if (!empty($regexHint['document_date'])) {
-        $hintBlock .= "Ngày ban hành gợi ý: {$regexHint['document_date']}\n";
-    }
-    if ($regexHint['organization'] !== '') {
-        $hintBlock .= "Cơ quan gợi ý: {$regexHint['organization']}\n";
-    }
-    if ($regexHint['title'] !== '') {
-        $hintBlock .= "Trích yếu gợi ý: {$regexHint['title']}\n";
+        throw new RuntimeException('Nội dung văn bản quá ngắn. Chọn PDF có lớp chữ hoặc dán phần đầu văn bản.');
     }
 
-    $payload = json_encode([
-        'mode' => 'document',
-        'text' => vbd_truncate(($hintBlock !== '' ? "Gợi ý từ hệ thống (ưu tiên nếu khớp văn bản):\n{$hintBlock}\n---\n" : '') . $cleanSource, 18000),
-        'model' => $model,
-    ], JSON_UNESCAPED_UNICODE);
-    $ch = curl_init($workerUrl . '/chat');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_CONNECTTIMEOUT => 8,
-        CURLOPT_TIMEOUT => 45,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'X-Giangbai-Worker-Secret: ' . $secret,
-        ],
-        CURLOPT_POSTFIELDS => $payload,
-    ]);
-    $raw = curl_exec($ch);
-    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-    $response = is_string($raw) ? json_decode($raw, true) : null;
-    if ($status < 200 || $status >= 300 || !is_array($response) || empty($response['answer'])) {
-        $message = is_array($response) ? trim((string)($response['error'] ?? '')) : '';
-        if ($message === '') $message = $error ?: 'Workers AI không phản hồi.';
-        vbd_log_ai_usage(false, $model, $message);
-        throw new RuntimeException($message);
-    }
-
-    $answer = trim((string)$response['answer']);
-    $answer = preg_replace('/^```(?:json)?\s*|\s*```$/iu', '', $answer);
-    $start = strpos($answer, '{');
-    $end = strrpos($answer, '}');
-    if ($start === false || $end === false || $end <= $start) {
-        throw new RuntimeException('AI không trả về dữ liệu văn bản đúng định dạng.');
-    }
-    $data = json_decode(substr($answer, $start, $end - $start + 1), true);
-    if (!is_array($data)) {
-        vbd_log_ai_usage(false, $model, 'Không đọc được dữ liệu AI trả về.');
-        throw new RuntimeException('Không đọc được dữ liệu AI trả về.');
-    }
-    vbd_log_ai_usage(true, (string)($response['model'] ?? $model));
-    $merged = vbd_merge_suggestion([
-        'document_number' => trim((string)($data['document_number'] ?? '')),
-        'title' => trim((string)($data['title'] ?? '')),
-        'organization' => trim((string)($data['organization'] ?? '')),
-        'document_type' => trim((string)($data['document_type'] ?? '')),
-        'summary_text' => trim((string)($data['summary_text'] ?? '')),
-        'document_date' => vbd_date($data['document_date'] ?? null),
-        'report_required' => !empty($data['report_required']),
-        'report_due_at' => vbd_date($data['report_due_at'] ?? null),
-        'confidence' => trim((string)($data['confidence'] ?? 'medium')),
-        'note' => trim((string)($data['note'] ?? '')),
-        'provider' => (string)($response['provider'] ?? 'cloudflare_workers_ai'),
-        'model' => (string)($response['model'] ?? vbd_runtime_model()),
-    ], $regexHint);
+    $parsed = vbd_regex_extract($cleanSource);
+    $parsed['document_date'] = vbd_date($parsed['document_date'] ?? null);
+    $parsed['report_due_at'] = vbd_date($parsed['report_due_at'] ?? null);
+    $parsed['provider'] = 'parser';
+    $parsed['model'] = '';
 
     $filled = array_filter([
-        $merged['document_number'] ?? '',
-        $merged['title'] ?? '',
-        $merged['organization'] ?? '',
-        $merged['document_type'] ?? '',
+        $parsed['document_number'] ?? '',
+        $parsed['title'] ?? '',
+        $parsed['organization'] ?? '',
+        $parsed['document_type'] ?? '',
     ], static fn($v) => trim((string)$v) !== '');
-    if (count($filled) < 2) {
-        $merged['confidence'] = 'low';
-        $merged['note'] = trim(($merged['note'] ?? '') . ' AI chỉ nhận diện được ít trường — kiểm tra số văn bản, ngày ban hành (không lấy ngày ký số).');
-    }
+    $count = count($filled);
+    $parsed['confidence'] = $count >= 3 ? 'high' : ($count >= 2 ? 'medium' : 'low');
+    $parsed['note'] = $count >= 2
+        ? 'Tự nhận diện từ nội dung văn bản. Kiểm tra trước khi lưu.'
+        : 'Chỉ nhận diện được ít trường — bổ sung thủ công số văn bản, ngày ban hành, trích yếu.';
 
-    return $merged;
+    return $parsed;
 }
 
 function vbd_drive_folder(array $document): string
@@ -502,34 +381,16 @@ if ($action === 'create_school_year') {
     respond(['ok' => true, 'academic_year' => $year, 'message' => 'Đã tạo hoặc chọn năm học ' . $year . '.']);
 }
 
-if ($action === 'ai_suggest') {
+if ($action === 'parse_document' || $action === 'ai_suggest') {
     $input = json_body();
     $source = trim((string)($input['source_text'] ?? ''));
     if (mb_strlen(vbd_preprocess_source($source)) < 20) {
-        respond(['error' => 'Dán ít nhất một đoạn nội dung văn bản (hoặc PDF có chữ/OCR) để AI đọc.'], 422);
+        respond(['error' => 'Chưa đủ nội dung để nhận diện. Chọn PDF hoặc dán phần đầu văn bản (số, ngày, trích yếu).'], 422);
     }
     try {
-        respond(['ok' => true, 'suggestion' => vbd_ai_extract($source)]);
+        respond(['ok' => true, 'suggestion' => vbd_parse_document($source)]);
     } catch (Throwable $e) {
-        $regex = vbd_regex_extract($source);
-        $filled = array_filter([
-            $regex['document_number'] ?? '',
-            $regex['title'] ?? '',
-            $regex['organization'] ?? '',
-            $regex['document_type'] ?? '',
-        ], static fn($v) => trim((string)$v) !== '');
-        if (count($filled) >= 2) {
-            respond([
-                'ok' => true,
-                'suggestion' => array_merge($regex, [
-                    'confidence' => 'low',
-                    'provider' => 'regex',
-                    'model' => '',
-                    'note' => 'AI Worker lỗi — đã điền bằng nhận diện mẫu. ' . $e->getMessage(),
-                ]),
-            ]);
-        }
-        respond(['error' => $e->getMessage()], 502);
+        respond(['error' => $e->getMessage()], 422);
     }
 }
 

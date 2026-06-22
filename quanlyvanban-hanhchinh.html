@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="ai-design-config.js?v=20260624-admin-sync"></script>
-    <script src="ai-usage-reporter.js?v=20260622-ai-track1"></script>
     <script src="mistral-ocr-client.js?v=20260622-ai-track1"></script>
     <style>
         body { font-family: "Segoe UI", Arial, sans-serif; background: #f6f8fb; }
@@ -123,16 +122,13 @@
                 <label class="block text-sm font-bold text-slate-700">Tóm tắt việc cần làm
                     <textarea id="summaryText" rows="3" class="mt-1 w-full rounded border border-slate-300 p-2.5"></textarea>
                 </label>
-                <section class="rounded-xl border border-violet-200 bg-violet-50 p-4">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h3 class="font-bold text-violet-950"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI đọc và tự điền</h3>
-                            <p class="mt-1 text-xs text-violet-800">Dán trích văn bản hoặc chọn PDF — tự đọc chữ/OCR rồi điền số văn bản, cơ quan, ngày ban hành (bỏ qua ngày ký số).</p>
-                        </div>
-                        <button id="aiSuggestBtn" type="button" class="shrink-0 rounded-lg bg-violet-700 px-3 py-2 text-sm font-bold text-white hover:bg-violet-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI tự điền</button>
+                <section class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                    <div>
+                        <h3 class="font-bold text-sky-950"><i class="fa-solid fa-file-lines mr-2"></i>Nội dung văn bản · tự nhận diện</h3>
+                        <p class="mt-1 text-xs text-sky-800">Dán trích văn bản hoặc chọn PDF — hệ thống tự đọc chữ rồi điền số văn bản, cơ quan, ngày ban hành (bỏ qua ngày ký số).</p>
                     </div>
-                    <textarea id="sourceText" rows="5" class="mt-3 w-full rounded border border-violet-200 bg-white p-2.5 text-sm"></textarea>
-                    <p id="aiNote" class="mt-2 hidden text-xs font-semibold text-violet-800"></p>
+                    <textarea id="sourceText" rows="5" class="mt-3 w-full rounded border border-sky-200 bg-white p-2.5 text-sm" placeholder="Dán phần đầu văn bản hoặc chọn PDF bên dưới..."></textarea>
+                    <p id="parseNote" class="mt-2 hidden text-xs font-semibold text-sky-800"></p>
                 </section>
                 <section class="rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-bold text-amber-950">
@@ -170,6 +166,6 @@
     </div>
 
     <div id="toast" class="fixed bottom-4 right-4 z-[70] hidden max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-xl"></div>
-    <script src="vanban-app.js?v=20260622-vanban-ai1"></script>
+    <script src="vanban-app.js?v=20260622-vanban-parse1"></script>
 </body>
 </html>

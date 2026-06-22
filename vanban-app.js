@@ -412,7 +412,7 @@
         if ($('reportDueAt')) $('reportDueAt').value = doc?.report_due_at || '';
         if ($('reportStatus')) $('reportStatus').value = ['pending', 'in_progress', 'completed'].includes(doc?.report_status) ? doc.report_status : 'pending';
         if ($('reportNote')) $('reportNote').value = doc?.report_note || '';
-        $('aiNote')?.classList.add('hidden');
+        $('parseNote')?.classList.add('hidden');
         setReportVisibility();
         $('documentModal')?.classList.remove('hidden');
     }
@@ -501,7 +501,10 @@
         return { text, mode };
     }
 
-    function applyAiSuggestion(item) {
+    let parseTimer = null;
+    let parseBusy = false;
+
+    function applyParsedFields(item) {
         if (!item || typeof item !== 'object') return 0;
         let filled = 0;
         const setValue = (id, value) => {
@@ -523,46 +526,55 @@
         return filled;
     }
 
-    async function runAiSuggest(options = {}) {
-        const source = $('sourceText')?.value.trim() || `${$('title')?.value || ''}\n${$('summaryText')?.value || ''}`.trim();
+    function showParseNote(item, filled) {
+        const note = $('parseNote');
+        if (!note) return;
+        const confidence = item.confidence || 'medium';
+        const detail = item.note ? ` · ${item.note}` : '';
+        note.textContent = `Tự nhận diện: đã điền ${filled} trường · độ tin cậy ${confidence}${detail}. Kiểm tra trước khi lưu.`;
+        note.classList.remove('hidden');
+    }
+
+    async function runAutoParse(options = {}) {
+        const source = $('sourceText')?.value.trim() || '';
         if (source.length < 20) {
-            toast('Hãy dán nội dung văn bản hoặc chọn PDF trước.', 'rose');
+            if (!options.silent) toast('Hãy dán nội dung văn bản hoặc chọn PDF trước.', 'rose');
             return null;
         }
-        const button = $('aiSuggestBtn');
-        const original = button?.innerHTML || '';
-        if (button) {
-            button.disabled = true;
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>AI đang đọc...';
+        if (parseBusy) return null;
+        parseBusy = true;
+        const note = $('parseNote');
+        if (note) {
+            note.textContent = 'Đang nhận diện thông tin từ văn bản...';
+            note.classList.remove('hidden');
         }
         try {
-            const data = await api('ai_suggest', {
+            const data = await api('parse_document', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ source_text: source }),
             });
             const item = data.suggestion || {};
-            const filled = applyAiSuggestion(item);
-            if ($('aiNote')) {
-                const provider = item.provider === 'regex' ? 'Nhận diện mẫu' : (item.provider || 'AI');
-                $('aiNote').textContent = `${provider}: đã điền ${filled} trường · độ tin cậy ${item.confidence || 'medium'}${item.note ? ` · ${item.note}` : ''}. Kiểm tra trước khi lưu.`;
-                $('aiNote').classList.remove('hidden');
-            }
+            const filled = applyParsedFields(item);
+            showParseNote(item, filled);
             if (!filled && !options.silent) {
-                toast('AI không trích xuất được trường nào. Thử dán phần đầu văn bản hoặc PDF có chữ rõ.', 'rose');
-            } else if (!options.silent) {
+                toast('Không nhận diện được trường nào. Thử dán phần đầu văn bản hoặc PDF có chữ rõ.', 'rose');
+            } else if (!options.silent && filled) {
                 toast(`Đã tự điền ${filled} trường từ văn bản.`);
             }
             return item;
         } catch (error) {
+            if (note) note.textContent = error.message;
             if (!options.silent) toast(error.message, 'rose');
             throw error;
         } finally {
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = original || '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI tự điền';
-            }
+            parseBusy = false;
         }
+    }
+
+    function scheduleAutoParse() {
+        clearTimeout(parseTimer);
+        parseTimer = setTimeout(() => runAutoParse({ silent: true }), 600);
     }
 
     async function uploadFiles(documentId) {
@@ -624,21 +636,21 @@
             }
         });
 
-        $('aiSuggestBtn')?.addEventListener('click', () => runAiSuggest());
+        $('sourceText')?.addEventListener('input', scheduleAutoParse);
 
         $('files')?.addEventListener('change', async event => {
             const file = [...event.target.files].find(item => item.type === 'application/pdf' || item.name.toLowerCase().endsWith('.pdf'));
-            if (!file || !$('aiNote') || !$('sourceText')) return;
-            $('aiNote').textContent = 'Đang đọc PDF (lớp chữ hoặc Mistral OCR)...';
-            $('aiNote').classList.remove('hidden');
+            if (!file || !$('parseNote') || !$('sourceText')) return;
+            $('parseNote').textContent = 'Đang đọc PDF (lớp chữ hoặc Mistral OCR)...';
+            $('parseNote').classList.remove('hidden');
             try {
                 const extracted = await extractPdf(file);
                 const mode = extracted.mode === 'mistral-ocr' ? 'Mistral OCR' : 'lớp chữ PDF';
                 $('sourceText').value = extracted.text;
-                $('aiNote').textContent = `Đã đọc PDF bằng ${mode}. Đang tự điền thông tin...`;
-                await runAiSuggest({ silent: true });
+                $('parseNote').textContent = `Đã đọc PDF bằng ${mode}. Đang tự điền thông tin...`;
+                await runAutoParse({ silent: true });
             } catch (error) {
-                $('aiNote').textContent = error.message;
+                $('parseNote').textContent = error.message;
                 toast(error.message, 'rose');
             }
         });

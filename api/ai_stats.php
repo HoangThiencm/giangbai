@@ -375,8 +375,8 @@ function ai_stats_module_catalog(): array
         [
             'id' => 'vanban',
             'label' => ai_usage_module_label('vanban'),
-            'providers' => ['cloudflare_workers_ai'],
-            'note' => 'Trích xuất metadata văn bản qua Cloudflare Worker',
+            'providers' => [],
+            'note' => 'Tự nhận diện mẫu (pdf.js + regex), không gọi AI',
         ],
     ];
 }
