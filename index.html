@@ -815,35 +815,48 @@
             }
         }
 
+        function setToolCardsVisible(selector, visible) {
+            document.querySelectorAll(selector).forEach(card => {
+                card.classList.toggle('hidden', !visible);
+            });
+        }
+
         function hideToolCards(selector) {
-            document.querySelectorAll(selector).forEach(card => card.classList.add('hidden'));
+            setToolCardsVisible(selector, false);
         }
 
         function applyFeatureToolVisibility(features) {
             Object.entries(TOOL_PAGE_LINKS).forEach(([tool, href]) => {
-                if (features[tool] === false) {
-                    hideToolCards(`[data-tool="${tool}"], a[href="${href}"]`);
-                }
+                setToolCardsVisible(`[data-tool="${tool}"], a[href="${href}"]`, features[tool] !== false);
             });
-            if (features.teacher_design === false) hideToolCards('[data-tool="teacher-lotrinh-design"]');
-            if (features.teacher_progress_stats === false) hideToolCards('a[href="thongketientrinh.html"]');
-            if (features.teacher_ai_stats === false) hideToolCards('a[href="theodoi-ai.html"]');
+            setToolCardsVisible('[data-tool="teacher-lotrinh-design"]', features.teacher_design !== false);
+            setToolCardsVisible('a[href="thongketientrinh.html"]', features.teacher_progress_stats !== false);
+            setToolCardsVisible('a[href="theodoi-ai.html"]', features.teacher_ai_stats !== false);
         }
 
         function applyTeacherAllowedPagesVisibility(allowedSet, features) {
             if (localStorage.getItem('userRole') !== 'teacher' || !allowedSet.size) return;
             Object.entries(TOOL_PAGE_LINKS).forEach(([tool, pageKey]) => {
-                if (!allowedSet.has(pageKey)) hideToolCards(`[data-tool="${tool}"]`);
+                const visible = allowedSet.has(pageKey) && features[tool] !== false;
+                setToolCardsVisible(`[data-tool="${tool}"]`, visible);
             });
             const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
-            if (!hasLotrinh || features.teacher_design === false) hideToolCards('[data-tool="teacher-lotrinh-design"]');
-            if (!allowedSet.has('quanlyvanban')) hideToolCards('[data-tool="teacher-documents"]');
-            if (!allowedSet.has('thongketientrinh') || features.teacher_progress_stats === false) {
-                hideToolCards('a[href="thongketientrinh.html"]');
-            }
-            if (!allowedSet.has('theodoiai') || features.teacher_ai_stats === false) {
-                hideToolCards('a[href="theodoi-ai.html"]');
-            }
+            setToolCardsVisible('[data-tool="teacher-lotrinh-design"]', hasLotrinh && features.teacher_design !== false);
+            setToolCardsVisible('[data-tool="teacher-documents"]', allowedSet.has('quanlyvanban'));
+            setToolCardsVisible(
+                'a[href="thongketientrinh.html"]',
+                allowedSet.has('thongketientrinh') && features.teacher_progress_stats !== false
+            );
+            setToolCardsVisible(
+                'a[href="theodoi-ai.html"]',
+                allowedSet.has('theodoiai') && features.teacher_ai_stats !== false
+            );
+        }
+
+        function applyTeacherHubVisibility(features, allowedSet) {
+            if (localStorage.getItem('userRole') !== 'teacher') return;
+            applyFeatureToolVisibility(features);
+            applyTeacherAllowedPagesVisibility(allowedSet, features);
         }
 
         function storeTeacherTabFlags(features) {
@@ -898,13 +911,11 @@
                         }
                     }
 
-                    applyFeatureToolVisibility(features);
-
                     if (localStorage.getItem('userRole') === 'student') {
+                        applyFeatureToolVisibility(features);
                         hideToolCards('[data-tool="rutgon"]');
-                    } else if (localStorage.getItem('userRole') === 'teacher') {
-                        applyTeacherAllowedPagesVisibility(getAllowedPagesSet(), features);
                     }
+                    // Giáo viên: chờ setupTeacherLotrinhHub tải api/me.php rồi mới lọc theo allowed_pages
 
                     storeTeacherTabFlags(features);
                 }
@@ -1244,6 +1255,12 @@
             const canViewDocuments = allowedSet.has('quanlyvanban');
             const canViewDesign = teacherTabs.design && lotrinhPages.length > 0;
             const hasTeacherWorkspace = canViewDesign || canViewStats || canViewDocuments || (teacherTabs.ai_stats && allowedSet.has('theodoiai'));
+
+            const mainToolsGridEarly = document.getElementById('mainToolsGrid');
+            if (mainToolsGridEarly) {
+                applyTeacherHubVisibility(accountFeatures, allowedSet);
+            }
+
             if (!hasTeacherWorkspace) return;
 
             const hub = document.getElementById('teacherLotrinhHub');
@@ -1382,8 +1399,7 @@
                     `);
                 }
                 mainToolsGrid.insertAdjacentHTML('beforeend', teacherWorkspaceCards.join(''));
-                applyFeatureToolVisibility(accountFeatures);
-                applyTeacherAllowedPagesVisibility(allowedSet, accountFeatures);
+                applyTeacherHubVisibility(accountFeatures, allowedSet);
                 const reminderBadge = document.getElementById('teacherDocumentsCardReminder');
                 if (reminderBadge) {
                     fetch('api/vanban.php?action=list', { credentials: 'include', cache: 'no-store' })
