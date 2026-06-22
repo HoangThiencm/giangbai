@@ -98,7 +98,7 @@
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
                     <div>
                         <h3 class="font-bold text-slate-700 text-lg"><i class="fas fa-chart-line text-sky-600 mr-2"></i> Theo dõi sử dụng AI</h3>
-                        <p class="text-sm text-slate-500 mt-1">Cloudflare Workers AI, Gemini fallback và ShopAIKey/DeepSeek cho AI lộ trình học (<code>api/ai_explain.php</code>).</p>
+                        <p class="text-sm text-slate-500 mt-1">Theo dõi AI theo <strong>module</strong>: lộ trình (Cloudflare), thi trực tuyến (Mistral + Gemini), quản lý văn bản (Cloudflare).</p>
                     </div>
                     <button id="aiStatsRefreshBtn" type="button" onclick="loadAiStats(true)" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
                         <i class="fas fa-rotate-right mr-2"></i>Tải lại
@@ -257,12 +257,22 @@
 
                 <div id="adminConfigStorageBanner" class="hidden rounded-lg border p-3 mb-4 text-sm"></div>
 
+                <div class="rounded-lg border border-slate-200 bg-white p-4 mb-4 text-xs leading-6 text-slate-700">
+                    <div class="font-bold text-slate-900 mb-2"><i class="fas fa-sitemap text-sky-600 mr-1"></i> Bản đồ AI theo chức năng</div>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Lộ trình học</strong> → Cloudflare Worker (chính) → Gemini / ShopAIKey khi hết quota</li>
+                        <li><strong>Thi trực tuyến</strong> → Mistral OCR (quét PDF) → Gemini trình duyệt (nhận diện câu hỏi) — <em>không</em> dùng Cloudflare</li>
+                        <li><strong>Quản lý văn bản</strong> → Cloudflare Worker (trích xuất metadata từ văn bản)</li>
+                    </ul>
+                    <p class="mt-2 text-slate-500">Smart Quota chỉ áp dụng Cloudflare (lộ trình + văn bản). Thống kê Mistral/Gemini Thi trực tuyến ghi qua <code>api/ai_usage_report.php</code>.</p>
+                </div>
+
                 <!-- CLOUDFLARE WORKERS AI CONFIG -->
                 <div class="rounded-lg border border-orange-200 bg-orange-50 p-4 mb-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
-                            <h4 class="font-bold text-orange-900 text-sm">Cloudflare Workers AI <span class="font-normal">· nguồn AI chính</span></h4>
-                            <p class="text-xs text-orange-800 mt-1">Đổi model AI trực tiếp tại đây. Worker URL và secret vẫn chỉ nằm trong <code>api/config.php</code> trên hosting.</p>
+                            <h4 class="font-bold text-orange-900 text-sm">Cloudflare Workers AI <span class="font-normal">· lộ trình + quản lý văn bản</span></h4>
+                            <p class="text-xs text-orange-800 mt-1">Dùng cho <strong>giải thích/chat lộ trình</strong> và <strong>trích xuất văn bản hành chính</strong>. Không dùng cho Thi trực tuyến. Worker URL/secret trong <code>api/config.php</code>.</p>
                         </div>
                         <span id="adminCloudflareAiStatus" class="text-xs font-semibold text-orange-700 shrink-0"></span>
                     </div>
@@ -330,8 +340,8 @@
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
-                            <h4 class="font-bold text-emerald-900 text-sm">Google Gemini</h4>
-                            <p class="text-xs text-emerald-800 mt-1">Nhập nhiều API key, mỗi key một dòng. Key được lưu trên <strong>hosting</strong> (<code>global_config.json</code>), mọi máy dùng chung — không lưu riêng trên máy cá nhân.</p>
+                            <h4 class="font-bold text-emerald-900 text-sm">Google Gemini <span class="font-normal">· fallback lộ trình + Thi trực tuyến</span></h4>
+                            <p class="text-xs text-emerald-800 mt-1">Fallback server khi hết Cloudflare (lộ trình). Cùng key được Thi trực tuyến dùng trên trình duyệt để nhận diện câu hỏi sau Mistral OCR. Lưu trên <code>global_config.json</code>.</p>
                             <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-emerald-900">
                                 <input id="adminGeminiEnabled" type="checkbox" class="h-4 w-4 rounded border-emerald-300 text-emerald-700 focus:ring-emerald-500" checked>
                                 Bật Gemini làm fallback
@@ -374,7 +384,7 @@
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <h4 class="font-bold text-violet-900 text-sm"><i class="fas fa-file-image mr-1"></i> Mistral OCR <span class="font-normal">· quét PDF nhanh</span></h4>
-                            <p class="text-xs text-violet-800 mt-1">Bắt buộc cho <strong>Thi trực tuyến</strong>: quét PDF (<code>/v1/ocr</code>) rồi Gemini đọc văn bản để nhận diện câu hỏi. Key lưu trên <strong>hosting</strong> (<code>global_config.json</code>).</p>
+                            <p class="text-xs text-violet-800 mt-1">Chỉ cho <strong>Thi trực tuyến</strong>: quét PDF (<code>/v1/ocr</code>) → Gemini đọc văn bản nhận diện câu hỏi. <strong>Không</strong> liên quan Cloudflare/Smart Quota. Key trong <code>global_config.json</code>.</p>
                             <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-violet-900">
                                 <input id="adminMistralEnabled" type="checkbox" class="h-4 w-4 rounded border-violet-300 text-violet-700 focus:ring-violet-500" checked>
                                 Bật Mistral OCR
@@ -3049,7 +3059,7 @@
             }
         })();
     </script>
-    <script src="ai-stats-panel.js?v=20260621-smart-quota-1"></script>
+    <script src="ai-stats-panel.js?v=20260622-ai-track1"></script>
     <script>
         (function () {
             const panelLoad = window.loadAiStats;

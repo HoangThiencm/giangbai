@@ -54,6 +54,18 @@
         return btoa(binary);
     }
 
+    function reportMistral(model, ok, error) {
+        if (!global.AiUsageReporter) return;
+        AiUsageReporter.report({
+            provider: 'mistral_ocr',
+            module: 'thitructuyen',
+            mode: 'ocr',
+            model: model || '',
+            ok,
+            error: ok ? '' : (error || 'Mistral OCR lỗi'),
+        });
+    }
+
     async function ocrDocument(documentUrl, keys, model) {
         if (!isOcrEnabled()) throw new Error('Mistral OCR đang tắt trong Admin. Chỉ bật khi cần quét PDF.');
         const apiKeys = getKeys(keys);
@@ -84,11 +96,13 @@
                     if (res.status === 429 || res.status >= 500) continue;
                     throw new Error(lastError);
                 }
+                reportMistral(currentModel, true);
                 return { status: 'ok', data: raw, source: 'mistral-ocr' };
             } catch (err) {
                 lastError = err.message || lastError;
             }
         }
+        reportMistral(getModel(model), false, lastError);
         throw new Error(lastError);
     }
 

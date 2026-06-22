@@ -125,6 +125,63 @@ function ai_usage_mutate_store(callable $mutator): bool
     }
 }
 
+function ai_usage_allowed_modules(): array
+{
+    return ['lotrinh', 'thitructuyen', 'vanban', 'matrande', 'kttx', 'other'];
+}
+
+function ai_usage_allowed_providers(): array
+{
+    return [
+        'cloudflare_workers_ai',
+        'gemini',
+        'gemini_browser',
+        'mistral_ocr',
+        'shopaikey',
+    ];
+}
+
+function ai_usage_normalize_module(string $module): string
+{
+    $module = strtolower(trim($module));
+    return in_array($module, ai_usage_allowed_modules(), true) ? $module : 'other';
+}
+
+function ai_usage_normalize_mode(string $mode): string
+{
+    $mode = strtolower(trim($mode));
+    $allowed = ['explain', 'chat', 'ocr', 'vision', 'normalize', 'document', 'manual', 'answer_sheet'];
+    return in_array($mode, $allowed, true) ? $mode : 'explain';
+}
+
+function ai_usage_module_label(string $module): string
+{
+    return ([
+        'lotrinh' => 'Lộ trình học',
+        'thitructuyen' => 'Thi trực tuyến',
+        'vanban' => 'Quản lý văn bản',
+        'matrande' => 'Ma trận đề',
+        'kttx' => 'KTTX',
+        'other' => 'Khác',
+    ])[$module] ?? $module;
+}
+
+function ai_usage_module_bucket(array &$day, string $module): array
+{
+    if (!isset($day['by_module']) || !is_array($day['by_module'])) {
+        $day['by_module'] = [];
+    }
+    if (!isset($day['by_module'][$module]) || !is_array($day['by_module'][$module])) {
+        $day['by_module'][$module] = [
+            'calls' => 0,
+            'success' => 0,
+            'error' => 0,
+            'providers' => [],
+        ];
+    }
+    return $day['by_module'][$module];
+}
+
 function ai_usage_provider_bucket(array &$day, string $provider): array
 {
     if (!isset($day['providers']) || !is_array($day['providers'])) {
@@ -168,6 +225,7 @@ function ai_usage_tokens_from_meta(array $meta): array
 /**
  * @param array{
  *   provider:string,
+ *   module?:string,
  *   mode?:string,
  *   model?:string,
  *   ok?:bool,
@@ -182,11 +240,12 @@ function ai_usage_tokens_from_meta(array $meta): array
 function ai_usage_record(array $entry): void
 {
     $provider = trim((string)($entry['provider'] ?? ''));
-    if ($provider === '') {
+    if ($provider === '' || !in_array($provider, ai_usage_allowed_providers(), true)) {
         return;
     }
 
-    $mode = ($entry['mode'] ?? '') === 'chat' ? 'chat' : 'explain';
+    $module = ai_usage_normalize_module((string)($entry['module'] ?? 'other'));
+    $mode = ai_usage_normalize_mode((string)($entry['mode'] ?? 'explain'));
     $model = trim((string)($entry['model'] ?? ''));
     $ok = !empty($entry['ok']);
     $fallback = !empty($entry['fallback']);
@@ -199,22 +258,26 @@ function ai_usage_record(array $entry): void
         $estimatedUsd = ai_usage_estimate_shopaikey_usd($model, $promptTokens, $completionTokens);
     }
 
-    ai_usage_mutate_store(function (array &$store) use ($provider, $mode, $model, $ok, $fallback, $promptTokens, $completionTokens, $totalTokens, $estimatedUsd, $entry) {
+    ai_usage_mutate_store(function (array &$store) use ($provider, $module, $mode, $model, $ok, $fallback, $promptTokens, $completionTokens, $totalTokens, $estimatedUsd, $entry) {
         $dayKey = ai_usage_today_key();
         if (!isset($store['by_day'][$dayKey]) || !is_array($store['by_day'][$dayKey])) {
-            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => ['explain' => 0, 'chat' => 0]];
+            $store['by_day'][$dayKey] = ['providers' => [], 'by_mode' => [], 'by_module' => []];
         }
         $day = &$store['by_day'][$dayKey];
         $bucket = &ai_usage_provider_bucket($day, $provider);
+        $moduleBucket = &ai_usage_module_bucket($day, $module);
 
         $bucket['calls']++;
+        $moduleBucket['calls']++;
         if ($ok) {
             $bucket['success']++;
+            $moduleBucket['success']++;
             if ($fallback) {
                 $bucket['fallback_success']++;
             }
         } else {
             $bucket['error']++;
+            $moduleBucket['error']++;
         }
         $bucket['prompt_tokens'] += $promptTokens;
         $bucket['completion_tokens'] += $completionTokens;
@@ -223,8 +286,18 @@ function ai_usage_record(array $entry): void
             $bucket['estimated_usd'] = round((float)$bucket['estimated_usd'] + $estimatedUsd, 6);
         }
 
+        if (!isset($moduleBucket['providers'][$provider]) || !is_array($moduleBucket['providers'][$provider])) {
+            $moduleBucket['providers'][$provider] = ['calls' => 0, 'success' => 0, 'error' => 0];
+        }
+        $moduleBucket['providers'][$provider]['calls']++;
+        if ($ok) {
+            $moduleBucket['providers'][$provider]['success']++;
+        } else {
+            $moduleBucket['providers'][$provider]['error']++;
+        }
+
         if (!isset($day['by_mode']) || !is_array($day['by_mode'])) {
-            $day['by_mode'] = ['explain' => 0, 'chat' => 0];
+            $day['by_mode'] = [];
         }
         if ($ok) {
             $day['by_mode'][$mode] = (int)($day['by_mode'][$mode] ?? 0) + 1;
@@ -233,6 +306,7 @@ function ai_usage_record(array $entry): void
         $recentItem = [
             'ts' => (new DateTimeImmutable('now', ai_usage_timezone()))->format(DateTimeInterface::ATOM),
             'provider' => $provider,
+            'module' => $module,
             'mode' => $mode,
             'model' => $model,
             'ok' => $ok,

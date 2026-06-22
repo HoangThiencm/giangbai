@@ -74,7 +74,21 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
         return list;
     }
 
-    async function callGeminiText(prompt, keys, model, timeoutMs) {
+    function reportGemini(logMode, model, ok, raw, error) {
+        if (!global.AiUsageReporter) return;
+        const tokens = ok && raw ? AiUsageReporter.extractGeminiTokens(raw) : {};
+        AiUsageReporter.report({
+            provider: 'gemini_browser',
+            module: 'thitructuyen',
+            mode: logMode,
+            model: model || '',
+            ok,
+            ...tokens,
+            error: ok ? '' : (error || 'Gemini lỗi'),
+        });
+    }
+
+    async function callGeminiText(prompt, keys, model, timeoutMs, logMode = 'normalize') {
         const apiKeys = getKeys(keys);
         if (!apiKeys.length) throw new Error('Thiếu Gemini API Key. Bấm Cấu hình AI trên trang này để nạp key.');
         const models = [getModel(model)];
@@ -113,6 +127,7 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
                         parts.forEach((p) => { if (p.text) text += p.text; });
                         text = text.trim();
                         if (!text) throw new Error('Gemini trả về rỗng.');
+                        reportGemini(logMode, currentModel, true, raw);
                         return text;
                     } catch (err) {
                         if (err.name === 'AbortError') throw new Error('Hết thời gian chờ Gemini (90s). Thử lại.');
@@ -123,10 +138,11 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
         } finally {
             clearTimeout(timer);
         }
+        reportGemini(logMode, getModel(model), false, null, lastError);
         throw new Error(lastError);
     }
 
-    async function callGeminiVision(dataUrl, prompt, keys, model, timeoutMs) {
+    async function callGeminiVision(dataUrl, prompt, keys, model, timeoutMs, logMode = 'vision') {
         const apiKeys = getKeys(keys);
         if (!apiKeys.length) throw new Error('Thiếu Gemini API Key. Bấm Cấu hình AI trên trang này để nạp key.');
         const models = [getModel(model)];
@@ -171,6 +187,7 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
                         parts.forEach((p) => { if (p.text) text += p.text; });
                         text = text.trim();
                         if (!text) throw new Error('Gemini trả về rỗng.');
+                        reportGemini(logMode, currentModel, true, raw);
                         return text;
                     } catch (err) {
                         if (err.name === 'AbortError') throw new Error('Hết thời gian chờ Gemini (90s). Thử lại.');
@@ -181,11 +198,12 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]`;
         } finally {
             clearTimeout(timer);
         }
+        reportGemini(logMode, getModel(model), false, null, lastError);
         throw new Error(lastError);
     }
 
     async function normalizeSegment(imageDataUrl, keys, model) {
-        const text = await callGeminiVision(imageDataUrl, SEGMENT_PROMPT, keys, model);
+        const text = await callGeminiVision(imageDataUrl, SEGMENT_PROMPT, keys, model, undefined, 'vision');
         const rows = parseVisionJson(text);
         return { status: 'ok', data: mergeSegmentQuestions(rows), source: 'browser-gemini' };
     }
@@ -199,13 +217,13 @@ VĂN BẢN ĐÃ QUÉT BẰNG MISTRAL OCR (markdown):
 ---
 ${body}
 ---`;
-        const text = await callGeminiText(prompt, keys, model);
+        const text = await callGeminiText(prompt, keys, model, undefined, 'normalize');
         const rows = parseVisionJson(text);
         return { status: 'ok', data: mergeSegmentQuestions(rows), source: 'mistral-ocr+gemini' };
     }
 
     async function normalizeManual(imageDataUrl, keys, model) {
-        const text = await callGeminiVision(imageDataUrl, MANUAL_PROMPT, keys, model);
+        const text = await callGeminiVision(imageDataUrl, MANUAL_PROMPT, keys, model, undefined, 'manual');
         const rows = parseVisionJson(text).map((q, i) => ({
             ...q,
             id: `${Date.now()}_${i}`,
@@ -216,7 +234,7 @@ ${body}
     }
 
     async function importAnswerSheet(imageDataUrl, keys, model) {
-        const text = await callGeminiVision(imageDataUrl, ANSWER_PROMPT, keys, model);
+        const text = await callGeminiVision(imageDataUrl, ANSWER_PROMPT, keys, model, undefined, 'answer_sheet');
         const rows = parseVisionJson(text);
         return { status: 'ok', data: rows, source: 'browser-gemini' };
     }

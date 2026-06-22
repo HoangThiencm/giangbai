@@ -23,7 +23,7 @@
         <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-950">Theo dõi sử dụng AI</h1>
-                <p class="mt-1 text-sm text-slate-600">Cloudflare Workers AI, Gemini fallback và ShopAIKey cho AI lộ trình học.</p>
+                <p class="mt-1 text-sm text-slate-600">Theo dõi AI theo module: lộ trình, thi trực tuyến (Mistral + Gemini), quản lý văn bản.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <a href="index.html" class="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
@@ -39,7 +39,7 @@
 
     <main class="mx-auto max-w-7xl px-4 py-5">
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-sm text-slate-600">Số liệu từ <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs">api/ai_explain.php</code> — không bao gồm Gemini gọi trực tiếp từ trình duyệt.</p>
+            <p class="text-sm text-slate-600">Log từ <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs">data/ai_usage.json</code> — gồm lộ trình, thi trực tuyến, quản lý văn bản.</p>
             <button id="aiStatsRefreshBtn" type="button" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
                 <i class="fas fa-rotate-right mr-2"></i>Tải lại
             </button>
@@ -76,7 +76,7 @@
         })();
     </script>
     <script src="teacher-lotrinh-nav.js?v=20260624-reminders"></script>
-    <script src="ai-stats-panel.js?v=20260621-smart-quota-1"></script>
+    <script src="ai-stats-panel.js?v=20260622-ai-track1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             window.loadAiStats?.(true, { useSession: true });

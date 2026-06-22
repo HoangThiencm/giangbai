@@ -640,7 +640,8 @@ $workerPayload = [
 function ai_explain_log_result(string $mode, array $result, bool $ok, bool $fallback = false): void
 {
     ai_usage_record([
-        'provider' => (string)($result['provider'] ?? 'unknown'),
+        'provider' => (string)($result['provider'] ?? 'cloudflare_workers_ai'),
+        'module' => 'lotrinh',
         'mode' => $mode,
         'model' => (string)($result['model'] ?? ''),
         'ok' => $ok,

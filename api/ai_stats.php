@@ -332,13 +332,15 @@ function ai_stats_summarize_day(?array $day): array
     if (!is_array($day)) {
         return [
             'providers' => [],
-            'by_mode' => ['explain' => 0, 'chat' => 0],
+            'by_mode' => [],
+            'by_module' => [],
             'total_success' => 0,
             'total_calls' => 0,
         ];
     }
     $providers = is_array($day['providers'] ?? null) ? $day['providers'] : [];
-    $byMode = is_array($day['by_mode'] ?? null) ? $day['by_mode'] : ['explain' => 0, 'chat' => 0];
+    $byMode = is_array($day['by_mode'] ?? null) ? $day['by_mode'] : [];
+    $byModule = is_array($day['by_module'] ?? null) ? $day['by_module'] : [];
     $totalSuccess = 0;
     $totalCalls = 0;
     foreach ($providers as $bucket) {
@@ -346,15 +348,36 @@ function ai_stats_summarize_day(?array $day): array
         $totalSuccess += (int)($bucket['success'] ?? 0);
         $totalCalls += (int)($bucket['calls'] ?? 0);
     }
-    $byModeSuccess = (int)($byMode['explain'] ?? 0) + (int)($byMode['chat'] ?? 0);
-    if ($byModeSuccess > $totalSuccess) {
-        $totalSuccess = $byModeSuccess;
-    }
     return [
         'providers' => $providers,
         'by_mode' => $byMode,
+        'by_module' => $byModule,
         'total_success' => $totalSuccess,
         'total_calls' => $totalCalls,
+    ];
+}
+
+function ai_stats_module_catalog(): array
+{
+    return [
+        [
+            'id' => 'lotrinh',
+            'label' => ai_usage_module_label('lotrinh'),
+            'providers' => ['cloudflare_workers_ai', 'gemini', 'shopaikey'],
+            'note' => 'Giải thích & chat bài học qua api/ai_explain.php',
+        ],
+        [
+            'id' => 'thitructuyen',
+            'label' => ai_usage_module_label('thitructuyen'),
+            'providers' => ['mistral_ocr', 'gemini_browser'],
+            'note' => 'Mistral quét PDF + Gemini nhận diện câu hỏi (trình duyệt / hosting fallback)',
+        ],
+        [
+            'id' => 'vanban',
+            'label' => ai_usage_module_label('vanban'),
+            'providers' => ['cloudflare_workers_ai'],
+            'note' => 'Trích xuất metadata văn bản qua Cloudflare Worker',
+        ],
     ];
 }
 
@@ -404,10 +427,10 @@ $scriptName = ai_stats_worker_script_name();
 
 $internalToday = [
     'date' => $todayKey,
-    'module' => 'lotrinh_ai_explain',
-    'note' => 'Chỉ tính lượt gọi qua api/ai_explain.php (AI lộ trình học). Gemini trên trình duyệt (vẽ hình, game, smartquiz…) không đi qua log này.',
+    'note' => 'Log nội bộ từ mọi module: lộ trình (api/ai_explain.php), thi trực tuyến (trình duyệt + hosting), quản lý văn bản.',
     'summary' => $today,
     'recent' => array_slice($store['recent'] ?? [], 0, 30),
+    'modules' => ai_stats_module_catalog(),
 ];
 
 $shopaikeyStats = ai_stats_fetch_shopaikey(
@@ -442,6 +465,9 @@ $today['providers'] = ai_stats_enrich_today_providers($today, $cloudflareStats);
 $internalToday['summary'] = $today;
 
 $geminiInternal = $today['providers']['gemini'] ?? null;
+$geminiBrowserInternal = $today['providers']['gemini_browser'] ?? null;
+$mistralInternal = $today['providers']['mistral_ocr'] ?? null;
+
 $geminiStats = [
     'configured' => !empty($runtime['gemini_enabled']) && !empty($runtime['gemini_keys']),
     'keys_count' => count($runtime['gemini_keys'] ?? []),
@@ -449,8 +475,23 @@ $geminiStats = [
     'requests_today_internal' => is_array($geminiInternal) ? (int)($geminiInternal['success'] ?? 0) : 0,
     'fallback_success_today' => is_array($geminiInternal) ? (int)($geminiInternal['fallback_success'] ?? 0) : 0,
     'tokens_today_internal' => is_array($geminiInternal) ? (int)($geminiInternal['total_tokens'] ?? 0) : 0,
-    'message' => 'Gemini free tier không có API quota còn lại theo ngày. Số liệu dưới đây chỉ phản ánh fallback qua api/ai_explain.php.',
+    'message' => 'Fallback server khi hết Cloudflare (lộ trình). Khác với Gemini trình duyệt của Thi trực tuyến.',
     'dashboard_url' => 'https://aistudio.google.com/',
+];
+
+$geminiBrowserStats = [
+    'requests_today_internal' => is_array($geminiBrowserInternal) ? (int)($geminiBrowserInternal['success'] ?? 0) : 0,
+    'errors_today_internal' => is_array($geminiBrowserInternal) ? (int)($geminiBrowserInternal['error'] ?? 0) : 0,
+    'tokens_today_internal' => is_array($geminiBrowserInternal) ? (int)($geminiBrowserInternal['total_tokens'] ?? 0) : 0,
+    'message' => 'Gemini gọi từ trình duyệt / hosting fallback cho Thi trực tuyến.',
+];
+
+$mistralStats = [
+    'configured' => true,
+    'requests_today_internal' => is_array($mistralInternal) ? (int)($mistralInternal['success'] ?? 0) : 0,
+    'errors_today_internal' => is_array($mistralInternal) ? (int)($mistralInternal['error'] ?? 0) : 0,
+    'message' => 'Mistral OCR quét PDF cho Thi trực tuyến (log từ trình duyệt).',
+    'dashboard_url' => 'https://console.mistral.ai/',
 ];
 
 $smartQuota = ai_smart_quota_status();
@@ -472,14 +513,15 @@ respond([
     'providers' => [
         'cloudflare' => $cloudflareStats,
         'gemini' => $geminiStats,
+        'gemini_browser' => $geminiBrowserStats,
+        'mistral_ocr' => $mistralStats,
         'shopaikey' => $shopaikeyStats,
     ],
     'notes' => [
         'Log nội bộ lưu tại data/ai_usage.json trên hosting.',
-        'Cloudflare GraphQL cần API token có quyền Account Analytics (Read).',
-        'ShopAIKey dùng endpoint OpenAI-compatible /v1/dashboard/billing/*.',
-        'Các module gọi Gemini trực tiếp từ trình duyệt không xuất hiện trong log nội bộ.',
-        'Số lượt Worker trên Cloudflare có thể cao hơn log lộ trình vì đếm mọi request tới Worker; log nội bộ chỉ ghi lượt qua api/ai_explain.php.',
-        'Smart Quota: ước tính Neurons/ngày từ token mỗi lần Cloudflare thành công (mặc định 10.000 Neurons free). Cảnh báo vàng khi còn ≤20%, đỏ khi hết.',
+        'Cloudflare GraphQL đếm mọi request Worker; log nội bộ tách theo module (lộ trình, văn bản…).',
+        'Thi trực tuyến: Mistral OCR + Gemini trình duyệt được ghi qua api/ai_usage_report.php.',
+        'Smart Quota: Neurons từ Cloudflare lộ trình + quản lý văn bản (ước tính ~10.000 Neurons/ngày free).',
+        'Ma trận đề / KTTX / game gọi Gemini trực tiếp — chưa ghi log (sẽ bổ sung sau nếu cần).',
     ],
 ]);

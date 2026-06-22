@@ -22,9 +22,31 @@
     function providerLabel(id) {
         return ({
             cloudflare_workers_ai: 'Cloudflare Workers AI',
-            gemini: 'Gemini',
+            gemini: 'Gemini (fallback server)',
+            gemini_browser: 'Gemini (trình duyệt)',
+            mistral_ocr: 'Mistral OCR',
             shopaikey: 'ShopAIKey / DeepSeek',
         })[id] || id;
+    }
+
+    function moduleLabel(id) {
+        return ({
+            lotrinh: 'Lộ trình học',
+            thitructuyen: 'Thi trực tuyến',
+            vanban: 'Quản lý văn bản',
+            matrande: 'Ma trận đề',
+            kttx: 'KTTX',
+            other: 'Khác',
+        })[id] || id;
+    }
+
+    function moduleBucket(byModule, id) {
+        return (byModule && byModule[id]) || { calls: 0, success: 0, error: 0, providers: {} };
+    }
+
+    function providerInModule(mod, providerId) {
+        const bucket = mod.providers?.[providerId];
+        return bucket ? (bucket.success || 0) : 0;
     }
 
     function smartQuotaLevelMeta(level) {
@@ -74,7 +96,7 @@
                             <span class="inline-flex rounded-full border border-white/70 bg-white/80 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${meta.text}">${escapeHtml(meta.label)}</span>
                             ${sq.enabled ? '' : '<span class="text-[11px] font-semibold text-slate-500">(đang tắt)</span>'}
                         </div>
-                        <p class="mt-2 text-sm leading-6 ${meta.text}">${notice || 'Ưu tiên Cloudflare khi còn quota — tự chuyển fallback khi hết.'}</p>
+                        <p class="mt-2 text-sm leading-6 ${meta.text}">${notice || 'Áp dụng Cloudflare cho lộ trình học + quản lý văn bản. Thi trực tuyến dùng Mistral + Gemini riêng.'}</p>
                         <p class="mt-1 text-xs ${meta.text} opacity-80">Khi hết: <strong>${escapeHtml(modeLabel)}</strong> · Reset ${resetsAt}</p>
                     </div>
                     <div class="shrink-0 text-right text-xs ${meta.text}">
@@ -102,6 +124,38 @@
         `;
     }
 
+    function renderModuleCards(catalog, byModule) {
+        const items = Array.isArray(catalog) && catalog.length
+            ? catalog
+            : [
+                { id: 'lotrinh', label: moduleLabel('lotrinh'), note: 'api/ai_explain.php' },
+                { id: 'thitructuyen', label: moduleLabel('thitructuyen'), note: 'Mistral OCR + Gemini' },
+                { id: 'vanban', label: moduleLabel('vanban'), note: 'Cloudflare Worker' },
+            ];
+        const toneClasses = {
+            lotrinh: 'rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-900',
+            thitructuyen: 'rounded-xl border border-violet-200 bg-violet-50 p-4 text-violet-900',
+            vanban: 'rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900',
+        };
+        return items.map((item) => {
+            const mod = moduleBucket(byModule, item.id);
+            const cardClass = toneClasses[item.id] || 'rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-900';
+            const providerLines = (item.providers || []).map((pid) => {
+                const count = providerInModule(mod, pid);
+                if (!count) return '';
+                return `${providerLabel(pid)}: ${formatNumber(count)}`;
+            }).filter(Boolean).join(' · ');
+            return `
+                <div class="${cardClass}">
+                    <div class="text-sm font-bold">${escapeHtml(item.label || moduleLabel(item.id))}</div>
+                    <div class="mt-2 text-3xl font-black">${formatNumber(mod.success || 0)}</div>
+                    <div class="text-xs opacity-90">thành công hôm nay · ${formatNumber(mod.calls || 0)} lượt gọi</div>
+                    <div class="mt-2 text-xs opacity-90">${providerLines || escapeHtml(item.note || '')}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
     function renderAiStats(data, ids = {}) {
         const loadingId = ids.loading || 'aiStatsLoading';
         const contentId = ids.content || 'aiStatsContent';
@@ -111,54 +165,39 @@
 
         const cf = data.providers?.cloudflare || {};
         const gemini = data.providers?.gemini || {};
+        const geminiBrowser = data.providers?.gemini_browser || {};
+        const mistral = data.providers?.mistral_ocr || {};
         const shop = data.providers?.shopaikey || {};
         const internal = data.internal || {};
         const summary = internal.summary || {};
         const providers = summary.providers || {};
+        const byModule = summary.by_module || {};
         const byMode = summary.by_mode || {};
         const history = Array.isArray(data.history) ? data.history : [];
         const recent = Array.isArray(internal.recent) ? internal.recent : [];
         const generatedAt = data.generated_at || '';
-
-        const providerCards = ['cloudflare_workers_ai', 'gemini', 'shopaikey'].map(id => {
-            const bucket = providers[id] || {};
-            let mainValue = bucket.success || 0;
-            let subtitle = 'thành công hôm nay (log lộ trình)';
-            let detailLine = `Gọi log: ${formatNumber(bucket.calls || 0)} · Lỗi log: ${formatNumber(bucket.error || 0)}`;
-
-            if (id === 'cloudflare_workers_ai') {
-                const workerRequests = bucket.worker_requests_today ?? (cf.available ? cf.requests_today : null);
-                const workerSuccess = bucket.worker_success_today ?? (cf.available ? cf.success_today : null);
-                if (workerRequests != null) {
-                    mainValue = workerRequests;
-                    subtitle = 'lượt gọi Worker (Cloudflare Dashboard)';
-                    detailLine = `Thành công CF: ${formatNumber(workerSuccess ?? 0)} · Log lộ trình: ${formatNumber(bucket.success || cf.requests_today_internal || 0)}`;
-                }
-            }
-
-            const tokenPart = bucket.total_tokens ? ` · Token: ${formatNumber(bucket.total_tokens)}` : '';
-            const usdPart = bucket.estimated_usd ? ` · ~${formatUsd(bucket.estimated_usd)}` : '';
-
-            return `
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div class="text-xs font-bold uppercase tracking-wide text-slate-500">${escapeHtml(providerLabel(id))}</div>
-                    <div class="mt-2 text-2xl font-black text-slate-900">${formatNumber(mainValue)}</div>
-                    <div class="text-xs text-slate-500">${subtitle}</div>
-                    <div class="mt-2 text-xs text-slate-600">${detailLine}${tokenPart}${usdPart}</div>
-                </div>
-            `;
-        }).join('');
+        const cfBucket = providers.cloudflare_workers_ai || {};
+        const cfLogTotal = cfBucket.success || cf.requests_today_internal || 0;
+        const cfLogLotrinh = providerInModule(moduleBucket(byModule, 'lotrinh'), 'cloudflare_workers_ai');
+        const cfLogVanban = providerInModule(moduleBucket(byModule, 'vanban'), 'cloudflare_workers_ai');
 
         const historyRows = history.map(row => {
-            const cfDay = row.providers?.cloudflare_workers_ai?.success || 0;
-            const gemDay = row.providers?.gemini?.success || 0;
-            const shopDay = row.providers?.shopaikey?.success || 0;
-            return `<tr class="border-t border-slate-100"><td class="px-3 py-2 text-sm font-semibold">${escapeHtml(row.date)}</td><td class="px-3 py-2 text-sm">${formatNumber(row.total_success || 0)}</td><td class="px-3 py-2 text-sm">${formatNumber(cfDay)}</td><td class="px-3 py-2 text-sm">${formatNumber(gemDay)}</td><td class="px-3 py-2 text-sm">${formatNumber(shopDay)}</td></tr>`;
+            const p = row.providers || {};
+            return `<tr class="border-t border-slate-100">
+                <td class="px-3 py-2 text-sm font-semibold">${escapeHtml(row.date)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(row.total_success || 0)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(p.cloudflare_workers_ai?.success || 0)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(p.mistral_ocr?.success || 0)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(p.gemini_browser?.success || 0)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(p.gemini?.success || 0)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(p.shopaikey?.success || 0)}</td>
+            </tr>`;
         }).join('');
 
-        const recentRows = recent.slice(0, 15).map(item => `
+        const recentRows = recent.slice(0, 20).map(item => `
             <tr class="border-t border-slate-100">
                 <td class="px-3 py-2 text-xs text-slate-500">${escapeHtml((item.ts || '').replace('T', ' ').slice(0, 19))}</td>
+                <td class="px-3 py-2 text-xs font-semibold text-slate-700">${escapeHtml(moduleLabel(item.module || 'other'))}</td>
                 <td class="px-3 py-2 text-sm">${escapeHtml(providerLabel(item.provider))}</td>
                 <td class="px-3 py-2 text-sm">${escapeHtml(item.mode || '')}</td>
                 <td class="px-3 py-2 text-sm">${item.ok ? '<span class="text-emerald-700 font-semibold">OK</span>' : '<span class="text-rose-700 font-semibold">Lỗi</span>'}${item.fallback ? ' <span class="text-amber-700 text-xs">(fallback)</span>' : ''}</td>
@@ -170,54 +209,66 @@
 
         content.innerHTML = `
             ${renderSmartQuotaPanel(smartQuota)}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div>
+                <h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fas fa-layer-group text-sky-600 mr-1"></i> Theo module hôm nay</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule)}</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                 <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
                     <div class="flex items-center justify-between gap-2">
-                        <div class="text-sm font-bold text-orange-900">Cloudflare Workers AI</div>
+                        <div class="text-sm font-bold text-orange-900">Cloudflare Worker</div>
                         ${cf.available ? '<span class="text-xs font-semibold text-emerald-700">GraphQL OK</span>' : '<span class="text-xs font-semibold text-amber-700">GraphQL chưa có</span>'}
                     </div>
-                    <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
-                        <div><div class="text-xs text-orange-800">Worker hôm nay (CF)</div><div class="text-xl font-black text-orange-950">${cf.available ? formatNumber(cf.requests_today) : '—'}</div></div>
-                        <div><div class="text-xs text-orange-800">Lộ trình hôm nay (log)</div><div class="text-xl font-black text-orange-950">${formatNumber(cf.requests_today_internal || 0)}</div></div>
-                    </div>
-                    <div class="mt-2 text-xs text-orange-800">Model: <code>${escapeHtml(data.config?.cloudflare_model || '')}</code>${cf.script_name ? ` · Script: <code>${escapeHtml(cf.script_name)}</code>` : ''}</div>
-                    <div class="mt-2 text-xs text-orange-700">${escapeHtml(cf.message || '')}</div>
-                    ${cf.dashboard_url ? `<a href="${escapeHtml(cf.dashboard_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-bold text-orange-900 underline">Mở Cloudflare Dashboard</a>` : ''}
+                    <div class="mt-2 text-2xl font-black text-orange-950">${cf.available ? formatNumber(cf.requests_today) : '—'}</div>
+                    <div class="text-xs text-orange-800">Dashboard CF hôm nay</div>
+                    <div class="mt-2 text-xs text-orange-800">Log nội bộ: ${formatNumber(cfLogTotal)} (lộ trình ${formatNumber(cfLogLotrinh)} · văn bản ${formatNumber(cfLogVanban)})</div>
+                    <div class="mt-1 text-xs text-orange-700"><code>${escapeHtml(data.config?.cloudflare_model || '')}</code></div>
+                    ${cf.dashboard_url ? `<a href="${escapeHtml(cf.dashboard_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-bold text-orange-900 underline">Cloudflare Dashboard</a>` : ''}
+                </div>
+                <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                    <div class="text-sm font-bold text-violet-900">Mistral OCR</div>
+                    <div class="mt-2 text-2xl font-black text-violet-950">${formatNumber(mistral.requests_today_internal || 0)}</div>
+                    <div class="text-xs text-violet-800">Thi trực tuyến · quét PDF</div>
+                    <div class="mt-2 text-xs text-violet-700">${escapeHtml(mistral.message || '')}</div>
+                </div>
+                <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                    <div class="text-sm font-bold text-blue-900">Gemini trình duyệt</div>
+                    <div class="mt-2 text-2xl font-black text-blue-950">${formatNumber(geminiBrowser.requests_today_internal || 0)}</div>
+                    <div class="text-xs text-blue-800">Thi trực tuyến · nhận diện câu hỏi</div>
+                    <div class="mt-2 text-xs text-blue-700">${escapeHtml(geminiBrowser.message || '')}</div>
                 </div>
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                    <div class="text-sm font-bold text-emerald-900">Google Gemini (fallback)</div>
-                    <div class="mt-3 text-3xl font-black text-emerald-950">${formatNumber(gemini.requests_today_internal || 0)}</div>
-                    <div class="text-xs text-emerald-800">lượt fallback thành công hôm nay</div>
-                    <div class="mt-2 text-xs text-emerald-800">${formatNumber(gemini.keys_count || 0)} key · Model <code>${escapeHtml(gemini.model || '')}</code></div>
-                    <div class="mt-2 text-xs text-emerald-700">${escapeHtml(gemini.message || '')}</div>
-                    ${gemini.dashboard_url ? `<a href="${escapeHtml(gemini.dashboard_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-bold text-emerald-900 underline">Mở Google AI Studio</a>` : ''}
+                    <div class="text-sm font-bold text-emerald-900">Gemini fallback</div>
+                    <div class="mt-2 text-2xl font-black text-emerald-950">${formatNumber(gemini.requests_today_internal || 0)}</div>
+                    <div class="text-xs text-emerald-800">Lộ trình · khi hết Cloudflare</div>
+                    <div class="mt-2 text-xs text-emerald-700">${formatNumber(gemini.keys_count || 0)} key · <code>${escapeHtml(gemini.model || '')}</code></div>
                 </div>
                 <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
                     <div class="flex items-center justify-between gap-2">
-                        <div class="text-sm font-bold text-indigo-900">ShopAIKey / DeepSeek</div>
+                        <div class="text-sm font-bold text-indigo-900">ShopAIKey</div>
                         ${shop.available ? '<span class="text-xs font-semibold text-emerald-700">API OK</span>' : '<span class="text-xs font-semibold text-amber-700">API chưa có</span>'}
                     </div>
-                    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-                        <div><div class="text-xs text-indigo-800">Đã dùng</div><div class="text-lg font-black text-indigo-950">${shop.used_usd != null ? formatUsd(shop.used_usd) : '—'}</div></div>
-                        <div><div class="text-xs text-indigo-800">Còn lại</div><div class="text-lg font-black text-indigo-950">${shop.remaining_usd != null ? formatUsd(shop.remaining_usd) : '—'}</div></div>
-                        <div><div class="text-xs text-indigo-800">Hôm nay (log)</div><div class="text-lg font-black text-indigo-950">${formatNumber(shop.requests_today_internal || 0)}</div></div>
-                    </div>
-                    <div class="mt-2 text-xs text-indigo-800">Model: <code>${escapeHtml(data.config?.shopaikey_model || '')}</code>${shop.estimated_usd_today_internal ? ` · Ước tính hôm nay: ${formatUsd(shop.estimated_usd_today_internal)}` : ''}</div>
-                    <div class="mt-2 text-xs text-indigo-700">${escapeHtml(shop.message || '')}</div>
-                    ${shop.dashboard_url ? `<a href="${escapeHtml(shop.dashboard_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-bold text-indigo-900 underline">Mở ShopAIKey Dashboard</a>` : ''}
+                    <div class="mt-2 text-2xl font-black text-indigo-950">${formatNumber(shop.requests_today_internal || 0)}</div>
+                    <div class="text-xs text-indigo-800">Lộ trình fallback · còn ${shop.remaining_usd != null ? formatUsd(shop.remaining_usd) : '—'}</div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 md:col-span-1">
-                    <div class="text-xs font-bold uppercase text-sky-700">Hôm nay (${escapeHtml(data.today || '')})</div>
+                    <div class="text-xs font-bold uppercase text-sky-700">Tổng hôm nay (${escapeHtml(data.today || '')})</div>
                     <div class="mt-2 text-3xl font-black text-sky-950">${formatNumber(summary.total_success || 0)}</div>
-                    <div class="text-xs text-sky-800">phản hồi AI thành công (lộ trình)</div>
-                    <div class="mt-3 text-xs text-sky-800">Giải thích: <strong>${formatNumber(byMode.explain || 0)}</strong> · Chat: <strong>${formatNumber(byMode.chat || 0)}</strong></div>
+                    <div class="text-xs text-sky-800">phản hồi AI thành công (mọi module)</div>
+                    <div class="mt-3 text-xs text-sky-800">Giải thích: <strong>${formatNumber(byMode.explain || 0)}</strong> · Chat: <strong>${formatNumber(byMode.chat || 0)}</strong> · OCR: <strong>${formatNumber(byMode.ocr || 0)}</strong></div>
                 </div>
-                <div class="md:col-span-3">
-                    <div class="mb-2 text-xs font-semibold text-slate-500">Chi tiết theo provider · Cloudflare lấy từ Dashboard, Gemini/ShopAIKey từ log <code>api/ai_explain.php</code></div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${providerCards}</div>
+                <div class="md:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-700">
+                    <div class="font-bold text-slate-800 mb-2">Bản đồ AI theo chức năng</div>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Lộ trình học</strong> → Cloudflare Worker (chính) → Gemini / ShopAIKey (fallback)</li>
+                        <li><strong>Thi trực tuyến</strong> → Mistral OCR (quét PDF) → Gemini trình duyệt (nhận diện câu hỏi)</li>
+                        <li><strong>Quản lý văn bản</strong> → Cloudflare Worker (trích xuất metadata)</li>
+                    </ul>
                 </div>
             </div>
 
@@ -226,9 +277,9 @@
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
                     <table class="min-w-full text-left">
                         <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
-                            <tr><th class="px-3 py-2">Ngày</th><th class="px-3 py-2">Thành công</th><th class="px-3 py-2">CF</th><th class="px-3 py-2">Gemini</th><th class="px-3 py-2">ShopAIKey</th></tr>
+                            <tr><th class="px-3 py-2">Ngày</th><th class="px-3 py-2">Tổng</th><th class="px-3 py-2">CF</th><th class="px-3 py-2">Mistral</th><th class="px-3 py-2">Gemini TB</th><th class="px-3 py-2">Gemini FB</th><th class="px-3 py-2">ShopAIKey</th></tr>
                         </thead>
-                        <tbody>${historyRows || '<tr><td colspan="5" class="px-3 py-4 text-sm text-slate-400">Chưa có dữ liệu.</td></tr>'}</tbody>
+                        <tbody>${historyRows || '<tr><td colspan="7" class="px-3 py-4 text-sm text-slate-400">Chưa có dữ liệu.</td></tr>'}</tbody>
                     </table>
                 </div>
             </div>
@@ -238,9 +289,9 @@
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
                     <table class="min-w-full text-left">
                         <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
-                            <tr><th class="px-3 py-2">Thời gian</th><th class="px-3 py-2">Provider</th><th class="px-3 py-2">Mode</th><th class="px-3 py-2">Kết quả</th><th class="px-3 py-2">Model</th></tr>
+                            <tr><th class="px-3 py-2">Thời gian</th><th class="px-3 py-2">Module</th><th class="px-3 py-2">Provider</th><th class="px-3 py-2">Mode</th><th class="px-3 py-2">Kết quả</th><th class="px-3 py-2">Model</th></tr>
                         </thead>
-                        <tbody>${recentRows || '<tr><td colspan="5" class="px-3 py-4 text-sm text-slate-400">Chưa có lượt gọi nào.</td></tr>'}</tbody>
+                        <tbody>${recentRows || '<tr><td colspan="6" class="px-3 py-4 text-sm text-slate-400">Chưa có lượt gọi nào.</td></tr>'}</tbody>
                     </table>
                 </div>
             </div>
@@ -264,15 +315,14 @@
         if (!mount) return;
 
         const cf = data.providers?.cloudflare || {};
-        const gemini = data.providers?.gemini || {};
-        const shop = data.providers?.shopaikey || {};
+        const geminiBrowser = data.providers?.gemini_browser || {};
+        const mistral = data.providers?.mistral_ocr || {};
         const summary = data.internal?.summary || {};
-        const providers = summary.providers || {};
-        const cfBucket = providers.cloudflare_workers_ai || {};
-        const cfWorker = cfBucket.worker_requests_today ?? (cf.available ? cf.requests_today : null);
-        const cfLog = cfBucket.success || cf.requests_today_internal || 0;
-        const gemLog = gemini.requests_today_internal || providers.gemini?.success || 0;
-        const shopLog = shop.requests_today_internal || providers.shopaikey?.success || 0;
+        const byModule = summary.by_module || {};
+        const lotrinh = moduleBucket(byModule, 'lotrinh');
+        const thitt = moduleBucket(byModule, 'thitructuyen');
+        const vanban = moduleBucket(byModule, 'vanban');
+        const cfWorker = cf.available ? cf.requests_today : null;
 
         const smartQuota = data.smart_quota || null;
         const quotaCompact = renderSmartQuotaPanel(smartQuota, { compact: true, hideLink: true });
@@ -282,24 +332,24 @@
             ${quotaCompact || ''}
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
-                    <div class="text-[10px] font-bold uppercase text-sky-700">Lộ trình hôm nay</div>
-                    <div class="mt-1 text-2xl font-black text-sky-950">${formatNumber(summary.total_success || 0)}</div>
-                    <div class="text-[11px] text-sky-800">phản hồi thành công</div>
+                    <div class="text-[10px] font-bold uppercase text-sky-700">Lộ trình</div>
+                    <div class="mt-1 text-2xl font-black text-sky-950">${formatNumber(lotrinh.success || 0)}</div>
+                    <div class="text-[11px] text-sky-800">thành công hôm nay</div>
+                </div>
+                <div class="rounded-xl border border-violet-200 bg-violet-50 p-3">
+                    <div class="text-[10px] font-bold uppercase text-violet-800">Thi trực tuyến</div>
+                    <div class="mt-1 text-2xl font-black text-violet-950">${formatNumber(thitt.success || 0)}</div>
+                    <div class="text-[11px] text-violet-800">Mistral ${formatNumber(mistral.requests_today_internal || 0)} · Gemini ${formatNumber(geminiBrowser.requests_today_internal || 0)}</div>
+                </div>
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <div class="text-[10px] font-bold uppercase text-amber-800">Quản lý VB</div>
+                    <div class="mt-1 text-2xl font-black text-amber-950">${formatNumber(vanban.success || 0)}</div>
+                    <div class="text-[11px] text-amber-800">Cloudflare hôm nay</div>
                 </div>
                 <div class="rounded-xl border border-orange-200 bg-orange-50 p-3">
-                    <div class="text-[10px] font-bold uppercase text-orange-800">Cloudflare Worker</div>
+                    <div class="text-[10px] font-bold uppercase text-orange-800">Worker CF</div>
                     <div class="mt-1 text-2xl font-black text-orange-950">${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
-                    <div class="text-[11px] text-orange-800">log lộ trình: ${formatNumber(cfLog)}</div>
-                </div>
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                    <div class="text-[10px] font-bold uppercase text-emerald-800">Gemini fallback</div>
-                    <div class="mt-1 text-2xl font-black text-emerald-950">${formatNumber(gemLog)}</div>
-                    <div class="text-[11px] text-emerald-800">lượt hôm nay</div>
-                </div>
-                <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3">
-                    <div class="text-[10px] font-bold uppercase text-indigo-800">ShopAIKey</div>
-                    <div class="mt-1 text-2xl font-black text-indigo-950">${formatNumber(shopLog)}</div>
-                    <div class="text-[11px] text-indigo-800">${shop.remaining_usd != null ? `còn ${formatUsd(shop.remaining_usd)}` : 'log hôm nay'}</div>
+                    <div class="text-[11px] text-orange-800">Dashboard · tổng log ${formatNumber(summary.total_success || 0)}</div>
                 </div>
             </div>
             </div>

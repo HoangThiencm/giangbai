@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/hf_fallback.php';
+require_once __DIR__ . '/ai_usage_log.php';
 
 set_time_limit(180);
 
@@ -20,6 +21,18 @@ function exam_ai_progress_get(string $pageId): int
 {
     if ($pageId === '') return 0;
     return (int)@file_get_contents(exam_ai_progress_path($pageId));
+}
+
+function exam_ai_log_gemini(string $mode, string $model, bool $ok, string $error = ''): void
+{
+    ai_usage_record([
+        'provider' => 'gemini_browser',
+        'module' => 'thitructuyen',
+        'mode' => $mode,
+        'model' => $model,
+        'ok' => $ok,
+        'error' => $ok ? '' : $error,
+    ]);
 }
 
 function exam_ai_clean_text(string $text): string
@@ -171,12 +184,14 @@ PROMPT;
 
     if (!$vision['ok'] || !is_array($vision['data'])) {
         exam_ai_progress_set($pageId, 100);
+        exam_ai_log_gemini('vision', $model, false, (string)($vision['error'] ?? 'Gemini Vision lỗi'));
         return [
             'status' => 'error',
             'message' => (string)($vision['error'] ?? 'Gemini Vision không trả về dữ liệu. Thử đổi model hoặc bật fallback HF.'),
             'data' => [],
         ];
     }
+    exam_ai_log_gemini('vision', $model, true);
 
     $merged = [];
     foreach ($vision['data'] as $q) {
@@ -235,7 +250,11 @@ Nếu không có câu hỏi, trả về [].
 PROMPT;
 
     $vision = hf_call_gemini_vision($apiKeys, $prompt, base64_encode($imgBytes), $model, 3);
-    if (!$vision['ok'] || !is_array($vision['data'])) return null;
+    if (!$vision['ok'] || !is_array($vision['data'])) {
+        exam_ai_log_gemini('manual', $model, false, (string)($vision['error'] ?? 'Gemini manual lỗi'));
+        return null;
+    }
+    exam_ai_log_gemini('manual', $model, true);
 
     $final = [];
     foreach ($vision['data'] as $q) {
@@ -266,7 +285,11 @@ Output JSON: [{"index": 1, "answer": "A"}, {"index": 2, "answer": "C"}...]
 PROMPT;
 
     $vision = hf_call_gemini_vision($apiKeys, $prompt, base64_encode($imgBytes), $model, 3);
-    if (!$vision['ok'] || !is_array($vision['data'])) return null;
+    if (!$vision['ok'] || !is_array($vision['data'])) {
+        exam_ai_log_gemini('answer_sheet', $model, false, (string)($vision['error'] ?? 'Gemini answer sheet lỗi'));
+        return null;
+    }
+    exam_ai_log_gemini('answer_sheet', $model, true);
 
     return ['status' => 'ok', 'data' => $vision['data']];
 }

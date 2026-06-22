@@ -164,6 +164,25 @@ function vbd_runtime_model(): string
     return preg_match('#^@cf/[a-z0-9._-]+/[a-z0-9._-]+$#i', $model) ? $model : '@cf/qwen/qwen3-30b-a3b-fp8';
 }
 
+function vbd_log_ai_usage(bool $ok, string $model, string $error = ''): void
+{
+    require_once __DIR__ . '/ai_usage_log.php';
+    ai_usage_record([
+        'provider' => 'cloudflare_workers_ai',
+        'module' => 'vanban',
+        'mode' => 'document',
+        'model' => $model,
+        'ok' => $ok,
+        'error' => $ok ? '' : $error,
+    ]);
+    if ($ok) {
+        require_once __DIR__ . '/ai_smart_quota.php';
+        $cfg = ai_smart_quota_load_config();
+        $neurons = ai_smart_quota_estimate_neurons($model, 0, 0, (int)$cfg['avg_neurons_per_call']);
+        ai_smart_quota_add_neurons($neurons);
+    }
+}
+
 function vbd_ai_extract(string $source): array
 {
     $workerUrl = defined('CLOUDFLARE_AI_WORKER_URL') ? rtrim(trim((string)CLOUDFLARE_AI_WORKER_URL), '/') : '';
@@ -173,10 +192,11 @@ function vbd_ai_extract(string $source): array
     }
     if (!function_exists('curl_init')) throw new RuntimeException('Hosting chưa bật cURL để gọi AI.');
 
+    $model = vbd_runtime_model();
     $payload = json_encode([
         'mode' => 'document',
         'text' => vbd_truncate($source, 18000),
-        'model' => vbd_runtime_model(),
+        'model' => $model,
     ], JSON_UNESCAPED_UNICODE);
     $ch = curl_init($workerUrl . '/chat');
     curl_setopt_array($ch, [
@@ -198,6 +218,7 @@ function vbd_ai_extract(string $source): array
     if ($status < 200 || $status >= 300 || !is_array($response) || empty($response['answer'])) {
         $message = is_array($response) ? trim((string)($response['error'] ?? '')) : '';
         if ($message === '') $message = $error ?: 'Workers AI không phản hồi.';
+        vbd_log_ai_usage(false, $model, $message);
         throw new RuntimeException($message);
     }
 
@@ -209,7 +230,11 @@ function vbd_ai_extract(string $source): array
         throw new RuntimeException('AI không trả về dữ liệu văn bản đúng định dạng.');
     }
     $data = json_decode(substr($answer, $start, $end - $start + 1), true);
-    if (!is_array($data)) throw new RuntimeException('Không đọc được dữ liệu AI trả về.');
+    if (!is_array($data)) {
+        vbd_log_ai_usage(false, $model, 'Không đọc được dữ liệu AI trả về.');
+        throw new RuntimeException('Không đọc được dữ liệu AI trả về.');
+    }
+    vbd_log_ai_usage(true, (string)($response['model'] ?? $model));
     return [
         'document_number' => trim((string)($data['document_number'] ?? '')),
         'title' => trim((string)($data['title'] ?? '')),
