@@ -206,9 +206,17 @@
         `).join('');
 
         const smartQuota = data.smart_quota || null;
+        const explainCache = data.explain_cache || {};
 
         content.innerHTML = `
             ${renderSmartQuotaPanel(smartQuota)}
+
+            <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+                <div class="text-sm font-bold">Cache câu trả lời lộ trình</div>
+                <div class="mt-2 text-2xl font-black">${formatNumber(explainCache.entries || 0)}</div>
+                <div class="text-xs text-cyan-800">câu đã lưu · tái sử dụng ${formatNumber(explainCache.total_hits || 0)} lần${explainCache.enabled === false ? ' · đang tắt' : ''}</div>
+                <div class="mt-1 text-xs text-cyan-700">Giữ tối đa ${formatNumber(explainCache.max_entries || 0)} câu trong ${formatNumber(explainCache.ttl_days || 0)} ngày</div>
+            </div>
 
             <div>
                 <h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fas fa-layer-group text-sky-600 mr-1"></i> Theo module hôm nay</h4>
@@ -267,7 +275,7 @@
                     <ul class="list-disc pl-5 space-y-1">
                         <li><strong>Lộ trình học</strong> → Cloudflare Worker (chính) → Gemini / ShopAIKey (fallback)</li>
                         <li><strong>Thi trực tuyến</strong> → Mistral OCR (quét PDF) → Gemini trình duyệt (nhận diện câu hỏi)</li>
-                        <li><strong>Quản lý văn bản</strong> → Cloudflare Worker (trích xuất metadata)</li>
+                        <li><strong>Quản lý văn bản</strong> → Tự nhận diện mẫu (không AI)</li>
                     </ul>
                 </div>
             </div>

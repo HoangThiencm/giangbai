@@ -267,6 +267,12 @@
         return mathText(cleanAiAnswer(value));
     }
 
+    function formatAiCacheNote(data) {
+        if (!data?.cached) return '';
+        const hits = Number(data.cache_hits) > 1 ? ` · dùng lại lần ${data.cache_hits}` : '';
+        return `<p class="mt-2 text-xs font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước${hits} — không tốn quota AI.</p>`;
+    }
+
     function practiceItems(lesson) {
         return [
             ...(Array.isArray(lesson.questions) ? lesson.questions.map(item => ({ type: 'choice', item })) : []),
@@ -3053,7 +3059,7 @@
         showAiModal('<p class="text-slate-500"><i class="fas fa-spinner fa-spin"></i> AI đang giải thích...</p>', anchor);
         try {
             const data = await requestAiExplain(lesson, selectedText);
-            showAiModal(renderAiAnswer(data.answer || ''), anchor);
+            showAiModal(renderAiAnswer(data.answer || '') + formatAiCacheNote(data), anchor);
             anchor.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         } catch (err) {
             showAiModal(formatAiErrorHtml(err), anchor);
@@ -3118,7 +3124,10 @@
             return;
         }
         box.innerHTML = aiAssistState.chatHistory.map(msg => `
-            <div class="lesson-ai-chat-msg ${msg.role === 'error' ? 'error' : msg.role}">${msg.role === 'assistant' ? renderAiAnswer(msg.content) : escapeHtml(msg.content)}</div>
+            <div class="lesson-ai-chat-msg ${msg.role === 'error' ? 'error' : msg.role}">
+                ${msg.role === 'assistant' ? renderAiAnswer(msg.content) : escapeHtml(msg.content)}
+                ${msg.role === 'assistant' && msg.cached ? '<div class="mt-1 text-[11px] font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước</div>' : ''}
+            </div>
         `).join('');
         box.scrollTop = box.scrollHeight;
         typesetMath();
@@ -3149,7 +3158,11 @@
                 const history = aiAssistState.chatHistory.slice(0, -2);
                 const data = await requestAiChat(lesson, question, history);
                 aiAssistState.chatHistory.pop();
-                aiAssistState.chatHistory.push({ role: 'assistant', content: data.answer || '' });
+                aiAssistState.chatHistory.push({
+                    role: 'assistant',
+                    content: data.answer || '',
+                    cached: !!data.cached,
+                });
             } catch (err) {
                 aiAssistState.chatHistory.pop();
                 aiAssistState.chatHistory.push({ role: 'error', content: formatAiErrorMessage(err) });
@@ -3260,7 +3273,7 @@
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang giải thích...';
         try {
             const data = await requestAiExplain(lesson, text);
-            showAiModal(renderAiAnswer(data.answer || ''), button);
+            showAiModal(renderAiAnswer(data.answer || '') + formatAiCacheNote(data), button);
         } catch (err) {
             showAiModal(formatAiErrorHtml(err), button);
         } finally {

@@ -67,6 +67,15 @@ if (isset($nextConfig['mistral_enabled'])) {
 if (isset($nextConfig['light_ai_enabled'])) {
     $nextConfig['light_ai_enabled'] = (bool)$nextConfig['light_ai_enabled'];
 }
+if (array_key_exists('ai_explain_cache_enabled', $nextConfig)) {
+    $nextConfig['ai_explain_cache_enabled'] = (bool)$nextConfig['ai_explain_cache_enabled'];
+}
+if (isset($nextConfig['ai_explain_cache_max_entries'])) {
+    $nextConfig['ai_explain_cache_max_entries'] = max(100, min(20000, (int)$nextConfig['ai_explain_cache_max_entries']));
+}
+if (isset($nextConfig['ai_explain_cache_ttl_days'])) {
+    $nextConfig['ai_explain_cache_ttl_days'] = max(1, min(365, (int)$nextConfig['ai_explain_cache_ttl_days']));
+}
 if (isset($nextConfig['shopaikey_api_key'])) {
     $nextConfig['shopaikey_api_key'] = trim((string)$nextConfig['shopaikey_api_key']);
 }

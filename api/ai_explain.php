@@ -2,6 +2,7 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
 require_once __DIR__ . '/ai_smart_quota.php';
+require_once __DIR__ . '/ai_explain_cache.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -588,10 +589,71 @@ function try_shopaikey_explain(array $config, string $prompt): ?array
     return ['error' => $errorMessage, 'provider' => 'shopaikey'];
 }
 
+function ai_explain_cache_eligible(string $mode, string $text, string $question): bool
+{
+    $minLen = 8;
+    if ($mode === 'chat') {
+        return mb_strlen(ai_explain_cache_normalize($question)) >= $minLen;
+    }
+    return mb_strlen(ai_explain_cache_normalize($text)) >= $minLen;
+}
+
+function ai_explain_respond_success(
+    string $cacheKey,
+    string $mode,
+    string $subject,
+    string $lessonTitle,
+    array $result,
+    bool $fromCache = false,
+    ?array $quotaStatus = null
+): void {
+    $answer = trim((string)($result['answer'] ?? ''));
+    $complete = !empty($result['complete']) || answer_looks_complete($answer);
+
+    if (!$fromCache && $answer !== '' && $complete) {
+        ai_explain_cache_put($cacheKey, [
+            'answer' => $answer,
+            'complete' => true,
+            'provider' => (string)($result['provider'] ?? ''),
+            'model' => (string)($result['model'] ?? ''),
+            'mode' => $mode,
+            'subject' => $subject,
+            'lesson_title' => $lessonTitle,
+        ]);
+    }
+
+    $payload = [
+        'ok' => true,
+        'answer' => $answer,
+        'complete' => $complete,
+        'provider' => (string)($result['provider'] ?? ($fromCache ? 'cache' : '')),
+        'model' => (string)($result['model'] ?? ''),
+        'quota' => $quotaStatus ?? ai_smart_quota_status(),
+    ];
+    if ($fromCache) {
+        $payload['cached'] = true;
+        if (!empty($result['hits'])) {
+            $payload['cache_hits'] = (int)$result['hits'];
+        }
+    }
+    if (!empty($result['fallback'])) {
+        $payload['fallback'] = true;
+    }
+    respond($payload);
+}
+
 $runtime = load_ai_runtime_config();
 $prompt = $mode === 'chat'
     ? build_chat_prompt($subject, $lessonTitle, $lessonContext, $history, $question)
     : build_explain_prompt($subject, $lessonTitle, $text);
+
+$cacheKey = ai_explain_cache_make_key($mode, $subject, $lessonTitle, $text, $question, $lessonContext, $history);
+if (ai_explain_cache_eligible($mode, $text, $question)) {
+    $cached = ai_explain_cache_get($cacheKey);
+    if (is_array($cached) && trim((string)($cached['answer'] ?? '')) !== '') {
+        ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, $cached, true);
+    }
+}
 
 function try_cloudflare_ai_explain(array $config, array $payload): ?array
 {
@@ -680,14 +742,12 @@ if (ai_smart_quota_allows_cloudflare()) {
         ai_smart_quota_add_neurons($neurons);
         $quotaStatus = ai_smart_quota_status();
         ai_explain_log_result($mode, $cloudflareResult, true, false);
-        respond([
-            'ok' => true,
+        ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, [
             'answer' => trim($cloudflareResult['answer']),
             'complete' => answer_looks_complete($cloudflareResult['answer']),
             'provider' => 'cloudflare_workers_ai',
             'model' => $cloudflareResult['model'] ?? 'Workers AI',
-            'quota' => $quotaStatus,
-        ]);
+        ], false, $quotaStatus);
     }
     if (is_array($cloudflareResult) && !empty($cloudflareResult['error'])) {
         if (ai_smart_quota_is_exhaustion_error((string)$cloudflareResult['error'])) {
@@ -722,14 +782,12 @@ if (is_array($geminiResult) && !empty($geminiResult['answer'])) {
     $usedFallback = $cloudflareSkippedQuota
         || (is_array($cloudflareResult) && !empty($cloudflareResult['error']));
     ai_explain_log_result($mode, $geminiResult, true, $usedFallback);
-    respond([
-        'ok' => true,
+    ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, [
         'answer' => trim($geminiResult['answer']),
         'complete' => answer_looks_complete($geminiResult['answer']),
         'provider' => $geminiResult['provider'] ?? 'gemini',
         'model' => $geminiResult['model'] ?? $runtime['gemini_model'],
         'fallback' => $usedFallback,
-        'quota' => ai_smart_quota_status(),
     ]);
 }
 if (is_array($geminiResult) && !empty($geminiResult['error'])) {
@@ -739,14 +797,12 @@ if (is_array($geminiResult) && !empty($geminiResult['error'])) {
 $fallbackResult = try_shopaikey_explain($runtime, $prompt);
 if (is_array($fallbackResult) && !empty($fallbackResult['answer'])) {
     ai_explain_log_result($mode, $fallbackResult, true, true);
-    respond([
-        'ok' => true,
+    ai_explain_respond_success($cacheKey, $mode, $subject, $lessonTitle, [
         'answer' => trim($fallbackResult['answer']),
         'complete' => answer_looks_complete($fallbackResult['answer']),
         'provider' => $fallbackResult['provider'] ?? 'shopaikey',
         'model' => $fallbackResult['model'] ?? $runtime['shopaikey_model'],
         'fallback' => true,
-        'quota' => ai_smart_quota_status(),
     ]);
 }
 if (is_array($fallbackResult) && !empty($fallbackResult['error'])) {

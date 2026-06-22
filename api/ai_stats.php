@@ -2,6 +2,7 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_usage_log.php';
 require_once __DIR__ . '/ai_smart_quota.php';
+require_once __DIR__ . '/ai_explain_cache.php';
 session_start();
 
 $key = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
@@ -517,11 +518,13 @@ respond([
         'mistral_ocr' => $mistralStats,
         'shopaikey' => $shopaikeyStats,
     ],
+    'explain_cache' => ai_explain_cache_stats(),
     'notes' => [
         'Log nội bộ lưu tại data/ai_usage.json trên hosting.',
-        'Cloudflare GraphQL đếm mọi request Worker; log nội bộ tách theo module (lộ trình, văn bản…).',
+        'Cloudflare GraphQL đếm mọi request Worker; log nội bộ tách theo module (lộ trình, thi trực tuyến…).',
+        'Lộ trình: câu hỏi trùng được cache tại data/ai_explain_cache.json — không tốn quota AI.',
         'Thi trực tuyến: Mistral OCR + Gemini trình duyệt được ghi qua api/ai_usage_report.php.',
-        'Smart Quota: Neurons từ Cloudflare lộ trình + quản lý văn bản (ước tính ~10.000 Neurons/ngày free).',
+        'Smart Quota: Neurons từ Cloudflare lộ trình (ước tính ~10.000 Neurons/ngày free).',
         'Ma trận đề / KTTX / game gọi Gemini trực tiếp — chưa ghi log (sẽ bổ sung sau nếu cần).',
     ],
 ]);
