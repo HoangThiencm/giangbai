@@ -68,6 +68,10 @@
     let currentSlug = defaults.slug;
     let currentLessonId = null;
     let selectedSubject = PAGE_SUBJECT || 'Toán 6';
+    let essayItems = [];
+    let fillItems = [];
+    let dragItems = [];
+    let questionItems = [];
 
     function el(id) { return document.getElementById(id); }
 
@@ -620,6 +624,173 @@
         });
     }
 
+    // Dynamic flexible items for structured sections (support paste image per item via rich toolbar)
+    function syncEssayToTextarea() {
+        const ta = el('lessonEssay');
+        if (!ta) return;
+        ta.value = essayItems.map(i => `${i.de}|${i.dap}|${i.goi}`).join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function renderEssayItems() {
+        const cont = el('essayItems');
+        if (!cont) return;
+        cont.innerHTML = '';
+        essayItems.forEach((it, i) => {
+            const d = document.createElement('div');
+            d.className = 'p-2 border rounded bg-white text-xs';
+            d.innerHTML = `
+                <div class="flex items-center mb-1">
+                    <span class="font-bold">Bài ${i+1}</span>
+                    <button type="button" class="ml-auto text-rose-600" onclick="removeEssayItem(${i})">×</button>
+                </div>
+                ${richToolbarHtml(`essay-de-${i}`)}
+                <textarea id="essay-de-${i}" class="w-full p-1 border text-xs" placeholder="Đề bài (dán ảnh nếu cần)"></textarea>
+                <div class="flex gap-1 mt-1">
+                    <input id="essay-dap-${i}" class="flex-1 p-1 border text-xs" placeholder="Đáp án (số)">
+                    <input id="essay-goi-${i}" class="flex-1 p-1 border text-xs" placeholder="Gợi ý">
+                </div>
+            `;
+            cont.appendChild(d);
+            const de = d.querySelector(`#essay-de-${i}`);
+            de.value = it.de || '';
+            de.oninput = () => { essayItems[i].de = de.value; syncEssayToTextarea(); };
+            const dap = d.querySelector(`#essay-dap-${i}`);
+            dap.value = it.dap || '';
+            dap.oninput = () => { essayItems[i].dap = dap.value; syncEssayToTextarea(); };
+            const goi = d.querySelector(`#essay-goi-${i}`);
+            goi.value = it.goi || '';
+            goi.oninput = () => { essayItems[i].goi = goi.value; syncEssayToTextarea(); };
+        });
+        setupRichToolbars();
+    }
+    function addEssayItem() { essayItems.push({de:'', dap:'', goi:''}); renderEssayItems(); syncEssayToTextarea(); }
+    function removeEssayItem(i) { essayItems.splice(i,1); renderEssayItems(); syncEssayToTextarea(); }
+
+    function syncFillToTextarea() {
+        const ta = el('lessonFill');
+        if (!ta) return;
+        ta.value = fillItems.map(i => `${i.de}|${i.manh}|${i.dap}|${i.goi}`).join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function renderFillItems() {
+        const cont = el('fillItems');
+        if (!cont) return;
+        cont.innerHTML = '';
+        fillItems.forEach((it, i) => {
+            const d = document.createElement('div');
+            d.className = 'p-2 border rounded bg-white text-xs';
+            d.innerHTML = `
+                <div class="flex items-center mb-1"><span class="font-bold">Bài ${i+1}</span><button type="button" class="ml-auto text-rose-600" onclick="removeFillItem(${i})">×</button></div>
+                ${richToolbarHtml(`fill-de-${i}`)}
+                <textarea id="fill-de-${i}" class="w-full p-1 border text-xs" placeholder="Câu có ___ (dán ảnh)"></textarea>
+                <div class="grid grid-cols-3 gap-1 mt-1">
+                    <input id="fill-manh-${i}" class="p-1 border text-xs" placeholder="Mảnh » ...">
+                    <input id="fill-dap-${i}" class="p-1 border text-xs" placeholder="Đáp án">
+                    <input id="fill-goi-${i}" class="p-1 border text-xs" placeholder="Gợi ý">
+                </div>
+            `;
+            cont.appendChild(d);
+            const de = d.querySelector(`#fill-de-${i}`); de.value = it.de||''; de.oninput = ()=>{fillItems[i].de=de.value; syncFillToTextarea();};
+            ['manh','dap','goi'].forEach(k=>{ const inp=d.querySelector(`#fill-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{fillItems[i][k]=inp.value; syncFillToTextarea();}; });
+        });
+        setupRichToolbars();
+    }
+    function addFillItem(){ fillItems.push({de:'',manh:'',dap:'',goi:''}); renderFillItems(); syncFillToTextarea(); }
+    function removeFillItem(i){ fillItems.splice(i,1); renderFillItems(); syncFillToTextarea(); }
+
+    function syncDragToTextarea() {
+        const ta = el('lessonDrag');
+        if (!ta) return;
+        ta.value = dragItems.map(i => `${i.de}|${i.trai}|${i.phai}|${i.map}|${i.goi}`).join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function renderDragItems() {
+        const cont = el('dragItems');
+        if (!cont) return;
+        cont.innerHTML = '';
+        dragItems.forEach((it, i) => {
+            const d = document.createElement('div');
+            d.className = 'p-2 border rounded bg-white text-xs';
+            d.innerHTML = `
+                <div class="flex items-center mb-1"><span class="font-bold">Bài ${i+1}</span><button type="button" class="ml-auto text-rose-600" onclick="removeDragItem(${i})">×</button></div>
+                ${richToolbarHtml(`drag-de-${i}`)}
+                <textarea id="drag-de-${i}" class="w-full p-1 border text-xs" placeholder="Đề (dán ảnh)"></textarea>
+                <div class="grid grid-cols-4 gap-1 mt-1">
+                    <input id="drag-trai-${i}" class="p-1 border text-xs" placeholder="Trái »">
+                    <input id="drag-phai-${i}" class="p-1 border text-xs" placeholder="Phải »">
+                    <input id="drag-map-${i}" class="p-1 border text-xs" placeholder="0-0,1-1">
+                    <input id="drag-goi-${i}" class="p-1 border text-xs" placeholder="Gợi ý">
+                </div>
+            `;
+            cont.appendChild(d);
+            const de = d.querySelector(`#drag-de-${i}`); de.value = it.de||''; de.oninput = ()=>{dragItems[i].de=de.value; syncDragToTextarea();};
+            ['trai','phai','map','goi'].forEach(k=>{ const inp=d.querySelector(`#drag-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{dragItems[i][k]=inp.value; syncDragToTextarea();}; });
+        });
+        setupRichToolbars();
+    }
+    function addDragItem(){ dragItems.push({de:'',trai:'',phai:'',map:'',goi:''}); renderDragItems(); syncDragToTextarea(); }
+    function removeDragItem(i){ dragItems.splice(i,1); renderDragItems(); syncDragToTextarea(); }
+
+    function syncQuestionsToTextarea() {
+        const ta = el('lessonQuestions');
+        if (!ta) return;
+        ta.value = questionItems.map(i => `${i.cau}|${i.a}|${i.b}|${i.c}|${i.d}|${i.dung}`).join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function renderQuestionItems() {
+        const cont = el('questionItems');
+        if (!cont) return;
+        cont.innerHTML = '';
+        questionItems.forEach((it, i) => {
+            const d = document.createElement('div');
+            d.className = 'p-2 border rounded bg-white text-xs';
+            d.innerHTML = `
+                <div class="flex items-center mb-1"><span class="font-bold">Câu ${i+1}</span><button type="button" class="ml-auto text-rose-600" onclick="removeQuestionItem(${i})">×</button></div>
+                ${richToolbarHtml(`q-cau-${i}`)}
+                <textarea id="q-cau-${i}" class="w-full p-1 border text-xs" placeholder="Câu hỏi (dán ảnh nếu cần)"></textarea>
+                <div class="grid grid-cols-5 gap-1 mt-1">
+                    <input id="q-a-${i}" class="p-1 border text-xs" placeholder="A">
+                    <input id="q-b-${i}" class="p-1 border text-xs" placeholder="B">
+                    <input id="q-c-${i}" class="p-1 border text-xs" placeholder="C">
+                    <input id="q-d-${i}" class="p-1 border text-xs" placeholder="D">
+                    <input id="q-dung-${i}" class="p-1 border text-xs" placeholder="Đúng (A/B/C/D)">
+                </div>
+            `;
+            cont.appendChild(d);
+            const cau = d.querySelector(`#q-cau-${i}`); cau.value=it.cau||''; cau.oninput=()=>{questionItems[i].cau=cau.value; syncQuestionsToTextarea();};
+            ['a','b','c','d','dung'].forEach(k=>{ const inp=d.querySelector(`#q-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{questionItems[i][k]=inp.value; syncQuestionsToTextarea();}; });
+        });
+        setupRichToolbars();
+    }
+    function addQuestionItem(){ questionItems.push({cau:'',a:'',b:'',c:'',d:'',dung:''}); renderQuestionItems(); syncQuestionsToTextarea(); }
+    function removeQuestionItem(i){ questionItems.splice(i,1); renderQuestionItems(); syncQuestionsToTextarea(); }
+
+    // parse from | format to items (for load)
+    function parseEssayToItems(str) {
+        return (str || '').split('\n').filter(Boolean).map(line => {
+            const p = line.split('|').map(s=>s.trim());
+            return {de: p[0]||'', dap: p[1]||'', goi: p[2]||''};
+        });
+    }
+    function parseFillToItems(str) {
+        return (str || '').split('\n').filter(Boolean).map(line => {
+            const p = line.split('|').map(s=>s.trim());
+            return {de: p[0]||'', manh: p[1]||'', dap: p[2]||'', goi: p[3]||''};
+        });
+    }
+    function parseDragToItems(str) {
+        return (str || '').split('\n').filter(Boolean).map(line => {
+            const p = line.split('|').map(s=>s.trim());
+            return {de: p[0]||'', trai: p[1]||'', phai: p[2]||'', map: p[3]||'', goi: p[4]||''};
+        });
+    }
+    function parseQuestionToItems(str) {
+        return (str || '').split('\n').filter(Boolean).map(line => {
+            const p = line.split('|').map(s=>s.trim());
+            return {cau: p[0]||'', a: p[1]||'', b: p[2]||'', c: p[3]||'', d: p[4]||'', dung: p[5]||''};
+        });
+    }
+
     function setupEditorFieldShortcuts() {
         document.querySelectorAll('#lessonEditorPanel input, #lessonEditorPanel textarea').forEach(field => {
             if (field.dataset.editorShortcutsReady) return;
@@ -769,19 +940,34 @@
                         <div id="selfPracticeSubmissionsBody" class="mt-3 text-sm text-sky-900">Chọn bài học để xem bài nộp.</div>
                     </section>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <label class="block text-sm font-bold text-slate-700">Bài tập tự luận
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Đề bài | Đáp án mẫu (chỉ số) | Gợi ý. Học sinh chỉ nhập kết quả là số, không nhập lời giải hay chữ.</span>
-                            <textarea id="lessonEssay" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tính 2 + 3 | 5 | Cộng thêm 3 đơn vị sau số 2."></textarea>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu có ___ | Mảnh 1 » Mảnh 2 » ... | Đáp án đúng | Gợi ý. Dùng » giữa các mảnh; phép so sánh 2&gt;1 không bị tách.</span>
-                            <textarea id="lessonFill" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Số liền sau của 7 là ___ | 8 » 7 » 9 | 8 | Thêm 1 vào 7."></textarea>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">Nối ô / sắp xếp
-                            <span class="block text-xs font-medium text-slate-500 mb-1">Nối ô: Đề | Cột trái » ... | Cột phải » ... | 0-0,1-1 | Gợi ý. Sắp xếp: Đề | Mảnh » ... | Thứ tự đúng | Gợi ý. Dùng » giữa các mục.</span>
-                            <textarea id="lessonDrag" rows="7" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Nối cặp | $a$ » $b$ » $c$ | x » y » z | 0-0,1-1,2-2 | Ghép đúng cặp."></textarea>
-                        </label>
+                    <div class="space-y-6">
+                        <!-- Bài tập tự luận (linh hoạt, có thể dán hình vào Đề) -->
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700">Bài tập tự luận
+                                <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi item: Đề (hỗ trợ ảnh) | Đáp án (số) | Gợi ý. Thêm từng bài một, dán hình vào phần Đề nếu cần.</span>
+                            </label>
+                            <div id="essayItems" class="space-y-3"></div>
+                            <button type="button" onclick="addEssayItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài tập tự luận</button>
+                            <textarea id="lessonEssay" class="hidden"></textarea>
+                        </div>
+                        <!-- Kéo vào ô trống -->
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700">Kéo vào ô trống
+                                <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi item: Đề (hỗ trợ ảnh) | Mảnh » ... | Đáp án | Gợi ý</span>
+                            </label>
+                            <div id="fillItems" class="space-y-3"></div>
+                            <button type="button" onclick="addFillItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài kéo thả</button>
+                            <textarea id="lessonFill" class="hidden"></textarea>
+                        </div>
+                        <!-- Nối / sắp xếp -->
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700">Nối ô / sắp xếp
+                                <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi item: Đề (hỗ trợ ảnh) | ... | ... | map | Gợi ý</span>
+                            </label>
+                            <div id="dragItems" class="space-y-3"></div>
+                            <button type="button" onclick="addDragItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm bài nối/sắp xếp</button>
+                            <textarea id="lessonDrag" class="hidden"></textarea>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -800,10 +986,14 @@
                         <textarea id="lessonVideos" rows="4" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài giảng Tập hợp | https://www.youtube.com/watch?v=..."></textarea>
                     </label>
 
-                    <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm
-                        <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi dòng: Câu hỏi | A | B | C | D | đáp án. Đáp án nhập A/B/C/D hoặc 1/2/3/4.</span>
-                        <textarea id="lessonQuestions" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none font-mono text-xs" placeholder="Tập hợp là gì? | Một nhóm đối tượng xác định rõ ràng | Một phép cộng | Một số bất kỳ | Một hình vẽ | A"></textarea>
-                    </label>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700">Câu hỏi trắc nghiệm
+                            <span class="block text-xs font-medium text-slate-500 mb-1">Mỗi câu: Câu hỏi (hỗ trợ ảnh) | A | B | C | D | đáp án. Thêm từng câu, dán hình vào Câu hỏi nếu cần.</span>
+                        </label>
+                        <div id="questionItems" class="space-y-3"></div>
+                        <button type="button" onclick="addQuestionItem()" class="mt-2 text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded">+ Thêm câu hỏi trắc nghiệm</button>
+                        <textarea id="lessonQuestions" class="hidden"></textarea>
+                    </div>
 
                     <div id="lessonPreview" class="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"></div>
 
@@ -851,6 +1041,16 @@
         setupEditorFieldShortcuts();
         setupRichToolbars();
         injectLessonEditorStyles();
+
+        // init dynamic flexible lists (empty for new)
+        essayItems = [];
+        fillItems = [];
+        dragItems = [];
+        questionItems = [];
+        renderEssayItems();
+        renderFillItems();
+        renderDragItems();
+        renderQuestionItems();
 
         applyPageScopeUi();
         renderSubjectPills();
@@ -1007,6 +1207,17 @@
         el('lessonSkills').value = formatSkills(lesson.skills);
         el('lessonTasks').value = Array.isArray(lesson.tasks) ? lesson.tasks.join('\n') : '';
         el('lessonQuestions').value = formatQuestions(lesson.questions);
+
+        // populate dynamic items for flexible UI
+        essayItems = parseEssayToItems(el('lessonEssay').value || '');
+        fillItems = parseFillToItems(el('lessonFill').value || '');
+        dragItems = parseDragToItems(el('lessonDrag').value || '');
+        questionItems = parseQuestionToItems(el('lessonQuestions').value || '');
+        renderEssayItems();
+        renderFillItems();
+        renderDragItems();
+        renderQuestionItems();
+
         renderSubjectPills();
         renderPreview();
         loadSelfPracticeSubmissions();
@@ -1092,6 +1303,14 @@
         el('lessonSkills').value = formatSkills(defaults.skills);
         el('lessonTasks').value = defaults.tasks.join('\n');
         el('lessonQuestions').value = formatQuestions(defaults.questions);
+        essayItems = parseEssayToItems(el('lessonEssay').value);
+        fillItems = parseFillToItems(el('lessonFill').value);
+        dragItems = parseDragToItems(el('lessonDrag').value);
+        questionItems = parseQuestionToItems(el('lessonQuestions').value);
+        renderEssayItems();
+        renderFillItems();
+        renderDragItems();
+        renderQuestionItems();
         renderSubjectPills();
         renderPreview();
     }
@@ -1117,6 +1336,14 @@
         el('lessonSkills').value = 'nhan_biet | Nhan biet kien thuc | 80';
         el('lessonTasks').value = 'Đọc lý thuyết\nXem ví dụ\nLàm bài luyện tập';
         el('lessonQuestions').value = '';
+        essayItems = [];
+        fillItems = [];
+        dragItems = [];
+        questionItems = [];
+        renderEssayItems();
+        renderFillItems();
+        renderDragItems();
+        renderQuestionItems();
         renderPreview();
     }
 
@@ -1149,6 +1376,11 @@
     async function saveLesson(event) {
         event.preventDefault();
         suggestSlug();
+        // sync dynamic lists to hidden textareas (for save compatibility)
+        syncEssayToTextarea();
+        syncFillToTextarea();
+        syncDragToTextarea();
+        syncQuestionsToTextarea();
         const skills = parseSkills(el('lessonSkills').value);
         const payload = {
             action: 'save_content',
