@@ -740,7 +740,7 @@
                     </label>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <label class="block text-sm font-bold text-slate-700">Kiến thức cần nhớ
+                    <label class="block text-sm font-bold text-slate-700">Lý thuyết
                         <span class="block text-xs font-medium text-slate-500 mb-1">Enter 1 lần = xuống dòng. Enter 2 lần = tách đoạn (dùng với <code class="font-mono text-[11px]">[AI]</code>). Định dạng: <code class="font-mono text-[11px]">**đậm**</code>, <code class="font-mono text-[11px]">*nghiêng*</code>, <code class="font-mono text-[11px]">++gạch chân++</code>, ảnh: <code class="font-mono text-[11px]">![mô tả](link)</code>. Công thức: <code class="font-mono text-[11px]">$...$</code>.</span>
                         ${richToolbarHtml('lessonTheory')}
                         <textarea id="lessonTheory" rows="8" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
@@ -762,7 +762,7 @@
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <h4 class="text-base font-bold text-sky-950"><i class="fas fa-folder-open mr-1"></i> Bài nộp học sinh (Google Drive)</h4>
-                                <p class="text-xs text-sky-800 mt-1">Học sinh lớp bạn dạy nộp ở tab <strong>Bài tập nộp giáo viên</strong> trong lộ trình. Bấm link tệp để xem trên Drive.</p>
+                                <p class="text-xs text-sky-800 mt-1">Học sinh lớp bạn dạy nộp ở tab <strong>Bài tập</strong> trong lộ trình. Bấm link tệp để xem trên Drive.</p>
                             </div>
                             <button type="button" id="reloadSelfPracticeSubmissionsBtn" class="rounded border border-sky-300 bg-white px-3 py-1.5 text-xs font-bold text-sky-800 hover:bg-sky-100">Tải lại</button>
                         </div>
@@ -1139,7 +1139,7 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><div class="text-xs text-slate-500">Nội dung</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn · ${blocks.filter(block => block.ai).length} có AI`; })()}</div></div>
                 <div><div class="text-xs text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length} mục</div></div>
-                <div><div class="text-xs text-slate-500">Bài tập nộp GV</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
+                <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
                 <div><div class="text-xs text-slate-500">Kỹ năng</div><div class="font-bold">${parseSkills(el('lessonSkills').value).length} kỹ năng</div></div>
                 <div><div class="text-xs text-slate-500">Bài tập</div><div class="font-bold">${essayCount + fillCount + dragCount + questionCount}</div></div>
             </div>

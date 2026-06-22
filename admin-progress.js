@@ -238,7 +238,7 @@
             </div>
             <section id="progressTodayActions" class="mt-5 rounded-lg border border-amber-200 bg-amber-50/70 p-4"></section>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-5 gap-3"></div>
-            <p class="mt-4 text-xs text-slate-500"><i class="fas fa-folder-open mr-1 text-sky-600"></i>Mỗi học sinh một dòng: tiến độ luyện tập và bài nộp Drive (tab <strong>Bài tập nộp giáo viên</strong> trong lộ trình).</p>
+            <p class="mt-4 text-xs text-slate-500"><i class="fas fa-folder-open mr-1 text-sky-600"></i>Mỗi học sinh một dòng: tiến độ luyện tập và bài nộp Drive (tab <strong>Bài tập</strong> trong lộ trình).</p>
             <div class="mt-2 overflow-x-auto rounded border border-slate-200">
                 <table class="min-w-full table-fixed divide-y divide-slate-200">
                     <colgroup>

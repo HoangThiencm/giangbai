@@ -2269,7 +2269,7 @@
             selfPracticeState.submissions = Array.isArray(data.submissions) ? data.submissions : [];
             selfPracticeState.loaded = true;
         } catch (err) {
-            console.warn('Không tải bài nộp giáo viên:', err);
+            console.warn('Không tải bài tập:', err);
             selfPracticeState.submissions = [];
         } finally {
             selfPracticeState.loading = false;
@@ -2422,7 +2422,7 @@
         const canSubmit = !isTeacher();
         const showForm = canSubmit || isTeacherPreview();
         if (canSubmit) {
-            els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải bài tập nộp giáo viên...</div>';
+            els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải bài tập...</div>';
             await loadSelfPracticeSubmissions(lesson);
         }
         const alreadySubmitted = canSubmit && submissionsForLessonSelfPractice().length > 0;
@@ -3907,7 +3907,7 @@
             }
             applyNextActionSuggestion({
                 title: tasks[0] || 'Bắt đầu bằng kiến thức cần nhớ',
-                body: 'Quay lại tab Kiến thức cần nhớ để nắm khái niệm và ký hiệu của bài.',
+                body: 'Quay lại tab Lý thuyết để nắm khái niệm và ký hiệu của bài.',
                 tab: 'learn'
             });
             return;

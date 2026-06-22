@@ -87,32 +87,42 @@
         }
         .lesson-tab-bar {
             display: flex;
-            flex-wrap: nowrap;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
+            padding-bottom: 4px;
         }
         .lesson-tab-bar .tab-btn {
             flex: 0 0 auto;
             white-space: nowrap;
-            padding: 6px 8px;
+            padding: 4px 6px;
             font-size: 0.72rem;
-            line-height: 1.2;
+            font-weight: 700;
+            line-height: 1.15;
+            border-radius: 6px;
         }
-        .lesson-tab-bar .tab-btn i { margin-right: 4px; }
-        .lesson-tab-bar .tab-text-full { display: none; }
-        .lesson-tab-bar .tab-text-short { display: inline; }
+        .lesson-tab-bar .tab-btn i { margin-right: 3px; font-size: 0.82em; }
+        /* Compact tabs — fit on most laptops without zoom */
+        @media (min-width: 520px) {
+            .lesson-tab-bar { gap: 3px; }
+            .lesson-tab-bar .tab-btn { padding: 5px 7px; font-size: 0.74rem; }
+        }
         @media (min-width: 768px) {
-            .lesson-tab-bar { gap: 8px; }
+            .lesson-tab-bar { gap: 4px; }
             .lesson-tab-bar .tab-btn {
-                padding: 8px 12px;
-                font-size: 0.875rem;
+                padding: 6px 8px;
+                font-size: 0.78rem;
             }
-            .lesson-tab-bar .tab-btn i { margin-right: 8px; }
-            .lesson-tab-bar .tab-text-full { display: inline; }
-            .lesson-tab-bar .tab-text-short { display: none; }
+            .lesson-tab-bar .tab-btn i { margin-right: 4px; }
+        }
+        @media (min-width: 1024px) {
+            .lesson-tab-bar { gap: 5px; }
+            .lesson-tab-bar .tab-btn {
+                padding: 6px 9px;
+                font-size: 0.8rem;
+            }
         }
         .question-head {
             border-bottom: 1px solid #e2e8f0;
@@ -574,11 +584,11 @@
                     <div id="lessonStatus" class="mt-4 max-w-xl"></div>
                 </section>
 
-                <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+                <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
                     <section class="panel p-5">
-                        <div class="lesson-tab-bar border-b border-slate-200 pb-3 md:pb-4">
+                        <div class="lesson-tab-bar border-b border-slate-200 pb-2">
                             <button data-tab="learn" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-book-open"></i><span class="tab-text-short">Cần nhớ</span><span class="tab-text-full">Kiến thức cần nhớ</span>
+                                <i class="fas fa-book-open"></i>Lý thuyết
                             </button>
                             <button data-tab="examples" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
                                 <i class="fas fa-lightbulb"></i>Ví dụ
@@ -590,7 +600,7 @@
                                 <i class="fas fa-pen-to-square"></i>Luyện tập
                             </button>
                             <button data-tab="self_practice" class="tab-btn rounded font-bold text-slate-700 hover:bg-slate-100">
-                                <i class="fas fa-cloud-arrow-up"></i><span class="tab-text-short">Nộp GV</span><span class="tab-text-full">Bài tập nộp giáo viên</span>
+                                <i class="fas fa-cloud-arrow-up"></i>Bài tập
                             </button>
                         </div>
                         <div id="tabContent" class="pt-5"></div>
