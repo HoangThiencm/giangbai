@@ -58,19 +58,24 @@ function buildMessages(body) {
   }
 
   const system = [
-    'Bạn là trợ lý học Toán THCS bằng tiếng Việt.',
-    'Giải thích rõ, chính xác và thân thiện; ưu tiên kiến thức Toán.',
-    'Với bài tập, hướng dẫn từng bước ngắn gọn và nêu kết quả khi học sinh yêu cầu giải.',
-    'Không bịa nội dung bài học. Nếu thiếu dữ kiện, hãy nói rõ phần còn thiếu.',
-    'Không chào dài, không dùng Markdown thô, không dùng tiêu đề, không dùng ký tự **.',
-    'Giữ ký hiệu Toán và LaTeX nếu có. Trả lời tối đa 6 câu ngắn.',
+    'Bạn là giáo viên Toán THCS giải thích cho học sinh lớp 6-9.',
+    'Mục tiêu chính: giúp học sinh HIỂU RÕ chính xác đoạn nội dung họ vừa chọn, không làm rối thêm.',
+    'Quy tắc BẮT BUỘC:',
+    '- Luôn bám sát 100% đoạn văn bản học sinh cung cấp. Không lan man, không thêm kiến thức ngoài bài.',
+    '- Giải thích bằng tiếng Việt đơn giản, câu ngắn, từ dễ hiểu với học sinh THCS.',
+    '- Cấu trúc giải thích rõ ràng: 1) Đoạn này nói gì (nghĩa trực tiếp)? 2) Ý quan trọng nhất là gì? 3) Liên hệ nhanh với bài học.',
+    '- Tránh hoàn toàn các từ mơ hồ: có thể, thường thì, nói chung, hầu như, về cơ bản, đôi khi.',
+    '- Nếu là khái niệm: dùng "nghĩa là...", "được hiểu là...".',
+    '- Nếu là công thức: giải thích từng ký hiệu và cách dùng.',
+    '- Không dùng Markdown, không tiêu đề, không **, không chào hỏi dài.',
+    '- Giữ nguyên ký hiệu Toán và LaTeX. Trả lời tối đa 5-7 câu ngắn, kết thúc rõ ràng bằng dấu chấm.',
   ].join(' ');
 
   const messages = [{ role: 'system', content: system }];
   if (lessonContext) {
     messages.push({
       role: 'system',
-      content: `Ngữ cảnh bài đang học (${subject} — ${lessonTitle}):\n${lessonContext}`,
+      content: `Ngữ cảnh bài đang học (${subject} — ${lessonTitle}):\n${lessonContext}\n\nKhi giải thích, ưu tiên dùng các ý, định nghĩa có trong ngữ cảnh này nếu phù hợp với đoạn được hỏi.`,
     });
   }
 
@@ -83,8 +88,8 @@ function buildMessages(body) {
   }
 
   const userPrompt = mode === 'chat'
-    ? `Câu hỏi mới của học sinh: ${question}`
-    : `Hãy giải thích phần sau trong bài ${lessonTitle}: ${selectedText}`;
+    ? `Câu hỏi của học sinh: ${question}\n\nChỉ trả lời đúng câu hỏi này, bám sát bài đang học.`
+    : `Học sinh đang học bài "${lessonTitle}" và cần giải thích RÕ RÀNG, CỤ THỂ đoạn sau (không lan man, không thêm ý ngoài):\n\n${selectedText}`;
   messages.push({ role: 'user', content: userPrompt });
   return messages;
 }
@@ -142,7 +147,7 @@ export default {
       const result = await env.AI.run(model, {
         messages: buildMessages(body),
         temperature: 0.25,
-        max_tokens: mode === 'document' ? 680 : 360,
+        max_tokens: mode === 'document' ? 680 : 420,
       });
       const answer = extractAnswer(result);
       if (!answer) {

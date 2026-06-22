@@ -51,7 +51,7 @@ if ($mode === 'chat') {
 
 function build_explain_prompt(string $subject, string $lessonTitle, string $text): string
 {
-    return "Ban la tro ly hoc Toan cho hoc sinh THCS. Nhiem vu duy nhat: tra loi dung phan hoc sinh vua hoi trong muc NOI DUNG CAN GIAI THICH, khong tu y chuyen sang chu de khac, khong tom tat ca bai, khong them loi chao, khong noi 'thay se giup', khong dung Markdown, khong dung **, khong dung gach ngang ---.\n\nQuy tac bat buoc:\n- Neu noi dung la mot khai niem/cau/cum tu: giai thich truc tiep khai niem/cau/cum tu do.\n- Neu noi dung la mot cong thuc: giai thich tung ky hieu va y nghia cong thuc do, giu nguyen ky hieu Toan.\n- Neu noi dung la mot bai tap: chi goi y cach lam va diem can chu y, khong lam thay tron ven neu khong duoc yeu cau.\n- Chi dua vi du khi vi du giup lam ro dung noi dung dang hoi; neu dua vi du thi that ngan.\n- Neu noi dung hoi khong ro, noi ro can them thong tin nao, khong bịa.\n- Cau cuoi cung phai ket thuc tron ven bang dau cham, dau hoi hoac dau cham than; khong dung lai giua tu.\n\nMon: {$subject}\nBai: {$lessonTitle}\nNOI DUNG CAN GIAI THICH:\n{$text}\n\nTra loi bang 2-5 cau ngan, bam sat noi dung tren.";
+    return "Ban la giao vien Toan THCS giai thich cho hoc sinh lop 6-9. Muc tieu: giup hoc sinh HIEU RO chinh xac doan noi dung ho vua chon, KHONG lam roi them.\n\nQuy tac BAT BUOC:\n- Luon bam sat 100% doan van ban hoc sinh cung cap. Khong lan man, khong them kien thuc ngoai bai.\n- Giai thich bang tieng Viet don gian, cau ngan, tu de hieu voi hoc sinh THCS.\n- Tranh hoan toan cac tu mo ho: co the, thuong thi, noi chung, hau nhu, ve co ban.\n- Neu la khai niem: dung \"nghia la...\", \"duoc hieu la...\".\n- Neu la cong thuc: giai thich tung ky hieu va cach dung.\n- Khong dung Markdown, khong tieu de, khong **, khong chao hoi dai.\n- Ket thuc bang mot cau tom tat y chinh ro rang, ket thuc bang dau cham.\n\nMon: {$subject}\nBai: {$lessonTitle}\nDOAN NOI DUNG CAN GIAI THICH:\n{$text}\n\nTra loi bang 4-7 cau ngan, ro rang, bam sat doan tren.";
 }
 
 function build_chat_prompt(string $subject, string $lessonTitle, string $lessonContext, array $history, string $question): string
@@ -67,9 +67,9 @@ function build_chat_prompt(string $subject, string $lessonTitle, string $lessonC
 
     $contextBlock = $lessonContext !== '' ? "TOM TAT BAI DANG HOC:\n{$lessonContext}\n\n" : '';
 
-    return "Ban la tro ly hoc Toan cho hoc sinh THCS. Hoc sinh dang hoc bai va hoi them trong khung chat.\n\nQuy tac bat buoc:\n- Chi tra loi trong pham vi bai hoc va mon Toan THCS, khong lam ho toan bo bai tap neu hoc sinh chi hoi khai niem.\n- Neu la bai tap: goi y cach lam, diem can chu y, khong lam thay tron ven neu hoc sinh khong yeu cau.\n- Giu ky hieu Toan/LaTeX khi can.\n- Khong dung Markdown, khong dung **, khong loi chao dai.\n- Tra loi ngan 2-6 cau, ro rang, ket thuc tron ven bang dau cham.\n\nMon: {$subject}\nBai: {$lessonTitle}\n{$contextBlock}"
+    return "Ban la giao vien Toan THCS giai thich cho hoc sinh lop 6-9. Hoc sinh dang hoc bai va hoi them.\n\nQuy tac BAT BUOC:\n- Chi tra loi dung cau hoi, bam sat bai hoc va mon Toan THCS. Khong lam ho toan bo bai tap.\n- Giai thich don gian, cau ngan. Tranh tu mo ho nhu 'co the', 'thuong thi'.\n- Giu ky hieu Toan/LaTeX.\n- Khong dung Markdown, khong **, khong loi chao dai.\n- Tra loi ngan 3-7 cau, ro rang, ket thuc bang dau cham.\n\nMon: {$subject}\nBai: {$lessonTitle}\n{$contextBlock}"
         . ($historyText !== '' ? "LICH SU CHAT GAN DAY:\n{$historyText}\n" : '')
-        . "CAU HOI MOI CUA HOC SINH:\n{$question}\n\nTra loi cau hoi moi.";
+        . "CAU HOI CUA HOC SINH:\n{$question}\n\nTra loi.";
 }
 
 function answer_looks_complete(string $answer): bool
@@ -271,19 +271,19 @@ function light_ai_answer(string $lessonTitle, string $question, string $source, 
     $source = light_ai_normalize($source);
     $source = light_ai_substr($source, 0, 460);
     $prefixes = [
-        'formula' => 'Quy tắc hoặc công thức liên quan trong bài là',
-        'example' => 'Ví dụ gần nhất trong bài cho em là',
-        'definition' => 'Theo nội dung bài “' . $lessonTitle . '”, ý cần hiểu là',
-        'method' => 'Gợi ý từ nội dung bài là',
-        'general' => 'Phần liên quan trực tiếp trong bài là',
+        'formula' => 'Công thức hoặc quy tắc trong bài là',
+        'example' => 'Ví dụ trong bài:',
+        'definition' => 'Trong bài “' . $lessonTitle . '” có nội dung:',
+        'method' => 'Hướng dẫn từ bài học:',
+        'general' => 'Phần liên quan trong bài:',
     ];
     $prefix = $prefixes[$intent] ?? $prefixes['general'];
     $guidance = $intent === 'method'
-        ? ' Em hãy đối chiếu từng dữ kiện của câu hỏi với phần này rồi làm từng bước.'
+        ? ' Em hãy xem lại phần này và làm từng bước.'
         : ($intent === 'formula'
-            ? ' Khi làm bài, hãy thay đúng số hoặc ký hiệu vào công thức rồi tính cẩn thận.'
-            : ' Em hãy ghi nhớ các từ khóa trong phần này trước khi làm bài.');
-    return $prefix . ': ' . rtrim($source, ".!? \t") . '.' . $guidance;
+            ? ' Thay số hoặc ký hiệu vào đúng công thức rồi tính.'
+            : ' Ghi nhớ ý chính rồi áp dụng.');
+    return $prefix . ' ' . rtrim($source, ".!? \t") . '. ' . $guidance;
 }
 
 function try_light_ai_explain(array $config, string $mode, string $lessonTitle, string $text, string $question, string $lessonContext): ?array
