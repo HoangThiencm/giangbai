@@ -2403,6 +2403,50 @@
         const mathRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
         const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban'];
 
+        function allTeacherPageIds() {
+            return teacherFeatureGroups.flatMap(group => group.pages);
+        }
+
+        function teacherFeatureFlagsFromPages(allowedPages) {
+            const pageSet = new Set((allowedPages || []).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page));
+            const lotrinhKeys = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+            const flags = {};
+            CLIENT_FEATURE_CHECKS.forEach(id => {
+                flags[id] = pageSet.has(id);
+            });
+            flags.teacher_design = lotrinhKeys.some(id => pageSet.has(id));
+            flags.teacher_progress_stats = pageSet.has('thongketientrinh');
+            flags.teacher_ai_stats = pageSet.has('theodoiai');
+            return flags;
+        }
+
+        async function syncTeacherUserFeaturesFromPages(username, allowedPages) {
+            const account = String(username || '').trim();
+            if (!account || !Array.isArray(allowedPages)) return;
+            if (!currentGlobalContent || typeof currentGlobalContent !== 'object') {
+                currentGlobalContent = { features: {}, user_features: {} };
+            }
+            if (!currentGlobalContent.user_features) currentGlobalContent.user_features = {};
+            currentGlobalContent.user_features[account] = {
+                ...(currentGlobalContent.user_features[account] || {}),
+                ...teacherFeatureFlagsFromPages(allowedPages),
+            };
+            try {
+                await saveConfigToLocalApi(currentGlobalContent);
+            } catch (e) {
+                console.warn('Khong dong bo user_features cho giao vien:', e);
+            }
+        }
+
+        function selectAllTeacherPages(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.querySelectorAll('.allowed-page').forEach(input => {
+                input.checked = true;
+                input.closest('.teacher-perm-toggle')?.classList.add('is-on');
+            });
+        }
+
         function normalizeAllowedPagesForAdmin(pages) {
             return (pages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
         }
@@ -2713,6 +2757,11 @@
                             <button onclick="openStudentConfig(${user.id})" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
                                 <i class="fas fa-cog"></i> Cài đặt
                             </button>
+                            ${user.role === 'teacher' ? `
+                                <button onclick="grantTeacherFullAccess(${user.id})" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
+                                    <i class="fas fa-unlock"></i> Cấp full
+                                </button>
+                            ` : ''}
                             ${promotion ? `
                                 <button onclick="promoteStudent(${user.id})" class="text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded text-xs font-bold shadow transition mr-2 mb-1 inline-block">
                                     <i class="fas fa-arrow-up"></i> Lên Toán ${promotion.nextLevel}
@@ -2812,7 +2861,15 @@
                 </label>
             `;
             document.getElementById('modalFeaturesList').innerHTML = `
-                <p id="editAllowedPagesLabel" class="text-sm font-bold text-slate-700 mb-2"></p>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p id="editAllowedPagesLabel" class="text-sm font-bold text-slate-700"></p>
+                    ${editingStudent.role === 'teacher' ? `
+                        <button type="button" onclick="selectAllTeacherPages('editAllowedPages')"
+                            class="text-xs font-bold text-indigo-700 hover:text-indigo-900 underline">
+                            Bật tất cả
+                        </button>
+                    ` : ''}
+                </div>
                 <div id="editAllowedPages" class="space-y-2"></div>
             `;
             renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6'], editingStudent.role || 'student');
@@ -2873,8 +2930,35 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không lưu được tài khoản.');
+                if (role === 'teacher') {
+                    await syncTeacherUserFeaturesFromPages(editingStudent.username, data.allowed_pages || allowedPages);
+                }
                 closeUserConfigModal();
                 await loadUsers();
+                if (role === 'teacher') {
+                    const count = data.allowed_count || (data.allowed_pages || allowedPages).length;
+                    alert(`Đã lưu ${count} quyền cho giáo viên. Yêu cầu giáo viên Ctrl+F5 trang chủ để thấy đủ công cụ.`);
+                }
+            } catch (e) {
+                alert(e.message);
+            }
+        };
+
+        window.grantTeacherFullAccess = async function (id) {
+            const user = cachedUsers.find(item => item.id === id);
+            if (!user || user.role !== 'teacher') return;
+            if (!confirm(`Cấp full quyền (lộ trình + công cụ + quản lý) cho ${user.full_name}?`)) return;
+            try {
+                const res = await fetch('api/admin_students.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': cachedKey },
+                    body: JSON.stringify({ action: 'grant_teacher_full', id }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Không cấp được full quyền.');
+                await syncTeacherUserFeaturesFromPages(user.username, data.allowed_pages || allTeacherPageIds());
+                await loadUsers();
+                alert(`Đã cấp ${data.allowed_count || 0} quyền. Giáo viên Ctrl+F5 trang chủ để thấy đủ công cụ.`);
             } catch (e) {
                 alert(e.message);
             }

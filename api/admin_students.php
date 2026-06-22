@@ -136,7 +136,38 @@ if ($action === 'update') {
         $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([$hash, $id]);
     }
 
-    respond(['ok' => true]);
+    respond([
+        'ok' => true,
+        'allowed_pages' => $allowedPages,
+        'allowed_count' => count($allowedPages),
+    ]);
+}
+
+if ($action === 'grant_teacher_full') {
+    $id = (int)($data['id'] ?? 0);
+    if ($id <= 0) {
+        respond(['error' => 'Thieu ID tai khoan.'], 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$id]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        respond(['error' => 'Khong tim thay tai khoan.'], 404);
+    }
+    if (($user['role'] ?? '') !== 'teacher') {
+        respond(['error' => 'Chi ap dung cho giao vien.'], 422);
+    }
+
+    $allowedPages = teacher_all_page_ids();
+    $json = json_encode($allowedPages, JSON_UNESCAPED_UNICODE);
+    $pdo->prepare('UPDATE users SET allowed_pages_json = ? WHERE id = ?')->execute([$json, $id]);
+
+    respond([
+        'ok' => true,
+        'allowed_pages' => $allowedPages,
+        'allowed_count' => count($allowedPages),
+    ]);
 }
 
 if ($action === 'delete') {

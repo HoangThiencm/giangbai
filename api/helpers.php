@@ -76,6 +76,79 @@ function teacher_default_workspace_extras(): array
     return ['thongketientrinh', 'quanlyvanban'];
 }
 
+function teacher_all_page_ids(): array
+{
+    return array_values(array_unique(array_merge(
+        array_keys(lotrinh_page_subjects()),
+        teacher_workspace_page_ids()
+    )));
+}
+
+function teacher_feature_keys_for_pages(): array
+{
+    return [
+        'gslides' => 'gslides',
+        'vehinh' => 'vehinh',
+        'smartquiz' => 'smartquiz',
+        'matrande' => 'matrande',
+        'tronde' => 'tronde',
+        'thitructuyen' => 'thitructuyen',
+        'kttx' => 'kttx',
+        'nopbai' => 'nopbai',
+        'padlet' => 'padlet',
+        'vietbaocao' => 'vietbaocao',
+        'rutgon' => 'rutgon',
+    ];
+}
+
+function teacher_tool_pages_from_user_features(string $username): array
+{
+    $username = trim($username);
+    if ($username === '') {
+        return [];
+    }
+
+    $path = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'global_config.json';
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $cfg = json_decode((string)file_get_contents($path), true);
+    if (!is_array($cfg)) {
+        return [];
+    }
+
+    $userFeat = $cfg['user_features'][$username] ?? null;
+    if (!is_array($userFeat)) {
+        return [];
+    }
+
+    $pages = [];
+    foreach (teacher_feature_keys_for_pages() as $feature => $pageId) {
+        if (!empty($userFeat[$feature])) {
+            $pages[] = $pageId;
+        }
+    }
+
+    return $pages;
+}
+
+function teacher_allowed_pages_resolved(array $user): array
+{
+    $pages = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
+    if (($user['role'] ?? '') !== 'teacher') {
+        return $pages;
+    }
+
+    $username = trim((string)($user['username'] ?? ''));
+    $fromFeatures = teacher_tool_pages_from_user_features($username);
+    if ($fromFeatures) {
+        $pages = normalize_pages(array_merge($pages, $fromFeatures));
+    }
+
+    return $pages;
+}
+
 function normalize_pages($pages): array
 {
     $catalog = page_catalog();
@@ -399,14 +472,14 @@ function ensure_users_expires_option_column(PDO $pdo): void
 
 function public_user(array $user): array
 {
-    $pages = json_decode($user['allowed_pages_json'] ?? '[]', true);
+    $pages = teacher_allowed_pages_resolved($user);
     return [
         'id' => (int)$user['id'],
         'username' => $user['username'],
         'full_name' => $user['full_name'],
         'role' => $user['role'],
         'class_name' => $user['class_name'],
-        'allowed_pages' => normalize_pages($pages),
+        'allowed_pages' => $pages,
         'is_active' => (bool)$user['is_active'],
         'expires_at' => $user['expires_at'],
         'expires_option' => normalize_duration_option($user['expires_option'] ?? 'forever'),
