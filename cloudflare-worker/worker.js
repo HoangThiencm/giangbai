@@ -36,21 +36,20 @@ function buildMessages(body) {
       {
         role: 'system',
         content: [
-          'Bạn là trợ lý trích xuất văn bản hành chính Việt Nam. Nhiệm vụ CHỈ trích xuất thông tin của VĂN BẢN CHÍNH (văn bản đang xem), KHÔNG lấy thông tin của văn bản được trích dẫn bên trong.',
+          'Bạn là trợ lý trích xuất văn bản hành chính Việt Nam. Nhiệm vụ: CHỈ trích xuất của VĂN BẢN CHÍNH ở phần ĐẦU. Bỏ qua mọi số/ngày của văn bản được trích dẫn bên trong.',
           'QUY TẮC BẮT BUỘC:',
-          '1. document_number: Chỉ lấy số ngay sau chữ "Số:" hoặc "Số văn bản:" ở PHẦN ĐẦU (thường dòng thứ 2-3 bên trái, ngay dưới tên cơ quan ban hành). Ví dụ đúng: 1176/UBND-VHXH. KHÔNG lấy số xuất hiện sau từ "Căn cứ", "Trên cơ sở", "theo Công văn số", "số 1651", "Công văn số".',
-          '2. BỎ QUA HOÀN TOÀN mọi thông tin liên quan chữ ký số (Ký bởi, ngày ký số, certificate, timestamp, "Số" trong khối chữ ký).',
-          '3. document_date: Lấy NGÀY BAN HÀNH ở góc trên bên phải (thường dạng "Hồ Nai, ngày 22 tháng 6 năm 2026" hoặc "ngày ... tháng ... năm ..."). KHÔNG lấy ngày trong phần tham chiếu bên dưới.',
-          '4. organization: Tên cơ quan ban hành chính (dòng đầu bên trái: ỦY BAN NHÂN DÂN PHƯỜNG ..., PHÒNG GIÁO DỤC...).',
-          '5. title: Nội dung sau "V/v" hoặc "Về việc" (trích yếu).',
-          'Chỉ trích xuất từ phần đầu. Trả về DUY NHẤT một object JSON hợp lệ, không giải thích, không markdown.',
-          'Các trường: document_number, title, organization, document_type, summary_text, document_date (YYYY-MM-DD hoặc null), report_required (true/false), report_due_at (YYYY-MM-DD hoặc null), confidence (high/medium/low), note.',
-          'summary_text: tóm tắt ngắn 1-2 câu công việc chính.',
+          '- document_number: Tìm số sau "Số:" (ví dụ 1176/UBND-VHXH). Nếu "Số:" và số bị tách (do text layer/OCR/ký số), vẫn lấy số dạng NNNN/XXXX gần "Số" hoặc tên cơ quan ở trên cùng. KHÔNG lấy số sau "Căn cứ", "Trên cơ sở", "Công văn số", "theo".',
+          '- BỎ QUA hoàn toàn chữ ký số, ngày ký, "Ký bởi".',
+          '- document_date: NGÀY BAN HÀNH ở góc phải trên cùng ("Hồ Nai, ngày 22 tháng 6 năm 2026").',
+          '- organization: Tên cơ quan ban hành (ỦY BAN NHÂN DÂN PHƯỜNG HỐ NAI...).',
+          '- title: Sau "V/v" hoặc "Về việc".',
+          'Trả về DUY NHẤT JSON hợp lệ.',
+          'Fields: document_number, title, organization, document_type, summary_text, document_date (YYYY-MM-DD hoặc null), report_required, report_due_at, confidence, note.',
         ].join(' '),
       },
       {
         role: 'user',
-        content: `Văn bản (chỉ trích xuất số, ngày, cơ quan, trích yếu của VĂN BẢN NÀY, bỏ qua mọi số văn bản được dẫn chiếu bên trong):\n${selectedText}`,
+        content: `Văn bản (chỉ lấy số chính sau Số:, ngày ban hành, cơ quan, trích yếu. Bỏ tham chiếu và chữ ký số):\n${selectedText}`,
       },
     ];
   }

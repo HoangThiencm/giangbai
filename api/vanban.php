@@ -214,32 +214,46 @@ function vbd_regex_extract(string $source): array
         'report_due_at' => null,
     ];
 
-    // Tìm số văn bản CHÍNH ở phần rất đầu, bỏ qua số của văn bản được dẫn chiếu
-    // Loại trừ các dòng có "Căn cứ", "Trên cơ sở", "theo", "Công văn số", "số 1651"
+    // Tìm số văn bản CHÍNH ở phần rất đầu.
+    // Hỗ trợ trường hợp text bị tách (Số: rồi sau đó số), hoặc "Số:1176/..." không khoảng trắng.
+    // Bỏ qua nếu số nằm sau từ chỉ dẫn chiếu (Căn cứ, Trên cơ sở, Công văn số...)
     $numberPatterns = [
-        // Ưu tiên dòng ngay sau tên cơ quan hoặc dòng đầu có Số:
-        '/(?:ỦY BAN|PHÒNG|TRƯỜNG|BAN)[^\n]{0,80}?\n\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:^|[\n\r])\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
+        '/(?:ỦY BAN|PHÒNG|TRƯỜNG|BAN)[^\n]{0,60}?\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:Số|So)\s*(?:văn bản|van ban)?\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
     ];
     foreach ($numberPatterns as $pattern) {
         if (preg_match($pattern, $head, $match)) {
             $num = trim(preg_replace('/\s+/u', '', $match[1]) ?? $match[1]);
-            // Bỏ qua nếu trông giống số được dẫn trong thân văn bản
-            if (!preg_match('/Căn cứ|Trên cơ sở|theo Công văn|Công văn số/i', $head)) {
+            // Kiểm tra context: nếu trước số không có từ dẫn chiếu thì lấy
+            $pos = mb_strpos($head, $match[0]);
+            $contextBefore = $pos !== false ? mb_substr($head, max(0, $pos - 80), 80) : '';
+            if (!preg_match('/(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*$/iu', $contextBefore)) {
                 $result['document_number'] = $num;
                 break;
             }
         }
     }
 
-    // Fallback: tìm số dạng XXXX/XXXX-XXXX trong 800 ký tự đầu, nhưng bỏ nếu nằm sau từ chỉ dẫn chiếu
+    // Fallback mạnh: tìm bất kỳ số dạng NNNN/XXXX-XXXX nào trong 900 ký tự đầu
+    // (hữu ích khi text layer tách "Số:" và số ra riêng, hoặc OCR lỗi nhẹ)
     if (empty($result['document_number'])) {
-        if (preg_match('/\b([0-9]{1,6}\/[A-ZĐ]{2,}[A-Z0-9.\-]*)\b/u', $head, $match)) {
-            $contextBefore = mb_substr($head, 0, mb_strpos($head, $match[0]));
-            if (!preg_match('/(Căn cứ|Trên cơ sở|theo|Công văn số)\s*[^.]{0,30}$/iu', $contextBefore)) {
-                $result['document_number'] = $match[1];
+        if (preg_match('/\b([0-9]{3,6}\/[A-ZĐA-Z0-9.\-]{3,})\b/u', $head, $match)) {
+            $num = $match[1];
+            // Kiểm tra không nằm sau tham chiếu
+            $pos = mb_strpos($head, $num);
+            $before = $pos !== false ? mb_substr($head, max(0, $pos-100), 100) : '';
+            if (!preg_match('/(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*[^0-9]{0,40}$/iu', $before)) {
+                $result['document_number'] = $num;
             }
+        }
+    }
+
+    // Cứu hộ cuối cùng: nếu trong head có "Số:" nhưng document_number vẫn trống hoặc thiếu chữ số,
+    // lấy số đầu tiên dạng NNNN/XXXX trong 600 ký tự đầu
+    if (empty($result['document_number']) && preg_match('/Số\s*[:\.]?/iu', $head)) {
+        if (preg_match('/\b([0-9]{3,6}\/[A-ZĐA-Z0-9.\-]{2,})\b/u', mb_substr($head, 0, 600), $match)) {
+            $result['document_number'] = $match[1];
         }
     }
 
@@ -268,13 +282,23 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    // Ngày ban hành thường ở góc phải phần đầu: "Hồ Nai, ngày 22 tháng 6 năm 2026"
-    // Ưu tiên ngày xuất hiện sớm, trước các dòng "Căn cứ", "Trên cơ sở"
+    // Tìm ngày ban hành ở phần đầu (thường "Hồ Nai, ngày 22 tháng 6 năm 2026" hoặc "ngày 22 tháng 6 năm 2026")
+    // Ưu tiên ngày sớm nhất trong 900 ký tự đầu, bỏ qua ngày trong tham chiếu
     $dateHead = mb_substr($head, 0, 900);
-    if (preg_match('/[A-Za-zÀ-ỹ\.\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $match)) {
-        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
-    } elseif (preg_match('/,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $match)) {
-        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$match[3], (int)$match[2], (int)$match[1]);
+    $dateMatch = null;
+
+    // Pattern 1: có địa danh trước
+    if (preg_match('/[A-Za-zÀ-ỹ\.\s,]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
+        $dateMatch = $m;
+    } 
+    // Pattern 2: "ngày DD tháng MM năm YYYY" sớm
+    elseif (preg_match('/ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
+        // Kiểm tra không phải ngày trong tham chiếu (nếu có "12/6" hoặc tương tự gần đó)
+        $dateMatch = $m;
+    }
+
+    if ($dateMatch) {
+        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$dateMatch[3], (int)$dateMatch[2], (int)$dateMatch[1]);
     } else {
         $result['document_date'] = vbd_parse_vn_date($dateHead);
     }
@@ -318,7 +342,10 @@ function vbd_parse_document(string $source): array
     // - Có dấu hiệu trích dẫn văn bản khác (rất hay nhầm số của văn bản được dẫn chiếu)
     $headForCheck = mb_substr($cleanSource, 0, 900);
     $hasReference = (bool)preg_match('/(Căn cứ|Trên cơ sở|theo Công văn số|Công văn số)\s*\d/i', $headForCheck);
-    $needsAi = empty($parsed['document_number']) || empty($parsed['document_date']) || $hasReference;
+    $numBad = empty($parsed['document_number']) || 
+              str_starts_with($parsed['document_number'], '/') || 
+              strlen($parsed['document_number']) < 5;
+    $needsAi = $numBad || empty($parsed['document_date']) || $hasReference;
     if ($needsAi) {
         $aiResult = vbd_try_ai_document_extract($cleanSource);
         if ($aiResult) {
