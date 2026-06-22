@@ -52,13 +52,35 @@
         return localStorage.getItem(flagKey) !== '0';
     }
 
-    function teacherCanViewAiStats() {
-        if (!teacherTabEnabled('teacher_ai_stats_enabled')) return false;
+    function getAllowedPagesList() {
         try {
-            return JSON.parse(localStorage.getItem('allowedPages') || '[]').includes('theodoiai');
+            return JSON.parse(localStorage.getItem('allowedPages') || '[]');
         } catch {
-            return false;
+            return [];
         }
+    }
+
+    function teacherCanViewDesign() {
+        return teacherTabEnabled('teacher_design_enabled') && getAllowedLotrinhPages().length > 0;
+    }
+
+    function teacherCanViewStats() {
+        return teacherTabEnabled('teacher_progress_stats_enabled') && getAllowedPagesList().includes('thongketientrinh');
+    }
+
+    function teacherCanViewDocuments() {
+        return getAllowedPagesList().includes('quanlyvanban');
+    }
+
+    function teacherCanViewAiStats() {
+        return teacherTabEnabled('teacher_ai_stats_enabled') && getAllowedPagesList().includes('theodoiai');
+    }
+
+    function teacherHasWorkspaceNav() {
+        return teacherCanViewDesign()
+            || teacherCanViewStats()
+            || teacherCanViewDocuments()
+            || teacherCanViewAiStats();
     }
 
     function isVanbanPage() {
@@ -169,8 +191,9 @@
         const aiStatsActive = mode === 'ai-stats';
         const documentsActive = mode === 'documents';
         const designActive = mode === 'design' || mode === 'preview';
-        const showDesign = teacherTabEnabled('teacher_design_enabled');
-        const showStats = teacherTabEnabled('teacher_progress_stats_enabled');
+        const showDesign = teacherCanViewDesign();
+        const showStats = teacherCanViewStats();
+        const showDocuments = teacherCanViewDocuments();
         const showAiStats = teacherCanViewAiStats();
 
         const designLink = showDesign
@@ -184,7 +207,9 @@
         const aiStatsLink = showAiStats
             ? `<a href="theodoi-ai.html" class="${navLinkClass(aiStatsActive)}"><i class="fas fa-robot"></i> Theo dõi AI</a>`
             : '';
-        const documentsLink = `<a href="quanlyvanban.html" class="${navLinkClass(documentsActive)}"><i class="fas fa-folder-open"></i> Quản lý văn bản <span id="teacherDocumentReminderBadge" class="teacher-document-reminder-badge hidden" title="Văn bản gần hoặc quá hạn báo cáo"></span></a>`;
+        const documentsLink = showDocuments
+            ? `<a href="quanlyvanban.html" class="${navLinkClass(documentsActive)}"><i class="fas fa-folder-open"></i> Quản lý văn bản <span id="teacherDocumentReminderBadge" class="teacher-document-reminder-badge hidden" title="Văn bản gần hoặc quá hạn báo cáo"></span></a>`
+            : '';
 
         return `
             <div class="teacher-workspace-nav">
@@ -246,7 +271,7 @@
     function mountTeacherLotrinhNav(options = {}) {
         if (!isTeacher()) return null;
         if (isVanbanPage()) return null;
-        if (!getAllowedLotrinhPages().length) return null;
+        if (!teacherHasWorkspaceNav()) return null;
 
         ensureStyles();
         const html = buildNavHtml(options);

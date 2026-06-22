@@ -1660,11 +1660,35 @@
             gslides: { title: 'Trình chiếu Slides', url: 'gslides.html' },
             smartquiz: { title: 'Soạn câu hỏi/Game AI', url: 'smartquiz.html' },
             thitructuyen: { title: 'Thi Online', url: 'thitructuyen.html' },
-            kttx: { title: 'Đề kiểm tra thường xuyên', url: 'kttx.html' }
-        };
-        const teacherOnlyPages = {
+            kttx: { title: 'Đề kiểm tra thường xuyên', url: 'kttx.html' },
+            rutgon: { title: 'Link rút gọn & QR', url: 'rutgon.html' },
+            thongketientrinh: { title: 'Thống kê tiến trình lớp', url: 'thongketientrinh.html' },
+            quanlyvanban: { title: 'Quản lý văn bản', url: 'quanlyvanban.html' },
             theodoiai: { title: 'Theo dõi AI lộ trình', url: 'theodoi-ai.html' }
         };
+        const teacherOnlyPages = {
+            rutgon: hostingPages.rutgon,
+            thongketientrinh: hostingPages.thongketientrinh,
+            quanlyvanban: hostingPages.quanlyvanban,
+            theodoiai: hostingPages.theodoiai
+        };
+        const teacherFeatureGroups = [
+            {
+                title: 'Lộ trình Toán — Soạn bài',
+                hint: 'Tab Soạn bài và chọn khối Toán 4–9.',
+                pages: ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']
+            },
+            {
+                title: 'Theo dõi & quản lý',
+                hint: 'Các tab trong không gian giáo viên.',
+                pages: ['thongketientrinh', 'quanlyvanban', 'theodoiai']
+            },
+            {
+                title: 'Công cụ giảng dạy',
+                hint: 'Hiện trên trang chính của giáo viên.',
+                pages: ['gslides', 'smartquiz', 'thitructuyen', 'kttx', 'rutgon']
+            }
+        ];
         let editingStudent = null;
 
         function ensureStudentCreatePanel() {
@@ -1805,7 +1829,7 @@
                     syncClassNameLabels(role);
                     renderPageChecks(
                         'createAllowedPages',
-                        preserved.length ? preserved : (role === 'teacher' ? mathRouteOrder : ['lotrinhtoan6']),
+                        preserved.length ? preserved : (role === 'teacher' ? defaultTeacherPages : ['lotrinhtoan6']),
                         role
                     );
                 });
@@ -1991,7 +2015,33 @@
         }
 
         function allowedPagesLabelFor(role) {
-            return role === 'teacher' ? 'Lộ trình được phép soạn' : 'Trang mở cho học sinh';
+            return role === 'teacher' ? 'Chức năng giáo viên được phép' : 'Trang mở cho học sinh';
+        }
+
+        function ensureTeacherPermStyles() {
+            if (document.getElementById('teacherPermToggleStyles')) return;
+            const style = document.createElement('style');
+            style.id = 'teacherPermToggleStyles';
+            style.textContent = `
+                .teacher-perm-groups { display: flex; flex-direction: column; gap: 1rem; }
+                .teacher-perm-group { border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #f8fafc; padding: 0.85rem; }
+                .teacher-perm-group-title { font-size: 0.82rem; font-weight: 800; color: #0f172a; }
+                .teacher-perm-group-hint { margin-top: 0.15rem; font-size: 0.72rem; color: #64748b; }
+                .teacher-perm-grid { margin-top: 0.65rem; display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 0.5rem; }
+                @media (min-width: 640px) { .teacher-perm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+                @media (min-width: 1024px) { .teacher-perm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+                .teacher-perm-toggle { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.65rem; background: #fff; padding: 0.55rem 0.7rem; cursor: pointer; }
+                .teacher-perm-toggle.is-on { border-color: #0d9488; background: #f0fdfa; }
+                .teacher-perm-toggle-label { font-size: 0.82rem; font-weight: 700; color: #334155; line-height: 1.35; }
+                .teacher-perm-switch { position: relative; width: 2.5rem; height: 1.35rem; flex-shrink: 0; }
+                .teacher-perm-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+                .teacher-perm-switch-track { position: absolute; inset: 0; border-radius: 999px; background: #cbd5e1; transition: background 0.2s; }
+                .teacher-perm-switch-track::after { content: ''; position: absolute; top: 0.15rem; left: 0.15rem; width: 1.05rem; height: 1.05rem; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(15,23,42,.18); transition: transform 0.2s; }
+                .teacher-perm-switch input:checked + .teacher-perm-switch-track { background: #0d9488; }
+                .teacher-perm-switch input:checked + .teacher-perm-switch-track::after { transform: translateX(1.15rem); }
+                .teacher-perm-switch input:focus-visible + .teacher-perm-switch-track { outline: 2px solid #14b8a6; outline-offset: 2px; }
+            `;
+            document.head.appendChild(style);
         }
 
         function syncAllowedPagesLabels(role) {
@@ -2212,11 +2262,55 @@
             return entries;
         }
 
-        function renderPageChecks(containerId, selectedPages, role = 'student') {
+        function renderTeacherPageToggles(containerId, selectedPages) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            ensureTeacherPermStyles();
             const normalizedPages = (selectedPages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
             const selected = new Set(normalizedPages);
-            document.getElementById(containerId).innerHTML = pageEntriesForRole(role).map(([id, page]) => `
-                <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700${id === 'theodoiai' ? ' border-sky-200 bg-sky-50' : ''}">
+            container.innerHTML = teacherFeatureGroups.map(group => `
+                <section class="teacher-perm-group">
+                    <div class="teacher-perm-group-title">${escapeAdminHtml(group.title)}</div>
+                    <div class="teacher-perm-group-hint">${escapeAdminHtml(group.hint)}</div>
+                    <div class="teacher-perm-grid">
+                        ${group.pages.map(id => {
+                            const page = hostingPages[id];
+                            if (!page) return '';
+                            const on = selected.has(id);
+                            return `
+                                <label class="teacher-perm-toggle${on ? ' is-on' : ''}">
+                                    <span class="teacher-perm-toggle-label">${escapeAdminHtml(page.title)}</span>
+                                    <span class="teacher-perm-switch">
+                                        <input type="checkbox" value="${id}" class="allowed-page" ${on ? 'checked' : ''}>
+                                        <span class="teacher-perm-switch-track" aria-hidden="true"></span>
+                                    </span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </section>
+            `).join('');
+            container.classList.add('teacher-perm-groups');
+            container.querySelectorAll('.teacher-perm-toggle input.allowed-page').forEach(input => {
+                input.addEventListener('change', () => {
+                    input.closest('.teacher-perm-toggle')?.classList.toggle('is-on', input.checked);
+                });
+            });
+        }
+
+        function renderPageChecks(containerId, selectedPages, role = 'student') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (role === 'teacher') {
+                container.classList.remove('teacher-perm-groups');
+                renderTeacherPageToggles(containerId, selectedPages);
+                return;
+            }
+            container.classList.remove('teacher-perm-groups');
+            const normalizedPages = (selectedPages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
+            const selected = new Set(normalizedPages);
+            container.innerHTML = pageEntriesForRole(role).map(([id, page]) => `
+                <label class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
                     <input type="checkbox" value="${id}" ${selected.has(id) ? 'checked' : ''} class="allowed-page w-4 h-4 text-blue-600 rounded">
                     ${page.title}
                 </label>
@@ -2228,6 +2322,7 @@
         }
 
         const mathRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban'];
 
         function normalizeAllowedPagesForAdmin(pages) {
             return (pages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
@@ -2561,7 +2656,7 @@
             const allowedPages = selectedPagesFrom(document.getElementById('createAllowedPages'));
             const className = readClassNameFromForm('create');
             if (role === 'teacher' && !allowedPages.length) {
-                return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
+                return alert('Bật ít nhất một chức năng cho giáo viên.');
             }
             if (role === 'teacher' && !className) {
                 return alert('Giáo viên cần tick chọn hoặc nhập ít nhất một lớp phụ trách (vd. 6A, 6B). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
@@ -2587,7 +2682,7 @@
                 form.reset();
                 const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
                 const resetRole = roleSelect?.value || 'student';
-                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? mathRouteOrder : ['lotrinhtoan6'], resetRole);
+                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? defaultTeacherPages : ['lotrinhtoan6'], resetRole);
                 renderDurationOptions('createDurationOption', 'forever');
                 if (roleSelect) {
                     syncAllowedPagesLabels(roleSelect.value);
@@ -2674,7 +2769,7 @@
             const allowedPages = selectedPagesFrom(document.getElementById('editAllowedPages'));
             const className = readClassNameFromForm('edit');
             if (role === 'teacher' && !allowedPages.length) {
-                return alert('Giáo viên cần được chọn ít nhất một lộ trình để soạn bài.');
+                return alert('Bật ít nhất một chức năng cho giáo viên.');
             }
             if (role === 'teacher' && !className) {
                 return alert('Giáo viên cần tick chọn hoặc nhập ít nhất một lớp phụ trách (vd. 6A, 6B). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');

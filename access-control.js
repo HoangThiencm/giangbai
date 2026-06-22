@@ -159,8 +159,8 @@
             window.location.href = 'index.html';
             return;
         }
-        if (!hasLotrinhScope(allowedPages)) {
-            alert('Tài khoản chưa được admin mở lộ trình nào để theo dõi tiến độ.');
+        if (!canOpenPage('thongketientrinh', allowedPages)) {
+            alert('Tài khoản chưa được admin cấp quyền Thống kê tiến trình.');
             window.location.href = 'index.html';
         }
         return;
@@ -180,10 +180,26 @@
     }
 
     if (role === 'teacher' && pageKey === 'rutgon') {
+        if (!canOpenPage('rutgon', allowedPages)) {
+            alert('Tài khoản chưa được admin cấp quyền Link rút gọn & QR.');
+            window.location.href = 'index.html';
+        }
+        return;
+    }
+
+    if (role === 'teacher' && ['gslides', 'smartquiz', 'thitructuyen', 'kttx'].includes(pageKey)) {
+        if (!canOpenPage(pageKey, allowedPages)) {
+            alert('Tài khoản chưa được admin cấp quyền mở công cụ này.');
+            window.location.href = 'index.html';
+        }
         return;
     }
 
     if (role === 'teacher' && pageKey === 'quanlyvanban') {
+        if (!canOpenPage('quanlyvanban', allowedPages)) {
+            alert('Tài khoản chưa được admin cấp quyền Quản lý văn bản.');
+            window.location.href = 'index.html';
+        }
         return;
     }
 

@@ -1198,7 +1198,11 @@
                 card.classList.add('hidden');
             });
 
-            if (!lotrinhPages.length) return;
+            const canViewStats = teacherTabs.progress_stats && allowedSet.has('thongketientrinh');
+            const canViewDocuments = allowedSet.has('quanlyvanban');
+            const canViewDesign = teacherTabs.design && lotrinhPages.length > 0;
+            const hasTeacherWorkspace = canViewDesign || canViewStats || canViewDocuments || (teacherTabs.ai_stats && allowedSet.has('theodoiai'));
+            if (!hasTeacherWorkspace) return;
 
             const hub = document.getElementById('teacherLotrinhHub');
             const panel = document.getElementById('teacherLotrinhPanel');
@@ -1223,7 +1227,7 @@
                 : 'Chưa gán lớp phụ trách — liên hệ admin nếu cần theo dõi tiến độ theo lớp.';
 
             const actionCards = [];
-            if (teacherTabs.progress_stats) {
+            if (canViewStats) {
                 actionCards.push(`
                     <a href="thongketientrinh.html" class="lotrinh-action-card stats">
                         <span class="lotrinh-action-icon"><i class="fas fa-chart-line"></i></span>
@@ -1249,9 +1253,9 @@
                 `);
             }
 
-            const enabledCount = [teacherTabs.progress_stats, canViewAiStats].filter(Boolean).length;
+            const enabledCount = [canViewStats, canViewAiStats].filter(Boolean).length;
             const introParts = [];
-            if (teacherTabs.progress_stats) introParts.push('<strong class="text-white">theo dõi tiến độ</strong> học sinh');
+            if (canViewStats) introParts.push('<strong class="text-white">theo dõi tiến độ</strong> học sinh');
             if (canViewAiStats) introParts.push('<strong class="text-white">theo dõi AI</strong> lộ trình');
             const introText = introParts.length
                 ? `${enabledCount} việc chính: ${introParts.join(', ').replace(/, ([^,]*)$/, ' và $1')}.`
@@ -1306,7 +1310,7 @@
             const mainToolsGrid = document.getElementById('mainToolsGrid');
             if (mainToolsGrid) {
                 const teacherWorkspaceCards = [];
-                if (teacherTabs.design) {
+                if (canViewDesign) {
                     const defaultDesignUrl = lotrinhPages[0]?.url || 'lotrinhtoan6.html';
                     teacherWorkspaceCards.push(`
                         <a href="${defaultDesignUrl}" data-tool="teacher-lotrinh-design" class="tool-tile tool-tile--colored tool-tile--lotrinh">
@@ -1321,19 +1325,27 @@
                         </a>
                     `);
                 }
-                teacherWorkspaceCards.push(`
-                    <a href="quanlyvanban.html" data-tool="teacher-documents" class="tool-tile tool-tile--colored tool-tile--documents">
-                        <span class="tool-tile-glow"></span>
-                        <span class="tool-tile-watermark"><i class="fas fa-folder-open"></i></span>
-                        <div class="tool-tile-content">
-                            <span class="tool-tile-eyebrow">Hành chính & Đảng <span id="teacherDocumentsCardReminder" class="ml-1 hidden rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800"></span></span>
-                            <h3 class="tool-tile-title">Quản lý văn bản</h3>
-                            <p class="tool-tile-desc">Hành chính và Đảng: văn bản đến/đi, hạn báo cáo, xuất Excel, tệp trên Drive.</p>
-                        </div>
-                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
-                    </a>
-                `);
+                if (canViewDocuments) {
+                    teacherWorkspaceCards.push(`
+                        <a href="quanlyvanban.html" data-tool="teacher-documents" class="tool-tile tool-tile--colored tool-tile--documents">
+                            <span class="tool-tile-glow"></span>
+                            <span class="tool-tile-watermark"><i class="fas fa-folder-open"></i></span>
+                            <div class="tool-tile-content">
+                                <span class="tool-tile-eyebrow">Hành chính & Đảng <span id="teacherDocumentsCardReminder" class="ml-1 hidden rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800"></span></span>
+                                <h3 class="tool-tile-title">Quản lý văn bản</h3>
+                                <p class="tool-tile-desc">Hành chính và Đảng: văn bản đến/đi, hạn báo cáo, xuất Excel, tệp trên Drive.</p>
+                            </div>
+                            <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                        </a>
+                    `);
+                }
                 mainToolsGrid.insertAdjacentHTML('beforeend', teacherWorkspaceCards.join(''));
+                const teacherToolMap = { gslides: 'gslides', smartquiz: 'smartquiz', thitructuyen: 'thitructuyen', kttx: 'kttx', rutgon: 'rutgon' };
+                Object.entries(teacherToolMap).forEach(([tool, pageKey]) => {
+                    if (!allowedSet.has(pageKey)) {
+                        document.querySelectorAll(`[data-tool="${tool}"]`).forEach(card => card.classList.add('hidden'));
+                    }
+                });
                 const reminderBadge = document.getElementById('teacherDocumentsCardReminder');
                 if (reminderBadge) {
                     fetch('api/vanban.php?action=list', { credentials: 'include', cache: 'no-store' })

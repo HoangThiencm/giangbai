@@ -39,8 +39,29 @@ function page_catalog(): array
         'thitructuyen' => ['title' => 'Thi Online', 'url' => 'thitructuyen.html'],
         'kttx' => ['title' => 'Đề kiểm tra thường xuyên', 'url' => 'kttx.html'],
         'rutgon' => ['title' => 'Link rút gọn & QR', 'url' => 'rutgon.html'],
+        'thongketientrinh' => ['title' => 'Thống kê tiến trình lớp', 'url' => 'thongketientrinh.html'],
+        'quanlyvanban' => ['title' => 'Quản lý văn bản', 'url' => 'quanlyvanban.html'],
         'theodoiai' => ['title' => 'Theo dõi AI lộ trình', 'url' => 'theodoi-ai.html'],
     ];
+}
+
+function teacher_workspace_page_ids(): array
+{
+    return [
+        'thongketientrinh',
+        'quanlyvanban',
+        'theodoiai',
+        'gslides',
+        'smartquiz',
+        'thitructuyen',
+        'kttx',
+        'rutgon',
+    ];
+}
+
+function teacher_default_workspace_extras(): array
+{
+    return ['thongketientrinh', 'quanlyvanban'];
 }
 
 function normalize_pages($pages): array
@@ -111,6 +132,15 @@ function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
 
     $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
     $upgraded = ensure_teacher_lotrinh_scope($current);
+    $lotrinhKeys = array_keys(lotrinh_page_subjects());
+    if (array_intersect($upgraded, $lotrinhKeys)) {
+        foreach (teacher_default_workspace_extras() as $page) {
+            if (!in_array($page, $upgraded, true)) {
+                $upgraded[] = $page;
+            }
+        }
+        $upgraded = normalize_pages($upgraded);
+    }
     if ($upgraded === $current) {
         return $user;
     }
