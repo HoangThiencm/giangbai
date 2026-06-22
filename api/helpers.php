@@ -35,9 +35,15 @@ function page_catalog(): array
         'lotrinhtoan8' => ['title' => 'Lộ trình tự học Toán 8', 'url' => 'lotrinhtoan8.html'],
         'lotrinhtoan9' => ['title' => 'Lộ trình tự học Toán 9', 'url' => 'lotrinhtoan9.html'],
         'gslides' => ['title' => 'Trình chiếu Slides', 'url' => 'gslides.html'],
+        'vehinh' => ['title' => 'Vẽ hình học AI', 'url' => 'vehinh.html'],
         'smartquiz' => ['title' => 'Soạn câu hỏi/Game AI', 'url' => 'smartquiz.html'],
+        'matrande' => ['title' => 'Đề từ ma trận', 'url' => 'matrande.html'],
+        'tronde' => ['title' => 'Trộn đề thi', 'url' => 'tronde.html'],
         'thitructuyen' => ['title' => 'Thi Online', 'url' => 'thitructuyen.html'],
         'kttx' => ['title' => 'Đề kiểm tra thường xuyên', 'url' => 'kttx.html'],
+        'nopbai' => ['title' => 'Giao & nhận bài', 'url' => 'nopbai-quanly.html'],
+        'padlet' => ['title' => 'Bảng chia sẻ Padlet', 'url' => 'padlet_ht.html'],
+        'vietbaocao' => ['title' => 'Viết báo cáo AI', 'url' => 'vietbaocao.html'],
         'rutgon' => ['title' => 'Link rút gọn & QR', 'url' => 'rutgon.html'],
         'thongketientrinh' => ['title' => 'Thống kê tiến trình lớp', 'url' => 'thongketientrinh.html'],
         'quanlyvanban' => ['title' => 'Quản lý văn bản', 'url' => 'quanlyvanban.html'],
@@ -52,9 +58,15 @@ function teacher_workspace_page_ids(): array
         'quanlyvanban',
         'theodoiai',
         'gslides',
+        'vehinh',
         'smartquiz',
+        'matrande',
+        'tronde',
         'thitructuyen',
         'kttx',
+        'nopbai',
+        'padlet',
+        'vietbaocao',
         'rutgon',
     ];
 }
@@ -132,15 +144,6 @@ function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
 
     $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
     $upgraded = ensure_teacher_lotrinh_scope($current);
-    $lotrinhKeys = array_keys(lotrinh_page_subjects());
-    if (array_intersect($upgraded, $lotrinhKeys)) {
-        foreach (teacher_default_workspace_extras() as $page) {
-            if (!in_array($page, $upgraded, true)) {
-                $upgraded[] = $page;
-            }
-        }
-        $upgraded = normalize_pages($upgraded);
-    }
     if ($upgraded === $current) {
         return $user;
     }

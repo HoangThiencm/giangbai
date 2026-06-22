@@ -13,9 +13,15 @@
         'quanlyvanban-dang.html': 'quanlyvanban',
         'theodoi-ai.html': 'theodoiai',
         'gslides.html': 'gslides',
+        'vehinh.html': 'vehinh',
         'smartquiz.html': 'smartquiz',
+        'matrande.html': 'matrande',
+        'tronde.html': 'tronde',
         'thitructuyen.html': 'thitructuyen',
         'kttx.html': 'kttx',
+        'nopbai-quanly.html': 'nopbai',
+        'padlet_ht.html': 'padlet',
+        'vietbaocao.html': 'vietbaocao',
         'rutgon.html': 'rutgon'
     };
     const pageUrls = {
@@ -30,9 +36,15 @@
         quanlyvanban: 'quanlyvanban.html',
         theodoiai: 'theodoi-ai.html',
         gslides: 'gslides.html',
+        vehinh: 'vehinh.html',
         smartquiz: 'smartquiz.html',
+        matrande: 'matrande.html',
+        tronde: 'tronde.html',
         thitructuyen: 'thitructuyen.html',
         kttx: 'kttx.html',
+        nopbai: 'nopbai-quanly.html',
+        padlet: 'padlet_ht.html',
+        vietbaocao: 'vietbaocao.html',
         rutgon: 'rutgon.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
@@ -107,12 +119,19 @@
         return;
     }
 
+    function mergedFeaturesForUser(cfg) {
+        const globalFeatures = cfg.features || {};
+        const account = localStorage.getItem('userEmail') || '';
+        const userFeatures = account && cfg.user_features?.[account] ? cfg.user_features[account] : {};
+        return { ...globalFeatures, ...userFeatures };
+    }
+
     async function refreshTeacherTabFlags() {
         try {
             const res = await fetch('global_config.json', { cache: 'no-store' });
             if (!res.ok) return;
             const cfg = await res.json();
-            const features = cfg.features || {};
+            const features = mergedFeaturesForUser(cfg);
             localStorage.setItem('teacher_design_enabled', features.teacher_design !== false ? '1' : '0');
             localStorage.setItem('teacher_progress_stats_enabled', features.teacher_progress_stats !== false ? '1' : '0');
             localStorage.setItem('teacher_ai_stats_enabled', features.teacher_ai_stats !== false ? '1' : '0');
@@ -187,7 +206,8 @@
         return;
     }
 
-    if (role === 'teacher' && ['gslides', 'smartquiz', 'thitructuyen', 'kttx'].includes(pageKey)) {
+    const teacherWorkspaceTools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao'];
+    if (role === 'teacher' && teacherWorkspaceTools.includes(pageKey)) {
         if (!canOpenPage(pageKey, allowedPages)) {
             alert('Tài khoản chưa được admin cấp quyền mở công cụ này.');
             window.location.href = 'index.html';

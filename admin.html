@@ -220,6 +220,36 @@
                             <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
                         </label>
                     </div>
+                    <!-- 9. Giao & nhận bài -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Giao &amp; Nhận Bài</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_nopbai"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 10. Padlet -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Bảng Chia Sẻ Padlet</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_padlet"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <!-- 11. Viết báo cáo -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Viết Báo Cáo AI</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_vietbaocao"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
                 </div>
 
                 <div class="rounded-xl border border-teal-200 bg-teal-50/60 p-5 mb-6">
@@ -745,6 +775,11 @@
             lastSavedAt: null
         };
 
+        const CLIENT_FEATURE_CHECKS = [
+            'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx',
+            'nopbai', 'padlet', 'vietbaocao', 'rutgon'
+        ];
+
         const FEATURE_NAMES = {
             gslides: "Trình Chiếu Slides",
             vehinh: "Vẽ Hình Học AI",
@@ -753,8 +788,25 @@
             tronde: "Trộn Đề Thi",
             thitructuyen: "Tổ Chức Thi Online",
             kttx: "Đề Kiểm Tra Thường Xuyên",
-            rutgon: "Link Rút Gọn & QR"
+            nopbai: "Giao & Nhận Bài",
+            padlet: "Bảng Chia Sẻ Padlet",
+            vietbaocao: "Viết Báo Cáo AI",
+            rutgon: "Link Rút Gọn & QR",
+            teacher_design: "Soạn bài lộ trình",
+            teacher_progress_stats: "Thống kê tiến trình",
+            teacher_ai_stats: "Theo dõi AI"
         };
+
+        const USER_FEATURE_GROUPS = [
+            {
+                title: 'Công cụ AI trên hub giáo viên',
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'rutgon']
+            },
+            {
+                title: 'Không gian lộ trình Toán',
+                ids: ['teacher_design', 'teacher_progress_stats', 'teacher_ai_stats']
+            }
+        ];
 
         const TEACHER_TAB_CHECKS = ['teacher_design', 'teacher_progress_stats', 'teacher_ai_stats'];
 
@@ -1048,8 +1100,7 @@
         function applyGlobalConfigToAdminUI(content) {
             if (!content.user_features) content.user_features = {};
             const features = content.features || {};
-            const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'rutgon'];
-            checks.forEach(id => {
+            CLIENT_FEATURE_CHECKS.forEach(id => {
                 const el = document.getElementById('cfg_' + id);
                 if (el) el.checked = features[id] !== false;
             });
@@ -1185,8 +1236,7 @@
 
                     // Apply to UI
                     const features = content.features || {};
-                    const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'rutgon'];
-                    checks.forEach(id => {
+                    CLIENT_FEATURE_CHECKS.forEach(id => {
                         const el = document.getElementById('cfg_' + id);
                         if (el) el.checked = features[id] !== false;
                     });
@@ -1277,8 +1327,7 @@
 
             try {
                 const features = {};
-                const checks = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'rutgon'];
-                checks.forEach(id => {
+                CLIENT_FEATURE_CHECKS.forEach(id => {
                     const el = document.getElementById('cfg_' + id);
                     if (el) features[id] = el.checked;
                 });
@@ -1575,16 +1624,23 @@
             });
 
             // --- Render Tính Năng ---
-            let html = "";
-            Object.keys(FEATURE_NAMES).forEach(id => {
-                let isChecked = userFeatures[id] !== false;
-                html += `
-                <label class="flex items-center justify-between cursor-pointer p-3 mb-2 hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors">
-                    <span class="text-sm font-semibold text-slate-700"><i class="fas fa-cube text-blue-500 mr-2"></i>${FEATURE_NAMES[id]}</span>
-                    <input type="checkbox" id="ucfg_${id}" class="w-5 h-5 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500" ${isChecked ? 'checked' : ''}>
-                </label>
-                `;
-            });
+            const mergedFeatures = { ...(currentGlobalContent.features || {}), ...(currentGlobalContent.user_features[email] || {}) };
+            let html = USER_FEATURE_GROUPS.map(group => `
+                <section class="rounded-lg border border-slate-200 bg-slate-50/70 p-3 mb-3">
+                    <h4 class="text-sm font-bold text-slate-800 mb-2">${group.title}</h4>
+                    <div class="space-y-2">
+                        ${group.ids.map(id => {
+                            const isChecked = mergedFeatures[id] !== false;
+                            return `
+                                <label class="flex items-center justify-between cursor-pointer p-3 hover:bg-white rounded-lg border border-slate-200 transition-colors bg-white">
+                                    <span class="text-sm font-semibold text-slate-700"><i class="fas fa-cube text-blue-500 mr-2"></i>${FEATURE_NAMES[id] || id}</span>
+                                    <input type="checkbox" id="ucfg_${id}" class="w-5 h-5 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500" ${isChecked ? 'checked' : ''}>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </section>
+            `).join('');
 
             document.getElementById('modalFeaturesList').innerHTML = html;
             document.getElementById('userConfigModal').classList.remove('hidden');
@@ -1605,9 +1661,11 @@
 
             try {
                 const userFeatures = {};
-                Object.keys(FEATURE_NAMES).forEach(id => {
-                    const el = document.getElementById('ucfg_' + id);
-                    if (el) userFeatures[id] = el.checked;
+                USER_FEATURE_GROUPS.forEach(group => {
+                    group.ids.forEach(id => {
+                        const el = document.getElementById('ucfg_' + id);
+                        if (el) userFeatures[id] = el.checked;
+                    });
                 });
 
                 // Tính toán thời gian hết hạn dựa trên Option
@@ -1644,7 +1702,12 @@
                     ...userFeatures
                 };
 
-                await pushConfigToGitHub(currentGlobalContent, `Admin: Cập nhật cấu hình riêng cho ${editingUserEmail}`);
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback luu GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, `Admin: Cập nhật cấu hình riêng cho ${editingUserEmail}`);
+                }
 
                 alert(`Đã lưu cấu hình riêng cho ${editingUserEmail} thành công!`);
                 closeUserConfigModal();
@@ -1668,9 +1731,15 @@
             lotrinhtoan8: { title: 'Lộ trình tự học Toán 8', url: 'lotrinhtoan8.html' },
             lotrinhtoan9: { title: 'Lộ trình tự học Toán 9', url: 'lotrinhtoan9.html' },
             gslides: { title: 'Trình chiếu Slides', url: 'gslides.html' },
+            vehinh: { title: 'Vẽ hình học AI', url: 'vehinh.html' },
             smartquiz: { title: 'Soạn câu hỏi/Game AI', url: 'smartquiz.html' },
+            matrande: { title: 'Đề từ ma trận', url: 'matrande.html' },
+            tronde: { title: 'Trộn đề thi', url: 'tronde.html' },
             thitructuyen: { title: 'Thi Online', url: 'thitructuyen.html' },
             kttx: { title: 'Đề kiểm tra thường xuyên', url: 'kttx.html' },
+            nopbai: { title: 'Giao & nhận bài', url: 'nopbai-quanly.html' },
+            padlet: { title: 'Bảng chia sẻ Padlet', url: 'padlet_ht.html' },
+            vietbaocao: { title: 'Viết báo cáo AI', url: 'vietbaocao.html' },
             rutgon: { title: 'Link rút gọn & QR', url: 'rutgon.html' },
             thongketientrinh: { title: 'Thống kê tiến trình lớp', url: 'thongketientrinh.html' },
             quanlyvanban: { title: 'Quản lý văn bản', url: 'quanlyvanban.html' },
@@ -1696,7 +1765,7 @@
             {
                 title: 'Công cụ giảng dạy',
                 hint: 'Hiện trên trang chính của giáo viên.',
-                pages: ['gslides', 'smartquiz', 'thitructuyen', 'kttx', 'rutgon']
+                pages: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'rutgon']
             }
         ];
         let editingStudent = null;

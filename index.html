@@ -784,6 +784,79 @@
             window.location.href = primary ? routeMap[primary] : 'lotrinhtoan6.html';
         }
 
+        const TOOL_PAGE_LINKS = {
+            thitructuyen: 'thitructuyen.html',
+            matrande: 'matrande.html',
+            gslides: 'gslides.html',
+            vehinh: 'vehinh.html',
+            smartquiz: 'smartquiz.html',
+            tronde: 'tronde.html',
+            kttx: 'kttx.html',
+            nopbai: 'nopbai-quanly.html',
+            padlet: 'padlet_ht.html',
+            vietbaocao: 'vietbaocao.html',
+            rutgon: 'rutgon.html'
+        };
+        const LOTRINH_PAGE_KEYS = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
+
+        function mergeAccountFeatures(config) {
+            const globalFeatures = config.features || {};
+            const account = localStorage.getItem('userEmail') || '';
+            const userFeatures = account && config.user_features?.[account] ? config.user_features[account] : {};
+            return { ...globalFeatures, ...userFeatures };
+        }
+
+        function getAllowedPagesSet() {
+            try {
+                const pages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                return new Set((Array.isArray(pages) ? pages : []).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page));
+            } catch {
+                return new Set();
+            }
+        }
+
+        function hideToolCards(selector) {
+            document.querySelectorAll(selector).forEach(card => card.classList.add('hidden'));
+        }
+
+        function applyFeatureToolVisibility(features) {
+            Object.entries(TOOL_PAGE_LINKS).forEach(([tool, href]) => {
+                if (features[tool] === false) {
+                    hideToolCards(`[data-tool="${tool}"], a[href="${href}"]`);
+                }
+            });
+            if (features.teacher_design === false) hideToolCards('[data-tool="teacher-lotrinh-design"]');
+            if (features.teacher_progress_stats === false) hideToolCards('a[href="thongketientrinh.html"]');
+            if (features.teacher_ai_stats === false) hideToolCards('a[href="theodoi-ai.html"]');
+        }
+
+        function applyTeacherAllowedPagesVisibility(allowedSet, features) {
+            if (localStorage.getItem('userRole') !== 'teacher' || !allowedSet.size) return;
+            Object.entries(TOOL_PAGE_LINKS).forEach(([tool, pageKey]) => {
+                if (!allowedSet.has(pageKey)) hideToolCards(`[data-tool="${tool}"]`);
+            });
+            const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
+            if (!hasLotrinh || features.teacher_design === false) hideToolCards('[data-tool="teacher-lotrinh-design"]');
+            if (!allowedSet.has('quanlyvanban')) hideToolCards('[data-tool="teacher-documents"]');
+            if (!allowedSet.has('thongketientrinh') || features.teacher_progress_stats === false) {
+                hideToolCards('a[href="thongketientrinh.html"]');
+            }
+            if (!allowedSet.has('theodoiai') || features.teacher_ai_stats === false) {
+                hideToolCards('a[href="theodoi-ai.html"]');
+            }
+        }
+
+        function storeTeacherTabFlags(features) {
+            const teacherTabs = {
+                teacher_design_enabled: features.teacher_design !== false,
+                teacher_progress_stats_enabled: features.teacher_progress_stats !== false,
+                teacher_ai_stats_enabled: features.teacher_ai_stats !== false,
+            };
+            Object.entries(teacherTabs).forEach(([key, enabled]) => {
+                localStorage.setItem(key, enabled ? '1' : '0');
+            });
+        }
+
         // Load Global Config from GitHub deployment
         async function applyGlobalConfig() {
             try {
@@ -813,57 +886,27 @@
                     }
                     localStorage.setItem('global_mistral_enabled', config.mistral_enabled === false ? 'false' : 'true');
 
-                    const userEmail = localStorage.getItem('userEmail') || "";
-                    let features = config.features || {};
-
-                    if (userEmail && config.user_features && config.user_features[userEmail]) {
-                        // Ghi đè cấu hình global bằng cấu hình riêng của user
-                        features = config.user_features[userEmail];
-
-                        // Kiểm tra thời hạn tài khoản
-                        if (features.expiry) {
-                            const expiryDate = new Date(features.expiry);
-                            if (expiryDate < new Date()) {
-                                alert("Tài khoản của bạn đã hết hạn bảo trì, vui lòng liên hệ Admin để gia hạn.");
-                                localStorage.clear();
-                                window.location.href = 'login.html';
-                                return; // Block tiep tuc
-                            }
+                    const features = mergeAccountFeatures(config);
+                    const account = localStorage.getItem('userEmail') || '';
+                    if (account && config.user_features?.[account]?.expiry) {
+                        const expiryDate = new Date(config.user_features[account].expiry);
+                        if (expiryDate < new Date()) {
+                            alert("Tài khoản của bạn đã hết hạn bảo trì, vui lòng liên hệ Admin để gia hạn.");
+                            localStorage.clear();
+                            window.location.href = 'login.html';
+                            return;
                         }
                     }
 
-                    const links = {
-                        gslides: 'gslides.html',
-                        vehinh: 'vehinh.html',
-                        smartquiz: 'smartquiz.html',
-                        matrande: 'matrande.html',
-                        tronde: 'tronde.html',
-                        thitructuyen: 'thitructuyen.html',
-                        kttx: 'kttx.html',
-                        rutgon: 'rutgon.html',
-                        padlet: 'padlet_ht.html'
-                    };
-
-                    Object.keys(links).forEach(key => {
-                        if (features[key] === false) {
-                            document.querySelectorAll(`[data-tool="${key}"], a[href="${links[key]}"]`).forEach(card => {
-                                card.classList.add('hidden');
-                            });
-                        }
-                    });
+                    applyFeatureToolVisibility(features);
 
                     if (localStorage.getItem('userRole') === 'student') {
-                        document.querySelectorAll('[data-tool="rutgon"]').forEach(card => card.classList.add('hidden'));
+                        hideToolCards('[data-tool="rutgon"]');
+                    } else if (localStorage.getItem('userRole') === 'teacher') {
+                        applyTeacherAllowedPagesVisibility(getAllowedPagesSet(), features);
                     }
 
-                    const teacherTabs = {
-                        teacher_design_enabled: features.teacher_design !== false,
-                        teacher_progress_stats_enabled: features.teacher_progress_stats !== false,
-                        teacher_ai_stats_enabled: features.teacher_ai_stats !== false,
-                    };
-                    Object.entries(teacherTabs).forEach(([key, enabled]) => {
-                        localStorage.setItem(key, enabled ? '1' : '0');
-                    });
+                    storeTeacherTabFlags(features);
                 }
             } catch (e) {
                 console.warn("Chưa cấu hình global_config.json hoặc có lỗi tải file.");
@@ -1139,6 +1182,7 @@
         (async function setupTeacherLotrinhHub() {
             if (localStorage.getItem('userRole') !== 'teacher') return;
 
+            let accountFeatures = {};
             let teacherTabs = {
                 design: true,
                 progress_stats: true,
@@ -1148,13 +1192,11 @@
                 const cfgRes = await fetch('global_config.json', { cache: 'no-store' });
                 if (cfgRes.ok) {
                     const cfg = await cfgRes.json();
-                    const features = cfg.features || {};
-                    teacherTabs.design = features.teacher_design !== false;
-                    teacherTabs.progress_stats = features.teacher_progress_stats !== false;
-                    teacherTabs.ai_stats = features.teacher_ai_stats !== false;
-                    localStorage.setItem('teacher_design_enabled', teacherTabs.design ? '1' : '0');
-                    localStorage.setItem('teacher_progress_stats_enabled', teacherTabs.progress_stats ? '1' : '0');
-                    localStorage.setItem('teacher_ai_stats_enabled', teacherTabs.ai_stats ? '1' : '0');
+                    accountFeatures = mergeAccountFeatures(cfg);
+                    teacherTabs.design = accountFeatures.teacher_design !== false;
+                    teacherTabs.progress_stats = accountFeatures.teacher_progress_stats !== false;
+                    teacherTabs.ai_stats = accountFeatures.teacher_ai_stats !== false;
+                    storeTeacherTabFlags(accountFeatures);
                 }
             } catch {}
 
@@ -1340,12 +1382,8 @@
                     `);
                 }
                 mainToolsGrid.insertAdjacentHTML('beforeend', teacherWorkspaceCards.join(''));
-                const teacherToolMap = { gslides: 'gslides', smartquiz: 'smartquiz', thitructuyen: 'thitructuyen', kttx: 'kttx', rutgon: 'rutgon' };
-                Object.entries(teacherToolMap).forEach(([tool, pageKey]) => {
-                    if (!allowedSet.has(pageKey)) {
-                        document.querySelectorAll(`[data-tool="${tool}"]`).forEach(card => card.classList.add('hidden'));
-                    }
-                });
+                applyFeatureToolVisibility(accountFeatures);
+                applyTeacherAllowedPagesVisibility(allowedSet, accountFeatures);
                 const reminderBadge = document.getElementById('teacherDocumentsCardReminder');
                 if (reminderBadge) {
                     fetch('api/vanban.php?action=list', { credentials: 'include', cache: 'no-store' })
