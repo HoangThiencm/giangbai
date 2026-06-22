@@ -607,7 +607,7 @@ respond([
     'student_quota_defaults' => ai_student_quota_load_config(),
     'notes' => [
         'Log nội bộ lưu tại data/ai_usage.json trên hosting.',
-        'Cloudflare GraphQL đếm mọi request Worker; log nội bộ tách theo module (lộ trình, thi trực tuyến…).',
+        'Cloudflare GraphQL đếm HTTP request tới Worker; lộ trình đếm mọi phản hồi thành công (cache, Light AI, CF, Gemini…). Hai số thường khác nhau.',
         'Lộ trình: Router AI — cache → light_ai (miễn phí) → Cloudflare → Gemini → ShopAIKey/DeepSeek (cuối cùng).',
         'Cache theo lesson_id + câu hỏi tại data/ai_explain_cache.json — không tốn quota.',
         'Quota học sinh: data/ai_student_quota.json — mặc định 25 lượt API/ngày (cache không tính).',

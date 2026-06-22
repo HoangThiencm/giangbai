@@ -252,6 +252,27 @@
         `;
     }
 
+    function lotrinhModeBreakdown(byMode) {
+        const explain = modeCount(byMode, 'explain');
+        const chat = modeCount(byMode, 'chat');
+        if (!explain && !chat) return '';
+        return `Giải thích ${formatNumber(explain)} · Chat ${formatNumber(chat)}`;
+    }
+
+    function lotrinhProviderBreakdown(mod, providers, cfWorkerRequests) {
+        const lines = (MODULE_PROVIDER_MAP.lotrinh || []).map((pid) => {
+            const fromModule = providerInModule(mod, pid);
+            const fromGlobal = Math.max(0, Number(providers?.[pid]?.success) || 0);
+            const count = Math.max(fromModule, fromGlobal);
+            if (!count) return '';
+            return `${providerLabel(pid)}: ${formatNumber(count)}`;
+        }).filter(Boolean);
+        if (cfWorkerRequests != null && Number.isFinite(Number(cfWorkerRequests))) {
+            lines.push(`Worker CF (dashboard): ${formatNumber(cfWorkerRequests)}`);
+        }
+        return lines.join(' · ');
+    }
+
     function renderModuleCards(catalog, byModule, options = {}) {
         const items = Array.isArray(catalog) && catalog.length
             ? catalog
@@ -265,20 +286,34 @@
             thitructuyen: 'rounded-xl border border-violet-200 bg-violet-50 p-4 text-violet-900',
             vanban: 'rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900',
         };
+        const byMode = options.byMode || {};
+        const providers = options.providers || {};
+        const cfWorkerRequests = options.cfWorkerRequests;
         return items.map((item) => {
-            const mod = enrichedModuleBucket(byModule, options.byMode || {}, item.id, options.providers || {});
+            const mod = enrichedModuleBucket(byModule, byMode, item.id, providers);
             const cardClass = toneClasses[item.id] || 'rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-900';
-            const providerLines = (item.providers || []).map((pid) => {
-                const count = providerInModule(mod, pid);
-                if (!count) return '';
-                return `${providerLabel(pid)}: ${formatNumber(count)}`;
-            }).filter(Boolean).join(' · ');
+            let detailLines = '';
+            if (item.id === 'lotrinh') {
+                const modeLine = lotrinhModeBreakdown(byMode);
+                const providerLine = lotrinhProviderBreakdown(mod, providers, cfWorkerRequests);
+                detailLines = [modeLine, providerLine].filter(Boolean).join('<br>');
+            } else {
+                const providerLines = (item.providers || []).map((pid) => {
+                    const count = providerInModule(mod, pid);
+                    if (!count) return '';
+                    return `${providerLabel(pid)}: ${formatNumber(count)}`;
+                }).filter(Boolean).join(' · ');
+                detailLines = escapeHtml(providerLines || item.note || '');
+            }
+            const subtitle = item.id === 'lotrinh'
+                ? 'phản hồi AI cho học sinh (mọi nguồn)'
+                : `thành công hôm nay · ${formatNumber(mod.calls || 0)} lượt gọi`;
             return `
                 <div class="${cardClass}">
                     <div class="text-sm font-bold">${escapeHtml(item.label || moduleLabel(item.id))}</div>
                     <div class="mt-2 text-3xl font-black">${formatNumber(mod.success || 0)}</div>
-                    <div class="text-xs opacity-90">thành công hôm nay · ${formatNumber(mod.calls || 0)} lượt gọi</div>
-                    <div class="mt-2 text-xs opacity-90">${providerLines || escapeHtml(item.note || '')}</div>
+                    <div class="text-xs opacity-90">${subtitle}</div>
+                    <div class="mt-2 text-xs opacity-90 leading-5">${detailLines}</div>
                 </div>
             `;
         }).join('');
@@ -355,7 +390,7 @@
 
             <div>
                 <h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fas fa-layer-group text-sky-600 mr-1"></i> Theo module hôm nay</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule, { byMode, providers })}</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule, { byMode, providers, cfWorkerRequests: cf.available ? cf.requests_today : null })}</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
@@ -365,8 +400,9 @@
                         ${cf.available ? '<span class="text-xs font-semibold text-emerald-700">GraphQL OK</span>' : '<span class="text-xs font-semibold text-amber-700">GraphQL chưa có</span>'}
                     </div>
                     <div class="mt-2 text-2xl font-black text-orange-950">${cf.available ? formatNumber(cf.requests_today) : '—'}</div>
-                    <div class="text-xs text-orange-800">Dashboard CF hôm nay</div>
-                    <div class="mt-2 text-xs text-orange-800">Log nội bộ: ${formatNumber(cfLogTotal)} (lộ trình ${formatNumber(cfLogLotrinh)} · văn bản ${formatNumber(cfLogVanban)})</div>
+                    <div class="text-xs text-orange-800">HTTP request tới Worker (Dashboard CF)</div>
+                    <div class="mt-1 text-xs text-orange-700">Khác số lộ trình — cache/Light AI không gọi Worker</div>
+                    <div class="mt-2 text-xs text-orange-800">Log nội bộ CF: ${formatNumber(cfLogTotal)} (lộ trình ${formatNumber(cfLogLotrinh)} · văn bản ${formatNumber(cfLogVanban)})</div>
                     <div class="mt-1 text-xs text-orange-700"><code>${escapeHtml(data.config?.cloudflare_model || '')}</code></div>
                     ${cf.dashboard_url ? `<a href="${escapeHtml(cf.dashboard_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-bold text-orange-900 underline">Cloudflare Dashboard</a>` : ''}
                 </div>
@@ -479,7 +515,7 @@
                 <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-sky-700">Lộ trình</div>
                     <div class="mt-1 text-2xl font-black text-sky-950">${formatNumber(lotrinh.success || 0)}</div>
-                    <div class="text-[11px] text-sky-800">thành công hôm nay</div>
+                    <div class="text-[11px] text-sky-800">phản hồi HS · CF ${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
                 </div>
                 <div class="rounded-xl border border-violet-200 bg-violet-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-violet-800">Thi trực tuyến</div>
@@ -494,7 +530,7 @@
                 <div class="rounded-xl border border-orange-200 bg-orange-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-orange-800">Worker CF</div>
                     <div class="mt-1 text-2xl font-black text-orange-950">${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
-                    <div class="text-[11px] text-orange-800">Dashboard · tổng log ${formatNumber(resolveTotalSuccess(summary))}</div>
+                    <div class="text-[11px] text-orange-800">Dashboard CF · không bằng lộ trình</div>
                 </div>
             </div>
             </div>
