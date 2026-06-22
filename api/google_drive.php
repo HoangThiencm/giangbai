@@ -26,6 +26,141 @@ function drive_credentials(): array
     return $credentials;
 }
 
+function drive_is_service_account(): bool
+{
+    try {
+        $credentials = drive_credentials();
+        return !empty($credentials['client_email']) && !empty($credentials['private_key']);
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function drive_service_account_email(): string
+{
+    try {
+        $credentials = drive_credentials();
+        return trim((string)($credentials['client_email'] ?? ''));
+    } catch (Throwable $e) {
+        return '';
+    }
+}
+
+function drive_root_folder_id(): string
+{
+    return defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
+}
+
+function drive_service_account_storage_hint(): string
+{
+    $email = drive_service_account_email();
+    $emailPart = $email !== '' ? (' (' . $email . ')') : '';
+    return 'Service Account' . $emailPart . ' không thể lưu tệp vào Drive cá nhân. '
+        . 'Hãy tạo Shared Drive (Drive dùng chung), thêm email Service Account làm Quản lý nội dung, '
+        . 'tạo thư mục gốc bên trong Shared Drive đó, rồi dán ID thư mục vào GOOGLE_DRIVE_ROOT_FOLDER_ID trong api/config.php.';
+}
+
+function drive_get_file_meta(string $fileId): array
+{
+    $url = 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '?' . http_build_query([
+        'fields' => 'id,name,driveId,parents,capabilities,trashed',
+        'supportsAllDrives' => 'true',
+    ]);
+    return drive_api('GET', $url);
+}
+
+function drive_root_in_shared_drive(): ?bool
+{
+    $root = drive_root_folder_id();
+    if ($root === '') return null;
+    try {
+        $meta = drive_get_file_meta($root);
+        if (!empty($meta['trashed'])) return false;
+        return !empty($meta['driveId']);
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function drive_assert_upload_ready(): void
+{
+    drive_credentials();
+    $root = drive_root_folder_id();
+    if ($root === '') {
+        throw new RuntimeException('Chưa cấu hình GOOGLE_DRIVE_ROOT_FOLDER_ID trên hosting.');
+    }
+    if (!drive_is_service_account()) return;
+
+    $inSharedDrive = drive_root_in_shared_drive();
+    if ($inSharedDrive === true) return;
+    if ($inSharedDrive === false) {
+        throw new RuntimeException(drive_service_account_storage_hint());
+    }
+    throw new RuntimeException(
+        'Không truy cập được thư mục gốc Google Drive. Kiểm tra GOOGLE_DRIVE_ROOT_FOLDER_ID '
+        . 'và quyền của Service Account trên Shared Drive (Quản lý nội dung trở lên).'
+    );
+}
+
+function drive_setup_status(): array
+{
+    $configured = defined('GOOGLE_DRIVE_CREDENTIALS_JSON')
+        && trim((string)GOOGLE_DRIVE_CREDENTIALS_JSON) !== ''
+        && drive_root_folder_id() !== '';
+    $status = [
+        'drive_configured' => $configured,
+        'drive_auth_type' => 'none',
+        'drive_ready' => false,
+        'drive_hint' => '',
+        'drive_service_account_email' => '',
+        'drive_root_folder_id' => drive_root_folder_id(),
+        'drive_root_folder_name' => '',
+        'drive_in_shared_drive' => null,
+        'drive_shared_drive_id' => '',
+        'drive_can_upload' => null,
+    ];
+    if (!$configured) {
+        $status['drive_hint'] = 'Chưa cấu hình GOOGLE_DRIVE_CREDENTIALS_JSON hoặc GOOGLE_DRIVE_ROOT_FOLDER_ID trong api/config.php.';
+        return $status;
+    }
+    try {
+        drive_credentials();
+        $status['drive_auth_type'] = drive_is_service_account() ? 'service_account' : 'oauth';
+        $status['drive_service_account_email'] = drive_service_account_email();
+        try {
+            $meta = drive_get_file_meta(drive_root_folder_id());
+            $status['drive_root_folder_name'] = trim((string)($meta['name'] ?? ''));
+            $status['drive_in_shared_drive'] = !empty($meta['driveId']);
+            $status['drive_shared_drive_id'] = trim((string)($meta['driveId'] ?? ''));
+            $status['drive_can_upload'] = !empty($meta['capabilities']['canAddChildren']);
+        } catch (Throwable $e) {
+            $status['drive_hint'] = 'Không đọc được thư mục gốc: ' . $e->getMessage();
+            return $status;
+        }
+        if (drive_is_service_account()) {
+            if ($status['drive_in_shared_drive'] === true && $status['drive_can_upload'] === true) {
+                $status['drive_ready'] = true;
+            } elseif ($status['drive_in_shared_drive'] === false) {
+                $status['drive_hint'] = drive_service_account_storage_hint();
+            } elseif ($status['drive_can_upload'] === false) {
+                $status['drive_hint'] = 'Service Account thấy thư mục nhưng không có quyền tạo tệp. '
+                    . 'Thêm ' . ($status['drive_service_account_email'] ?: 'email Service Account')
+                    . ' vào Shared Drive với quyền Quản lý nội dung.';
+            } else {
+                $status['drive_hint'] = 'Không truy cập được thư mục gốc Google Drive. Kiểm tra ID thư mục và quyền Service Account trên Shared Drive.';
+            }
+        } else {
+            $status['drive_ready'] = $status['drive_can_upload'] !== false;
+            if (!$status['drive_ready']) {
+                $status['drive_hint'] = 'Tài khoản OAuth không có quyền tạo tệp trong thư mục gốc đã cấu hình.';
+            }
+        }
+    } catch (Throwable $e) {
+        $status['drive_hint'] = $e->getMessage();
+    }
+    return $status;
+}
+
 function drive_http(string $method, string $url, array $headers = [], ?string $body = null): array
 {
     if (function_exists('curl_init')) {
@@ -71,6 +206,9 @@ function drive_http(string $method, string $url, array $headers = [], ?string $b
     if ($status < 200 || $status >= 300) {
         $decoded = json_decode((string)$responseBody, true);
         $detail = $decoded['error']['message'] ?? $decoded['error_description'] ?? ('HTTP ' . $status);
+        if (str_contains((string)$detail, 'Service Accounts do not have storage quota')) {
+            $detail = drive_service_account_storage_hint();
+        }
         throw new RuntimeException('Google Drive từ chối yêu cầu: ' . $detail);
     }
 
@@ -346,6 +484,7 @@ function drive_google_convert_mime(string $ext, string $tmpPath): ?string
 
 function drive_upload_file(string $folderId, string $storedName, string $mimeType, string $tmpPath, bool $convertToGoogle = true): array
 {
+    drive_assert_upload_ready();
     $content = file_get_contents($tmpPath);
     if ($content === false) throw new RuntimeException('Không đọc được tệp tạm để tải lên Drive.');
 
@@ -358,48 +497,28 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
     $googleMime = $convertToGoogle ? drive_google_convert_mime($ext, $tmpPath) : null;
     if ($googleMime) $metadata['mimeType'] = $googleMime;
 
-    if ($googleMime) {
-        $boundary = 'giangbai_' . bin2hex(random_bytes(12));
-        $metaJson = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $body = '--' . $boundary . "\r\n" .
-            "Content-Type: application/json; charset=UTF-8\r\n\r\n" .
-            $metaJson . "\r\n" .
-            '--' . $boundary . "\r\n" .
-            'Content-Type: ' . $mediaMime . "\r\n" .
-            "Content-Transfer-Encoding: binary\r\n\r\n" .
-            $content . "\r\n" .
-            '--' . $boundary . '--';
-        $response = drive_http(
-            'POST',
-            'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,mimeType',
-            [
-                'Authorization: Bearer ' . drive_access_token(),
-                'Content-Type: multipart/related; boundary=' . $boundary,
-                'Content-Length: ' . strlen($body),
-            ],
-            $body
-        );
-    } else {
-        $response = drive_http(
-            'POST',
-            'https://www.googleapis.com/upload/drive/v3/files?uploadType=media&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,mimeType',
-            [
-                'Authorization: Bearer ' . drive_access_token(),
-                'Content-Type: ' . $mediaMime,
-                'Content-Length: ' . strlen($content),
-            ],
-            $content
-        );
-        if (empty($response['id'])) throw new RuntimeException('Google Drive không trả về mã tệp.');
-        $fileId = (string)$response['id'];
-        $response = drive_api(
-            'PATCH',
-            'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) .
-                '?addParents=' . rawurlencode($folderId) .
-                '&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,mimeType',
-            ['name' => $metadata['name']]
-        );
-    }
+    // Luôn multipart + parents ngay từ đầu. Service Account không có quota Drive cá nhân;
+    // uploadType=media (không parents) sẽ lỗi dù thư mục Shared Drive tạo được bình thường.
+    $boundary = 'giangbai_' . bin2hex(random_bytes(12));
+    $metaJson = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $body = '--' . $boundary . "\r\n" .
+        "Content-Type: application/json; charset=UTF-8\r\n\r\n" .
+        $metaJson . "\r\n" .
+        '--' . $boundary . "\r\n" .
+        'Content-Type: ' . $mediaMime . "\r\n" .
+        "Content-Transfer-Encoding: binary\r\n\r\n" .
+        $content . "\r\n" .
+        '--' . $boundary . '--';
+    $response = drive_http(
+        'POST',
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,mimeType',
+        [
+            'Authorization: Bearer ' . drive_access_token(),
+            'Content-Type: multipart/related; boundary=' . $boundary,
+            'Content-Length: ' . strlen($body),
+        ],
+        $body
+    );
 
     if (empty($response['id'])) throw new RuntimeException('Google Drive không trả về mã tệp.');
     $fileId = (string)$response['id'];

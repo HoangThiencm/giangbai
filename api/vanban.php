@@ -253,11 +253,21 @@ if ($action === 'list') {
     }
     unset($document);
     $years = $pdo->query('SELECT name FROM office_school_years ORDER BY name DESC')->fetchAll(PDO::FETCH_COLUMN);
+    require_once __DIR__ . '/google_drive.php';
+    $driveStatus = drive_setup_status();
     respond([
         'ok' => true,
         'documents' => $documents,
         'school_years' => $years,
-        'drive_configured' => defined('GOOGLE_DRIVE_CREDENTIALS_JSON') && trim((string)GOOGLE_DRIVE_CREDENTIALS_JSON) !== '' && defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') && trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) !== '',
+        'drive_configured' => (bool)($driveStatus['drive_configured'] ?? false),
+        'drive_ready' => (bool)($driveStatus['drive_ready'] ?? false),
+        'drive_auth_type' => (string)($driveStatus['drive_auth_type'] ?? 'none'),
+        'drive_hint' => (string)($driveStatus['drive_hint'] ?? ''),
+        'drive_service_account_email' => (string)($driveStatus['drive_service_account_email'] ?? ''),
+        'drive_root_folder_id' => (string)($driveStatus['drive_root_folder_id'] ?? ''),
+        'drive_root_folder_name' => (string)($driveStatus['drive_root_folder_name'] ?? ''),
+        'drive_in_shared_drive' => $driveStatus['drive_in_shared_drive'] ?? null,
+        'drive_can_upload' => $driveStatus['drive_can_upload'] ?? null,
         'user' => ['name' => $user['full_name'], 'username' => $user['username']],
     ]);
 }
@@ -348,11 +358,12 @@ if ($action === 'upload') {
     if (!$files) respond(['error' => 'Chưa chọn tệp để tải lên.'], 422);
     $maxBytes = (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024;
     try {
+        require_once __DIR__ . '/google_drive.php';
+        drive_assert_upload_ready();
         $folderId = trim((string)($document['drive_folder_id'] ?? '')) ?: vbd_drive_folder($document);
         if (empty($document['drive_folder_id'])) {
             $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $id]);
         }
-        require_once __DIR__ . '/google_drive.php';
         $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
         $uploaded = [];
         foreach ($files as $index => $file) {

@@ -41,15 +41,23 @@ define('SHOPAIKEY_API_KEY', '');
 define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');
 define('SHOPAIKEY_ENABLED', true);
 
-// Google Drive storage for the assignment submission module.
-// Enable Google Drive API, then use either OAuth Client credentials (personal
-// Drive) or a Service Account (recommended with Shared Drive). Paste the full
-// credentials JSON below in api/config.php on the hosting.
+// Google Drive storage (nộp bài, quản lý văn bản, Padlet, lộ trình...).
+// Bật Google Drive API trong Google Cloud Console.
+//
+// CÁCH 1 — Service Account + Shared Drive (khuyến nghị cho trường):
+//   1) Tạo Service Account, tải JSON, dán vào GOOGLE_DRIVE_CREDENTIALS_JSON.
+//   2) Trong Google Drive: Tạo "Drive dùng chung" (Shared Drive).
+//   3) Thêm email Service Account (client_email trong JSON) làm "Quản lý nội dung".
+//   4) Tạo thư mục gốc BÊN TRONG Shared Drive (không phải "Drive của tôi").
+//   5) Lấy ID thư mục từ URL .../folders/XXXXXXXX → GOOGLE_DRIVE_ROOT_FOLDER_ID.
+//   LƯU Ý: Service Account KHÔNG lưu được vào Drive cá nhân dù có chia sẻ thư mục.
+//
+// CÁCH 2 — OAuth (Drive cá nhân giáo viên):
+//   Dùng OAuth Client JSON + GOOGLE_DRIVE_TOKEN_JSON có refresh_token.
 define('GOOGLE_DRIVE_CREDENTIALS_JSON', '');
 define('GOOGLE_DRIVE_ROOT_FOLDER_ID', '');
 
-// Only needed when GOOGLE_DRIVE_CREDENTIALS_JSON is an OAuth Desktop/Web client.
-// Paste token JSON containing refresh_token. For a service account, leave blank.
+// Chỉ cần khi dùng OAuth Client (CÁCH 2). Service Account để trống.
 define('GOOGLE_DRIVE_TOKEN_JSON', '');
 
 // Keep "private" when the root folder is shared with teachers who review files.
