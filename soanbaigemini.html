@@ -474,8 +474,8 @@ ${imageDescription}
    (mỗi bài một dòng, dùng dấu | )
 
    **b. Kéo thả vào ô trống** (dán vào ô "Kéo vào ô trống"):
-   Câu hỏi có ___ | mảnh1 » mảnh2 » mảnh3 | đáp án | gợi ý
-   (dùng dấu » ngăn cách các mảnh)
+   Câu hỏi có ___ | mảnh1 » mảnh2 » mảnh3 » mảnh_nhiễu | đáp án1 » đáp án2 » đáp án3 | gợi ý ngắn
+   BẮT BUỘC đủ 4 cột (đề | mảnh | đáp án | gợi ý). Đáp án nhiều ô dùng » (vd: 4 » 8 » đơn vị). Cột gợi ý KHÔNG thay cột đáp án.
 
    **c. Nối ô / Sắp xếp** (dán vào ô "Nối ô / sắp xếp"):
    - Nối: Đề | Trái1 » Trái2 | Phải1 » Phải2 | 0-0,1-1 | gợi ý
@@ -1098,7 +1098,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (examples) container.appendChild(createAdminCopySection('VÍ DỤ', examples, 'Copy nguyên vào tab Ví dụ'));
             if (selfPractice) container.appendChild(createAdminCopySection('BÀI TẬP NỘP', selfPractice, 'Copy vào phần Bài tập nộp giáo viên'));
             if (essay) container.appendChild(createAdminCopySection('TỰ LUẬN', essay, 'Copy vào tab Bài tập tương tác → Bài tập tự luận (mỗi dòng: Đề | Đáp án | Gợi ý)'));
-            if (fill) container.appendChild(createAdminCopySection('ĐIỀN KHUYẾT / KÉO THẢ', fill, 'Copy vào tab Bài tập tương tác → Kéo vào ô trống (đáp án nhiều ô dùng » ví dụ 7 » 2 » 8)'));
+            if (fill) container.appendChild(createAdminCopySection('ĐIỀN KHUYẾT / KÉO THẢ', fill, 'Copy vào tab Bài tập tương tác → Hàng loạt hoặc Kéo vào ô trống. Format: Đề có ___ | mảnh » ... | đáp án » từng ô | gợi ý (4 cột, không gộp gợi ý vào cột đáp án)'));
             if (drag) container.appendChild(createAdminCopySection('NỐI Ô / SẮP XẾP', drag, 'Copy vào tab Bài tập tương tác → Nối ô / sắp xếp'));
             if (questions) container.appendChild(createAdminCopySection('TRẮC NGHIỆM', questions, 'Copy từng dòng vào tab Trắc nghiệm (Câu? | A | B | C | D | B)'));
             if (skills) container.appendChild(createAdminCopySection('KỸ NĂNG', skills, 'Copy vào ô Kỹ năng cần đạt'));
@@ -2020,8 +2020,11 @@ Tạo từ 3 đến 5 câu. Mỗi dòng: "Đề đầy đủ | Đáp án | Gợi
 Đáp án là kết quả cuối: số nguyên/thập phân, phân số (1/2) hoặc căn (√16); không chữ hay đơn vị.
 
 **KÉO THẢ VÀO Ô TRỐNG** (heading riêng):
-Tạo đúng 2 câu. Mỗi dòng: "Câu có ___ | mảnh1 » mảnh2 » mảnh3 | đáp án1 » đáp án2 » đáp án3 | gợi ý"
-Đáp án nhiều ô BẮT BUỘC dùng dấu » (ví dụ 7 » 2 » 8). Không dùng 7,2 hay 7, 2, 8.
+Tạo đúng 2 câu. Mỗi dòng BẮT BUỘC 4 cột: "Câu có ___ | mảnh1 » mảnh2 » mảnh_nhiễu | đáp án1 » đáp án2 » đáp án3 | gợi ý ngắn"
+- Cột 1: đề có ___ đúng số ô trống.
+- Cột 2: tất cả mảnh kéo (đáp án đứng trước, mảnh nhiễu đứng sau).
+- Cột 3: đáp án đúng từng ô, dùng » (vd: 4 » 8 » đơn vị). KHÔNG ghi lời giải/hướng dẫn vào cột này.
+- Cột 4: gợi ý ngắn 1 câu.
 
 **SẮP XẾP THỨ TỰ** (heading riêng):
 Tạo đúng 2 câu. Mỗi dòng: "Đề bài | phần tử 1 » phần tử 2 » phần tử 3 | thứ tự đúng 1 » thứ tự đúng 2 » thứ tự đúng 3 | gợi ý"

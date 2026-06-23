@@ -536,6 +536,33 @@
         return matches?.length || 1;
     }
 
+    function looksLikeFillHintText(value) {
+        const text = String(value || '').trim();
+        if (!text) return false;
+        if (POOL_ITEM_SEP_RE.test(text)) return false;
+        if (text.length < 18 && !/[.():]/.test(text)) return false;
+        return /xác định|ô trống|gợi ý|hãy|em hãy|điền|tính|phân tích|nhận xét|giải thích/i.test(text);
+    }
+
+    function inferFillAnswersFromPool(pool, blankCount) {
+        if (!Array.isArray(pool) || !pool.length || blankCount < 1) return [];
+        if (pool.length === blankCount) return [...pool];
+        if (pool.length > blankCount) return pool.slice(0, blankCount);
+        return [...pool];
+    }
+
+    function normalizeFillPromptBlanks(prompt, answers) {
+        let text = String(prompt || '').trim();
+        if (!text || countBlankTokens(text) > 0 || !answers.length) return text;
+        answers.forEach(answer => {
+            const token = String(answer || '').trim();
+            if (!token || token.length > 24) return;
+            const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            text = text.replace(new RegExp(`(?<!_)\\b${escaped}\\b(?!_)`), '___');
+        });
+        return text;
+    }
+
     function normalizeFillSlots(saved, blankCount) {
         if (Array.isArray(saved)) return saved.slice(0, blankCount);
         if (typeof saved === 'string' && saved.trim()) return [saved.trim()];
@@ -543,23 +570,41 @@
     }
 
     function normalizeFillExercise(item) {
-        const prompt = String(item?.prompt || '');
-        const blankCount = countBlankTokens(prompt);
+        let prompt = String(item?.prompt || '');
+        let blankCount = countBlankTokens(prompt);
         let pool = Array.isArray(item?.items) ? [...item.items] : splitPoolText(item?.pool);
         let answers = splitFillAnswerList(item?.answer, blankCount);
+        let hint = String(item?.hint || '').trim();
+
         if (answers.length === 1 && blankCount > 1) {
             const expanded = splitFillAnswerList(answers[0], blankCount);
             if (expanded.length > 1) answers = expanded;
         }
+        if (answers.length === 1 && looksLikeFillHintText(answers[0])) {
+            hint = hint || answers[0];
+            answers = inferFillAnswersFromPool(pool, blankCount);
+        }
+        if ((!answers.length || looksLikeFillHintText(answers.join(' '))) && pool.length) {
+            answers = inferFillAnswersFromPool(pool, blankCount);
+        }
         if (!pool.length && answers.length) pool = [...answers];
-        if (!answers.length && pool.length) answers = blankCount > 1 ? pool.slice(0, blankCount) : [pool[0]];
+        prompt = normalizeFillPromptBlanks(prompt, answers);
+        blankCount = countBlankTokens(prompt);
+        if (answers.length === 1 && blankCount > 1) {
+            const expanded = splitFillAnswerList(answers[0], blankCount);
+            if (expanded.length > 1) answers = expanded;
+        }
+        answers = answers.slice(0, blankCount);
+        if (!answers.length && pool.length) {
+            answers = inferFillAnswersFromPool(pool, blankCount);
+        }
         return {
             ...item,
             prompt,
             blankCount,
             pool,
-            answers: answers.slice(0, blankCount),
-            hint: item?.hint || ''
+            answers,
+            hint
         };
     }
 
