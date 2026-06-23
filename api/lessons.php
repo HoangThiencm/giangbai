@@ -260,6 +260,31 @@ if ($method === 'POST' && $action === 'upload_image') {
     ]);
 }
 
+// Delete an image that was inserted by the lesson editor from both the lesson and Drive.
+if ($method === 'POST' && $action === 'delete_image') {
+    $user = ensure_login();
+    if (!($isAdmin || ($user['role'] ?? '') === 'teacher')) {
+        respond(['error' => 'Chỉ giáo viên được phép xóa ảnh minh họa.'], 403);
+    }
+
+    $fileId = trim((string)($_POST['file_id'] ?? $requestData['file_id'] ?? ''));
+    if ($fileId === '' || !preg_match('/^[a-zA-Z0-9_-]{10,}$/', $fileId)) {
+        respond(['error' => 'Mã tệp Google Drive không hợp lệ.'], 422);
+    }
+
+    // Only allow deletion from the dedicated lesson-image folder, never an arbitrary Drive file.
+    drive_assert_upload_ready();
+    $lessonImageFolderId = drive_get_or_create_folder(drive_root_folder_id(), 'LESSON_IMAGES');
+    $meta = drive_get_file_meta($fileId);
+    $parents = array_map('strval', $meta['parents'] ?? []);
+    if (!in_array($lessonImageFolderId, $parents, true)) {
+        respond(['error' => 'Ảnh này không thuộc thư mục ảnh bài học nên không thể xóa từ đây.'], 403);
+    }
+
+    drive_delete_file($fileId);
+    respond(['ok' => true, 'file_id' => $fileId]);
+}
+
 if ($method === 'GET' && $canManageLessons && !empty($_GET['admin'])) {
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
     respond(['ok' => true, 'lessons' => array_map('lesson_row_to_payload', $stmt->fetchAll())]);

@@ -689,6 +689,126 @@
         window.lessonImageUploadStatusTimer = setTimeout(() => notice.remove(), type === 'loading' ? 30000 : 5000);
     }
 
+    function getDriveFileIdFromImageUrl(url) {
+        try {
+            const parsed = new URL(String(url || ''), window.location.origin);
+            const queryId = parsed.searchParams.get('id');
+            if (queryId) return queryId;
+            const pathMatch = parsed.pathname.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            return pathMatch ? pathMatch[1] : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function getLessonFieldPreview(field) {
+        if (!field?.id) return null;
+        let preview = document.getElementById(`lessonImagePreview_${field.id}`);
+        if (preview) return preview;
+
+        preview = document.createElement('div');
+        preview.id = `lessonImagePreview_${field.id}`;
+        preview.className = 'lesson-inline-image-preview hidden mt-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm';
+        field.insertAdjacentElement('afterend', preview);
+        return preview;
+    }
+
+    async function deleteLessonDriveImage(field, markdown, imageUrl) {
+        const fileId = getDriveFileIdFromImageUrl(imageUrl);
+        const actionText = fileId ? 'xóa ảnh khỏi nội dung và xóa tệp tương ứng trên Google Drive' : 'xóa ảnh khỏi nội dung';
+        if (!window.confirm(`Bạn có muốn ${actionText}?`)) return;
+
+        try {
+            if (fileId) {
+                showLessonImageUploadStatus('Đang xóa ảnh trên Google Drive...', 'loading');
+                const form = new FormData();
+                form.append('action', 'delete_image');
+                form.append('file_id', fileId);
+                const response = await fetch('api/lessons.php', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: form
+                });
+                const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error(data.error || `HTTP ${response.status}`);
+            }
+
+            field.value = field.value.replace(markdown, '');
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            showLessonImageUploadStatus(fileId ? 'Đã xóa ảnh khỏi bài học và Google Drive.' : 'Đã xóa ảnh khỏi nội dung.', 'success');
+        } catch (error) {
+            const message = `Không thể xóa ảnh: ${error?.message || error}`;
+            showLessonImageUploadStatus(message, 'error');
+            alert(message);
+        }
+    }
+
+    function renderLessonFieldImagePreview(field) {
+        const preview = getLessonFieldPreview(field);
+        if (!preview) return;
+        const value = String(field.value || '');
+        const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+        if (!imagePattern.test(value)) {
+            preview.classList.add('hidden');
+            preview.replaceChildren();
+            return;
+        }
+
+        imagePattern.lastIndex = 0;
+        preview.classList.remove('hidden');
+        preview.replaceChildren();
+        const title = document.createElement('div');
+        title.className = 'mb-2 text-xs font-bold text-sky-800';
+        title.textContent = 'Xem trước trong bài học (ảnh hiển thị đúng vị trí Markdown)';
+        preview.appendChild(title);
+
+        let cursor = 0;
+        let match;
+        while ((match = imagePattern.exec(value)) !== null) {
+            const markdown = match[0];
+            const altText = match[1];
+            const imageUrl = match[2];
+            const textBefore = value.slice(cursor, match.index).trim();
+            if (textBefore) {
+                const text = document.createElement('div');
+                text.className = 'mb-2 whitespace-pre-wrap text-slate-700';
+                text.textContent = textBefore;
+                preview.appendChild(text);
+            }
+
+            const figure = document.createElement('figure');
+            figure.className = 'mb-3 rounded-lg border border-slate-200 bg-white p-2';
+            const image = document.createElement('img');
+            image.src = imageUrl;
+            image.alt = altText || 'Ảnh minh họa';
+            image.className = 'max-h-80 max-w-full rounded object-contain';
+            figure.appendChild(image);
+
+            const caption = document.createElement('figcaption');
+            caption.className = 'mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500';
+            const captionText = document.createElement('span');
+            captionText.textContent = altText || 'Ảnh minh họa';
+            caption.appendChild(captionText);
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'rounded bg-rose-50 px-2 py-1 font-semibold text-rose-700 hover:bg-rose-100';
+            deleteButton.innerHTML = '<i class="fas fa-trash"></i> Xóa ảnh';
+            deleteButton.onclick = () => deleteLessonDriveImage(field, markdown, imageUrl);
+            caption.appendChild(deleteButton);
+            figure.appendChild(caption);
+            preview.appendChild(figure);
+            cursor = imagePattern.lastIndex;
+        }
+
+        const textAfter = value.slice(cursor).trim();
+        if (textAfter) {
+            const text = document.createElement('div');
+            text.className = 'whitespace-pre-wrap text-slate-700';
+            text.textContent = textAfter;
+            preview.appendChild(text);
+        }
+    }
+
     // Full support: paste image *file* (Ctrl+V screenshot) → auto upload to Google Drive + insert link
     // Also still supports pasting a plain image URL
     async function handleRichImagePaste(e, ta) {
@@ -738,6 +858,8 @@
         ta.addEventListener('paste', (e) => {
             handleRichImagePaste(e, ta);
         });
+        ta.addEventListener('input', () => renderLessonFieldImagePreview(ta));
+        renderLessonFieldImagePreview(ta);
     }
 
     function setupImagePasteHandlers() {
@@ -1113,7 +1235,7 @@
 
             <div id="tab-vidu" class="lesson-tab-content hidden">
                 <label class="block text-sm font-bold text-slate-700">Ví dụ / Dạng toán (dán hình minh họa khi cần)
-                    <span class="block text-[11px] text-slate-500 mb-1">Mỗi Dạng một khối (dùng **DẠNG 1:**). Dán ảnh vào khối đó nếu cần. Thêm hình riêng cho từng dạng.</span>
+                    <span class="block text-[11px] text-slate-500 mb-1">Mỗi dạng theo khung: <strong>DẠNG 1: Tên dạng → PHƯƠNG PHÁP GIẢI → Bài 1/Lời giải → Bài 2/Lời giải</strong> (có thể thêm Bài 3). Nên có ít nhất một <strong>DẠNG TOÁN THỰC TẾ</strong>. Dán ảnh vào đúng vị trí nếu cần.</span>
                     ${richToolbarHtml('lessonExamples')}
                     <textarea id="lessonExamples" rows="12" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>

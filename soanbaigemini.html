@@ -693,6 +693,49 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             document.body.appendChild(modal);
         }
 
+        function renderLessonContentPreview(container, value) {
+            const markerPattern = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
+            const content = String(value || '');
+            let cursor = 0;
+            let match;
+            markerPattern.lastIndex = 0;
+
+            const appendText = text => {
+                if (!text) return;
+                const paragraph = document.createElement('div');
+                paragraph.className = 'whitespace-pre-wrap';
+                paragraph.textContent = text;
+                container.appendChild(paragraph);
+            };
+
+            while ((match = markerPattern.exec(content)) !== null) {
+                appendText(content.slice(cursor, match.index));
+                const imageId = normalizeLessonImageId(`HINH_${match[2]}`);
+                const imageDataUrl = generatedLessonImages.get(imageId);
+                const figure = document.createElement('figure');
+                figure.className = 'my-3 rounded-lg border border-slate-200 bg-white p-2';
+                if (imageDataUrl) {
+                    const image = document.createElement('img');
+                    image.src = imageDataUrl;
+                    image.alt = match[1] || imageId;
+                    image.className = 'max-h-72 max-w-full rounded object-contain';
+                    figure.appendChild(image);
+                } else {
+                    const missing = document.createElement('div');
+                    missing.className = 'rounded bg-amber-50 px-3 py-2 text-amber-800';
+                    missing.textContent = `[${imageId}: ảnh sẽ hiển thị tại đây sau khi tạo]`;
+                    figure.appendChild(missing);
+                }
+                const caption = document.createElement('figcaption');
+                caption.className = 'mt-1 text-xs italic text-slate-500';
+                caption.textContent = match[1] || imageId;
+                figure.appendChild(caption);
+                container.appendChild(figure);
+                cursor = markerPattern.lastIndex;
+            }
+            appendText(content.slice(cursor));
+        }
+
         // Parse Gemini output and show preview + admin-ready copies + image prompts
         function parseAndPreview() {
             const raw = document.getElementById('gemini-output').value.trim();
@@ -739,55 +782,74 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 }
 
                 const body = document.createElement('div');
-                body.className = 'whitespace-pre-wrap text-xs bg-white p-2 rounded border max-h-32 overflow-auto font-mono';
-                body.textContent = copyValue.substring(0, 300) + (copyValue.length > 300 ? '...' : '');
+                body.className = 'whitespace-pre-wrap text-xs bg-white p-2 rounded border max-h-80 overflow-auto font-mono';
+                renderLessonContentPreview(body, copyValue);
                 div.appendChild(body);
 
                 return div;
             }
 
-            // Extract sections based on our prompt format
-            let goal = '', theory = '', examples = '', selfPractice = '', essay = '', fill = '', drag = '', questions = '', skills = '', tasks = '';
+            // Extract only actual headings, so words such as “ví dụ” inside a theory paragraph never cut its content.
+            let goal = '', theory = '', examples = '', selfPractice = '', interactive = '', questions = '', skills = '', tasks = '';
             let imagePrompts = [];
 
-            const lines = raw.split('\n');
+            const sectionValues = { goal: '', theory: '', examples: '', selfPractice: '', interactive: '', questions: '', skills: '', tasks: '', images: '' };
+            const normalizeHeading = line => String(line || '')
+                .replace(/^\s*#{1,6}\s*/, '')
+                .replace(/^\s*\d+[.)]\s*/, '')
+                .replace(/^\s*\*\*|\*\*\s*$/g, '')
+                .trim()
+                .toUpperCase();
+            const getSectionKey = line => {
+                const heading = normalizeHeading(line);
+                if (heading.length > 80) return '';
+                if (/^MỤC TIÊU(?: BÀI HỌC)?\b/.test(heading)) return 'goal';
+                if (/^LÝ THUYẾT\b/.test(heading)) return 'theory';
+                if (/^VÍ DỤ\b/.test(heading)) return 'examples';
+                if (/^BÀI TẬP NỘP(?: GIÁO VIÊN)?\b/.test(heading)) return 'selfPractice';
+                if (/^BÀI TẬP TƯƠNG TÁC\b/.test(heading)) return 'interactive';
+                if (/^TRẮC NGHIỆM\b/.test(heading)) return 'questions';
+                if (/^KỸ NĂNG(?: CẦN ĐẠT)?\b/.test(heading)) return 'skills';
+                if (/^NHIỆM VỤ(?: HỌC SINH)?\b/.test(heading)) return 'tasks';
+                if (/^(DANH SÁCH HÌNH|HÌNH ẢNH CẦN TẠO|PROMPT TẠO ẢNH)\b/.test(heading)) return 'images';
+                return '';
+            };
+
             let currentKey = '';
-            let buffer = [];
-
-            lines.forEach(line => {
-                const t = line.trim();
-                if (/MỤC TIÊU/i.test(t)) { currentKey = 'goal'; buffer = []; }
-                else if (/LÝ THUYẾT/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='theory'; buffer=[]; }
-                else if (/VÍ DỤ/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='examples'; buffer=[]; }
-                else if (/BÀI TẬP NỘP| BÀI TẬP NỘP GIÁO VIÊN/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='self'; buffer=[]; }
-                else if (/TỰ LUẬN|BÀI TẬP TỰ LUẬN/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='essay'; buffer=[]; }
-                else if (/KÉO THẢ|KÉO VÀO Ô/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='fill'; buffer=[]; }
-                else if (/NỐI Ô|NỐI /i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='drag'; buffer=[]; }
-                else if (/TRẮC NGHIỆM/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='questions'; buffer=[]; }
-                else if (/DANH SÁCH HÌNH| HÌNH ẢNH CẦN TẠO/i.test(t)) { currentKey='images'; buffer=[]; }
-                else if (currentKey) {
-                    buffer.push(line);
+            const buffer = [];
+            const flushSection = () => {
+                if (currentKey && buffer.length) {
+                    sectionValues[currentKey] = buffer.join('\n').trim();
                 }
+                buffer.length = 0;
+            };
+
+            raw.split('\n').forEach(line => {
+                const nextKey = getSectionKey(line);
+                if (nextKey) {
+                    flushSection();
+                    currentKey = nextKey;
+                    return;
+                }
+                if (currentKey) buffer.push(line);
             });
+            flushSection();
 
-            // flush last
-            if (currentKey && buffer.length) window['last_'+currentKey] = buffer.join('\n');
-
-            goal = window.last_goal || '';
-            theory = window.last_theory || '';
-            examples = window.last_examples || '';
-            selfPractice = window.last_self || '';
-            essay = window.last_essay || '';
-            fill = window.last_fill || '';
-            drag = window.last_drag || '';
-            questions = window.last_questions || '';
+            goal = sectionValues.goal;
+            theory = sectionValues.theory;
+            examples = sectionValues.examples;
+            selfPractice = sectionValues.selfPractice;
+            interactive = sectionValues.interactive;
+            questions = sectionValues.questions;
+            skills = sectionValues.skills;
+            tasks = sectionValues.tasks;
 
             // Try to extract image prompts
-            const imgSection = raw.split(/DANH SÁCH HÌNH ẢNH CẦN TẠO/i)[1] || '';
+            const imgSection = raw.split(/DANH SÁCH HÌNH(?: ẢNH)? CẦN TẠO/i)[1] || sectionValues.images || '';
             const imgLines = imgSection.split('\n');
             let currentImg = '';
             imgLines.forEach(l => {
-                if (l.match(/HINH_\d+|HÌNH \d+/i)) {
+                if (l.match(/(?:HINH|HÌNH)[_\s-]*\d+/i)) {
                     if (currentImg) imagePrompts.push(currentImg.trim());
                     currentImg = l + '\n';
                 } else if (currentImg && l.trim()) {
@@ -801,10 +863,10 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (theory) container.appendChild(createAdminCopySection('LÝ THUYẾT', theory, 'Copy nguyên vào tab Lý thuyết'));
             if (examples) container.appendChild(createAdminCopySection('VÍ DỤ', examples, 'Copy nguyên vào tab Ví dụ'));
             if (selfPractice) container.appendChild(createAdminCopySection('BÀI TẬP NỘP', selfPractice, 'Copy vào phần Bài tập nộp giáo viên'));
-            if (essay) container.appendChild(createAdminCopySection('BÀI TẬP TỰ LUẬN', essay, 'Copy từng dòng vào ô Bài tập tự luận'));
-            if (fill) container.appendChild(createAdminCopySection('KÉO THẢ', fill, 'Copy từng dòng vào ô Kéo vào ô trống'));
-            if (drag) container.appendChild(createAdminCopySection('NỐI/SẮP XẾP', drag, 'Copy từng dòng vào ô Nối ô / sắp xếp'));
+            if (interactive) container.appendChild(createAdminCopySection('BÀI TẬP TƯƠNG TÁC', interactive, 'Giữ nguyên toàn bộ phần Tự luận, Kéo thả và Nối/Sắp xếp'));
             if (questions) container.appendChild(createAdminCopySection('TRẮC NGHIỆM', questions, 'Copy từng dòng vào ô Câu hỏi trắc nghiệm'));
+            if (skills) container.appendChild(createAdminCopySection('KỸ NĂNG', skills, 'Copy vào ô Kỹ năng cần đạt'));
+            if (tasks) container.appendChild(createAdminCopySection('NHIỆM VỤ', tasks, 'Copy vào ô Nhiệm vụ học sinh'));
 
             // Generate illustrations directly in Canvas from the lesson's image descriptions.
             if (imagePrompts.length > 0) {
@@ -813,7 +875,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 imgDiv.innerHTML = `<div class="font-bold text-orange-700 mb-1">HÌNH ẢNH MINH HỌA</div><div class="text-xs text-orange-700 mb-3">Mỗi hình được Gemini Canvas tạo trực tiếp từ mô tả bên dưới.</div>`;
                 imagePrompts.forEach((p, i) => {
                     const pDiv = document.createElement('div');
-                    const imageId = (p.match(/HINH_\d+/i)?.[0] || `HINH_${String(i + 1).padStart(2, '0')}`).toUpperCase();
+                    const imageId = normalizeLessonImageId(p.match(/(?:HINH|HÌNH)[_\s-]*\d+/i)?.[0] || `HINH_${String(i + 1).padStart(2, '0')}`);
                     pDiv.className = 'mb-3 bg-white p-3 rounded-xl text-xs border border-orange-200';
 
                     const promptText = document.createElement('div');
@@ -1083,8 +1145,8 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         function isLessonDocumentHeading(line) {
             const normalized = String(line || '')
                 .replace(/^\s*#{1,6}\s*/, '')
-                .replace(/^\s*\*\*|\*\*\s*$/g, '')
                 .replace(/^\s*\d+[.)]\s*/, '')
+                .replace(/^\s*\*\*|\*\*\s*$/g, '')
                 .trim();
             return /^(MỤC TIÊU|LÝ THUYẾT|VÍ DỤ|BÀI TẬP NỘP|BÀI TẬP TƯƠNG TÁC|BÀI TẬP TỰ LUẬN|KÉO THẢ|KÉO VÀO Ô|NỐI Ô|SẮP XẾP|TRẮC NGHIỆM|KỸ NĂNG|NHIỆM VỤ|DANH SÁCH HÌNH ẢNH|PROMPT TẠO ẢNH)/i.test(normalized)
                 ? normalized
@@ -1102,7 +1164,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         function appendLessonContentWithImages(children, raw, api) {
             const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = api;
             const report = { embedded: 0, missing: [] };
-            const markerPattern = /!\[([^\]]*)\]\((HINH_\d+)\)/gi;
+            const markerPattern = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
 
             String(raw || '').split('\n').forEach(originalLine => {
                 const line = originalLine.trim();
@@ -1131,7 +1193,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                         children.push(new Paragraph({ children: [new TextRun({ text: textBefore, size: 22 })] }));
                     }
 
-                    const imageId = match[2].toUpperCase();
+                    const imageId = normalizeLessonImageId(`HINH_${match[2]}`);
                     const imageDataUrl = generatedLessonImages.get(imageId);
                     if (imageDataUrl) {
                         children.push(new Paragraph({
@@ -1401,6 +1463,15 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             return error?.message || 'Không thể kết nối tới Gemini Canvas.';
         }
 
+        function normalizeLessonImageId(value) {
+            const normalized = String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase();
+            const match = normalized.match(/HINH[_\s-]*(\d+)/);
+            return match ? `HINH_${String(Number(match[1])).padStart(2, '0')}` : normalized;
+        }
+
         const LESSON_IMAGE_MODELS = ['gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image'];
         const generatedLessonImages = new Map();
 
@@ -1470,6 +1541,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 statusEl.className = 'mt-2 text-xs text-emerald-700';
                 statusEl.textContent = 'Đã tạo ảnh minh họa.';
                 button.innerHTML = '<i class="fas fa-rotate-right"></i> Tạo lại ảnh';
+                parseAndPreview();
             } catch (error) {
                 const message = describeGeminiError(error);
                 statusEl.className = 'mt-2 text-xs text-rose-700';
@@ -1510,6 +1582,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                     job.button.disabled = false;
                 }
             }
+            parseAndPreview();
         }
 
         async function generateFullLessonDirect() {
@@ -1540,7 +1613,21 @@ ${notes ? `- Yêu cầu thêm: ${notes}` : ''}
 
 - LÝ THUYẾT: rich text Markdown + LaTeX $...$ + chèn hình khi cần bằng ![Mô tả](HINH_01)
 
-- VÍ DỤ: Dùng **DẠNG 1:** , **DẠNG 2:** ... (mỗi dạng cách nhau 2 dòng)
+- VÍ DỤ: Phân loại theo các dạng toán. Mỗi dạng phải dùng đúng khung sau (mỗi dạng cách nhau 2 dòng):
+  **DẠNG 1: Tên dạng toán**
+  **PHƯƠNG PHÁP GIẢI:** nêu các bước giải ngắn gọn, rõ ràng.
+  **Bài 1:** đề bài cụ thể.
+  **Lời giải:** trình bày đầy đủ từng bước.
+  **Bài 2:** đề bài cụ thể.
+  **Lời giải:** trình bày đầy đủ từng bước.
+  **Bài 3:** đề bài cụ thể (chỉ thêm khi phù hợp).
+  **Lời giải:** trình bày đầy đủ từng bước.
+  Mỗi dạng có từ 2 đến 3 bài tập, không chỉ nêu đáp số.
+
+  **BẮT BUỘC CÓ ÍT NHẤT 1 DẠNG TOÁN THỰC TẾ** (mua bán, đo đạc, thời gian, quãng đường, hình học trong đời sống... nếu phù hợp với bài):
+  - Chỉ cần 1 bài toán thực tế chất lượng, không cần 2–3 bài để tránh dài và gây ngán.
+  - Trong đề hoặc trước bài, chèn đúng vị trí một hình/sơ đồ minh họa bằng cú pháp: ![Mô tả ngắn](HINH_XX).
+  - Cuối bài phải có mô tả và prompt tạo riêng cho HINH_XX trong DANH SÁCH HÌNH ẢNH CẦN TẠO.
 
 - BÀI TẬP NỘP GIÁO VIÊN: tương tự ví dụ
 
