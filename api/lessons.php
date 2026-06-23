@@ -248,7 +248,8 @@ if ($method === 'POST' && $action === 'upload_image') {
     $driveResult = drive_upload_file($folderId, $stored, $mime, $file['tmp_name']);
 
     $fileId = $driveResult['file_id'];
-    // Good link for embedding in markdown / rendered lessons (works for public images)
+    // Ảnh minh họa bài học phải xem được qua link embed — luôn public, không phụ thuộc GOOGLE_DRIVE_SHARE_MODE.
+    drive_share_file_anyone($fileId);
     $embedUrl = 'https://drive.google.com/uc?export=view&id=' . $fileId;
 
     respond([

@@ -524,10 +524,7 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
     $fileId = (string)$response['id'];
 
     if (defined('GOOGLE_DRIVE_SHARE_MODE') && GOOGLE_DRIVE_SHARE_MODE === 'anyone') {
-        drive_api('POST', 'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '/permissions?supportsAllDrives=true', [
-            'type' => 'anyone',
-            'role' => 'reader',
-        ]);
+        drive_share_file_anyone($fileId);
     }
 
     return [
@@ -537,6 +534,39 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
         'view_url' => (string)($response['webViewLink'] ?? ('https://drive.google.com/file/d/' . $fileId . '/view')),
         'download_url' => (string)($response['webContentLink'] ?? ('https://drive.google.com/uc?export=download&id=' . $fileId)),
     ];
+}
+
+/**
+ * Cho phép mở file bằng link công khai (anyone + reader).
+ * Dùng cho ảnh minh họa bài học; bỏ qua lỗi nếu quyền đã tồn tại.
+ */
+function drive_share_file_anyone(string $fileId): void
+{
+    $fileId = trim($fileId);
+    if ($fileId === '') {
+        return;
+    }
+
+    try {
+        drive_api(
+            'POST',
+            'https://www.googleapis.com/drive/v3/files/' . rawurlencode($fileId) . '/permissions?supportsAllDrives=true',
+            [
+                'type' => 'anyone',
+                'role' => 'reader',
+            ]
+        );
+    } catch (RuntimeException $e) {
+        $message = $e->getMessage();
+        if (
+            str_contains($message, 'already exists')
+            || str_contains($message, 'already has access')
+            || str_contains($message, 'HTTP 409')
+        ) {
+            return;
+        }
+        throw $e;
+    }
 }
 
 function drive_resolve_file_id(string $directId = '', string $viewUrl = '', string $downloadUrl = ''): string

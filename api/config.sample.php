@@ -62,6 +62,7 @@ define('GOOGLE_DRIVE_TOKEN_JSON', '');
 
 // Keep "private" when the root folder is shared with teachers who review files.
 // Use "anyone" only if every uploaded file may be opened by anyone with its link.
+// Lưu ý: ảnh minh họa trong LESSON_IMAGES luôn được public khi upload (api/lessons.php).
 define('GOOGLE_DRIVE_SHARE_MODE', 'private');
 
 // Hard server-side ceiling. Each assignment may choose a lower limit.
