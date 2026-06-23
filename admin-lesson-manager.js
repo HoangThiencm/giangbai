@@ -1040,46 +1040,24 @@
     function parseDragToItems(str) {
         const text = String(str || '').trim();
         if (!text) return [];
-        return buildDragExercisesFromItems(
-            text.split('\n').filter(Boolean).map(line => {
-                const p = splitQuestionParts(line);
-                const pairSpec = p[3] || '';
-                if (p.length >= 4 && /\d+\s*-\s*\d+/.test(pairSpec)) {
-                    return { de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: pairSpec, goi: p[4] || '' };
-                }
-                const left = splitPoolText(p[1]);
-                const right = splitPoolText(p[2]);
-                if (poolTextHasMultipleItems(p[1]) && poolTextHasMultipleItems(p[2])) {
-                    if (poolsLookLikeSortOrder(left, right)) {
-                        return { de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: '', goi: p[3] || '' };
-                    }
-                    return {
-                        de: p[0] || '',
-                        trai: p[1] || '',
-                        phai: p[2] || '',
-                        map: buildDefaultMatchPairSpec(left.length, right.length),
-                        goi: p[3] || ''
-                    };
-                }
-                return { de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: '', goi: p[3] || '' };
-            })
-        ).map(item => {
-            if (item.mode === 'match') {
+        return text.split('\n').filter(Boolean).map(line => {
+            const p = splitQuestionParts(line);
+            const pairSpec = String(p[3] || '').trim();
+            if (p.length >= 4 && /\d+\s*-\s*\d+/.test(pairSpec)) {
+                return { de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: pairSpec, goi: p[4] || '' };
+            }
+            const left = splitPoolText(p[1]);
+            const right = splitPoolText(p[2]);
+            if (poolTextHasMultipleItems(p[1]) && poolTextHasMultipleItems(p[2]) && !poolsLookLikeSortOrder(left, right)) {
                 return {
-                    de: item.prompt || '',
-                    trai: joinPoolText(item.left),
-                    phai: joinPoolText(item.right),
-                    map: item.pair_spec || '',
-                    goi: item.hint || ''
+                    de: p[0] || '',
+                    trai: p[1] || '',
+                    phai: p[2] || '',
+                    map: buildDefaultMatchPairSpec(left.length, right.length),
+                    goi: p[3] || ''
                 };
             }
-            return {
-                de: item.prompt || '',
-                trai: joinPoolText(item.items),
-                phai: joinPoolText(item.answer),
-                map: '',
-                goi: item.hint || ''
-            };
+            return { de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: '', goi: p[3] || '' };
         });
     }
     function parseQuestionToItems(str) {
@@ -1428,7 +1406,9 @@
 
         essayItems = parseEssayToItems(el('lessonEssay').value || '');
         fillItems = parseFillToItems(el('lessonFill').value || '');
-        dragItems = parseDragToItems(el('lessonDrag').value || '');
+        if (!pkg.drag_exercises?.length) {
+            dragItems = parseDragToItems(el('lessonDrag').value || '');
+        }
         questionItems = parseQuestionToItems(el('lessonQuestions').value || '');
         renderEssayItems();
         renderFillItems();
@@ -1518,9 +1498,14 @@
         a.download = `${pkg.slug || 'lesson'}-import-v1.json`;
         a.click();
         URL.revokeObjectURL(url);
+        const parts = [`Đã tải file: ${pkg.slug || 'lesson'}-import-v1.json`];
         if (validation.warnings.length) {
-            alert(`Đã tải JSON.\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}`);
+            parts.push(`Cảnh báo:\n• ${validation.warnings.join('\n• ')}`);
         }
+        if (validation.errors.length) {
+            parts.push(`Lỗi dữ liệu (sửa tab Tương tác / Trắc nghiệm trước khi lưu):\n• ${validation.errors.join('\n• ')}`);
+        }
+        if (parts.length > 1) alert(parts.join('\n\n'));
     }
 
     function openStudentPreview() {

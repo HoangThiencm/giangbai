@@ -1052,8 +1052,10 @@
                 });
             }
             if (d.mode === 'sort' && d.items?.length && d.answer?.length) {
-                if (!multisetEqual(d.items, d.answer)) {
-                    errors.push(`drag_exercises[${i}]: answer phải là hoán vị của items.`);
+                if (d.items.length !== d.answer.length) {
+                    errors.push(`drag_exercises[${i}]: số phần tử đáp án phải bằng số mảnh sắp xếp.`);
+                } else if (!multisetEqual(d.items, d.answer)) {
+                    warnings.push(`drag_exercises[${i}]: đáp án có thể chưa là hoán vị chuẩn của các mảnh — kiểm tra tab Sắp xếp.`);
                 }
             }
         });
