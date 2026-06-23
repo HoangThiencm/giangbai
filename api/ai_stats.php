@@ -337,7 +337,7 @@ function ai_stats_count_recent_module_success(array $recent, string $todayKey, s
 function ai_stats_providers_for_module(string $moduleId): array
 {
     return [
-        'lotrinh' => ['cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
+        'lotrinh' => ['ds2api', 'cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
         'thitructuyen' => ['mistral_ocr', 'gemini_browser'],
         'vanban' => ['cloudflare_workers_ai'],
     ][$moduleId] ?? [];
@@ -448,8 +448,8 @@ function ai_stats_module_catalog(): array
         [
             'id' => 'lotrinh',
             'label' => ai_usage_module_label('lotrinh'),
-            'providers' => ['cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
-            'note' => 'Giải thích & chat · cache, Light AI, Cloudflare, Gemini, ShopAIKey',
+            'providers' => ['ds2api', 'cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
+            'note' => 'Giải thích & chat · DS2API, cache, Light AI, Cloudflare, Gemini, ShopAIKey',
         ],
         [
             'id' => 'thitructuyen',
@@ -579,6 +579,43 @@ $mistralStats = [
     'dashboard_url' => 'https://console.mistral.ai/',
 ];
 
+$ds2apiInternal = $today['providers']['ds2api'] ?? null;
+$ds2apiProviderMode = is_array($store['by_day'][$todayKey]['by_provider_mode']['ds2api'] ?? null)
+    ? $store['by_day'][$todayKey]['by_provider_mode']['ds2api']
+    : [];
+$ds2apiStats = [
+    'configured' => !empty($runtime['ds2api_enabled']) && trim((string)($runtime['ds2api_base_url'] ?? '')) !== '',
+    'enabled' => !empty($runtime['ds2api_enabled']),
+    'model' => $runtime['ds2api_model'] ?? 'deepseek-v4-flash',
+    'base_url' => $runtime['ds2api_base_url'] ?? '',
+    'requests_today_internal' => is_array($ds2apiInternal) ? (int)($ds2apiInternal['success'] ?? 0) : 0,
+    'errors_today_internal' => is_array($ds2apiInternal) ? (int)($ds2apiInternal['error'] ?? 0) : 0,
+    'tokens_today_internal' => is_array($ds2apiInternal) ? (int)($ds2apiInternal['total_tokens'] ?? 0) : 0,
+    'explain_today_internal' => (int)($ds2apiProviderMode['explain'] ?? 0),
+    'chat_today_internal' => (int)($ds2apiProviderMode['chat'] ?? 0),
+    'message' => 'DeepSeek qua DS2API (Vercel) — ưu tiên đầu router lộ trình, trước Cloudflare.',
+];
+$ds2apiTotalInternal = 0;
+$ds2apiExplainTotal = 0;
+$ds2apiChatTotal = 0;
+foreach ($store['by_day'] ?? [] as $dayBucket) {
+    if (!is_array($dayBucket)) {
+        continue;
+    }
+    $ds2Bucket = $dayBucket['providers']['ds2api'] ?? null;
+    if (is_array($ds2Bucket)) {
+        $ds2apiTotalInternal += (int)($ds2Bucket['success'] ?? 0);
+    }
+    $ds2Modes = $dayBucket['by_provider_mode']['ds2api'] ?? null;
+    if (is_array($ds2Modes)) {
+        $ds2apiExplainTotal += (int)($ds2Modes['explain'] ?? 0);
+        $ds2apiChatTotal += (int)($ds2Modes['chat'] ?? 0);
+    }
+}
+$ds2apiStats['requests_total_internal'] = $ds2apiTotalInternal;
+$ds2apiStats['explain_total_internal'] = $ds2apiExplainTotal;
+$ds2apiStats['chat_total_internal'] = $ds2apiChatTotal;
+
 $smartQuota = ai_smart_quota_status();
 
 respond([
@@ -590,12 +627,15 @@ respond([
     'config' => [
         'cloudflare_model' => $runtime['cloudflare_ai_model'],
         'cloudflare_worker_url' => $runtime['cloudflare_worker_url'],
+        'ds2api_model' => $runtime['ds2api_model'] ?? 'deepseek-v4-flash',
+        'ds2api_base_url' => $runtime['ds2api_base_url'] ?? '',
         'gemini_model' => $runtime['gemini_model'],
         'shopaikey_model' => $runtime['shopaikey_model'],
     ],
     'internal' => $internalToday,
     'history' => ai_stats_build_history($store['by_day'] ?? [], 14),
     'providers' => [
+        'ds2api' => $ds2apiStats,
         'cloudflare' => $cloudflareStats,
         'gemini' => $geminiStats,
         'gemini_browser' => $geminiBrowserStats,
@@ -608,7 +648,8 @@ respond([
     'notes' => [
         'Log nội bộ lưu tại data/ai_usage.json trên hosting.',
         'Cloudflare GraphQL đếm HTTP request tới Worker; lộ trình đếm mọi phản hồi thành công (cache, Light AI, CF, Gemini…). Hai số thường khác nhau.',
-        'Lộ trình: Router AI — cache → light_ai (miễn phí) → Cloudflare → Gemini → ShopAIKey/DeepSeek (cuối cùng).',
+        'Lộ trình: Router AI — cache → light_ai (miễn phí) → DS2API (DeepSeek web) → Cloudflare → Gemini → ShopAIKey/DeepSeek (cuối cùng).',
+        'DS2API: log nội bộ đếm giải thích & chat lộ trình qua DeepSeek web (Vercel); không có dashboard bên ngoài.',
         'Cache theo lesson_id + câu hỏi tại data/ai_explain_cache.json — không tốn quota.',
         'Quota học sinh: data/ai_student_quota.json — mặc định 25 lượt API/ngày (cache không tính).',
         'Thi trực tuyến: Mistral OCR + Gemini trình duyệt được ghi qua api/ai_usage_report.php.',

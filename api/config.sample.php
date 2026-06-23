@@ -23,7 +23,14 @@ define('GEMINI_API_KEYS', []);
 define('GEMINI_MODEL', 'gemini-2.5-flash');
 define('GEMINI_ENABLED', true);
 
-// Cloudflare Workers AI is the primary AI provider. Keep the secret only in
+// === DS2API Configuration ===
+// DeepSeek web session trên Vercel — không cần API key client (session quản lý trên server DS2API).
+define('DS2API_ENABLED', true);
+define('DS2API_BASE_URL', 'https://freeapideepseek.vercel.app');
+define('DS2API_API_KEY', 'sk-'); // tùy chọn; để trống hoặc sk- = không gửi Bearer
+define('DS2API_MODEL', 'deepseek-v4-flash');
+
+// Cloudflare Workers AI — fallback sau DS2API. Keep the secret only in
 // api/config.php on the hosting; never expose it through JavaScript or JSON.
 define('CLOUDFLARE_AI_WORKER_URL', 'https://late-bird-fe3b.hoangthien-thcstranphu.workers.dev');
 define('CLOUDFLARE_AI_WORKER_SECRET', 'paste-the-same-secret-as-APP_SHARED_SECRET');

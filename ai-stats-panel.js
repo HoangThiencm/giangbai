@@ -21,6 +21,7 @@
 
     function providerLabel(id) {
         return ({
+            ds2api: 'DS2API (DeepSeek web)',
             cloudflare_workers_ai: 'Cloudflare Workers AI',
             gemini: 'Gemini (fallback server)',
             gemini_browser: 'Gemini (trình duyệt)',
@@ -50,7 +51,7 @@
     };
 
     const MODULE_PROVIDER_MAP = {
-        lotrinh: ['cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
+        lotrinh: ['ds2api', 'cloudflare_workers_ai', 'gemini', 'shopaikey', 'light_ai', 'light_ai_math', 'explain_cache'],
         thitructuyen: ['mistral_ocr', 'gemini_browser'],
         vanban: ['cloudflare_workers_ai'],
     };
@@ -326,6 +327,7 @@
         const content = document.getElementById(contentId);
         if (!loading || !content) return;
 
+        const ds2api = data.providers?.ds2api || {};
         const cf = data.providers?.cloudflare || {};
         const gemini = data.providers?.gemini || {};
         const geminiBrowser = data.providers?.gemini_browser || {};
@@ -356,6 +358,7 @@
             return `<tr class="border-t border-slate-100">
                 <td class="px-3 py-2 text-sm font-semibold">${escapeHtml(row.date)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(row.total_success || 0)}</td>
+                <td class="px-3 py-2 text-sm">${formatNumber(p.ds2api?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.cloudflare_workers_ai?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.mistral_ocr?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.gemini_browser?.success || 0)}</td>
@@ -393,7 +396,18 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderModuleCards(internal.modules, byModule, { byMode, providers, cfWorkerRequests: cf.available ? cf.requests_today : null })}</div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div class="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-sm font-bold text-teal-900">DS2API · DeepSeek</div>
+                        ${ds2api.configured ? '<span class="text-xs font-semibold text-emerald-700">Đã cấu hình</span>' : '<span class="text-xs font-semibold text-amber-700">Chưa bật</span>'}
+                    </div>
+                    <div class="mt-2 text-2xl font-black text-teal-950">${formatNumber(ds2api.requests_today_internal || 0)}</div>
+                    <div class="text-xs text-teal-800">Lộ trình · giải thích & chat qua DeepSeek web</div>
+                    <div class="mt-2 text-xs text-teal-700">Giải thích ${formatNumber(ds2api.explain_today_internal || 0)} · Chat ${formatNumber(ds2api.chat_today_internal || 0)}</div>
+                    <div class="mt-1 text-xs text-teal-700">${formatNumber(ds2api.errors_today_internal || 0)} lỗi · ${formatNumber(ds2api.tokens_today_internal || 0)} tokens</div>
+                    <div class="mt-1 text-xs text-teal-700"><code>${escapeHtml(ds2api.model || data.config?.ds2api_model || '')}</code></div>
+                </div>
                 <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
                     <div class="flex items-center justify-between gap-2">
                         <div class="text-sm font-bold text-orange-900">Cloudflare Worker</div>
@@ -444,7 +458,7 @@
                 <div class="md:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-700">
                     <div class="font-bold text-slate-800 mb-2">Bản đồ AI theo chức năng</div>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Lộ trình học</strong> → Cloudflare Worker (chính) → Gemini / ShopAIKey (fallback)</li>
+                        <li><strong>Lộ trình học</strong> → DS2API → Cloudflare Worker → Gemini → ShopAIKey</li>
                         <li><strong>Thi trực tuyến</strong> → Mistral OCR (quét PDF) → Gemini trình duyệt (nhận diện câu hỏi)</li>
                         <li><strong>Quản lý văn bản</strong> → Tự nhận diện mẫu (không AI)</li>
                     </ul>
@@ -456,9 +470,9 @@
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
                     <table class="min-w-full text-left">
                         <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
-                            <tr><th class="px-3 py-2">Ngày</th><th class="px-3 py-2">Tổng</th><th class="px-3 py-2">CF</th><th class="px-3 py-2">Mistral</th><th class="px-3 py-2">Gemini TB</th><th class="px-3 py-2">Gemini FB</th><th class="px-3 py-2">ShopAIKey</th></tr>
+                            <tr><th class="px-3 py-2">Ngày</th><th class="px-3 py-2">Tổng</th><th class="px-3 py-2">DS2</th><th class="px-3 py-2">CF</th><th class="px-3 py-2">Mistral</th><th class="px-3 py-2">Gemini TB</th><th class="px-3 py-2">Gemini FB</th><th class="px-3 py-2">ShopAIKey</th></tr>
                         </thead>
-                        <tbody>${historyRows || '<tr><td colspan="7" class="px-3 py-4 text-sm text-slate-400">Chưa có dữ liệu.</td></tr>'}</tbody>
+                        <tbody>${historyRows || '<tr><td colspan="8" class="px-3 py-4 text-sm text-slate-400">Chưa có dữ liệu.</td></tr>'}</tbody>
                     </table>
                 </div>
             </div>
@@ -493,6 +507,7 @@
         const mount = typeof mountEl === 'string' ? document.getElementById(mountEl) : mountEl;
         if (!mount) return;
 
+        const ds2api = data.providers?.ds2api || {};
         const cf = data.providers?.cloudflare || {};
         const geminiBrowser = data.providers?.gemini_browser || {};
         const mistral = data.providers?.mistral_ocr || {};
@@ -515,7 +530,7 @@
                 <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-sky-700">Lộ trình</div>
                     <div class="mt-1 text-2xl font-black text-sky-950">${formatNumber(lotrinh.success || 0)}</div>
-                    <div class="text-[11px] text-sky-800">phản hồi HS · CF ${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
+                    <div class="text-[11px] text-sky-800">DS2 ${formatNumber(ds2api.requests_today_internal || 0)} · CF ${cfWorker != null ? formatNumber(cfWorker) : '—'}</div>
                 </div>
                 <div class="rounded-xl border border-violet-200 bg-violet-50 p-3">
                     <div class="text-[10px] font-bold uppercase text-violet-800">Thi trực tuyến</div>

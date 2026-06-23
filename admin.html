@@ -290,11 +290,58 @@
                 <div class="rounded-lg border border-slate-200 bg-white p-4 mb-4 text-xs leading-6 text-slate-700">
                     <div class="font-bold text-slate-900 mb-2"><i class="fas fa-sitemap text-sky-600 mr-1"></i> Bản đồ AI theo chức năng</div>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Lộ trình học</strong> → Cloudflare Worker (chính) → Gemini / ShopAIKey khi hết quota</li>
+                        <li><strong>Lộ trình học</strong> → DS2API (DeepSeek web) → Cloudflare Worker → Gemini → ShopAIKey</li>
                         <li><strong>Thi trực tuyến</strong> → Mistral OCR (quét PDF) → Gemini trình duyệt (nhận diện câu hỏi) — <em>không</em> dùng Cloudflare</li>
                         <li><strong>Quản lý văn bản</strong> → Cloudflare Worker (trích xuất metadata từ văn bản)</li>
                     </ul>
                     <p class="mt-2 text-slate-500">Smart Quota chỉ áp dụng Cloudflare (lộ trình + văn bản). Thống kê Mistral/Gemini Thi trực tuyến ghi qua <code>api/ai_usage_report.php</code>.</p>
+                </div>
+
+                <!-- DS2API CONFIG -->
+                <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-4 mb-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h4 class="font-bold text-cyan-900 text-sm">DS2API (DeepSeek web) <span class="font-normal">· ưu tiên AI Explain lộ trình</span></h4>
+                            <p class="text-xs text-cyan-800 mt-1">OpenAI-compatible tại <code>https://freeapideepseek.vercel.app</code>. <strong>Không cần API key</strong> — session DeepSeek quản lý trên server Vercel (<a href="https://freeapideepseek.vercel.app/admin" target="_blank" rel="noopener" class="underline">panel</a>). Cấu hình chính trong <code>api/config.php</code>.</p>
+                            <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-cyan-900">
+                                <input id="adminDs2apiEnabled" type="checkbox" class="h-4 w-4 rounded border-cyan-300 text-cyan-700 focus:ring-cyan-500" checked>
+                                Bật DS2API làm nguồn chính
+                            </label>
+                        </div>
+                        <span id="adminDs2apiStatus" class="text-xs font-semibold text-cyan-700"></span>
+                    </div>
+                    <div class="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-cyan-200 bg-white/80 px-3 py-2 text-xs text-cyan-950">
+                        <span class="font-bold uppercase tracking-wide">Model đang áp dụng</span>
+                        <code id="adminDs2apiCurrentModel" class="rounded bg-cyan-100 px-2 py-1 font-semibold text-cyan-950">Đang tải…</code>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-cyan-900">Base URL</label>
+                            <input id="adminDs2apiBaseUrlInput" type="url" class="w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500" placeholder="https://freeapideepseek.vercel.app">
+                            <label class="block text-xs font-bold text-cyan-900">API Key <span class="font-normal text-cyan-700">(tùy chọn)</span></label>
+                            <input id="adminDs2apiKeyInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+                                class="admin-secret-mask w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Để trống — không cần key" data-lpignore="true">
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-cyan-900">Model</label>
+                            <select id="adminDs2apiModuleSelect" class="w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500">
+                                <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                                <option value="deepseek-v4-flash-nothinking">deepseek-v4-flash-nothinking</option>
+                                <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                                <option value="deepseek-v4-pro-nothinking">deepseek-v4-pro-nothinking</option>
+                            </select>
+                            <input id="adminDs2apiModuleCustom" type="text" class="w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Hoặc nhập tên model khác">
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <button type="button" id="btnSaveDs2apiConfig" onclick="saveDs2apiAdminConfig()" class="rounded bg-cyan-700 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-800">
+                                    <i class="fas fa-save mr-1"></i> Lưu DS2API
+                                </button>
+                                <button type="button" id="btnClearDs2apiConfig" onclick="clearDs2apiAdminConfig()" class="rounded border border-cyan-300 bg-white px-4 py-2 text-sm font-bold text-cyan-800 hover:bg-cyan-100">
+                                    <i class="fas fa-trash mr-1"></i> Xóa key
+                                </button>
+                            </div>
+                            <p id="adminDs2apiStorageDetail" class="text-xs text-cyan-800"></p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- CLOUDFLARE WORKERS AI CONFIG -->
@@ -830,6 +877,7 @@
         const GEMINI_MODEL_OPTIONS = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'];
         const MISTRAL_OCR_MODEL_OPTIONS = ['mistral-ocr-latest', 'mistral-ocr-2505'];
         const SHOPAIKEY_MODEL_OPTIONS = ['deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner'];
+        const DS2API_MODEL_OPTIONS = ['deepseek-v4-flash', 'deepseek-v4-flash-nothinking', 'deepseek-v4-pro', 'deepseek-v4-pro-nothinking'];
         const CLOUDFLARE_AI_MODEL_OPTIONS = ['@cf/qwen/qwen3-30b-a3b-fp8', '@cf/meta/llama-3.2-3b-instruct'];
 
         function parseGeminiKeys(text) {
@@ -866,20 +914,21 @@
             const mistralKeys = Array.isArray(currentGlobalContent?.mistral_keys) ? currentGlobalContent.mistral_keys.length : 0;
             const cloudflareModel = String(currentGlobalContent?.cloudflare_ai_model || '@cf/qwen/qwen3-30b-a3b-fp8');
             const hasShop = !!String(currentGlobalContent?.shopaikey_api_key || '').trim();
+            const hasDs2 = currentGlobalContent?.ds2api_enabled !== false;
             const source = configStorageMeta.source;
             let tone = 'border-amber-200 bg-amber-50 text-amber-900';
             let icon = 'fa-circle-info';
             let message = '';
 
             if (source === 'hosting') {
-                if (keys || hasShop) {
+                if (keys || hasShop || hasDs2) {
                     tone = 'border-emerald-200 bg-emerald-50 text-emerald-900';
                     icon = 'fa-cloud';
-                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Router lộ trình dùng ngay cấu hình này — Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', ShopAIKey cuối cùng' : ''}. Worker URL/secret lấy từ <code>api/config.php</code>.`;
+                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Router lộ trình — ${hasDs2 ? 'DS2API (chính), ' : ''}Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', ShopAIKey cuối' : ''}. DS2API URL trong <code>api/config.php</code>; Worker URL/secret cũng trong <code>config.php</code>.`;
                 } else {
                     tone = 'border-amber-200 bg-amber-50 text-amber-900';
                     icon = 'fa-triangle-exclamation';
-                    message = 'Đã kết nối hosting nhưng <strong>chưa có key AI</strong> trong <code>global_config.json</code>. Nhập key rồi bấm <strong>Lưu Gemini</strong> / <strong>Lưu Mistral</strong> / <strong>Lưu Fallback</strong>.';
+                    message = 'Đã kết nối hosting nhưng <strong>chưa có key AI</strong> trong <code>global_config.json</code>. Nhập key rồi bấm <strong>Lưu DS2API</strong> / <strong>Lưu Gemini</strong> / <strong>Lưu Mistral</strong> / <strong>Lưu Fallback</strong>.';
                 }
             } else if (source === 'github') {
                 tone = 'border-sky-200 bg-sky-50 text-sky-900';
@@ -1059,6 +1108,44 @@
             return document.getElementById('adminShopaikeyModuleSelect')?.value || 'deepseek-v4-flash';
         }
 
+        function readDs2apiModelFromUI() {
+            const custom = document.getElementById('adminDs2apiModuleCustom')?.value?.trim() || '';
+            if (custom) return custom;
+            return document.getElementById('adminDs2apiModuleSelect')?.value || 'deepseek-v4-flash';
+        }
+
+        function syncDs2apiAdminUI(content) {
+            const apiKey = typeof content?.ds2api_api_key === 'string' ? content.ds2api_api_key : '';
+            const baseUrl = typeof content?.ds2api_base_url === 'string' ? content.ds2api_base_url : 'https://freeapideepseek.vercel.app';
+            const model = typeof content?.ds2api_model === 'string' ? content.ds2api_model : 'deepseek-v4-flash';
+            const enabled = content?.ds2api_enabled !== false;
+            const keyInput = document.getElementById('adminDs2apiKeyInput');
+            const baseInput = document.getElementById('adminDs2apiBaseUrlInput');
+            const modelSelect = document.getElementById('adminDs2apiModuleSelect');
+            const modelCustom = document.getElementById('adminDs2apiModuleCustom');
+            const enabledInput = document.getElementById('adminDs2apiEnabled');
+            const status = document.getElementById('adminDs2apiStatus');
+            const currentModel = document.getElementById('adminDs2apiCurrentModel');
+
+            if (keyInput) keyInput.value = apiKey;
+            if (baseInput) baseInput.value = baseUrl;
+            if (modelSelect) modelSelect.value = DS2API_MODEL_OPTIONS.includes(model) ? model : 'deepseek-v4-flash';
+            if (modelCustom) modelCustom.value = DS2API_MODEL_OPTIONS.includes(model) ? '' : model;
+            if (enabledInput) enabledInput.checked = enabled;
+            if (currentModel) currentModel.textContent = model;
+            if (status) {
+                status.innerHTML = !enabled
+                    ? '<span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-slate-700">Đang tắt</span>'
+                    : `<span class="inline-flex items-center rounded-full bg-cyan-100 px-2.5 py-1 text-cyan-800">Bật · ${model}</span>`;
+            }
+            if (document.getElementById('adminDs2apiStorageDetail')) {
+                document.getElementById('adminDs2apiStorageDetail').textContent = !enabled
+                    ? 'DS2API đang tắt — router sẽ bỏ qua và dùng Cloudflare/Gemini.'
+                    : `Ưu tiên trước Cloudflare. Cấu hình chính: <code>DS2API_BASE_URL</code> trong api/config.php trên hosting (không cần API key).${apiKey ? ' Có key tùy chọn trong global_config.' : ''}`;
+            }
+            renderConfigStorageBanner();
+        }
+
         function syncShopaikeyAdminUI(content) {
             const apiKey = typeof content?.shopaikey_api_key === 'string' ? content.shopaikey_api_key : '';
             const model = typeof content?.shopaikey_model === 'string' ? content.shopaikey_model : 'deepseek-v4-flash';
@@ -1118,6 +1205,7 @@
             }
             syncGeminiAdminUI(content);
             syncMistralAdminUI(content);
+            syncDs2apiAdminUI(content);
             syncCloudflareAiAdminUI(content);
             syncSmartQuotaAdminUI(content);
             syncShopaikeyAdminUI(content);
@@ -1505,6 +1593,65 @@
             } finally {
                 if (btn) {
                     btn.innerHTML = originalText || '<i class="fas fa-save"></i> Lưu cài đặt lên GitHub';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function saveDs2apiAdminConfig() {
+            const btn = document.getElementById('btnSaveDs2apiConfig');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu DS2API...';
+                btn.disabled = true;
+            }
+            try {
+                currentGlobalContent.ds2api_api_key = document.getElementById('adminDs2apiKeyInput')?.value?.trim() || '';
+                currentGlobalContent.ds2api_base_url = document.getElementById('adminDs2apiBaseUrlInput')?.value?.trim() || 'https://freeapideepseek.vercel.app';
+                currentGlobalContent.ds2api_model = readDs2apiModelFromUI();
+                currentGlobalContent.ds2api_enabled = !!document.getElementById('adminDs2apiEnabled')?.checked;
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    console.warn('Fallback luu DS2API len GitHub vi API noi bo loi:', localError);
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Cap nhat cau hinh DS2API');
+                    markConfigSaved('github');
+                }
+                syncDs2apiAdminUI(currentGlobalContent);
+                alert(`Đã lưu DS2API lên ${configSourceLabel(configStorageMeta.lastSaveTarget || configStorageMeta.source)}, model ${currentGlobalContent.ds2api_model}`);
+            } catch (e) {
+                alert('Lỗi lưu DS2API: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText || '<i class="fas fa-save mr-1"></i> Lưu DS2API';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function clearDs2apiAdminConfig() {
+            if (!confirm('Xóa API key DS2API?')) return;
+            const btn = document.getElementById('btnClearDs2apiConfig');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xóa...';
+                btn.disabled = true;
+            }
+            try {
+                currentGlobalContent.ds2api_api_key = '';
+                currentGlobalContent.ds2api_model = 'deepseek-v4-flash';
+                try {
+                    await saveConfigToLocalApi(currentGlobalContent);
+                } catch (localError) {
+                    await pushConfigToGitHub(currentGlobalContent, 'Admin: Xoa DS2API key');
+                }
+                syncDs2apiAdminUI(currentGlobalContent);
+                alert('Đã xóa DS2API API key.');
+            } catch (e) {
+                alert('Lỗi xóa DS2API: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText || '<i class="fas fa-trash mr-1"></i> Xóa key';
                     btn.disabled = false;
                 }
             }
@@ -3229,7 +3376,7 @@
             }
         })();
     </script>
-    <script src="ai-stats-panel.js?v=20260622-cf-vs-lotrinh"></script>
+    <script src="ai-stats-panel.js?v=20260623-ds2api-stats"></script>
     <script>
         (function () {
             const panelLoad = window.loadAiStats;

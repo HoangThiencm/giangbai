@@ -134,6 +134,7 @@ function ai_usage_allowed_providers(): array
 {
     return [
         'cloudflare_workers_ai',
+        'ds2api',
         'gemini',
         'gemini_browser',
         'mistral_ocr',
@@ -304,6 +305,13 @@ function ai_usage_record(array $entry): void
         }
         if ($ok) {
             $day['by_mode'][$mode] = (int)($day['by_mode'][$mode] ?? 0) + 1;
+            if (!isset($day['by_provider_mode']) || !is_array($day['by_provider_mode'])) {
+                $day['by_provider_mode'] = [];
+            }
+            if (!isset($day['by_provider_mode'][$provider]) || !is_array($day['by_provider_mode'][$provider])) {
+                $day['by_provider_mode'][$provider] = [];
+            }
+            $day['by_provider_mode'][$provider][$mode] = (int)($day['by_provider_mode'][$provider][$mode] ?? 0) + 1;
         }
 
         $recentItem = [

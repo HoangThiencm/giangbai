@@ -332,25 +332,37 @@ function call_gemini(string $model, string $key, string $payload): array
     return [$raw, $status, $curlError];
 }
 
-function call_shopaikey(string $baseUrl, string $key, string $payload): array
+function call_openai_compatible_chat(string $baseUrl, string $key, string $payload, int $timeout = 45): array
 {
     $url = rtrim($baseUrl, '/') . '/chat/completions';
+    $headers = ['Content-Type: application/json'];
+    if (trim($key) !== '') {
+        $headers[] = 'Authorization: Bearer ' . $key;
+    }
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $key,
-        ],
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT => 45,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT => $timeout,
     ]);
     $raw = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
     return [$raw, $status, $curlError];
+}
+
+function call_shopaikey(string $baseUrl, string $key, string $payload): array
+{
+    return call_openai_compatible_chat($baseUrl, $key, $payload, 45);
+}
+
+function call_ds2api(string $baseUrl, string $key, string $payload): array
+{
+    return call_openai_compatible_chat($baseUrl, $key, $payload, 60);
 }
 
 function call_cloudflare_worker(string $workerUrl, string $secret, array $payload): array
@@ -415,7 +427,7 @@ function complete_answer_if_needed(string $provider, callable $caller, string $a
 
     $more = $provider === 'gemini'
         ? extract_gemini_answer($response2)
-        : extract_shopaikey_answer($response2);
+        : extract_shopaikey_answer($response2); // ds2api + shopaikey: OpenAI format
     if ($more !== '') {
         $answer = rtrim($answer) . ' ' . ltrim($more);
     }
@@ -472,6 +484,44 @@ function try_gemini_explain(array $config, string $prompt): ?array
     }
 
     return ['error' => $lastError, 'provider' => 'gemini'];
+}
+
+function try_ds2api_explain(array $config, string $prompt): ?array
+{
+    if (empty($config['ds2api_enabled'])) return null;
+    $baseUrl = normalize_ds2api_base_url((string)($config['ds2api_base_url'] ?? ''));
+    $apiKey = ds2api_effective_api_key((string)($config['ds2api_api_key'] ?? ''));
+    if ($baseUrl === '') return null;
+
+    $model = trim((string)($config['ds2api_model'] ?? 'deepseek-v4-flash')) ?: 'deepseek-v4-flash';
+
+    $caller = function (string $textPrompt, int $maxTokens = 900) use ($baseUrl, $apiKey, $model) {
+        [$raw, $status, $curlError] = call_ds2api($baseUrl, $apiKey, shopaikey_payload($model, $textPrompt, $maxTokens));
+        $response = is_string($raw) && $raw !== '' ? (json_decode($raw, true) ?: []) : [];
+        return [$raw, $status, $curlError, $response];
+    };
+
+    [$raw, $status, $curlError, $response] = $caller($prompt);
+    if ($raw === false || $raw === '') {
+        return ['error' => $curlError ?: 'DS2API khong phan hoi.', 'provider' => 'ds2api'];
+    }
+
+    if ($status >= 200 && $status < 300) {
+        $answer = extract_shopaikey_answer($response);
+        if ($answer === '') {
+            return ['error' => 'DS2API tra ve noi dung rong.', 'provider' => 'ds2api'];
+        }
+        $finishReason = $response['choices'][0]['finish_reason'] ?? '';
+        [$answer, ] = complete_answer_if_needed('ds2api', $caller, $answer, ['finish_reason' => $finishReason]);
+        return array_merge([
+            'answer' => $answer,
+            'provider' => 'ds2api',
+            'model' => $model,
+        ], ai_usage_extract_shopaikey_tokens($response));
+    }
+
+    $errorMessage = $response['error']['message'] ?? ($response['message'] ?? ('DS2API loi HTTP ' . $status));
+    return ['error' => $errorMessage, 'provider' => 'ds2api'];
 }
 
 function try_shopaikey_explain(array $config, string $prompt): ?array
@@ -672,6 +722,9 @@ $routerOut = ai_router_run([
     'providers' => [
         'light' => function () use ($runtime, $mode, $lessonTitle, $text, $question, $lessonContext) {
             return try_light_ai_explain($runtime, $mode, $lessonTitle, $text, $question, $lessonContext);
+        },
+        'ds2api' => function () use ($runtime, $prompt) {
+            return try_ds2api_explain($runtime, $prompt);
         },
         'cloudflare' => function () use ($runtime, $workerPayload) {
             return try_cloudflare_ai_explain($runtime, $workerPayload);

@@ -2,12 +2,12 @@
 /**
  * AI Router — miễn phí trước, ShopAIKey/DeepSeek chỉ khi thật sự cần.
  *
- * Thứ tự chính:
- *   light_ai (miễn phí) → Cloudflare (với quota neurons)
+ * Thứ tự chính (AI Explain lộ trình):
+ *   light_ai (miễn phí) → DS2API (DeepSeek web) → Cloudflare (quota neurons)
  *
- * Khi hết hạn ngạch Cloudflare:
- *   → Gemini (ưu tiên chính)
- *   → ShopAIKey / DeepSeek (chỉ khi Gemini không được hoặc không có key)
+ * Khi DS2API / Cloudflare không đủ:
+ *   → Gemini
+ *   → ShopAIKey / DeepSeek API (cuối cùng)
  *
  * Escalation chỉ khi tier trước không cho câu trả lời chấp nhận được.
  */
@@ -147,6 +147,35 @@ function ai_router_run(array $ctx): array
                 ];
             }
             $candidates[] = $light;
+        }
+    }
+
+    $tryDs2api = $providers['ds2api'] ?? null;
+    if (is_callable($tryDs2api)) {
+        $ds2 = $tryDs2api();
+        if (is_array($ds2) && !empty($ds2['answer'])) {
+            $tiersTried[] = 'ds2api';
+            $ds2['complete'] = !empty($ds2['complete']) || (function_exists('answer_looks_complete') && answer_looks_complete((string)$ds2['answer']));
+            if (ai_router_quality_acceptable($ds2, $mode, $question, $text)) {
+                if (is_callable($log)) {
+                    $log($mode, $ds2, true, false);
+                }
+                return [
+                    'result' => array_merge($ds2, [
+                        'router_tier' => 'ds2api',
+                        'tiers_tried' => $tiersTried,
+                    ]),
+                    'quota' => $quotaStatus,
+                    'used_api' => true,
+                ];
+            }
+            $candidates[] = $ds2;
+            $usedFallback = true;
+        } elseif (is_array($ds2) && !empty($ds2['error'])) {
+            $errors[] = 'DS2API: ' . $ds2['error'];
+            if (is_callable($log)) {
+                $log($mode, $ds2, false, false);
+            }
         }
     }
 

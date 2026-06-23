@@ -1562,8 +1562,8 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         }
 
         // Canvas cấp key qua global/env; model phải nằm trong tier Canvas hỗ trợ (không dùng 2.5/3.x preview).
-        const LESSON_TEXT_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-        const LESSON_IMAGE_MODELS = ['gemini-2.0-flash-preview-image-generation', 'gemini-2.5-flash-image'];
+        const LESSON_TEXT_MODELS = ['gemini-3-flash-preview', 'gemini-2.5-flash'];
+        const LESSON_IMAGE_MODELS = ['gemini-3.1-flash-image', 'gemini-2.5-flash-image'];
 
         function resolveCanvasGeminiApiKey() {
             const candidates = [

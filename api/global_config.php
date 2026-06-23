@@ -76,6 +76,18 @@ if (isset($nextConfig['ai_explain_cache_max_entries'])) {
 if (isset($nextConfig['ai_explain_cache_ttl_days'])) {
     $nextConfig['ai_explain_cache_ttl_days'] = max(1, min(365, (int)$nextConfig['ai_explain_cache_ttl_days']));
 }
+if (isset($nextConfig['ds2api_base_url'])) {
+    $nextConfig['ds2api_base_url'] = rtrim(trim((string)$nextConfig['ds2api_base_url']), '/');
+}
+if (isset($nextConfig['ds2api_api_key'])) {
+    $nextConfig['ds2api_api_key'] = trim((string)$nextConfig['ds2api_api_key']);
+}
+if (isset($nextConfig['ds2api_model'])) {
+    $nextConfig['ds2api_model'] = trim((string)$nextConfig['ds2api_model']) ?: 'deepseek-v4-flash';
+}
+if (array_key_exists('ds2api_enabled', $nextConfig)) {
+    $nextConfig['ds2api_enabled'] = (bool)$nextConfig['ds2api_enabled'];
+}
 if (isset($nextConfig['shopaikey_api_key'])) {
     $nextConfig['shopaikey_api_key'] = trim((string)$nextConfig['shopaikey_api_key']);
 }
