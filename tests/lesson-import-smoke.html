@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>lesson-import smoke test</title>
+    <style>
+        body { font-family: Consolas, monospace; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+        .ok { color: #047857; }
+        .fail { color: #b91c1c; font-weight: bold; }
+        pre { background: #f8fafc; padding: 1rem; border-radius: .5rem; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>lesson-import smoke test</h1>
+    <pre id="out">Đang chạy…</pre>
+    <script src="../lesson-import.js?v=20260623-lesson-import-v2"></script>
+    <script>
+        (async function run() {
+            const out = document.getElementById('out');
+            const lines = [];
+            const LI = window.LessonImport;
+            let failed = 0;
+
+            function check(name, ok) {
+                lines.push((ok ? 'OK: ' : 'FAIL: ') + name);
+                if (!ok) failed += 1;
+            }
+
+            if (!LI) {
+                out.innerHTML = '<span class="fail">FAIL: LessonImport không load</span>';
+                return;
+            }
+
+            let raw = '';
+            try {
+                const res = await fetch('fixtures/gemini-raw-sample.txt');
+                raw = await res.text();
+            } catch (e) {
+                out.innerHTML = '<span class="fail">FAIL: không tải fixture — ' + e.message + '</span>';
+                return;
+            }
+
+            const pkg = LI.buildLessonImportPackage({
+                rawGeminiText: raw,
+                metadata: { subject: 'Toán 6', chapter: 'Chương 1', title: 'Bài 1: Tập hợp', tool: 'smoke-html' }
+            });
+            const validation = LI.validateLessonImportPackage(pkg, { pageSubject: 'Toán 6' });
+
+            check('schema', pkg.schema_version === 'lesson-import-v1');
+            check('skills', pkg.skills.length >= 2);
+            check('questions', pkg.questions.length >= 2);
+            check('questions have skill', pkg.questions.every(q => q.skill));
+            check('drag match+sort', pkg.drag_exercises.length >= 2);
+            check('fill', pkg.fill_exercises.length >= 1);
+            check('essay', pkg.essay_exercises.length >= 1);
+            check('image manifest', pkg.image_manifest.length >= 1);
+            check('is_published false', pkg.is_published === false);
+            check('no validate errors', !(validation.errors || []).length);
+
+            const dragText = 'Nối | A » B | 1 » 2 | 0-0,1-1 | gợi';
+            const parsed = LI.parseDragExercises(dragText, { preferMatch: true });
+            const items = parsed.map(item => ({
+                de: item.prompt,
+                trai: LI.joinPoolText(item.left || item.items),
+                phai: LI.joinPoolText(item.right || item.answer),
+                map: item.pair_spec || '',
+                goi: item.hint || ''
+            }));
+            const rebuilt = LI.buildDragExercisesFromItems(items);
+            check('drag idempotency', rebuilt[0]?.mode === 'match' && rebuilt[0]?.pairs?.length === 2);
+
+            const roundTrip = LI.packageFromSavePayload(LI.packageToSavePayload(pkg));
+            check('round-trip slug', roundTrip.slug === pkg.slug);
+            check('round-trip questions', roundTrip.questions.length === pkg.questions.length);
+
+            out.innerHTML = lines.map(line =>
+                '<span class="' + (line.startsWith('OK') ? 'ok' : 'fail') + '">' + line + '</span>'
+            ).join('\n') + (failed ? '\n\n<span class="fail">' + failed + ' test(s) failed</span>' : '\n\n<span class="ok">All smoke checks passed.</span>');
+        })();
+    </script>
+</body>
+</html>

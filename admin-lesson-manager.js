@@ -74,8 +74,60 @@
     let questionItems = [];
     let interactiveEditorMode = 'bulk';
     let questionsEditorMode = 'bulk';
+    const LI = window.LessonImport;
 
     function el(id) { return document.getElementById(id); }
+
+    function requireLessonImport() {
+        if (!LI) {
+            alert('Thiếu lesson-import.js. Tải lại trang (Ctrl+F5).');
+            return false;
+        }
+        return true;
+    }
+
+    if (!LI) {
+        console.error('admin-lesson-manager.js requires lesson-import.js — load lesson-import.js before admin-lesson-manager.js');
+        return;
+    }
+
+    const AI_MARKER = LI.AI_MARKER;
+    const slugify = LI?.slugify || function slugifyLocal(value) {
+        return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+            .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 110);
+    };
+    const parseLines = (...a) => LI.parseLines(...a);
+    const splitQuestionParts = (...a) => LI.splitQuestionParts(...a);
+    const parseContentWithAiMarker = (...a) => LI.parseContentWithAiMarker(...a);
+    const normalizeTheoryItem = (...a) => LI.normalizeTheoryItem(...a);
+    const parseTheoryBlocks = (...a) => LI.parseTheoryBlocks(...a);
+    const formatTheoryBlocks = (...a) => LI.formatTheoryBlocks(...a);
+    const parseExamples = (...a) => LI.parseExamples(...a);
+    const parseSkills = (...a) => LI.parseSkills(...a);
+    const parseVideos = (...a) => LI.parseVideos(...a);
+    const parseQuestions = (...a) => LI.parseQuestions(...a);
+    const parseEssayExercises = (...a) => LI.parseEssayExercises(...a);
+    const parseFillExercises = (...a) => LI.parseFillExercises(...a);
+    const parseDragExercises = (...a) => LI.parseDragExercises(...a);
+    const buildDragExercisesFromItems = (...a) => LI.buildDragExercisesFromItems(...a);
+    const parseGeminiLessonSections = (...a) => LI.parseGeminiLessonSections(...a);
+    const parseInteractiveBulkPaste = (...a) => LI.parseInteractiveBulkPaste(...a);
+    const normalizeFillParts = (...a) => LI.normalizeFillParts(...a);
+    const normalizeMcqBulkLine = (...a) => LI.normalizeMcqBulkLine(...a);
+    const looksLikeSkillId = (...a) => LI.looksLikeSkillId(...a);
+    const poolsLookLikeSortOrder = (...a) => LI.poolsLookLikeSortOrder(...a);
+    const poolTextHasMultipleItems = (...a) => LI.poolTextHasMultipleItems(...a);
+    const joinPoolText = (...a) => LI.joinPoolText(...a);
+    const splitPoolText = (...a) => LI.splitPoolText(...a);
+    const repairPoolPieces = (...a) => LI.repairPoolPieces(...a);
+    const parseMatchPairs = (...a) => LI.parseMatchPairs(...a);
+    const buildDefaultMatchPairSpec = (...a) => LI.buildDefaultMatchPairSpec(...a);
+    const isDragMatchItem = (...a) => LI.isDragMatchItem(...a);
+    const normalizeBulkHeading = (...a) => LI.normalizeBulkHeading(...a);
+    const classifyInteractivePipeLine = (...a) => LI.classifyInteractivePipeLine(...a);
+    const resolveInteractiveBulkSection = (...a) => LI.resolveInteractiveBulkSection(...a);
+    const isInteractivePipeLine = (...a) => LI.isInteractivePipeLine(...a);
+    const questionsToEditorItems = (...a) => LI.questionsToEditorItems(...a);
 
     function getAllowedPages() {
         try {
@@ -164,73 +216,6 @@
         }[ch]));
     }
 
-    function slugify(value) {
-        return String(value || '')
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase()
-            .replace(/đ/g, 'd')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 110);
-    }
-
-    function parseLines(text) {
-        return String(text || '').split('\n').map(line => line.trim()).filter(Boolean);
-    }
-
-    const AI_MARKER = '[AI]';
-    const AI_MARKER_LINE_RE = /^\s*(\[\[AI\]\]|\[AI\])\s*$/i;
-    const AI_MARKER_INLINE_RE = /\s*(\[\[AI\]\]|\[AI\])\s*$/i;
-
-    function parseContentWithAiMarker(text) {
-        let ai = false;
-        const lines = String(text || '').replace(/\r/g, '').split('\n');
-        while (lines.length && AI_MARKER_LINE_RE.test(lines[lines.length - 1])) {
-            ai = true;
-            lines.pop();
-        }
-        const cleaned = lines
-            .map(line => line.replace(/[ \t]+$/g, '').replace(AI_MARKER_INLINE_RE, () => {
-                ai = true;
-                return '';
-            }))
-            .join('\n')
-            .trim();
-        return { text: cleaned, ai };
-    }
-
-    function normalizeTheoryItem(item) {
-        let text = '';
-        let ai = false;
-        if (typeof item === 'string') {
-            text = item.trim();
-        } else if (item && typeof item === 'object') {
-            text = String(item.text ?? item.content ?? '').trim();
-            ai = !!item.ai;
-        }
-        const parsed = parseContentWithAiMarker(text);
-        return { text: parsed.text, ai: ai || parsed.ai };
-    }
-
-    function parseTheoryBlocks(text) {
-        return String(text || '')
-            .replace(/\r/g, '')
-            .split(/\n\s*\n+/)
-            .map(block => parseContentWithAiMarker(block))
-            .filter(block => block.text);
-    }
-
-    function formatTheoryBlocks(blocks) {
-        return (Array.isArray(blocks) ? blocks : [])
-            .map(item => {
-                const block = normalizeTheoryItem(item);
-                if (!block.text) return '';
-                return block.ai ? `${block.text}\n${AI_MARKER}` : block.text;
-            })
-            .filter(Boolean)
-            .join('\n\n');
-    }
-
     function normalizeExampleItem(item) {
         const title = String(item?.title ?? '').trim();
         const parsed = parseContentWithAiMarker(String(item?.body ?? ''));
@@ -240,540 +225,6 @@
             body: parsed.text,
             ai: hasAiField ? !!item.ai : (parsed.ai || true)
         };
-    }
-
-    function cleanExampleTypeHeading(line) {
-        return String(line || '')
-            .replace(/^\s*#{1,6}\s*/, '')
-            .replace(/^\s*[-+*]\s+/, '')
-            .replace(/^\s*\d+[.)]\s+(?=(?:\*\*|__)?DẠNG\b)/i, '')
-            .replace(/^\s*(?:\*\*|__)/, '')
-            .replace(/(?:\*\*|__)\s*$/, '')
-            .trim();
-    }
-
-    function isExampleTypeHeading(line) {
-        const heading = cleanExampleTypeHeading(line);
-        return /^DẠNG\s+(?:\d+|[IVXLCDM]+)\s*(?::|[.\-–—]|$)/i.test(heading)
-            || /^DẠNG\s+TOÁN\s+THỰC\s+TẾ\s*(?::|[.\-–—]|$)/i.test(heading)
-            || /^DẠNG\s*(?::|[\-–—])/i.test(heading);
-    }
-
-    function parseExamplesByTypeHeadings(text) {
-        const lines = String(text || '').replace(/\r/g, '').split('\n');
-        const headingIndexes = [];
-        lines.forEach((line, index) => {
-            if (isExampleTypeHeading(line)) headingIndexes.push(index);
-        });
-        if (!headingIndexes.length) return [];
-
-        const preamble = lines.slice(0, headingIndexes[0]).join('\n').trim();
-        return headingIndexes.map((startIndex, groupIndex) => {
-            const endIndex = headingIndexes[groupIndex + 1] ?? lines.length;
-            const title = cleanExampleTypeHeading(lines[startIndex]) || `DẠNG ${groupIndex + 1}`;
-            const bodyParts = lines.slice(startIndex + 1, endIndex);
-            if (groupIndex === 0 && preamble) bodyParts.unshift(preamble, '');
-            const parsed = parseContentWithAiMarker(bodyParts.join('\n').replace(/\n{3,}/g, '\n\n').trim());
-            return { title, body: parsed.text, ai: parsed.ai };
-        }).filter(example => example.title || example.body);
-    }
-
-    function parseExamples(text) {
-        const normalizedText = String(text || '').replace(/\r/g, '');
-        const typedExamples = parseExamplesByTypeHeadings(normalizedText);
-        if (typedExamples.length) return typedExamples;
-
-        const blocks = normalizedText.split(/\n\s*\n+/).map(block => block.trim()).filter(Boolean);
-        const source = blocks.length > 1 || !normalizedText.includes('|') ? blocks : parseLines(normalizedText);
-        return source.map((block, index) => {
-            const parts = block.includes('||') ? block.split('||') : block.split('|');
-            if (parts.length >= 2) {
-                const [title, ...bodyParts] = parts;
-                const parsed = parseContentWithAiMarker(bodyParts.join(parts.length > 2 ? '|' : '').trim());
-                return {
-                    title: (title || `Ví dụ ${index + 1}`).trim(),
-                    body: parsed.text,
-                    ai: parsed.ai
-                };
-            }
-            const lines = block.split('\n').map(line => line.replace(/[ \t]+$/g, ''));
-            const title = (lines[0] || '').trim();
-            const parsed = parseContentWithAiMarker(lines.slice(1).join('\n').trim());
-            return {
-                title: title || `Ví dụ ${index + 1}`,
-                body: parsed.text,
-                ai: parsed.ai
-            };
-        }).filter(example => example.title || example.body);
-    }
-
-    function normalizeSkillField(value, kind) {
-        let text = String(value || '').trim();
-        if (kind === 'id') {
-            text = text.replace(/^id\s*[:：]\s*/i, '').trim();
-        } else if (kind === 'name') {
-            text = text.replace(/^t[eê]n\s*[:：]\s*/i, '').trim();
-        } else if (kind === 'target') {
-            text = text.replace(/^(?:target|muc|mục)\s*[:：]\s*/i, '').trim();
-        }
-        return text;
-    }
-
-    function mergeSkillInputLines(text) {
-        const merged = [];
-        String(text || '').replace(/\r/g, '').split('\n').forEach((rawLine) => {
-            const line = rawLine.trim();
-            if (!line) return;
-            if (/^\d{1,3}$/.test(line) && merged.length && /\|\s*$/.test(merged[merged.length - 1])) {
-                merged[merged.length - 1] = `${merged[merged.length - 1].replace(/\|\s*$/, '')} | ${line}`;
-                return;
-            }
-            merged.push(line);
-        });
-        return merged;
-    }
-
-    function parseSkills(text) {
-        return mergeSkillInputLines(text).map((line, index) => {
-            const parts = line.split('|').map(part => part.trim());
-            if (parts.length === 1 && /^\d{1,3}$/.test(parts[0])) return null;
-
-            const idRaw = normalizeSkillField(parts[0], 'id');
-            const nameRaw = normalizeSkillField(parts[1], 'name');
-            const targetRaw = normalizeSkillField(parts[2], 'target');
-            const id = slugify(idRaw || nameRaw || `skill-${index + 1}`);
-            const name = nameRaw || idRaw || `Kỹ năng ${index + 1}`;
-            const targetNum = Number(targetRaw);
-            const target = Number.isFinite(targetNum) && targetNum > 0
-                ? Math.min(100, Math.max(1, Math.round(targetNum)))
-                : 80;
-
-            if (!id && !name) return null;
-            return { id, name, target };
-        }).filter(Boolean);
-    }
-
-    function parseVideos(text) {
-        return parseLines(text).map(line => {
-            const trimmed = String(line || '').trim();
-            if (/^https?:\/\//i.test(trimmed)) {
-                return { title: 'Video bài giảng', url: trimmed };
-            }
-            const parts = line.includes('||') ? line.split('||') : line.split('|');
-            const [title, ...urlParts] = parts;
-            const url = urlParts.join('|').trim();
-            if (/^https?:\/\//i.test(String(title || '').trim()) && !url) {
-                return { title: 'Video bài giảng', url: String(title || '').trim() };
-            }
-            return { title: (title || 'Video bài giảng').trim(), url };
-        }).filter(video => video.url);
-    }
-
-    function answerToIndex(value, lineNumber) {
-        const raw = String(value || '').trim().toUpperCase().replace(/^ĐÁP\s*ÁN\s*[:：-]?\s*/, '');
-        const letter = raw.match(/^[ABCD]$/)?.[0] || raw.match(/(?:^|\s)([ABCD])(?:\s|$)/)?.[1];
-        if (letter) return letter.charCodeAt(0) - 65;
-        const number = raw.match(/^[1-4]$/)?.[0] || raw.match(/(?:^|\s)([1-4])(?:\s|$)/)?.[1];
-        if (number) return Number(number) - 1;
-        throw new Error(`Câu hỏi số ${lineNumber} chưa có đáp án đúng. Nhập A/B/C/D hoặc 1/2/3/4.`);
-    }
-
-    function decodePastedText(text) {
-        return String(text || '')
-            .replace(/\r/g, '')
-            .replace(/&quot;/g, '"')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .replace(/&nbsp;/g, ' ');
-    }
-
-    function splitQuestionParts(line) {
-        return (line.includes('||') ? line.split('||') : line.split('|'))
-            .map(part => part.trim())
-            .filter(Boolean);
-    }
-
-    function normalizeMcqBulkLine(line) {
-        let text = String(line || '').trim();
-        if (!text) return '';
-        text = text.replace(/^\*\*|\*\*$/g, '').trim();
-        text = text.replace(/^câu\s*\d+\s*[.:)\-–—]?\s*\|/iu, '').trim();
-        text = text.replace(/^\d+\s*[.)]\s*/, '').trim();
-        return text;
-    }
-
-    function looksLikeSkillId(value) {
-        const text = String(value || '').trim();
-        return /^[a-z0-9][a-z0-9_-]*$/i.test(text)
-            && text.length >= 3
-            && !/^câu\s*\d+$/i.test(text)
-            && !/^[ABCD]$/i.test(text);
-    }
-
-    function parseQuestionLine(line, index, fallbackSkill) {
-        const parts = splitQuestionParts(normalizeMcqBulkLine(line));
-        if (parts.length < 6) {
-            throw new Error(`Câu hỏi số ${index + 1} chưa đúng mẫu: Câu hỏi | A | B | C | D | đáp án`);
-        }
-
-        const hasSkill = parts.length >= 7 && looksLikeSkillId(parts[0]);
-        const skill = hasSkill ? parts[0] : fallbackSkill;
-        const offset = hasSkill ? 1 : 0;
-        const prompt = parts[offset];
-        const options = parts.slice(offset + 1, offset + 5);
-        const answer = parts[offset + 5];
-        if (!prompt || options.length < 4 || options.some(option => !option)) {
-            throw new Error(`Câu hỏi số ${index + 1} còn thiếu nội dung hoặc lựa chọn A/B/C/D.`);
-        }
-
-        return {
-            id: `q${index + 1}`,
-            skill: slugify(skill || fallbackSkill || 'tong_hop'),
-            prompt,
-            options,
-            answer: answerToIndex(answer, index + 1)
-        };
-    }
-
-    function canParseQuestionBlock(block, fallbackSkill) {
-        try {
-            parseQuestionLine(block, 0, fallbackSkill);
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    function readQuestionBlocks(text, fallbackSkill) {
-        const lines = decodePastedText(text).split('\n').map(line => line.trim()).filter(Boolean);
-        const blocks = [];
-        let buffer = '';
-
-        lines.forEach(line => {
-            const normalized = normalizeMcqBulkLine(line);
-            if (splitQuestionParts(normalized).length >= 6) {
-                if (buffer.trim()) {
-                    parseQuestionLine(buffer, blocks.length, fallbackSkill);
-                }
-                blocks.push(normalized);
-                buffer = '';
-                return;
-            }
-            buffer = buffer ? `${buffer} ${line}` : line;
-            if (canParseQuestionBlock(buffer, fallbackSkill)) {
-                blocks.push(buffer);
-                buffer = '';
-            }
-        });
-
-        if (buffer.trim()) {
-            parseQuestionLine(buffer, blocks.length, fallbackSkill);
-        }
-
-        return blocks;
-    }
-
-    function parseQuestions(text, skills = []) {
-        const fallbackSkill = skills[0]?.id || 'tong_hop';
-        return readQuestionBlocks(text, fallbackSkill).map((line, index) => parseQuestionLine(line, index, fallbackSkill));
-    }
-
-    function parseEssayExercises(text) {
-        return parseLines(text).map((line, index) => {
-            const parts = splitQuestionParts(line);
-            return { id: `essay_${index + 1}`, prompt: parts[0] || '', answer: parts[1] || '', hint: parts[2] || '' };
-        }).filter(item => item.prompt);
-    }
-
-    const POOL_ITEM_JOINER = ' » ';
-    const POOL_ITEM_SEP_RE = /\s*»\s*/u;
-    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]|\[(?:\d+(?:[.,]\d+)?)\]/g;
-    // Chỉ tách khi dấu phẩy có khoảng trắng (7, 2, 8) — không tách số thập phân 7,2 hay 70,208
-    const FILL_COMMA_LIST_RE = /\s*,\s+|\s+,\s*/;
-
-    function splitPoolTextByGt(value) {
-        const source = String(value || '');
-        if (!source) return [];
-        const parts = [];
-        let current = '';
-        let inInlineMath = false;
-        let inDisplayMath = false;
-        for (let i = 0; i < source.length; i += 1) {
-            if (!inInlineMath && source.startsWith('$$', i)) {
-                inDisplayMath = !inDisplayMath;
-                current += '$$';
-                i += 1;
-                continue;
-            }
-            if (!inDisplayMath && source[i] === '$') {
-                inInlineMath = !inInlineMath;
-                current += '$';
-                continue;
-            }
-            if (source[i] === '>' && !inInlineMath && !inDisplayMath) {
-                const trimmed = current.trim();
-                if (trimmed) parts.push(trimmed);
-                current = '';
-                continue;
-            }
-            current += source[i];
-        }
-        const trimmed = current.trim();
-        if (trimmed) parts.push(trimmed);
-        return parts;
-    }
-
-    function splitPoolText(value) {
-        const source = String(value || '');
-        if (!source) return [];
-        if (POOL_ITEM_SEP_RE.test(source)) {
-            return source.split(POOL_ITEM_SEP_RE).map(part => part.trim()).filter(Boolean);
-        }
-        return splitPoolTextByGt(source);
-    }
-
-    function joinPoolText(items) {
-        return (items || []).map(item => String(item || '').trim()).filter(Boolean).join(POOL_ITEM_JOINER);
-    }
-
-    function repairPoolPieces(pieces, expectedCount = 0) {
-        if (!Array.isArray(pieces) || pieces.length <= 1) return pieces || [];
-        const repaired = splitPoolText(pieces.join(' > '));
-        if (repaired.length >= pieces.length) return pieces;
-        if (expectedCount > 0 && repaired.length === expectedCount) return repaired;
-        if (!expectedCount && repaired.length < pieces.length) return repaired;
-        return pieces;
-    }
-
-    function poolTextHasMultipleItems(value) {
-        return splitPoolText(value).length > 1;
-    }
-
-    function countBlankTokens(prompt) {
-        const matches = String(prompt || '').match(BLANK_TOKEN_RE);
-        return matches?.length || 1;
-    }
-
-    function looksLikeFillHintText(value) {
-        const text = String(value || '').trim();
-        if (!text) return false;
-        if (POOL_ITEM_SEP_RE.test(text)) return false;
-        if (text.length < 18 && !/[.():]/.test(text)) return false;
-        return /xác định|ô trống|gợi ý|hãy|em hãy|điền|tính|phân tích|nhận xét|giải thích/i.test(text);
-    }
-
-    function inferFillAnswersFromPool(pool, blankCount) {
-        if (!Array.isArray(pool) || !pool.length || blankCount < 1) return [];
-        if (pool.length === blankCount) return [...pool];
-        if (pool.length > blankCount) return pool.slice(0, blankCount);
-        return [...pool];
-    }
-
-    function poolsLookLikeSortOrder(leftItems, rightItems) {
-        const left = (leftItems || []).map(item => String(item || '').trim()).filter(Boolean);
-        const right = (rightItems || []).map(item => String(item || '').trim()).filter(Boolean);
-        if (!left.length || !right.length || left.length !== right.length) return false;
-        const signature = items => [...items].sort((a, b) => a.localeCompare(b, 'vi')).join('\u0001');
-        return signature(left) === signature(right);
-    }
-
-    function normalizeFillPromptBlanks(prompt, answers) {
-        let text = String(prompt || '').trim();
-        if (!text || countBlankTokens(text) > 0 || !answers.length) return text;
-        answers.forEach(answer => {
-            const token = String(answer || '').trim();
-            if (!token || token.length > 24) return;
-            const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            text = text.replace(new RegExp(`(?<!_)\\b${escaped}\\b(?!_)`), '___');
-        });
-        return text;
-    }
-
-    function normalizeFillParts(parts) {
-        const rawParts = (parts || []).map(part => String(part || '').trim());
-        let prompt = rawParts[0] || '';
-        let pool = [];
-        let answer = '';
-        let hint = '';
-
-        if (poolTextHasMultipleItems(rawParts[1])) {
-            pool = splitPoolText(rawParts[1]);
-            if (rawParts.length >= 4) {
-                answer = rawParts[2] || '';
-                hint = rawParts[3] || '';
-            } else if (rawParts.length === 3) {
-                if (looksLikeFillHintText(rawParts[2])) {
-                    hint = rawParts[2];
-                    answer = joinPoolText(inferFillAnswersFromPool(pool, countBlankTokens(prompt)));
-                } else {
-                    answer = rawParts[2];
-                }
-            } else {
-                answer = joinPoolText(inferFillAnswersFromPool(pool, countBlankTokens(prompt)));
-            }
-        } else if (rawParts[1]) {
-            answer = rawParts[1];
-            pool = [answer];
-            hint = rawParts[2] || '';
-        }
-
-        let blankCount = countBlankTokens(prompt);
-        if (looksLikeFillHintText(answer)) {
-            hint = hint || answer;
-            answer = joinPoolText(inferFillAnswersFromPool(pool, blankCount));
-        }
-
-        let answers = splitFillAnswerList(answer, blankCount);
-        if (answers.length === 1 && blankCount > 1) {
-            const expanded = splitFillAnswerList(answers[0], blankCount);
-            if (expanded.length > 1) answers = expanded;
-        }
-        if ((!answers.length || looksLikeFillHintText(answers.join(' '))) && pool.length) {
-            answers = inferFillAnswersFromPool(pool, blankCount);
-            answer = joinPoolText(answers);
-        }
-
-        prompt = normalizeFillPromptBlanks(prompt, answers);
-        blankCount = countBlankTokens(prompt);
-        if (answers.length === 1 && blankCount > 1) {
-            const expanded = splitFillAnswerList(answers[0], blankCount);
-            if (expanded.length > 1) answers = expanded;
-        }
-
-        return { prompt, pool, answers, hint, blankCount };
-    }
-
-    function splitFillAnswerList(value, blankCount = 0) {
-        if (Array.isArray(value)) {
-            return value.map(part => String(part || '').trim()).filter(Boolean);
-        }
-        const source = String(value || '').trim();
-        if (!source) return [];
-        if (POOL_ITEM_SEP_RE.test(source)) return splitPoolText(source);
-        if (FILL_COMMA_LIST_RE.test(source)) {
-            const parts = source.split(FILL_COMMA_LIST_RE).map(part => part.trim()).filter(Boolean);
-            if (parts.length > 1) return parts;
-        }
-        if (source.includes(';')) {
-            const parts = source.split(/\s*;\s*/).map(part => part.trim()).filter(Boolean);
-            if (parts.length > 1) return parts;
-        }
-        if (source.includes('>')) {
-            const gtParts = splitPoolTextByGt(source);
-            if (gtParts.length > 1) return gtParts;
-        }
-        if (blankCount > 1 && source.length === 1 && blankCount === source.length) {
-            return source.split('');
-        }
-        return [source];
-    }
-
-    function parseMatchPairs(spec) {
-        return String(spec || '').split(',').map(part => part.trim()).filter(Boolean).map(part => {
-            const [left, right] = part.split('-').map(value => Number.parseInt(value, 10));
-            if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
-            return { left, right };
-        }).filter(Boolean);
-    }
-
-    function parseFillExercises(text) {
-        return parseLines(text).map((line, index) => {
-            const normalized = normalizeFillParts(splitQuestionParts(line));
-            return {
-                id: `fill_${index + 1}`,
-                prompt: normalized.prompt,
-                items: normalized.pool,
-                pool: normalized.pool,
-                answer: normalized.answers.length <= 1 ? (normalized.answers[0] || '') : normalized.answers,
-                hint: normalized.hint
-            };
-        }).filter(item => item.prompt && (item.pool.length || item.answer));
-    }
-
-    function buildDragExercisesFromItems(items) {
-        return (items || []).map((item, index) => {
-            if (isDragMatchItem(item)) {
-                const left = repairPoolPieces(splitPoolText(item.trai), 0);
-                const right = repairPoolPieces(splitPoolText(item.phai), 0);
-                const pairSpec = String(item.map || '').trim() || buildDefaultMatchPairSpec(left.length, right.length);
-                const pairs = parseMatchPairs(pairSpec);
-                return {
-                    id: `drag_${index + 1}`,
-                    mode: 'match',
-                    prompt: item.de || '',
-                    left,
-                    right,
-                    pairs,
-                    pair_spec: pairSpec,
-                    hint: item.goi || ''
-                };
-            }
-            const sortItems = repairPoolPieces(splitPoolText(item.trai), 0);
-            const sortAnswer = repairPoolPieces(splitPoolText(item.phai), sortItems.length);
-            return {
-                id: `drag_${index + 1}`,
-                mode: 'sort',
-                prompt: item.de || '',
-                items: sortItems,
-                answer: sortAnswer,
-                hint: item.goi || ''
-            };
-        }).filter(item => {
-            if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
-            return item.prompt && item.items?.length && item.answer?.length;
-        });
-    }
-
-    function buildDefaultMatchPairSpec(leftCount, rightCount) {
-        const count = Math.min(leftCount, rightCount);
-        if (!count) return '';
-        return Array.from({ length: count }, (_, index) => `${index}-${index}`).join(',');
-    }
-
-    function parseSingleDragLine(line, index, options = {}) {
-        const parts = splitQuestionParts(line);
-        const prompt = parts[0] || '';
-        let pairSpec = parts[3] || '';
-        if (!(pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) && options.preferMatch) {
-            const left = repairPoolPieces(splitPoolText(parts[1]), 0);
-            const right = repairPoolPieces(splitPoolText(parts[2]), 0);
-            pairSpec = buildDefaultMatchPairSpec(left.length, right.length);
-        }
-        if (pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) {
-            const pairs = parseMatchPairs(pairSpec);
-            const left = repairPoolPieces(splitPoolText(parts[1]), pairs.length);
-            const right = repairPoolPieces(splitPoolText(parts[2]), pairs.length);
-            return {
-                id: `drag_${index + 1}`,
-                mode: 'match',
-                prompt,
-                left,
-                right,
-                pairs,
-                pair_spec: pairSpec,
-                hint: parts[4] || ''
-            };
-        }
-        const items = splitPoolText(parts[1]);
-        const answer = splitPoolText(parts[2] || parts[1]);
-        return {
-            id: `drag_${index + 1}`,
-            mode: 'sort',
-            prompt,
-            items,
-            answer,
-            hint: parts[3] || ''
-        };
-    }
-
-    function parseDragExercises(text, options = {}) {
-        return parseLines(text)
-            .map((line, index) => parseSingleDragLine(line, index, options))
-            .filter(item => {
-                if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
-                return item.prompt && item.items?.length && item.answer?.length;
-            });
     }
 
     function formatExamples(items) {
@@ -793,6 +244,7 @@
     }
 
     function formatQuestions(items) {
+        if (LI) return LI.formatQuestionsBulk(items);
         return (items || []).map(item => {
             const options = item.options || [];
             const answer = 'ABCD'[Number(item.answer || 0)] || 'A';
@@ -805,24 +257,6 @@
                 answer
             ].join(' | ');
         }).join('\n');
-    }
-
-    function questionsToEditorItems(questions) {
-        return (questions || []).map(item => {
-            const options = item.options || [];
-            const answerIndex = Number(item.answer);
-            const answerLetter = Number.isFinite(answerIndex) && answerIndex >= 0 && answerIndex <= 3
-                ? ('ABCD'[answerIndex] || 'A')
-                : String(item.answer || 'A').trim().toUpperCase().charAt(0) || 'A';
-            return {
-                cau: item.prompt || '',
-                a: options[0] || '',
-                b: options[1] || '',
-                c: options[2] || '',
-                d: options[3] || '',
-                dung: answerLetter
-            };
-        });
     }
 
     function formatEssayExercises(items) {
@@ -1635,7 +1069,7 @@
         if (!text) return [];
         const skills = parseSkills(el('lessonSkills')?.value || '');
         try {
-            return questionsToEditorItems(parseQuestions(text, skills));
+            return questionsToEditorItems(parseQuestions(text, skills), skills);
         } catch {
             return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
                 const p = splitQuestionParts(normalizeMcqBulkLine(line));
@@ -1643,6 +1077,7 @@
                 const hasSkill = p.length >= 7 && looksLikeSkillId(p[0]);
                 const offset = hasSkill ? 1 : 0;
                 return {
+                    skill: hasSkill ? p[0] : '',
                     cau: p[offset] || '',
                     a: p[offset + 1] || '',
                     b: p[offset + 2] || '',
@@ -1652,149 +1087,6 @@
                 };
             }).filter(Boolean);
         }
-    }
-
-    function normalizeBulkHeading(line) {
-        return String(line || '')
-            .replace(/^\s*#{1,6}\s*/, '')
-            .replace(/^\s*\d+[.)]\s*/, '')
-            .replace(/^\s*\*\*|\*\*\s*$/g, '')
-            .trim()
-            .toUpperCase();
-    }
-
-    function isInteractivePipeLine(line) {
-        const text = String(line || '').trim();
-        if (!text || !text.includes('|')) return false;
-        if (/^\*\*.+\*\*$/.test(text)) return false;
-        return !resolveInteractiveBulkSection(text);
-    }
-
-    function resolveInteractiveBulkSection(line) {
-        const heading = normalizeBulkHeading(line);
-        if (!heading) return '';
-        if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
-        if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/KÉO THẢ|KÉO VÀO Ô|KÉO VÀO TRỐNG/.test(heading)) return 'fill';
-        if (/NỐI Ô/.test(heading) && /SẮP XẾP/.test(heading)) return 'dragMixed';
-        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
-        if (/SẮP XẾP/.test(heading)) return 'dragSort';
-        if (/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ|^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
-        return '';
-    }
-
-    function classifyInteractivePipeLine(line) {
-        const parts = splitQuestionParts(line);
-        if (parts.length >= 4 && /\d+\s*-\s*\d+/.test(parts[3] || '')) return 'dragMatch';
-        if (parts.length >= 4) {
-            const leftMulti = poolTextHasMultipleItems(parts[1]);
-            const rightMulti = poolTextHasMultipleItems(parts[2]);
-            if (leftMulti && rightMulti) {
-                return poolsLookLikeSortOrder(splitPoolText(parts[1]), splitPoolText(parts[2])) ? 'dragSort' : 'dragMatch';
-            }
-            if (leftMulti || /___|…/.test(parts[0] || '')) return 'fill';
-        }
-        return 'essay';
-    }
-
-    function pushInteractiveDragLine(buckets, line) {
-        const kind = classifyInteractivePipeLine(line);
-        if (kind === 'dragMatch') buckets.dragMatch.push(line);
-        else if (kind === 'dragSort') buckets.dragSort.push(line);
-        else buckets.drag.push(line);
-    }
-
-    function pushInteractiveBulkLines(buckets, section, lines) {
-        const pipeLines = lines.filter(isInteractivePipeLine);
-        if (!pipeLines.length) return;
-        if (section === 'dragMatch') {
-            buckets.dragMatch.push(...pipeLines);
-            return;
-        }
-        if (section === 'dragSort') {
-            buckets.dragSort.push(...pipeLines);
-            return;
-        }
-        if (section === 'dragMixed') {
-            pipeLines.forEach(line => {
-                const kind = classifyInteractivePipeLine(line);
-                if (kind === 'dragMatch' || kind === 'dragSort') {
-                    buckets[kind].push(line);
-                } else if (kind === 'drag') {
-                    pushInteractiveDragLine(buckets, line);
-                } else {
-                    buckets[kind].push(line);
-                }
-            });
-            return;
-        }
-        if (section === 'essay' || section === 'fill' || section === 'drag') {
-            buckets[section].push(...pipeLines);
-        }
-    }
-
-    function parseInteractiveBulkPaste(text) {
-        const buckets = { essay: [], fill: [], drag: [], dragMatch: [], dragSort: [] };
-        let section = '';
-        let stop = false;
-        const buffer = [];
-
-        const flush = () => {
-            if (!section || section === 'skip' || !buffer.length) {
-                buffer.length = 0;
-                return;
-            }
-            pushInteractiveBulkLines(buckets, section, buffer);
-            buffer.length = 0;
-        };
-
-        String(text || '').split('\n').forEach(rawLine => {
-            if (stop) return;
-            const line = String(rawLine || '').trim();
-            if (!line) return;
-
-            const nextSection = resolveInteractiveBulkSection(line);
-            if (nextSection === 'stop') {
-                flush();
-                stop = true;
-                return;
-            }
-            if (nextSection) {
-                flush();
-                if (nextSection !== 'skip') section = nextSection;
-                return;
-            }
-
-            if (!isInteractivePipeLine(line)) return;
-
-            if (section && section !== 'skip') {
-                buffer.push(line);
-                return;
-            }
-
-            const kind = classifyInteractivePipeLine(line);
-            if (kind === 'dragMatch' || kind === 'dragSort') {
-                buckets[kind].push(line);
-            } else if (kind === 'drag') {
-                pushInteractiveDragLine(buckets, line);
-            } else {
-                buckets[kind].push(line);
-            }
-        });
-
-        flush();
-
-        return {
-            essay: buckets.essay.join('\n'),
-            fill: buckets.fill.join('\n'),
-            drag: buckets.drag.join('\n'),
-            dragMatch: buckets.dragMatch.join('\n'),
-            dragSort: buckets.dragSort.join('\n')
-        };
-    }
-
-    function isDragMatchItem(item) {
-        return /\d+\s*-\s*\d+/.test(String(item?.map || ''));
     }
 
     function serializeInteractiveBulkFromItems() {
@@ -1876,7 +1168,15 @@
     }
 
     function serializeQuestionsBulkFromItems() {
-        return questionItems.map(item => `${item.cau}|${item.a}|${item.b}|${item.c}|${item.d}|${item.dung}`).join('\n');
+        return questionItems.map(item => [
+            item.skill || '',
+            item.cau || '',
+            item.a || '',
+            item.b || '',
+            item.c || '',
+            item.d || '',
+            item.dung || ''
+        ].join(' | ')).join('\n');
     }
 
     function refreshQuestionsBulkTextarea() {
@@ -1972,136 +1272,103 @@
         if (!skipSync) renderPreview();
     }
 
-    function normalizeGeminiSectionHeading(line) {
-        return String(line || '')
-            .replace(/^\s*#{1,6}\s*/, '')
-            .replace(/^\s*[-*+]\s+/, '')
-            .replace(/^\s*\d+[.)\-:]\s*/, '')
-            .replace(/^\s*\*\*|\*\*\s*$/g, '')
-            .replace(/[:：]\s*$/, '')
-            .trim()
-            .toUpperCase();
-    }
-
-    function resolveGeminiSectionKey(line) {
-        const heading = normalizeGeminiSectionHeading(line);
-        if (!heading) return '';
-        if (/^MỤC TIÊU(?:\s+BÀI HỌC)?/.test(heading)) return 'goal';
-        if (/^LÝ THUYẾT/.test(heading)) return 'theory';
-        if (/^(?:PHẦN\s+)?VÍ DỤ/.test(heading)) return 'examples';
-        if (/^BÀI TẬP NỘP/.test(heading)) return 'selfPractice';
-        if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'interactive';
-        if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/KÉO THẢ|KÉO VÀO Ô|KÉO VÀO TRỐNG/.test(heading)) return 'fill';
-        if (/NỐI Ô/.test(heading) && /SẮP XẾP/.test(heading)) return 'dragMixed';
-        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
-        if (/SẮP XẾP/.test(heading)) return 'dragSort';
-        if (/^TRẮC NGHIỆM/.test(heading)) return 'questions';
-        if (/^KỸ NĂNG/.test(heading)) return 'skills';
-        if (/^NHIỆM VỤ/.test(heading)) return 'tasks';
-        if (/^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
-        return '';
-    }
-
-    function parseGeminiLessonSections(raw) {
-        const sections = {
-            goal: '', theory: '', examples: '', selfPractice: '',
-            interactive: '', essay: '', fill: '', drag: '', dragMatch: '', dragSort: '', dragMixed: '',
-            questions: '', skills: '', tasks: ''
-        };
-        let current = '';
-        const buffer = [];
-        const flush = () => {
-            if (!current || current === 'stop' || !buffer.length) {
-                buffer.length = 0;
-                return;
-            }
-            const text = buffer.join('\n').trim();
-            if (text) sections[current] = sections[current] ? `${sections[current]}\n\n${text}` : text;
-            buffer.length = 0;
-        };
-        String(raw || '').replace(/\r/g, '').split('\n').forEach(line => {
-            const next = resolveGeminiSectionKey(line);
-            if (next === 'stop') {
-                flush();
-                current = 'stop';
-                return;
-            }
-            if (next) {
-                flush();
-                current = next;
-                return;
-            }
-            if (current && current !== 'stop') buffer.push(line);
+    function formatImageManifestText(lesson) {
+        const saved = Array.isArray(lesson?.image_manifest) ? lesson.image_manifest : [];
+        const savedById = new Map(saved.map(img => [String(img.id || '').toUpperCase(), img]));
+        const pkg = LI.packageFromSavePayload({
+            goal_text: lesson?.goal || lesson?.goal_text || '',
+            theory: lesson?.theory || [],
+            examples: lesson?.examples || [],
+            self_practice: lesson?.self_practice || [],
+            essay_exercises: lesson?.essay_exercises || [],
+            fill_exercises: lesson?.fill_exercises || [],
+            drag_exercises: lesson?.drag_exercises || [],
+            questions: lesson?.questions || []
         });
-        flush();
-        const parsedInteractive = parseInteractiveBulkPaste(sections.interactive);
-        const parsedDragMixed = parseInteractiveBulkPaste(sections.dragMixed);
-        return {
-            goal: sections.goal,
-            theory: sections.theory,
-            examples: sections.examples,
-            selfPractice: sections.selfPractice,
-            essay: sections.essay || parsedInteractive.essay,
-            fill: sections.fill || parsedInteractive.fill,
-            drag: [
-                sections.drag,
-                parsedInteractive.drag,
-                parsedDragMixed.drag
-            ].filter(Boolean).join('\n'),
-            dragMatch: [sections.dragMatch, parsedInteractive.dragMatch, parsedDragMixed.dragMatch].filter(Boolean).join('\n'),
-            dragSort: [sections.dragSort, parsedInteractive.dragSort, parsedDragMixed.dragSort].filter(Boolean).join('\n'),
-            questions: sections.questions,
-            skills: sections.skills,
-            tasks: sections.tasks
-        };
+        const markers = LI.collectMarkersFromPackage(pkg);
+        const ids = [...new Set([...markers, ...saved.map(img => img.id).filter(Boolean)])];
+        if (!ids.length) return '';
+        return ids.map(id => {
+            const entry = savedById.get(String(id).toUpperCase()) || saved.find(img => img.id === id);
+            if (entry) {
+                return `${entry.id}: LOẠI: ${entry.type || 'diagram'} | ${entry.alt || entry.id}`;
+            }
+            return `${id}: LOẠI: diagram | ${id}`;
+        }).join('\n');
     }
 
-    function importGeminiLessonRaw(raw) {
-        const text = String(raw || '').trim();
-        if (!text) {
-            alert('Dán nội dung Gemini trả về trước.');
-            return;
-        }
-        const sections = parseGeminiLessonSections(text);
+    function buildFormLessonPackage() {
+        flushBulkEditorsBeforeSave();
+        const skills = parseSkills(el('lessonSkills').value);
+        let questions = [];
+        try { questions = resolveQuestionsForSave(skills); } catch { questions = []; }
+        return LI.packageFromSavePayload({
+            subject: (isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject').value).trim(),
+            chapter: el('lessonChapter').value.trim(),
+            title: el('lessonTitleInput').value.trim(),
+            slug: el('lessonSlug').value.trim(),
+            order_index: Number(el('lessonOrder').value) || 0,
+            is_published: false,
+            goal_text: el('lessonGoalInput').value.trim(),
+            theory: parseTheoryBlocks(el('lessonTheory').value),
+            examples: parseExamples(el('lessonExamples').value),
+            self_practice: parseExamples(el('lessonSelfPractice')?.value || ''),
+            essay_exercises: parseEssayExercises(el('lessonEssay').value),
+            fill_exercises: parseFillExercises(el('lessonFill').value),
+            drag_exercises: buildDragExercisesFromItems(dragItems),
+            videos: parseVideos(el('lessonVideos').value),
+            skills,
+            tasks: parseLines(el('lessonTasks').value),
+            questions,
+            image_manifest: LI.parseImageManifest(el('lessonImageManifest')?.value || '')
+        });
+    }
+
+    function applyLessonPackageToForm(pkg, report) {
         const filled = [];
-        if (sections.goal) {
-            el('lessonGoalInput').value = sections.goal;
-            filled.push('mục tiêu');
+        if (pkg.goal_text) { el('lessonGoalInput').value = pkg.goal_text; filled.push('mục tiêu'); }
+        if (pkg.chapter) el('lessonChapter').value = pkg.chapter;
+        if (pkg.title) el('lessonTitleInput').value = pkg.title;
+        if (pkg.slug) el('lessonSlug').value = pkg.slug;
+        if (pkg.order_index) el('lessonOrder').value = String(pkg.order_index);
+        if (!isPageScopedEditor() && pkg.subject) {
+            el('lessonSubject').value = pkg.subject;
+            selectedSubject = pkg.subject;
         }
-        if (sections.theory) {
-            el('lessonTheory').value = sections.theory;
+        el('lessonPublished').checked = false;
+
+        if (pkg.theory?.length) {
+            el('lessonTheory').value = LI.formatTheoryBlocks(pkg.theory);
             filled.push('lý thuyết');
         }
-        if (sections.examples) {
-            el('lessonExamples').value = sections.examples;
+        if (pkg.examples?.length) {
+            el('lessonExamples').value = pkg.examples.map(ex => `${ex.title}\n${ex.body}`).join('\n\n');
             filled.push('ví dụ');
         }
-        if (sections.selfPractice) {
-            el('lessonSelfPractice').value = sections.selfPractice;
+        if (pkg.self_practice?.length) {
+            el('lessonSelfPractice').value = pkg.self_practice.map(ex => `${ex.title}\n${ex.body}`).join('\n\n');
             filled.push('bài nộp');
         }
-        if (sections.essay) {
-            el('lessonEssay').value = sections.essay;
-            filled.push(`tự luận (${parseEssayExercises(sections.essay).length})`);
+        if (pkg.skills?.length) {
+            el('lessonSkills').value = pkg.skills.map(s => `${s.id} | ${s.name} | ${s.target}`).join('\n');
+            filled.push(`kỹ năng (${pkg.skills.length})`);
         }
-        if (sections.fill) {
-            el('lessonFill').value = sections.fill;
-            filled.push(`điền khuyết (${parseFillExercises(sections.fill).length})`);
+        if (pkg.essay_exercises?.length) {
+            el('lessonEssay').value = formatEssayExercises(pkg.essay_exercises);
+            filled.push(`tự luận (${pkg.essay_exercises.length})`);
         }
-        const importedDrag = [
-            ...parseDragExercises(sections.dragMatch || '', { preferMatch: true }),
-            ...parseDragExercises(sections.dragSort || ''),
-            ...parseDragExercises(sections.drag || '')
-        ];
-        if (importedDrag.length) {
-            dragItems = importedDrag.map(item => {
+        if (pkg.fill_exercises?.length) {
+            el('lessonFill').value = formatFillExercises(pkg.fill_exercises);
+            filled.push(`điền khuyết (${pkg.fill_exercises.length})`);
+        }
+        if (pkg.drag_exercises?.length) {
+            dragItems = pkg.drag_exercises.map(item => {
                 if (item.mode === 'match') {
                     return {
                         de: item.prompt || '',
                         trai: joinPoolText(item.left),
                         phai: joinPoolText(item.right),
-                        map: item.pair_spec || '',
+                        map: item.pair_spec || (item.pairs || []).map(p => `${p.left}-${p.right}`).join(','),
                         goi: item.hint || ''
                     };
                 }
@@ -2114,29 +1381,27 @@
                 };
             });
             syncDragToTextarea();
-            const matchCount = importedDrag.filter(item => item.mode === 'match').length;
-            filled.push(`nối ô/sắp xếp (${importedDrag.length}, nối ô: ${matchCount})`);
+            const matchCount = pkg.drag_exercises.filter(d => d.mode === 'match').length;
+            filled.push(`nối ô/sắp xếp (${pkg.drag_exercises.length}, nối ô: ${matchCount})`);
         }
-        if (sections.questions) {
-            const questionLines = sections.questions.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/i.test(normalizeBulkHeading(line)))
-                .map(normalizeMcqBulkLine)
-                .filter(Boolean);
-            el('lessonQuestions').value = questionLines.join('\n');
-            const skillsForImport = parseSkills(el('lessonSkills')?.value || '');
-            let importedQuestionCount = 0;
-            try { importedQuestionCount = parseQuestions(questionLines.join('\n'), skillsForImport).length; } catch { importedQuestionCount = 0; }
-            filled.push(`trắc nghiệm (${importedQuestionCount})`);
+        if (pkg.questions?.length) {
+            el('lessonQuestions').value = LI.formatQuestionsBulk(pkg.questions);
+            filled.push(`trắc nghiệm (${pkg.questions.length})`);
         }
-        if (sections.skills) {
-            el('lessonSkills').value = sections.skills;
-            filled.push(`kỹ năng (${parseSkills(sections.skills).length})`);
-        }
-        if (sections.tasks) {
-            el('lessonTasks').value = sections.tasks;
+        if (pkg.tasks?.length) {
+            el('lessonTasks').value = pkg.tasks.join('\n');
             filled.push('nhiệm vụ');
         }
+        if (pkg.videos?.length) {
+            el('lessonVideos').value = formatVideos(pkg.videos);
+            filled.push(`video (${pkg.videos.length})`);
+        }
+        if (pkg.image_manifest?.length && el('lessonImageManifest')) {
+            el('lessonImageManifest').value = pkg.image_manifest.map(img =>
+                `${img.id}: LOẠI: ${img.type || 'diagram'} | ${img.alt || img.id}`
+            ).join('\n');
+        }
+
         essayItems = parseEssayToItems(el('lessonEssay').value || '');
         fillItems = parseFillToItems(el('lessonFill').value || '');
         dragItems = parseDragToItems(el('lessonDrag').value || '');
@@ -2152,12 +1417,140 @@
             if (field) renderLessonFieldImagePreview(field);
         });
         renderPreview();
+        return { filled, report };
+    }
+
+    function importGeminiLessonRaw(raw) {
+        if (!requireLessonImport()) return;
+        const text = String(raw || '').trim();
+        if (!text) {
+            alert('Dán nội dung Gemini trả về trước.');
+            return;
+        }
+        const pkg = LI.buildLessonImportPackage({
+            rawGeminiText: text,
+            metadata: {
+                subject: isPageScopedEditor() ? PAGE_SUBJECT : (el('lessonSubject')?.value || selectedSubject),
+                chapter: el('lessonChapter')?.value || '',
+                title: el('lessonTitleInput')?.value || '',
+                slug: el('lessonSlug')?.value || '',
+                tool: 'gemini-text-import'
+            }
+        });
+        const validation = LI.validateLessonImportPackage(pkg, {
+            pageSubject: PAGE_SUBJECT || '',
+            existingSlugs: lessonsForScope().map(l => l.slug).filter(Boolean)
+        });
+        const { filled } = applyLessonPackageToForm(pkg, validation);
         if (!filled.length) {
             alert('Không nhận diện được section. Hãy đảm bảo Gemini trả về đúng heading: LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG...');
             return;
         }
-        alert(`Đã điền: ${filled.join(', ')}.\n\nKiểm tra preview → dán ảnh thật thay HINH_xx → bấm Lưu bài học.`);
+        const warnText = validation.warnings.length ? `\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}` : '';
+        const errText = validation.errors.length ? `\n\nLỗi (vẫn điền form, kiểm tra trước khi lưu):\n• ${validation.errors.join('\n• ')}` : '';
+        alert(`Đã điền: ${filled.join(', ')}.${warnText}${errText}\n\nKiểm tra preview → dán ảnh thật thay HINH_xx → bấm Lưu bài học.`);
         el('geminiImportRaw').value = '';
+    }
+
+    function importLessonJsonFile(file) {
+        if (!requireLessonImport()) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            let parsed;
+            try {
+                parsed = JSON.parse(String(reader.result || ''));
+            } catch {
+                alert('File JSON không hợp lệ.');
+                return;
+            }
+            const pkg = LI.normalizeLessonImportPackage(parsed, {
+                defaultSubject: isPageScopedEditor() ? PAGE_SUBJECT : selectedSubject,
+                forceUnpublished: true
+            });
+            const validation = LI.validateLessonImportPackage(pkg, {
+                pageSubject: PAGE_SUBJECT || '',
+                existingSlugs: lessonsForScope().map(l => l.slug).filter(Boolean)
+            });
+            if (validation.errors.length) {
+                alert(`Không import được:\n• ${validation.errors.join('\n• ')}`);
+                return;
+            }
+            const { filled } = applyLessonPackageToForm(pkg, validation);
+            const warnText = validation.warnings.length ? `\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}` : '';
+            alert(`Đã import JSON: ${filled.join(', ')}.${warnText}\n\nChưa lưu — kiểm tra và bấm Lưu bài học.`);
+        };
+        reader.readAsText(file, 'utf-8');
+    }
+
+    function exportLessonJson() {
+        if (!requireLessonImport()) return;
+        const pkg = buildFormLessonPackage();
+        const validation = LI.validateLessonImportPackage(pkg, { pageSubject: PAGE_SUBJECT || '' });
+        const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${pkg.slug || 'lesson'}-import-v1.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        if (validation.warnings.length) {
+            alert(`Đã tải JSON.\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}`);
+        }
+    }
+
+    function openStudentPreview() {
+        if (!requireLessonImport()) return;
+        const pkg = buildFormLessonPackage();
+        const markers = LI.collectMarkersFromPackage(pkg);
+        const manifestIds = new Set((pkg.image_manifest || []).map(m => m.id));
+        const missing = markers.filter(id => !manifestIds.has(id));
+        const dragMatch = (pkg.drag_exercises || []).filter(d => d.mode === 'match').length;
+        const dragSort = (pkg.drag_exercises || []).length - dragMatch;
+        const lines = [
+            `<header style="border-bottom:2px solid #0d9488;padding-bottom:1rem;margin-bottom:1.5rem">`,
+            `<h1 style="margin:0 0 .5rem">${escapeHtml(pkg.title || 'Xem thử')}</h1>`,
+            `<p style="margin:0;color:#475569"><strong>${escapeHtml(pkg.subject)}</strong> · ${escapeHtml(pkg.chapter)} · <code>${escapeHtml(pkg.slug || '')}</code></p>`,
+            `</header>`
+        ];
+        if (pkg.goal_text) {
+            lines.push(`<section style="margin-bottom:1.5rem"><h2>Mục tiêu</h2><p>${escapeHtml(pkg.goal_text)}</p></section>`);
+        }
+        if (missing.length) {
+            lines.push(`<p style="color:#b45309;background:#fffbeb;padding:.75rem;border-radius:.5rem">Ảnh còn thiếu manifest: ${missing.map(escapeHtml).join(', ')}</p>`);
+        }
+        lines.push(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:1rem 0;padding:1rem;background:#f8fafc;border-radius:.5rem;font-size:.85rem">`);
+        lines.push(`<div><div style="color:#64748b">Lý thuyết</div><strong>${(pkg.theory || []).length} đoạn</strong></div>`);
+        lines.push(`<div><div style="color:#64748b">Ví dụ</div><strong>${(pkg.examples || []).length}</strong></div>`);
+        lines.push(`<div><div style="color:#64748b">Tương tác</div><strong>${(pkg.essay_exercises || []).length + (pkg.fill_exercises || []).length + (pkg.drag_exercises || []).length}</strong><div style="font-size:.75rem;color:#64748b">TL ${(pkg.essay_exercises || []).length} · ĐK ${(pkg.fill_exercises || []).length} · Nối ${dragMatch} · SX ${dragSort}</div></div>`);
+        lines.push(`<div><div style="color:#64748b">Trắc nghiệm</div><strong>${(pkg.questions || []).length}</strong></div>`);
+        lines.push(`<div><div style="color:#64748b">Kỹ năng</div><strong>${(pkg.skills || []).length}</strong></div>`);
+        lines.push(`</div>`);
+        if ((pkg.skills || []).length) {
+            lines.push(`<section style="margin-bottom:1.5rem"><h2>Kỹ năng</h2><ul>${pkg.skills.map(s => `<li><code>${escapeHtml(s.id)}</code> — ${escapeHtml(s.name)} (${s.target || 80}%)</li>`).join('')}</ul></section>`);
+        }
+        (pkg.theory || []).forEach((block, i) => {
+            const text = typeof block === 'string' ? block : (block.text || '');
+            const ai = typeof block === 'object' && block.ai ? ' <span style="color:#7c3aed">[AI]</span>' : '';
+            lines.push(`<section style="margin-bottom:1rem"><h3>Lý thuyết ${i + 1}${ai}</h3><pre style="white-space:pre-wrap;background:#fff;border:1px solid #e2e8f0;padding:.75rem;border-radius:.5rem">${escapeHtml(text)}</pre></section>`);
+        });
+        (pkg.examples || []).slice(0, 3).forEach((ex, i) => {
+            lines.push(`<section style="margin-bottom:1rem"><h3>${escapeHtml(ex.title || `Ví dụ ${i + 1}`)}</h3><pre style="white-space:pre-wrap;background:#fff;border:1px solid #e2e8f0;padding:.75rem;border-radius:.5rem">${escapeHtml(ex.body || '')}</pre></section>`);
+        });
+        if ((pkg.examples || []).length > 3) {
+            lines.push(`<p style="color:#64748b;font-size:.85rem">… và ${pkg.examples.length - 3} ví dụ khác</p>`);
+        }
+        (pkg.questions || []).slice(0, 2).forEach((q, i) => {
+            const opts = (q.options || []).map((opt, j) => `<li>${'ABCD'[j]}. ${escapeHtml(opt)}</li>`).join('');
+            const ans = 'ABCD'[Number(q.answer)] || '?';
+            lines.push(`<section style="margin-bottom:1rem"><h3>Câu ${i + 1}${q.skill ? ` <small style="color:#64748b">(${escapeHtml(q.skill)})</small>` : ''}</h3><p>${escapeHtml(q.prompt || '')}</p><ol type="A" style="list-style:none;padding:0">${opts}</ol><p style="color:#0d9488;font-size:.85rem">Đáp án: ${ans}</p></section>`);
+        });
+        if ((pkg.questions || []).length > 2) {
+            lines.push(`<p style="color:#64748b;font-size:.85rem">… và ${pkg.questions.length - 2} câu trắc nghiệm khác</p>`);
+        }
+        const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Xem thử — ${escapeHtml(pkg.title || '')}</title>
+            <style>body{font-family:Segoe UI,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#1e293b} h2{color:#0d9488;border-bottom:1px solid #e2e8f0;padding-bottom:.25rem} h3{color:#334155;font-size:1rem}</style></head><body>${lines.join('')}<footer style="margin-top:2rem;padding-top:1rem;border-top:1px solid #e2e8f0;color:#64748b;font-size:.85rem"><em>Preview nhanh từ form — lưu bài để học sinh xem đầy đủ trên lộ trình.</em></footer></body></html>`;
+        const w = window.open('', '_blank');
+        if (w) { w.document.write(html); w.document.close(); }
     }
 
     function resolveDragForSave() {
@@ -2440,12 +1833,28 @@
             <div id="tab-khac" class="lesson-tab-content hidden">
                 <div class="mb-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
                     <div class="text-sm font-bold text-violet-900 mb-1"><i class="fas fa-file-import mr-1"></i> Nhập khối từ Gemini / Soạn bài Gemini</div>
-                    <p class="text-[11px] text-violet-800 mb-2">Dán <strong>toàn bộ</strong> bài Gemini trả về — hệ thống tự điền vào đúng tab (lý thuyết, nối ô, trắc nghiệm, kỹ năng...). Sau đó dán ảnh thật thay <code>HINH_xx</code> rồi <strong>Lưu bài</strong>.</p>
+                    <p class="text-[11px] text-violet-800 mb-2">Ưu tiên <strong>Đường A</strong>: dán <strong>toàn bộ</strong> bài Gemini → Import text hoặc Import JSON <code>lesson-import-v1</code>. Sau đó dán ảnh thật thay <code>HINH_xx</code> rồi <strong>Lưu bài</strong> (không tự lưu).</p>
                     <textarea id="geminiImportRaw" rows="5" class="w-full p-2 border border-violet-300 rounded text-xs font-mono focus:ring-2 focus:ring-violet-500 outline-none" placeholder="Dán nguyên khối MỤC TIÊU, LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG..."></textarea>
-                    <button id="geminiImportBtn" type="button" class="mt-2 rounded bg-violet-700 px-4 py-2 text-xs font-bold text-white hover:bg-violet-800">
-                        <i class="fas fa-wand-magic-sparkles mr-1"></i> Phân tích và điền vào các tab
-                    </button>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button id="geminiImportBtn" type="button" class="rounded bg-violet-700 px-4 py-2 text-xs font-bold text-white hover:bg-violet-800">
+                            <i class="fas fa-wand-magic-sparkles mr-1"></i> Import text Gemini
+                        </button>
+                        <label class="rounded bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 cursor-pointer">
+                            <i class="fas fa-file-code mr-1"></i> Import JSON
+                            <input id="lessonJsonImportInput" type="file" accept=".json,application/json" class="hidden">
+                        </label>
+                        <button id="lessonJsonExportBtn" type="button" class="rounded bg-slate-700 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800">
+                            <i class="fas fa-download mr-1"></i> Export JSON
+                        </button>
+                        <button id="lessonStudentPreviewBtn" type="button" class="rounded bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800">
+                            <i class="fas fa-eye mr-1"></i> Xem thử
+                        </button>
+                    </div>
                 </div>
+                <label class="block text-sm font-bold text-slate-700 mb-3">Manifest ảnh (từ DANH SÁCH HÌNH Gemini)
+                    <span class="block text-[11px] text-slate-500 font-normal">Tự điền khi import. Dùng để kiểm tra marker HINH_xx trước khi công khai.</span>
+                    <textarea id="lessonImageManifest" rows="3" class="w-full p-2 border border-slate-300 rounded text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none" placeholder="HINH_01: LOẠI: SƠ_ĐỒ | Mô tả..."></textarea>
+                </label>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
                         <span class="block text-[11px] text-slate-500">Mỗi dòng: <code>id_khong_dau | Tên kỹ năng | 80</code> — không cần gõ chữ "id:" hay "Tên:"</span>
@@ -2489,6 +1898,13 @@
         el('saveLessonBtn').onclick = saveLesson;
         el('seedLessonBtn').onclick = fillSeed;
         el('geminiImportBtn')?.addEventListener('click', () => importGeminiLessonRaw(el('geminiImportRaw')?.value || ''));
+        el('lessonJsonImportInput')?.addEventListener('change', event => {
+            const file = event.target.files?.[0];
+            if (file) importLessonJsonFile(file);
+            event.target.value = '';
+        });
+        el('lessonJsonExportBtn')?.addEventListener('click', exportLessonJson);
+        el('lessonStudentPreviewBtn')?.addEventListener('click', openStudentPreview);
 
         // Attach add buttons (no inline onclick because functions are in IIFE scope)
         const addEssay = el('addEssayBtn'); if (addEssay) addEssay.onclick = addEssayItem;
@@ -2746,6 +2162,9 @@
         el('lessonSkills').value = formatSkills(lesson.skills);
         el('lessonTasks').value = Array.isArray(lesson.tasks) ? lesson.tasks.join('\n') : '';
         el('lessonQuestions').value = formatQuestions(lesson.questions);
+        if (el('lessonImageManifest')) {
+            el('lessonImageManifest').value = formatImageManifestText(lesson);
+        }
 
         // populate dynamic items for flexible UI
         essayItems = parseEssayToItems(el('lessonEssay').value || '');
@@ -2893,6 +2312,7 @@
         questionItems = [];
         if (el('interactiveBulkPaste')) el('interactiveBulkPaste').value = '';
         if (el('questionsBulkPaste')) el('questionsBulkPaste').value = '';
+        if (el('lessonImageManifest')) el('lessonImageManifest').value = '';
         renderEssayItems();
         renderFillItems();
         renderDragItems();
@@ -2904,9 +2324,11 @@
 
     function suggestSlug() {
         if (el('lessonSlug').value.trim()) return;
-        const subjectCode = SUBJECTS.find(item => item.title === el('lessonSubject').value)?.id || 'lesson';
-        const value = [subjectCode, el('lessonChapter').value, el('lessonTitleInput').value].join(' ');
-        el('lessonSlug').value = slugify(value);
+        el('lessonSlug').value = LI.suggestSlugFromMeta({
+            subject: isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject').value,
+            chapter: el('lessonChapter').value,
+            title: el('lessonTitleInput').value
+        });
     }
 
     function renderSkillsHint() {
@@ -2935,6 +2357,25 @@
         const dragSortCount = dragParsed.filter(item => item.mode !== 'match').length;
         const videoCount = parseVideos(el('lessonVideos')?.value || '').length;
         renderSkillsHint();
+        let imageWarn = '';
+        if (LI) {
+            const textBlob = [
+                el('lessonGoalInput')?.value,
+                el('lessonTheory')?.value,
+                el('lessonExamples')?.value,
+                el('lessonSelfPractice')?.value,
+                el('lessonEssay')?.value,
+                el('lessonFill')?.value,
+                el('lessonDrag')?.value,
+                el('lessonQuestions')?.value
+            ].join('\n');
+            const markers = LI.extractImageMarkers(textBlob);
+            const manifestIds = new Set(LI.parseImageManifest(el('lessonImageManifest')?.value || '').map(m => m.id));
+            const missing = markers.filter(id => !manifestIds.has(id));
+            if (missing.length) {
+                imageWarn = `<div class="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900"><i class="fas fa-image mr-1"></i>Ảnh chưa có manifest: ${missing.map(escapeHtml).join(', ')}</div>`;
+            }
+        }
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-center">
                 <div><div class="text-[10px] text-slate-500">Lý thuyết</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn`; })()}</div></div>
@@ -2944,6 +2385,7 @@
                 <div><div class="text-[10px] text-slate-500">Trắc nghiệm</div><div class="font-bold ${questionCount ? 'text-teal-700' : 'text-amber-700'}">${questionCount}</div></div>
                 <div><div class="text-[10px] text-slate-500">Kỹ năng / Video</div><div class="font-bold ${skills.length ? 'text-teal-700' : 'text-amber-700'}">${skills.length}<div class="text-[9px] font-normal text-slate-500">${videoCount} video</div></div></div>
             </div>
+            ${imageWarn}
         `;
     }
 

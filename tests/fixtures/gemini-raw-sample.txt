@@ -1,0 +1,38 @@
+MỤC TIÊU BÀI HỌC
+Học sinh hiểu tập hợp và ký hiệu thuộc.
+
+LÝ THUYẾT
+Tập hợp là nhóm đối tượng xác định rõ.
+![Sơ đồ tập hợp](HINH_01)
+
+VÍ DỤ
+**DẠNG 1: Liệt kê phần tử**
+**Bài 1:** Cho $A=\{1,2,3\}$. Liệt kê A.
+**Lời giải:** $A=\{1,2,3\}$
+
+BÀI TẬP TỰ LUẬN NGẮN
+Viết tập B gồm số chẵn nhỏ hơn 6 | B={0,2,4} | Bắt đầu từ 0
+
+KÉO THẢ VÀO Ô TRỐNG
+Điền ___ vào chỗ trống: 2 + 3 = ___ | 4 » 5 » 6 | 5 | Tính tổng
+
+SẮP XẾP THỨ TỰ
+Sắp xếp từ bé đến lớn | 3 » 1 » 2 | 1 » 2 » 3 | So sánh
+
+NỐI Ô
+Nối phép tính với kết quả | 2+1 » 3+0 | 3 » 3 | 0-0,1-1 | Ghép cặp
+
+KỸ NĂNG CẦN ĐẠT
+khai_niem | Hiểu khái niệm tập hợp | 80
+liet_ke | Liệt kê phần tử | 80
+
+TRẮC NGHIỆM
+khai_niem | Câu nào đúng về tập hợp? | Nhóm đối tượng xác định | Một phép cộng | Số tự nhiên | Hình vẽ | A
+liet_ke | $4 \in \{2,4,6\}$? | Đúng | Sai | Không xác định | Cả A và B | A
+
+NHIỆM VỤ HỌC SINH
+Đọc lý thuyết
+Làm bài tập
+
+DANH SÁCH HÌNH ẢNH CẦN TẠO
+HINH_01: LOẠI: SƠ_ĐỒ | Sơ đồ tập hợp A={1,2,3}

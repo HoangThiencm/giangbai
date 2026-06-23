@@ -275,6 +275,47 @@
         return renderMarkdownTable(html);
     }
 
+    /** Đề bài tương tác: LaTeX + ảnh Markdown (HINH_xx / Drive URL) */
+    function practiceRichText(value) {
+        const source = normalizeLessonImageMarkers(normalizeMathContent(value));
+        if (!/!\[[^\]]*\]\([^)]+\)/.test(source) && !isLessonImagePlaceholderRef(source.trim())) {
+            return mathText(source);
+        }
+        const lines = source.split('\n');
+        const chunks = [];
+        let textBuffer = [];
+        const flushText = () => {
+            if (!textBuffer.length) return;
+            chunks.push(mathText(textBuffer.join('\n')));
+            textBuffer = [];
+        };
+        lines.forEach(line => {
+            const img = line.trim().match(/^!\[([^\]]*)\]\((\S+)\)$/);
+            if (img) {
+                flushText();
+                const altRaw = String(img[1] || '').trim();
+                if (isLessonImagePlaceholderRef(img[2])) {
+                    chunks.push(lessonImageMissingFigure(altRaw || img[2]));
+                    return;
+                }
+                const url = normalizeLessonImageDisplayUrl(img[2]);
+                if (!url) {
+                    chunks.push(lessonImageMissingFigure(altRaw));
+                    return;
+                }
+                const alt = escapeHtml(altRaw);
+                const caption = shouldShowLessonImageCaption(altRaw) ? `<figcaption>${alt}</figcaption>` : '';
+                chunks.push(
+                    `<figure class="lesson-inline-image"><img src="${escapeHtml(url)}" alt="${alt || 'Ảnh minh họa'}" loading="lazy">${caption}</figure>`
+                );
+                return;
+            }
+            textBuffer.push(line);
+        });
+        flushText();
+        return chunks.join('<br>');
+    }
+
     function extractDriveFileId(url) {
         const value = String(url || '').trim();
         const patterns = [
@@ -2295,7 +2336,7 @@
                 <article class="practice-card practice-card--essay">
                     <div class="question-head practice-card-head">
                         ${renderPracticeQuestionMeta(index, 'Tự luận', 'essay')}
-                        <h3 class="question-text practice-q-text">${mathText(item.prompt || '')}</h3>
+                        <h3 class="question-text practice-q-text">${practiceRichText(item.prompt || '')}</h3>
                     </div>
                     <div class="practice-card-content">
                         ${renderPracticeHint('Nhập <strong>kết quả cuối</strong>: số (<strong>4</strong>), phân số (<strong>1/2</strong>), hoặc căn (<strong>√16</strong>). Có thể dùng các nút ký hiệu bên dưới.')}
@@ -2318,7 +2359,7 @@
         let slotIndex = 0;
         let html = '';
         parts.forEach((part, partIndex) => {
-            if (part) html += `<span class="fill-prompt-text">${mathText(part)}</span>`;
+            if (part) html += `<span class="fill-prompt-text">${practiceRichText(part)}</span>`;
             if (partIndex < markers.length) {
                 const value = String(slots[slotIndex] || '').trim();
                 const chipHtml = value
@@ -2402,7 +2443,7 @@
                     <article class="practice-card practice-card--drag match-card ${dragDisabled}" data-match-card="${escapeHtml(key)}">
                         <div class="question-head practice-card-head">
                             ${renderPracticeQuestionMeta(index, 'Nối cặp', 'drag')}
-                            <h3 class="question-text practice-q-text">${mathText(normalized.prompt || '')}</h3>
+                            <h3 class="question-text practice-q-text">${practiceRichText(normalized.prompt || '')}</h3>
                         </div>
                         <div class="practice-card-content">
                         ${renderPracticeHint('Bấm mục bên trái, rồi bấm mục bên phải để nối cặp. Bấm lại để gỡ. Các mục hai bên được xáo trộn.')}
@@ -2451,7 +2492,7 @@
                 <article class="practice-card practice-card--drag sort-card ${dragDisabled}" data-sort-card="${escapeHtml(key)}">
                     <div class="question-head practice-card-head">
                         ${renderPracticeQuestionMeta(index, 'Sắp xếp', 'drag')}
-                        <h3 class="question-text practice-q-text">${mathText(normalized.prompt || '')}</h3>
+                        <h3 class="question-text practice-q-text">${practiceRichText(normalized.prompt || '')}</h3>
                     </div>
                     <div class="practice-card-content">
                         <p class="fill-pool-label sort-pool-label practice-zone-label"><i class="fas fa-layer-group" aria-hidden="true"></i> Kéo các mảnh vào hàng bên dưới theo thứ tự đúng</p>
@@ -3685,7 +3726,7 @@
             <article class="practice-card practice-card--choice">
                 <div class="question-head practice-card-head">
                     ${renderPracticeQuestionMeta(index, 'Trắc nghiệm', 'choice')}
-                    <h3 class="question-text practice-q-text">${mathText(question.prompt)}</h3>
+                    <h3 class="question-text practice-q-text">${practiceRichText(question.prompt)}</h3>
                 </div>
                 <div class="answer-grid practice-answer-grid">
                     ${(question.options || []).map((option, optionIndex) => {
@@ -3698,7 +3739,7 @@
                                 <span class="flex min-w-0 items-center gap-3">
                                     <input type="radio" name="${question.id}" value="${optionIndex}" ${checked} ${disabled} class="sr-only">
                                     <span class="answer-letter">${letter}</span>
-                                    <span class="min-w-0 flex-1 leading-7 text-slate-800">${mathText(option)}</span>
+                                    <span class="min-w-0 flex-1 leading-7 text-slate-800">${practiceRichText(option)}</span>
                                 </span>
                                 ${mark}
                             </label>

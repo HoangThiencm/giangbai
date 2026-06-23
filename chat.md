@@ -1,1226 +1,967 @@
-# Toàn bộ nội dung chat — giangbai / Thi trực tuyến
+# Tổng hợp phản biện: Soạn bài Gemini và hệ thống Lộ trình Toán 4–9
 
-> Ghi nguyên văn từ các phiên chat. Phiên thi trực tuyến / import Excel: `019eddde-2aaf-7983-b92a-a967627d0e23`. Phiên phân quyền GV / lớp / thời hạn / AI: `019ede1f-f59a-7e33-8597-a3b9bf8bf94e`. Phiên giao diện CÔNG CỤ AI + Link rút gọn & QR + Theo dõi AI: `019ee3f6-b145-7560-9aca-d54b84d67e82`.
-> Các tin nhắn có `[Image #N]` là người dùng đã đính kèm ảnh chụp màn hình.
-> Phần trả lời của trợ lý là nội dung đã hiển thị trong chat; không tóm tắt thêm.
+Ngày tổng hợp: 23/06/2026
 
----
+## 1. Mục tiêu sản phẩm
 
-## Lượt 1
+Mục tiêu được thống nhất là xây dựng luồng làm việc:
 
-**Người dùng:**
-
-bạn đọc lại dự án
-
-**Trợ lý:**
-
-Đang đọc lại cấu trúc và các thành phần chính của dự án.
-Đã đọc lại toàn bộ dự án **giangbai**. Đây là tóm tắt trạng thái hiện tại:
-
-## Tổng quan
-
-**Giangbai** là hệ thống tự học và ôn luyện cho học sinh THCS, do giáo viên quản lý. Stack chính:
-
-- **Frontend:** HTML + Tailwind CSS + JavaScript thuần + MathJax
-- **Backend:** PHP (PDO) + MySQL
-- **Triển khai:** Hosting PHP/MySQL, có GitHub Actions FTP deploy (`DEPLOY_HOSTING.md`)
-
-## Cấu trúc chính
-
-### 1. Trang chủ & công cụ (`index.html`)
-Bảng điều khiển với nhiều module AI/công cụ giảng dạy:
-
-| Trang | Chức năng |
-|-------|-----------|
-| `gslides.html` | Tạo slide với AI |
-| `vehinh.html` | Vẽ hình hình học (Fabric.js, `app.js`) |
-| `smartquiz.html` | Tạo quiz thông minh |
-| `matrande.html` | Ma trận đề |
-| `tronde.html` | Tròn đề |
-| `thitructuyen.html` | Thi trực tuyến |
-| `kttx.html` | Kiểm tra thường xuyên |
-| `vietbaocao.html` | Viết báo cáo |
-| `game-*.html` | 8 mini-game ôn tập |
-
-### 2. Lộ trình học Toán 6–9 (trọng tâm dự án)
-- `lotrinhtoan6.html` → `lotrinhtoan9.html`
-- Logic chính: `lotrinh.js` (~2.400 dòng)
-- Giao diện 3 cột:
-  - **Trái:** Tiến độ, danh sách/bản đồ bài
-  - **Giữa:** Nội dung bài (lý thuyết / ví dụ / luyện tập)
-  - **Phải:** Kế hoạch tự học, động lực, kỹ năng, nhiệm vụ
-
-Tính năng nổi bật:
-- Tiến độ realtime (lý thuyết 30% + ví dụ 20% + luyện tập 50%)
-- AI giải thích (bong bóng chat, marker `[AI]`)
-- Ôn tập thông minh, bản đồ chương, streak/huy hiệu
-- Trắc nghiệm có phản hồi đúng/sai ngay
-
-### 3. Giáo viên
-- `admin-lesson-manager.js` — soạn/sửa/xóa/nhân bản bài, đổi tên chương
-- `admin-progress.js` — theo dõi tiến độ theo lớp (`class_name`)
-- Mount vào `#lessonDesignerMount` khi `userRole === 'teacher'`
-
-### 4. Admin
-- `admin.html` — quản lý tài khoản HS/GV, cấu hình AI keys, bật/tắt tính năng
-- Không còn panel soạn bài / theo dõi tiến độ (đã chuyển sang giao diện giáo viên)
-
-### 5. Backend API (`api/`)
-| File | Vai trò |
-|------|---------|
-| `login.php` / `logout.php` / `me.php` | Xác thực |
-| `lessons.php` | Bài học, tiến độ, CRUD bài |
-| `admin_progress.php` | Tiến độ theo lớp |
-| `admin_students.php` | Quản lý học sinh |
-| `ai_explain.php` | Gemini → fallback ShopAIKey |
-| `global_config.php` | Cấu hình hệ thống |
-
-### 6. Database (`database_schema.sql`)
-3 bảng chính: `users`, `lessons`, `student_lesson_progress`
-
-## Phân quyền
-- `access-control.js` — HS chỉ vào trang được cấp trong `allowed_pages_json`
-- Bài học mới mặc định `is_published = 0`, GV phải bật **Mở bài cho học sinh**
-
-## Công việc gần đây (cập nhật 2026-06-20)
-Theo `plan.md` và `thongtin.md`, đã hoàn thành:
-- Fix lỗi 500 lưu tiến độ (`state_json`)
-- AI giải thích dạng bong bóng chat
-- Fix MathJax + Tailwind
-- Tiến độ realtime, tính % chương đúng
-- Panel tiến độ theo lớp cho GV
-- CRUD bài/chương đầy đủ
-- Hardfix ôn tập thông minh, streak, huy hiệu
-
-## Việc còn lại
-- Checklist phản biện UI trên `plan.md` (chưa tick)
-- Mở rộng bài tập: điền khuyết, kéo thả, tự luận
-- Responsive mobile cho trang lộ trình
-- Đồng bộ cache `admin-progress.js` trên `index.html`
-- (Tùy chọn) Đồng bộ streak/huy hiệu lên server
-
-## Lưu ý bảo mật
-File `global_config.json` đang chứa **GitHub PAT** dạng plaintext — nên xóa/rotate token và không commit secret vào repo.
-
----
-
-Bạn muốn làm gì tiếp theo? Ví dụ: chạy checklist phản biện UI, sửa cache `index.html`, mở rộng bài tập, hoặc task cụ thể khác.
-
----
-
-## Lượt 2
-
-**Người dùng:**
-
-[Image #1] Thi trực tuyến nó báo lỗi như ảnh.
-Ngoài ra có những em làm 2 đến 3 lần thì gom tên theo số lần thi đi
-
-**Trợ lý:**
-
-Đang kiểm tra mã thi trực tuyến để sửa lỗi `[object Object]` khi nộp bài và thêm nhóm học sinh theo số lần thi.
-Đã xác định nguyên nhân: API bắt buộc `student_class` nhưng form không gửi khi học sinh bỏ trống lớp — lỗi validation hiện `[object Object]`. Đang sửa và thêm nhóm theo số lần thi.
-Đã sửa xong hai vấn đề:
-
-## 1. Lỗi `[object Object]` khi nộp bài
-
-**Nguyên nhân:** API backend bắt buộc trường `student_class`, nhưng khi học sinh không điền **Lớp**, frontend không gửi trường này. FastAPI trả lỗi dạng mảng object, `alert()` hiển thị thành `[object Object]`.
-
-**Đã sửa:**
-- Luôn gửi `student_class: ""` nếu học sinh bỏ trống
-- Thêm hàm `formatApiError()` để hiển thị lỗi API đúng tiếng Việt (không còn `[object Object]`)
-
-## 2. Gom học sinh thi nhiều lần
-
-Trang **Kết quả thi** (giáo viên) giờ có:
-- Khối **"Học sinh thi nhiều lần"** — gom theo số lần: *Thi 2 lần*, *Thi 3 lần*… kèm tên, SBD và các điểm
-- Bảng chi tiết thêm cột **Lần** và **Thời gian**
-- Các lượt thi lặp được tô nền vàng nhạt
-
----
-
-Học sinh có thể **bỏ trống Lớp** và nộp bài bình thường. Nếu vẫn lỗi, thông báo sẽ hiện rõ nội dung (ví dụ: `student_class: Field required`) thay vì `[object Object]`.
-
-Bạn tải lại trang thi và thử nộp bài lần nữa. Giáo viên vào xem kết quả đề sẽ thấy phần gom nhóm theo số lần thi.
-
----
-
-## Lượt 3
-
-**Người dùng:**
-
-[Image #1] Nên thêm nút copy[Image #2] Xuất excel nhiều thông tin quá chỉ cần thông tin học sinh,  kết quả và các câu sai thôiLúc chưa hết thôi gian nộp cũng k dc, đợi hết thôi gian rồi nộp cũng k dc
-Đây là phụ huynh chia sẽ khi làm bài bị lỗi đó họ làm trên điện thoại và mở đường link chạy từ zalo
-
-**Trợ lý:**
-
-Đang kiểm tra luồng nộp bài trên mobile/Zalo — thường lỗi do fullscreen, `confirm()` hoặc request bị chặn.
-
----
-
-## Lượt 4
-
-**Người dùng:**
-
-Xuất excel nhiều thông tin quá chỉ cần thông tin học sinh,  kết quả và các câu sai thôi
-
-**Trợ lý:**
-
-Đang xem cấu trúc dữ liệu kết quả và phần xuất Excel hiện tại.
-Đang đơn giản hóa xuất Excel: chỉ thông tin học sinh, kết quả và danh sách câu sai từ `details_json`.
-Đã cập nhật **Xuất Excel** gọn hơn. File chỉ còn 6 cột:
-
-| Cột | Nội dung |
-|-----|----------|
-| Họ và tên | Tên học sinh |
-| SBD | Số báo danh |
-| Lớp | Lớp học |
-| Điểm | Điểm số |
-| Kết quả | Dạng `15/20` (đúng/tổng) |
-| Các câu sai | Danh sách câu làm sai, mỗi dòng một câu |
-
-Ví dụ cột **Các câu sai**:
-```
-1. Tổng của hai số 123 và 77 là: (Đáp án: 200)
-2. Thực hiện phép tính: 912 + 1298. (Đáp án: 2210)
+```text
+Ảnh sách giáo khoa
+→ soanbaigemini tạo bài học đúng trình độ và đúng cấu trúc
+→ chuyển thành gói dữ liệu bài học có schema rõ ràng
+→ import vào trình soạn Lộ trình Toán 4–9
+→ giáo viên chèn hoặc thay ảnh phù hợp
+→ xem thử
+→ lưu và công khai cho học sinh
 ```
 
-Đã bỏ khỏi Excel: lần thi, thời gian nộp, và các cột phụ khác. Công thức toán được làm sạch (bỏ ký hiệu `$`) để dễ đọc trong Excel.
+Kỳ vọng cuối cùng là phần nội dung và cấu trúc được tự động hóa gần như hoàn toàn. Giáo viên chủ yếu kiểm tra, chèn ảnh và quyết định lưu/công khai.
 
-Bảng trên màn hình giáo viên vẫn giữ đầy đủ thông tin như cũ — chỉ file Excel được rút gọn.
+## 2. Các file và thành phần đã đối chiếu
 
----
+- `soanbaigemini.html`: nhận ảnh SGK, gọi Gemini, kiểm định nội dung, parse section, tạo ảnh minh họa và xuất Word.
+- `lotrinh.js`: giao diện học sinh, tải bài từ API, render nội dung và chấm bài.
+- `lotrinhtoan4.html` đến `lotrinhtoan9.html`: các vỏ trang theo từng lớp.
+- `lesson-import.js`: module dùng chung — parser Gemini, schema `lesson-import-v1`, validate, build/export package (mới, 23/06/2026).
+- `admin-lesson-manager.js`: trình soạn bài của giáo viên; gọi `LessonImport`, import/export JSON, không còn parser trùng.
+- `api/lessons.php`: đọc/ghi bài học trong database.
 
-## Lượt 5
+Sáu file `lotrinhtoan4–9.html` chủ yếu khác nhau ở:
 
-**Người dùng:**
+- `LOTRINH_PAGE_KEY`
+- `LOTRINH_SUBJECT`
+- Tiêu đề trang
 
-[Image #1] Nên thêm nút copy Ở QR sinh ra đó
+Toàn bộ các lớp dùng chung lõi `lotrinh.js`, `admin-lesson-manager.js` và API bài học.
 
-**Trợ lý:**
+## 3. Vấn đề ban đầu: nội dung vượt quá ảnh và trình độ lớp
 
-Đã thêm nút **Copy** cạnh ô đường dẫn trong popup QR.
+Prompt cũ trong `soanbaigemini.html` có mâu thuẫn:
 
-- Bấm **Copy** → sao chép link thi vào clipboard, nút đổi thành **Đã copy** (2 giây)
-- Hỗ trợ cả trình duyệt không có `clipboard API` (fallback chọn ô link + copy thủ công)
-- Ô link vẫn giữ nguyên để xem hoặc chọn tay nếu cần
+- Một mặt yêu cầu không vượt trình độ.
+- Mặt khác yêu cầu nội dung phong phú, bài mở rộng và nhiều dạng bài bắt buộc.
 
-Giáo viên có thể copy link gửi Zalo cho phụ huynh/học sinh mà không cần bôi đen thủ công.
+Điều này khiến Gemini có xu hướng bổ sung kiến thức liên quan nhưng chưa xuất hiện trong ảnh hoặc thuộc mức cao hơn.
 
----
+### Nguyên tắc đã cập nhật
 
-## Lượt 6
+- Ảnh SGK là **trần kiến thức chính**.
+- Lớp học được chọn là **trần trình độ thứ hai**.
+- Nếu ảnh và thông tin lớp có dấu hiệu không khớp, lấy mức thấp hơn.
+- Chỉ sử dụng khái niệm, ký hiệu, thuật ngữ, dạng bài và phương pháp xuất hiện trực tiếp hoặc xác định chắc chắn từ ảnh.
+- Bài tự tạo chỉ được là bài song sinh: đổi số liệu hoặc bối cảnh nhưng giữ nguyên phương pháp, loại phép tính, số bước và độ khó.
+- Không tạo dạng mới hoặc bài mở rộng chỉ vì có liên quan đến chủ đề.
+- Hai vòng phản biện phải loại nội dung vượt lớp hoặc vượt ảnh.
+- Giảm `temperature` để kết quả bám SGK ổn định hơn.
 
-**Người dùng:**
+### Điểm vẫn cần cân nhắc
 
-Đã cập nhật Xuất Excel gọn hơn. File chỉ còn 6 cột:
+Prompt hiện còn ép số lượng:
 
-┌─────────────┬─────────────────────────────────────────┐
-│ Cột         │ Nội dung                                │
-├─────────────┼─────────────────────────────────────────┤
-│ Họ và tên   │ Tên học sinh                            │
-├─────────────┼─────────────────────────────────────────┤
-│ SBD         │ Số báo danh                             │
-├─────────────┼─────────────────────────────────────────┤
-│ Lớp         │ Lớp học                                 │
-├─────────────┼─────────────────────────────────────────┤
-│ Điểm        │ Điểm số                                 │
-├─────────────┼─────────────────────────────────────────┤
-│ Kết quả     │ Dạng 15/20 (đúng/tổng)                  │
-├─────────────┼─────────────────────────────────────────┤
-│ Các câu sai │ Danh sách câu làm sai, mỗi dòng một câu │Xuất vậy nó rối quá. Xuất trong một trang kết quả. 
-STT|Họ và tê|Số báo danh|Lớp học|điểm|Kết quả|các câu đúng|các câu sai
+- 3–5 bài tự luận ngắn.
+- 2 bài kéo thả vào ô trống.
+- 2 bài sắp xếp.
+- 1–2 bài nối ô.
+- 10 câu trắc nghiệm.
+- Một dạng bài toán thực tế.
 
-**Trợ lý:**
+Khi ảnh SGK ít nội dung, áp lực đủ số lượng vẫn có thể khiến Gemini sáng tác quá nhiều. Đúng schema chưa chắc đồng nghĩa với đúng quy mô sư phạm. Nên cân nhắc số lượng linh hoạt theo lượng kiến thức trong ảnh.
 
-Đang kiểm tra cấu trúc dữ liệu API để xuất Excel theo bảng một trang với cột câu đúng và câu sai riêng.
-Chuyển sang xuất số thứ tự câu (Câu 1, Câu 2...) thay vì nội dung dài — gọn hơn trên một trang.
+## 4. Kiến trúc hiện tại
 
----
+Luồng thực tế trong code hiện nay là:
 
-## Lượt 7
-
-**Người dùng:**
-
-tiếp tục đi
-
-**Trợ lý:**
-
-Đang hoàn thiện xuất Excel theo bảng một trang: STT, thông tin HS, điểm, kết quả, danh sách số câu đúng/sai.
-Đã cập nhật xuất Excel theo đúng bảng một trang bạn yêu cầu.
-
-**8 cột trong file `KetQuaThi.xlsx` (một sheet duy nhất):**
-
-| STT | Họ và tên | Số báo danh | Lớp học | Điểm | Kết quả | Các câu đúng | Các câu sai |
-|-----|-----------|-------------|---------|------|---------|--------------|-------------|
-
-**Ví dụ một dòng:**
-```
-1 | Nguyễn Văn A | SBD2711 | 6A | 9.5 | 19/20 | 1, 2, 3, 5, 6, ... | 4
+```text
+soanbaigemini
+→ Gemini trả văn bản có heading
+→ (tuỳ chọn) tải lesson-import-v1.json hoặc copy toàn bộ raw
+→ tab Khác trong admin: Import text / Import JSON
+→ lesson-import.js parse + validate → điền form soạn bài
+→ giáo viên chèn ảnh theo manifest
+→ bấm Lưu
+→ POST payload JSON với action save_content
+→ api/lessons.php lưu các cột JSON vào MySQL
+→ lotrinh.js GET api/lessons.php
+→ render bài cho học sinh
 ```
 
-- **Các câu đúng / Các câu sai** chỉ ghi **số thứ tự câu** (vd. `1, 3, 5, 8`), không còn dài dòng nội dung câu hỏi
-- Hệ thống đối chiếu `details_json` với đề thi để xác định đúng/sai
-- Sắp xếp theo tên học sinh, STT tự đánh số từ 1
-
-Bạn tải lại trang rồi bấm **Xuất Excel** để kiểm tra.
-
----
-
-## Lượt 8
-
-**Người dùng:**
-
-Nhưng mà đề học sinh làm là đã trộn so với đề gốc. Vậy phải quy đổi tư đề họ sinh với đề gốc chứ nhỉ
-
-**Trợ lý:**
-
-Đúng — cần kiểm tra cách hệ thống lưu đáp án khi đề đã trộn và cách backend tạo `details_json`.
-Đúng — học sinh thấy đề trộn nhưng đáp án lưu theo `originalIdx` (đề gốc). Đang cập nhật xuất Excel để quy đổi rõ ràng theo đề gốc và cải thiện đối chiếu câu hỏi.
-Đúng — cần quy về **đề gốc**, và hệ thống đã được cập nhật theo hướng đó.
-
-## Cách hệ thống hoạt động
-
-Khi học sinh làm bài, đề **trộn thứ tự câu + trộn đáp án** trên màn hình, nhưng khi chọn đáp án hệ thống vẫn lưu theo **`originalIdx`** — tức vị trí câu trên **đề gốc** của giáo viên. Ví dụ:
-
-- HS nhìn thấy **Câu 3** trên màn hình → có thể là **Câu 11** trên đề gốc
-- Khi nộp bài, server chấm theo đề gốc, không theo thứ tự HS nhìn thấy
-
-## Đã cập nhật xuất Excel
-
-File Excel giờ quy đổi rõ ràng về **đề gốc**:
-
-| Cột | Ý nghĩa |
-|-----|---------|
-| Các câu đúng (đề gốc) | `Câu 1, Câu 2, Câu 5...` theo đề GV soạn |
-| Các câu sai (đề gốc) | `Câu 11` nếu HS sai câu đó trên đề gốc |
-
-Dòng ghi chú đầu file:
-> *STT câu đúng/sai theo đề gốc của giáo viên. Học sinh làm đề đã trộn nên thứ tự trên màn hình HS khác với đề gốc.*
-
-Hệ thống đối chiếu nội dung câu hỏi trong `details_json` với từng câu trong đề gốc để tìm đúng số câu — không lấy số câu HS nhìn thấy trên màn hình đã trộn.
-
-**Ví dụ:** HS sai câu hiển thị là "Câu 20" trên điện thoại → Excel ghi **Câu 11 (đề gốc)** nếu đó là vị trí câu đó trong đề GV.
-
-Giáo viên đối chiếu với đáp án đề gốc là được, không cần tự quy đổi thủ công.
-
----
-
-## Lượt 9
-
-**Người dùng:**
-
-Lúc chưa hết thôi gian nộp cũng k dc, đợi hết thôi gian rồi nộp cũng k dc
-Đây là phụ huynh chia sẽ khi làm bài bị lỗi đó họ làm trên điện thoại và mở đường link chạy từ zalo.
-
-**Trợ lý:**
-
-Đang sửa lỗi nộp bài trên điện thoại/Zalo — kiểm tra toàn bộ luồng `handleSubmit` và các vấn đề mobile.
-Đang sửa các lỗi chính trên mobile/Zalo: closure cũ khi hết giờ, chống gian lận quá gắt, `confirm()` không hoạt động, và nút Nộp bài bị khóa.
-Đã sửa lỗi nộp bài trên **điện thoại / Zalo**. Nguyên nhân chính:
-
-## Vì sao không nộp được?
-
-1. **Chống gian lận quá gắt trên mobile** — Zalo/iPhone không hỗ trợ toàn màn hình, hệ thống coi là “vi phạm” → khóa màn hình → **không bấm được Nộp Bài**
-2. **Hết giờ nộp sai dữ liệu** — bộ đếm giờ dùng dữ liệu cũ, gửi thiếu đáp án → lỗi API
-3. **`confirm()` trong Zalo** — hộp thoại xác nhận không hiện hoặc không hoạt động
-4. **Thiếu trường Lớp** — API bắt buộc `student_class`, báo lỗi `[object Object]`
-
-## Đã sửa
-
-| Vấn đề | Cách xử lý |
-|--------|------------|
-| Mobile/Zalo | Tắt chống gian lận toàn màn hình, không khóa màn hình |
-| Hết giờ tự nộp | Luôn lấy đáp án mới nhất qua `ref` |
-| Nộp thủ công | Modal xác nhận thay cho `confirm()` |
-| Lớp học | Gửi `""` nếu để trống |
-| Đang nộp | Nút hiện “Đang nộp...”, chặn bấm 2 lần |
-| Lỗi API | Hiện thông báo tiếng Việt rõ ràng |
-
-## Hướng dẫn phụ huynh
-
-1. Tải lại link thi (giáo viên gửi link mới hoặc F5)
-2. Nhập **Họ tên** và **SBD** → Vào thi
-3. Làm hết câu → bấm **Nộp Bài** → xác nhận trong popup
-4. Nếu vẫn lỗi: mở link bằng **Chrome/Safari** (menu Zalo → “Mở bằng trình duyệt”) thay vì làm trong app Zalo
-
-Nhờ phụ huynh thử lại và báo kết quả.
-
----
-
-## Lượt 10
-
-**Người dùng:**
-
-học sinh làm bài nộp nhưng koong có tên
-
-**Trợ lý:**
-
-Đang kiểm tra luồng lưu tên học sinh khi nộp bài — có thể do state/ref hoặc input không cập nhật đúng trên mobile.
-Nguyên nhân: trên mobile/Zalo, tên chưa kịp lưu vào state khi nộp bài (bàn phím tiếng Việt, ref cập nhật chậm). Đang sửa bằng cách đồng bộ tên ngay khi nhập và khi bắt đầu thi.
-Đã sửa lỗi **nộp bài không có tên**.
-
-## Nguyên nhân
-
-Trên điện thoại/Zalo, khi gõ tiếng Việt rồi bấm **Vào thi** hoặc **Nộp bài** ngay, tên chưa kịp lưu vào bộ nhớ — server nhận `student_name` rỗng.
-
-## Đã sửa
-
-1. **Lưu tên ngay khi gõ** — cập nhật đồng thời state, ref và `sessionStorage`
-2. **Khi bấm "Vào thi"** — đọc lại trực tiếp từ ô input (kể cả chữ đang gõ dở trên bàn phím tiếng Việt)
-3. **Khi nộp bài** — lấy tên từ 3 nguồn: ref → sessionStorage → state
-4. **Thiếu tên/SBD** — báo lỗi rõ, không gửi bài trống tên lên server
-
-## Lưu ý
-
-- Các bài **đã nộp trước đó** không có tên thì không khôi phục được — chỉ áp dụng cho lượt thi mới sau khi cập nhật.
-- Phụ huynh/HS nên **tải lại link thi** rồi nhập Họ tên + SBD trước khi làm bài.
-
-Giáo viên cho HS thi lại một lượt để kiểm tra — tên sẽ hiện đúng trong bảng kết quả.
-
----
-
-## Lượt 11
-
-**Người dùng:**
-
-cập nhật vào plan.md và thongtin.md
-
-**Trợ lý:**
-
-Đã cập nhật cả hai file.
-
-### `plan.md`
-- Header cập nhật: thi trực tuyến mobile/Zalo, lưu tên HS, Excel đề gốc, Copy QR
-- Mục **đã hoàn thành**: 6 nhóm thay đổi `thitructuyen.html`
-- Mục **cần phản biện**: 5 checklist mới cho thi trực tuyến
-- Mục **to-do**: 2 hạng mục tùy chọn (backend lưu `original_idx`, sửa tên bài thi cũ)
-
-### `thongtin.md`
-- Thêm mục **6. Thi trực tuyến (`thitructuyen.html`)** — kiến trúc, trộn đề, mobile/Zalo, Excel, QR
-- Bổ sung **Notes**: đề gốc vs đề trộn, dữ liệu cũ thiếu tên, khuyến nghị mở Chrome/Safari
-
-Cả hai file giữ ngày cập nhật **2026-06-20**.
-
----
-
-## Lượt 12
-
-**Người dùng:**
-
-[Image #1] Bạn test hả
-
-**Trợ lý:**
-
-Đúng — đó là dữ liệu test tôi tạo khi kiểm tra API nộp bài. Đang tìm cách xóa các bản ghi test đó.
-Đúng, xin lỗi — đó là **dữ liệu test** tôi tạo khi kiểm tra API nộp bài trên đề thật của thầy (`db776d2b`).
-
-3 dòng đó là:
-
-| Tên | SBD | Ghi chú |
-|-----|-----|---------|
-| Test User | TEST999 | Thử nộp bài mẫu |
-| Test Map | TESTMAP01 | Thử payload metadata |
-| Test Order | TESTORD3 | Thử lưu thứ tự đề (cột Lớp bị `6A\|ORDER:...`) |
-
-**Không phải học sinh thật** — có thể bỏ qua khi xem kết quả, hoặc lọc theo SBD không bắt đầu bằng `TEST`.
-
-Backend hiện **không có API xóa từng lượt thi**, nên 3 dòng này vẫn nằm trong database cho đến khi xóa thủ công ở Supabase/phpMyAdmin (nếu thầy có quyền truy cập HuggingFace Space).
-
-Từ giờ tôi **không chạy test trên đề thật** nữa. Nếu thầy muốn, tôi có thể thêm nút **Xóa kết quả** hoặc **Ẩn bản ghi test** trên giao diện giáo viên.
-
----
-
-## Lượt 13
-
-**Người dùng:**
-
-Bởi thế tôi cần chức năng để xóa học sinh là như thế đó
-
-**Trợ lý:**
-
-Cần thêm chức năng xóa kết quả thi từng học sinh — đang kiểm tra API backend và giao diện giáo viên.
-Backend dùng bảng `submissions` trên Supabase — thêm API xóa và nút xóa trên giao diện giáo viên.
-Đang kiểm tra frontend và backend hiện tại để hoàn thiện chức năng xóa học sinh.
-Frontend đã sẵn sàng; đang kiểm tra backend HuggingFace và cách triển khai.
-Frontend đã xong; đang tạo file backend đầy đủ và cập nhật tài liệu.
-Đúng vậy — chức năng xóa kết quả học sinh đã được thiết kế như sau.
-
-## Trên giao diện (đã có sẵn)
-
-Trong màn **Kết quả thi** (`ResultDetail`):
-
-1. **Xóa từng lượt** — cột **Thao tác**, nút thùng rác; có hộp xác nhận trước khi xóa.
-2. **Xóa hàng loạt bản ghi test** — nút *Xóa N bản ghi test* (SBD bắt đầu `TEST` hoặc tên `Test...`).
-3. Dòng test được tô nền đỏ nhạt để dễ nhận biết.
-
-## Backend (cần deploy)
-
-Frontend gọi 2 API:
-
-- `DELETE /api/exam/result/{id}` — xóa một bản ghi
-- `POST /api/exam/results/delete-batch` — body `{ "ids": [1, 2, 3] }`
-
-File backend đầy đủ đã có tại `backend/thitructuyen.py` (đã gộp code xóa vào cuối file).
-
-**Bước deploy lên HuggingFace:**
-
-1. Mở [hoangthiencm/giangbai](https://huggingface.co/spaces/hoangthiencm/giangbai) → tab **Files** → `thitructuyen.py`
-2. Thay toàn bộ nội dung bằng file `backend/thitructuyen.py` trong repo
-3. **Commit** → Space tự restart
-
-Hiện API xóa trên HF **chưa có** (gọi thử trả `404 Not Found`), nên nút xóa trên web sẽ báo lỗi cho đến khi bạn deploy file trên.
-
-Sau khi deploy, vào **Kết quả thi** → thử xóa một bản ghi test hoặc bấm *Xóa N bản ghi test* để kiểm tra. Nếu bạn muốn, tôi có thể hướng dẫn chi tiết từng bước trên giao diện HuggingFace.
-
----
-
-## Lượt 14
-
-**Người dùng:**
-
-cái này lưu cơ sở dữ liệu tôi nghĩ thiết kế lại lưu trên hosting của tôi luôn đi
-
-**Trợ lý:**
-
-Đang khảo sát kiến trúc hiện tại và hosting PHP/MySQL của bạn để thiết kế lại lưu trữ thi trực tuyến.
-Đang triển khai API PHP/MySQL trên hosting và tách phần AI (vẫn dùng HuggingFace).
-Đã thiết kế lại: **đề thi, nộp bài, kết quả, xóa HS** lưu trên MySQL hosting của bạn; chỉ phần **AI quét PDF** vẫn dùng HuggingFace.
-
-## Kiến trúc mới
-
-| Việc | Trước | Sau |
-|------|-------|-----|
-| Lưu đề, nộp bài, kết quả | Supabase (qua HF) | **MySQL hosting** (`api/exam.php`) |
-| AI quét PDF, nhận diện câu | HuggingFace | **Giữ HuggingFace** (`AI_API`) |
-
-## File đã thêm/sửa
-
-1. **`api/exam.php`** — API đầy đủ: lưu/sửa đề, danh sách đề, lấy đề, xóa/nhân bản, nộp bài, xem kết quả, xóa kết quả.
-2. **`database_schema.sql`** — bảng `exams`, `exam_submissions`.
-3. **`thitructuyen.html`** — tách 2 nguồn:
-   - `EXAM_API` → `api/exam.php` (cùng domain hosting)
-   - `AI_API` → HuggingFace (soạn đề bằng AI)
-
-## Việc bạn cần làm trên hosting
-
-1. Upload `api/exam.php`, `thitructuyen.html`, `database_schema.sql`.
-2. Chạy SQL tạo bảng (hoặc mở trang thi một lần — API tự tạo bảng nếu chưa có).
-3. Giáo viên **đăng nhập** trước khi soạn đề / xem kết quả (API dùng session PHP).
-4. HS làm bài qua link QR **không cần đăng nhập**.
-
-## Lưu ý quan trọng
-
-- **Đề và kết quả cũ trên Supabase không tự chuyển sang** — sau deploy bạn sẽ thấy kho đề trống cho đến khi lưu đề mới (hoặc cần script nhập tay nếu muốn giữ dữ liệu cũ).
-- Xóa kết quả HS hoạt động ngay trên hosting, **không cần deploy HuggingFace** nữa.
-
-Bạn upload lên hosting rồi thử: đăng nhập GV → tạo/lưu đề → HS nộp bài → xem kết quả → xóa bản ghi test. Nếu cần, tôi có thể viết script chuyển dữ liệu cũ từ Supabase sang MySQL.
-
----
-
-## Lượt 15
-
-**Người dùng:**
-
-cập nhật những nội dung chat này vào thành chat.md để tôi đọc
-
-**Trợ lý:**
-
-Đang tổng hợp nội dung cuộc hội thoại vào `chat.md`.
-Đã tạo file `chat.md` trong repo. Nội dung gồm:
-
-1. **Bối cảnh dự án** — stack, trang chính, hosting  
-2. **Các fix trước đó** — nộp bài mobile/Zalo, Excel, QR, HS thi nhiều lần  
-3. **Xóa kết quả HS** — giao diện, API, điều kiện bản ghi test  
-4. **Chuyển CSDL sang hosting** — kiến trúc `EXAM_API` / `AI_API`, bảng MySQL, phân quyền  
-5. **File đã sửa** — danh sách file liên quan  
-6. **Việc cần làm sau deploy** — checklist kiểm tra  
-7. **Tùy chọn chưa làm** — migration, AI feedback PHP…  
-8. **Dòng thời gian chat** — tóm tắt 6 bước
-
-Mở tại: `C:\Users\HoangThien\Documents\GitHub\giangbai\chat.md`
-
----
-
-## Lượt 16
-
-**Người dùng:**
-
-ghi lại toàn bộ luôn chứ không cần tóm tắt
-
-**Trợ lý:**
-
-Đã đọc transcript đầy đủ từ phiên chat và ghi lại **toàn bộ nguyên văn** vào file `chat.md` này (16 lượt hỏi–đáp).
-
-- Mỗi lượt gồm đúng nội dung **Người dùng** và **Trợ lý** như đã hiển thị trong chat.
-- Không tóm tắt, không gộp ý — giữ nguyên câu chữ, bảng, danh sách trong từng câu trả lời.
-- Tin nhắn có `[Image #N]` là lúc bạn gửi kèm ảnh chụp màn hình (ảnh không lưu được vào file text).
-
-File này chính là bản đầy đủ để bạn đọc lại sau.
-
----
-
-## Lượt 17
-
-**Người dùng:**
-
-Tôi muốn tạo danh sách học sinh cho lóp học nhanh nhất bằng cách import excel. Bạn tạo nhé và cung cấp file excel mẫu từ hệ thống để chuyển qua cho nhanh
-
-**Trợ lý:**
-
-Đã thêm chức năng **import danh sách học sinh từ Excel** và file mẫu.
-
-## Cách dùng
-
-1. Vào `admin.html` → đăng nhập Admin Key
-2. Trong khung **Import danh sách học sinh từ Excel**:
-   - Bấm **Tải file Excel mẫu** (file có sẵn trong repo)
-   - Hoặc **Tạo file mẫu mới** (tải trực tiếp từ trình duyệt)
-3. Điền danh sách HS vào Excel
-4. Chọn **Mật khẩu mặc định** (mặc định `123456`), **Lớp mặc định** (vd. `6A`), tick trang mở
-5. Chọn file → **Import danh sách**
-
-## File Excel mẫu
-
-Đường dẫn: `templates/DanhSachHocSinh_Mau.xlsx`
-
-| STT | Tài khoản | Mật khẩu | Họ và tên | Lớp/Nhóm |
-|-----|-----------|----------|-----------|----------|
-| 1 | HS6A01 | 123456 | Nguyễn Văn An | 6A |
-| 2 | HS6A02 | 123456 | Trần Thị Bình | 6A |
-| 3 | HS6A03 | 123456 | Lê Văn Cường | 6A |
-
-- **Bắt buộc:** Tài khoản, Họ và tên
-- **Mật khẩu / Lớp để trống** → dùng giá trị mặc định trên màn hình import
-- **Tài khoản trùng** → cập nhật thông tin (không tạo trùng)
-
-## File đã sửa
-
-- `api/admin_students.php` — action `import_batch`
-- `admin.html` — giao diện import + đọc Excel (SheetJS)
-- `templates/DanhSachHocSinh_Mau.xlsx` — file mẫu
-
-Upload `admin.html`, `api/admin_students.php` và thư mục `templates/` lên hosting rồi thử import một lớp thử.
-
----
-
-## Lượt 18
-
-**Người dùng:**
-
-cập nhật vào thongtin.md, plan.md và chat.md
-
-**Trợ lý:**
-
-Đã cập nhật cả ba file:
-
-### `thongtin.md`
-- Bổ sung mục **6. Quản trị tài khoản (`admin.html`)** — tạo tài khoản, import Excel, lên lớp hàng loạt.
-- Cập nhật `admin_students.php` — thêm action `import_batch`.
-- Đánh lại số mục Thi trực tuyến thành **7**.
-
-### `plan.md`
-- Header cập nhật: import Excel HS + thi trực tuyến hosting.
-- Mục **đã hoàn thành**: Import Excel danh sách học sinh.
-- Mục **cần phản biện**: checklist thử import Excel trên admin.
-
-### `chat.md`
-- Thêm **Lượt 17** (yêu cầu import Excel) và **Lượt 18** (cập nhật tài liệu) vào cuối file.
-
----
-
-## Lượt 19
-
-**Người dùng:**
-
-đọc thongtin.md, plan.md, chat.md để hiểu
-
-**Trợ lý:**
-
-Đã đọc lại ba file tài liệu và nắm trạng thái dự án: lộ trình Toán 6–9, thi trực tuyến hosting, import Excel HS, panel GV soạn bài/theo dõi tiến độ, checklist phản biện UI chưa tick.
-
----
-
-## Lượt 20
-
-**Người dùng:**
-
-ở thitructuyen.html khi tạo đề thi lấy danh sách từ lớp đã có hoặc thí sinh tự do. Do GV quyết định
-
-đúng thế cập nhật đi
-
-**Trợ lý:**
-
-Đã triển khai chế độ thí sinh khi GV lưu đề:
-
-- **Thí sinh tự do** (`student_mode: free`): HS tự nhập Họ tên, SBD, Lớp — mặc định.
-- **Danh sách từ lớp** (`student_mode: class`): GV chọn lớp từ `users.class_name` → API `student-classes` / `class-students`; snapshot `roster` lưu khi Lưu đề.
-
-File: `thitructuyen.html`, `api/exam.php`. Đã cập nhật `thongtin.md` và `plan.md`.
-
----
-
-## Lượt 21
-
-**Người dùng:**
-
-thay phần điền khuyết bằng kéo thả trong lotrinh, phần nối ô hoạt động không đúng yêu cầu
-
-**Trợ lý:**
-
-Đã sửa `lotrinh.js` và `admin-lesson-manager.js`:
-
-- **Kéo vào ô trống** (`renderFillExercises`): HS kéo chip từ pool vào ô trống trong đề; chấm sau nộp luyện tập.
-- **Nối ô** (`renderDragExercises`, `mode: match`): bấm mục trái rồi phải để ghép cặp; có badge số cặp.
-- Parser soạn bài GV cập nhật `parseFillExercises`, `parseDragExercises`, `formatFillExercises`, `formatDragExercises`.
-
-Cache: `lotrinh.js?v=20260619-drag-fill1`.
-
----
-
-## Lượt 22
-
-**Người dùng:**
-
-tôi dùng tài khoản giáo viên soạn bài mà nó báo tài khoản không có quyền tạo bài học. Hay phải phân quyền trong admin để cho giáo viên nào có quyền soạn
-
-**Trợ lý:**
-
-Đúng — admin cần cấp quyền trong `admin.html`:
-
-1. Vai trò: **Giáo viên**
-2. Tick **Lộ trình được phép soạn** (vd. Toán 6 = `lotrinhtoan6`)
-3. GV **đăng xuất → đăng nhập lại** sau khi admin lưu
-
-Đã bổ sung enforce server + client:
-
-- `access-control.js`: GV chỉ mở được lộ trình đã tick.
-- `api/helpers.php`: `teacher_allowed_subjects()`, `require_lesson_manager()`.
-- `api/lessons.php`: chặn lưu/xóa/nhân bản nếu sai môn.
-- `admin-lesson-manager.js`: lọc theo `allowedPages`, `credentials: 'include'`.
-- `login.html`: GV sau đăng nhập vào lộ trình đầu tiên được cấp.
-
-Không có checkbox riêng “được soạn bài” — quyền soạn = `role=teacher` + lộ trình được tick.
-
----
-
-## Lượt 23
-
-**Người dùng:**
-
-ý là admin phân quyền cho GV soạn bài lớp học nào. Chỉ sau này phát triển nhiều giáo viên thì sao?
-
-**Trợ lý:**
-
-Mô hình đề xuất (đã triển khai):
-
-- **Soạn bài theo lộ trình** (`allowed_pages`): tick Toán 6/7/8/9 — mỗi GV có thể soạn một hoặc nhiều lộ trình.
-- **Giám sát tiến độ theo lớp** (`class_name` của GV = lớp phụ trách): mỗi lớp gán một GV (hoặc nhiều lớp qua dấu phẩy `6A,6B`).
-
-Ví dụ Toán 6 có 3 lớp 6A/6B/6C → 3 tài khoản GV, mỗi người tick `lotrinhtoan6` + lớp phụ trách riêng.
-
----
-
-## Lượt 24
-
-**Người dùng:**
-
-vậy bạn không sửa gì à
-
-[Image #1]
-
-Ví dụ nhé. Lộ trình toán 6 nhưng có thể có 2-3-4 lớp, mỗi lớp 1 giáo viên thì phải phân lớp để họ có trách nhiệm giám sát tiến độ chứ
-
-**Trợ lý:**
-
-Đã triển khai phân lớp phụ trách:
-
-- `admin.html`: nhãn **Lớp phụ trách** (bắt buộc với GV).
-- `api/admin_progress.php`: chỉ trả HS thuộc lớp GV; lọc bài theo môn được cấp.
-- `admin-progress.js`: khóa dropdown lớp theo `userClassName`.
-- `login.html`: lưu `userClassName` vào `localStorage`.
-- `api/helpers.php`: `teacher_managed_classes()`, `teacher_can_view_student_class()`.
-
-Cache: `admin-progress.js?v=20260619-teacher-class1`.
-
----
-
-## Lượt 25
-
-**Người dùng:**
-
-[Image #1]
-
-Trong thiết lập phân quyền không có thời gian hết hạn của giáo viên để 1 tháng, 3 tháng, 9 tháng, 1 năm, không giới hạn
-
-**Trợ lý:**
-
-Đã thêm **Thời hạn tài khoản** cho HS/GV:
-
-- Cột `expires_at` + `expires_option` (auto-migrate).
-- Gói: Không giới hạn, 1 tháng, 3 tháng, 9 tháng, 1 năm.
-- `api/helpers.php`: `resolve_account_expiry()`.
-- `api/login.php`: chặn tài khoản hết hạn.
-- `admin.html`: chọn thời hạn khi tạo/sửa; cột bảng hiển thị `expires_at`.
-
----
-
-## Lượt 26
-
-**Người dùng:**
-
-[Image #1]
-
-Cái này lưu ở hosting hay lưu ở máy tính cá nhân vậy mà sao lúc trước tôi đặt và lưu rồi giờ không thấy gì
-
-**Trợ lý:**
-
-Cấu hình Gemini/ShopAIKey lưu trên **hosting** (`global_config.json` qua `api/global_config.php`), không lưu riêng máy cá nhân.
-
-- `localStorage.global_gemini_keys` chỉ là bản copy khi HS mở `index.html`.
-- File `global_config.json` trong repo hiện **không có** `gemini_keys` → form admin trống là đúng nếu chưa lưu trên hosting.
-- **Bug đã sửa**: `loadUsers` hosting không gọi `loadGlobalConfig()` → đã thêm.
-
----
-
-## Lượt 27
-
-**Người dùng:**
-
-Phải thêm trạng thái như thế
-
-[Image #1]
-
-**Trợ lý:**
-
-Đã thêm banner trạng thái cấu hình AI trong `admin.html`:
-
-- `#adminConfigStorageBanner`: hiển thị nguồn (hosting / GitHub / file / chưa tải), badge Gemini/ShopAIKey, số key, lần lưu gần nhất.
-- Gợi ý rõ khi hosting chưa có key: nhập key rồi bấm **Lưu Gemini** / **Lưu Fallback**.
-
----
-
-## Lượt 28
-
-**Người dùng:**
-
-[Image #1]
-
-Lớp phụ trách không phân được vì không có gì để chọn
-
-**Trợ lý:**
-
-Đã sửa dropdown **Lớp phụ trách** trong `admin.html`:
-
-- `studentClassCatalog()`: lấy danh sách lớp từ HS đã có (vd. `6A (12 học sinh)`).
-- `applyClassFieldForRole()`: GV thấy dropdown; tùy chọn *+ Nhập lớp mới…*.
-- Nếu chưa có HS xếp lớp → gợi ý import/tạo HS trước.
-- Tên lớp phải trùng `Lớp/Nhóm` của HS để panel tiến độ hoạt động.
-
----
-
-## Lượt 29
-
-**Người dùng:**
-
-cập nhật thongtin.md, plan.md và chat.md
-
-**Trợ lý:**
-
-Đã cập nhật cả ba file:
-
-### `thongtin.md`
-- Phân quyền GV (lộ trình + lớp phụ trách), thời hạn tài khoản, cấu hình AI hosting, banner trạng thái.
-- Bài tập kéo vào ô trống & nối ô; cache script mới.
-- API/helpers mới; quy trình admin cấp GV; ghi chú lỗi thường gặp.
-
-### `plan.md`
-- Mục **đã hoàn thành**: phân quyền GV, lớp phụ trách, thời hạn, AI hosting, kéo/nối ô.
-- Mục **cần phản biện**: checklist thử phân quyền GV, lớp, thời hạn, AI, bài tập kéo/nối.
-- Cập nhật to-do (đồng bộ cache, Gemini admin UI → done).
-
-### `chat.md`
-- Thêm **Lượt 19–29** (phiên phân quyền GV, lớp, thời hạn, AI, kéo/nối ô).
-
----
-
-## Lượt 30
-
-**Người dùng:**
-
-bạn đọc kỹ hệ thống nhất là plan.md và thongtin.md
-
-**Trợ lý:**
-
-Đã đọc kỹ `plan.md` và `thongtin.md`. Tóm tắt kiến trúc hệ thống **giangbai**:
-
-## Tổng quan
-
-- **Frontend:** HTML + Tailwind CSS + JavaScript thuần + MathJax
-- **Backend:** PHP (PDO) + MySQL trên hosting
-- **Trọng tâm:** Lộ trình tự học Toán 4–9 (`lotrinhtoan*.html`, `lotrinh.js`), panel GV soạn bài / theo dõi tiến độ
-- **Công cụ AI:** slides, vẽ hình, soạn quiz, ma trận đề, trộn đề, thi online, KTTX, nộp bài, viết báo cáo
-- **Thi trực tuyến:** lưu trên MySQL hosting (`api/exam.php`), AI quét PDF vẫn qua HuggingFace
-- **Admin:** `admin.html` — tài khoản HS/GV, import Excel, phân quyền lộ trình + lớp phụ trách, thời hạn tài khoản, cấu hình Gemini/ShopAIKey trên hosting
-
-## Đã hoàn thành (theo tài liệu)
-
-- Tiến độ realtime, AI giải thích bong bóng chat, panel GV, CRUD bài/chương
-- Thi online: mobile/Zalo, Excel đề gốc, Copy QR, xóa kết quả, chuyển CSDL hosting
-- Import Excel danh sách HS; phân quyền GV theo lộ trình + lớp; thời hạn tài khoản
-- Bài tập kéo vào ô trống & nối ô trong `lotrinh.js`
-
-## Việc còn lại
-
-- Checklist phản biện UI trên `plan.md` (nhiều mục chưa tick)
-- Responsive mobile lộ trình; mở rộng dạng bài tập
-
----
-
-## Lượt 31
-
-**Người dùng:**
-
-[Image #1] Giao diện này tôi vẫn chưa hài lòng
-
-**Trợ lý:**
-
-Đã xem ảnh và thiết kế lại khu vực **CÔNG CỤ AI** trên `index.html`:
-
-### Vấn đề giao diện cũ
-
-1. **8 thẻ giống hệt nhau** — pastel đồng nhất, khó phân biệt mục đích
-2. **Tiêu đề quá dài** bị cắt
-3. **Nút CTA không thống nhất**
-4. **Header mờ** — thiếu phân cấp so với panel Lộ trình Toán
-
-### Lần sửa đầu
-
-- Nhóm theo category (Giảng dạy / Soạn đề / Thi & hành chính)
-- Rút gọn tiêu đề, thống nhất CTA
-- Banner gradient cho khu vực công cụ
-
----
-
-## Lượt 32
-
-**Người dùng:**
-
-vẫn chưa đẹp.Sao thiết kế xấu thế
-
-**Trợ lý:**
-
-Redesign lần 2 — layout **bento**:
-
-- 2 thẻ **hero** gradient lớn: **Thi trực tuyến**, **Đề ma trận**
-- 7 thẻ còn lại dạng xám đơn giản
-- Banner gradient phía trên lưới công cụ
-
----
-
-## Lượt 33
-
-**Người dùng:**
-
-[Image #1] Ơ sao mất hết các chứ năng khác rồi
-
-**Trợ lý:**
-
-Đã xác định bug: lưới bento 12 cột + `overflow: hidden` trên `.tools-deck` khiến **chỉ hiện 3 thẻ**, các thẻ khác bị cắt.
-
-**Đã sửa:**
-
-- Đổi lưới về **2/3/4 cột** đơn giản
-- Đặt `overflow: visible` trên `.tools-deck`
-- Khôi phục đủ **9 thẻ công cụ** (slides, vẽ hình, quiz, ma trận, trộn đề, KTTX, thi online, nộp bài, viết báo cáo)
-
----
-
-## Lượt 34
-
-**Người dùng:**
-
-[Image #1] 2 cái đầu còn đẹp còn mấy cái còn lại xấu vậy. Ngoài ra mất cái tab báo cáo dự liệu rồi
-
-[Image #1] 2 cái đầu còn đẹp còn mấy cái còn lại xấu vậy.
-
-**Trợ lý:**
-
-Đã sửa tiếp:
-
-1. **7 thẻ còn lại** — mỗi thẻ có **gradient riêng** (class `tool-tile--colored tool-tile--slides`, `--vehinh`, `--smartquiz`, `--tronde`, `--kttx`, `--nopbai`, `--vietbaocao`), glow, watermark, chữ trắng — đồng bộ với 2 hero.
-2. **Khôi phục thẻ Viết báo cáo** (`vietbaocao.html`) — user báo mất tab báo cáo.
-
-Kết quả: 2 hero + 7 thẻ màu, tổng 9 công cụ hiển thị đầy đủ.
-
----
-
-## Lượt 35
-
-**Người dùng:**
-
-Tôi muốn xấy dựng hệ thống rút gọn link được không nhỉ. Chúng ta đã có web, hosting rồi
-
-**Trợ lý:**
-
-Có thể xây trên hosting PHP/MySQL hiện có. Đề xuất kiến trúc:
-
-| Thành phần | Mô tả |
-|------------|-------|
-| `api/short_links.php` | CRUD link, thống kê click (chỉ GV) |
-| `s.php` | Redirect công khai `/s/CODE` |
-| `.htaccess` | Rewrite URL đẹp |
-| `rutgon.html` | Trang quản lý GV |
-| Bảng `short_links`, `short_link_clicks` | MySQL, auto-migrate |
-
-Tính năng: mã tùy chọn, giới hạn click, hết hạn, đếm click, log IP hash / user-agent / referer.
-
----
-
-## Lượt 36
-
-**Người dùng:**
-
-OK cần hết. Mở ra tab Link rút gọn luôn và có chức năng đó, trong rút gọn link có thêm tính năng tạo qr
-
-**Trợ lý:**
-
-Đã triển khai đầy đủ hệ thống **Link rút gọn & QR**:
-
-## Trang chủ (`index.html`)
-
-- Thẻ **Link rút gọn & QR** (`tool-tile--rutgon`, gradient tím/indigo) trong bộ công cụ AI
-- Bật qua `global_config.json` (`rutgon: true`)
-- Học sinh **không thấy** thẻ; giáo viên bấm mở `rutgon.html`
-- Bổ sung hướng dẫn nhanh trong accordion
-
-## Trang quản lý (`rutgon.html`)
-
-- Tạo / sửa / xóa link rút gọn
-- Mã tùy chọn, giới hạn click, hết hạn, ghi chú
-- **Tạo QR** cho từng link (modal + thư viện `qrcodejs`)
-- **Tải ảnh QR** (PNG) để in hoặc gửi Zalo
-- Thống kê lịch sử click, tìm kiếm, thống kê tổng
-- Copy link ngắn `{domain}/s/CODE`
-
-## Backend
-
-- `api/short_links.php` — actions: `list`, `create`, `update`, `delete`, `stats`
-- `s.php` — redirect 302, kiểm tra active/expiry/max clicks, ghi log click
-- `.htaccess` — `^s/([A-Za-z0-9]+)$` → `s.php?c=$1`
-- `database_schema.sql` — DDL `short_links`, `short_link_clicks`
-
-## Phân quyền & Admin
-
-- `access-control.js` — map `rutgon.html` → `rutgon`; chỉ GV; HS bị chặn
-- `api/helpers.php` — thêm `rutgon` vào `page_catalog()`
-- `admin.html` — checkbox `cfg_rutgon`, `FEATURE_NAMES.rutgon`, đồng bộ load/lưu cấu hình
-- `global_config.json` — `"rutgon": true` cho global và tất cả user
-
-## Cách dùng (giáo viên)
-
-1. Trang chủ → **Link rút gọn & QR**
-2. **Tạo link mới** → dán URL đích
-3. Copy link ngắn hoặc bấm **QR** → chiếu/tải mã
-4. Theo dõi click qua nút **Click**
-
-## Deploy lên hosting
-
-Upload: `rutgon.html`, `s.php`, `.htaccess`, `api/short_links.php`, `index.html`, `admin.html`, `access-control.js`, `global_config.json`.
-
-Bảng DB tự tạo khi GV mở trang lần đầu, hoặc chạy SQL trong `database_schema.sql`.
-
-**Lưu ý:** Hosting cần `mod_rewrite` (Apache) cho URL `/s/CODE`. Không có vẫn dùng `s.php?c=CODE`.
-
----
-
-## Lượt 37
-
-**Người dùng:**
-
-xuất ra chat.md
-
-**Trợ lý:**
-
-Đã cập nhật file `chat.md` — thêm **Lượt 30–37** (phiên đọc tài liệu, redesign CÔNG CỤ AI, hệ thống Link rút gọn & QR) vào cuối file, giữ nguyên định dạng hỏi–đáp như các lượt trước.
-
----
-
-## Lượt 38
-
-**Người dùng:**
-
-Bạn đọc lại hệ thống. Đặc biệt là dùng AI thì có thể thống kê số lượt dùng của các module AI trong ngày không(đối với CloudFlare), của deepkseek (dùng shopaikey) hoặc quota của gemini. Đại loại như thế. Chắc gemini không thống kê được nhỉ. Còn deeppseek thì thống kê số USD thì phải
-
-**Trợ lý:**
-
-Đã đọc lại luồng AI trong codebase. Kết luận:
-
-## Hiện trạng: chưa có thống kê trong app
-
-GiangBai **không ghi log** lượt dùng AI theo ngày/module/provider. `api/ai_explain.php` chỉ trả `provider` + `model`; `api/hosting_stats.php` chỉ báo dung lượng hosting.
-
-## Ba nguồn AI
-
-| Nguồn | Trong app | Ngoài app |
-|-------|-----------|-----------|
-| **Cloudflare Workers AI** | Không log | Dashboard CF: requests/neurons theo ngày |
-| **Gemini** | Không log quota | AI Studio; free tier không có API “còn bao nhiêu lượt hôm nay” |
-| **ShopAIKey/DeepSeek** | Không lưu `usage` | Dashboard ShopAIKey: requests, USD đã dùng / còn lại |
-
-## Luồng AI hiện tại
-
-- **Server** (`api/ai_explain.php`): CF → Gemini fallback → ShopAIKey fallback (chỉ **lộ trình học**).
-- **Client** gọi thẳng Gemini: `app.js` (vẽ hình), `smartquiz.html`, `kttx.html`, các `game-*.html`, `matrande.html`… → không qua server, không thống kê được trừ khi tự log hoặc proxy.
-
-User đoán đúng: **Gemini** khó quota realtime trong app; **ShopAIKey** có thể xem USD trên dashboard hoặc API billing nếu tích hợp sau.
-
----
-
-## Lượt 39
-
-**Người dùng:**
-
-[Image #1] Đây là của shopaikey.
-Còn cloudflare thì nó có số luợt gọi trong ngày mà.
-trong trang GV có thể mở tab theo dõi lượt sử dụng AI
-
-**Trợ lý:**
-
-Bổ sung / sửa đánh giá:
-
-- **ShopAIKey** — dashboard có Requests, **Đã dùng $**, **Còn lại $** (ảnh user: 62 requests, $2.0 đã dùng, $48.0 còn).
-- **Cloudflare** — dashboard có lượt gọi theo ngày (Workers AI / Analytics).
-- **Gemini** — vẫn khó quota realtime; chỉ ước lượng nếu tự log.
-
-Trong GiangBai lúc đó **chưa có tab** — `admin.html` chỉ có: Tạo tài khoản, THCS Trần Phú, Cài đặt hệ thống. Đề xuất thêm tab **Theo dõi AI** gồm:
-
-1. Cloudflare — lượt/ngày (log nội bộ + CF GraphQL nếu có token)
-2. ShopAIKey — USD / requests (API billing)
-3. Gemini — lượt fallback từ log server
-
----
-
-## Lượt 40
-
-**Người dùng:**
-
-Làm hết luôn
-
-**Trợ lý:**
-
-Đã triển khai đầy đủ tab **Theo dõi AI** và luồng thống kê.
-
-### 1. Log nội bộ (`api/ai_usage_log.php` + `api/ai_explain.php`)
-
-- Mỗi lần gọi `api/ai_explain.php` ghi vào `data/ai_usage.json`
-- Lưu: provider, mode (explain/chat), model, OK/lỗi, fallback, token (Gemini/ShopAIKey), USD ước tính (DeepSeek)
-- Giữ lịch sử 90 ngày (tổng hợp) + 120 lượt gần nhất
-
-### 2. API thống kê (`api/ai_stats.php`)
-
-- Tổng hợp log nội bộ (hôm nay + 14 ngày)
-- **ShopAIKey**: `GET /v1/dashboard/billing/subscription` và `/usage` → Đã dùng $ / Còn lại $
-- **Cloudflare**: GraphQL `workersInvocationsAdaptive` (nếu có `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` trong `api/config.php`)
-- **Gemini**: số lượt fallback từ log (không có API quota realtime)
-
-### 3. Tab Admin (`admin.html`)
-
-- Tab mới: **Theo dõi AI** (giữa THCS Trần Phú và Cài đặt hệ thống)
-- 3 thẻ: Cloudflare, Gemini, ShopAIKey
-- Bảng 14 ngày + lượt gọi gần đây
-- Link mở Dashboard CF / AI Studio / ShopAIKey
-- Bấm tab hoặc **Tải lại** → gọi `api/ai_stats.php` (header `X-Admin-Key`)
-
-### 4. Cấu hình & Worker
-
-- `api/config.sample.php`: thêm `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_WORKER_SCRIPT_NAME`
-- `cloudflare-worker/worker.js`: trả `usage` nếu Workers AI có metadata
-- `cloudflare-worker/README.md`: hướng dẫn theo dõi sử dụng
-
-### File đã thêm/sửa
-
-| File | Vai trò |
-|------|---------|
-| `api/ai_usage_log.php` | Ghi/đọc `data/ai_usage.json` |
-| `api/ai_stats.php` | API thống kê cho admin |
-| `api/ai_explain.php` | Ghi log sau mỗi lượt AI |
-| `admin.html` | Tab + UI Theo dõi AI |
-| `api/config.sample.php` | Biến Cloudflare GraphQL |
-| `cloudflare-worker/worker.js` | Metadata usage (tuỳ chọn) |
-
-### Deploy lên hosting
-
-1. Upload các file trên; thư mục `data/` phải **ghi được** (tự tạo `ai_usage.json`).
-2. Để thấy lượt Worker/ngày từ Cloudflare (như dashboard CF), thêm vào `api/config.php`:
-
-```php
-define('CLOUDFLARE_ACCOUNT_ID', 'account-id-cua-ban');
-define('CLOUDFLARE_API_TOKEN', 'token-co-quyen-Account-Analytics-Read');
-define('CLOUDFLARE_WORKER_SCRIPT_NAME', 'late-bird-fe3b');
+Điểm cần nói chính xác:
+
+- Lộ trình **không đọc file `.json` tĩnh**.
+- `lotrinh.js` tải bài từ database qua `api/lessons.php`.
+- Editor hiện nhập văn bản Gemini, chưa có input file JSON.
+- `soanbaigemini.html` hiện xuất Word, chưa xuất JSON.
+
+## 5. Mapping hiện có giữa Soạn bài Gemini và Lộ trình
+
+| Section từ Gemini | Trường lưu bài |
+|---|---|
+| MỤC TIÊU | `goal_text` khi lưu, `goal` khi API trả về |
+| LÝ THUYẾT | `theory` |
+| VÍ DỤ | `examples` |
+| BÀI TẬP NỘP GIÁO VIÊN | `self_practice` |
+| BÀI TẬP TỰ LUẬN NGẮN | `essay_exercises` |
+| KÉO THẢ VÀO Ô TRỐNG | `fill_exercises` |
+| NỐI Ô / SẮP XẾP | `drag_exercises` |
+| TRẮC NGHIỆM | `questions` |
+| KỸ NĂNG CẦN ĐẠT | `skills` |
+| NHIỆM VỤ HỌC SINH | `tasks` |
+| Video | `videos` — hiện chưa có trong đầu ra/import Gemini |
+
+Mapping section đã có tương đối đầy đủ. Tuy nhiên, tỷ lệ hoàn thiện chỉ cao về cấu trúc field, chưa đồng nghĩa với độ tin cậy end-to-end.
+
+## 6. Schema dữ liệu thực tế
+
+Payload `save_content` trong `admin-lesson-manager.js` đã gần với schema import mong muốn.
+
+Các kiểu dữ liệu quan trọng:
+
+```js
+theory: [
+  { text: "...", ai: false }
+]
+
+examples: [
+  { title: "DẠNG 1: ...", body: "...", ai: false }
+]
+
+self_practice: [
+  { title: "DẠNG 1: ...", body: "...", ai: false }
+]
+
+questions: [
+  {
+    id: "q1",
+    skill: "skill_id",
+    prompt: "...",
+    options: ["A", "B", "C", "D"],
+    answer: 0
+  }
+]
+
+essay_exercises: [
+  { id: "essay_1", prompt: "...", answer: "4", hint: "..." }
+]
+
+fill_exercises: [
+  {
+    id: "fill_1",
+    prompt: "... ___ ...",
+    pool: ["..."],
+    answer: "..." /* hoặc mảng */,
+    hint: "..."
+  }
+]
+
+drag_exercises: [
+  {
+    id: "drag_1",
+    mode: "match",
+    prompt: "...",
+    left: ["..."],
+    right: ["..."],
+    pairs: [{ left: 0, right: 0 }],
+    hint: "..."
+  },
+  {
+    id: "drag_2",
+    mode: "sort",
+    prompt: "...",
+    items: ["..."],
+    answer: ["..."],
+    hint: "..."
+  }
+]
+
+skills: [
+  { id: "skill_id", name: "Tên kỹ năng", target: 80 }
+]
+
+tasks: ["..."]
+videos: [{ title: "...", url: "..." }]
 ```
 
-3. ShopAIKey dùng key đã lưu trong `global_config.json` — tab tự gọi API billing.
+Không cần thiết kế lại toàn bộ schema từ đầu. Cần chuẩn hóa payload đang có thành hợp đồng import/export ổn định.
 
-### Lưu ý
+## 7. Các khoảng trống quan trọng
 
-- Log nội bộ chỉ tính **AI lộ trình** (`api/ai_explain.php`). Vẽ hình, smartquiz, game… gọi Gemini từ trình duyệt **không** vào log này.
-- Chưa cấu hình CF token → tab vẫn chạy, thiếu cột “Worker hôm nay (CF)”, vẫn có “Lộ trình hôm nay (log)”.
+### 7.1. Chưa có xuất/nhập file JSON
 
-Vào `admin.html` → đăng nhập → tab **Theo dõi AI**.
+> **Cập nhật 23/06/2026:** Đã triển khai — xem mục 18. Nút tải/nhập JSON có ở `soanbaigemini.html` và tab Khác trong admin.
+
+`soanbaigemini.html` (trước khi triển khai) chỉ:
+
+- Hiển thị văn bản Gemini.
+- Parse và xem trước.
+- Copy từng section.
+- Tạo ảnh minh họa.
+- Xuất Word.
+
+Editor hiện chỉ nhận text qua `importGeminiLessonRaw()`. Chưa có:
+
+- Nút tải `lesson-import-v1.json`.
+- Input chọn file JSON.
+- Validator package trước khi điền form.
+
+### 7.2. Metadata không đi theo import text
+
+Importer hiện không tự điền đầy đủ:
+
+- `subject`
+- `chapter`
+- `title`
+- `slug`
+- `order_index`
+- `is_published`
+
+Do đó quy trình hiện tại chưa phải “import nguyên bài”.
+
+### 7.3. Ánh xạ kỹ năng–trắc nghiệm đang sai
+
+Schema thật của câu hỏi có trường `skill`, nhưng `soanbaigemini` hiện yêu cầu format sáu cột:
+
+```text
+Câu hỏi | A | B | C | D | B
+```
+
+Khi thiếu `skill_id`, parser gán câu hỏi vào kỹ năng đầu tiên. Trong khi `lotrinh.js` tính điểm kỹ năng dựa trên `question.skill`. Vì vậy bảng kỹ năng có thể hiển thị đẹp nhưng không phản ánh đúng năng lực.
+
+Format text fallback nên là:
+
+```text
+skill_id | Câu hỏi | A | B | C | D | B
+```
+
+Parser hiện tại đã hỗ trợ dạng bảy cột này.
+
+Với JSON, mỗi câu phải có:
+
+```json
+{
+  "skill": "skill_id",
+  "prompt": "...",
+  "options": ["...", "...", "...", "..."],
+  "answer": 1
+}
+```
+
+### 7.4. Hai bộ parser đang lệch nhau
+
+> **Cập nhật 23/06/2026:** Đã gộp vào `lesson-import.js`; admin không còn parser trùng. `soanbaigemini` ưu tiên `LessonImport`, vẫn giữ fallback cũ — xem mục 18.3.
+
+`soanbaigemini.html` và `admin-lesson-manager.js` (trước khi triển khai) cùng có parser riêng.
+
+Parser trong admin đã tách rõ hơn:
+
+- `dragMatch`
+- `dragSort`
+- Phân loại bài nối ô và sắp xếp.
+
+Parser trong `soanbaigemini.html` cũ hơn và gộp nhiều trường hợp vào `drag`. Vì vậy preview/copy trong Soạn bài Gemini có thể không hoàn toàn giống kết quả import ở editor.
+
+Không nên tạo thêm một parser thứ ba khi làm JSON. Cần tách logic dùng chung thành module.
+
+### 7.5. Dấu `|` dễ phá cấu trúc
+
+Pipe text dễ hỏng khi nội dung Toán chứa:
+
+```text
+a | b
+{x | x > 0}
+```
+
+Parser có thể coi dấu `|` trong nội dung là dấu phân cột. JSON typed fields giải quyết vấn đề này tốt hơn. Pipe text nên được giữ làm fallback, không phải định dạng chính.
+
+### 7.6. Video chưa nằm trong luồng Gemini
+
+Editor và API có `videos`, nhưng:
+
+- `soanbaigemini` không tạo section video.
+- `importGeminiLessonRaw()` không nhập video.
+
+Package JSON đầy đủ nên có `videos: []`, kể cả khi rỗng.
+
+### 7.7. Trang Lộ trình bị scope theo lớp
+
+Mỗi trang Toán 4–9 ép `PAGE_SUBJECT` tương ứng. Nếu mở trang Toán 4 nhưng import package có `subject: "Toán 6"`, hệ thống phải:
+
+- Cảnh báo rõ ràng.
+- Không âm thầm đổi môn hoặc lưu sai scope.
+- Cho người dùng hủy import hoặc chuyển sang đúng trang.
+
+### 7.8. Không tự lưu hoặc tự công khai
+
+Import JSON chỉ nên điền form. Không được tự gọi API lưu bài.
+
+Quy tắc an toàn:
+
+- `is_published` mặc định là `false`.
+- Không mang theo database `id`.
+- Giáo viên phải xem preview và bấm Lưu.
+- Sau khi lưu, giáo viên quyết định công khai.
+
+## 8. Hình ảnh
+
+### 8.1. Ảnh trong Soạn bài Gemini chưa chuyển thẳng sang Lộ trình
+
+Ảnh Gemini sinh trong `soanbaigemini` là Data URL lưu trong RAM của phiên trình duyệt. Lộ trình chỉ hiển thị URL HTTP(S), thường là Google Drive sau khi giáo viên dán ảnh vào editor.
+
+JSON không nên chứa base64 vì:
+
+- File rất lớn.
+- Khó kiểm soát dung lượng.
+- Không tương thích trực tiếp với luồng Drive hiện tại.
+
+JSON chỉ nên chứa marker và manifest:
+
+```json
+{
+  "image_manifest": [
+    {
+      "id": "HINH_01",
+      "section": "theory",
+      "alt": "Mô tả ngắn",
+      "type": "diagram",
+      "prompt": "Mô tả ảnh cần tạo..."
+    }
+  ]
+}
+```
+
+Nội dung vẫn đặt marker:
+
+```markdown
+![Mô tả ngắn](HINH_01)
+```
+
+Sau import, giáo viên dán ảnh thật để editor upload Drive và thay marker bằng URL.
+
+### 8.2. Ảnh trong bài tập tương tác chưa render đúng
+
+Lý thuyết, ví dụ và bài nộp dùng `lessonRichText()`, có thể render Markdown ảnh.
+
+Các đề sau chủ yếu dùng `mathText()`:
+
+- Tự luận.
+- Điền khuyết.
+- Trắc nghiệm.
+- Nối ô và sắp xếp.
+
+Admin cho phép dán ảnh vào các đề này nhưng giao diện học sinh có thể hiển thị Markdown ảnh thành chữ thô. Cần sửa renderer để prompt bài tập có thể dùng ảnh an toàn.
+
+### 8.3. Vị trí marker ảnh
+
+Renderer lý thuyết/ví dụ nhận ảnh chắc chắn nhất khi Markdown ảnh nằm riêng một dòng. Quy ước import nên bắt buộc marker ảnh đứng trên dòng riêng.
+
+## 9. Đánh giá các nhận xét của Grok
+
+### Những điểm Grok bổ sung đúng
+
+- Payload `save_content` đã là nền schema thực tế.
+- Cần ghi rõ `theory` và `examples` là mảng object.
+- Có hai bộ parser không đồng nhất.
+- `videos` còn thiếu trong luồng Gemini.
+- Import phải kiểm tra môn theo trang đang mở.
+- “70–80%” chỉ đúng về mapping, chưa đúng về độ tin cậy.
+- Import không nên tự lưu và không nên ép đủ số lượng nếu bài SGK ngắn.
+
+### Những điểm cần diễn đạt thận trọng hơn
+
+Các nhận xét như:
+
+- “Trắc nghiệm mất khi lưu”.
+- “Điền khuyết 3 cột và 4 cột bị lỗi”.
+- “Nối ô/sắp xếp bị nhầm”.
+
+hiện là vùng rủi ro hợp lý nhưng chưa được chứng minh là lỗi còn tồn tại trong phiên bản code hiện tại.
+
+Code hiện có:
+
+- Đồng bộ bulk editor trước khi lưu.
+- Parser điền khuyết xử lý cả ba và bốn cột bằng heuristic.
+- Parser admin tách `dragMatch` và `dragSort`.
+- `resolveQuestionsForSave()` đọc lại câu hỏi trước khi tạo payload.
+
+Cần tạo fixture và test round-trip để xác nhận lỗi cụ thể trước khi sửa.
+
+### Điểm không nên áp dụng máy móc
+
+Validator “cảnh báo từ khóa vượt lớp” không đủ tin cậy. Kiến thức vượt lớp không thể xác định tốt chỉ bằng từ khóa.
+
+Validator code nên kiểm tra:
+
+- Kiểu dữ liệu.
+- Số lượng và ID.
+- Liên kết chéo.
+- Đáp án hợp lệ.
+- Marker ảnh.
+- Môn/lớp.
+
+Kiểm định học thuật vẫn cần prompt phản biện và giáo viên xem thử.
+
+## 10. Kiến trúc đích được thống nhất
+
+Không nên bắt Gemini trả JSON thô trực tiếp. Mô hình có thể tạo JSON thiếu dấu, sai kiểu hoặc sai liên kết ID.
+
+Luồng nên là:
+
+```text
+Gemini trả nội dung dễ đọc
+→ parser dùng chung chuyển thành object
+→ normalize
+→ validate
+→ xuất lesson-import-v1.json
+→ admin nhập JSON
+→ validate lần hai
+→ điền form và metadata
+→ giáo viên chèn ảnh
+→ teacher preview
+→ giáo viên bấm Lưu
+→ giáo viên quyết định công khai
+```
+
+Pipe text vẫn được giữ làm fallback cho nội dung cũ.
+
+## 11. Hợp đồng `lesson-import-v1`
+
+Không nên dùng nguyên xi payload API làm file import, vì API hiện có bất đối xứng:
+
+- Gửi vào dùng `goal_text`.
+- API trả ra dùng `goal`.
+- Payload lưu có `action` và có thể có database `id`.
+- API payload không có `schema_version` hoặc `image_manifest`.
+
+Nên có adapter:
+
+```text
+lesson-import-v1
+↔ normalize/validate
+↔ save_content payload
+```
+
+Khung package:
+
+```json
+{
+  "schema_version": "lesson-import-v1",
+  "subject": "Toán 6",
+  "chapter": "Chương 2: Số tự nhiên",
+  "title": "Bài 5: ...",
+  "slug": "math6-chuong-2-bai-5",
+  "order_index": 5,
+  "is_published": false,
+  "goal_text": "...",
+  "theory": [],
+  "examples": [],
+  "self_practice": [],
+  "essay_exercises": [],
+  "fill_exercises": [],
+  "drag_exercises": [],
+  "questions": [],
+  "skills": [],
+  "tasks": [],
+  "videos": [],
+  "image_manifest": []
+}
+```
+
+### Quy tắc package
+
+- Không chứa database `id`.
+- `schema_version` là bắt buộc.
+- `subject` phải thuộc `Toán 4` đến `Toán 9`.
+- `is_published` khi import luôn được ép về `false`, bất kể file ghi gì.
+- `answer` của trắc nghiệm là số từ 0 đến 3.
+- Mỗi `questions[].skill` phải trùng một `skills[].id`.
+- `drag_exercises[].mode` phải là `match` hoặc `sort`.
+- ID trong từng collection phải duy nhất.
+- Marker `HINH_xx` phải có entry tương ứng trong `image_manifest` hoặc được cảnh báo.
+- Ảnh trong nội dung phải nằm riêng một dòng.
+
+## 12. Validator cần có
+
+### Lỗi chặn import
+
+- JSON không parse được.
+- Sai hoặc thiếu `schema_version`.
+- Sai kiểu dữ liệu chính.
+- Thiếu `subject`, `title` hoặc `slug`.
+- Môn không hợp lệ.
+- `questions[].answer` ngoài khoảng 0–3.
+- Câu trắc nghiệm không có đúng bốn lựa chọn.
+- `questions[].skill` không tồn tại.
+- `drag_exercises[].mode` không hợp lệ.
+- Bài nối ô có index pair vượt phạm vi.
+
+### Cảnh báo nhưng vẫn cho import
+
+- Thiếu video.
+- Không có ảnh.
+- Không có bài thực tế.
+- Số lượng trắc nghiệm ít hơn cấu hình gợi ý.
+- Thiếu một loại bài tập tương tác.
+- Có marker ảnh chưa có manifest.
+- `subject` khác với trang đang mở.
+- Slug có nguy cơ trùng bài đang có.
+
+Các cảnh báo về độ khó chỉ nên là gợi ý, không thay thế kiểm định học thuật.
+
+## 13. Test round-trip cần có
+
+Trước khi coi import là ổn định, cần bộ fixture bao phủ:
+
+1. Lý thuyết nhiều đoạn, Markdown và LaTeX.
+2. Ví dụ có nhiều heading `DẠNG`.
+3. Bài nộp giáo viên.
+4. Tự luận có đáp án số nguyên, thập phân, phân số và căn.
+5. Điền khuyết một ô và nhiều ô.
+6. Điền khuyết ba cột và bốn cột ở pipe fallback.
+7. Nối ô có mapping không theo thứ tự 0-0.
+8. Sắp xếp có phần tử giống nhau hoặc LaTeX.
+9. Trắc nghiệm sáu cột và bảy cột có `skill_id`.
+10. Nội dung Toán chứa ký hiệu `|`.
+11. Marker ảnh trong lý thuyết, ví dụ và đề bài.
+12. Package sai lớp so với trang đang mở.
+13. Export → import → lưu → API trả về → render.
+
+Mục tiêu test:
+
+```text
+lesson-import-v1
+→ import form
+→ build save_content payload
+→ lưu/đọc API
+→ normalize lại
+```
+
+Nội dung có ý nghĩa phải được bảo toàn và các liên kết ID không bị thay đổi ngoài những trường được phép chuẩn hóa.
+
+## 14. Lộ trình triển khai đã chốt
+
+> **Trạng thái 23/06/2026:** P0, P0a, P1, P2, P3, P2.5 (một phần), P4 (một phần) đã code — chi tiết từng file ở **mục 18**. P5 và round-trip API đầy đủ chưa xong.
+
+### P0 — Fixture và module dùng chung
+
+- Viết các fixture round-trip tối thiểu.
+- Tách parser, normalizer và validator thành module dùng chung, dự kiến `lesson-import.js`.
+- Không tạo thêm parser riêng trong admin hoặc `soanbaigemini`.
+
+### P1 — Chuẩn hóa package
+
+- Xây `buildLessonImportPackage()`.
+- Xây `normalizeLessonImportPackage()`.
+- Xây `validateLessonImportPackage()`.
+- Xây adapter package ↔ payload `save_content`.
+
+### P2 — Cập nhật Soạn bài Gemini
+
+- Đổi trắc nghiệm sang format có `skill_id`.
+- Parse nội dung bằng module dùng chung.
+- Thêm nút tải `lesson-import-v1.json`.
+- Đưa metadata từ form vào package.
+- Thêm `image_manifest`.
+- Không nhúng base64 vào JSON.
+
+### P3 — Cập nhật editor Lộ trình
+
+- Thêm nút Import JSON trong tab Khác.
+- Parse và validate file trước khi điền form.
+- Kiểm tra `subject` với trang đang mở.
+- Điền cả metadata và nội dung.
+- Ép `is_published = false`.
+- Không tự lưu.
+- Hiển thị báo cáo lỗi/cảnh báo dễ hiểu.
+- Giữ import text cũ làm fallback.
+
+### P4 — Chất lượng và hình ảnh
+
+- Cho prompt bài tập tương tác render ảnh an toàn.
+- Hỗ trợ thay marker `HINH_xx` có kiểm soát.
+- Mở teacher preview sau import hoặc cung cấp nút xem thử rõ ràng.
+- Kiểm tra ảnh còn thiếu trước khi công khai.
+
+### P5 — Điều chỉnh sư phạm
+
+- Cho phép số lượng bài tập linh hoạt theo nội dung ảnh.
+- Giữ mức tối thiểu hợp lý thay vì luôn ép đủ 10 câu.
+- Duy trì hai vòng tự giải và phản biện.
+- Không dùng keyword validator làm căn cứ chính để kết luận vượt lớp.
+
+## 15. Kết luận chung
+
+Ý tưởng “Soạn bài Gemini tạo đúng cấu trúc rồi import vào Lộ trình, giáo viên chủ yếu chèn ảnh” là đúng hướng.
+
+Tuy nhiên, câu “chỉ việc chèn ảnh” chỉ chính xác sau khi hoàn thiện:
+
+- Import/export JSON có version.
+- Metadata.
+- Ánh xạ kỹ năng–câu hỏi.
+- Validator.
+- Module parser dùng chung.
+- Kiểm tra scope theo lớp.
+- Teacher preview.
+- Render ảnh trong bài tập tương tác nếu cần.
+
+Mô tả mục tiêu chính xác hơn:
+
+> `soanbaigemini` tạo một gói bài học có cấu trúc, được kiểm định và xuất theo `lesson-import-v1`; giáo viên import gói đó vào trình soạn, chèn ảnh, xem thử rồi mới lưu và công khai.
+
+Đây không phải bài toán xây lại hệ thống. Phần lớn field và payload lưu đã tồn tại. Công việc trọng tâm là chuẩn hóa hợp đồng dữ liệu, dùng chung parser, kiểm tra round-trip và tạo UX import an toàn.
 
 ---
 
-## Lượt 41
+## 16. Phản biện bổ sung (vòng 2 — đối chiếu code, 23/06/2026)
 
-**Người dùng:**
+Phần này bổ sung sau khi đọc lại toàn bộ mục 1–15 và đối chiếu trực tiếp với `admin-lesson-manager.js`, `soanbaigemini.html`, `lotrinh.js`. Mục tiêu: cập nhật trạng thái thực tế, chỉ ra lỗ hổng chưa được nói đủ, và điều chỉnh thứ tự ưu tiên triển khai.
 
-cập nhật vào chat.md
+### 16.1. Những gì đã cải thiện trong code (xác nhận)
 
-**Trợ lý:**
+Các vấn đề từng được Grok/ChatGPT nêu ở mức “rủi ro” đã có patch cụ thể trong admin:
 
-Đã cập nhật file `chat.md` — thêm **Lượt 38–41** (hỏi thống kê AI, ShopAIKey/Cloudflare, triển khai tab Theo dõi AI, cập nhật tài liệu chat) vào cuối file; cập nhật dòng phiên trong header.
+| Vấn đề | Trạng thái code hiện tại |
+|---|---|
+| Trắc nghiệm mất khi lưu (bulk trống ghi đè) | `resolveQuestionsForSave()` + guard bulk trống trong `flushBulkEditorsBeforeSave()` |
+| Điền khuyết 3/4 cột lệch | `normalizeFillParts()` + heuristic gợi ý vs đáp án |
+| Nối ô / sắp xếp bị nhầm | `poolsLookLikeSortOrder()`, `buildDragExercisesFromItems()`, `classifyInteractivePipeLine()`, tách `dragMatch` / `dragSort` trong `parseGeminiLessonSections()` |
+| Parser bulk vs item editor lệch | `parseQuestionToItems()` gọi `parseQuestions()` thay vì tự tách cột |
+
+**Kết luận:** Các bug end-to-end phổ biến nhất đã được xử lý ở tầng admin. Tuy nhiên, chưa có fixture tự động chứng minh round-trip — chỉ xác nhận bằng đọc code, chưa phải bằng test.
+
+### 16.2. Phản biện lại mục 9 — cần cập nhật diễn đạt
+
+Mục 9.2 nói các lỗi TN/điền khuyết/nối ô “chưa được chứng minh còn tồn tại” — đúng tại thời điểm viết, nhưng **sau patch `fill-drag-fix1`** nên đổi thành:
+
+> Đã sửa phần lớn ở admin; rủi ro còn lại nằm ở **heuristic** (edge case) và **preview soanbaigemini ≠ import admin**, không phải ở luồng lưu cơ bản.
+
+Heuristic vẫn có thể sai trong các trường hợp:
+
+- Điền khuyết: Gemini ghi gợi ý dài, đáp án ngắn — `normalizeFillParts()` có thể đảo cột.
+- Nối ô: hai pool cùng độ dài, nội dung gần giống — `poolsLookLikeSortOrder()` có thể phân loại sai.
+- Pipe chứa `|` trong LaTeX/tập hợp — `splitQuestionParts()` vẫn fragile dù đã có normalize.
+
+Đây là lý do JSON typed vẫn cần thiết; patch text không thay thế hợp đồng dữ liệu.
+
+### 16.3. Lỗ hổng mới phát hiện khi đọc code
+
+#### A. `importGeminiLessonRaw()` — thứ tự skills và đếm TN
+
+Trong `importGeminiLessonRaw()`:
+
+1. Section `questions` được điền **trước** section `skills`.
+2. Số câu TN trong `alert()` đếm bằng `parseSkills(el('lessonSkills')?.value)` — tức **skills cũ trên form**, chưa phải skills vừa import.
+3. `questionItems` parse lại ở cuối hàm **sau** khi skills đã điền — dữ liệu cuối đúng hơn alert.
+
+**Hệ quả:** Giáo viên có thể thấy “trắc nghiệm (0)” trong alert dù import thành công. Không chặn lưu, nhưng gây nhiễu UX và khó debug.
+
+**Đề xuất:** Đổi thứ tự import — `skills` trước `questions` — hoặc parse/count TN sau khi cả hai đã điền.
+
+#### B. Round-trip drag sau import (dòng 2097 → 2116 → 2142)
+
+Luồng hiện tại:
+
+```text
+parseDragExercises() → dragItems (object)
+→ syncDragToTextarea() (serialize pipe)
+→ parseDragToItems() (deserialize lại)
+```
+
+Đây là **kiểm tra idempotency bắt buộc**. Nếu serialize/deserialize không đối xứng, import có thể làm biến dạng mapping `0-0,1-2` hoặc đổi mode match ↔ sort. Fixture #7, #8 trong mục 13 phải chạy **ngay trên nhánh hiện tại**, trước khi làm JSON.
+
+#### C. `soanbaigemini.html` vẫn lệch admin — chưa chỉ là “parser cũ hơn”
+
+Khác biệt không chỉ là version parser:
+
+| Khía cạnh | `soanbaigemini.html` | `admin-lesson-manager.js` |
+|---|---|---|
+| Nối ô vs sắp xếp | Gộp vào `drag` | Tách `dragMatch`, `dragSort`, `dragMixed` |
+| Trắc nghiệm | Prompt 6 cột, không `skill_id` | Parser hỗ trợ 7 cột |
+| Preview/copy | Section copy riêng từng phần | `importGeminiLessonRaw()` một lần |
+| Phản biện 2 vòng | Có trong prompt Gemini | Không chạy lại khi import admin |
+
+**Hệ quả thực tế:** Giáo viên có hai đường vào editor:
+
+- **Đường A (tốt hơn):** Dán raw Gemini → tab Khác → Import — dùng parser admin mới.
+- **Đường B (dễ lỗi hơn):** Copy từng section trong soanbaigemini — có thể thiếu `skill_id`, lẫn nối ô/sắp xếp.
+
+Tài liệu và UI nên **khuyến khích Đường A**, đồng thời sửa prompt soanbaigemini cho khớp admin (P2 không đủ muộn — nên làm sớm, xem 16.7).
+
+#### D. Preview giáo viên ≠ giao diện học sinh
+
+`renderPreview()` trong admin chỉ hiển thị **số lượng** (đoạn lý thuyết, số TN, số nối/sắp xếp). Không render như `lotrinh.js`.
+
+Trong khi đó `lotrinh.js`:
+
+- Lý thuyết/ví dụ/bài nộp: `lessonRichText()` — có ảnh Markdown, placeholder `HINH_xx`.
+- Tự luận/điền khuyết/TN/nối ô: `mathText()` — **không** parse `![...](url)`.
+
+**Hệ quả:** Giáo viên có thể dán ảnh vào đề tự luận/điền khuyết, preview admin vẫn “ổn”, nhưng học sinh thấy chuỗi Markdown thô. Mục 8.2 đúng hướng nhưng cần nâng mức ưu tiên: đây là blocker cho “chỉ việc chèn ảnh” nếu ảnh nằm trong đề bài tương tác.
+
+#### E. `DANH SÁCH HÌNH ẢNH` chưa nối vào `image_manifest`
+
+Gemini đã có section `DANH SÁCH HÌNH ẢNH CẦN TẠO` / `PROMPT TẠO ẢNH`, nhưng:
+
+- `parseGeminiLessonSections()` dừng ở `stop` — không parse manifest.
+- Marker `HINH_xx` trong nội dung và danh sách ảnh ở cuối bài **không được liên kết tự động**.
+
+Khi làm `lesson-import-v1`, nên có bước:
+
+```text
+parse DANH SÁCH HÌNH → image_manifest[]
+đối chiếu marker trong theory/examples/... → cảnh báo thiếu/không khớp
+```
+
+Không nên bắt giáo viên tự ghép manifest bằng tay.
+
+#### F. Chưa có export ngược (bài đã lưu → JSON)
+
+Kế hoạch P1–P3 mô tả soanbaigemini → JSON → admin. Thiếu chiều ngược:
+
+```text
+bài đã lưu trong DB → export lesson-import-v1.json → chỉnh sửa → import lại
+```
+
+Chiều ngược quan trọng cho: sao chép bài giữa các lớp, backup, chỉnh sửa hàng loạt, và test round-trip thực (fixture #13).
+
+### 16.4. Phản biện schema `lesson-import-v1`
+
+Schema trong mục 11 đủ cho import, nhưng còn thiếu metadata hữu ích:
+
+```json
+{
+  "generated_at": "2026-06-23T10:00:00+07:00",
+  "source": {
+    "tool": "soanbaigemini",
+    "prompt_version": "2026-06-scope-v2",
+    "model": "gemini-..."
+  },
+  "import_notes": []
+}
+```
+
+**Lý do:**
+
+- `prompt_version` giúp biết bài cũ có format 6 cột hay 7 cột TN.
+- `generated_at` hỗ trợ audit khi giáo viên import bài cũ.
+- Không ảnh hưởng payload lưu — adapter bỏ qua khi `save_content`.
+
+Ngoài ra, nên quy định rõ **`slug` sinh tự động** nếu thiếu:
+
+```text
+slug = f(subject, chapter, title) → normalize ASCII, tránh trùng
+```
+
+Admin đã có `suggestSlug()` khi lưu; import JSON nên tái dùng logic này thay vì bắt giáo viên gõ slug.
+
+### 16.5. Phản biện validator (mục 12) — bổ sung rule
+
+Ngoài rule đã liệt kê, cần thêm:
+
+**Lỗi chặn:**
+
+- `essay_exercises[].answer` rỗng khi bài có chấm tự động.
+- `fill_exercises`: `pool` rỗng hoặc `answer` không nằm trong pool (khi một ô).
+- `drag_exercises` mode `sort`: `answer` phải là hoán vị của `items` (cùng multiset).
+- Trùng `slug` với bài đã publish cùng `subject` (tra API trước import).
+
+**Cảnh báo:**
+
+- `skills[].target` không phải số 0–100.
+- Câu TN gán vào cùng một `skill_id` (>80% câu một skill) — có thể do thiếu cột skill.
+- Nội dung có `HINH_xx` nhưng `image_manifest` rỗng.
+- `order_index` trùng hoặc nhảy bước lớn so với bài cùng chương.
+
+### 16.6. Phạm vi ngoài JSON import (không lẫn)
+
+`global_config.json` đang bật `ai_test_ds2api_only` — chỉ ảnh hưởng **AI Explain** qua `api/ai_router.php`, không ảnh hưởng soanbaigemini hay import bài. Không nên đưa DS2API vào lộ trình P0–P5.
+
+### 16.7. Điều chỉnh thứ tự ưu tiên (đề xuất thay mục 14)
+
+Thứ tự cũ (P0 → P5) đúng về kiến trúc, nhưng **chưa tối ưu cho giáo viên đang dùng ngay**. Đề xuất chèn milestone ngắn:
+
+| Bước | Việc | Lý do |
+|---|---|---|
+| **P0a** (1–2 ngày) | Sửa thứ tự import skills→questions; đồng bộ prompt soanbaigemini (7 cột TN, heading NỐI Ô / SẮP XẾP tách) | Giảm lỗi ngay, không cần JSON |
+| **P0b** | Fixture thủ công 3–5 bài mẫu, test idempotency drag + fill | Xác nhận patch hiện tại |
+| **P0** | `lesson-import.js` dùng chung | Nền cho JSON |
+| **P1–P3** | Như mục 14 | |
+| **P2.5** | `mathText()` hoặc wrapper `practiceRichText()` cho đề có ảnh | Blocker UX ảnh trong bài tập |
+| **P4** | Manifest ảnh từ `DANH SÁCH HÌNH` | Giảm việc tay sau import |
+| **P5** | Số lượng bài linh hoạt trong prompt | Giảm sáng tác vượt ảnh |
+
+### 16.8. Tiêu chí “xong” rõ ràng hơn
+
+Chưa nên coi JSON import hoàn tất khi chỉ có nút tải/nhập file. Cần đủ:
+
+1. **Round-trip:** Gemini text → package → import form → lưu → API → render học sinh — nội dung không đổi ý nghĩa.
+2. **Skill integrity:** Mỗi câu TN có `skill` đúng; bảng kỹ năng học sinh khớp.
+3. **Image integrity:** Marker có manifest; ảnh hiển thị đúng ở cả lý thuyết và đề tương tác (sau P2.5).
+4. **Scope safety:** Import Toán 6 trên trang Toán 4 → cảnh báo, không lưu nhầm.
+5. **No silent save:** Import không gọi API; `is_published` luôn false.
+
+### 16.9. Kết luận vòng 2
+
+Tài liệu mục 1–15 **đúng hướng và đủ chi tiết kiến trúc**. Sau đối chiếu code, ba điểm cần nhấn mạnh thêm:
+
+1. **Patch admin đã xử lý nhiều bug vận hành**, nhưng chưa có test — rủi ro chuyển sang heuristic và lệch soanbaigemini.
+2. **`lesson-import.js` đã triển khai** (xem mục 18); giáo viên có text import + JSON import — cần chạy fixture/smoke test thường xuyên.
+3. **“Chỉ việc chèn ảnh”** còn xa nếu ảnh nằm trong đề tương tác (renderer) hoặc manifest ảnh chưa tự sinh từ Gemini.
+
+Mô tả mục tiêu sau vòng 2:
+
+> Luồng ổn định = text import tin cậy (admin) + prompt soanbaigemini khớp + fixture xác nhận → sau đó mới bọc bằng `lesson-import-v1` có validate hai lần; giáo viên import, chèn ảnh theo manifest, xem thử **giao diện học sinh**, rồi mới lưu.
 
 ---
 
-## Lượt 42
+## 17. Quyết định hiện tại
 
-**Người dùng:**
+Ngày cập nhật: 23/06/2026
 
-Sao mỗi lần đăng nhập trang admin.html cứ đòi lưu mật khẩu hoài vậy
+Mình đồng ý tiếp tục code theo hướng đã chốt trong tài liệu.
 
-**Trợ lý:**
+**Đã hoàn thành trong đợt triển khai 23/06/2026** (chi tiết mục 18):
 
-**Nguyên nhân:** Trình duyệt coi ô **Mã bảo mật** là form đăng nhập vì `type="password"` + nút gửi.
+1. Luồng text import qua `lesson-import.js` + admin bridge.
+2. Đồng bộ `soanbaigemini.html` — TN 7 cột, parser chung, export JSON.
+3. Module dùng chung `lesson-import.js` (parser, normalizer, validator).
+4. Import/Export JSON `lesson-import-v1` trong admin.
 
-**Đã sửa trong `admin.html`:**
-- Ô Admin Key: `type="text"` + che ký tự bằng CSS (`admin-secret-mask`), `autocomplete="off"`
-- Form đăng nhập: `autocomplete="off"`, `data-lpignore` (tránh LastPass/1Password)
-- Các ô API key / mật khẩu HS: cùng cách
+Ưu tiên tiếp theo:
 
-Nếu vẫn hỏi sau deploy: xóa mục đã lưu cho site trong Cài đặt → Mật khẩu trình duyệt (bản cũ trước khi sửa).
+1. Chạy smoke test + round-trip qua API/DB.
+2. Gỡ fallback parser cũ trong `soanbaigemini.html`.
+3. Lưu `image_manifest` vào DB (nếu cần).
+4. P5 — số lượng bài linh hoạt trong prompt.
+
+Nguyên tắc hiện tại:
+
+- Không đi thẳng vào JSON thô.
+- Không tự lưu hoặc tự công khai khi import.
+- Ưu tiên P0a trước để giảm lỗi ngay cho giáo viên đang dùng.
 
 ---
 
-## Lượt 43
+## 18. Nhật ký triển khai code (23/06/2026)
 
-**Người dùng:**
+Phần này ghi lại **các file đã sửa/tạo** và **nội dung thay đổi cụ thể** sau khi triển khai theo phản biện mục 16–17 (P0a → P5). Dùng làm đối chiếu khi review hoặc commit.
 
-cập nhật các thông tin lại việc đã cấu hình đọc dữ liệu thành công AI về lượt sử dụng
+### 18.1. Tóm tắt trạng thái
 
-**Trợ lý:**
+| Hạng mục | Trước | Sau (23/06/2026) |
+|---|---|---|
+| Parser Gemini | Hai bản trong admin + soanbaigemini | Một module `lesson-import.js`, admin/soanbaigemini gọi chung |
+| Import JSON | Chưa có | Có: tải/nhập `lesson-import-v1.json`, validate lỗi → chặn |
+| Import text | Parser riêng admin | `LI.buildLessonImportPackage()` — skills trước questions |
+| Trắc nghiệm bulk | 6 cột (soanbaigemini cũ) | 7 cột: `skill_id \| Câu \| A \| B \| C \| D \| Đáp án` |
+| Ảnh trong đề tương tác | `mathText()` — Markdown thô | `practiceRichText()` trong `lotrinh.js` |
+| Manifest ảnh | Thủ công | Parse từ `DANH SÁCH HÌNH`, điền form khi load/import |
+| Smoke test | Chưa có | `tests/lesson-import-smoke.js` (Node) + `tests/lesson-import-smoke.html` (browser) |
+| Cache script | — | `?v=20260623-lesson-import-v2` trên các trang lộ trình + soanbaigemini |
 
-Đã cập nhật `thongtin.md`, `plan.md` và `chat.md` với trạng thái **Theo dõi AI đã cấu hình và đọc dữ liệu thành công**:
+### 18.2. File mới
 
-### `thongtin.md`
-- Bổ sung `ai_usage_log.php`, `ai_stats.php`; `ai_explain.php` ghi log vào `data/ai_usage.json`.
-- Tab admin: **Theo dõi AI**; mô tả nguồn số liệu (log nội bộ, ShopAIKey billing API, Cloudflare GraphQL).
-- Note: ShopAIKey USD đọc API thành công; CF GraphQL khi có token; Gemini chỉ fallback; phạm vi log chỉ lộ trình (`api/ai_explain.php`).
-- Sửa đăng nhập admin (`autocomplete="off"`). Ngày cập nhật **2026-06-21**.
+#### `lesson-import.js`
 
-### `plan.md`
-- Header **2026-06-21**.
-- Mục **đã hoàn thành**: Theo dõi lượt sử dụng AI + sửa đăng nhập admin.
-- Checklist: tick **tab Theo dõi AI** (ShopAIKey/log); thêm mục kiểm tra Cloudflare GraphQL và không hỏi lưu mật khẩu.
+Module lõi (`window.LessonImport`), IIFE, không phụ thuộc framework.
 
-### `chat.md`
-- Thêm **Lượt 42–43**.
+- **Schema:** `lesson-import-v1`, `PROMPT_VERSION = '2026-06-scope-v3'`
+- **Parser Gemini:** `parseGeminiLessonSections()` — tách `dragMatch` / `dragSort` / `dragMixed`, dừng ở `DANH SÁCH HÌNH`
+- **Bulk tương tác:** `parseInteractiveBulkPaste()`, `classifyInteractivePipeLine()`, `resolveInteractiveBulkSection()`
+- **Ảnh:** `parseImageManifest()`, `extractImageMarkers()`, `collectMarkersFromPackage()`
+- **Trắc nghiệm:** `parseQuestions()` (7 cột + `skill_id`), `formatQuestionsBulk()`, `questionsToEditorItems()`
+- **Drag:** `parseDragExercises()`, `buildDragExercisesFromItems()`, `poolsLookLikeSortOrder()`, `parseMatchPairs()`
+- **Package:** `buildLessonImportPackage()`, `normalizeLessonImportPackage()`, `validateLessonImportPackage()`
+- **Adapter:** `packageFromSavePayload()`, `packageToSavePayload()`, `suggestSlugFromMeta()`, `sectionsToEditorTexts()`
+
+#### `tests/fixtures/gemini-raw-sample.txt`
+
+Fixture mẫu Gemini raw (mục tiêu, lý thuyết, tương tác, TN 7 cột, kỹ năng, danh sách hình) — dùng cho smoke test.
+
+#### `tests/lesson-import-smoke.js`
+
+Smoke test Node (`node tests/lesson-import-smoke.js`). Kiểm tra: schema, skills, questions có skill, drag match+sort, fill, essay, image manifest, `is_published === false`, idempotency drag.
+
+#### `tests/lesson-import-smoke.html`
+
+Phiên bản chạy trên browser (fetch fixture, không cần Node). Mở qua local server / Live Server.
+
+### 18.3. File đã sửa
+
+#### `admin-lesson-manager.js`
+
+Thay đổi chính:
+
+1. **Bắt buộc `lesson-import.js`:** load trước admin; thiếu module → `console.error` + `return` sớm (editor không khởi tạo).
+2. **Bridge `LI`:** alias toàn bộ parser/formatter từ `window.LessonImport` (không copy logic).
+3. **Gỡ parser trùng (~700+ dòng):** xóa bản sao `parseGeminiLessonSections`, `parseInteractiveBulkPaste`, `normalizeBulkHeading`, `classifyInteractivePipeLine`, … — chỉ giữ logic admin-only (UI editor, Drive upload, format ví dụ có `[AI]`, v.v.).
+4. **Import text:** `importGeminiLessonRaw()` → `LI.buildLessonImportPackage()` → `applyLessonPackageToForm()`; **skills điền trước questions** (sửa lỗi 16.3.A).
+5. **Import/Export JSON:** `importLessonJsonFile()`, `exportLessonJson()` — lỗi validate chặn import; cảnh báo vẫn cho import; **không tự lưu**; `is_published = false`.
+6. **`applyLessonPackageToForm()` / `buildFormLessonPackage()`:** điền form từ package; export ngược từ form.
+7. **`formatImageManifestText()`:** khi `fillForm()` — quét marker `HINH_xx` trong nội dung bài, ghép với `image_manifest` đã lưu (nếu có).
+8. **`suggestSlug()`:** dùng `LI.suggestSlugFromMeta()` thay logic slug cục bộ.
+9. **`serializeQuestionsBulkFromItems()`:** xuất **7 cột** có `skill_id`.
+10. **`questionsToEditorItems`:** gọi `LI.questionsToEditorItems(questions, skills)`.
+11. **`openStudentPreview()`:** preview phong phú hơn — thống kê, kỹ năng, lý thuyết, ví dụ, 2 câu TN mẫu, cảnh báo manifest thiếu.
+12. **`renderPreview()`:** cảnh báo ảnh thiếu manifest (không gọi `buildFormLessonPackage()` để tránh loop).
+13. **UI tab Khác:** ô `lessonImageManifest`, nút Import JSON, Export JSON, Xem thử học sinh.
+14. **`newLesson()`:** xóa sạch ô manifest ảnh.
+
+#### `soanbaigemini.html`
+
+- Load `lesson-import.js` (cache `v2`).
+- `parseAndPreview()` ưu tiên `LI.parseGeminiLessonSections()`; format TN qua `LI.formatQuestionsBulk()`.
+- Prompt cũ (block comment) cập nhật TN **7 cột**; hướng dẫn cấu trúc đã có 7 cột.
+- Nút **Tải lesson-import-v1.json**; gợi ý import raw vào admin tab Khác.
+- Vẫn giữ `parseLessonSectionsFromRaw()` làm fallback khi thiếu `LessonImport` (nên Ctrl+F5 nếu preview lệch).
+
+#### `lotrinh.js`
+
+- Thêm `practiceRichText()` — render ảnh Markdown `![...](url)` trong đề bài tương tác (tự luận, điền khuyết, drag, trắc nghiệm).
+- Thay `mathText()` bằng `practiceRichText()` tại các vị trí prompt/option bài luyện tập (sửa mục 16.3.D / 8.2).
+
+#### `lotrinhtoan4.html` … `lotrinhtoan9.html` (6 file)
+
+Thứ tự script:
+
+```html
+<script src="lesson-import.js?v=20260623-lesson-import-v2"></script>
+<script src="lotrinh.js?v=20260623-lesson-import-v2"></script>
+<script src="admin-lesson-manager.js?v=20260623-lesson-import-v2"></script>
+```
+
+`lesson-import.js` **phải** load trước `admin-lesson-manager.js`.
+
+### 18.4. Luồng end-to-end sau triển khai
+
+```text
+Ảnh SGK
+→ soanbaigemini (prompt 7 cột TN, heading tách NỐI Ô / SẮP XẾP)
+→ Gemini trả raw text
+→ Đường A (khuyến khích): Lộ trình tab Khác → Import text
+   hoặc Đường B: Tải lesson-import-v1.json → Import JSON
+→ lesson-import.js: parse → normalize → validate
+→ admin form (is_published = false, manifest ảnh điền sẵn)
+→ giáo viên chèn ảnh thật thay HINH_xx
+→ Xem thử (preview nhanh) → Lưu bài học
+→ học sinh: lotrinh.js + practiceRichText()
+```
+
+### 18.5. Việc còn lại (chưa làm trong đợt này)
+
+| Việc | Ghi chú |
+|---|---|
+| Chạy smoke test trên máy có Node | `node tests/lesson-import-smoke.js` |
+| Round-trip đầy đủ qua API + DB | fixture → import → lưu → render học sinh — cần test thủ công |
+| Gỡ fallback parser cũ trong `soanbaigemini.html` | Khi chắc chắn mọi trang luôn load `lesson-import.js` |
+| `image_manifest` lưu vào DB | Hiện manifest chỉ trên form/export JSON; API `save_content` chưa field riêng |
+| Preview học sinh = `lotrinh.js` thật | `openStudentPreview()` vẫn là HTML tĩnh, chưa embed renderer đầy đủ |
+| Validator rule nâng cao (mục 16.5) | Một phần đã có trong `validateLessonImportPackage()`; chưa đủ hết |
+| Số lượng bài linh hoạt trong prompt (P5) | Prompt vẫn có thể ép số lượng cố định ở block comment cũ |
+
+### 18.6. Cách kiểm tra nhanh
+
+1. **Ctrl+F5** trang `lotrinhtoan6.html` (hoặc lớp tương ứng).
+2. Tab **Khác** → dán `tests/fixtures/gemini-raw-sample.txt` → **Import text**.
+3. Kiểm tra: kỹ năng có trước TN, bulk TN 7 cột, manifest ảnh, preview cảnh báo.
+4. **Export JSON** → **Import JSON** lại — nội dung không mất.
+5. Mở `tests/lesson-import-smoke.html` — tất cả dòng **OK**.
