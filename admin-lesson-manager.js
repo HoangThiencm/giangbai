@@ -72,6 +72,8 @@
     let fillItems = [];
     let dragItems = [];
     let questionItems = [];
+    let interactiveEditorMode = 'bulk';
+    let questionsEditorMode = 'bulk';
 
     function el(id) { return document.getElementById(id); }
 
@@ -1242,7 +1244,12 @@
     function syncDragToTextarea() {
         const ta = el('lessonDrag');
         if (!ta) return;
-        ta.value = dragItems.map(i => `${i.de}|${i.trai}|${i.phai}|${i.map}|${i.goi}`).join('\n');
+        ta.value = dragItems.map(item => {
+            if (isDragMatchItem(item)) {
+                return `${item.de}|${item.trai}|${item.phai}|${item.map}|${item.goi}`;
+            }
+            return `${item.de}|${item.trai}|${item.phai}|${item.goi}`;
+        }).join('\n');
         ta.dispatchEvent(new Event('input', { bubbles: true }));
     }
     function renderDragItems() {
@@ -1317,27 +1324,264 @@
     // parse from | format to items (for load)
     function parseEssayToItems(str) {
         return (str || '').split('\n').filter(Boolean).map(line => {
-            const p = line.split('|').map(s=>s.trim());
-            return {de: p[0]||'', dap: p[1]||'', goi: p[2]||''};
+            const p = splitQuestionParts(line);
+            return {de: p[0] || '', dap: p[1] || '', goi: p[2] || ''};
         });
     }
     function parseFillToItems(str) {
         return (str || '').split('\n').filter(Boolean).map(line => {
-            const p = line.split('|').map(s=>s.trim());
-            return {de: p[0]||'', manh: p[1]||'', dap: p[2]||'', goi: p[3]||''};
+            const p = splitQuestionParts(line);
+            return {de: p[0] || '', manh: p[1] || '', dap: p[2] || '', goi: p[3] || ''};
         });
     }
     function parseDragToItems(str) {
         return (str || '').split('\n').filter(Boolean).map(line => {
-            const p = line.split('|').map(s=>s.trim());
-            return {de: p[0]||'', trai: p[1]||'', phai: p[2]||'', map: p[3]||'', goi: p[4]||''};
+            const p = splitQuestionParts(line);
+            const pairSpec = p[3] || '';
+            if (p.length >= 4 && /\d+\s*-\s*\d+/.test(pairSpec)) {
+                return {de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: pairSpec, goi: p[4] || ''};
+            }
+            return {de: p[0] || '', trai: p[1] || '', phai: p[2] || '', map: '', goi: p[3] || ''};
         });
     }
     function parseQuestionToItems(str) {
         return (str || '').split('\n').filter(Boolean).map(line => {
-            const p = line.split('|').map(s=>s.trim());
-            return {cau: p[0]||'', a: p[1]||'', b: p[2]||'', c: p[3]||'', d: p[4]||'', dung: p[5]||''};
+            const p = splitQuestionParts(line);
+            return {cau: p[0] || '', a: p[1] || '', b: p[2] || '', c: p[3] || '', d: p[4] || '', dung: p[5] || ''};
         });
+    }
+
+    function normalizeBulkHeading(line) {
+        return String(line || '')
+            .replace(/^\s*#{1,6}\s*/, '')
+            .replace(/^\s*\d+[.)]\s*/, '')
+            .replace(/^\s*\*\*|\*\*\s*$/g, '')
+            .trim()
+            .toUpperCase();
+    }
+
+    function isInteractivePipeLine(line) {
+        const text = String(line || '').trim();
+        if (!text || !text.includes('|')) return false;
+        if (/^\*\*.+\*\*$/.test(text)) return false;
+        return !resolveInteractiveBulkSection(text);
+    }
+
+    function resolveInteractiveBulkSection(line) {
+        const heading = normalizeBulkHeading(line);
+        if (!heading) return '';
+        if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
+        if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+        if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
+        if (/SẮP XẾP|NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
+        if (/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ|^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
+        return '';
+    }
+
+    function classifyInteractivePipeLine(line) {
+        const parts = splitQuestionParts(line);
+        if (parts.length >= 5 && /\d+\s*-\s*\d+/.test(parts[3] || '')) return 'drag';
+        if (parts.length >= 4) {
+            const leftMulti = poolTextHasMultipleItems(parts[1]);
+            const rightMulti = poolTextHasMultipleItems(parts[2]);
+            if (leftMulti && rightMulti) return 'drag';
+            if (leftMulti || /___|…/.test(parts[0] || '')) return 'fill';
+        }
+        return 'essay';
+    }
+
+    function parseInteractiveBulkPaste(text) {
+        const buckets = { essay: [], fill: [], drag: [] };
+        let section = '';
+        let stop = false;
+        const buffer = [];
+
+        const flush = () => {
+            if (!section || section === 'skip' || !buffer.length) {
+                buffer.length = 0;
+                return;
+            }
+            buckets[section].push(...buffer.filter(isInteractivePipeLine));
+            buffer.length = 0;
+        };
+
+        String(text || '').split('\n').forEach(rawLine => {
+            if (stop) return;
+            const line = String(rawLine || '').trim();
+            if (!line) return;
+
+            const nextSection = resolveInteractiveBulkSection(line);
+            if (nextSection === 'stop') {
+                flush();
+                stop = true;
+                return;
+            }
+            if (nextSection) {
+                flush();
+                if (nextSection !== 'skip') section = nextSection;
+                return;
+            }
+
+            if (!isInteractivePipeLine(line)) return;
+
+            if (section && section !== 'skip') {
+                buffer.push(line);
+                return;
+            }
+
+            const kind = classifyInteractivePipeLine(line);
+            buckets[kind].push(line);
+        });
+
+        flush();
+
+        return {
+            essay: buckets.essay.join('\n'),
+            fill: buckets.fill.join('\n'),
+            drag: buckets.drag.join('\n')
+        };
+    }
+
+    function isDragMatchItem(item) {
+        return /\d+\s*-\s*\d+/.test(String(item?.map || ''));
+    }
+
+    function serializeInteractiveBulkFromItems() {
+        const parts = [];
+        if (essayItems.length) {
+            parts.push('**BÀI TẬP TỰ LUẬN NGẮN**');
+            parts.push(...essayItems.map(item => `${item.de}|${item.dap}|${item.goi}`));
+            parts.push('');
+        }
+        if (fillItems.length) {
+            parts.push('**KÉO THẢ VÀO Ô TRỐNG**');
+            parts.push(...fillItems.map(item => `${item.de}|${item.manh}|${item.dap}|${item.goi}`));
+            parts.push('');
+        }
+        const sortItems = dragItems.filter(item => !isDragMatchItem(item));
+        const matchItems = dragItems.filter(item => isDragMatchItem(item));
+        if (sortItems.length) {
+            parts.push('**SẮP XẾP THỨ TỰ**');
+            parts.push(...sortItems.map(item => `${item.de}|${item.trai}|${item.phai}|${item.goi}`));
+            parts.push('');
+        }
+        if (matchItems.length) {
+            parts.push('**NỐI Ô**');
+            parts.push(...matchItems.map(item => `${item.de}|${item.trai}|${item.phai}|${item.map}|${item.goi}`));
+        }
+        return parts.join('\n').trim();
+    }
+
+    function refreshInteractiveBulkTextarea() {
+        const ta = el('interactiveBulkPaste');
+        if (!ta) return;
+        ta.value = serializeInteractiveBulkFromItems();
+    }
+
+    function syncItemsFromInteractiveBulk() {
+        const parsed = parseInteractiveBulkPaste(el('interactiveBulkPaste')?.value || '');
+        essayItems = parseEssayToItems(parsed.essay);
+        fillItems = parseFillToItems(parsed.fill);
+        dragItems = parseDragToItems(parsed.drag);
+        syncEssayToTextarea();
+        syncFillToTextarea();
+        syncDragToTextarea();
+    }
+
+    function serializeQuestionsBulkFromItems() {
+        return questionItems.map(item => `${item.cau}|${item.a}|${item.b}|${item.c}|${item.d}|${item.dung}`).join('\n');
+    }
+
+    function refreshQuestionsBulkTextarea() {
+        const ta = el('questionsBulkPaste');
+        if (!ta) return;
+        ta.value = serializeQuestionsBulkFromItems();
+    }
+
+    function syncItemsFromQuestionsBulk() {
+        const lines = String(el('questionsBulkPaste')?.value || '').split('\n').map(line => line.trim()).filter(line => {
+            if (!line.includes('|')) return false;
+            const heading = normalizeBulkHeading(line);
+            return !/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ/.test(heading);
+        });
+        questionItems = parseQuestionToItems(lines.join('\n'));
+        syncQuestionsToTextarea();
+    }
+
+    function applyEditorModeButtons(activeBtn, inactiveBtn, activeIsFirst) {
+        if (activeBtn) {
+            activeBtn.classList.toggle('bg-teal-600', activeIsFirst);
+            activeBtn.classList.toggle('text-white', activeIsFirst);
+            activeBtn.classList.toggle('bg-white', !activeIsFirst);
+            activeBtn.classList.toggle('text-slate-600', !activeIsFirst);
+        }
+        if (inactiveBtn) {
+            inactiveBtn.classList.toggle('bg-teal-600', !activeIsFirst);
+            inactiveBtn.classList.toggle('text-white', !activeIsFirst);
+            inactiveBtn.classList.toggle('bg-white', activeIsFirst);
+            inactiveBtn.classList.toggle('text-slate-600', activeIsFirst);
+        }
+    }
+
+    function setInteractiveEditorMode(mode, options = {}) {
+        const { skipSync = false } = options;
+        const nextMode = mode === 'items' ? 'items' : 'bulk';
+        if (!skipSync && nextMode !== interactiveEditorMode) {
+            if (interactiveEditorMode === 'bulk' && nextMode === 'items') {
+                syncItemsFromInteractiveBulk();
+                renderEssayItems();
+                renderFillItems();
+                renderDragItems();
+            } else if (interactiveEditorMode === 'items' && nextMode === 'bulk') {
+                refreshInteractiveBulkTextarea();
+            }
+        }
+        interactiveEditorMode = nextMode;
+        const isBulk = interactiveEditorMode === 'bulk';
+        el('interactiveBulkPanel')?.classList.toggle('hidden', !isBulk);
+        el('interactiveItemsPanel')?.classList.toggle('hidden', isBulk);
+        applyEditorModeButtons(el('interactiveModeBulk'), el('interactiveModeItems'), isBulk);
+        const hint = el('interactiveModeHint');
+        if (hint) {
+            hint.textContent = isBulk
+                ? 'Dán khối BÀI TẬP TƯƠNG TÁC từ Gemini. Chuyển sang Từng câu để chỉnh chi tiết hoặc dán ảnh vào đề.'
+                : 'Soạn từng bài, dán ảnh vào đề khi cần. Chuyển sang Hàng loạt để xem/ghi theo format Gemini.';
+        }
+        if (!skipSync) renderPreview();
+    }
+
+    function setQuestionsEditorMode(mode, options = {}) {
+        const { skipSync = false } = options;
+        const nextMode = mode === 'items' ? 'items' : 'bulk';
+        if (!skipSync && nextMode !== questionsEditorMode) {
+            if (questionsEditorMode === 'bulk' && nextMode === 'items') {
+                syncItemsFromQuestionsBulk();
+                renderQuestionItems();
+            } else if (questionsEditorMode === 'items' && nextMode === 'bulk') {
+                refreshQuestionsBulkTextarea();
+            }
+        }
+        questionsEditorMode = nextMode;
+        const isBulk = questionsEditorMode === 'bulk';
+        el('questionsBulkPanel')?.classList.toggle('hidden', !isBulk);
+        el('questionsItemsPanel')?.classList.toggle('hidden', isBulk);
+        applyEditorModeButtons(el('questionsModeBulk'), el('questionsModeItems'), isBulk);
+        const hint = el('questionsModeHint');
+        if (hint) {
+            hint.textContent = isBulk
+                ? 'Dán các dòng trắc nghiệm từ Gemini. Chuyển sang Từng câu để chỉnh hoặc dán ảnh vào câu hỏi.'
+                : 'Soạn từng câu, dán ảnh khi cần. Chuyển sang Hàng loạt để xem/ghi theo format Gemini.';
+        }
+        if (!skipSync) renderPreview();
+    }
+
+    function flushBulkEditorsBeforeSave() {
+        if (interactiveEditorMode === 'bulk') syncItemsFromInteractiveBulk();
+        if (questionsEditorMode === 'bulk') syncItemsFromQuestionsBulk();
+        syncEssayToTextarea();
+        syncFillToTextarea();
+        syncDragToTextarea();
+        syncQuestionsToTextarea();
     }
 
     function setupEditorFieldShortcuts() {
@@ -1416,7 +1660,7 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-book-open text-teal-600 mr-2"></i>Thiết kế bài học
                     </h3>
-                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. <strong>Dán ảnh (Ctrl+V) sẽ tự nén (tối đa 1200px, ~480KB) rồi upload Google Drive</strong> và chèn link. Thêm từng mục một.</p>
+                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. <strong>Dán ảnh (Ctrl+V) sẽ tự nén (tối đa 1200px, ~480KB) rồi upload Google Drive</strong> và chèn link. Bài tập tương tác / Trắc nghiệm có 2 chế độ <strong>Hàng loạt ↔ Từng câu</strong>, chuyển qua lại được.</p>
                 </div>
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
@@ -1503,10 +1747,24 @@
                     <textarea id="lessonSelfPractice" rows="5" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>
 
-                <div class="mt-4 space-y-4">
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-sm font-bold text-slate-700">Bài tập tương tác</span>
+                    <div class="inline-flex rounded-lg border border-slate-300 overflow-hidden text-xs shadow-sm" role="group" aria-label="Chế độ soạn bài tập tương tác">
+                        <button type="button" id="interactiveModeBulk" class="px-3 py-1.5 font-bold bg-teal-600 text-white">Hàng loạt</button>
+                        <button type="button" id="interactiveModeItems" class="px-3 py-1.5 font-bold bg-white text-slate-600">Từng câu</button>
+                    </div>
+                </div>
+                <p id="interactiveModeHint" class="text-[11px] text-slate-500 mb-2">Dán khối BÀI TẬP TƯƠNG TÁC từ Gemini. Chuyển sang Từng câu để chỉnh chi tiết hoặc dán ảnh vào đề.</p>
+
+                <div id="interactiveBulkPanel" class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p class="text-[11px] text-amber-800 mb-2">Dán nguyên khối từ Gemini (có hoặc không tiêu đề con). Hệ thống tự tách Tự luận, Kéo thả, Sắp xếp, Nối ô theo từng dòng <code>|</code>.</p>
+                    <textarea id="interactiveBulkPaste" rows="8" class="w-full p-2 border border-amber-300 rounded text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none" placeholder="**BÀI TẬP TỰ LUẬN NGẮN**&#10;Đề 1 | Đáp án | Gợi ý&#10;**KÉO THẢ VÀO Ô TRỐNG**&#10;Câu có ___ | mảnh1 » mảnh2 | đáp án | gợi ý"></textarea>
+                </div>
+
+                <div id="interactiveItemsPanel" class="hidden mt-2 space-y-4">
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <span class="text-sm font-bold text-slate-700">Bài tập tự luận (thêm từng bài)</span>
+                            <span class="text-sm font-bold text-slate-700">Bài tập tự luận</span>
                             <button type="button" id="addEssayBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm bài</button>
                         </div>
                         <div id="essayItems" class="space-y-2"></div>
@@ -1514,7 +1772,7 @@
                     </div>
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <span class="text-sm font-bold text-slate-700">Kéo thả vào ô trống (thêm từng bài)</span>
+                            <span class="text-sm font-bold text-slate-700">Kéo thả vào ô trống</span>
                             <button type="button" id="addFillBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
                         </div>
                         <div id="fillItems" class="space-y-2"></div>
@@ -1522,7 +1780,7 @@
                     </div>
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <span class="text-sm font-bold text-slate-700">Nối ô / sắp xếp (thêm từng bài)</span>
+                            <span class="text-sm font-bold text-slate-700">Nối ô / sắp xếp</span>
                             <button type="button" id="addDragBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm</button>
                         </div>
                         <div id="dragItems" class="space-y-2"></div>
@@ -1541,11 +1799,27 @@
             </div>
 
             <div id="tab-tracnghiem" class="lesson-tab-content hidden">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-sm font-bold text-slate-700">Trắc nghiệm (thêm từng câu, dán ảnh vào câu nếu cần)</span>
-                    <button type="button" id="addQuestionBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm câu</button>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                    <span class="text-sm font-bold text-slate-700">Trắc nghiệm</span>
+                    <div class="inline-flex rounded-lg border border-slate-300 overflow-hidden text-xs shadow-sm" role="group" aria-label="Chế độ soạn trắc nghiệm">
+                        <button type="button" id="questionsModeBulk" class="px-3 py-1.5 font-bold bg-teal-600 text-white">Hàng loạt</button>
+                        <button type="button" id="questionsModeItems" class="px-3 py-1.5 font-bold bg-white text-slate-600">Từng câu</button>
+                    </div>
                 </div>
-                <div id="questionItems" class="space-y-2"></div>
+                <p id="questionsModeHint" class="text-[11px] text-slate-500 mb-2">Dán các dòng trắc nghiệm từ Gemini. Chuyển sang Từng câu để chỉnh hoặc dán ảnh vào câu hỏi.</p>
+
+                <div id="questionsBulkPanel" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p class="text-[11px] text-amber-800 mb-2">Mỗi dòng: <code>Câu? | A | B | C | D | B</code>. Có thể dán cả khối <strong>TRẮC NGHIỆM</strong> từ Gemini.</p>
+                    <textarea id="questionsBulkPaste" rows="8" class="w-full p-2 border border-amber-300 rounded text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                </div>
+
+                <div id="questionsItemsPanel" class="hidden">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-bold text-slate-700">Danh sách câu hỏi</span>
+                        <button type="button" id="addQuestionBtn" class="text-xs px-2 py-0.5 bg-teal-600 text-white rounded">+ Thêm câu</button>
+                    </div>
+                    <div id="questionItems" class="space-y-2"></div>
+                </div>
                 <textarea id="lessonQuestions" class="hidden"></textarea>
             </div>
 
@@ -1597,6 +1871,18 @@
         const addFill = el('addFillBtn'); if (addFill) addFill.onclick = addFillItem;
         const addDrag = el('addDragBtn'); if (addDrag) addDrag.onclick = addDragItem;
         const addQ = el('addQuestionBtn'); if (addQ) addQ.onclick = addQuestionItem;
+        const interactiveModeBulk = el('interactiveModeBulk'); if (interactiveModeBulk) interactiveModeBulk.onclick = () => setInteractiveEditorMode('bulk');
+        const interactiveModeItems = el('interactiveModeItems'); if (interactiveModeItems) interactiveModeItems.onclick = () => setInteractiveEditorMode('items');
+        const questionsModeBulk = el('questionsModeBulk'); if (questionsModeBulk) questionsModeBulk.onclick = () => setQuestionsEditorMode('bulk');
+        const questionsModeItems = el('questionsModeItems'); if (questionsModeItems) questionsModeItems.onclick = () => setQuestionsEditorMode('items');
+        el('interactiveBulkPaste')?.addEventListener('input', () => {
+            syncItemsFromInteractiveBulk();
+            renderPreview();
+        });
+        el('questionsBulkPaste')?.addEventListener('input', () => {
+            syncItemsFromQuestionsBulk();
+            renderPreview();
+        });
 
         el('lessonTitleInput').addEventListener('blur', suggestSlug);
         el('lessonChapter').addEventListener('blur', suggestSlug);
@@ -1638,6 +1924,8 @@
         renderDragItems();
         renderQuestionItems();
         setupDynamicImagePaste();
+        setInteractiveEditorMode('bulk', { skipSync: true });
+        setQuestionsEditorMode('bulk', { skipSync: true });
 
         // Tab switching for visual design
         const tabButtons = panel.querySelectorAll('.lesson-tab');
@@ -1848,6 +2136,10 @@
         renderFillItems();
         renderDragItems();
         renderQuestionItems();
+        refreshInteractiveBulkTextarea();
+        refreshQuestionsBulkTextarea();
+        setInteractiveEditorMode('items', { skipSync: true });
+        setQuestionsEditorMode('items', { skipSync: true });
 
         renderSubjectPills();
         renderPreview();
@@ -1942,6 +2234,10 @@
         renderFillItems();
         renderDragItems();
         renderQuestionItems();
+        refreshInteractiveBulkTextarea();
+        refreshQuestionsBulkTextarea();
+        setInteractiveEditorMode('items', { skipSync: true });
+        setQuestionsEditorMode('items', { skipSync: true });
         renderSubjectPills();
         renderPreview();
     }
@@ -1971,10 +2267,14 @@
         fillItems = [];
         dragItems = [];
         questionItems = [];
+        if (el('interactiveBulkPaste')) el('interactiveBulkPaste').value = '';
+        if (el('questionsBulkPaste')) el('questionsBulkPaste').value = '';
         renderEssayItems();
         renderFillItems();
         renderDragItems();
         renderQuestionItems();
+        setInteractiveEditorMode('bulk', { skipSync: true });
+        setQuestionsEditorMode('bulk', { skipSync: true });
         renderPreview();
     }
 
@@ -2011,11 +2311,7 @@
             return;
         }
         suggestSlug();
-        // sync dynamic lists to hidden textareas (for save compatibility)
-        syncEssayToTextarea();
-        syncFillToTextarea();
-        syncDragToTextarea();
-        syncQuestionsToTextarea();
+        flushBulkEditorsBeforeSave();
         const editorValues = [
             el('lessonTheory')?.value || '',
             el('lessonExamples')?.value || '',
