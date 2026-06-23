@@ -612,6 +612,8 @@
     }
 
     function resolveInteractiveBulkSection(line) {
+        const trimmed = String(line || '').trim();
+        if (trimmed.includes('|')) return '';
         const heading = normalizeBulkHeading(line);
         if (!heading) return '';
         if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
@@ -717,6 +719,8 @@
     }
 
     function resolveGeminiSectionKey(line) {
+        const trimmed = String(line || '').trim();
+        if (trimmed.includes('|')) return '';
         const heading = normalizeGeminiSectionHeading(line);
         if (!heading) return '';
         if (/^MỤC TIÊU(?:\s+BÀI HỌC)?/.test(heading)) return 'goal';

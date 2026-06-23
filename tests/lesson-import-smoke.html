@@ -13,7 +13,7 @@
 <body>
     <h1>lesson-import smoke test</h1>
     <pre id="out">Đang chạy…</pre>
-    <script src="../lesson-import.js?v=20260623-lesson-import-v2"></script>
+    <script src="../lesson-import.js?v=20260623-lesson-import-v3"></script>
     <script>
         (async function run() {
             const out = document.getElementById('out');
@@ -50,7 +50,8 @@
             check('skills', pkg.skills.length >= 2);
             check('questions', pkg.questions.length >= 2);
             check('questions have skill', pkg.questions.every(q => q.skill));
-            check('drag match+sort', pkg.drag_exercises.length >= 2);
+            const dragModes = (pkg.drag_exercises || []).map(d => d.mode).join('+') || 'none';
+            check('drag match+sort (' + pkg.drag_exercises.length + ': ' + dragModes + ')', pkg.drag_exercises.length >= 2);
             check('fill', pkg.fill_exercises.length >= 1);
             check('essay', pkg.essay_exercises.length >= 1);
             check('image manifest', pkg.image_manifest.length >= 1);
