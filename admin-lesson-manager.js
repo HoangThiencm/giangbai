@@ -1345,8 +1345,14 @@
     function applyLessonPackageToForm(pkg, report) {
         const filled = [];
         if (pkg.goal_text) { el('lessonGoalInput').value = pkg.goal_text; filled.push('mục tiêu'); }
-        if (pkg.chapter) el('lessonChapter').value = pkg.chapter;
-        if (pkg.title) el('lessonTitleInput').value = pkg.title;
+        if (pkg.chapter) {
+            el('lessonChapter').value = pkg.chapter;
+            filled.push('chương');
+        }
+        if (pkg.title) {
+            el('lessonTitleInput').value = pkg.title;
+            filled.push('tên bài');
+        }
         if (pkg.slug) el('lessonSlug').value = pkg.slug;
         if (pkg.order_index) el('lessonOrder').value = String(pkg.order_index);
         if (!isPageScopedEditor() && pkg.subject) {
@@ -1464,6 +1470,7 @@
             alert('Không nhận diện được section. Hãy đảm bảo Gemini trả về đúng heading: LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG...');
             return;
         }
+        if (!el('lessonSlug').value.trim()) suggestSlug();
         const warnText = validation.warnings.length ? `\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}` : '';
         const errText = validation.errors.length ? `\n\nLỗi (vẫn điền form, kiểm tra trước khi lưu):\n• ${validation.errors.join('\n• ')}` : '';
         alert(`Đã điền: ${filled.join(', ')}.${warnText}${errText}\n\nKiểm tra preview → dán ảnh thật thay HINH_xx → bấm Lưu bài học.`);

@@ -881,6 +881,19 @@
         return slugify([subjectCode, meta?.chapter || '', meta?.title || ''].join(' '));
     }
 
+    function inferLessonTitle(pkg) {
+        const existing = String(pkg?.title || '').trim();
+        if (existing) return existing;
+        const goal = String(pkg?.goal_text || '').trim();
+        if (goal) {
+            const line = goal.split(/\n+/).map(part => part.trim()).find(Boolean) || '';
+            if (line.length >= 8) return line.slice(0, 120);
+        }
+        const chapter = String(pkg?.chapter || '').trim();
+        if (chapter) return `Bài học — ${chapter}`.slice(0, 120);
+        return 'Bài học import';
+    }
+
     function ensureArray(value) {
         return Array.isArray(value) ? value : [];
     }
@@ -923,6 +936,10 @@
             source: input.source || { tool: 'unknown', prompt_version: PROMPT_VERSION },
             import_notes: ensureArray(input.import_notes)
         };
+
+        if (!normalized.title) {
+            normalized.title = inferLessonTitle(normalized);
+        }
 
         if (!normalized.slug) {
             normalized.slug = suggestSlugFromMeta(normalized);
