@@ -540,6 +540,15 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
  * Cho phép mở file bằng link công khai (anyone + reader).
  * Dùng cho ảnh minh họa bài học; bỏ qua lỗi nếu quyền đã tồn tại.
  */
+function drive_lesson_image_embed_url(string $fileId): string
+{
+    $fileId = trim($fileId);
+    if ($fileId === '') {
+        return '';
+    }
+    return 'https://drive.google.com/thumbnail?id=' . rawurlencode($fileId) . '&sz=w1600';
+}
+
 function drive_share_file_anyone(string $fileId): void
 {
     $fileId = trim($fileId);

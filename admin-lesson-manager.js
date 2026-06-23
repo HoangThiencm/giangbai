@@ -588,6 +588,166 @@
         field.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
+    const PENDING_IMAGE_PLACEHOLDER_RE = /!\[(?:Đang tải ảnh[^\]]*|ĐANG_TAI:[^\]]*)\]\(\s*\)/gi;
+    const LESSON_IMAGE_MAX_EDGE = 1200;
+    const LESSON_IMAGE_JPEG_QUALITY = 0.8;
+    const LESSON_IMAGE_TARGET_BYTES = 480 * 1024;
+    const LESSON_IMAGE_SKIP_BELOW_BYTES = 180 * 1024;
+    let lessonPendingImageUploads = 0;
+
+    function createLessonImageUploadToken() {
+        return `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function buildLessonImagePlaceholder(token, label = 'ảnh') {
+        return `\n![ĐANG_TAI:${token}|${label}]()\n`;
+    }
+
+    function buildLessonImageMarkdown(label, url) {
+        return `\n![${label || 'ảnh'}](${url})\n`;
+    }
+
+    function extractDriveFileIdFromUrl(url) {
+        const value = String(url || '').trim();
+        const patterns = [
+            /drive\.google\.com\/thumbnail\?[^#]*\bid=([a-zA-Z0-9_-]+)/i,
+            /drive\.google\.com\/uc\?[^#]*\bid=([a-zA-Z0-9_-]+)/i,
+            /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+            /drive\.google\.com\/open\?[^#]*\bid=([a-zA-Z0-9_-]+)/i,
+        ];
+        for (const pattern of patterns) {
+            const match = value.match(pattern);
+            if (match) return match[1];
+        }
+        return '';
+    }
+
+    function normalizeLessonImagePreviewUrl(url) {
+        const value = String(url || '').trim();
+        if (!/^https?:\/\//i.test(value)) return '';
+        const fileId = extractDriveFileIdFromUrl(value);
+        if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+        return value;
+    }
+
+    function lessonEditorTextHasPendingImages(...values) {
+        return values.some(value => PENDING_IMAGE_PLACEHOLDER_RE.test(String(value || '')));
+    }
+
+    function cleanupStaleLessonImagePlaceholders(text) {
+        const source = String(text || '');
+        if (!PENDING_IMAGE_PLACEHOLDER_RE.test(source)) {
+            return { text: source, removed: 0 };
+        }
+        PENDING_IMAGE_PLACEHOLDER_RE.lastIndex = 0;
+        let removed = 0;
+        const cleaned = source.replace(PENDING_IMAGE_PLACEHOLDER_RE, () => {
+            removed += 1;
+            return '';
+        });
+        return { text: cleaned.replace(/\n{3,}/g, '\n\n').trim(), removed };
+    }
+
+    function formatLessonImageByteSize(bytes) {
+        const size = Number(bytes) || 0;
+        if (size < 1024) return `${size} B`;
+        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+        return new Promise(resolve => {
+            canvas.toBlob(blob => resolve(blob), type, quality);
+        });
+    }
+
+    function loadLessonImageElement(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(image);
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Không đọc được ảnh để nén.'));
+            };
+            image.src = url;
+        });
+    }
+
+    async function compressLessonImageFile(file) {
+        const mime = String(file?.type || '').toLowerCase();
+        if (!file || !mime.startsWith('image/')) return file;
+        if (mime === 'image/gif' || mime === 'image/svg+xml') return file;
+
+        let image;
+        try {
+            image = await loadLessonImageElement(file);
+        } catch (_) {
+            return file;
+        }
+
+        let width = image.naturalWidth || image.width;
+        let height = image.naturalHeight || image.height;
+        if (!width || !height) return file;
+
+        const maxEdge = Math.max(width, height);
+        const withinSize = file.size <= LESSON_IMAGE_SKIP_BELOW_BYTES;
+        const withinEdge = maxEdge <= LESSON_IMAGE_MAX_EDGE;
+        if (withinSize && withinEdge) return file;
+
+        if (maxEdge > LESSON_IMAGE_MAX_EDGE) {
+            const scale = LESSON_IMAGE_MAX_EDGE / maxEdge;
+            width = Math.max(1, Math.round(width * scale));
+            height = Math.max(1, Math.round(height * scale));
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return file;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(image, 0, 0, width, height);
+
+        let quality = LESSON_IMAGE_JPEG_QUALITY;
+        let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+        while (blob && blob.size > LESSON_IMAGE_TARGET_BYTES && quality > 0.52) {
+            quality = Math.max(0.52, quality - 0.08);
+            blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+        }
+        if (!blob || blob.size >= file.size) return file;
+
+        const baseName = String(file.name || 'anh-minh-hoa').replace(/\.[^.]+$/, '') || 'anh-minh-hoa';
+        return new File([blob], `${baseName}.jpg`, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+        });
+    }
+
+    function replaceLessonImagePlaceholder(field, token, finalMd) {
+        const exact = buildLessonImagePlaceholder(token);
+        if (field.value.includes(exact)) {
+            field.value = field.value.replace(exact, finalMd);
+            return true;
+        }
+        const tokenPattern = new RegExp(`!\\[ĐANG_TAI:${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\]]*\\]\\(\\s*\\)`, 'g');
+        if (tokenPattern.test(field.value)) {
+            field.value = field.value.replace(tokenPattern, finalMd);
+            return true;
+        }
+        if (PENDING_IMAGE_PLACEHOLDER_RE.test(field.value)) {
+            field.value = field.value.replace(PENDING_IMAGE_PLACEHOLDER_RE, finalMd.trim());
+            return true;
+        }
+        field.value += finalMd;
+        return false;
+    }
+
     function insertEditorImage(targetId) {
         const field = el(targetId);
         if (!field) return;
@@ -620,17 +780,30 @@
     async function uploadImageFileToDrive(file, targetField) {
         if (!file || !targetField) return;
 
-        const originalText = targetField.value;
-        const cursor = targetField.selectionStart ?? originalText.length;
-        showLessonImageUploadStatus(`Đang tải “${file.name || 'ảnh screenshot'}” lên Google Drive...`, 'loading');
+        const uploadToken = createLessonImageUploadToken();
+        const imageLabel = (file.name || 'ảnh screenshot').replace(/\s+/g, ' ').trim() || 'ảnh';
+        const cursor = targetField.selectionStart ?? targetField.value.length;
+        const placeholder = buildLessonImagePlaceholder(uploadToken, imageLabel);
+        lessonPendingImageUploads += 1;
 
-        // Temporary placeholder
-        const placeholder = `\n![Đang tải ảnh... ${file.name}]()\n`;
+        showLessonImageUploadStatus(`Đang nén “${imageLabel}” trước khi tải lên...`, 'loading');
         targetField.setRangeText(placeholder, cursor, cursor, 'end');
         targetField.dispatchEvent(new Event('input', { bubbles: true }));
 
+        let uploadFile = file;
+        try {
+            uploadFile = await compressLessonImageFile(file);
+        } catch (_) {
+            uploadFile = file;
+        }
+
+        const compressedNote = uploadFile.size < file.size
+            ? ` (${formatLessonImageByteSize(file.size)} → ${formatLessonImageByteSize(uploadFile.size)})`
+            : '';
+        showLessonImageUploadStatus(`Đang tải “${imageLabel}” lên Google Drive${compressedNote}...`, 'loading');
+
         const form = new FormData();
-        form.append('image', file);
+        form.append('image', uploadFile);
         form.append('action', 'upload_image');
 
         try {
@@ -639,33 +812,35 @@
                 credentials: 'include',
                 body: form
             });
-            const data = await res.json();
-
-            if (!data.ok || !data.url) {
-                throw new Error(data.error || 'Upload thất bại');
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (_) {
+                throw new Error(`Máy chủ trả lời không hợp lệ (HTTP ${res.status}).`);
             }
 
-            // Replace placeholder with real markdown
-            const finalMd = `\n![${file.name || 'ảnh'}](${data.url})\n`;
-            const currentVal = targetField.value;
-            const idx = currentVal.indexOf(placeholder);
-            if (idx !== -1) {
-                targetField.value = currentVal.slice(0, idx) + finalMd + currentVal.slice(idx + placeholder.length);
-            } else {
-                // fallback
-                targetField.value = originalText + finalMd;
+            if (!res.ok || !data.ok || !data.url) {
+                throw new Error(data.error || data.detail || `Upload thất bại (HTTP ${res.status}).`);
             }
+
+            const previewUrl = normalizeLessonImagePreviewUrl(data.url);
+            const finalMd = buildLessonImageMarkdown(imageLabel, previewUrl || data.url);
+            replaceLessonImagePlaceholder(targetField, uploadToken, finalMd);
 
             targetField.focus();
             targetField.dispatchEvent(new Event('input', { bubbles: true }));
-            showLessonImageUploadStatus(`Đã tải ảnh lên Google Drive và chèn vào nội dung.`, 'success');
+            const savedText = uploadFile.size < file.size
+                ? ` Đã giảm dung lượng ${formatLessonImageByteSize(file.size)} → ${formatLessonImageByteSize(uploadFile.size)}.`
+                : '';
+            showLessonImageUploadStatus(`Đã tải ảnh lên Google Drive và chèn vào nội dung.${savedText}`, 'success');
         } catch (err) {
-            // revert
-            targetField.value = originalText;
+            replaceLessonImagePlaceholder(targetField, uploadToken, '');
             const message = 'Không thể tải ảnh lên Google Drive: ' + (err.message || err);
             showLessonImageUploadStatus(message, 'error');
             alert(message);
             targetField.dispatchEvent(new Event('input', { bubbles: true }));
+        } finally {
+            lessonPendingImageUploads = Math.max(0, lessonPendingImageUploads - 1);
         }
     }
 
@@ -748,13 +923,15 @@
         if (!preview) return;
         const value = String(field.value || '');
         const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
-        if (!imagePattern.test(value)) {
+        const pendingPattern = PENDING_IMAGE_PLACEHOLDER_RE;
+        if (!imagePattern.test(value) && !pendingPattern.test(value)) {
             preview.classList.add('hidden');
             preview.replaceChildren();
             return;
         }
 
         imagePattern.lastIndex = 0;
+        pendingPattern.lastIndex = 0;
         preview.classList.remove('hidden');
         preview.replaceChildren();
         const title = document.createElement('div');
@@ -762,13 +939,21 @@
         title.textContent = 'Xem trước trong bài học (ảnh hiển thị đúng vị trí Markdown)';
         preview.appendChild(title);
 
+        if (pendingPattern.test(value)) {
+            pendingPattern.lastIndex = 0;
+            const pendingNote = document.createElement('div');
+            pendingNote.className = 'mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800';
+            pendingNote.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang tải ảnh — đợi thông báo xanh rồi mới bấm Lưu bài học.';
+            preview.appendChild(pendingNote);
+        }
+
         let cursor = 0;
         let match;
         while ((match = imagePattern.exec(value)) !== null) {
             const markdown = match[0];
-            const altText = match[1];
-            const imageUrl = match[2];
-            const textBefore = value.slice(cursor, match.index).trim();
+            const altText = match[1].replace(/^ĐANG_TAI:[^|]*\|?/i, '');
+            const imageUrl = normalizeLessonImagePreviewUrl(match[2]);
+            const textBefore = cleanupStaleLessonImagePlaceholders(value.slice(cursor, match.index)).text.trim();
             if (textBefore) {
                 const text = document.createElement('div');
                 text.className = 'mb-2 whitespace-pre-wrap text-slate-700';
@@ -782,6 +967,12 @@
             image.src = imageUrl;
             image.alt = altText || 'Ảnh minh họa';
             image.className = 'max-h-80 max-w-full rounded object-contain';
+            image.addEventListener('error', () => {
+                const fileId = extractDriveFileIdFromUrl(imageUrl);
+                if (!fileId || image.dataset.fallbackTried === '1') return;
+                image.dataset.fallbackTried = '1';
+                image.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            }, { once: true });
             figure.appendChild(image);
 
             const caption = document.createElement('figcaption');
@@ -800,7 +991,7 @@
             cursor = imagePattern.lastIndex;
         }
 
-        const textAfter = value.slice(cursor).trim();
+        const textAfter = cleanupStaleLessonImagePlaceholders(value.slice(cursor)).text.trim();
         if (textAfter) {
             const text = document.createElement('div');
             text.className = 'whitespace-pre-wrap text-slate-700';
@@ -1161,7 +1352,7 @@
                     <h3 class="font-bold text-slate-800 text-lg">
                         <i class="fas fa-book-open text-teal-600 mr-2"></i>Thiết kế bài học
                     </h3>
-                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. <strong>Dán ảnh trực tiếp (Ctrl+V) sẽ tự upload lên Google Drive</strong> và chèn link. Thêm từng mục một.</p>
+                    <p id="lessonEditorScopeHint" class="text-sm text-slate-500">Mỗi tab là một phần nội dung. <strong>Dán ảnh (Ctrl+V) sẽ tự nén (tối đa 1200px, ~480KB) rồi upload Google Drive</strong> và chèn link. Thêm từng mục một.</p>
                 </div>
                 <div class="flex flex-wrap gap-2" id="subjectPills"></div>
             </div>
@@ -1227,7 +1418,7 @@
                     <textarea id="lessonGoalInput" rows="2" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none text-sm" placeholder="Sau bài này học sinh cần nắm được..."></textarea>
                 </label>
                 <label class="block text-sm font-bold text-slate-700">Lý thuyết
-                    <span class="block text-[11px] text-slate-500 mb-1">Dùng Enter 2 lần tách đoạn. <strong>Dán ảnh (Ctrl+V) tự upload Drive</strong> hoặc dùng nút ảnh. Công thức $...$.</span>
+                    <span class="block text-[11px] text-slate-500 mb-1">Dùng Enter 2 lần tách đoạn. <strong>Dán ảnh (Ctrl+V) tự nén rồi upload Drive</strong> hoặc dùng nút ảnh. Công thức $...$.</span>
                     ${richToolbarHtml('lessonTheory')}
                     <textarea id="lessonTheory" rows="11" class="w-full p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
                 </label>
@@ -1310,7 +1501,7 @@
                     <textarea id="lessonVideos" rows="3" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Bài 1 | https://..."></textarea>
                 </label>
                 <div class="mt-3 rounded border border-teal-100 bg-teal-50 p-2 text-[11px] text-teal-800">
-                    Mẹo: <strong>Dán ảnh trực tiếp (Ctrl+V)</strong> vào khung sẽ tự upload lên Google Drive & chèn link. Hoặc nhấn nút ảnh chọn file từ máy. Mỗi mục một ảnh nếu cần.
+                    Mẹo: <strong>Dán ảnh (Ctrl+V)</strong> sẽ tự nén (1200px, ~480KB) rồi upload Google Drive & chèn link. Hoặc nhấn nút ảnh chọn file từ máy.
                 </div>
             </div>
 
@@ -1559,9 +1750,19 @@
         el('lessonOrder').value = lesson.order_index || 1;
         el('lessonPublished').checked = !!lesson.is_published;
         el('lessonGoalInput').value = lesson.goal || lesson.goal_text || '';
-        el('lessonTheory').value = formatTheoryBlocks(lesson.theory);
-        el('lessonExamples').value = formatExamples(lesson.examples);
-        if (el('lessonSelfPractice')) el('lessonSelfPractice').value = formatExamples(lesson.self_practice || []);
+        const theoryText = formatTheoryBlocks(lesson.theory);
+        const examplesText = formatExamples(lesson.examples);
+        const selfPracticeText = formatExamples(lesson.self_practice || []);
+        const theoryCleanup = cleanupStaleLessonImagePlaceholders(theoryText);
+        const examplesCleanup = cleanupStaleLessonImagePlaceholders(examplesText);
+        const selfPracticeCleanup = cleanupStaleLessonImagePlaceholders(selfPracticeText);
+        const removedPlaceholders = theoryCleanup.removed + examplesCleanup.removed + selfPracticeCleanup.removed;
+        el('lessonTheory').value = theoryCleanup.text;
+        el('lessonExamples').value = examplesCleanup.text;
+        if (el('lessonSelfPractice')) el('lessonSelfPractice').value = selfPracticeCleanup.text;
+        if (removedPlaceholders > 0) {
+            showLessonImageUploadStatus(`Đã gỡ ${removedPlaceholders} ảnh chưa tải xong. Vui lòng dán lại ảnh rồi lưu bài.`, 'error');
+        }
         el('lessonEssay').value = formatEssayExercises(lesson.essay_exercises);
         el('lessonFill').value = formatFillExercises(lesson.fill_exercises);
         el('lessonDrag').value = formatDragExercises(lesson.drag_exercises);
@@ -1575,6 +1776,10 @@
         fillItems = parseFillToItems(el('lessonFill').value || '');
         dragItems = parseDragToItems(el('lessonDrag').value || '');
         questionItems = parseQuestionToItems(el('lessonQuestions').value || '');
+        ['lessonTheory', 'lessonExamples', 'lessonSelfPractice'].forEach(id => {
+            const field = el(id);
+            if (field) renderLessonFieldImagePreview(field);
+        });
         renderEssayItems();
         renderFillItems();
         renderDragItems();
@@ -1737,12 +1942,29 @@
 
     async function saveLesson(event) {
         event.preventDefault();
+        if (lessonPendingImageUploads > 0) {
+            alert('Đang tải ảnh lên Google Drive. Vui lòng đợi thông báo "Đã tải ảnh" rồi mới lưu bài.');
+            return;
+        }
         suggestSlug();
         // sync dynamic lists to hidden textareas (for save compatibility)
         syncEssayToTextarea();
         syncFillToTextarea();
         syncDragToTextarea();
         syncQuestionsToTextarea();
+        const editorValues = [
+            el('lessonTheory')?.value || '',
+            el('lessonExamples')?.value || '',
+            el('lessonSelfPractice')?.value || '',
+            el('lessonEssay')?.value || '',
+            el('lessonFill')?.value || '',
+            el('lessonDrag')?.value || '',
+            el('lessonQuestions')?.value || ''
+        ];
+        if (lessonEditorTextHasPendingImages(...editorValues)) {
+            alert('Còn ảnh chưa tải xong trong nội dung. Đợi upload hoàn tất hoặc xóa dòng "Đang tải ảnh" trước khi lưu.');
+            return;
+        }
         const skills = parseSkills(el('lessonSkills').value);
         const payload = {
             action: 'save_content',

@@ -250,7 +250,7 @@ if ($method === 'POST' && $action === 'upload_image') {
     $fileId = $driveResult['file_id'];
     // Ảnh minh họa bài học phải xem được qua link embed — luôn public, không phụ thuộc GOOGLE_DRIVE_SHARE_MODE.
     drive_share_file_anyone($fileId);
-    $embedUrl = 'https://drive.google.com/uc?export=view&id=' . $fileId;
+    $embedUrl = drive_lesson_image_embed_url($fileId);
 
     respond([
         'ok' => true,

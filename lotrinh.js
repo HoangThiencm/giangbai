@@ -193,10 +193,38 @@
         }).join('');
     }
 
+    function extractDriveFileId(url) {
+        const value = String(url || '').trim();
+        const patterns = [
+            /drive\.google\.com\/thumbnail\?[^#]*\bid=([a-zA-Z0-9_-]+)/i,
+            /drive\.google\.com\/uc\?[^#]*\bid=([a-zA-Z0-9_-]+)/i,
+            /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+            /drive\.google\.com\/open\?[^#]*\bid=([a-zA-Z0-9_-]+)/i,
+        ];
+        for (const pattern of patterns) {
+            const match = value.match(pattern);
+            if (match) return match[1];
+        }
+        return '';
+    }
+
     function sanitizeLessonImageUrl(url) {
         const value = String(url || '').trim();
         if (!/^https?:\/\//i.test(value)) return '';
         return value.replace(/[\s"'<>]/g, '');
+    }
+
+    function normalizeLessonImageDisplayUrl(url) {
+        const value = sanitizeLessonImageUrl(url);
+        if (!value) return '';
+        const fileId = extractDriveFileId(value);
+        if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+        return value;
+    }
+
+    function isPendingLessonImageLine(line) {
+        const trimmed = String(line || '').trim();
+        return /^!\[(?:Đang tải ảnh|ĐANG_TAI:)/i.test(trimmed) && /\(\s*\)$/.test(trimmed);
     }
 
     function applyLessonInlineMarkup(text) {
@@ -230,15 +258,25 @@
         };
 
         lines.forEach(line => {
+            if (isPendingLessonImageLine(line)) {
+                flushText();
+                chunks.push(
+                    '<figure class="lesson-inline-image lesson-inline-image--pending"><span class="text-sm text-slate-500"><i class="fas fa-spinner fa-spin mr-1"></i>Ảnh chưa tải xong — giáo viên cần dán lại và lưu bài.</span></figure>'
+                );
+                return;
+            }
             const img = line.trim().match(/^!\[([^\]]*)\]\((\S+)\)$/);
             if (img) {
                 flushText();
-                const url = sanitizeLessonImageUrl(img[2]);
+                const url = normalizeLessonImageDisplayUrl(img[2]);
                 if (!url) return;
                 const alt = escapeHtml(img[1]);
                 chunks.push(
                     `<figure class="lesson-inline-image"><img src="${escapeHtml(url)}" alt="${alt}" loading="lazy">${img[1] ? `<figcaption>${alt}</figcaption>` : ''}</figure>`
                 );
+                return;
+            }
+            if (/^!\[[^\]]*\]\([^)]*\)$/.test(line.trim())) {
                 return;
             }
             textBuffer.push(line);
