@@ -622,6 +622,7 @@
 
         const originalText = targetField.value;
         const cursor = targetField.selectionStart ?? originalText.length;
+        showLessonImageUploadStatus(`Đang tải “${file.name || 'ảnh screenshot'}” lên Google Drive...`, 'loading');
 
         // Temporary placeholder
         const placeholder = `\n![Đang tải ảnh... ${file.name}]()\n`;
@@ -657,12 +658,35 @@
 
             targetField.focus();
             targetField.dispatchEvent(new Event('input', { bubbles: true }));
+            showLessonImageUploadStatus(`Đã tải ảnh lên Google Drive và chèn vào nội dung.`, 'success');
         } catch (err) {
             // revert
             targetField.value = originalText;
-            alert('Không thể tải ảnh lên Google Drive: ' + (err.message || err));
+            const message = 'Không thể tải ảnh lên Google Drive: ' + (err.message || err);
+            showLessonImageUploadStatus(message, 'error');
+            alert(message);
             targetField.dispatchEvent(new Event('input', { bubbles: true }));
         }
+    }
+
+    function showLessonImageUploadStatus(message, type = 'loading') {
+        let notice = document.getElementById('lessonImageUploadStatus');
+        if (!notice) {
+            notice = document.createElement('div');
+            notice.id = 'lessonImageUploadStatus';
+            notice.className = 'fixed bottom-5 right-5 z-[10000] max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-xl';
+            document.body.appendChild(notice);
+        }
+
+        const styles = {
+            loading: 'bg-sky-600 text-white',
+            success: 'bg-emerald-600 text-white',
+            error: 'bg-rose-600 text-white'
+        };
+        notice.className = `fixed bottom-5 right-5 z-[10000] max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-xl ${styles[type] || styles.loading}`;
+        notice.innerHTML = `${type === 'loading' ? '<i class="fas fa-spinner fa-spin mr-2"></i>' : type === 'success' ? '<i class="fas fa-circle-check mr-2"></i>' : '<i class="fas fa-circle-exclamation mr-2"></i>'}${message}`;
+        clearTimeout(window.lessonImageUploadStatusTimer);
+        window.lessonImageUploadStatusTimer = setTimeout(() => notice.remove(), type === 'loading' ? 30000 : 5000);
     }
 
     // Full support: paste image *file* (Ctrl+V screenshot) → auto upload to Google Drive + insert link
@@ -960,7 +984,20 @@
 
                 // Ảnh screenshot phải đi tiếp tới handleRichImagePaste() để upload Drive.
                 // Handler này đang chạy ở capture phase nên nếu chặn ở đây, listener ảnh sẽ không bao giờ nhận được event.
-                if (hasImage) return;
+                if (hasImage) {
+                    const imageItem = Array.from(clipboard?.items || []).find(item =>
+                        item.kind === 'file' && String(item.type || '').startsWith('image/')
+                    );
+                    const imageFile = imageItem?.getAsFile() || Array.from(clipboard?.files || []).find(file =>
+                        String(file.type || '').startsWith('image/')
+                    );
+                    if (imageFile) {
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                        void uploadImageFileToDrive(imageFile, field);
+                    }
+                    return;
+                }
 
                 const text = clipboard?.getData('text/plain');
                 if (typeof text !== 'string') return;
