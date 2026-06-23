@@ -141,6 +141,87 @@
         }[ch]));
     }
 
+    function renderMarkdownTable(htmlStr) {
+        const lines = String(htmlStr || '').split(/(?:<br\s*\/?>|\n)/i);
+        const out = [];
+        let inTable = false;
+        let tableLines = [];
+
+        const flushTable = () => {
+            if (!inTable) return;
+            out.push(renderHtmlTable(tableLines));
+            inTable = false;
+            tableLines = [];
+        };
+
+        lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+                inTable = true;
+                tableLines.push(trimmed);
+                return;
+            }
+            flushTable();
+            out.push(line);
+        });
+        flushTable();
+        return out.join('<br>');
+
+        function renderHtmlTable(tLines) {
+            if (tLines.length < 2 || !tLines[1].replace(/\s/g, '').match(/^\|[\-\:|]+\|$/)) {
+                return tLines.join('<br>');
+            }
+            let tbl = '<table class="lesson-markdown-table"><thead><tr>';
+            const headerCells = tLines[0].slice(1, -1).split('|');
+            headerCells.forEach(cell => {
+                tbl += `<th>${cell.trim()}</th>`;
+            });
+            tbl += '</tr></thead><tbody>';
+            tLines.slice(2).forEach(rowLine => {
+                const cells = rowLine.slice(1, -1).split('|');
+                tbl += '<tr>';
+                cells.forEach(cell => {
+                    tbl += `<td>${cell.trim()}</td>`;
+                });
+                tbl += '</tr>';
+            });
+            return `${tbl}</tbody></table>`;
+        }
+    }
+
+    (function injectLessonMarkdownTableStyles() {
+        if (document.getElementById('lotrinh-md-table-style')) return;
+        const style = document.createElement('style');
+        style.id = 'lotrinh-md-table-style';
+        style.textContent = `
+            .lesson-markdown-table {
+                border-collapse: collapse;
+                width: 100%;
+                max-width: 100%;
+                margin: 0.75rem 0;
+                font-size: 0.95rem;
+            }
+            .lesson-markdown-table th,
+            .lesson-markdown-table td {
+                border: 1px solid #cbd5e1;
+                padding: 0.45rem 0.65rem;
+                text-align: center;
+                vertical-align: middle;
+            }
+            .lesson-markdown-table th {
+                background: #f1f5f9;
+                font-weight: 700;
+                color: #334155;
+            }
+            .lesson-markdown-table td { background: #fff; }
+            .practice-q-text .lesson-markdown-table,
+            .fill-prompt-line .lesson-markdown-table {
+                margin-top: 0.5rem;
+            }
+        `;
+        document.head.appendChild(style);
+    })();
+
     function normalizeDisplayText(value) {
         return String(value ?? '')
             .replace(/&quot;/g, '"')
@@ -184,13 +265,14 @@
     function mathText(value) {
         const source = normalizeMathContent(value);
         const parts = source.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\n$]*?\$|\\\([\s\S]*?\\\))/g);
-        return parts.map(part => {
+        const html = parts.map(part => {
             if (!part) return '';
             if (isMathPart(part)) {
                 return escapeHtml(part.replace(/[ \t]*\n[ \t]*/g, ' '));
             }
             return escapeHtml(part).replace(/\n/g, '<br>');
         }).join('');
+        return renderMarkdownTable(html);
     }
 
     function extractDriveFileId(url) {
@@ -252,13 +334,14 @@
 
     function formatLessonTextBlock(text) {
         const parts = text.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\n$]*?\$|\\\([\s\S]*?\\\))/g);
-        return parts.map(part => {
+        const html = parts.map(part => {
             if (!part) return '';
             if (isMathPart(part)) {
                 return escapeHtml(part.replace(/[ \t]*\n[ \t]*/g, ' '));
             }
             return applyLessonInlineMarkup(part).replace(/\n/g, '<br>');
         }).join('');
+        return renderMarkdownTable(html);
     }
 
     function lessonRichText(value) {
