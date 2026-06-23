@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soạn bài Gemini • Tạo bài học hoàn chỉnh (hình ảnh + nội dung)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/docx@8.5.0/dist/docx.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+        }
+
+        .lesson-section {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .structure-card {
+            border-left: 4px solid #0f766e;
+        }
+
+        .image-prompt {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.8rem;
+            background: #f8fafc;
+        }
+
+        .gemini-canvas-hint {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .math {
+            font-family: 'Computer Modern', 'Cambria Math', serif;
+            background: #f1f5f9;
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+
+        .preview-box {
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        /* Fix for text selection issues: prevent drag interference */
+        textarea, #generated-prompt, #gemini-output {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -webkit-user-drag: none;
+        }
+
+        #upload-area {
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
+
+        /* Prevent layout shift or escape when selecting text */
+        .bg-white, .rounded-3xl {
+            -webkit-user-drag: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-11 h-11 bg-teal-600 rounded-2xl flex items-center justify-center shadow-sm">
+                    <i class="fas fa-graduation-cap text-white text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-semibold text-slate-800 tracking-tight">Soạn bài Gemini - Tạo bài học hoàn chỉnh</h1>
+                    <p class="text-sm text-slate-500 -mt-0.5">Dán ảnh sách → Gemini phân tích + sinh nội dung + hình ảnh minh họa → Xuất Word + copy vào Editor</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-x-2 text-sm">
+                <div class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl flex items-center gap-x-2 text-xs font-medium">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Chạy tốt trong Gemini Canvas</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-8">
+            <!-- Introduction -->
+            <div class="max-w-3xl mb-8">
+                <div class="gemini-canvas-hint rounded-3xl p-5 border border-sky-200">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-robot text-sky-600 mt-1"></i>
+                        <div class="text-sm text-sky-700">
+                            <strong>Luồng tích hợp (tất cả trong file này):</strong><br>
+                            1. Dán/Ctrl+V nhiều ảnh screenshot sách vào vùng Ảnh đầu vào.<br>
+                            2. Nhấn "Tạo bài học đầy đủ từ ảnh" (gọi Gemini trực tiếp với key của bạn + ảnh).<br>
+                            3. Tool nhận kết quả, parse thành đúng cấu trúc hệ thống.<br>
+                            4. Tự động tạo danh sách prompt hình ảnh chuẩn sách giáo khoa.<br>
+                            5. Bạn gen ảnh với Gemini, dán ảnh vào tool nếu muốn preview.<br>
+                            6. Xuất Word hoàn chỉnh (có vị trí hình + prompt) hoặc copy blocks sang editor chính.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- LEFT: INPUT -->
+                <div class="lg:col-span-5">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="font-semibold text-lg mb-4 flex items-center gap-x-2">
+                            <i class="fas fa-images text-teal-600"></i>
+                            <span>1. Đầu vào</span>
+                        </h2>
+
+                        <!-- Gemini API Key (lưu localStorage) -->
+                        <div class="mb-4">
+                            <label class="text-xs font-medium text-slate-600">Gemini API Key (lưu trình duyệt)</label>
+                            <div class="flex gap-2 mt-1">
+                                <input id="geminiKey" type="password" class="flex-1 border border-slate-300 rounded-2xl px-3 py-2 text-sm" placeholder="AIzaSy...">
+                                <button onclick="saveGeminiKey()" class="px-3 py-1 text-xs bg-slate-200 hover:bg-slate-300 rounded-2xl">Lưu</button>
+                            </div>
+                            <div class="text-[10px] text-slate-400">Cần key Gemini (tạo tại aistudio.google.com). Chỉ dùng local, không gửi đâu cả.</div>
+                        </div>
+
+                        <!-- Lesson Info -->
+                        <div class="space-y-4 mb-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs font-medium text-slate-600 block mb-1">Lớp</label>
+                                    <select id="subject" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500">
+                                        <option value="Toán 4">Toán 4</option>
+                                        <option value="Toán 5">Toán 5</option>
+                                        <option value="Toán 6" selected>Toán 6</option>
+                                        <option value="Toán 7">Toán 7</option>
+                                        <option value="Toán 8">Toán 8</option>
+                                        <option value="Toán 9">Toán 9</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-slate-600 block mb-1">Chương</label>
+                                    <input id="chapter" type="text" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm" 
+                                           placeholder="Chương 2: Số tự nhiên" value="Chương 2: Số tự nhiên">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-medium text-slate-600 block mb-1">Tên bài học</label>
+                                <input id="title" type="text" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm" 
+                                       placeholder="Bài 5: Ước chung và bội chung" value="Bài 5: Ước chung và bội chung">
+                            </div>
+                        </div>
+
+                        <!-- Image Upload - Drag & Drop focused -->
+                        <div>
+                            <label class="text-xs font-semibold text-teal-700 block mb-1.5">Chụp màn hình → Ctrl + V ảnh vào đây (chính)</label>
+                            
+                            <div id="upload-area" 
+                                 class="border-3 border-dashed border-teal-300 hover:border-teal-500 bg-white hover:bg-teal-50/30 transition-all rounded-3xl p-8 text-center cursor-pointer">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-download text-5xl text-teal-500 mb-3"></i>
+                                    <div class="text-lg font-bold text-slate-700 mb-1">
+                                        Ctrl + V dán ảnh chụp màn hình vào đây
+                                    </div>
+                                    <div class="text-sm text-slate-500 mb-4">
+                                        Chụp trang sách → dán trực tiếp (nhiều ảnh OK)
+                                    </div>
+                                    
+                                    <button type="button" id="choose-file-btn"
+                                            class="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm">
+                                        <i class="fas fa-folder-open"></i>
+                                        <span>Hoặc chọn file từ máy (nếu cần)</span>
+                                    </button>
+                                </div>
+                                <input type="file" id="image-input" multiple accept="image/*" class="hidden">
+                            </div>
+
+                            <div id="image-preview" class="mt-3 grid grid-cols-4 gap-2 hidden"></div>
+                            
+                            <div class="mt-1 text-[10px] text-teal-700 font-medium">
+                                <strong>Chụp màn hình → Ctrl + V nhiều lần</strong> để thêm ảnh. Sau đó nhấn nút lớn bên phải để gọi Gemini trực tiếp.
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Ghi chú thêm (tùy chọn)</label>
+                            <textarea id="notes" rows="2" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm" 
+                                      placeholder="Ví dụ: Tập trung vào dạng bài tập thực tế, thêm nhiều ví dụ hình học..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MIDDLE: ACTIONS -->
+                <div class="lg:col-span-7">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="font-semibold text-lg mb-4 flex items-center gap-x-2">
+                            <i class="fas fa-magic text-teal-600"></i>
+                            <span>2. Tạo nội dung</span>
+                        </h2>
+
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="generateFullLessonDirect()"
+                                    class="flex-1 min-w-[260px] bg-emerald-600 hover:bg-emerald-700 transition-colors text-white px-6 py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-x-2 shadow-sm">
+                                <i class="fas fa-magic"></i>
+                                <span>Tạo bài học đầy đủ từ ảnh (gọi Gemini trực tiếp)</span>
+                            </button>
+
+                            <button onclick="showStructureGuide()"
+                                    class="px-5 py-3 border border-slate-300 hover:bg-slate-50 transition-colors rounded-2xl text-sm font-medium flex items-center gap-x-2">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Xem cấu trúc</span>
+                            </button>
+                        </div>
+
+                        <div class="text-[10px] text-slate-400 mt-1">Tool sẽ gửi ảnh + prompt chi tiết đến Gemini API của bạn và nhận kết quả ngay trong file này.</div>
+
+                        <div class="mt-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium">Prompt đã tạo (copy cái này cho Gemini):</span>
+                                <button onclick="copyPrompt()" 
+                                        class="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm">
+                                    <i class="fas fa-copy"></i> 
+                                    <span>Copy Prompt</span>
+                                </button>
+                            </div>
+                            <textarea id="generated-prompt" rows="9" readonly
+                                      class="w-full font-mono text-xs border border-slate-200 bg-slate-50 p-3 rounded-2xl resize-y"
+                                      placeholder="Nhấn nút 'Tạo Prompt cho Gemini Canvas' để sinh prompt đầy đủ..."></textarea>
+                            <div class="text-[10px] text-orange-600 mt-1">
+                                → Dùng nút Copy ở trên. <strong>Đừng kéo chuột chọn chữ</strong> trong ô này để tránh nút Gemini nổi lên.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OUTPUT SECTION -->
+                <div class="lg:col-span-12 mt-2">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-semibold text-lg flex items-center gap-x-2">
+                                <i class="fas fa-file-alt text-teal-600"></i>
+                                <span>3. Kết quả từ Gemini (dán vào đây)</span>
+                            </h2>
+                            <div class="flex gap-x-2">
+                                <button onclick="parseAndPreview()"
+                                        class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-sm rounded-2xl flex items-center gap-x-2 text-slate-700">
+                                    <i class="fas fa-sync-alt"></i>
+                                    <span>Parse + Chuẩn bị hình ảnh</span>
+                                </button>
+                                <button onclick="exportToWord()"
+                                        class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 transition-colors text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm">
+                                    <i class="fas fa-file-word"></i>
+                                    <span>Xuất Word (.docx)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <!-- Paste Gemini Result -->
+                            <div>
+                                <label class="text-xs uppercase tracking-wider font-medium text-slate-500 block mb-2">
+                                    Dán nội dung Gemini trả về (sau đó nhấn Phân tích bên phải)
+                                </label>
+                                <textarea id="gemini-output" rows="8" 
+                                          class="w-full border border-slate-200 p-3 rounded-2xl text-sm font-mono resize-y"
+                                          placeholder="Dán toàn bộ nội dung bài học mà Gemini tạo ra ở đây..."></textarea>
+                                <div class="text-[10px] text-orange-600 mt-1">Mẹo: Dán xong nhấn "Phân tích" → dùng nút Copy của từng phần (không cần quét chọn trong ô này).</div>
+                            </div>
+
+                            <!-- Preview -->
+                            <div>
+                                <label class="text-xs uppercase tracking-wider font-medium text-slate-500 block mb-2">Xem trước cấu trúc</label>
+                                <div id="preview-area" 
+                                     class="border border-slate-200 rounded-2xl p-4 bg-slate-50 min-h-[320px] preview-box text-sm overflow-auto">
+                                    <div class="text-slate-400 italic text-center py-10">
+                                        Chưa có nội dung.<br>
+                                        1. Dán kết quả Gemini vào ô bên trái<br>
+                                        2. Nhấn "Phân tích &amp; Xem trước"<br>
+                                        3. Xuất Word rồi copy từng khối vào đúng tab của hệ thống.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#0f766e');
+        }
+
+        // Image upload handling
+        let uploadedImages = [];
+
+        function setupImageUpload() {
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('image-input');
+            const previewContainer = document.getElementById('image-preview');
+
+            // Attach choose file only to the explicit button (prevents accidental open during text selection on page)
+            const chooseBtn = document.getElementById('choose-file-btn');
+            if (chooseBtn) {
+                chooseBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    fileInput.click();
+                });
+            }
+
+            // The drop zone itself should not open file picker on click (only drag)
+            uploadArea.addEventListener('click', (e) => {
+                // do nothing - use the button instead
+            });
+
+            // Extra protection: make sure selecting text in textareas doesn't trigger upload behaviors
+            document.querySelectorAll('textarea').forEach(ta => {
+                ta.addEventListener('mousedown', e => {
+                    e.stopPropagation();
+                });
+
+                // Prevent dragstart from text selection in textareas from interfering with the UI
+                ta.addEventListener('dragstart', e => {
+                    e.stopPropagation();
+                    // Allow the text selection drag itself, but stop it from triggering outer drop logic
+                });
+            });
+
+            // Global dragstart protection - only allow file drags from upload area
+            document.addEventListener('dragstart', (e) => {
+                const isFileDrag = e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files');
+                const isFromUpload = e.target.closest && e.target.closest('#upload-area');
+
+                if (!isFileDrag && !isFromUpload) {
+                    if (e.target.tagName === 'TEXTAREA' || e.target.closest('textarea')) {
+                        return;
+                    }
+                }
+            }, true);
+
+            // Aggressively protect textareas from Gemini's "Hỏi Gemini" overlay and selection drag issues
+            function protectTextArea(ta) {
+                if (!ta) return;
+
+                // Stop Gemini from reacting to selections inside
+                ['select', 'selectionchange', 'selectstart', 'mouseup', 'mousedown'].forEach(evt => {
+                    ta.addEventListener(evt, (e) => {
+                        e.stopImmediatePropagation();
+                    }, true);
+                });
+
+                // Make selection as "internal" as possible
+                ta.style.userSelect = 'text';
+            }
+
+            // Protect the two main text areas
+            const promptTA = document.getElementById('generated-prompt');
+            const outputTA = document.getElementById('gemini-output');
+            protectTextArea(promptTA);
+            protectTextArea(outputTA);
+
+            // Also protect any future textareas
+            document.querySelectorAll('textarea').forEach(protectTextArea);
+
+            // === DRAG & DROP focused (primary method) ===
+            uploadArea.addEventListener('dragover', (e) => {
+                if (!e.dataTransfer || !e.dataTransfer.types || !e.dataTransfer.types.includes('Files')) {
+                    e.dataTransfer.effectAllowed = 'none';
+                    return;
+                }
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                uploadArea.classList.add('!border-teal-600', 'bg-teal-100');
+            });
+
+            uploadArea.addEventListener('dragleave', (e) => {
+                if (e.relatedTarget && uploadArea.contains(e.relatedTarget)) return;
+                uploadArea.classList.remove('!border-teal-600', 'bg-teal-100');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('!border-teal-600', 'bg-teal-100');
+
+                const files = e.dataTransfer ? e.dataTransfer.files : null;
+                if (files && files.length > 0) {
+                    handleFiles(files);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+
+            function handleFiles(files) {
+                if (!files || files.length === 0) return;
+
+                uploadedImages = [];
+                previewContainer.innerHTML = '';
+                previewContainer.classList.remove('hidden');
+
+                Array.from(files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        uploadedImages.push({
+                            name: file.name,
+                            data: ev.target.result
+                        });
+
+                        const imgDiv = document.createElement('div');
+                        imgDiv.className = 'relative group border border-slate-200 rounded-xl overflow-hidden';
+                        imgDiv.innerHTML = `
+                            <img src="${ev.target.result}" class="w-full aspect-[4/3] object-cover">
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1.5 py-0.5 truncate">
+                                ${file.name}
+                            </div>
+                        `;
+                        previewContainer.appendChild(imgDiv);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        // Build powerful prompt for Gemini - EXACT structure matching the admin editor
+        function buildGeminiPrompt() {
+            const subject = document.getElementById('subject').value;
+            const chapter = document.getElementById('chapter').value;
+            const title = document.getElementById('title').value;
+            const notes = document.getElementById('notes').value;
+
+            let imageDescription = '';
+            if (uploadedImages.length > 0) {
+                imageDescription = `\n\n**ẢNH BÀI HỌC ĐÍNH KÈM (${uploadedImages.length} ảnh):** Hãy phân tích kỹ các ảnh sách giáo khoa tôi upload. Trích xuất khái niệm, ví dụ, bài tập.`;
+            }
+
+            const prompt = `Bạn là chuyên gia soạn bài học Toán theo đúng hệ thống E-learning hiện tại. 
+
+Nhiệm vụ: Tạo **TOÀN BỘ** nội dung một bài học theo **ĐÚNG CẤU TRÚC** và **ĐỊNH DẠNG** sau để tôi copy trực tiếp vào hệ thống (từ Word).
+
+**THÔNG TIN BÀI:**
+- Môn học: ${subject}
+- Chương: ${chapter}
+- Tên bài: ${title}
+${notes ? `- Yêu cầu đặc biệt: ${notes}` : ''}
+
+${imageDescription}
+
+**YÊU CẦU BẮT BUỘC VỀ ĐỊNH DẠNG (RẤT QUAN TRỌNG):**
+
+1. **MỤC TIÊU BÀI HỌC**
+   - Viết 2-4 câu ngắn gọn.
+
+2. **LÝ THUYẾT** (dán vào tab "Lý thuyết")
+   - Viết dạng rich text: dùng **đậm**, *nghiêng*, ++gạch chân++.
+   - Công thức bắt buộc dùng LaTeX: $A = \\{1, 2, 3\\}$ hoặc $$...$$
+   - Tách đoạn bằng 2 lần xuống dòng.
+   - Muốn có nút AI giải thích thì thêm dòng [AI] ở cuối đoạn.
+
+3. **VÍ DỤ** (dán vào tab "Ví dụ")
+   - Viết theo kiểu **DẠNG 1:** 
+   - Mỗi dạng cách nhau bằng 2 lần xuống dòng.
+   - Ví dụ:
+     **DẠNG 1: Tên dạng**
+     Nội dung giải thích.
+     Ví dụ cụ thể.
+
+4. **BÀI TẬP NỘP GIÁO VIÊN** (dán vào tab "Bài tập tương tác" - phần trên)
+   - Cũng viết theo kiểu DẠNG như phần Ví dụ.
+
+5. **BÀI TẬP TƯƠNG TÁC** (copy nguyên từng dòng vào các ô tương ứng)
+
+   **a. Bài tập tự luận** (dán vào ô "Bài tập tự luận"):
+   Đề bài đầy đủ | Đáp án mẫu | Gợi ý ngắn
+   (mỗi bài một dòng, dùng dấu | )
+
+   **b. Kéo thả vào ô trống** (dán vào ô "Kéo vào ô trống"):
+   Câu hỏi có ___ | mảnh1 » mảnh2 » mảnh3 | đáp án | gợi ý
+   (dùng dấu » ngăn cách các mảnh)
+
+   **c. Nối ô / Sắp xếp** (dán vào ô "Nối ô / sắp xếp"):
+   - Nối: Đề | Trái1 » Trái2 | Phải1 » Phải2 | 0-0,1-1 | gợi ý
+   - Sắp xếp: Đề | Các phần tử » ngăn cách | Thứ tự đúng » | gợi ý
+
+6. **TRẮC NGHIỆM** (dán vào ô "Câu hỏi trắc nghiệm"):
+   Câu hỏi đầy đủ? | A | B | C | D | B
+   (mỗi câu một dòng, đáp án là A/B/C/D)
+
+7. **KỸ NĂNG CẦN ĐẠT**:
+   id_khong_dau | Tên kỹ năng | 80
+
+8. **NHIỆM VỤ HỌC SINH**:
+   - Đọc và hiểu lý thuyết
+   - ...
+
+**QUY TẮC HÌNH ẢNH:**
+- Trong nội dung rich text (Lý thuyết, Ví dụ), khi cần hình thì dùng: ![Mô tả ngắn](HINH_01)
+- Cuối bài, thêm phần riêng:
+  **DANH SÁCH HÌNH ẢNH CẦN TẠO**
+  HINH_01: Mô tả chi tiết
+  **PROMPT TẠO ẢNH (chuẩn sách giáo khoa):**
+  "Minh họa sách giáo khoa Toán lớp X, phong cách vector sạch sẽ, nền trắng, đường nét rõ ràng, màu sắc tươi sáng, nhãn chữ tiếng Việt rõ ràng. [mô tả chi tiết khái niệm]. Không có nhân vật hoạt hình."
+
+**YÊU CẦU XUẤT RA:**
+Xuất theo đúng thứ tự trên, dùng heading rõ ràng để tôi dễ copy từ Word vào từng tab của hệ thống.
+Sử dụng LaTeX đúng cú pháp $...$ .
+Giữ ngôn ngữ chuẩn sách giáo khoa Việt Nam.
+
+Bắt đầu tạo bài học.`;
+
+            document.getElementById('generated-prompt').value = prompt;
+            document.getElementById('generated-prompt').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyPrompt() {
+            const textarea = document.getElementById('generated-prompt');
+            if (!textarea || !textarea.value.trim()) {
+                alert("Vui lòng nhấn 'Tạo Prompt cho Gemini Canvas' trước.");
+                return;
+            }
+
+            const text = textarea.value;
+
+            // Try modern Clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => showCopyToast("Đã copy prompt"))
+                    .catch(() => fallbackCopyText(text));
+            } else {
+                fallbackCopyText(text);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            // Old reliable method for sandboxed environments (Gemini Canvas, etc.)
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.top = '0';
+            ta.style.left = '0';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+
+            try {
+                const ok = document.execCommand('copy');
+                if (ok) {
+                    showCopyToast("Đã copy prompt (fallback)");
+                } else {
+                    showManualCopy(text);
+                }
+            } catch (e) {
+                showManualCopy(text);
+            }
+            document.body.removeChild(ta);
+        }
+
+        function showCopyToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 bg-emerald-600 text-white px-4 py-2 rounded-2xl text-sm shadow-lg flex items-center gap-x-2 z-[9999]`;
+            toast.innerHTML = `<i class="fas fa-check mr-2"></i>${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        function showManualCopy(text) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[9999]';
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 max-w-[90%] w-full max-w-2xl mx-4">
+                    <div class="font-bold mb-2">Gemini chặn Clipboard API (lỗi permissions policy)</div>
+                    <p class="text-sm mb-3">Hãy copy thủ công nội dung dưới đây:</p>
+                    <textarea readonly class="w-full h-80 p-3 border rounded-2xl font-mono text-xs" style="white-space:pre;">${text}</textarea>
+                    <div class="mt-4 text-right">
+                        <button onclick="this.closest('.fixed').remove()" class="px-5 py-2 bg-slate-800 text-white rounded-2xl text-sm">Đóng</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Full lesson prompt for option B - user can create the lesson with images here
+        function buildFullLessonPrompt() {
+            const subject = document.getElementById('subject').value;
+            const chapter = document.getElementById('chapter').value;
+            const title = document.getElementById('title').value;
+            const notes = document.getElementById('notes').value;
+
+            let imageInfo = '';
+            if (uploadedImages.length > 0) {
+                imageInfo = `\n\n**${uploadedImages.length} ẢNH BÀI HỌC ĐÃ DÁN (screenshot).** Phân tích chúng kỹ để tạo nội dung chính xác.`;
+            }
+
+            const prompt = `Bạn là chuyên gia soạn bài học Toán E-learning.
+
+Tạo **TOÀN BỘ** bài học hoàn chỉnh từ ảnh tôi cung cấp, theo đúng cấu trúc hệ thống, và chuẩn bị hình ảnh.
+
+**BÀI:** ${subject} - ${chapter} - ${title}
+${notes ? `Lưu ý: ${notes}` : ''}
+
+${imageInfo}
+
+**CẤU TRÚC XUẤT (dùng đúng format để tôi copy dễ dàng):**
+
+1. MỤC TIÊU BÀI HỌC
+2. LÝ THUYẾT (rich + LaTeX $...$ + ![HINH_xx])
+3. VÍ DỤ (DẠNG 1: ...)
+4. BÀI TẬP NỘP GIÁO VIÊN
+5. BÀI TẬP TƯƠNG TÁC
+   - Tự luận: "Đề | Đáp án | Gợi ý"
+   - Kéo thả: "Câu | mảnh1 » mảnh2 | đáp án | gợi ý"
+   - Nối/Sắp xếp đúng format
+6. TRẮC NGHIỆM: "Câu | A | B | C | D | B"
+7. Kỹ năng & Nhiệm vụ
+
+**HÌNH ẢNH:**
+- Dùng placeholder ![Mô tả](HINH_01) trong nội dung.
+- Cuối cùng liệt kê **DANH SÁCH HÌNH ẢNH CẦN TẠO** với prompt chuẩn sách giáo khoa (vector sạch, nền trắng, nhãn VN rõ ràng).
+
+Phân tích ảnh, tạo nội dung hay, và đưa sẵn  prompt hình ảnh chất lượng để tôi copy dán hỏi bạn gen ảnh ngay trong Canvas này.
+
+Sử dụng LaTeX đúng $...$ .`;
+
+            document.getElementById('generated-prompt').value = prompt;
+            document.getElementById('generated-prompt').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Minimal copy version for B - user pastes screenshots to Gemini chat first
+        function buildMinimalPrompt() {
+            const subject = document.getElementById('subject').value;
+            const chapter = document.getElementById('chapter').value;
+            const title = document.getElementById('title').value;
+            const notes = document.getElementById('notes').value;
+
+            const prompt = `Dựa trên các ảnh screenshot bài học tôi vừa dán vào cuộc trò chuyện này, hãy tạo TOÀN BỘ bài học "${title}" (${subject} - ${chapter}) theo đúng cấu trúc và định dạng của hệ thống E-learning.
+
+${notes ? `Lưu ý: ${notes}` : ''}
+
+Yêu cầu:
+- Phân tích kỹ ảnh.
+- Tạo nội dung theo đúng format: Mục tiêu, Lý thuyết (rich + LaTeX), Ví dụ theo DẠNG, Bài tập nộp, Tương tác (tự luận, kéo thả, nối), Trắc nghiệm.
+- Sử dụng placeholder hình ảnh ![Mô tả](HINH_01) trong nội dung.
+- Cuối cùng đưa DANH SÁCH HÌNH ẢNH CẦN TẠO với prompt chuẩn sách giáo khoa chi tiết để tôi copy gen ảnh ngay.
+
+Làm một lần đầy đủ, dùng LaTeX $...$ .`;
+
+            document.getElementById('generated-prompt').value = prompt;
+            document.getElementById('generated-prompt').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showStructureGuide() {
+            const modal = document.createElement('div');
+            modal.className = `fixed inset-0 bg-black/50 flex items-center justify-center z-50`;
+            modal.innerHTML = `
+                <div class="bg-white max-w-2xl w-full mx-4 rounded-3xl p-7 max-h-[85vh] overflow-auto">
+                    <h3 class="text-xl font-semibold mb-4">Cấu trúc bài học bắt buộc</h3>
+                    
+                    <div class="space-y-4 text-sm">
+                        <div class="structure-card bg-slate-50 p-4 rounded-2xl">
+                            <div class="font-semibold text-teal-700">1. MỤC TIÊU BÀI HỌC</div>
+                            <div class="text-slate-600">2–4 câu, rõ ràng, bắt đầu bằng "Sau bài học này..."</div>
+                        </div>
+                        
+                        <div class="structure-card bg-slate-50 p-4 rounded-2xl">
+                            <div class="font-semibold text-teal-700">2. LÝ THUYẾT</div>
+                            <div class="text-slate-600">Rich text, Markdown, LaTeX ($...$), có thể thêm [AI] ở cuối đoạn.</div>
+                        </div>
+                        
+                        <div class="structure-card bg-slate-50 p-4 rounded-2xl">
+                            <div class="font-semibold text-teal-700">3. VÍ DỤ</div>
+                            <div class="text-slate-600">Dùng <strong>DẠNG 1:</strong>, <strong>DẠNG 2:</strong>...</div>
+                        </div>
+                        
+                        <div class="structure-card bg-slate-50 p-4 rounded-2xl">
+                            <div class="font-semibold text-teal-700">4. BÀI TẬP TƯƠNG TÁC</div>
+                            <ul class="mt-1 space-y-1 text-slate-600 list-disc pl-5">
+                                <li>Tự luận: <code>Đề | Đáp án | Gợi ý</code></li>
+                                <li>Kéo thả: <code>Câu | mảnh1 » mảnh2 | đáp án | gợi ý</code></li>
+                                <li>Nối/Sắp xếp: <code>Đề | Trái » ... | Phải » ... | 0-1,1-0</code></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="structure-card bg-slate-50 p-4 rounded-2xl">
+                            <div class="font-semibold text-teal-700">5. TRẮC NGHIỆM</div>
+                            <div class="text-slate-600">Format: <code>Câu hỏi | A | B | C | D | B</code></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 text-right">
+                        <button onclick="this.closest('.fixed').remove()" 
+                                class="px-5 py-2 bg-slate-800 text-white rounded-2xl text-sm">Đóng</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Parse Gemini output and show preview + admin-ready copies + image prompts
+        function parseAndPreview() {
+            const raw = document.getElementById('gemini-output').value.trim();
+            if (!raw) {
+                alert("Vui lòng dán nội dung Gemini trả về trước.");
+                return;
+            }
+
+            const preview = document.getElementById('preview-area');
+            preview.innerHTML = '';
+
+            const container = document.createElement('div');
+            container.className = 'space-y-4';
+
+            // Helper for specific admin copy
+            function createAdminCopySection(label, copyValue, description) {
+                const div = document.createElement('div');
+                div.className = 'border border-teal-200 bg-teal-50 rounded-2xl p-4 text-sm';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between mb-1';
+
+                const titleEl = document.createElement('div');
+                titleEl.className = 'font-bold text-teal-800';
+                titleEl.textContent = label;
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'text-xs px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-full flex items-center gap-x-1';
+                copyBtn.innerHTML = `<i class="fas fa-copy"></i> <span>Copy cho tab ${label}</span>`;
+                copyBtn.onclick = () => {
+                    safeCopy(copyValue, copyBtn);
+                };
+
+                header.appendChild(titleEl);
+                header.appendChild(copyBtn);
+                div.appendChild(header);
+
+                if (description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'text-xs text-teal-600 mb-1';
+                    desc.textContent = description;
+                    div.appendChild(desc);
+                }
+
+                const body = document.createElement('div');
+                body.className = 'whitespace-pre-wrap text-xs bg-white p-2 rounded border max-h-32 overflow-auto font-mono';
+                body.textContent = copyValue.substring(0, 300) + (copyValue.length > 300 ? '...' : '');
+                div.appendChild(body);
+
+                return div;
+            }
+
+            // Extract sections based on our prompt format
+            let goal = '', theory = '', examples = '', selfPractice = '', essay = '', fill = '', drag = '', questions = '', skills = '', tasks = '';
+            let imagePrompts = [];
+
+            const lines = raw.split('\n');
+            let currentKey = '';
+            let buffer = [];
+
+            lines.forEach(line => {
+                const t = line.trim();
+                if (/MỤC TIÊU/i.test(t)) { currentKey = 'goal'; buffer = []; }
+                else if (/LÝ THUYẾT/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='theory'; buffer=[]; }
+                else if (/VÍ DỤ/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='examples'; buffer=[]; }
+                else if (/BÀI TẬP NỘP| BÀI TẬP NỘP GIÁO VIÊN/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='self'; buffer=[]; }
+                else if (/TỰ LUẬN|BÀI TẬP TỰ LUẬN/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='essay'; buffer=[]; }
+                else if (/KÉO THẢ|KÉO VÀO Ô/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='fill'; buffer=[]; }
+                else if (/NỐI Ô|NỐI /i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='drag'; buffer=[]; }
+                else if (/TRẮC NGHIỆM/i.test(t)) { if(buffer.length) window['last_'+currentKey] = buffer.join('\n'); currentKey='questions'; buffer=[]; }
+                else if (/DANH SÁCH HÌNH| HÌNH ẢNH CẦN TẠO/i.test(t)) { currentKey='images'; buffer=[]; }
+                else if (currentKey) {
+                    buffer.push(line);
+                }
+            });
+
+            // flush last
+            if (currentKey && buffer.length) window['last_'+currentKey] = buffer.join('\n');
+
+            goal = window.last_goal || '';
+            theory = window.last_theory || '';
+            examples = window.last_examples || '';
+            selfPractice = window.last_self || '';
+            essay = window.last_essay || '';
+            fill = window.last_fill || '';
+            drag = window.last_drag || '';
+            questions = window.last_questions || '';
+
+            // Try to extract image prompts
+            const imgSection = raw.split(/DANH SÁCH HÌNH ẢNH CẦN TẠO/i)[1] || '';
+            const imgLines = imgSection.split('\n');
+            let currentImg = '';
+            imgLines.forEach(l => {
+                if (l.match(/HINH_\d+|HÌNH \d+/i)) {
+                    if (currentImg) imagePrompts.push(currentImg.trim());
+                    currentImg = l + '\n';
+                } else if (currentImg && l.trim()) {
+                    currentImg += l + '\n';
+                }
+            });
+            if (currentImg) imagePrompts.push(currentImg.trim());
+
+            // Render sections with admin-specific copy
+            if (goal) container.appendChild(createAdminCopySection('MỤC TIÊU', goal, 'Copy dán vào ô Mục tiêu bài học'));
+            if (theory) container.appendChild(createAdminCopySection('LÝ THUYẾT', theory, 'Copy nguyên vào tab Lý thuyết'));
+            if (examples) container.appendChild(createAdminCopySection('VÍ DỤ', examples, 'Copy nguyên vào tab Ví dụ'));
+            if (selfPractice) container.appendChild(createAdminCopySection('BÀI TẬP NỘP', selfPractice, 'Copy vào phần Bài tập nộp giáo viên'));
+            if (essay) container.appendChild(createAdminCopySection('BÀI TẬP TỰ LUẬN', essay, 'Copy từng dòng vào ô Bài tập tự luận'));
+            if (fill) container.appendChild(createAdminCopySection('KÉO THẢ', fill, 'Copy từng dòng vào ô Kéo vào ô trống'));
+            if (drag) container.appendChild(createAdminCopySection('NỐI/SẮP XẾP', drag, 'Copy từng dòng vào ô Nối ô / sắp xếp'));
+            if (questions) container.appendChild(createAdminCopySection('TRẮC NGHIỆM', questions, 'Copy từng dòng vào ô Câu hỏi trắc nghiệm'));
+
+            // Image prompts section
+            if (imagePrompts.length > 0) {
+                const imgDiv = document.createElement('div');
+                imgDiv.className = 'border-2 border-orange-300 bg-orange-50 rounded-2xl p-4';
+                imgDiv.innerHTML = `<div class="font-bold text-orange-700 mb-2">DANH SÁCH PROMPT HÌNH ẢNH (copy dán cho Gemini gen ảnh)</div>`;
+                imagePrompts.forEach((p, i) => {
+                    const pDiv = document.createElement('div');
+                    pDiv.className = 'mb-2 bg-white p-2 rounded text-xs border';
+                    pDiv.innerHTML = `<div class="font-mono whitespace-pre-wrap">${p}</div>`;
+                    const cBtn = document.createElement('button');
+                    cBtn.className = 'mt-1 text-xs px-2 py-0.5 bg-orange-500 text-white rounded';
+                    cBtn.textContent = 'Copy prompt này';
+                    cBtn.onclick = () => navigator.clipboard.writeText(p);
+                    pDiv.appendChild(cBtn);
+                    imgDiv.appendChild(pDiv);
+                });
+                container.appendChild(imgDiv);
+            }
+
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="p-4 text-slate-500">Chưa parse được. Hãy đảm bảo Gemini trả về theo đúng format có heading LÝ THUYẾT, VÍ DỤ, DANH SÁCH HÌNH...</div>';
+            }
+
+            preview.appendChild(container);
+        }
+
+        // Export to Word - Structured for easy copy back to admin editor
+        async function exportToWord() {
+            const { Document, Paragraph, TextRun, HeadingLevel, Header, Footer, AlignmentType } = docx;
+            
+            const raw = document.getElementById('gemini-output').value.trim();
+            if (!raw) {
+                alert("Vui lòng dán kết quả từ Gemini trước khi xuất Word.");
+                return;
+            }
+
+            const subject = document.getElementById('subject').value;
+            const title = document.getElementById('title').value;
+            const chapter = document.getElementById('chapter').value;
+
+            // Parse raw into sections for clean Word
+            const sections = parseGeminiOutputToSections(raw);
+
+            const children = [];
+
+            // Title
+            children.push(new Paragraph({
+                heading: HeadingLevel.TITLE,
+                children: [new TextRun({ text: title, bold: true, size: 48 })]
+            }));
+            children.push(new Paragraph({
+                children: [new TextRun({ text: `${subject} • ${chapter}`, size: 24, color: "64748b" })]
+            }));
+            children.push(new Paragraph({ children: [] }));
+
+            // MỤC TIÊU
+            if (sections.goal) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "MỤC TIÊU BÀI HỌC (copy vào ô Mục tiêu)", bold: true })]
+                }));
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: sections.goal, size: 22 })]
+                }));
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // LÝ THUYẾT
+            if (sections.theory) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "LÝ THUYẾT (copy toàn bộ vào tab Lý thuyết)", bold: true })]
+                }));
+                sections.theory.split('\n\n').forEach(block => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: block.trim(), size: 22 })]
+                    }));
+                });
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // VÍ DỤ
+            if (sections.examples) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "VÍ DỤ (copy vào tab Ví dụ)", bold: true })]
+                }));
+                sections.examples.split('\n\n').forEach(block => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: block.trim(), size: 22 })]
+                    }));
+                });
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // BÀI TẬP TỰ LUẬN
+            if (sections.essay) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "BÀI TẬP TỰ LUẬN (copy từng dòng vào ô Bài tập tự luận)", bold: true })]
+                }));
+                sections.essay.forEach(line => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: line, size: 20, font: "Courier New" })]
+                    }));
+                });
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // KÉO THẢ
+            if (sections.fill) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "KÉO THẢ VÀO Ô TRỐNG (copy vào ô Kéo vào ô trống)", bold: true })]
+                }));
+                sections.fill.forEach(line => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: line, size: 20, font: "Courier New" })]
+                    }));
+                });
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // NỐI / SẮP XẾP
+            if (sections.drag) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "NỐI Ô / SẮP XẾP (copy vào ô Nối ô / sắp xếp)", bold: true })]
+                }));
+                sections.drag.forEach(line => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: line, size: 20, font: "Courier New" })]
+                    }));
+                });
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // TRẮC NGHIỆM
+            if (sections.questions) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "TRẮC NGHIỆM (copy vào ô Câu hỏi trắc nghiệm)", bold: true })]
+                }));
+                sections.questions.forEach(line => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: line, size: 20, font: "Courier New" })]
+                    }));
+                });
+                children.push(new Paragraph({ children: [] }));
+            }
+
+            // Image prompts section
+            if (sections.images && sections.images.length > 0) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "DANH SÁCH HÌNH ẢNH CẦN TẠO (dùng prompt này gen ảnh)", bold: true })]
+                }));
+                sections.images.forEach(img => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: img, size: 18 })]
+                    }));
+                });
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    headers: {
+                        default: new Header({
+                            children: [new Paragraph({
+                                children: [new TextRun({ text: `Bài học ${subject} - ${title}`, size: 18, color: "64748b" })]
+                            })]
+                        })
+                    },
+                    children: children
+                }]
+            });
+
+            const blob = await docx.Packer.toBlob(doc);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Helper: Parse Gemini output into clean sections for Word
+        function parseGeminiOutputToSections(raw) {
+            const result = {
+                goal: '',
+                theory: '',
+                examples: '',
+                essay: [],
+                fill: [],
+                drag: [],
+                questions: [],
+                images: []
+            };
+
+            const lines = raw.split('\n');
+            let currentSection = '';
+            let buffer = [];
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+
+                if (trimmed.match(/MỤC TIÊU/i)) {
+                    currentSection = 'goal';
+                    buffer = [];
+                } else if (trimmed.match(/LÝ THUYẾT/i)) {
+                    if (buffer.length && currentSection === 'goal') result.goal = buffer.join('\n');
+                    currentSection = 'theory';
+                    buffer = [];
+                } else if (trimmed.match(/VÍ DỤ/i)) {
+                    if (buffer.length && currentSection === 'theory') result.theory = buffer.join('\n');
+                    currentSection = 'examples';
+                    buffer = [];
+                } else if (trimmed.match(/BÀI TẬP TỰ LUẬN/i)) {
+                    if (buffer.length && currentSection === 'examples') result.examples = buffer.join('\n');
+                    currentSection = 'essay';
+                    buffer = [];
+                } else if (trimmed.match(/KÉO THẢ|KÉO VÀO Ô/i)) {
+                    if (buffer.length && currentSection === 'essay') result.essay = buffer.filter(l => l.includes('|'));
+                    currentSection = 'fill';
+                    buffer = [];
+                } else if (trimmed.match(/NỐI Ô|NỐI /i)) {
+                    if (buffer.length && currentSection === 'fill') result.fill = buffer.filter(l => l.includes('|'));
+                    currentSection = 'drag';
+                    buffer = [];
+                } else if (trimmed.match(/TRẮC NGHIỆM/i)) {
+                    if (buffer.length && currentSection === 'drag') result.drag = buffer.filter(l => l.includes('|'));
+                    currentSection = 'questions';
+                    buffer = [];
+                } else if (trimmed.match(/HÌNH ẢNH|PROMPT TẠO ẢNH/i)) {
+                    if (buffer.length && currentSection === 'questions') result.questions = buffer.filter(l => l.includes('|'));
+                    currentSection = 'images';
+                    buffer = [];
+                } else if (trimmed) {
+                    buffer.push(trimmed);
+                }
+            });
+
+            // Final flush
+            if (buffer.length) {
+                if (currentSection === 'goal') result.goal = buffer.join('\n');
+                else if (currentSection === 'theory') result.theory = buffer.join('\n');
+                else if (currentSection === 'examples') result.examples = buffer.join('\n');
+                else if (currentSection === 'essay') result.essay = buffer.filter(l => l.includes('|'));
+                else if (currentSection === 'fill') result.fill = buffer.filter(l => l.includes('|'));
+                else if (currentSection === 'drag') result.drag = buffer.filter(l => l.includes('|'));
+                else if (currentSection === 'questions') result.questions = buffer.filter(l => l.includes('|'));
+                else if (currentSection === 'images') result.images = buffer;
+            }
+
+            return result;
+        }
+
+        function parseToDocxParagraphs(rawText) {
+            const { Paragraph, TextRun, HeadingLevel } = docx;
+            const lines = rawText.split('\n');
+            const children = [];
+
+            let currentText = [];
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+
+                if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+                    // Heading
+                    if (currentText.length) {
+                        children.push(new Paragraph({
+                            children: [new TextRun({ text: currentText.join('\n'), size: 22 })]
+                        }));
+                        currentText = [];
+                    }
+                    const headingText = trimmed.replace(/\*\*/g, '');
+                    children.push(new Paragraph({
+                        heading: HeadingLevel.HEADING_2,
+                        children: [new TextRun({ text: headingText, bold: true })]
+                    }));
+                } 
+                else if (trimmed.startsWith('* ')) {
+                    currentText.push('• ' + trimmed.slice(2));
+                }
+                else if (trimmed.includes('$')) {
+                    // Keep LaTeX as-is
+                    currentText.push(trimmed);
+                }
+                else if (trimmed === '') {
+                    if (currentText.length) {
+                        children.push(new Paragraph({
+                            children: [new TextRun({ text: currentText.join('\n'), size: 22 })]
+                        }));
+                        currentText = [];
+                    }
+                } 
+                else {
+                    currentText.push(trimmed);
+                }
+            });
+
+            if (currentText.length) {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: currentText.join('\n'), size: 22 })]
+                }));
+            }
+
+            return children;
+        }
+
+        // Initialize everything
+        function saveGeminiKey() {
+            const key = document.getElementById('geminiKey').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                alert('Đã lưu key (chỉ trên trình duyệt này).');
+            }
+        }
+
+        function loadGeminiKey() {
+            const key = localStorage.getItem('gemini_api_key');
+            if (key && document.getElementById('geminiKey')) {
+                document.getElementById('geminiKey').value = key;
+            }
+            return key;
+        }
+
+        function safeCopy(text, btnEl = null) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (btnEl) {
+                        const old = btnEl.innerHTML;
+                        btnEl.innerHTML = '✓ Đã copy';
+                        setTimeout(() => btnEl.innerHTML = old, 1500);
+                    }
+                }).catch(() => {
+                    fallbackCopy(text, btnEl);
+                });
+            } else {
+                fallbackCopy(text, btnEl);
+            }
+        }
+
+        function fallbackCopy(text, btnEl = null) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                if (btnEl) {
+                    const old = btnEl.innerHTML;
+                    btnEl.innerHTML = '✓ Đã copy';
+                    setTimeout(() => btnEl.innerHTML = old, 1500);
+                }
+            } catch(e) {
+                alert('Không copy được. Hãy copy thủ công từ ô text sau:\n\n' + text.substring(0,200));
+            }
+            document.body.removeChild(ta);
+        }
+
+        async function generateFullLessonDirect() {
+            if (uploadedImages.length === 0) {
+                alert('Hãy dán ít nhất 1 ảnh screenshot bài học trước.');
+                return;
+            }
+
+            const subject = document.getElementById('subject').value;
+            const chapter = document.getElementById('chapter').value;
+            const title = document.getElementById('title').value;
+            const notes = document.getElementById('notes').value || '';
+
+            const base64List = uploadedImages.map(i => i.data);
+
+            const masterPrompt = `Bạn là chuyên gia thiết kế bài học E-learning Toán theo đúng hệ thống hiện tại.
+
+Từ các ảnh screenshot sách giáo khoa tôi cung cấp (đã đính kèm dưới dạng inline images), hãy tạo **TOÀN BỘ** một bài học hoàn chỉnh cho:
+- Môn: ${subject}
+- Chương: ${chapter}
+- Tên bài: ${title}
+${notes ? `- Yêu cầu thêm: ${notes}` : ''}
+
+**Yêu cầu nghiêm ngặt về format (để tôi copy dễ vào editor):**
+
+- MỤC TIÊU: 2-4 câu rõ ràng.
+
+- LÝ THUYẾT: rich text Markdown + LaTeX $...$ + chèn hình khi cần bằng ![Mô tả](HINH_01)
+
+- VÍ DỤ: Dùng **DẠNG 1:** , **DẠNG 2:** ... (mỗi dạng cách nhau 2 dòng)
+
+- BÀI TẬP NỘP GIÁO VIÊN: tương tự ví dụ
+
+- BÀI TẬP TƯƠNG TÁC:
+  Tự luận: mỗi dòng "Đề đầy đủ | Đáp án | Gợi ý"
+  Kéo thả: "Câu có ___ | mảnh1 » mảnh2 | đáp án | gợi ý"
+  Nối/Sắp xếp: đúng format có map 0-0,1-1
+
+- TRẮC NGHIỆM: mỗi dòng "Câu? | A | B | C | D | B"
+
+- KỸ NĂNG: id | Tên | 80
+- NHIỆM VỤ: list
+
+**VỀ HÌNH ẢNH MINH HỌA:**
+- Trong nội dung chèn ![Mô tả ngắn](HINH_01)
+- Cuối response, thêm phần riêng:
+**DANH SÁCH HÌNH ẢNH CẦN TẠO**
+HINH_01: Mô tả chi tiết vị trí dùng
+**PROMPT TẠO ẢNH (chuẩn sách giáo khoa, vector sạch, nền trắng, nhãn tiếng Việt, đơn giản dễ hiểu cho học sinh):**
+"Minh họa giáo dục sách giáo khoa Toán [lớp], phong cách vector sạch sẽ, đường nét rõ ràng, màu tươi sáng. [mô tả chính xác khái niệm]."
+
+Phân tích kỹ các ảnh, tạo nội dung phong phú, thực tế. Xuất rõ ràng theo các heading trên.`;
+
+            const outputArea = document.getElementById('gemini-output');
+            outputArea.value = 'Đang gọi Gemini với ảnh...';
+
+            const result = await callGeminiWithImages(masterPrompt, base64List);
+
+            if (result) {
+                outputArea.value = result;
+                // Auto parse after generation
+                setTimeout(() => {
+                    parseAndPreview();
+                }, 300);
+            } else {
+                outputArea.value = 'Lỗi khi gọi Gemini. Kiểm tra key và thử lại.';
+            }
+        }
+
+        async function callGeminiWithImages(prompt, base64Images = []) {
+            const key = loadGeminiKey() || document.getElementById('geminiKey')?.value.trim();
+            if (!key) {
+                alert('Vui lòng nhập Gemini API Key trước.');
+                return null;
+            }
+
+            const parts = [{ text: prompt }];
+
+            base64Images.forEach(imgData => {
+                const match = imgData.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+                if (match) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: match[1],
+                            data: match[2]
+                        }
+                    });
+                }
+            });
+
+            const body = {
+                contents: [{ parts }]
+            };
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const err = await res.text();
+                    throw new Error(err);
+                }
+
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } catch (e) {
+                console.error(e);
+                alert('Lỗi gọi Gemini: ' + e.message);
+                return null;
+            }
+        }
+
+        function init() {
+            initializeTailwind();
+            setupImageUpload();
+            loadGeminiKey();
+
+            // Set draggable=false on key containers to prevent text selection from dragging elements out
+            document.querySelectorAll('#upload-area, .bg-white.rounded-3xl, .grid, textarea').forEach(el => {
+                if (el) el.setAttribute('draggable', 'false');
+            });
+
+            // === PASTE SUPPORT (primary for screenshots) ===
+            // Paste images from clipboard (Ctrl + V after taking screenshot) works globally
+            function addPastedImage(blob, source = 'pasted') {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const preview = document.getElementById('image-preview');
+                    preview.classList.remove('hidden');
+
+                    const div = document.createElement('div');
+                    div.className = 'relative group border border-slate-200 rounded-xl overflow-hidden';
+                    div.innerHTML = `
+                        <img src="${ev.target.result}" class="w-full aspect-[4/3] object-cover">
+                        <div class="absolute bottom-0 left-0 right-0 bg-teal-600/80 text-white text-[9px] px-1.5 py-0.5 flex items-center justify-between">
+                            <span>${source}</span>
+                            <span class="text-[8px] opacity-75">ảnh đã nhận</span>
+                        </div>
+                    `;
+                    preview.appendChild(div);
+
+                    uploadedImages.push({
+                        name: `${source}-${Date.now()}.png`,
+                        data: ev.target.result
+                    });
+                };
+                reader.readAsDataURL(blob);
+            }
+
+            // Global paste listener - best for Ctrl+V screenshots
+            document.addEventListener('paste', function(e) {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+
+                let foundImage = false;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        if (blob) {
+                            addPastedImage(blob, 'screenshot');
+                            foundImage = true;
+                            e.preventDefault();
+                            break;
+                        }
+                    }
+                }
+
+                if (foundImage) {
+                    const area = document.getElementById('upload-area');
+                    if (area) {
+                        area.style.transition = 'background 0.1s';
+                        area.style.background = '#ccfbf1'; // flash teal
+                        setTimeout(() => {
+                            area.style.background = '';
+                        }, 600);
+                    }
+                    // scroll so user sees the images added
+                    area?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, true);
+
+            // Also allow paste directly on the drop zone
+            const uploadAreaEl = document.getElementById('upload-area');
+            if (uploadAreaEl) {
+                uploadAreaEl.addEventListener('paste', function(e) {
+                    // The global one will catch it, but we can add feedback
+                });
+            }
+
+            // Demo data
+            console.log('%c[soanbaigemini] File sẵn sàng (B - tích hợp). Dán ảnh → nhập key → nhấn "Tạo bài học đầy đủ từ ảnh" (gọi API trực tiếp).', 'color:#64748b');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
