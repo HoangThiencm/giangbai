@@ -545,9 +545,8 @@
         if (filledCount < normalized.blankCount) {
             return '<span class="font-bold text-slate-600">Hãy kéo đủ mảnh vào tất cả ô trống trước khi kiểm tra.</span>';
         }
-        const given = slots.map(normalizeAnswerText);
-        const expected = normalized.answers.map(normalizeAnswerText);
-        const ok = expected.length > 0 && expected.every((answer, slotIndex) => given[slotIndex] === answer);
+        const ok = normalized.answers.length > 0
+            && normalized.answers.every((answer, slotIndex) => essayAnswersEqual(slots[slotIndex], answer));
         return ok
             ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã kéo đúng vào các ô trống.'
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${normalized.answers.map(part => mathText(part)).join(' · ')}`;
@@ -2016,10 +2015,78 @@
         `;
     }
 
+    function preprocessEssayAnswerExpression(raw) {
+        let text = String(raw ?? '').trim();
+        if (!text) return '';
+        text = text
+            .replace(/,/g, '.')
+            .replace(/÷/g, '/')
+            .replace(/×/g, '*')
+            .replace(/−/g, '-')
+            .replace(/√\(([^)]+)\)/g, 'sqrt($1)')
+            .replace(/√\{([^}]+)\}/g, 'sqrt($1)')
+            .replace(/√(-?(?:\d+\.\d+|\d+|\.\d+))/g, 'sqrt($1)')
+            .replace(/\\sqrt\{([^}]*)\}/g, 'sqrt($1)')
+            .replace(/\\sqrt\(([^)]*)\)/g, 'sqrt($1)')
+            .replace(/\\sqrt\s*(-?(?:\d+\.\d+|\d+|\.\d+))/g, 'sqrt($1)')
+            .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
+            .replace(/\s+/g, '');
+        return text;
+    }
+
+    function parseEssayNumericToken(token) {
+        const text = String(token ?? '').trim();
+        if (!text) return { ok: false };
+        if (/^-?(?:\d+\.\d+|\d+|\.\d+)$/.test(text)) {
+            const value = Number.parseFloat(text);
+            return Number.isFinite(value) ? { ok: true, value } : { ok: false };
+        }
+        const fraction = text.match(/^(-?(?:\d+\.\d+|\d+|\.\d+))\/(-?(?:\d+\.\d+|\d+|\.\d+))$/);
+        if (fraction) {
+            const numerator = Number.parseFloat(fraction[1]);
+            const denominator = Number.parseFloat(fraction[2]);
+            if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return { ok: false };
+            return { ok: true, value: numerator / denominator };
+        }
+        const sqrtMatch = text.match(/^sqrt\((.+)\)$/i);
+        if (sqrtMatch) {
+            const inner = parseEssayNumericToken(preprocessEssayAnswerExpression(sqrtMatch[1]));
+            if (!inner.ok || inner.value < 0) return { ok: false };
+            const value = Math.sqrt(inner.value);
+            return Number.isFinite(value) ? { ok: true, value } : { ok: false };
+        }
+        return { ok: false };
+    }
+
+    function tryEvaluateEssayAnswer(raw) {
+        const normalized = preprocessEssayAnswerExpression(raw);
+        if (!normalized) return { ok: false };
+        return parseEssayNumericToken(normalized);
+    }
+
+    function essayAnswersEqual(given, expected) {
+        const left = String(given ?? '').trim();
+        const right = String(expected ?? '').trim();
+        if (!left || !right) return false;
+        if (normalizeAnswerText(left) === normalizeAnswerText(right)) return true;
+
+        const givenEval = tryEvaluateEssayAnswer(left);
+        const expectedEval = tryEvaluateEssayAnswer(right);
+        if (givenEval.ok && expectedEval.ok) {
+            return Math.abs(givenEval.value - expectedEval.value) < 1e-9;
+        }
+        return false;
+    }
+
     function isEssayNumericAnswer(value) {
-        const text = String(value ?? '').trim().replace(/\s+/g, '');
+        const text = String(value ?? '').trim();
         if (!text) return false;
-        return /^-?(?:\d+(?:[.,]\d+)?|\d+[.,]\d+)(?:\/-?(?:\d+(?:[.,]\d+)?|\d+[.,]\d+))?$/.test(text);
+        if (tryEvaluateEssayAnswer(text).ok) return true;
+        const normalized = preprocessEssayAnswerExpression(text);
+        return /^-?(?:\d+(?:\.\d+)?|\d*\.\d+)(?:\/-?(?:\d+(?:\.\d+)?|\d*\.\d+))?$/.test(normalized)
+            || /^sqrt\(.+\)$/i.test(normalized)
+            || /^\\frac\{[^}]+\}\{[^}]+\}$/.test(text.replace(/\s+/g, ''))
+            || /^√/.test(text);
     }
 
     function buildEssayCheckFeedback(item, value) {
@@ -2028,9 +2095,9 @@
             return '<span class="font-bold text-slate-600">Hãy nhập đáp án trước khi kiểm tra.</span>';
         }
         if (!isEssayNumericAnswer(trimmed)) {
-            return '<span class="font-bold text-amber-700">Chỉ nhập kết quả là số.</span> Không nhập lời giải, công thức, chữ hoặc ký hiệu toán. Ví dụ: <strong>5</strong>, <strong>-3</strong>, <strong>1/2</strong>.';
+            return '<span class="font-bold text-amber-700">Chỉ nhập kết quả cuối cùng.</span> Dùng số, phân số (<strong>1/2</strong>), hoặc căn (<strong>√16</strong>, <strong>4</strong>). Không nhập lời giải hay đơn vị.';
         }
-        const ok = normalizeAnswerText(trimmed) === normalizeAnswerText(item?.answer || '');
+        const ok = essayAnswersEqual(trimmed, item?.answer || '');
         return ok
             ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item?.hint || 'Hãy thử so sánh với đáp án mẫu.')}`;
@@ -2044,7 +2111,7 @@
         return items.map((item, index) => {
             const key = item.id || `essay_${index + 1}`;
             const saved = ui.essayAnswers?.[key] || '';
-            const ok = practiceDone && normalizeAnswerText(saved) === normalizeAnswerText(item.answer || '');
+            const ok = practiceDone && essayAnswersEqual(saved, item.answer || '');
             const feedback = practiceDone
                 ? (ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
@@ -2057,8 +2124,9 @@
                         <h3 class="question-text practice-q-text">${mathText(item.prompt || '')}</h3>
                     </div>
                     <div class="practice-card-content">
-                        ${renderPracticeHint('Chỉ nhập <strong>kết quả cuối cùng là số</strong> (ví dụ: 5, -3, 1/2). Không nhập lời giải, công thức hay kết quả dạng chữ.')}
-                        <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="decimal" autocomplete="off" placeholder="Chỉ nhập số, ví dụ: 12 hoặc -3 hoặc 1/2" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
+                        ${renderPracticeHint('Nhập <strong>kết quả cuối</strong>: số (<strong>4</strong>), phân số (<strong>1/2</strong>), hoặc căn (<strong>√16</strong>). Có thể dùng các nút ký hiệu bên dưới.')}
+                        <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="text" autocomplete="off" placeholder="Ví dụ: 4, -3, 1/2, √16" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
+                        ${practiceDone ? '' : renderMathSymbolToolbar('essay', key)}
                         ${renderPracticeActions(`
                             ${practiceDone ? '' : `<button type="button" class="essay-check-btn practice-btn practice-btn--primary" data-essay-key="${escapeHtml(key)}"><i class="fas fa-check"></i>Kiểm tra đáp án</button>`}
                             ${renderPracticeAiButton(item.prompt || '')}
@@ -2105,9 +2173,8 @@
                 normalized.pool.filter(piece => !usedValues.includes(normalizeAnswerText(piece))),
                 shuffleSeed(`${lesson.id}-fill-${key}`)
             );
-            const given = slots.map(normalizeAnswerText);
-            const expected = normalized.answers.map(normalizeAnswerText);
-            const ok = practiceDone && expected.length > 0 && expected.every((answer, slotIndex) => given[slotIndex] === answer);
+            const ok = practiceDone && normalized.answers.length > 0
+                && normalized.answers.every((answer, slotIndex) => essayAnswersEqual(slots[slotIndex], answer));
             const feedback = practiceDone
                 ? (ok
                     ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã kéo đúng vào các ô trống.'
@@ -3651,10 +3718,10 @@
         {
             title: 'Công thức',
             symbols: [
-                { label: '√', insert: '\\sqrt{}', title: 'Căn bậc hai' },
+                { label: '√', insert: '√', title: 'Căn bậc hai (gõ thêm số, ví dụ √16)' },
                 { label: 'x²', insert: '^2', title: 'Bình phương' },
                 { label: 'x³', insert: '^3', title: 'Lập phương' },
-                { label: 'a/b', insert: '\\frac{}{}', title: 'Phân số' },
+                { label: 'a/b', insert: '/', title: 'Phân số (ví dụ 1/2)' },
                 { label: '|x|', insert: '\\left| \\right|', title: 'Giá trị tuyệt đối' },
                 { label: 'π', insert: '\\pi', title: 'Pi' },
                 { label: '∞', insert: '\\infty', title: 'Vô cực' },
@@ -3751,10 +3818,9 @@
         items.forEach(item => {
             const key = item.id || `essay_${items.indexOf(item) + 1}`;
             const field = document.querySelector(`[data-essay-key="${escapeSelector(key)}"]`);
-            const value = normalizeAnswerText(field?.value || '');
-            answers[key] = field?.value || '';
-            const expected = normalizeAnswerText(item.answer || '');
-            if (expected && value === expected) correct += 1;
+            const value = field?.value || '';
+            answers[key] = value;
+            if (essayAnswersEqual(value, item.answer || '')) correct += 1;
         });
         return { score: Math.round((correct / items.length) * 100), answers };
     }
@@ -3782,9 +3848,9 @@
             const card = document.querySelector(`[data-fill-card="${escapeSelector(key)}"]`);
             const slots = collectFillSlotsFromCard(card, normalized.blankCount);
             answers[key] = slots;
-            const given = slots.map(normalizeAnswerText);
-            const expected = normalized.answers.map(normalizeAnswerText);
-            if (expected.length && expected.every((answer, slotIndex) => given[slotIndex] === answer)) correct += 1;
+            const given = slots;
+            const expected = normalized.answers;
+            if (expected.length && expected.every((answer, slotIndex) => essayAnswersEqual(given[slotIndex], answer))) correct += 1;
         });
         return { score: Math.round((correct / items.length) * 100), answers };
     }
