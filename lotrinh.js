@@ -325,6 +325,23 @@
         return !isGenericLessonImageLabel(label);
     }
 
+    function isLessonImagePlaceholderRef(value) {
+        const text = String(value || '').trim();
+        if (!text) return false;
+        return /^(?:HINH|HÌNH|IMAGE)[_\s-]*\d+$/i.test(text)
+            || /^IMAGE[_\s-]*PLACEHOLDER$/i.test(text);
+    }
+
+    function lessonImageMissingFigure(label) {
+        const caption = String(label || '').trim() || 'Ảnh minh họa';
+        return `<figure class="lesson-inline-image lesson-inline-image--missing"><span class="text-sm text-amber-800"><i class="fas fa-image mr-1" aria-hidden="true"></i>${escapeHtml(caption)} — giáo viên cần dán ảnh (Ctrl+V) vào editor rồi <strong>lưu bài</strong>.</span></figure>`;
+    }
+
+    function normalizeLessonImageMarkers(text) {
+        return String(text || '')
+            .replace(/\[Image\s*#\s*(\d+)\]/gi, (_, num) => `\n![Ảnh minh họa #${num}](HINH_${String(num).padStart(2, '0')})\n`);
+    }
+
     function applyLessonInlineMarkup(text) {
         return escapeHtml(text)
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -345,7 +362,7 @@
     }
 
     function lessonRichText(value) {
-        const source = normalizeMathContent(value);
+        const source = normalizeLessonImageMarkers(normalizeMathContent(value));
         const lines = source.split('\n');
         const chunks = [];
         let textBuffer = [];
@@ -367,9 +384,16 @@
             const img = line.trim().match(/^!\[([^\]]*)\]\((\S+)\)$/);
             if (img) {
                 flushText();
-                const url = normalizeLessonImageDisplayUrl(img[2]);
-                if (!url) return;
                 const altRaw = String(img[1] || '').trim();
+                if (isLessonImagePlaceholderRef(img[2])) {
+                    chunks.push(lessonImageMissingFigure(altRaw || img[2]));
+                    return;
+                }
+                const url = normalizeLessonImageDisplayUrl(img[2]);
+                if (!url) {
+                    chunks.push(lessonImageMissingFigure(altRaw));
+                    return;
+                }
                 const alt = escapeHtml(altRaw);
                 const caption = shouldShowLessonImageCaption(altRaw) ? `<figcaption>${alt}</figcaption>` : '';
                 chunks.push(
@@ -393,6 +417,7 @@
     function cleanAiAnswer(value) {
         return String(value ?? '')
             .replace(/\r\n?/g, '\n')
+            .replace(/\[Image\s*#\s*\d+\]/gi, '')
             .replace(/^\s*[-*_]{3,}\s*$/gm, '')
             .replace(/\*\*([^*\n]+)\*\*/g, '$1')
             .replace(/__([^_\n]+)__/g, '$1')
@@ -3626,6 +3651,8 @@
         const essayExercises = Array.isArray(lesson.essay_exercises) ? lesson.essay_exercises : [];
         const fillExercises = Array.isArray(lesson.fill_exercises) ? lesson.fill_exercises : [];
         const dragExercises = Array.isArray(lesson.drag_exercises) ? lesson.drag_exercises : [];
+        const matchDragExercises = dragExercises.filter(item => normalizeDragExercise(item).mode === 'match');
+        const sortDragExercises = dragExercises.filter(item => normalizeDragExercise(item).mode !== 'match');
         const answers = ui.answers || {};
         const practiceScore = typeof progress.score === 'number' ? progress.score : null;
         const hasAnyPractice = essayExercises.length || fillExercises.length || dragExercises.length || questions.length;
@@ -3644,8 +3671,25 @@
             fillExercises.length
                 ? renderPracticePart('Phần Bài tập điền khuyết', 'fa-i-cursor', renderFillExercises(lesson), fillExercises.length, '', 'fill')
                 : '',
-            dragExercises.length
-                ? renderPracticePart('Phần Bài tập kéo thả', 'fa-hand-pointer', renderDragExercises(lesson), dragExercises.length, '', 'drag')
+            matchDragExercises.length
+                ? renderPracticePart(
+                    'Phần Bài tập nối ô',
+                    'fa-link',
+                    renderDragExercises({ ...lesson, drag_exercises: matchDragExercises }),
+                    matchDragExercises.length,
+                    'Bấm mục bên trái, rồi bấm mục bên phải để ghép cặp.',
+                    'drag'
+                )
+                : '',
+            sortDragExercises.length
+                ? renderPracticePart(
+                    'Phần Bài tập sắp xếp',
+                    'fa-arrow-down-wide-short',
+                    renderDragExercises({ ...lesson, drag_exercises: sortDragExercises }),
+                    sortDragExercises.length,
+                    '',
+                    'drag'
+                )
                 : '',
             questions.length
                 ? renderPracticePart('Phần Bài tập trắc nghiệm', 'fa-list-check', renderMultipleChoiceExercises(lesson), questions.length, '', 'choice')

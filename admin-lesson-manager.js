@@ -1648,6 +1648,159 @@
         if (!skipSync) renderPreview();
     }
 
+    function normalizeGeminiSectionHeading(line) {
+        return String(line || '')
+            .replace(/^\s*#{1,6}\s*/, '')
+            .replace(/^\s*[-*+]\s+/, '')
+            .replace(/^\s*\d+[.)\-:]\s*/, '')
+            .replace(/^\s*\*\*|\*\*\s*$/g, '')
+            .replace(/[:：]\s*$/, '')
+            .trim()
+            .toUpperCase();
+    }
+
+    function resolveGeminiSectionKey(line) {
+        const heading = normalizeGeminiSectionHeading(line);
+        if (!heading) return '';
+        if (/^MỤC TIÊU(?:\s+BÀI HỌC)?/.test(heading)) return 'goal';
+        if (/^LÝ THUYẾT/.test(heading)) return 'theory';
+        if (/^(?:PHẦN\s+)?VÍ DỤ/.test(heading)) return 'examples';
+        if (/^BÀI TẬP NỘP/.test(heading)) return 'selfPractice';
+        if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'interactive';
+        if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+        if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
+        if (/SẮP XẾP/.test(heading) && !/NỐI/.test(heading)) return 'drag';
+        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
+        if (/^TRẮC NGHIỆM/.test(heading)) return 'questions';
+        if (/^KỸ NĂNG/.test(heading)) return 'skills';
+        if (/^NHIỆM VỤ/.test(heading)) return 'tasks';
+        if (/^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
+        return '';
+    }
+
+    function parseGeminiLessonSections(raw) {
+        const sections = {
+            goal: '', theory: '', examples: '', selfPractice: '',
+            interactive: '', essay: '', fill: '', drag: '',
+            questions: '', skills: '', tasks: ''
+        };
+        let current = '';
+        const buffer = [];
+        const flush = () => {
+            if (!current || current === 'stop' || !buffer.length) {
+                buffer.length = 0;
+                return;
+            }
+            const text = buffer.join('\n').trim();
+            if (text) sections[current] = sections[current] ? `${sections[current]}\n\n${text}` : text;
+            buffer.length = 0;
+        };
+        String(raw || '').replace(/\r/g, '').split('\n').forEach(line => {
+            const next = resolveGeminiSectionKey(line);
+            if (next === 'stop') {
+                flush();
+                current = 'stop';
+                return;
+            }
+            if (next) {
+                flush();
+                current = next;
+                return;
+            }
+            if (current && current !== 'stop') buffer.push(line);
+        });
+        flush();
+        const parsedInteractive = parseInteractiveBulkPaste(sections.interactive);
+        return {
+            goal: sections.goal,
+            theory: sections.theory,
+            examples: sections.examples,
+            selfPractice: sections.selfPractice,
+            essay: sections.essay || parsedInteractive.essay,
+            fill: sections.fill || parsedInteractive.fill,
+            drag: sections.drag || parsedInteractive.drag,
+            questions: sections.questions,
+            skills: sections.skills,
+            tasks: sections.tasks
+        };
+    }
+
+    function importGeminiLessonRaw(raw) {
+        const text = String(raw || '').trim();
+        if (!text) {
+            alert('Dán nội dung Gemini trả về trước.');
+            return;
+        }
+        const sections = parseGeminiLessonSections(text);
+        const filled = [];
+        if (sections.goal) {
+            el('lessonGoalInput').value = sections.goal;
+            filled.push('mục tiêu');
+        }
+        if (sections.theory) {
+            el('lessonTheory').value = sections.theory;
+            filled.push('lý thuyết');
+        }
+        if (sections.examples) {
+            el('lessonExamples').value = sections.examples;
+            filled.push('ví dụ');
+        }
+        if (sections.selfPractice) {
+            el('lessonSelfPractice').value = sections.selfPractice;
+            filled.push('bài nộp');
+        }
+        if (sections.essay) {
+            el('lessonEssay').value = sections.essay;
+            filled.push(`tự luận (${parseEssayExercises(sections.essay).length})`);
+        }
+        if (sections.fill) {
+            el('lessonFill').value = sections.fill;
+            filled.push(`điền khuyết (${parseFillExercises(sections.fill).length})`);
+        }
+        if (sections.drag) {
+            el('lessonDrag').value = sections.drag;
+            const dragCount = parseDragExercises(sections.drag).length;
+            const matchCount = parseDragExercises(sections.drag).filter(item => item.mode === 'match').length;
+            filled.push(`nối ô/sắp xếp (${dragCount}, nối ô: ${matchCount})`);
+        }
+        if (sections.questions) {
+            const questionLines = sections.questions.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/i.test(normalizeBulkHeading(line)));
+            el('lessonQuestions').value = questionLines.join('\n');
+            filled.push(`trắc nghiệm (${questionLines.length} dòng)`);
+        }
+        if (sections.skills) {
+            el('lessonSkills').value = sections.skills;
+            filled.push(`kỹ năng (${parseSkills(sections.skills).length})`);
+        }
+        if (sections.tasks) {
+            el('lessonTasks').value = sections.tasks;
+            filled.push('nhiệm vụ');
+        }
+        essayItems = parseEssayToItems(el('lessonEssay').value || '');
+        fillItems = parseFillToItems(el('lessonFill').value || '');
+        dragItems = parseDragToItems(el('lessonDrag').value || '');
+        questionItems = parseQuestionToItems(el('lessonQuestions').value || '');
+        renderEssayItems();
+        renderFillItems();
+        renderDragItems();
+        renderQuestionItems();
+        refreshInteractiveBulkTextarea();
+        refreshQuestionsBulkTextarea();
+        ['lessonTheory', 'lessonExamples', 'lessonSelfPractice'].forEach(id => {
+            const field = el(id);
+            if (field) renderLessonFieldImagePreview(field);
+        });
+        renderPreview();
+        if (!filled.length) {
+            alert('Không nhận diện được section. Hãy đảm bảo Gemini trả về đúng heading: LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG...');
+            return;
+        }
+        alert(`Đã điền: ${filled.join(', ')}.\n\nKiểm tra preview → dán ảnh thật thay HINH_xx → bấm Lưu bài học.`);
+        el('geminiImportRaw').value = '';
+    }
+
     function flushBulkEditorsBeforeSave() {
         if (interactiveEditorMode === 'bulk') syncItemsFromInteractiveBulk();
         if (questionsEditorMode === 'bulk') syncItemsFromQuestionsBulk();
@@ -1897,6 +2050,14 @@
             </div>
 
             <div id="tab-khac" class="lesson-tab-content hidden">
+                <div class="mb-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                    <div class="text-sm font-bold text-violet-900 mb-1"><i class="fas fa-file-import mr-1"></i> Nhập khối từ Gemini / Soạn bài Gemini</div>
+                    <p class="text-[11px] text-violet-800 mb-2">Dán <strong>toàn bộ</strong> bài Gemini trả về — hệ thống tự điền vào đúng tab (lý thuyết, nối ô, trắc nghiệm, kỹ năng...). Sau đó dán ảnh thật thay <code>HINH_xx</code> rồi <strong>Lưu bài</strong>.</p>
+                    <textarea id="geminiImportRaw" rows="5" class="w-full p-2 border border-violet-300 rounded text-xs font-mono focus:ring-2 focus:ring-violet-500 outline-none" placeholder="Dán nguyên khối MỤC TIÊU, LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG..."></textarea>
+                    <button id="geminiImportBtn" type="button" class="mt-2 rounded bg-violet-700 px-4 py-2 text-xs font-bold text-white hover:bg-violet-800">
+                        <i class="fas fa-wand-magic-sparkles mr-1"></i> Phân tích và điền vào các tab
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
                         <span class="block text-[11px] text-slate-500">Mỗi dòng: <code>id_khong_dau | Tên kỹ năng | 80</code> — không cần gõ chữ "id:" hay "Tên:"</span>
@@ -1939,6 +2100,7 @@
         el('renameChapterBtn').onclick = renameChapter;
         el('saveLessonBtn').onclick = saveLesson;
         el('seedLessonBtn').onclick = fillSeed;
+        el('geminiImportBtn')?.addEventListener('click', () => importGeminiLessonRaw(el('geminiImportRaw')?.value || ''));
 
         // Attach add buttons (no inline onclick because functions are in IIFE scope)
         const addEssay = el('addEssayBtn'); if (addEssay) addEssay.onclick = addEssayItem;
@@ -2414,6 +2576,16 @@
             return;
         }
         const skills = parseSkills(el('lessonSkills').value);
+        const dragCount = parseDragExercises(el('lessonDrag').value).length;
+        let questionCount = 0;
+        try { questionCount = parseQuestions(el('lessonQuestions').value, skills).length; } catch { questionCount = 0; }
+        const missingParts = [];
+        if (!skills.length) missingParts.push('kỹ năng');
+        if (!dragCount) missingParts.push('nối ô / sắp xếp');
+        if (!questionCount) missingParts.push('trắc nghiệm');
+        if (missingParts.length && !confirm(`Bài đang thiếu: ${missingParts.join(', ')}. Học sinh sẽ không thấy các phần này trên lộ trình. Vẫn lưu?`)) {
+            return;
+        }
         const payload = {
             action: 'save_content',
             id: currentLessonId || undefined,
