@@ -10,6 +10,15 @@ VÍ DỤ
 **Bài 1:** Cho $A=\{1,2,3\}$. Liệt kê A.
 **Lời giải:** $A=\{1,2,3\}$
 
+BÀI TẬP NỘP GIÁO VIÊN
+**DẠNG 1: Liệt kê tập hợp**
+**Bài 1:** Viết tập hợp $B$ gồm các số tự nhiên nhỏ hơn 5.
+**Yêu cầu nộp:** Học sinh chụp ảnh hoặc tải file bài làm có liệt kê đầy đủ phần tử của $B$.
+
+**DẠNG 2: Ký hiệu thuộc**
+**Bài 2:** Cho $C=\{2,4,6,8\}$. Nêu các phần tử thuộc $C$ và không thuộc $C$ (chọn từ $1,2,3,4,5$).
+**Yêu cầu nộp:** Nộp bảng ghi rõ $\in$ hoặc $\notin$ cho từng số.
+
 BÀI TẬP TỰ LUẬN NGẮN
 Viết tập B gồm số chẵn nhỏ hơn 6 | B={0,2,4} | Bắt đầu từ 0
 

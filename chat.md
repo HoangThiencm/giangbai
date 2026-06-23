@@ -875,7 +875,7 @@ Module lõi (`window.LessonImport`), IIFE, không phụ thuộc framework.
 
 #### `tests/fixtures/gemini-raw-sample.txt`
 
-Fixture mẫu Gemini raw (mục tiêu, lý thuyết, tương tác, TN 7 cột, kỹ năng, danh sách hình) — dùng cho smoke test.
+Fixture mẫu Gemini raw (mục tiêu, lý thuyết, ví dụ, **bài tập nộp GV**, tương tác, TN 7 cột, kỹ năng, danh sách hình) — dùng cho smoke test.
 
 #### `tests/lesson-import-smoke.js`
 

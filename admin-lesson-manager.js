@@ -74,7 +74,17 @@
     let questionItems = [];
     let interactiveEditorMode = 'bulk';
     let questionsEditorMode = 'bulk';
+    let previewRenderQueued = false;
     const LI = window.LessonImport;
+
+    function scheduleRenderPreview() {
+        if (previewRenderQueued) return;
+        previewRenderQueued = true;
+        requestAnimationFrame(() => {
+            previewRenderQueued = false;
+            renderPreview();
+        });
+    }
 
     function el(id) { return document.getElementById(id); }
 
@@ -840,11 +850,11 @@
     }
 
     // Dynamic flexible items for structured sections (support paste image per item via rich toolbar)
-    function syncEssayToTextarea() {
+    function syncEssayToTextarea(options = {}) {
         const ta = el('lessonEssay');
         if (!ta) return;
         ta.value = essayItems.map(i => `${i.de}|${i.dap}|${i.goi}`).join('\n');
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        if (options.refreshPreview && interactiveEditorMode === 'items') scheduleRenderPreview();
     }
     function renderEssayItems() {
         const cont = el('essayItems');
@@ -871,25 +881,25 @@
 
             const de = d.querySelector(`#essay-de-${i}`);
             de.value = it.de || '';
-            de.oninput = () => { essayItems[i].de = de.value; syncEssayToTextarea(); };
+            de.oninput = () => { essayItems[i].de = de.value; syncEssayToTextarea({ refreshPreview: true }); };
             const dap = d.querySelector(`#essay-dap-${i}`);
             dap.value = it.dap || '';
-            dap.oninput = () => { essayItems[i].dap = dap.value; syncEssayToTextarea(); };
+            dap.oninput = () => { essayItems[i].dap = dap.value; syncEssayToTextarea({ refreshPreview: true }); };
             const goi = d.querySelector(`#essay-goi-${i}`);
             goi.value = it.goi || '';
-            goi.oninput = () => { essayItems[i].goi = goi.value; syncEssayToTextarea(); };
+            goi.oninput = () => { essayItems[i].goi = goi.value; syncEssayToTextarea({ refreshPreview: true }); };
         });
         setupRichToolbars();
         setupDynamicImagePaste();
     }
-    function addEssayItem() { essayItems.push({de:'', dap:'', goi:''}); renderEssayItems(); syncEssayToTextarea(); }
-    function removeEssayItem(i) { essayItems.splice(i,1); renderEssayItems(); syncEssayToTextarea(); }
+    function addEssayItem() { essayItems.push({de:'', dap:'', goi:''}); renderEssayItems(); syncEssayToTextarea({ refreshPreview: true }); }
+    function removeEssayItem(i) { essayItems.splice(i,1); renderEssayItems(); syncEssayToTextarea({ refreshPreview: true }); }
 
-    function syncFillToTextarea() {
+    function syncFillToTextarea(options = {}) {
         const ta = el('lessonFill');
         if (!ta) return;
         ta.value = fillItems.map(i => `${i.de}|${i.manh}|${i.dap}|${i.goi}`).join('\n');
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        if (options.refreshPreview && interactiveEditorMode === 'items') scheduleRenderPreview();
     }
     function renderFillItems() {
         const cont = el('fillItems');
@@ -912,16 +922,16 @@
             const removeBtn = d.querySelector('.remove-item-btn');
             if (removeBtn) removeBtn.onclick = () => removeFillItem(i);
 
-            const de = d.querySelector(`#fill-de-${i}`); de.value = it.de||''; de.oninput = ()=>{fillItems[i].de=de.value; syncFillToTextarea();};
-            ['manh','dap','goi'].forEach(k=>{ const inp=d.querySelector(`#fill-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{fillItems[i][k]=inp.value; syncFillToTextarea();}; });
+            const de = d.querySelector(`#fill-de-${i}`); de.value = it.de||''; de.oninput = ()=>{fillItems[i].de=de.value; syncFillToTextarea({ refreshPreview: true });};
+            ['manh','dap','goi'].forEach(k=>{ const inp=d.querySelector(`#fill-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{fillItems[i][k]=inp.value; syncFillToTextarea({ refreshPreview: true });}; });
         });
         setupRichToolbars();
         setupDynamicImagePaste();
     }
-    function addFillItem(){ fillItems.push({de:'',manh:'',dap:'',goi:''}); renderFillItems(); syncFillToTextarea(); }
-    function removeFillItem(i){ fillItems.splice(i,1); renderFillItems(); syncFillToTextarea(); }
+    function addFillItem(){ fillItems.push({de:'',manh:'',dap:'',goi:''}); renderFillItems(); syncFillToTextarea({ refreshPreview: true }); }
+    function removeFillItem(i){ fillItems.splice(i,1); renderFillItems(); syncFillToTextarea({ refreshPreview: true }); }
 
-    function syncDragToTextarea() {
+    function syncDragToTextarea(options = {}) {
         const ta = el('lessonDrag');
         if (!ta) return;
         ta.value = dragItems.map(item => {
@@ -930,7 +940,7 @@
             }
             return `${item.de}|${item.trai}|${item.phai}|${item.goi}`;
         }).join('\n');
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        if (options.refreshPreview && interactiveEditorMode === 'items') scheduleRenderPreview();
     }
     function renderDragItems() {
         const cont = el('dragItems');
@@ -954,20 +964,28 @@
             const removeBtn = d.querySelector('.remove-item-btn');
             if (removeBtn) removeBtn.onclick = () => removeDragItem(i);
 
-            const de = d.querySelector(`#drag-de-${i}`); de.value = it.de||''; de.oninput = ()=>{dragItems[i].de=de.value; syncDragToTextarea();};
-            ['trai','phai','map','goi'].forEach(k=>{ const inp=d.querySelector(`#drag-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{dragItems[i][k]=inp.value; syncDragToTextarea();}; });
+            const de = d.querySelector(`#drag-de-${i}`); de.value = it.de||''; de.oninput = ()=>{dragItems[i].de=de.value; syncDragToTextarea({ refreshPreview: true });};
+            ['trai','phai','map','goi'].forEach(k=>{ const inp=d.querySelector(`#drag-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{dragItems[i][k]=inp.value; syncDragToTextarea({ refreshPreview: true });}; });
         });
         setupRichToolbars();
         setupDynamicImagePaste();
     }
-    function addDragItem(){ dragItems.push({de:'',trai:'',phai:'',map:'',goi:''}); renderDragItems(); syncDragToTextarea(); }
-    function removeDragItem(i){ dragItems.splice(i,1); renderDragItems(); syncDragToTextarea(); }
+    function addDragItem(){ dragItems.push({de:'',trai:'',phai:'',map:'',goi:''}); renderDragItems(); syncDragToTextarea({ refreshPreview: true }); }
+    function removeDragItem(i){ dragItems.splice(i,1); renderDragItems(); syncDragToTextarea({ refreshPreview: true }); }
 
-    function syncQuestionsToTextarea() {
+    function syncQuestionsToTextarea(options = {}) {
         const ta = el('lessonQuestions');
         if (!ta) return;
-        ta.value = questionItems.map(i => `${i.cau}|${i.a}|${i.b}|${i.c}|${i.d}|${i.dung}`).join('\n');
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        ta.value = questionItems.map(row => [
+            row.skill || '',
+            row.cau || '',
+            row.a || '',
+            row.b || '',
+            row.c || '',
+            row.d || '',
+            row.dung || ''
+        ].join(' | ')).join('\n');
+        if (options.refreshPreview && questionsEditorMode === 'items') scheduleRenderPreview();
     }
     function renderQuestionItems() {
         const cont = el('questionItems');
@@ -992,14 +1010,14 @@
             const removeBtn = d.querySelector('.remove-item-btn');
             if (removeBtn) removeBtn.onclick = () => removeQuestionItem(i);
 
-            const cau = d.querySelector(`#q-cau-${i}`); cau.value=it.cau||''; cau.oninput=()=>{questionItems[i].cau=cau.value; syncQuestionsToTextarea();};
-            ['a','b','c','d','dung'].forEach(k=>{ const inp=d.querySelector(`#q-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{questionItems[i][k]=inp.value; syncQuestionsToTextarea();}; });
+            const cau = d.querySelector(`#q-cau-${i}`); cau.value=it.cau||''; cau.oninput=()=>{questionItems[i].cau=cau.value; syncQuestionsToTextarea({ refreshPreview: true });};
+            ['a','b','c','d','dung'].forEach(k=>{ const inp=d.querySelector(`#q-${k}-${i}`); inp.value=it[k]||''; inp.oninput=()=>{questionItems[i][k]=inp.value; syncQuestionsToTextarea({ refreshPreview: true });}; });
         });
         setupRichToolbars();
         setupDynamicImagePaste();
     }
-    function addQuestionItem(){ questionItems.push({cau:'',a:'',b:'',c:'',d:'',dung:''}); renderQuestionItems(); syncQuestionsToTextarea(); }
-    function removeQuestionItem(i){ questionItems.splice(i,1); renderQuestionItems(); syncQuestionsToTextarea(); }
+    function addQuestionItem(){ questionItems.push({skill:'',cau:'',a:'',b:'',c:'',d:'',dung:''}); renderQuestionItems(); syncQuestionsToTextarea({ refreshPreview: true }); }
+    function removeQuestionItem(i){ questionItems.splice(i,1); renderQuestionItems(); syncQuestionsToTextarea({ refreshPreview: true }); }
 
     // parse from | format to items (for load)
     function parseEssayToItems(str) {
@@ -1244,7 +1262,7 @@
                 ? 'Dán khối BÀI TẬP TƯƠNG TÁC từ Gemini. Chuyển sang Từng câu để chỉnh chi tiết hoặc dán ảnh vào đề.'
                 : 'Soạn từng bài, dán ảnh vào đề khi cần. Chuyển sang Hàng loạt để xem/ghi theo format Gemini.';
         }
-        if (!skipSync) renderPreview();
+        if (!skipSync) scheduleRenderPreview();
     }
 
     function setQuestionsEditorMode(mode, options = {}) {
@@ -1269,7 +1287,7 @@
                 ? 'Dán các dòng trắc nghiệm từ Gemini. Chuyển sang Từng câu để chỉnh hoặc dán ảnh vào câu hỏi.'
                 : 'Soạn từng câu, dán ảnh khi cần. Chuyển sang Hàng loạt để xem/ghi theo format Gemini.';
         }
-        if (!skipSync) renderPreview();
+        if (!skipSync) scheduleRenderPreview();
     }
 
     function formatImageManifestText(lesson) {
@@ -1917,11 +1935,11 @@
         const questionsModeItems = el('questionsModeItems'); if (questionsModeItems) questionsModeItems.onclick = () => setQuestionsEditorMode('items');
         el('interactiveBulkPaste')?.addEventListener('input', () => {
             syncItemsFromInteractiveBulk();
-            renderPreview();
+            scheduleRenderPreview();
         });
         el('questionsBulkPaste')?.addEventListener('input', () => {
             syncItemsFromQuestionsBulk();
-            renderPreview();
+            scheduleRenderPreview();
         });
 
         el('lessonTitleInput').addEventListener('blur', suggestSlug);
@@ -2345,8 +2363,6 @@
     function renderPreview() {
         const preview = el('lessonPreview');
         if (!preview) return;
-        if (interactiveEditorMode === 'bulk') syncItemsFromInteractiveBulk();
-        if (questionsEditorMode === 'bulk') syncItemsFromQuestionsBulk();
         let questionCount = 0;
         const skills = parseSkills(el('lessonSkills').value);
         try { questionCount = resolveQuestionsForSave(skills).length; } catch { questionCount = 0; }

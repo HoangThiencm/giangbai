@@ -34,6 +34,7 @@ const checks = [
     ['drag match+sort (' + pkg.drag_exercises.length + ')', pkg.drag_exercises.length >= 2],
     ['fill', pkg.fill_exercises.length >= 1],
     ['essay', pkg.essay_exercises.length >= 1],
+    ['self practice', pkg.self_practice.length >= 1],
     ['image manifest', pkg.image_manifest.length >= 1],
     ['is_published false', pkg.is_published === false],
     ['no validate errors', errors.length === 0]

@@ -54,6 +54,7 @@
             check('drag match+sort (' + pkg.drag_exercises.length + ': ' + dragModes + ')', pkg.drag_exercises.length >= 2);
             check('fill', pkg.fill_exercises.length >= 1);
             check('essay', pkg.essay_exercises.length >= 1);
+            check('self practice (' + (pkg.self_practice || []).length + ')', (pkg.self_practice || []).length >= 1);
             check('image manifest', pkg.image_manifest.length >= 1);
             check('is_published false', pkg.is_published === false);
             check('no validate errors', !(validation.errors || []).length);
