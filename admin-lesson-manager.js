@@ -355,9 +355,17 @@
 
     function parseVideos(text) {
         return parseLines(text).map(line => {
+            const trimmed = String(line || '').trim();
+            if (/^https?:\/\//i.test(trimmed)) {
+                return { title: 'Video bài giảng', url: trimmed };
+            }
             const parts = line.includes('||') ? line.split('||') : line.split('|');
             const [title, ...urlParts] = parts;
-            return { title: (title || 'Video bài giảng').trim(), url: urlParts.join('|').trim() };
+            const url = urlParts.join('|').trim();
+            if (/^https?:\/\//i.test(String(title || '').trim()) && !url) {
+                return { title: 'Video bài giảng', url: String(title || '').trim() };
+            }
+            return { title: (title || 'Video bài giảng').trim(), url };
         }).filter(video => video.url);
     }
 
@@ -386,13 +394,30 @@
             .filter(Boolean);
     }
 
+    function normalizeMcqBulkLine(line) {
+        let text = String(line || '').trim();
+        if (!text) return '';
+        text = text.replace(/^\*\*|\*\*$/g, '').trim();
+        text = text.replace(/^câu\s*\d+\s*[.:)\-–—]?\s*\|/iu, '').trim();
+        text = text.replace(/^\d+\s*[.)]\s*/, '').trim();
+        return text;
+    }
+
+    function looksLikeSkillId(value) {
+        const text = String(value || '').trim();
+        return /^[a-z0-9][a-z0-9_-]*$/i.test(text)
+            && text.length >= 3
+            && !/^câu\s*\d+$/i.test(text)
+            && !/^[ABCD]$/i.test(text);
+    }
+
     function parseQuestionLine(line, index, fallbackSkill) {
-        const parts = splitQuestionParts(line);
+        const parts = splitQuestionParts(normalizeMcqBulkLine(line));
         if (parts.length < 6) {
             throw new Error(`Câu hỏi số ${index + 1} chưa đúng mẫu: Câu hỏi | A | B | C | D | đáp án`);
         }
 
-        const hasSkill = parts.length >= 7;
+        const hasSkill = parts.length >= 7 && looksLikeSkillId(parts[0]);
         const skill = hasSkill ? parts[0] : fallbackSkill;
         const offset = hasSkill ? 1 : 0;
         const prompt = parts[offset];
@@ -426,6 +451,15 @@
         let buffer = '';
 
         lines.forEach(line => {
+            const normalized = normalizeMcqBulkLine(line);
+            if (splitQuestionParts(normalized).length >= 6) {
+                if (buffer.trim()) {
+                    parseQuestionLine(buffer, blocks.length, fallbackSkill);
+                }
+                blocks.push(normalized);
+                buffer = '';
+                return;
+            }
             buffer = buffer ? `${buffer} ${line}` : line;
             if (canParseQuestionBlock(buffer, fallbackSkill)) {
                 blocks.push(buffer);
@@ -585,40 +619,55 @@
         }).filter(item => item.prompt && (item.pool.length || item.answer));
     }
 
-    function parseDragExercises(text) {
-        return parseLines(text).map((line, index) => {
-            const parts = splitQuestionParts(line);
-            const prompt = parts[0] || '';
-            const pairSpec = parts[3] || '';
-            if (pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) {
-                const pairs = parseMatchPairs(pairSpec);
-                const left = repairPoolPieces(splitPoolText(parts[1]), pairs.length);
-                const right = repairPoolPieces(splitPoolText(parts[2]), pairs.length);
-                return {
-                    id: `drag_${index + 1}`,
-                    mode: 'match',
-                    prompt,
-                    left,
-                    right,
-                    pairs,
-                    pair_spec: pairSpec,
-                    hint: parts[4] || ''
-                };
-            }
-            const items = splitPoolText(parts[1]);
-            const answer = splitPoolText(parts[2] || parts[1]);
+    function buildDefaultMatchPairSpec(leftCount, rightCount) {
+        const count = Math.min(leftCount, rightCount);
+        if (!count) return '';
+        return Array.from({ length: count }, (_, index) => `${index}-${index}`).join(',');
+    }
+
+    function parseSingleDragLine(line, index, options = {}) {
+        const parts = splitQuestionParts(line);
+        const prompt = parts[0] || '';
+        let pairSpec = parts[3] || '';
+        if (!(pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) && options.preferMatch) {
+            const left = repairPoolPieces(splitPoolText(parts[1]), 0);
+            const right = repairPoolPieces(splitPoolText(parts[2]), 0);
+            pairSpec = buildDefaultMatchPairSpec(left.length, right.length);
+        }
+        if (pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) {
+            const pairs = parseMatchPairs(pairSpec);
+            const left = repairPoolPieces(splitPoolText(parts[1]), pairs.length);
+            const right = repairPoolPieces(splitPoolText(parts[2]), pairs.length);
             return {
                 id: `drag_${index + 1}`,
-                mode: 'sort',
+                mode: 'match',
                 prompt,
-                items,
-                answer,
-                hint: parts[3] || ''
+                left,
+                right,
+                pairs,
+                pair_spec: pairSpec,
+                hint: parts[4] || ''
             };
-        }).filter(item => {
-            if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
-            return item.prompt && item.items?.length && item.answer?.length;
-        });
+        }
+        const items = splitPoolText(parts[1]);
+        const answer = splitPoolText(parts[2] || parts[1]);
+        return {
+            id: `drag_${index + 1}`,
+            mode: 'sort',
+            prompt,
+            items,
+            answer,
+            hint: parts[3] || ''
+        };
+    }
+
+    function parseDragExercises(text, options = {}) {
+        return parseLines(text)
+            .map((line, index) => parseSingleDragLine(line, index, options))
+            .filter(item => {
+                if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
+                return item.prompt && item.items?.length && item.answer?.length;
+            });
     }
 
     function formatExamples(items) {
@@ -1418,10 +1467,20 @@
         });
     }
     function parseQuestionToItems(str) {
-        return (str || '').split('\n').filter(Boolean).map(line => {
-            const p = splitQuestionParts(line);
-            return {cau: p[0] || '', a: p[1] || '', b: p[2] || '', c: p[3] || '', d: p[4] || '', dung: p[5] || ''};
-        });
+        return (str || '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+            const p = splitQuestionParts(normalizeMcqBulkLine(line));
+            if (p.length < 6) return null;
+            const hasSkill = p.length >= 7 && looksLikeSkillId(p[0]);
+            const offset = hasSkill ? 1 : 0;
+            return {
+                cau: p[offset] || '',
+                a: p[offset + 1] || '',
+                b: p[offset + 2] || '',
+                c: p[offset + 3] || '',
+                d: p[offset + 4] || '',
+                dung: p[offset + 5] || ''
+            };
+        }).filter(Boolean);
     }
 
     function normalizeBulkHeading(line) {
@@ -1445,8 +1504,10 @@
         if (!heading) return '';
         if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
         if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
-        if (/SẮP XẾP|NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
+        if (/KÉO THẢ|KÉO VÀO Ô|KÉO VÀO TRỐNG/.test(heading)) return 'fill';
+        if (/NỐI Ô/.test(heading) && /SẮP XẾP/.test(heading)) return 'dragMixed';
+        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
+        if (/SẮP XẾP/.test(heading)) return 'dragSort';
         if (/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ|^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
         return '';
     }
@@ -1463,8 +1524,37 @@
         return 'essay';
     }
 
+    function pushInteractiveBulkLines(buckets, section, lines) {
+        const pipeLines = lines.filter(isInteractivePipeLine);
+        if (!pipeLines.length) return;
+        if (section === 'dragMatch') {
+            buckets.dragMatch.push(...pipeLines);
+            return;
+        }
+        if (section === 'dragSort') {
+            buckets.dragSort.push(...pipeLines);
+            return;
+        }
+        if (section === 'dragMixed') {
+            pipeLines.forEach(line => {
+                const kind = classifyInteractivePipeLine(line);
+                if (kind === 'drag' && /\d+\s*-\s*\d+/.test(splitQuestionParts(line)[3] || '')) {
+                    buckets.dragMatch.push(line);
+                } else if (kind === 'drag') {
+                    buckets.dragSort.push(line);
+                } else {
+                    buckets[kind].push(line);
+                }
+            });
+            return;
+        }
+        if (section === 'essay' || section === 'fill' || section === 'drag') {
+            buckets[section].push(...pipeLines);
+        }
+    }
+
     function parseInteractiveBulkPaste(text) {
-        const buckets = { essay: [], fill: [], drag: [] };
+        const buckets = { essay: [], fill: [], drag: [], dragMatch: [], dragSort: [] };
         let section = '';
         let stop = false;
         const buffer = [];
@@ -1474,7 +1564,7 @@
                 buffer.length = 0;
                 return;
             }
-            buckets[section].push(...buffer.filter(isInteractivePipeLine));
+            pushInteractiveBulkLines(buckets, section, buffer);
             buffer.length = 0;
         };
 
@@ -1503,7 +1593,11 @@
             }
 
             const kind = classifyInteractivePipeLine(line);
-            buckets[kind].push(line);
+            if (kind === 'drag' && /\d+\s*-\s*\d+/.test(splitQuestionParts(line)[3] || '')) {
+                buckets.dragMatch.push(line);
+            } else {
+                buckets[kind].push(line);
+            }
         });
 
         flush();
@@ -1511,7 +1605,9 @@
         return {
             essay: buckets.essay.join('\n'),
             fill: buckets.fill.join('\n'),
-            drag: buckets.drag.join('\n')
+            drag: buckets.drag.join('\n'),
+            dragMatch: buckets.dragMatch.join('\n'),
+            dragSort: buckets.dragSort.join('\n')
         };
     }
 
@@ -1555,7 +1651,28 @@
         const parsed = parseInteractiveBulkPaste(el('interactiveBulkPaste')?.value || '');
         essayItems = parseEssayToItems(parsed.essay);
         fillItems = parseFillToItems(parsed.fill);
-        dragItems = parseDragToItems(parsed.drag);
+        dragItems = [
+            ...parseDragExercises(parsed.dragMatch, { preferMatch: true }),
+            ...parseDragExercises(parsed.dragSort),
+            ...parseDragExercises(parsed.drag)
+        ].map(item => {
+            if (item.mode === 'match') {
+                return {
+                    de: item.prompt || '',
+                    trai: joinPoolText(item.left),
+                    phai: joinPoolText(item.right),
+                    map: item.pair_spec || '',
+                    goi: item.hint || ''
+                };
+            }
+            return {
+                de: item.prompt || '',
+                trai: joinPoolText(item.items),
+                phai: joinPoolText(item.answer),
+                map: '',
+                goi: item.hint || ''
+            };
+        });
         syncEssayToTextarea();
         syncFillToTextarea();
         syncDragToTextarea();
@@ -1576,7 +1693,7 @@
             if (!line.includes('|')) return false;
             const heading = normalizeBulkHeading(line);
             return !/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ/.test(heading);
-        });
+        }).map(normalizeMcqBulkLine).filter(Boolean);
         questionItems = parseQuestionToItems(lines.join('\n'));
         syncQuestionsToTextarea();
     }
@@ -1668,9 +1785,10 @@
         if (/^BÀI TẬP NỘP/.test(heading)) return 'selfPractice';
         if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'interactive';
         if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
-        if (/SẮP XẾP/.test(heading) && !/NỐI/.test(heading)) return 'drag';
-        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
+        if (/KÉO THẢ|KÉO VÀO Ô|KÉO VÀO TRỐNG/.test(heading)) return 'fill';
+        if (/NỐI Ô/.test(heading) && /SẮP XẾP/.test(heading)) return 'dragMixed';
+        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
+        if (/SẮP XẾP/.test(heading)) return 'dragSort';
         if (/^TRẮC NGHIỆM/.test(heading)) return 'questions';
         if (/^KỸ NĂNG/.test(heading)) return 'skills';
         if (/^NHIỆM VỤ/.test(heading)) return 'tasks';
@@ -1681,7 +1799,7 @@
     function parseGeminiLessonSections(raw) {
         const sections = {
             goal: '', theory: '', examples: '', selfPractice: '',
-            interactive: '', essay: '', fill: '', drag: '',
+            interactive: '', essay: '', fill: '', drag: '', dragMatch: '', dragSort: '', dragMixed: '',
             questions: '', skills: '', tasks: ''
         };
         let current = '';
@@ -1711,6 +1829,7 @@
         });
         flush();
         const parsedInteractive = parseInteractiveBulkPaste(sections.interactive);
+        const parsedDragMixed = parseInteractiveBulkPaste(sections.dragMixed);
         return {
             goal: sections.goal,
             theory: sections.theory,
@@ -1718,7 +1837,13 @@
             selfPractice: sections.selfPractice,
             essay: sections.essay || parsedInteractive.essay,
             fill: sections.fill || parsedInteractive.fill,
-            drag: sections.drag || parsedInteractive.drag,
+            drag: [
+                sections.drag,
+                parsedInteractive.drag,
+                parsedDragMixed.drag
+            ].filter(Boolean).join('\n'),
+            dragMatch: [sections.dragMatch, parsedInteractive.dragMatch, parsedDragMixed.dragMatch].filter(Boolean).join('\n'),
+            dragSort: [sections.dragSort, parsedInteractive.dragSort, parsedDragMixed.dragSort].filter(Boolean).join('\n'),
             questions: sections.questions,
             skills: sections.skills,
             tasks: sections.tasks
@@ -1757,18 +1882,45 @@
             el('lessonFill').value = sections.fill;
             filled.push(`điền khuyết (${parseFillExercises(sections.fill).length})`);
         }
-        if (sections.drag) {
-            el('lessonDrag').value = sections.drag;
-            const dragCount = parseDragExercises(sections.drag).length;
-            const matchCount = parseDragExercises(sections.drag).filter(item => item.mode === 'match').length;
-            filled.push(`nối ô/sắp xếp (${dragCount}, nối ô: ${matchCount})`);
+        const importedDrag = [
+            ...parseDragExercises(sections.dragMatch || '', { preferMatch: true }),
+            ...parseDragExercises(sections.dragSort || ''),
+            ...parseDragExercises(sections.drag || '')
+        ];
+        if (importedDrag.length) {
+            dragItems = importedDrag.map(item => {
+                if (item.mode === 'match') {
+                    return {
+                        de: item.prompt || '',
+                        trai: joinPoolText(item.left),
+                        phai: joinPoolText(item.right),
+                        map: item.pair_spec || '',
+                        goi: item.hint || ''
+                    };
+                }
+                return {
+                    de: item.prompt || '',
+                    trai: joinPoolText(item.items),
+                    phai: joinPoolText(item.answer),
+                    map: '',
+                    goi: item.hint || ''
+                };
+            });
+            syncDragToTextarea();
+            const matchCount = importedDrag.filter(item => item.mode === 'match').length;
+            filled.push(`nối ô/sắp xếp (${importedDrag.length}, nối ô: ${matchCount})`);
         }
         if (sections.questions) {
             const questionLines = sections.questions.split('\n')
                 .map(line => line.trim())
-                .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/i.test(normalizeBulkHeading(line)));
+                .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/i.test(normalizeBulkHeading(line)))
+                .map(normalizeMcqBulkLine)
+                .filter(Boolean);
             el('lessonQuestions').value = questionLines.join('\n');
-            filled.push(`trắc nghiệm (${questionLines.length} dòng)`);
+            const skillsForImport = parseSkills(el('lessonSkills')?.value || '');
+            let importedQuestionCount = 0;
+            try { importedQuestionCount = parseQuestions(questionLines.join('\n'), skillsForImport).length; } catch { importedQuestionCount = 0; }
+            filled.push(`trắc nghiệm (${importedQuestionCount})`);
         }
         if (sections.skills) {
             el('lessonSkills').value = sections.skills;
@@ -2035,7 +2187,7 @@
                 <p id="questionsModeHint" class="text-[11px] text-slate-500 mb-2">Dán các dòng trắc nghiệm từ Gemini. Chuyển sang Từng câu để chỉnh hoặc dán ảnh vào câu hỏi.</p>
 
                 <div id="questionsBulkPanel" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <p class="text-[11px] text-amber-800 mb-2">Mỗi dòng: <code>Câu? | A | B | C | D | B</code>. Có thể dán cả khối <strong>TRẮC NGHIỆM</strong> từ Gemini.</p>
+                    <p class="text-[11px] text-amber-800 mb-2">Mỗi dòng: <code>Câu? | A | B | C | D | B</code> hoặc <code>Câu 1 | ... | A | B | C | D | B</code>. Có thể dán cả khối <strong>TRẮC NGHIỆM</strong> từ Gemini.</p>
                     <textarea id="questionsBulkPaste" rows="8" class="w-full p-2 border border-amber-300 rounded text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
                 </div>
 
@@ -2535,21 +2687,26 @@
     function renderPreview() {
         const preview = el('lessonPreview');
         if (!preview) return;
+        if (interactiveEditorMode === 'bulk') syncItemsFromInteractiveBulk();
+        if (questionsEditorMode === 'bulk') syncItemsFromQuestionsBulk();
         let questionCount = 0;
         const skills = parseSkills(el('lessonSkills').value);
         try { questionCount = parseQuestions(el('lessonQuestions').value, skills).length; } catch { questionCount = 0; }
         const essayCount = parseEssayExercises(el('lessonEssay').value).length;
         const fillCount = parseFillExercises(el('lessonFill').value).length;
-        const dragCount = parseDragExercises(el('lessonDrag').value).length;
+        const dragParsed = parseDragExercises(el('lessonDrag').value);
+        const dragMatchCount = dragParsed.filter(item => item.mode === 'match').length;
+        const dragSortCount = dragParsed.filter(item => item.mode !== 'match').length;
+        const videoCount = parseVideos(el('lessonVideos')?.value || '').length;
         renderSkillsHint();
         preview.innerHTML = `
             <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-center">
                 <div><div class="text-[10px] text-slate-500">Lý thuyết</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn`; })()}</div></div>
                 <div><div class="text-[10px] text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length}</div></div>
                 <div><div class="text-[10px] text-slate-500">Bài tập nộp</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
-                <div><div class="text-[10px] text-slate-500">Tương tác</div><div class="font-bold">${essayCount + fillCount + dragCount}</div></div>
-                <div><div class="text-[10px] text-slate-500">Trắc nghiệm</div><div class="font-bold">${questionCount}</div></div>
-                <div><div class="text-[10px] text-slate-500">Kỹ năng</div><div class="font-bold ${skills.length ? 'text-teal-700' : 'text-amber-700'}">${skills.length}</div></div>
+                <div><div class="text-[10px] text-slate-500">Tương tác</div><div class="font-bold">${essayCount + fillCount + dragParsed.length}<div class="text-[9px] font-normal text-slate-500">TL ${essayCount} · ĐK ${fillCount} · Nối ${dragMatchCount} · SX ${dragSortCount}</div></div></div>
+                <div><div class="text-[10px] text-slate-500">Trắc nghiệm</div><div class="font-bold ${questionCount ? 'text-teal-700' : 'text-amber-700'}">${questionCount}</div></div>
+                <div><div class="text-[10px] text-slate-500">Kỹ năng / Video</div><div class="font-bold ${skills.length ? 'text-teal-700' : 'text-amber-700'}">${skills.length}<div class="text-[9px] font-normal text-slate-500">${videoCount} video</div></div></div>
             </div>
         `;
     }
