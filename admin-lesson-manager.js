@@ -240,9 +240,49 @@
         };
     }
 
+    function cleanExampleTypeHeading(line) {
+        return String(line || '')
+            .replace(/^\s*#{1,6}\s*/, '')
+            .replace(/^\s*[-+*]\s+/, '')
+            .replace(/^\s*\d+[.)]\s+(?=(?:\*\*|__)?DẠNG\b)/i, '')
+            .replace(/^\s*(?:\*\*|__)/, '')
+            .replace(/(?:\*\*|__)\s*$/, '')
+            .trim();
+    }
+
+    function isExampleTypeHeading(line) {
+        const heading = cleanExampleTypeHeading(line);
+        return /^DẠNG\s+(?:\d+|[IVXLCDM]+)\s*(?::|[.\-–—]|$)/i.test(heading)
+            || /^DẠNG\s+TOÁN\s+THỰC\s+TẾ\s*(?::|[.\-–—]|$)/i.test(heading)
+            || /^DẠNG\s*(?::|[\-–—])/i.test(heading);
+    }
+
+    function parseExamplesByTypeHeadings(text) {
+        const lines = String(text || '').replace(/\r/g, '').split('\n');
+        const headingIndexes = [];
+        lines.forEach((line, index) => {
+            if (isExampleTypeHeading(line)) headingIndexes.push(index);
+        });
+        if (!headingIndexes.length) return [];
+
+        const preamble = lines.slice(0, headingIndexes[0]).join('\n').trim();
+        return headingIndexes.map((startIndex, groupIndex) => {
+            const endIndex = headingIndexes[groupIndex + 1] ?? lines.length;
+            const title = cleanExampleTypeHeading(lines[startIndex]) || `DẠNG ${groupIndex + 1}`;
+            const bodyParts = lines.slice(startIndex + 1, endIndex);
+            if (groupIndex === 0 && preamble) bodyParts.unshift(preamble, '');
+            const parsed = parseContentWithAiMarker(bodyParts.join('\n').replace(/\n{3,}/g, '\n\n').trim());
+            return { title, body: parsed.text, ai: parsed.ai };
+        }).filter(example => example.title || example.body);
+    }
+
     function parseExamples(text) {
-        const blocks = String(text || '').replace(/\r/g, '').split(/\n\s*\n+/).map(block => block.trim()).filter(Boolean);
-        const source = blocks.length > 1 || !String(text || '').includes('|') ? blocks : parseLines(text);
+        const normalizedText = String(text || '').replace(/\r/g, '');
+        const typedExamples = parseExamplesByTypeHeadings(normalizedText);
+        if (typedExamples.length) return typedExamples;
+
+        const blocks = normalizedText.split(/\n\s*\n+/).map(block => block.trim()).filter(Boolean);
+        const source = blocks.length > 1 || !normalizedText.includes('|') ? blocks : parseLines(normalizedText);
         return source.map((block, index) => {
             const parts = block.includes('||') ? block.split('||') : block.split('|');
             if (parts.length >= 2) {
