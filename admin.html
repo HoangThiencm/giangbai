@@ -307,6 +307,10 @@
                                 <input id="adminDs2apiEnabled" type="checkbox" class="h-4 w-4 rounded border-cyan-300 text-cyan-700 focus:ring-cyan-500" checked>
                                 Bật DS2API làm nguồn chính
                             </label>
+                            <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-amber-900">
+                                <input id="adminDs2apiTestOnly" type="checkbox" class="h-4 w-4 rounded border-amber-300 text-amber-700 focus:ring-amber-500">
+                                Chế độ test: chỉ DS2API (tắt Light AI, Cloudflare, Gemini, ShopAIKey)
+                            </label>
                         </div>
                         <span id="adminDs2apiStatus" class="text-xs font-semibold text-cyan-700"></span>
                     </div>
@@ -915,6 +919,7 @@
             const cloudflareModel = String(currentGlobalContent?.cloudflare_ai_model || '@cf/qwen/qwen3-30b-a3b-fp8');
             const hasShop = !!String(currentGlobalContent?.shopaikey_api_key || '').trim();
             const hasDs2 = currentGlobalContent?.ds2api_enabled !== false;
+            const ds2TestOnly = currentGlobalContent?.ai_test_ds2api_only === true;
             const source = configStorageMeta.source;
             let tone = 'border-amber-200 bg-amber-50 text-amber-900';
             let icon = 'fa-circle-info';
@@ -924,7 +929,9 @@
                 if (keys || hasShop || hasDs2) {
                     tone = 'border-emerald-200 bg-emerald-50 text-emerald-900';
                     icon = 'fa-cloud';
-                    message = `Đã đọc cấu hình AI từ <strong>hosting</strong>: Router lộ trình — ${hasDs2 ? 'DS2API (chính), ' : ''}Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', ShopAIKey cuối' : ''}. DS2API URL trong <code>api/config.php</code>; Worker URL/secret cũng trong <code>config.php</code>.`;
+                    message = ds2TestOnly
+                        ? `Đã đọc cấu hình AI từ <strong>hosting</strong>: <strong>Chế độ test chỉ DS2API</strong> — AI Explain lộ trình không fallback Cloudflare/Gemini/ShopAIKey. DS2API URL trong <code>api/config.php</code>.`
+                        : `Đã đọc cấu hình AI từ <strong>hosting</strong>: Router lộ trình — ${hasDs2 ? 'DS2API (chính), ' : ''}Cloudflare · <code>${cloudflareModel}</code>, ${keys} Gemini key${keys === 1 ? '' : 's'}, ${mistralKeys} Mistral key${mistralKeys === 1 ? '' : 's'}${hasShop ? ', ShopAIKey cuối' : ''}. DS2API URL trong <code>api/config.php</code>; Worker URL/secret cũng trong <code>config.php</code>.`;
                 } else {
                     tone = 'border-amber-200 bg-amber-50 text-amber-900';
                     icon = 'fa-triangle-exclamation';
@@ -1119,11 +1126,13 @@
             const baseUrl = typeof content?.ds2api_base_url === 'string' ? content.ds2api_base_url : 'https://freeapideepseek.vercel.app';
             const model = typeof content?.ds2api_model === 'string' ? content.ds2api_model : 'deepseek-v4-flash';
             const enabled = content?.ds2api_enabled !== false;
+            const testOnly = content?.ai_test_ds2api_only === true;
             const keyInput = document.getElementById('adminDs2apiKeyInput');
             const baseInput = document.getElementById('adminDs2apiBaseUrlInput');
             const modelSelect = document.getElementById('adminDs2apiModuleSelect');
             const modelCustom = document.getElementById('adminDs2apiModuleCustom');
             const enabledInput = document.getElementById('adminDs2apiEnabled');
+            const testOnlyInput = document.getElementById('adminDs2apiTestOnly');
             const status = document.getElementById('adminDs2apiStatus');
             const currentModel = document.getElementById('adminDs2apiCurrentModel');
 
@@ -1132,16 +1141,25 @@
             if (modelSelect) modelSelect.value = DS2API_MODEL_OPTIONS.includes(model) ? model : 'deepseek-v4-flash';
             if (modelCustom) modelCustom.value = DS2API_MODEL_OPTIONS.includes(model) ? '' : model;
             if (enabledInput) enabledInput.checked = enabled;
+            if (testOnlyInput) testOnlyInput.checked = testOnly;
             if (currentModel) currentModel.textContent = model;
             if (status) {
-                status.innerHTML = !enabled
-                    ? '<span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-slate-700">Đang tắt</span>'
-                    : `<span class="inline-flex items-center rounded-full bg-cyan-100 px-2.5 py-1 text-cyan-800">Bật · ${model}</span>`;
+                if (testOnly) {
+                    status.innerHTML = '<span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-amber-900">Test chỉ DS2API</span>';
+                } else if (!enabled) {
+                    status.innerHTML = '<span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-slate-700">Đang tắt</span>';
+                } else {
+                    status.innerHTML = `<span class="inline-flex items-center rounded-full bg-cyan-100 px-2.5 py-1 text-cyan-800">Bật · ${model}</span>`;
+                }
             }
             if (document.getElementById('adminDs2apiStorageDetail')) {
-                document.getElementById('adminDs2apiStorageDetail').textContent = !enabled
-                    ? 'DS2API đang tắt — router sẽ bỏ qua và dùng Cloudflare/Gemini.'
-                    : `Ưu tiên trước Cloudflare. Cấu hình chính: <code>DS2API_BASE_URL</code> trong api/config.php trên hosting (không cần API key).${apiKey ? ' Có key tùy chọn trong global_config.' : ''}`;
+                if (testOnly) {
+                    document.getElementById('adminDs2apiStorageDetail').textContent = 'Chế độ test: AI Explain lộ trình chỉ gọi DS2API — không fallback Cloudflare/Gemini/ShopAIKey. Lỗi DS2API hiện rõ trên UI.';
+                } else if (!enabled) {
+                    document.getElementById('adminDs2apiStorageDetail').textContent = 'DS2API đang tắt — router sẽ bỏ qua và dùng Cloudflare/Gemini.';
+                } else {
+                    document.getElementById('adminDs2apiStorageDetail').textContent = `Ưu tiên trước Cloudflare. Cấu hình chính: <code>DS2API_BASE_URL</code> trong api/config.php trên hosting (không cần API key).${apiKey ? ' Có key tùy chọn trong global_config.' : ''}`;
+                }
             }
             renderConfigStorageBanner();
         }
@@ -1610,6 +1628,7 @@
                 currentGlobalContent.ds2api_base_url = document.getElementById('adminDs2apiBaseUrlInput')?.value?.trim() || 'https://freeapideepseek.vercel.app';
                 currentGlobalContent.ds2api_model = readDs2apiModelFromUI();
                 currentGlobalContent.ds2api_enabled = !!document.getElementById('adminDs2apiEnabled')?.checked;
+                currentGlobalContent.ai_test_ds2api_only = !!document.getElementById('adminDs2apiTestOnly')?.checked;
                 try {
                     await saveConfigToLocalApi(currentGlobalContent);
                 } catch (localError) {

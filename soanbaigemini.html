@@ -674,18 +674,18 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                         </div>
                         
                         <div class="structure-card bg-slate-50 p-4 rounded-2xl">
-                            <div class="font-semibold text-teal-700">4. BÀI TẬP TƯƠNG TÁC</div>
+                            <div class="font-semibold text-teal-700">4. BÀI TẬP TƯƠNG TÁC (4 heading riêng)</div>
                             <ul class="mt-1 space-y-1 text-slate-600 list-disc pl-5">
-                                <li>Tự luận ngắn: 3–5 câu; đáp án chỉ là số.</li>
-                                <li>Kéo thả vào ô trống: đúng 2 câu.</li>
-                                <li>Sắp xếp thứ tự: đúng 2 câu.</li>
-                                <li>Nối ô: 1–2 câu.</li>
+                                <li><strong>BÀI TẬP TỰ LUẬN NGẮN</strong> — 3–5 dòng <code>Đề | Đáp án | Gợi ý</code></li>
+                                <li><strong>KÉO THẢ VÀO Ô TRỐNG</strong> — 2 dòng <code>Câu ___ | mảnh1 » mảnh2 | đáp án » từng ô | gợi ý</code></li>
+                                <li><strong>SẮP XẾP THỨ TỰ</strong> — 2 dòng <code>Đề | phần tử » ... | thứ tự » ... | gợi ý</code></li>
+                                <li><strong>NỐI Ô</strong> — 1–2 dòng <code>Đề | Trái » ... | Phải » ... | 0-0,1-1 | gợi ý</code></li>
                             </ul>
                         </div>
                         
                         <div class="structure-card bg-slate-50 p-4 rounded-2xl">
-                            <div class="font-semibold text-teal-700">5. TRẮC NGHIỆM</div>
-                            <div class="text-slate-600">Đúng 10 câu. Format: <code>Câu hỏi | A | B | C | D | B</code></div>
+                            <div class="font-semibold text-teal-700">5. TRẮC NGHIỆM (heading riêng)</div>
+                            <div class="text-slate-600">Đúng 10 câu. Format: <code>Câu hỏi | A | B | C | D | B</code> — dán vào tab Trắc nghiệm, không gộp vào Bài tập tương tác.</div>
                         </div>
                     </div>
 
@@ -767,7 +767,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             const heading = normalizeLessonSectionHeading(trimmed);
             if (!heading || heading.length > 80) return false;
 
-            if (/^(MỤC TIÊU|LÝ THUYẾT|VÍ DỤ|BÀI TẬP NỘP|BÀI TẬP TƯƠNG TÁC|TRẮC NGHIỆM|KỸ NĂNG|NHIỆM VỤ|DANH SÁCH HÌNH|DẠNG\s+\d+|KIẾN THỨC|GHI NHỚ|CHÚ Ý|LƯU Ý|VẬN DỤNG|CỦNG CỐ|PHẦN\s+VÍ DỤ|VÍ DỤ MINH HỌA|PROMPT TẠO ẢNH)/.test(heading)) {
+            if (/^(MỤC TIÊU|LÝ THUYẾT|VÍ DỤ|BÀI TẬP NỘP|BÀI TẬP TƯƠNG TÁC|BÀI TẬP TỰ LUẬN|KÉO THẢ|KÉO VÀO Ô|SẮP XẾP|NỐI Ô|TRẮC NGHIỆM|KỸ NĂNG|NHIỆM VỤ|DANH SÁCH HÌNH|DẠNG\s+\d+|KIẾN THỨC|GHI NHỚ|CHÚ Ý|LƯU Ý|VẬN DỤNG|CỦNG CỐ|PHẦN\s+VÍ DỤ|VÍ DỤ MINH HỌA|PROMPT TẠO ẢNH)/.test(heading)) {
                 return true;
             }
 
@@ -804,6 +804,10 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
             if (/^BÀI TẬP NỘP(?:\s+GIÁO VIÊN)?$/.test(heading)) return 'selfPractice';
             if (/^BÀI TẬP TƯƠNG TÁC$/.test(heading)) return 'interactive';
+            if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+            if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
+            if (/SẮP XẾP/.test(heading) && !/NỐI/.test(heading)) return 'drag';
+            if (/NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
             if (/^TRẮC NGHIỆM$/.test(heading)) return 'questions';
             if (/^KỸ NĂNG(?:\s+CẦN ĐẠT)?$/.test(heading)) return 'skills';
             if (/^NHIỆM VỤ(?:\s+HỌC SINH)?$/.test(heading)) return 'tasks';
@@ -819,6 +823,109 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             sectionValues[key] = sectionValues[key] ? `${sectionValues[key]}\n\n${value}` : value;
         }
 
+        function splitQuestionParts(line) {
+            return (line.includes('||') ? line.split('||') : line.split('|'))
+                .map(part => part.trim())
+                .filter(Boolean);
+        }
+
+        function normalizeBulkHeading(line) {
+            return String(line || '')
+                .replace(/^\s*#{1,6}\s*/, '')
+                .replace(/^\s*\d+[.)]\s*/, '')
+                .replace(/^\s*\*\*|\*\*\s*$/g, '')
+                .trim()
+                .toUpperCase();
+        }
+
+        function resolveInteractiveBulkSection(line) {
+            const heading = normalizeBulkHeading(line);
+            if (!heading) return '';
+            if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
+            if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+            if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
+            if (/SẮP XẾP|NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
+            if (/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ|^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
+            return '';
+        }
+
+        function poolTextHasMultipleItems(value) {
+            const source = String(value || '');
+            if (!source) return false;
+            if (/\s*»\s*/u.test(source)) return source.split(/\s*»\s*/u).filter(Boolean).length > 1;
+            return false;
+        }
+
+        function isInteractivePipeLine(line) {
+            const text = String(line || '').trim();
+            if (!text || !text.includes('|')) return false;
+            if (/^\*\*.+\*\*$/.test(text)) return false;
+            return !resolveInteractiveBulkSection(text);
+        }
+
+        function classifyInteractivePipeLine(line) {
+            const parts = splitQuestionParts(line);
+            if (parts.length >= 5 && /\d+\s*-\s*\d+/.test(parts[3] || '')) return 'drag';
+            if (parts.length >= 4) {
+                const leftMulti = poolTextHasMultipleItems(parts[1]);
+                const rightMulti = poolTextHasMultipleItems(parts[2]);
+                if (leftMulti && rightMulti) return 'drag';
+                if (leftMulti || /___|…/.test(parts[0] || '')) return 'fill';
+            }
+            return 'essay';
+        }
+
+        function parseInteractiveBulkPaste(text) {
+            const buckets = { essay: [], fill: [], drag: [] };
+            let section = '';
+            let stop = false;
+            const buffer = [];
+
+            const flush = () => {
+                if (!section || section === 'skip' || !buffer.length) {
+                    buffer.length = 0;
+                    return;
+                }
+                buckets[section].push(...buffer.filter(isInteractivePipeLine));
+                buffer.length = 0;
+            };
+
+            String(text || '').split('\n').forEach(rawLine => {
+                if (stop) return;
+                const line = String(rawLine || '').trim();
+                if (!line) return;
+
+                const nextSection = resolveInteractiveBulkSection(line);
+                if (nextSection === 'stop') {
+                    flush();
+                    stop = true;
+                    return;
+                }
+                if (nextSection) {
+                    flush();
+                    if (nextSection !== 'skip') section = nextSection;
+                    return;
+                }
+
+                if (!isInteractivePipeLine(line)) return;
+
+                if (section && section !== 'skip') {
+                    buffer.push(line);
+                    return;
+                }
+
+                buckets[classifyInteractivePipeLine(line)].push(line);
+            });
+
+            flush();
+
+            return {
+                essay: buckets.essay.join('\n'),
+                fill: buckets.fill.join('\n'),
+                drag: buckets.drag.join('\n')
+            };
+        }
+
         function parseLessonSectionsFromRaw(raw) {
             const sectionValues = {
                 goal: '',
@@ -827,6 +934,9 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 examples: '',
                 selfPractice: '',
                 interactive: '',
+                essay: '',
+                fill: '',
+                drag: '',
                 questions: '',
                 skills: '',
                 tasks: '',
@@ -957,8 +1067,14 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             const theory = sectionValues.theory;
             const examples = sectionValues.examples;
             const selfPractice = sectionValues.selfPractice;
-            const interactive = sectionValues.interactive;
-            const questions = sectionValues.questions;
+            const parsedInteractive = parseInteractiveBulkPaste(sectionValues.interactive);
+            const essay = sectionValues.essay || parsedInteractive.essay;
+            const fill = sectionValues.fill || parsedInteractive.fill;
+            const drag = sectionValues.drag || parsedInteractive.drag;
+            const questions = String(sectionValues.questions || '').split('\n')
+                .map(line => line.trim())
+                .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/.test(normalizeBulkHeading(line)))
+                .join('\n');
             const skills = sectionValues.skills;
             const tasks = sectionValues.tasks;
 
@@ -981,8 +1097,10 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (theory) container.appendChild(createAdminCopySection('LÝ THUYẾT', theory, 'Copy nguyên vào tab Lý thuyết'));
             if (examples) container.appendChild(createAdminCopySection('VÍ DỤ', examples, 'Copy nguyên vào tab Ví dụ'));
             if (selfPractice) container.appendChild(createAdminCopySection('BÀI TẬP NỘP', selfPractice, 'Copy vào phần Bài tập nộp giáo viên'));
-            if (interactive) container.appendChild(createAdminCopySection('BÀI TẬP TƯƠNG TÁC', interactive, 'Giữ nguyên toàn bộ phần Tự luận, Kéo thả và Nối/Sắp xếp'));
-            if (questions) container.appendChild(createAdminCopySection('TRẮC NGHIỆM', questions, 'Copy từng dòng vào ô Câu hỏi trắc nghiệm'));
+            if (essay) container.appendChild(createAdminCopySection('TỰ LUẬN', essay, 'Copy vào tab Bài tập tương tác → Bài tập tự luận (mỗi dòng: Đề | Đáp án | Gợi ý)'));
+            if (fill) container.appendChild(createAdminCopySection('ĐIỀN KHUYẾT / KÉO THẢ', fill, 'Copy vào tab Bài tập tương tác → Kéo vào ô trống (đáp án nhiều ô dùng » ví dụ 7 » 2 » 8)'));
+            if (drag) container.appendChild(createAdminCopySection('NỐI Ô / SẮP XẾP', drag, 'Copy vào tab Bài tập tương tác → Nối ô / sắp xếp'));
+            if (questions) container.appendChild(createAdminCopySection('TRẮC NGHIỆM', questions, 'Copy từng dòng vào tab Trắc nghiệm (Câu? | A | B | C | D | B)'));
             if (skills) container.appendChild(createAdminCopySection('KỸ NĂNG', skills, 'Copy vào ô Kỹ năng cần đạt'));
             if (tasks) container.appendChild(createAdminCopySection('NHIỆM VỤ', tasks, 'Copy vào ô Nhiệm vụ học sinh'));
 
@@ -1822,7 +1940,7 @@ Yêu cầu hoàn thiện:
 - Nếu số lượng hoặc format dòng dùng dấu | chưa đúng, phải tự sửa và trả lại bản hoàn chỉnh đúng form.
 - Xóa mọi chú thích nguồn chen trong nội dung như "(Dựa theo Bài 5 - SGK)", "(Theo SGK...)" hoặc "(Nguồn: SGK...)"; không ghi số bài, số trang hay lời dẫn trích nguồn.
 - Giữ nguyên cấu trúc heading và format xuất của hệ thống:
-MỤC TIÊU, LÝ THUYẾT, VÍ DỤ, BÀI TẬP NỘP GIÁO VIÊN, BÀI TẬP TƯƠNG TÁC, TRẮC NGHIỆM, KỸ NĂNG, NHIỆM VỤ, DANH SÁCH HÌNH ẢNH CẦN TẠO.
+MỤC TIÊU, LÝ THUYẾT, VÍ DỤ, BÀI TẬP NỘP GIÁO VIÊN, BÀI TẬP TỰ LUẬN NGẮN, KÉO THẢ VÀO Ô TRỐNG, SẮP XẾP THỨ TỰ, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG CẦN ĐẠT, NHIỆM VỤ, DANH SÁCH HÌNH ẢNH CẦN TẠO.
 - Không thêm lời mở đầu, bảng chấm, nhận xét, nhãn ĐÚNG/SAI hoặc giải thích bạn đã sửa gì.
 - Chỉ trả lại toàn bộ bài học hoàn chỉnh. Nếu nội dung đã đúng thì giữ nguyên; nếu sai thì trả lại bản đã sửa.
 
@@ -1897,25 +2015,30 @@ ${notes ? `- Yêu cầu thêm: ${notes}` : ''}
   - Mỗi bài là một **bài tập song sinh** tương ứng với bài ví dụ: cùng dạng, cùng phương pháp và độ khó tương đương nhưng đổi số liệu/ngữ cảnh; không sao chép nguyên đề.
   - Chỉ ghi đề bài để học sinh làm và nộp; không đưa lời giải hoặc đáp án vào phần này.
 
-- BÀI TẬP TƯƠNG TÁC:
-  **BÀI TẬP TỰ LUẬN NGẮN**: tạo từ 3 đến 5 câu. Mỗi dòng đúng format:
-  "Đề đầy đủ | Đáp án | Gợi ý"
-  Đáp án để học sinh điền là kết quả cuối cùng: số nguyên/thập phân (âm được), phân số (1/2, -3/4) hoặc căn đơn giản (√16, √(25)); không chứa chữ hay đơn vị. Hệ thống chấp √16 và 4 là như nhau, 1/2 và 0.5 là như nhau.
+**BÀI TẬP TỰ LUẬN NGẮN** (heading riêng, không gộp chung):
+Tạo từ 3 đến 5 câu. Mỗi dòng: "Đề đầy đủ | Đáp án | Gợi ý"
+Đáp án là kết quả cuối: số nguyên/thập phân, phân số (1/2) hoặc căn (√16); không chữ hay đơn vị.
 
-  **KÉO THẢ VÀO Ô TRỐNG**: tạo đúng 2 câu. Mỗi dòng đúng format:
-  "Câu có ___ | mảnh1 » mảnh2 » mảnh3 | đáp án | gợi ý"
+**KÉO THẢ VÀO Ô TRỐNG** (heading riêng):
+Tạo đúng 2 câu. Mỗi dòng: "Câu có ___ | mảnh1 » mảnh2 » mảnh3 | đáp án1 » đáp án2 » đáp án3 | gợi ý"
+Đáp án nhiều ô BẮT BUỘC dùng dấu » (ví dụ 7 » 2 » 8). Không dùng 7,2 hay 7, 2, 8.
 
-  **SẮP XẾP THỨ TỰ**: tạo đúng 2 câu. Mỗi dòng đúng format:
-  "Đề bài | phần tử 1 » phần tử 2 » phần tử 3 | thứ tự đúng 1 » thứ tự đúng 2 » thứ tự đúng 3 | gợi ý"
+**SẮP XẾP THỨ TỰ** (heading riêng):
+Tạo đúng 2 câu. Mỗi dòng: "Đề bài | phần tử 1 » phần tử 2 » phần tử 3 | thứ tự đúng 1 » thứ tự đúng 2 » thứ tự đúng 3 | gợi ý"
 
-  **NỐI Ô**: tạo từ 1 đến 2 câu. Mỗi dòng đúng format:
-  "Đề bài | Trái 1 » Trái 2 » Trái 3 | Phải 1 » Phải 2 » Phải 3 | 0-0,1-1,2-2 | gợi ý"
-  Không viết dòng tiêu đề cột, không đánh số ở đầu các dòng dữ liệu.
+**NỐI Ô** (heading riêng):
+Tạo từ 1 đến 2 câu. Mỗi dòng: "Đề bài | Trái 1 » Trái 2 » Trái 3 | Phải 1 » Phải 2 » Phải 3 | 0-0,1-1,2-2 | gợi ý"
+Không viết dòng tiêu đề cột, không đánh số ở đầu dòng dữ liệu.
 
-- TRẮC NGHIỆM: tạo đúng 10 câu, bao quát từ nhận biết đến vận dụng. Mỗi dòng đúng format "Câu? | phương án A | phương án B | phương án C | phương án D | B"; trường cuối chỉ là A/B/C/D. Không viết dòng tiêu đề cột.
+**TRẮC NGHIỆM** (heading riêng, tab Trắc nghiệm trong editor):
+Tạo đúng 10 câu. Mỗi dòng: "Câu? | phương án A | phương án B | phương án C | phương án D | B"
+Trường cuối chỉ là A/B/C/D. Không gộp vào phần Bài tập tương tác.
 
-- KỸ NĂNG: id | Tên | 80
-- NHIỆM VỤ: list
+**KỸ NĂNG CẦN ĐẠT** (heading riêng):
+Mỗi dòng: id_khong_dau | Tên kỹ năng | 80 (không prefix "id:" hay "Tên:")
+
+**NHIỆM VỤ HỌC SINH** (heading riêng):
+Liệt kê 3–5 việc cần làm, mỗi dòng một nhiệm vụ.
 
 **VỀ HÌNH ẢNH MINH HỌA (CHỈ KHI THẬT SỰ CẦN):**
 - **Nguyên tắc:** Không phải bài nào cũng cần hình. Trắc nghiệm, tự luận ngắn, kéo thả, nối ô, sắp xếp **mặc định không có hình**. Lý thuyết chỉ chèn hình khi cần sơ đồ/khái niệm trực quan. Ví dụ dạng cơ bản chỉ chèn hình khi minh họa giúp hiểu dạng (ví dụ hình học, biểu đồ).

@@ -307,15 +307,50 @@
         }).filter(example => example.title || example.body);
     }
 
-    function parseSkills(text) {
-        return parseLines(text).map((line, index) => {
-            const [id, name, target] = line.split('|').map(part => part.trim());
-            return {
-                id: slugify(id || name || `skill-${index + 1}`),
-                name: name || id || `Kỹ năng ${index + 1}`,
-                target: Number(target) || 80
-            };
+    function normalizeSkillField(value, kind) {
+        let text = String(value || '').trim();
+        if (kind === 'id') {
+            text = text.replace(/^id\s*[:：]\s*/i, '').trim();
+        } else if (kind === 'name') {
+            text = text.replace(/^t[eê]n\s*[:：]\s*/i, '').trim();
+        } else if (kind === 'target') {
+            text = text.replace(/^(?:target|muc|mục)\s*[:：]\s*/i, '').trim();
+        }
+        return text;
+    }
+
+    function mergeSkillInputLines(text) {
+        const merged = [];
+        String(text || '').replace(/\r/g, '').split('\n').forEach((rawLine) => {
+            const line = rawLine.trim();
+            if (!line) return;
+            if (/^\d{1,3}$/.test(line) && merged.length && /\|\s*$/.test(merged[merged.length - 1])) {
+                merged[merged.length - 1] = `${merged[merged.length - 1].replace(/\|\s*$/, '')} | ${line}`;
+                return;
+            }
+            merged.push(line);
         });
+        return merged;
+    }
+
+    function parseSkills(text) {
+        return mergeSkillInputLines(text).map((line, index) => {
+            const parts = line.split('|').map(part => part.trim());
+            if (parts.length === 1 && /^\d{1,3}$/.test(parts[0])) return null;
+
+            const idRaw = normalizeSkillField(parts[0], 'id');
+            const nameRaw = normalizeSkillField(parts[1], 'name');
+            const targetRaw = normalizeSkillField(parts[2], 'target');
+            const id = slugify(idRaw || nameRaw || `skill-${index + 1}`);
+            const name = nameRaw || idRaw || `Kỹ năng ${index + 1}`;
+            const targetNum = Number(targetRaw);
+            const target = Number.isFinite(targetNum) && targetNum > 0
+                ? Math.min(100, Math.max(1, Math.round(targetNum)))
+                : 80;
+
+            if (!id && !name) return null;
+            return { id, name, target };
+        }).filter(Boolean);
     }
 
     function parseVideos(text) {
@@ -419,6 +454,9 @@
 
     const POOL_ITEM_JOINER = ' » ';
     const POOL_ITEM_SEP_RE = /\s*»\s*/u;
+    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]/g;
+    // Chỉ tách khi dấu phẩy có khoảng trắng (7, 2, 8) — không tách số thập phân 7,2 hay 70,208
+    const FILL_COMMA_LIST_RE = /\s*,\s+|\s+,\s*/;
 
     function splitPoolTextByGt(value) {
         const source = String(value || '');
@@ -478,6 +516,36 @@
         return splitPoolText(value).length > 1;
     }
 
+    function countBlankTokens(prompt) {
+        const matches = String(prompt || '').match(BLANK_TOKEN_RE);
+        return matches?.length || 1;
+    }
+
+    function splitFillAnswerList(value, blankCount = 0) {
+        if (Array.isArray(value)) {
+            return value.map(part => String(part || '').trim()).filter(Boolean);
+        }
+        const source = String(value || '').trim();
+        if (!source) return [];
+        if (POOL_ITEM_SEP_RE.test(source)) return splitPoolText(source);
+        if (FILL_COMMA_LIST_RE.test(source)) {
+            const parts = source.split(FILL_COMMA_LIST_RE).map(part => part.trim()).filter(Boolean);
+            if (parts.length > 1) return parts;
+        }
+        if (source.includes(';')) {
+            const parts = source.split(/\s*;\s*/).map(part => part.trim()).filter(Boolean);
+            if (parts.length > 1) return parts;
+        }
+        if (source.includes('>')) {
+            const gtParts = splitPoolTextByGt(source);
+            if (gtParts.length > 1) return gtParts;
+        }
+        if (blankCount > 1 && source.length === 1 && blankCount === source.length) {
+            return source.split('');
+        }
+        return [source];
+    }
+
     function parseMatchPairs(spec) {
         return String(spec || '').split(',').map(part => part.trim()).filter(Boolean).map(part => {
             const [left, right] = part.split('-').map(value => Number.parseInt(value, 10));
@@ -490,6 +558,7 @@
         return parseLines(text).map((line, index) => {
             const parts = splitQuestionParts(line);
             const prompt = parts[0] || '';
+            const blankCount = countBlankTokens(prompt);
             let pool = [];
             let answer = parts[1] || '';
             let hint = parts[2] || '';
@@ -500,7 +569,11 @@
             } else if (answer) {
                 pool = [String(answer).trim()];
             }
-            const answers = poolTextHasMultipleItems(answer) ? splitPoolText(answer) : [String(answer || '').trim()].filter(Boolean);
+            let answers = splitFillAnswerList(answer, blankCount);
+            if (answers.length === 1 && blankCount > 1) {
+                const expanded = splitFillAnswerList(answers[0], blankCount);
+                if (expanded.length > 1) answers = expanded;
+            }
             return {
                 id: `fill_${index + 1}`,
                 prompt,
@@ -1826,8 +1899,9 @@
             <div id="tab-khac" class="lesson-tab-content hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <label class="block text-sm font-bold text-slate-700">Kỹ năng cần đạt
-                        <span class="block text-[11px] text-slate-500">id | Tên | target</span>
-                        <textarea id="lessonSkills" rows="5" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                        <span class="block text-[11px] text-slate-500">Mỗi dòng: <code>id_khong_dau | Tên kỹ năng | 80</code> — không cần gõ chữ "id:" hay "Tên:"</span>
+                        <textarea id="lessonSkills" rows="5" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="cac-so-den-100000 | Nhận biết, đọc viết và so sánh các số đến 100 000 | 80"></textarea>
+                        <span id="lessonSkillsHint" class="mt-1 block text-[11px] text-slate-500"></span>
                     </label>
                     <label class="block text-sm font-bold text-slate-700">Nhiệm vụ học sinh
                         <span class="block text-[11px] text-slate-500">Mỗi dòng = 1 việc cần làm</span>
@@ -2285,21 +2359,35 @@
         el('lessonSlug').value = slugify(value);
     }
 
+    function renderSkillsHint() {
+        const hint = el('lessonSkillsHint');
+        if (!hint) return;
+        const skills = parseSkills(el('lessonSkills')?.value || '');
+        if (!skills.length) {
+            hint.innerHTML = '<span class="text-amber-700"><i class="fas fa-triangle-exclamation mr-1"></i>Chưa nhận kỹ năng nào. Mỗi dòng cần ít nhất id và tên, cách nhau bởi dấu <code>|</code>.</span>';
+            return;
+        }
+        hint.innerHTML = `<span class="text-teal-700"><i class="fas fa-circle-check mr-1"></i>Đã nhận ${skills.length} kỹ năng: ${skills.map(skill => escapeHtml(skill.name || skill.id)).join(' · ')}</span>`;
+    }
+
     function renderPreview() {
         const preview = el('lessonPreview');
         if (!preview) return;
         let questionCount = 0;
-        try { questionCount = parseQuestions(el('lessonQuestions').value, parseSkills(el('lessonSkills').value)).length; } catch { questionCount = 0; }
+        const skills = parseSkills(el('lessonSkills').value);
+        try { questionCount = parseQuestions(el('lessonQuestions').value, skills).length; } catch { questionCount = 0; }
         const essayCount = parseEssayExercises(el('lessonEssay').value).length;
         const fillCount = parseFillExercises(el('lessonFill').value).length;
         const dragCount = parseDragExercises(el('lessonDrag').value).length;
+        renderSkillsHint();
         preview.innerHTML = `
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-center">
                 <div><div class="text-[10px] text-slate-500">Lý thuyết</div><div class="font-bold">${(() => { const blocks = parseTheoryBlocks(el('lessonTheory').value); return `${blocks.length} đoạn`; })()}</div></div>
                 <div><div class="text-[10px] text-slate-500">Ví dụ</div><div class="font-bold">${parseExamples(el('lessonExamples').value).length}</div></div>
                 <div><div class="text-[10px] text-slate-500">Bài tập nộp</div><div class="font-bold">${parseExamples(el('lessonSelfPractice')?.value || '').length} dạng</div></div>
                 <div><div class="text-[10px] text-slate-500">Tương tác</div><div class="font-bold">${essayCount + fillCount + dragCount}</div></div>
                 <div><div class="text-[10px] text-slate-500">Trắc nghiệm</div><div class="font-bold">${questionCount}</div></div>
+                <div><div class="text-[10px] text-slate-500">Kỹ năng</div><div class="font-bold ${skills.length ? 'text-teal-700' : 'text-amber-700'}">${skills.length}</div></div>
             </div>
         `;
     }

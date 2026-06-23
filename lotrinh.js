@@ -424,6 +424,8 @@
     const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]/g;
     const POOL_ITEM_JOINER = ' » ';
     const POOL_ITEM_SEP_RE = /\s*»\s*/u;
+    // Chỉ tách khi dấu phẩy có khoảng trắng (7, 2, 8) — không tách số thập phân 7,2 hay 70,208
+    const FILL_COMMA_LIST_RE = /\s*,\s+|\s+,\s*/;
 
     function splitPoolTextByGt(value) {
         const source = String(value || '');
@@ -466,6 +468,31 @@
         return splitPoolTextByGt(source);
     }
 
+    function splitFillAnswerList(value, blankCount = 0) {
+        if (Array.isArray(value)) {
+            return value.map(part => String(part || '').trim()).filter(Boolean);
+        }
+        const source = String(value || '').trim();
+        if (!source) return [];
+        if (POOL_ITEM_SEP_RE.test(source)) return splitPoolText(source);
+        if (FILL_COMMA_LIST_RE.test(source)) {
+            const parts = source.split(FILL_COMMA_LIST_RE).map(part => part.trim()).filter(Boolean);
+            if (parts.length > 1) return parts;
+        }
+        if (source.includes(';')) {
+            const parts = source.split(/\s*;\s*/).map(part => part.trim()).filter(Boolean);
+            if (parts.length > 1) return parts;
+        }
+        if (source.includes('>')) {
+            const gtParts = splitPoolTextByGt(source);
+            if (gtParts.length > 1) return gtParts;
+        }
+        if (blankCount > 1 && source.length === 1 && blankCount === source.length) {
+            return source.split('');
+        }
+        return [source];
+    }
+
     function joinPoolText(items) {
         return (items || []).map(item => String(item || '').trim()).filter(Boolean).join(POOL_ITEM_JOINER);
     }
@@ -494,19 +521,13 @@
         const prompt = String(item?.prompt || '');
         const blankCount = countBlankTokens(prompt);
         let pool = Array.isArray(item?.items) ? [...item.items] : splitPoolText(item?.pool);
-        let answers = [];
-        if (Array.isArray(item?.answer)) {
-            answers = item.answer.map(part => String(part || '').trim()).filter(Boolean);
-        } else if (String(item?.answer || '').includes('>')) {
-            answers = splitPoolText(item.answer);
-        } else if (item?.answer) {
-            answers = [String(item.answer).trim()];
+        let answers = splitFillAnswerList(item?.answer, blankCount);
+        if (answers.length === 1 && blankCount > 1) {
+            const expanded = splitFillAnswerList(answers[0], blankCount);
+            if (expanded.length > 1) answers = expanded;
         }
         if (!pool.length && answers.length) pool = [...answers];
-        while (answers.length < blankCount && answers.length) {
-            answers.push(answers[answers.length - 1]);
-        }
-        if (!answers.length && pool.length) answers = [pool[0]];
+        if (!answers.length && pool.length) answers = blankCount > 1 ? pool.slice(0, blankCount) : [pool[0]];
         return {
             ...item,
             prompt,
@@ -632,7 +653,7 @@
             && normalized.answers.every((answer, slotIndex) => essayAnswersEqual(slots[slotIndex], answer));
         return ok
             ? '<span class="font-bold text-teal-700">Đúng.</span> Em đã kéo đúng vào các ô trống.'
-            : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${normalized.answers.map(part => mathText(part)).join(' · ')}`;
+            : `<span class="font-bold text-rose-700">Chưa đúng.</span> Đáp án mẫu: ${normalized.answers.map(part => mathText(part)).join(' · ')}${normalized.blankCount > 1 ? ` <span class="text-slate-600">(${normalized.blankCount} ô trống)</span>` : ''}`;
     }
 
     function sortPieceIndex(piece, items) {

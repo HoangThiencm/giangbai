@@ -47,6 +47,7 @@ function load_ai_runtime_config(): array
         'shopaikey_model' => 'deepseek-v4-flash',
         'shopaikey_base_url' => 'https://api.shopaikey.com/v1',
         'light_ai_enabled' => true,
+        'ai_test_ds2api_only' => false,
     ];
 
     if (defined('CLOUDFLARE_AI_WORKER_URL') && is_string(CLOUDFLARE_AI_WORKER_URL)) {
@@ -135,6 +136,9 @@ function load_ai_runtime_config(): array
             if (array_key_exists('ds2api_enabled', $globalConfig)) {
                 $config['ds2api_enabled'] = (bool)$globalConfig['ds2api_enabled'];
             }
+            if (array_key_exists('ai_test_ds2api_only', $globalConfig)) {
+                $config['ai_test_ds2api_only'] = (bool)$globalConfig['ai_test_ds2api_only'];
+            }
         }
     }
 
@@ -167,14 +171,17 @@ function ai_router_runtime_status(?array $config = null): array
 
     return [
         'active' => true,
+        'test_ds2api_only' => !empty($config['ai_test_ds2api_only']),
         'ready_tiers' => $readyCount,
         'tiers' => $tiers,
         'cloudflare_worker_configured' => $cfReady,
         'gemini_keys_count' => count($config['gemini_keys'] ?? []),
         'shopaikey_configured' => $shopReady,
         'ds2api_configured' => $ds2Ready,
-        'message' => $readyCount >= 3
-            ? 'Router dùng cấu hình Admin + config.php hiện có — không cần thiết lập thêm.'
-            : 'Thiếu một số tầng AI — kiểm tra config.php (DS2API/Worker) hoặc Admin (Gemini/ShopAIKey).',
+        'message' => !empty($config['ai_test_ds2api_only'])
+            ? 'Chế độ test: chỉ DS2API (DeepSeek web) — Light AI, Cloudflare, Gemini, ShopAIKey đang bỏ qua.'
+            : ($readyCount >= 3
+                ? 'Router dùng cấu hình Admin + config.php hiện có — không cần thiết lập thêm.'
+                : 'Thiếu một số tầng AI — kiểm tra config.php (DS2API/Worker) hoặc Admin (Gemini/ShopAIKey).'),
     ];
 }

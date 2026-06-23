@@ -127,6 +127,54 @@ function ai_router_run(array $ctx): array
     $tiersTried = [];
     $geminiTriedAsCfFallback = false;
 
+    if (!empty($config['ai_test_ds2api_only'])) {
+        $tryDs2apiOnly = $providers['ds2api'] ?? null;
+        if (empty($config['ds2api_enabled'])) {
+            return [
+                'error' => 'Chế độ test DS2API: ds2api_enabled đang tắt.',
+                'quota' => $quotaStatus,
+                'tiers_tried' => [],
+                'test_mode' => true,
+            ];
+        }
+        if (!is_callable($tryDs2apiOnly)) {
+            return [
+                'error' => 'Chế độ test DS2API: chưa cấu hình provider.',
+                'quota' => $quotaStatus,
+                'tiers_tried' => [],
+                'test_mode' => true,
+            ];
+        }
+        $ds2Only = $tryDs2apiOnly();
+        $tiersTried[] = 'ds2api';
+        if (is_array($ds2Only) && !empty($ds2Only['answer'])) {
+            if (is_callable($log)) {
+                $log($mode, $ds2Only, true, false);
+            }
+            return [
+                'result' => array_merge($ds2Only, [
+                    'router_tier' => 'ds2api',
+                    'tiers_tried' => $tiersTried,
+                    'test_mode' => true,
+                    'complete' => true,
+                ]),
+                'quota' => $quotaStatus,
+                'used_api' => true,
+                'test_mode' => true,
+            ];
+        }
+        $ds2Err = is_array($ds2Only) ? (string)($ds2Only['error'] ?? 'DS2API không trả lời.') : 'DS2API không trả lời.';
+        if (is_callable($log) && is_array($ds2Only)) {
+            $log($mode, $ds2Only, false, false);
+        }
+        return [
+            'error' => 'Chế độ test DS2API: ' . $ds2Err,
+            'quota' => $quotaStatus,
+            'tiers_tried' => $tiersTried,
+            'test_mode' => true,
+        ];
+    }
+
     $tryLight = $providers['light'] ?? null;
     if (is_callable($tryLight)) {
         $light = $tryLight();

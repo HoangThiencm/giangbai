@@ -88,6 +88,9 @@ if (isset($nextConfig['ds2api_model'])) {
 if (array_key_exists('ds2api_enabled', $nextConfig)) {
     $nextConfig['ds2api_enabled'] = (bool)$nextConfig['ds2api_enabled'];
 }
+if (array_key_exists('ai_test_ds2api_only', $nextConfig)) {
+    $nextConfig['ai_test_ds2api_only'] = (bool)$nextConfig['ai_test_ds2api_only'];
+}
 if (isset($nextConfig['shopaikey_api_key'])) {
     $nextConfig['shopaikey_api_key'] = trim((string)$nextConfig['shopaikey_api_key']);
 }
