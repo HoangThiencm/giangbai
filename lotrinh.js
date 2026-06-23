@@ -227,6 +227,22 @@
         return /^!\[(?:Đang tải ảnh|ĐANG_TAI:)/i.test(trimmed) && /\(\s*\)$/.test(trimmed);
     }
 
+    function isGenericLessonImageLabel(label) {
+        const value = String(label || '').trim();
+        if (!value) return true;
+        const lower = value.toLowerCase();
+        if (/^(ảnh|anh)(\s+screenshot|\s+minh\s*họa)?$/iu.test(value)) return true;
+        if (/^image\.(png|jpe?g|webp|gif|bmp)$/i.test(lower)) return true;
+        if (/^pasted-image\.(png|jpe?g|webp)$/i.test(lower)) return true;
+        if (/^anh-minh-hoa(\.[a-z0-9]+)?$/i.test(lower)) return true;
+        if (/^screenshot/i.test(lower)) return true;
+        return false;
+    }
+
+    function shouldShowLessonImageCaption(label) {
+        return !isGenericLessonImageLabel(label);
+    }
+
     function applyLessonInlineMarkup(text) {
         return escapeHtml(text)
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -270,9 +286,11 @@
                 flushText();
                 const url = normalizeLessonImageDisplayUrl(img[2]);
                 if (!url) return;
-                const alt = escapeHtml(img[1]);
+                const altRaw = String(img[1] || '').trim();
+                const alt = escapeHtml(altRaw);
+                const caption = shouldShowLessonImageCaption(altRaw) ? `<figcaption>${alt}</figcaption>` : '';
                 chunks.push(
-                    `<figure class="lesson-inline-image"><img src="${escapeHtml(url)}" alt="${alt}" loading="lazy">${img[1] ? `<figcaption>${alt}</figcaption>` : ''}</figure>`
+                    `<figure class="lesson-inline-image"><img src="${escapeHtml(url)}" alt="${alt || 'Ảnh minh họa'}" loading="lazy">${caption}</figure>`
                 );
                 return;
             }

@@ -603,8 +603,29 @@
         return `\n![ĐANG_TAI:${token}|${label}]()\n`;
     }
 
+    function isGenericLessonImageLabel(label) {
+        const value = String(label || '').trim();
+        if (!value) return true;
+        const lower = value.toLowerCase();
+        if (/^(ảnh|anh)(\s+screenshot|\s+minh\s*họa)?$/iu.test(value)) return true;
+        if (/^image\.(png|jpe?g|webp|gif|bmp)$/i.test(lower)) return true;
+        if (/^pasted-image\.(png|jpe?g|webp)$/i.test(lower)) return true;
+        if (/^anh-minh-hoa(\.[a-z0-9]+)?$/i.test(lower)) return true;
+        if (/^screenshot/i.test(lower)) return true;
+        return false;
+    }
+
+    function lessonImageAltForMarkdown(label) {
+        return isGenericLessonImageLabel(label) ? '' : String(label || '').trim();
+    }
+
+    function shouldShowLessonImageCaption(label) {
+        return !isGenericLessonImageLabel(label);
+    }
+
     function buildLessonImageMarkdown(label, url) {
-        return `\n![${label || 'ảnh'}](${url})\n`;
+        const alt = lessonImageAltForMarkdown(label);
+        return `\n![${alt}](${url})\n`;
     }
 
     function extractDriveFileIdFromUrl(url) {
@@ -975,18 +996,21 @@
             }, { once: true });
             figure.appendChild(image);
 
-            const caption = document.createElement('figcaption');
-            caption.className = 'mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500';
-            const captionText = document.createElement('span');
-            captionText.textContent = altText || 'Ảnh minh họa';
-            caption.appendChild(captionText);
+            if (shouldShowLessonImageCaption(altText)) {
+                const caption = document.createElement('figcaption');
+                caption.className = 'mt-1 text-xs text-slate-500';
+                caption.textContent = altText;
+                figure.appendChild(caption);
+            }
+            const actions = document.createElement('div');
+            actions.className = 'mt-1 flex justify-end';
             const deleteButton = document.createElement('button');
             deleteButton.type = 'button';
-            deleteButton.className = 'rounded bg-rose-50 px-2 py-1 font-semibold text-rose-700 hover:bg-rose-100';
+            deleteButton.className = 'rounded bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100';
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Xóa ảnh';
             deleteButton.onclick = () => deleteLessonDriveImage(field, markdown, imageUrl);
-            caption.appendChild(deleteButton);
-            figure.appendChild(caption);
+            actions.appendChild(deleteButton);
+            figure.appendChild(actions);
             preview.appendChild(figure);
             cursor = imagePattern.lastIndex;
         }
