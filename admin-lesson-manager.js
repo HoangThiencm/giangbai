@@ -951,7 +951,18 @@
                 }
             }, true);
             field.addEventListener('paste', event => {
-                const text = event.clipboardData?.getData('text/plain');
+                const clipboard = event.clipboardData;
+                const hasImage = Array.from(clipboard?.items || []).some(item =>
+                    item.kind === 'file' && String(item.type || '').startsWith('image/')
+                ) || Array.from(clipboard?.files || []).some(file =>
+                    String(file.type || '').startsWith('image/')
+                );
+
+                // Ảnh screenshot phải đi tiếp tới handleRichImagePaste() để upload Drive.
+                // Handler này đang chạy ở capture phase nên nếu chặn ở đây, listener ảnh sẽ không bao giờ nhận được event.
+                if (hasImage) return;
+
+                const text = clipboard?.getData('text/plain');
                 if (typeof text !== 'string') return;
                 event.preventDefault();
                 event.stopPropagation();
