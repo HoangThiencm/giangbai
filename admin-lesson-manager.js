@@ -488,7 +488,7 @@
 
     const POOL_ITEM_JOINER = ' » ';
     const POOL_ITEM_SEP_RE = /\s*»\s*/u;
-    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]/g;
+    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]|\[(?:\d+(?:[.,]\d+)?)\]/g;
     // Chỉ tách khi dấu phẩy có khoảng trắng (7, 2, 8) — không tách số thập phân 7,2 hay 70,208
     const FILL_COMMA_LIST_RE = /\s*,\s+|\s+,\s*/;
 
@@ -699,6 +699,24 @@
                 answer
             ].join(' | ');
         }).join('\n');
+    }
+
+    function questionsToEditorItems(questions) {
+        return (questions || []).map(item => {
+            const options = item.options || [];
+            const answerIndex = Number(item.answer);
+            const answerLetter = Number.isFinite(answerIndex) && answerIndex >= 0 && answerIndex <= 3
+                ? ('ABCD'[answerIndex] || 'A')
+                : String(item.answer || 'A').trim().toUpperCase().charAt(0) || 'A';
+            return {
+                cau: item.prompt || '',
+                a: options[0] || '',
+                b: options[1] || '',
+                c: options[2] || '',
+                d: options[3] || '',
+                dung: answerLetter
+            };
+        });
     }
 
     function formatEssayExercises(items) {
@@ -1467,20 +1485,27 @@
         });
     }
     function parseQuestionToItems(str) {
-        return (str || '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
-            const p = splitQuestionParts(normalizeMcqBulkLine(line));
-            if (p.length < 6) return null;
-            const hasSkill = p.length >= 7 && looksLikeSkillId(p[0]);
-            const offset = hasSkill ? 1 : 0;
-            return {
-                cau: p[offset] || '',
-                a: p[offset + 1] || '',
-                b: p[offset + 2] || '',
-                c: p[offset + 3] || '',
-                d: p[offset + 4] || '',
-                dung: p[offset + 5] || ''
-            };
-        }).filter(Boolean);
+        const text = String(str || '').trim();
+        if (!text) return [];
+        const skills = parseSkills(el('lessonSkills')?.value || '');
+        try {
+            return questionsToEditorItems(parseQuestions(text, skills));
+        } catch {
+            return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+                const p = splitQuestionParts(normalizeMcqBulkLine(line));
+                if (p.length < 6) return null;
+                const hasSkill = p.length >= 7 && looksLikeSkillId(p[0]);
+                const offset = hasSkill ? 1 : 0;
+                return {
+                    cau: p[offset] || '',
+                    a: p[offset + 1] || '',
+                    b: p[offset + 2] || '',
+                    c: p[offset + 3] || '',
+                    d: p[offset + 4] || '',
+                    dung: p[offset + 5] || ''
+                };
+            }).filter(Boolean);
+        }
     }
 
     function normalizeBulkHeading(line) {
@@ -1688,13 +1713,23 @@
         ta.value = serializeQuestionsBulkFromItems();
     }
 
-    function syncItemsFromQuestionsBulk() {
-        const lines = String(el('questionsBulkPaste')?.value || '').split('\n').map(line => line.trim()).filter(line => {
+    function readQuestionsBulkText() {
+        return String(el('questionsBulkPaste')?.value || '').split('\n').map(line => line.trim()).filter(line => {
             if (!line.includes('|')) return false;
             const heading = normalizeBulkHeading(line);
             return !/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ/.test(heading);
-        }).map(normalizeMcqBulkLine).filter(Boolean);
-        questionItems = parseQuestionToItems(lines.join('\n'));
+        }).map(normalizeMcqBulkLine).filter(Boolean).join('\n');
+    }
+
+    function syncItemsFromQuestionsBulk() {
+        const bulkText = readQuestionsBulkText();
+        if (!bulkText) {
+            if (questionItems.length) return;
+            questionItems = [];
+            syncQuestionsToTextarea();
+            return;
+        }
+        questionItems = parseQuestionToItems(bulkText);
         syncQuestionsToTextarea();
     }
 
@@ -1955,11 +1990,25 @@
 
     function flushBulkEditorsBeforeSave() {
         if (interactiveEditorMode === 'bulk') syncItemsFromInteractiveBulk();
-        if (questionsEditorMode === 'bulk') syncItemsFromQuestionsBulk();
+        if (questionsEditorMode === 'bulk') {
+            const bulkText = readQuestionsBulkText();
+            if (bulkText) {
+                syncItemsFromQuestionsBulk();
+            } else if (!questionItems.length && String(el('lessonQuestions')?.value || '').trim()) {
+                questionItems = parseQuestionToItems(el('lessonQuestions').value);
+            }
+        }
         syncEssayToTextarea();
         syncFillToTextarea();
         syncDragToTextarea();
         syncQuestionsToTextarea();
+    }
+
+    function resolveQuestionsForSave(skills) {
+        const bulkText = readQuestionsBulkText();
+        const rawText = bulkText || String(el('lessonQuestions')?.value || '').trim();
+        if (!rawText) return [];
+        return parseQuestions(rawText, skills);
     }
 
     function setupEditorFieldShortcuts() {
@@ -2691,7 +2740,7 @@
         if (questionsEditorMode === 'bulk') syncItemsFromQuestionsBulk();
         let questionCount = 0;
         const skills = parseSkills(el('lessonSkills').value);
-        try { questionCount = parseQuestions(el('lessonQuestions').value, skills).length; } catch { questionCount = 0; }
+        try { questionCount = resolveQuestionsForSave(skills).length; } catch { questionCount = 0; }
         const essayCount = parseEssayExercises(el('lessonEssay').value).length;
         const fillCount = parseFillExercises(el('lessonFill').value).length;
         const dragParsed = parseDragExercises(el('lessonDrag').value);
@@ -2734,8 +2783,14 @@
         }
         const skills = parseSkills(el('lessonSkills').value);
         const dragCount = parseDragExercises(el('lessonDrag').value).length;
-        let questionCount = 0;
-        try { questionCount = parseQuestions(el('lessonQuestions').value, skills).length; } catch { questionCount = 0; }
+        let savedQuestions = [];
+        try {
+            savedQuestions = resolveQuestionsForSave(skills);
+        } catch (err) {
+            alert(err.message || 'Trắc nghiệm chưa đúng format. Kiểm tra tab Trắc nghiệm rồi thử lại.');
+            return;
+        }
+        const questionCount = savedQuestions.length;
         const missingParts = [];
         if (!skills.length) missingParts.push('kỹ năng');
         if (!dragCount) missingParts.push('nối ô / sắp xếp');
@@ -2762,7 +2817,7 @@
             videos: parseVideos(el('lessonVideos').value),
             skills,
             tasks: parseLines(el('lessonTasks').value),
-            questions: parseQuestions(el('lessonQuestions').value, skills)
+            questions: savedQuestions
         };
         if (!payload.slug || !payload.title) {
             alert('Cần nhập slug và tên bài.');
@@ -2787,7 +2842,7 @@
             if (el('lessonChapter')) el('lessonChapter').dataset.renameSource = payload.chapter;
             await refreshLessons();
             if (typeof window.refreshAdminProgress === 'function') window.refreshAdminProgress();
-            alert('Đã lưu bài học.');
+            alert(`Đã lưu bài học.${questionCount ? ` Trắc nghiệm: ${questionCount} câu.` : ''}`);
         } catch (e) {
             alert(e.message || 'Không lưu được bài học.');
         } finally {

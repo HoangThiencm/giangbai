@@ -446,7 +446,7 @@
         ];
     }
 
-    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]/g;
+    const BLANK_TOKEN_RE = /_{3,}|\[\.\.\.\]|\[\s*\]|\[(?:\d+(?:[.,]\d+)?)\]/g;
     const POOL_ITEM_JOINER = ' » ';
     const POOL_ITEM_SEP_RE = /\s*»\s*/u;
     // Chỉ tách khi dấu phẩy có khoảng trắng (7, 2, 8) — không tách số thập phân 7,2 hay 70,208
@@ -2125,10 +2125,10 @@
         bindAiExplainButtons(lesson);
     }
 
-    function renderPracticePart(title, icon, bodyHtml, count = 0, note = '', theme = 'choice') {
+    function renderPracticePart(title, icon, bodyHtml, count = 0, note = '', theme = 'choice', sectionId = '') {
         const countLabel = count === 1 ? '1 câu' : `${count} câu`;
         return `
-            <section class="practice-part practice-part--${theme}">
+            <section class="practice-part practice-part--${theme}"${sectionId ? ` id="${escapeHtml(sectionId)}"` : ''}>
                 <header class="practice-part-head">
                     <div class="practice-part-icon"><i class="fas ${icon}" aria-hidden="true"></i></div>
                     <div class="practice-part-intro">
@@ -2777,6 +2777,27 @@
         style.textContent = `
             .practice-workspace { display: flex; flex-direction: column; gap: 18px; }
             .practice-parts-stack { display: flex; flex-direction: column; gap: 22px; }
+            .practice-jump-nav {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px 10px;
+                padding: 12px 14px;
+                border-radius: 14px;
+                border: 1px solid #cbd5e1;
+                background: #f8fafc;
+                font-size: 0.82rem;
+            }
+            .practice-jump-label { color: #64748b; font-weight: 600; }
+            .practice-jump-link {
+                color: #0f766e;
+                font-weight: 700;
+                text-decoration: none;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: #ccfbf1;
+            }
+            .practice-jump-link:hover { background: #99f6e4; }
             .practice-part {
                 border-radius: 20px;
                 border: 1px solid #e2e8f0;
@@ -3657,6 +3678,20 @@
         const practiceScore = typeof progress.score === 'number' ? progress.score : null;
         const hasAnyPractice = essayExercises.length || fillExercises.length || dragExercises.length || questions.length;
 
+        const practiceJumpLinks = [
+            essayExercises.length ? { id: 'practice-part-essay', label: `Tự luận (${essayExercises.length})` } : null,
+            questions.length ? { id: 'practice-part-choice', label: `Trắc nghiệm (${questions.length})` } : null,
+            fillExercises.length ? { id: 'practice-part-fill', label: `Điền khuyết (${fillExercises.length})` } : null,
+            matchDragExercises.length ? { id: 'practice-part-match', label: `Nối ô (${matchDragExercises.length})` } : null,
+            sortDragExercises.length ? { id: 'practice-part-sort', label: `Sắp xếp (${sortDragExercises.length})` } : null
+        ].filter(Boolean);
+        const practiceJumpNav = practiceJumpLinks.length > 1
+            ? `<nav class="practice-jump-nav" aria-label="Nhảy tới phần luyện tập">
+                <span class="practice-jump-label">Nhảy tới:</span>
+                ${practiceJumpLinks.map(link => `<a href="#${escapeHtml(link.id)}" class="practice-jump-link">${escapeHtml(link.label)}</a>`).join('')}
+            </nav>`
+            : '';
+
         const practiceParts = [
             essayExercises.length
                 ? renderPracticePart(
@@ -3665,11 +3700,23 @@
                     renderEssayExercises(lesson),
                     essayExercises.length,
                     'Mỗi câu chỉ nhập <strong>kết quả là số</strong>. Không nhập lời giải, công thức hay đáp án dạng chữ.',
-                    'essay'
+                    'essay',
+                    'practice-part-essay'
+                )
+                : '',
+            questions.length
+                ? renderPracticePart(
+                    'Phần Bài tập trắc nghiệm',
+                    'fa-list-check',
+                    renderMultipleChoiceExercises(lesson),
+                    questions.length,
+                    '',
+                    'choice',
+                    'practice-part-choice'
                 )
                 : '',
             fillExercises.length
-                ? renderPracticePart('Phần Bài tập điền khuyết', 'fa-i-cursor', renderFillExercises(lesson), fillExercises.length, '', 'fill')
+                ? renderPracticePart('Phần Bài tập điền khuyết', 'fa-i-cursor', renderFillExercises(lesson), fillExercises.length, '', 'fill', 'practice-part-fill')
                 : '',
             matchDragExercises.length
                 ? renderPracticePart(
@@ -3678,7 +3725,8 @@
                     renderDragExercises({ ...lesson, drag_exercises: matchDragExercises }),
                     matchDragExercises.length,
                     'Bấm mục bên trái, rồi bấm mục bên phải để ghép cặp.',
-                    'drag'
+                    'drag',
+                    'practice-part-match'
                 )
                 : '',
             sortDragExercises.length
@@ -3688,11 +3736,9 @@
                     renderDragExercises({ ...lesson, drag_exercises: sortDragExercises }),
                     sortDragExercises.length,
                     '',
-                    'drag'
+                    'drag',
+                    'practice-part-sort'
                 )
-                : '',
-            questions.length
-                ? renderPracticePart('Phần Bài tập trắc nghiệm', 'fa-list-check', renderMultipleChoiceExercises(lesson), questions.length, '', 'choice')
                 : ''
         ].filter(Boolean).join('');
 
@@ -3716,7 +3762,7 @@
                     </div>
                 `}
                 ${hasAnyPractice
-                    ? `<div class="practice-parts-stack">${practiceParts}</div>`
+                    ? `${practiceJumpNav}<div class="practice-parts-stack">${practiceParts}</div>`
                     : '<div class="practice-empty-note">Giáo viên chưa nhập bài luyện tập cho bài này.</div>'}
                 <div class="practice-submit-bar">
                     ${practiceDone ? '' : `
