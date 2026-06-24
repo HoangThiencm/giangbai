@@ -21,12 +21,10 @@ function normalize_ds2api_base_url(string $baseUrl): string
     return $baseUrl . '/v1';
 }
 
-/** DS2API tự host dùng session DeepSeek trên server — không cần Bearer key thật. */
+/** DS2API business endpoints require the configured client Bearer key. */
 function ds2api_effective_api_key(string $key): string
 {
-    $key = trim($key);
-    if ($key === '' || $key === 'sk' || $key === 'sk-') return '';
-    return $key;
+    return trim($key);
 }
 
 function load_ai_runtime_config(): array
@@ -152,7 +150,8 @@ function ai_router_runtime_status(?array $config = null): array
 {
     $config = $config ?? load_ai_runtime_config();
     $ds2Ready = !empty($config['ds2api_enabled'])
-        && trim((string)($config['ds2api_base_url'] ?? '')) !== '';
+        && trim((string)($config['ds2api_base_url'] ?? '')) !== ''
+        && trim((string)($config['ds2api_api_key'] ?? '')) !== '';
     $cfReady = trim((string)($config['cloudflare_worker_url'] ?? '')) !== ''
         && trim((string)($config['cloudflare_worker_secret'] ?? '')) !== '';
     $geminiReady = !empty($config['gemini_enabled']) && !empty($config['gemini_keys']);
@@ -178,6 +177,7 @@ function ai_router_runtime_status(?array $config = null): array
         'gemini_keys_count' => count($config['gemini_keys'] ?? []),
         'shopaikey_configured' => $shopReady,
         'ds2api_configured' => $ds2Ready,
+        'ds2api_key_configured' => trim((string)($config['ds2api_api_key'] ?? '')) !== '',
         'message' => !empty($config['ai_test_ds2api_only'])
             ? 'Chế độ test: chỉ DS2API (DeepSeek web) — Light AI, Cloudflare, Gemini, ShopAIKey đang bỏ qua.'
             : ($readyCount >= 3

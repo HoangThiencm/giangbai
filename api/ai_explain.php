@@ -492,6 +492,12 @@ function try_ds2api_explain(array $config, string $prompt): ?array
     $baseUrl = normalize_ds2api_base_url((string)($config['ds2api_base_url'] ?? ''));
     $apiKey = ds2api_effective_api_key((string)($config['ds2api_api_key'] ?? ''));
     if ($baseUrl === '') return null;
+    if ($apiKey === '') {
+        return [
+            'error' => 'DS2API chưa có client API key. Key phải trùng với một key trong config.keys của DS2API Admin.',
+            'provider' => 'ds2api',
+        ];
+    }
 
     $model = trim((string)($config['ds2api_model'] ?? 'deepseek-v4-flash')) ?: 'deepseek-v4-flash';
 
@@ -520,7 +526,11 @@ function try_ds2api_explain(array $config, string $prompt): ?array
         ], ai_usage_extract_shopaikey_tokens($response));
     }
 
-    $errorMessage = $response['error']['message'] ?? ($response['message'] ?? ('DS2API loi HTTP ' . $status));
+    if ($status === 401) {
+        $errorMessage = 'DS2API từ chối API key (HTTP 401). Kiểm tra key này có trong config.keys của DS2API Admin và cấu hình Vercel đã được đồng bộ.';
+    } else {
+        $errorMessage = $response['error']['message'] ?? ($response['message'] ?? ('DS2API lỗi HTTP ' . $status));
+    }
     return ['error' => $errorMessage, 'provider' => 'ds2api'];
 }
 

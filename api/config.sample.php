@@ -24,10 +24,10 @@ define('GEMINI_MODEL', 'gemini-2.5-flash');
 define('GEMINI_ENABLED', true);
 
 // === DS2API Configuration ===
-// DeepSeek web session trên Vercel — không cần API key client (session quản lý trên server DS2API).
+// Client key phải trùng với một key trong config.keys của DS2API Admin.
 define('DS2API_ENABLED', true);
 define('DS2API_BASE_URL', 'https://freeapideepseek.vercel.app');
-define('DS2API_API_KEY', 'sk-'); // tùy chọn; để trống hoặc sk- = không gửi Bearer
+define('DS2API_API_KEY', '');
 define('DS2API_MODEL', 'deepseek-v4-flash');
 
 // Cloudflare Workers AI — fallback sau DS2API. Keep the secret only in

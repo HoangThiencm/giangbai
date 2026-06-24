@@ -302,7 +302,7 @@
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <h4 class="font-bold text-cyan-900 text-sm">DS2API (DeepSeek web) <span class="font-normal">· ưu tiên AI Explain lộ trình</span></h4>
-                            <p class="text-xs text-cyan-800 mt-1">OpenAI-compatible tại <code>https://freeapideepseek.vercel.app</code>. <strong>Không cần API key</strong> — session DeepSeek quản lý trên server Vercel (<a href="https://freeapideepseek.vercel.app/admin" target="_blank" rel="noopener" class="underline">panel</a>). Cấu hình chính trong <code>api/config.php</code>.</p>
+                            <p class="text-xs text-cyan-800 mt-1">OpenAI-compatible tại <code>https://freeapideepseek.vercel.app</code>. Client API key phải trùng với một key trong <code>config.keys</code> tại <a href="https://freeapideepseek.vercel.app/admin" target="_blank" rel="noopener" class="underline">DS2API Admin</a>. Cấu hình chính trong <code>api/config.php</code>.</p>
                             <label class="mt-2 inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-cyan-900">
                                 <input id="adminDs2apiEnabled" type="checkbox" class="h-4 w-4 rounded border-cyan-300 text-cyan-700 focus:ring-cyan-500" checked>
                                 Bật DS2API làm nguồn chính
@@ -322,9 +322,9 @@
                         <div class="space-y-3">
                             <label class="block text-xs font-bold text-cyan-900">Base URL</label>
                             <input id="adminDs2apiBaseUrlInput" type="url" class="w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500" placeholder="https://freeapideepseek.vercel.app">
-                            <label class="block text-xs font-bold text-cyan-900">API Key <span class="font-normal text-cyan-700">(tùy chọn)</span></label>
+                            <label class="block text-xs font-bold text-cyan-900">Client API Key <span class="font-normal text-cyan-700">(bắt buộc)</span></label>
                             <input id="adminDs2apiKeyInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
-                                class="admin-secret-mask w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Để trống — không cần key" data-lpignore="true">
+                                class="admin-secret-mask w-full rounded border border-cyan-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Phải trùng config.keys trong DS2API Admin" data-lpignore="true">
                         </div>
                         <div class="space-y-3">
                             <label class="block text-xs font-bold text-cyan-900">Model</label>
@@ -918,7 +918,9 @@
             const mistralKeys = Array.isArray(currentGlobalContent?.mistral_keys) ? currentGlobalContent.mistral_keys.length : 0;
             const cloudflareModel = String(currentGlobalContent?.cloudflare_ai_model || '@cf/qwen/qwen3-30b-a3b-fp8');
             const hasShop = !!String(currentGlobalContent?.shopaikey_api_key || '').trim();
-            const hasDs2 = currentGlobalContent?.ds2api_enabled !== false;
+            const hasDs2 = currentGlobalContent?.ds2api_enabled !== false
+                && !!String(currentGlobalContent?.ds2api_base_url || '').trim()
+                && !!String(currentGlobalContent?.ds2api_api_key || '').trim();
             const ds2TestOnly = currentGlobalContent?.ai_test_ds2api_only === true;
             const source = configStorageMeta.source;
             let tone = 'border-amber-200 bg-amber-50 text-amber-900';
@@ -1158,7 +1160,9 @@
                 } else if (!enabled) {
                     document.getElementById('adminDs2apiStorageDetail').textContent = 'DS2API đang tắt — router sẽ bỏ qua và dùng Cloudflare/Gemini.';
                 } else {
-                    document.getElementById('adminDs2apiStorageDetail').textContent = `Ưu tiên trước Cloudflare. Cấu hình chính: <code>DS2API_BASE_URL</code> trong api/config.php trên hosting (không cần API key).${apiKey ? ' Có key tùy chọn trong global_config.' : ''}`;
+                    document.getElementById('adminDs2apiStorageDetail').textContent = apiKey
+                        ? 'DS2API đã có client key. Key này phải trùng với config.keys trong DS2API Admin.'
+                        : 'Thiếu client API key DS2API — request chat sẽ bị HTTP 401.';
                 }
             }
             renderConfigStorageBanner();
