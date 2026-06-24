@@ -180,6 +180,12 @@
                             <textarea id="notes" rows="2" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm" 
                                       placeholder="Ví dụ: Tập trung vào dạng bài tập thực tế, thêm nhiều ví dụ hình học..."></textarea>
                         </div>
+                        <div class="mt-3">
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Link video bài giảng <span class="text-rose-600">*</span></label>
+                            <input id="lesson-video-url" type="url" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm"
+                                   placeholder="https://youtube.com/... hoặc Google Drive — bắt buộc để import JSON">
+                            <p class="text-[10px] text-slate-500 mt-1">Gemini không tạo link video; bạn nhập 1 link trước khi xuất JSON.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -245,11 +251,16 @@
                                     <i class="fas fa-sync-alt"></i>
                                     <span>Parse + Chuẩn bị hình ảnh</span>
                                 </button>
-                                <button onclick="exportLessonImportJson()"
-                                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm"
-                                        title="Trong Canvas: Copy JSON rồi lưu file .json thủ công">
+                                <button type="button" onclick="refreshLessonValidation()"
+                                        class="px-4 py-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-sm rounded-2xl flex items-center gap-x-2 text-amber-900">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <span>Kiểm tra import</span>
+                                </button>
+                                <button id="export-json-btn" onclick="exportLessonImportJson()" disabled
+                                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm opacity-50 cursor-not-allowed"
+                                        title="Chỉ mở khi kiểm tra import đạt 100%">
                                     <i class="fas fa-file-code"></i>
-                                    <span>Xuất / Copy JSON</span>
+                                    <span id="export-json-btn-label">Xuất JSON (chưa đạt)</span>
                                 </button>
                                 <button onclick="exportToWord().catch(handleWordExportError)"
                                         class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 transition-colors text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm">
@@ -268,6 +279,12 @@
                                           class="w-full border border-slate-200 p-3 rounded-2xl text-sm font-mono resize-y"
                                           placeholder="Nội dung Gemini Canvas tạo sẽ xuất hiện ở đây..."></textarea>
                                 <div class="text-[10px] text-slate-500 mt-1">Sau khi tạo xong, hệ thống tự phân tích cấu trúc. Bạn vẫn có thể chỉnh sửa rồi bấm “Parse”.</div>
+                                <div id="lesson-validation-panel" class="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs hidden">
+                                    <div id="lesson-validation-status" class="font-semibold text-slate-700 mb-2">Chưa kiểm tra import</div>
+                                    <ul id="lesson-validation-errors" class="space-y-1 text-rose-700 list-disc pl-4 hidden"></ul>
+                                    <ul id="lesson-validation-warnings" class="space-y-1 text-amber-800 list-disc pl-4 mt-2 hidden"></ul>
+                                    <ul id="lesson-validation-fixes" class="space-y-1 text-slate-700 list-disc pl-4 mt-2 hidden"></ul>
+                                </div>
                             </div>
 
                             <!-- Preview -->
@@ -424,18 +441,27 @@
             document.body.appendChild(modal);
         };
 
-        window.exportLessonImportJson = function() {
-            var LI = window.LessonImport;
-            if (!LI) {
-                window.showAppToast('Thiếu lesson-import.js. Tải lại trang (Ctrl+F5).', 'err');
-                return;
+        window.describeValidationFix = function(message) {
+            var text = String(message || '');
+            var m;
+            m = text.match(/essay_exercises\[(\d+)\]\.answer rỗng/);
+            if (m) return 'TỰ LUẬN — dòng ' + (Number(m[1]) + 1) + ': bắt buộc 3 cột Đề | Đáp án (chỉ số) | Gợi ý. Sửa trong ô kết quả hoặc khối TỰ LUẬN.';
+            m = text.match(/drag_exercises\[(\d+)\]/);
+            if (m && /hoán vị|số phần tử/.test(text)) {
+                return 'SẮP XẾP — câu ' + (Number(m[1]) + 1) + ': cột 3 phải là thứ tự đúng, dùng đúng các mảnh ở cột 2 (không thêm/bớt).';
             }
+            if (/Thiếu video/.test(text)) return 'Nhập link video vào ô "Link video bài giảng" ở mục 1.';
+            if (/questions\[(\d+)\]/.test(text)) return 'TRẮC NGHIỆM: kiểm tra đủ 7 cột skill_id | Câu | A | B | C | D | đáp án.';
+            if (/fill_exercises/.test(text)) return 'KÉO THẢ: đủ 4 cột — Đề có ___ | mảnh » ... | đáp án » từng ô | gợi ý.';
+            return 'Sửa nội dung trong ô kết quả Gemini rồi bấm Parse hoặc Kiểm tra lại.';
+        };
+
+        window.buildLessonPackageFromForm = function() {
+            var LI = window.LessonImport;
+            if (!LI) return null;
             var rawEl = document.getElementById('gemini-output');
             var raw = rawEl && rawEl.value ? rawEl.value.trim() : '';
-            if (!raw) {
-                window.showAppToast('Chưa có nội dung Gemini để xuất JSON.', 'warn');
-                return;
-            }
+            if (!raw) return null;
             var subject = (document.getElementById('subject') || {}).value || '';
             var chapter = (document.getElementById('chapter') || {}).value || '';
             var title = (document.getElementById('title') || {}).value || '';
@@ -449,28 +475,159 @@
                     prompt_version: LI.PROMPT_VERSION
                 }
             });
+            var videoUrl = (document.getElementById('lesson-video-url') || {}).value || '';
+            videoUrl = String(videoUrl).trim();
+            if (videoUrl && LI.parseVideos) {
+                pkg.videos = LI.parseVideos(videoUrl);
+            }
+            return pkg;
+        };
+
+        window.getLessonValidationState = function() {
+            var LI = window.LessonImport;
+            if (!LI) {
+                return { errors: ['Thiếu lesson-import.js — tải lại trang (Ctrl+F5).'], warnings: [], ready: false, pkg: null, fixes: [] };
+            }
+            var pkg = window.buildLessonPackageFromForm();
+            if (!pkg) {
+                return { errors: [], warnings: [], ready: false, pkg: null, fixes: [], empty: true };
+            }
+            var subject = (document.getElementById('subject') || {}).value || '';
             var validation = LI.validateLessonImportPackage(pkg, { pageSubject: subject });
+            var errors = validation.errors || [];
+            var warnings = validation.warnings || [];
+            var fixes = errors.concat(warnings).map(window.describeValidationFix);
+            return {
+                errors: errors,
+                warnings: warnings,
+                ready: errors.length === 0 && warnings.length === 0,
+                pkg: pkg,
+                fixes: fixes
+            };
+        };
+
+        window.updateExportJsonButton = function(state) {
+            var btn = document.getElementById('export-json-btn');
+            var label = document.getElementById('export-json-btn-label');
+            if (!btn || !label) return;
+            if (!state || state.empty) {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                label.textContent = 'Xuất JSON (chưa có nội dung)';
+                return;
+            }
+            if (state.ready) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                label.textContent = 'Xuất / Copy JSON ✓';
+                btn.title = 'Đã đạt 100% — sẵn sàng import';
+                return;
+            }
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            var blockers = state.errors.length + state.warnings.length;
+            label.textContent = 'Xuất JSON (' + blockers + ' lỗi/cảnh báo)';
+            btn.title = 'Sửa hết lỗi và cảnh báo trước khi xuất';
+        };
+
+        window.renderLessonValidationPanel = function(state) {
+            state = state || window.getLessonValidationState();
+            var panel = document.getElementById('lesson-validation-panel');
+            var statusEl = document.getElementById('lesson-validation-status');
+            var errorsEl = document.getElementById('lesson-validation-errors');
+            var warningsEl = document.getElementById('lesson-validation-warnings');
+            var fixesEl = document.getElementById('lesson-validation-fixes');
+            if (!panel || !statusEl) return state;
+            window.updateExportJsonButton(state);
+            if (state.empty) {
+                panel.classList.add('hidden');
+                return state;
+            }
+            panel.classList.remove('hidden');
+            if (state.ready) {
+                statusEl.className = 'font-semibold text-emerald-700 mb-2';
+                statusEl.textContent = '✓ Đạt 100% — có thể xuất JSON và import vào Lộ trình';
+                errorsEl.classList.add('hidden');
+                warningsEl.classList.add('hidden');
+                fixesEl.classList.add('hidden');
+                return state;
+            }
+            statusEl.className = 'font-semibold text-rose-700 mb-2';
+            statusEl.textContent = 'Chưa đạt 100% — sửa hết lỗi và cảnh báo trước khi xuất JSON';
+            function fillList(el, items, prefix) {
+                if (!el) return;
+                if (!items.length) {
+                    el.classList.add('hidden');
+                    el.innerHTML = '';
+                    return;
+                }
+                el.classList.remove('hidden');
+                el.innerHTML = items.map(function(item) {
+                    return '<li><strong>' + prefix + '</strong> ' + window.escapeHtml(item) + '</li>';
+                }).join('');
+            }
+            fillList(errorsEl, state.errors, 'Lỗi:');
+            fillList(warningsEl, state.warnings, 'Cảnh báo:');
+            var uniqueFixes = [];
+            (state.fixes || []).forEach(function(fix) {
+                if (fix && uniqueFixes.indexOf(fix) === -1) uniqueFixes.push(fix);
+            });
+            fillList(fixesEl, uniqueFixes, 'Cách sửa:');
+            return state;
+        };
+
+        window.refreshLessonValidation = function() {
+            return window.renderLessonValidationPanel(window.getLessonValidationState());
+        };
+
+        window.showValidationBlockedModal = function(state) {
+            state = state || window.getLessonValidationState();
+            var hints = state.errors.map(function(item) { return 'Lỗi: ' + item; })
+                .concat(state.warnings.map(function(item) { return 'Cảnh báo: ' + item; }))
+                .concat((state.fixes || []).map(function(item) { return 'Cách sửa: ' + item; }));
+            var modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4';
+            modal.innerHTML = '<div class="bg-white rounded-3xl p-6 w-full max-w-lg">' +
+                '<div class="font-bold text-rose-700 text-lg mb-2">Chưa thể xuất JSON</div>' +
+                '<p class="text-sm text-slate-600 mb-3">Import yêu cầu <strong>0 lỗi và 0 cảnh báo</strong>. Sửa trong ô kết quả / link video, rồi kiểm tra lại.</p>' +
+                '<ul class="text-sm text-slate-700 list-disc pl-5 space-y-1 max-h-64 overflow-auto">' +
+                hints.map(function(h) { return '<li>' + window.escapeHtml(h) + '</li>'; }).join('') +
+                '</ul>' +
+                '<div class="mt-4 text-right"><button type="button" data-close class="px-4 py-2 bg-slate-800 text-white rounded-2xl text-sm">Đóng</button></div></div>';
+            modal.querySelector('[data-close]').onclick = function() { modal.remove(); };
+            modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
+        };
+
+        window.exportLessonImportJson = function() {
+            var state = window.getLessonValidationState();
+            if (!window.LessonImport) {
+                window.showAppToast('Thiếu lesson-import.js. Tải lại trang (Ctrl+F5).', 'err');
+                return;
+            }
+            if (state.empty) {
+                window.showAppToast('Chưa có nội dung Gemini để xuất JSON.', 'warn');
+                return;
+            }
+            window.renderLessonValidationPanel(state);
+            if (!state.ready) {
+                window.showValidationBlockedModal(state);
+                return;
+            }
+            var pkg = state.pkg;
             var jsonText = JSON.stringify(pkg, null, 2);
             var filename = (pkg.slug || 'lesson') + '-import-v1.json';
-            var hints = validation.errors.map(function(item) { return 'Lỗi: ' + item; })
-                .concat(validation.warnings.map(function(item) { return 'Cảnh báo: ' + item; }));
             var blob = new Blob([jsonText], { type: 'application/json' });
             var sandboxed = !window.canAutoDownloadFiles();
             if (!sandboxed && window.triggerBlobDownload(blob, filename)) {
-                if (validation.errors.length) {
-                    window.showAppToast('Đã tải JSON nhưng có ' + validation.errors.length + ' lỗi.', 'warn');
-                } else if (validation.warnings.length) {
-                    window.showAppToast('Đã tải JSON (' + validation.warnings.length + ' cảnh báo).', 'warn');
-                } else {
-                    window.showAppToast('Đã tải ' + filename, 'ok');
-                }
+                window.showAppToast('Đã tải ' + filename + ' — sẵn sàng import.', 'ok');
                 return;
             }
             window.showTextExportModal({
-                title: sandboxed ? 'Xuất JSON trong Gemini Canvas' : 'Không tải tự động được — copy JSON',
+                title: 'Xuất JSON — đã đạt 100%',
                 filename: filename,
                 text: jsonText,
-                hints: hints
+                hints: []
             });
         };
 
@@ -1368,6 +1525,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             }
 
             preview.appendChild(container);
+            if (window.refreshLessonValidation) window.refreshLessonValidation();
             return imageGenerationJobs;
         }
 
@@ -2235,8 +2393,8 @@ ${notes ? `- Yêu cầu thêm: ${notes}` : ''}
   - Chỉ ghi đề bài để học sinh làm và nộp; không đưa lời giải hoặc đáp án vào phần này.
 
 **BÀI TẬP TỰ LUẬN NGẮN** (heading riêng, không gộp chung):
-Tạo từ 2 đến 5 câu tùy ảnh SGK. Mỗi dòng: "Đề đầy đủ | Đáp án | Gợi ý"
-Đáp án là kết quả cuối: số nguyên/thập phân, phân số (1/2) hoặc căn (√16); không chữ hay đơn vị.
+Tạo từ 2 đến 5 câu tùy ảnh SGK. Mỗi dòng BẮT BUỘC đúng 3 cột: "Đề đầy đủ | Đáp án | Gợi ý"
+- Cột Đáp án KHÔNG được để trống. Chỉ ghi số kết quả (vd: 42, 3/4, √16); không chữ, không đơn vị, không gộp gợi ý vào cột đáp án.
 
 **KÉO THẢ VÀO Ô TRỐNG** (heading riêng):
 Tạo đúng 2 câu. Mỗi dòng BẮT BUỘC 4 cột: "Câu có ___ | mảnh1 » mảnh2 » mảnh_nhiễu | đáp án1 » đáp án2 » đáp án3 | gợi ý ngắn"
@@ -2247,6 +2405,7 @@ Tạo đúng 2 câu. Mỗi dòng BẮT BUỘC 4 cột: "Câu có ___ | mảnh1 �
 
 **SẮP XẾP THỨ TỰ** (heading riêng):
 Tạo đúng 2 câu. Mỗi dòng: "Đề bài | phần tử 1 » phần tử 2 » phần tử 3 | thứ tự đúng 1 » thứ tự đúng 2 » thứ tự đúng 3 | gợi ý"
+- Cột thứ tự đúng phải là hoán vị của cột phần tử: cùng các mảnh, chỉ đổi thứ tự, không thêm/bớt/sửa chữ mảnh.
 
 **NỐI Ô** (heading riêng):
 Tạo từ 1 đến 2 câu. Mỗi dòng: "Đề bài | Trái 1 » Trái 2 » Trái 3 | Phải 1 » Phải 2 » Phải 3 | 0-0,1-1,2-2 | gợi ý"
@@ -2501,7 +2660,21 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 });
             }
 
-            // Demo data
+            var validationTimer = null;
+            function scheduleLessonValidation() {
+                if (validationTimer) clearTimeout(validationTimer);
+                validationTimer = setTimeout(function() {
+                    if (window.refreshLessonValidation) window.refreshLessonValidation();
+                }, 400);
+            }
+            ['gemini-output', 'lesson-video-url', 'subject', 'chapter', 'title'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', scheduleLessonValidation);
+                el.addEventListener('change', scheduleLessonValidation);
+            });
+            if (window.refreshLessonValidation) window.refreshLessonValidation();
+
             if (!window.LessonImport) {
                 showAppToast('Chưa tải lesson-import.js — thử Ctrl+F5. Xuất JSON/Parse cần file này.', 'warn');
             }
@@ -2511,6 +2684,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
         window.generateFullLessonDirect = generateFullLessonDirect;
         window.showStructureGuide = showStructureGuide;
         window.parseAndPreview = parseAndPreview;
+        window.refreshLessonValidation = window.refreshLessonValidation;
         window.exportToWord = exportToWord;
         window.handleWordExportError = handleWordExportError;
 
