@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/ai_usage_log.php';
 
-const AI_EXPLAIN_CACHE_VERSION = 'v2';
+const AI_EXPLAIN_CACHE_VERSION = 'v3';
 
 function ai_explain_cache_file_path(): string
 {

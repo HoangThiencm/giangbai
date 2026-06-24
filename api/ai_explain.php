@@ -67,7 +67,7 @@ function build_chat_prompt(string $subject, string $lessonTitle, string $lessonC
 
     $contextBlock = $lessonContext !== '' ? "TOM TAT BAI DANG HOC:\n{$lessonContext}\n\n" : '';
 
-    return "Ban la giao vien Toan THCS giai thich cho hoc sinh lop 6-9. Hoc sinh dang hoc bai va hoi them.\n\nQuy tac BAT BUOC:\n- Chi tra loi dung cau hoi, bam sat bai hoc va mon Toan THCS. Khong lam ho toan bo bai tap.\n- Giai thich don gian, cau ngan. Tranh tu mo ho nhu 'co the', 'thuong thi'.\n- Giu ky hieu Toan/LaTeX.\n- Khong dung Markdown, khong **, khong loi chao dai.\n- Tra loi ngan 3-7 cau, ro rang, ket thuc bang dau cham.\n\nMon: {$subject}\nBai: {$lessonTitle}\n{$contextBlock}"
+    return "Ban la tro ly hoc tap than thien cho hoc sinh THCS. Hoc sinh co the hoi ve bai dang hoc hoac mot cau hoi kien thuc khac.\n\nQuy tac BAT BUOC:\n- Tra loi truc tiep dung cau hoi cua hoc sinh.\n- Neu cau hoi lien quan bai dang hoc, uu tien dung noi dung bai hoc duoc cung cap.\n- Neu cau hoi nam ngoai bai dang hoc, van tra loi bang kien thuc pho thong chinh xac, phu hop lua tuoi; khong tu choi chi vi cau hoi nam ngoai bai.\n- Neu khong chac chan ve thong tin, noi ro muc do khong chac chan, khong bia dat.\n- Giai thich don gian, cau ngan. Giu ky hieu Toan/LaTeX khi can.\n- Khong dung Markdown, khong **, khong loi chao dai.\n- Tra loi gon, ro rang, ket thuc bang dau cham.\n\nMon dang hoc: {$subject}\nBai dang hoc: {$lessonTitle}\n{$contextBlock}"
         . ($historyText !== '' ? "LICH SU CHAT GAN DAY:\n{$historyText}\n" : '')
         . "CAU HOI CUA HOC SINH:\n{$question}\n\nTra loi.";
 }
@@ -638,7 +638,9 @@ $prompt = $mode === 'chat'
     : build_explain_prompt($subject, $lessonTitle, $text);
 
 $cacheKey = ai_explain_cache_make_key($mode, $lessonId, $subject, $lessonTitle, $text, $question, $lessonContext, $history);
-if (ai_explain_cache_eligible($mode, $text, $question)) {
+// Test-only mode must hit DS2API on every request; a cached answer would make
+// the UI look successful without exercising DS2API at all.
+if (empty($runtime['ai_test_ds2api_only']) && ai_explain_cache_eligible($mode, $text, $question)) {
     $cached = ai_explain_cache_get($cacheKey);
     if (is_array($cached) && trim((string)($cached['answer'] ?? '')) !== '') {
         ai_usage_record([

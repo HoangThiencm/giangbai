@@ -3501,7 +3501,7 @@
         const box = document.getElementById('lessonAiChatMessages');
         if (!box) return;
         if (!aiAssistState.chatHistory.length) {
-            box.innerHTML = '<div class="lesson-ai-chat-msg assistant">Em có thể hỏi về khái niệm, công thức hoặc cách làm bài trong bài học này.</div>';
+            box.innerHTML = '<div class="lesson-ai-chat-msg assistant">Em có thể hỏi về bài đang học hoặc một câu hỏi kiến thức khác để kiểm tra AI.</div>';
             return;
         }
         box.innerHTML = aiAssistState.chatHistory.map(msg => `
@@ -3566,11 +3566,11 @@
                 <div class="lesson-ai-chat-head">
                     <strong><i class="fas fa-comments text-teal-700 mr-1"></i> Hỏi đáp cùng AI</strong>
                     <p id="lessonAiChatLessonLabel">Đang tải bài...</p>
-                    <p class="lesson-ai-chat-hint">Bôi đen đoạn → <strong>AI giải thích</strong>, hoặc hỏi bên dưới.</p>
+                    <p class="lesson-ai-chat-hint">Bôi đen đoạn → <strong>AI giải thích</strong>, hoặc hỏi cả nội dung ngoài bài bên dưới.</p>
                 </div>
                 <div id="lessonAiChatMessages" class="lesson-ai-chat-messages"></div>
                 <form id="lessonAiChatForm" class="lesson-ai-chat-compose">
-                    <textarea id="lessonAiChatInput" rows="3" placeholder="Ví dụ: Tập hợp là gì?"></textarea>
+                    <textarea id="lessonAiChatInput" rows="3" placeholder="Hỏi về bài học hoặc kiến thức khác..."></textarea>
                     <button type="submit" id="lessonAiChatSend" class="lesson-ai-chat-send"><i class="fas fa-paper-plane mr-1"></i> Gửi câu hỏi</button>
                 </form>
             `;
