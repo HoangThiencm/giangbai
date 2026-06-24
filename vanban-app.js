@@ -419,7 +419,7 @@
         $('documentForm')?.reset();
         $('formError')?.classList.add('hidden');
         if ($('selectedFilesNote')) {
-            $('selectedFilesNote').textContent = 'Có thể chọn nhiều tệp cùng lúc · tối đa 25 MB cho mỗi tệp.';
+            $('selectedFilesNote').textContent = 'Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.';
         }
         if ($('documentId')) $('documentId').value = doc?.id || '';
         if ($('modalTitle')) $('modalTitle').textContent = doc ? 'Cập nhật văn bản' : `Thêm văn bản · ${meta.label}`;
@@ -792,7 +792,7 @@
             if (selectedNote) {
                 selectedNote.textContent = files.length
                     ? `Đã chọn ${files.length} tệp: ${files.map(file => file.name).join(', ')}`
-                    : 'Có thể chọn nhiều tệp cùng lúc · tối đa 25 MB cho mỗi tệp.';
+                    : 'Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.';
             }
 
             // Chỉ dùng tệp PDF đầu tiên để tự nhận diện thông tin văn bản.
