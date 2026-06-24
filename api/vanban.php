@@ -557,11 +557,24 @@ function vbd_should_fallback_to_local(Throwable $e): bool
     return true;
 }
 
+function vbd_parse_ini_size(string $value): int
+{
+    $value = trim($value);
+    if ($value === '') return 0;
+    if (preg_match('/^(\d+(?:\.\d+)?)\s*([KMG])?$/i', $value, $match)) {
+        $amount = (float)$match[1];
+        $unit = strtoupper($match[2] ?? '');
+        $mult = $unit === 'G' ? 1024 * 1024 * 1024 : ($unit === 'M' ? 1024 * 1024 : ($unit === 'K' ? 1024 : 1));
+        return (int)floor($amount * $mult);
+    }
+    return (int)$value;
+}
+
 function vbd_upload_chunk_bytes(): int
 {
     $configured = defined('VANBAN_UPLOAD_CHUNK_MB') ? max(1, (int)VANBAN_UPLOAD_CHUNK_MB) : 1;
     $chunk = $configured * 1024 * 1024;
-    $uploadMax = (int)(ini_get('upload_max_filesize') ?: 0);
+    $uploadMax = vbd_parse_ini_size((string)(ini_get('upload_max_filesize') ?: ''));
     if ($uploadMax > 0) {
         // Leave headroom for multipart overhead on shared hosting (often 2M).
         $safe = max(256 * 1024, $uploadMax - 256 * 1024);
