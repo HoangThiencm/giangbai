@@ -491,8 +491,16 @@ function vbd_local_storage_enabled(): bool
 function vbd_local_storage_root(): string
 {
     $custom = defined('VANBAN_LOCAL_STORAGE_DIR') ? trim((string)VANBAN_LOCAL_STORAGE_DIR) : '';
-    if ($custom !== '') return rtrim($custom, '/\\');
-    return dirname(__DIR__) . '/storage/vanban';
+    $candidates = array_values(array_filter([
+        $custom !== '' ? rtrim($custom, '/\\') : '',
+        dirname(__DIR__) . '/storage/vanban',
+        __DIR__ . '/storage/vanban',
+    ]));
+    foreach ($candidates as $path) {
+        if (is_dir($path) && is_writable($path)) return $path;
+        if (@mkdir($path, 0755, true) && is_dir($path) && is_writable($path)) return $path;
+    }
+    return $candidates[0] ?? (dirname(__DIR__) . '/storage/vanban');
 }
 
 function vbd_request_base_url(): string
@@ -527,25 +535,40 @@ function vbd_is_local_file_id(string $fileId): bool
     return str_starts_with(trim($fileId), 'local:');
 }
 
-function vbd_should_fallback_to_local(Throwable $e): bool
+function vbd_is_upload_validation_error(Throwable $e): bool
 {
-    if (!vbd_local_storage_enabled()) return false;
     $msg = $e->getMessage();
     $needles = [
-        'Không kết nối được Google Drive',
-        'Could not resolve host',
-        'Connection timed out',
-        'Failed to connect',
-        'Hosting không thể kết nối',
-        'cURL 6',
-        'cURL 7',
-        'cURL 28',
-        'Không phân giải được',
+        'Có tệp tải lên bị lỗi',
+        'không được vượt quá',
+        'Tệp tải lên không hợp lệ',
+        'định dạng tệp',
+        'Chưa chọn tệp',
     ];
     foreach ($needles as $needle) {
         if (str_contains($msg, $needle)) return true;
     }
     return false;
+}
+
+function vbd_should_fallback_to_local(Throwable $e): bool
+{
+    if (!vbd_local_storage_enabled() || vbd_is_upload_validation_error($e)) return false;
+    return true;
+}
+
+function vbd_probe_drive_ready(): ?string
+{
+    require_once __DIR__ . '/google_drive.php';
+    drive_http_set_profile('fast');
+    try {
+        drive_assert_upload_ready();
+        return null;
+    } catch (Throwable $e) {
+        return $e->getMessage();
+    } finally {
+        drive_http_set_profile('default');
+    }
 }
 
 function vbd_validate_upload_file(array $file, int $maxBytes): void
@@ -610,6 +633,7 @@ function vbd_upload_local_files(PDO $pdo, int $id, array $document, array $files
         'ok' => true,
         'files' => $uploaded,
         'storage' => 'local',
+        'upload_backend' => 'vanban-local-fallback-v2',
         'drive_error' => $driveError,
         'message' => 'Google Drive chưa kết nối được — đã lưu ' . count($uploaded) . ' tệp trên hosting. Khi Drive hoạt động, tải lại tệp để đồng bộ.',
     ]);
@@ -776,7 +800,12 @@ if ($action === 'update_status') {
 if ($action === 'drive_check') {
     require_once __DIR__ . '/google_drive.php';
     $status = drive_setup_status(true);
-    respond(['ok' => true] + $status);
+    respond([
+        'ok' => true,
+        'upload_backend' => 'vanban-local-fallback-v2',
+        'local_storage_root' => vbd_local_storage_root(),
+        'local_storage_writable' => is_writable(vbd_local_storage_root()),
+    ] + $status);
 }
 
 if ($action === 'file') {
@@ -814,8 +843,27 @@ if ($action === 'upload') {
     if (!$files) respond(['error' => 'Chưa chọn tệp để tải lên.'], 422);
     $maxBytes = (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024;
     try {
+        foreach ($files as $file) {
+            vbd_validate_upload_file($file, $maxBytes);
+        }
+    } catch (Throwable $e) {
+        respond(['error' => $e->getMessage()], 422);
+    }
+
+    $driveProbeError = vbd_local_storage_enabled() ? vbd_probe_drive_ready() : null;
+    if ($driveProbeError !== null) {
+        try {
+            vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $driveProbeError);
+        } catch (Throwable $localError) {
+            respond([
+                'error' => 'Google Drive: ' . $driveProbeError . ' | Lưu trên hosting: ' . $localError->getMessage(),
+                'upload_backend' => 'vanban-local-fallback-v2',
+            ], 502);
+        }
+    }
+
+    try {
         require_once __DIR__ . '/google_drive.php';
-        drive_assert_upload_ready();
         $folderId = trim((string)($document['drive_folder_id'] ?? '')) ?: vbd_drive_folder($document);
         if (empty($document['drive_folder_id'])) {
             $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $id]);
@@ -823,7 +871,6 @@ if ($action === 'upload') {
         $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
         $uploaded = [];
         foreach ($files as $index => $file) {
-            vbd_validate_upload_file($file, $maxBytes);
             $mime = drive_detect_mime($file['tmp_name'], (string)$file['name'], (string)$file['type']);
             $storedName = drive_safe_name(($document['document_number'] ?: 'VB-' . $id) . ' - ' . $document['title'] . ' - ' . ($index + 1) . ' - ' . $file['name'], 'van-ban');
             $drive = drive_upload_file($folderId, $storedName, $mime, $file['tmp_name']);
@@ -834,13 +881,24 @@ if ($action === 'upload') {
             'ok' => true,
             'files' => $uploaded,
             'storage' => 'drive',
+            'upload_backend' => 'vanban-local-fallback-v2',
             'message' => 'Đã lưu ' . count($uploaded) . ' tệp lên Google Drive.',
         ]);
     } catch (Throwable $e) {
         if (vbd_should_fallback_to_local($e)) {
-            vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $e->getMessage());
+            try {
+                vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $e->getMessage());
+            } catch (Throwable $localError) {
+                respond([
+                    'error' => 'Google Drive: ' . $e->getMessage() . ' | Lưu trên hosting: ' . $localError->getMessage(),
+                    'upload_backend' => 'vanban-local-fallback-v2',
+                ], 502);
+            }
         }
-        respond(['error' => $e->getMessage()], 502);
+        respond([
+            'error' => $e->getMessage(),
+            'upload_backend' => 'vanban-local-fallback-v2',
+        ], 502);
     }
 }
 

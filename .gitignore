@@ -4,3 +4,5 @@ baocaodulieu/
 /qlvb
 storage/vanban/*
 !storage/vanban/.gitkeep
+api/storage/vanban/*
+!api/storage/vanban/.gitkeep

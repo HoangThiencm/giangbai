@@ -305,18 +305,33 @@ function drive_http_connect_error(int $errno, string $message): string
     return $detail;
 }
 
+function drive_http_set_profile(string $profile = 'default'): void
+{
+    $GLOBALS['drive_http_profile'] = $profile;
+}
+
+function drive_http_profile(): string
+{
+    return (string)($GLOBALS['drive_http_profile'] ?? 'default');
+}
+
 function drive_http(string $method, string $url, array $headers = [], ?string $body = null): array
 {
+    $profile = drive_http_profile();
+    $maxAttempts = $profile === 'fast' ? 1 : 3;
+    $connectTimeout = $profile === 'fast' ? 6 : 15;
+    $requestTimeout = $profile === 'fast' ? 45 : 120;
+
     if (function_exists('curl_init')) {
         $raw = false;
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_CUSTOMREQUEST => $method,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_CONNECTTIMEOUT => 15,
-                CURLOPT_TIMEOUT => 120,
+                CURLOPT_CONNECTTIMEOUT => $connectTimeout,
+                CURLOPT_TIMEOUT => $requestTimeout,
                 CURLOPT_HTTPHEADER => $headers,
                 CURLOPT_HEADER => true,
             ]);
@@ -343,7 +358,7 @@ function drive_http(string $method, string $url, array $headers = [], ?string $b
             $errno = curl_errno($ch);
             $message = curl_error($ch);
             curl_close($ch);
-            if (!in_array($errno, [6, 7, 28], true) || $attempt === 3) {
+            if (!in_array($errno, [6, 7, 28], true) || $attempt === $maxAttempts) {
                 throw new RuntimeException(drive_http_connect_error($errno, $message));
             }
             usleep(250000 * $attempt);

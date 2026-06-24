@@ -760,7 +760,10 @@
         [...files].forEach(file => form.append('files[]', file));
         const response = await fetch(`${API}?action=upload&sector=${encodeURIComponent(SECTOR)}`, { method: 'POST', credentials: 'include', body: form });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Không tải được tệp lên Google Drive.');
+        if (!response.ok) {
+            const backend = data.upload_backend ? ` [${data.upload_backend}]` : '';
+            throw new Error((data.error || 'Không tải được tệp lên Google Drive.') + backend);
+        }
         return data;
     }
 
