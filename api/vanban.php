@@ -836,6 +836,8 @@ if ($action === 'file') {
 }
 
 if ($action === 'upload') {
+    @ini_set('memory_limit', '256M');
+    @set_time_limit(300);
     $id = (int)($_POST['document_id'] ?? 0);
     $document = vbd_document($pdo, $id, (int)$user['id']);
     if (!$document) respond(['error' => 'Hãy lưu văn bản trước khi tải tệp.'], 404);

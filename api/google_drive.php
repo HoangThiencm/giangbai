@@ -320,7 +320,7 @@ function drive_http(string $method, string $url, array $headers = [], ?string $b
     $profile = drive_http_profile();
     $maxAttempts = $profile === 'fast' ? 1 : 3;
     $connectTimeout = $profile === 'fast' ? 6 : 15;
-    $requestTimeout = $profile === 'fast' ? 45 : 120;
+    $requestTimeout = $profile === 'fast' ? 45 : 300;
 
     if (function_exists('curl_init')) {
         $raw = false;
@@ -664,12 +664,135 @@ function drive_google_convert_mime(string $ext, string $tmpPath): ?string
     return $map[$ext];
 }
 
+function drive_curl_apply_resolve($ch, string $url): void
+{
+    if (!defined('CURLOPT_RESOLVE')) return;
+    $resolvers = drive_curl_resolve_list($url);
+    if ($resolvers) curl_setopt($ch, CURLOPT_RESOLVE, $resolvers);
+    if (defined('CURL_IPRESOLVE_V4')) curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+}
+
+function drive_curl_timeouts(): array
+{
+    $profile = drive_http_profile();
+    return [
+        'connect' => $profile === 'fast' ? 6 : 15,
+        'total' => $profile === 'fast' ? 45 : 300,
+    ];
+}
+
+function drive_upload_response(array $response, string $storedName, string $mediaMime): array
+{
+    if (empty($response['id'])) throw new RuntimeException('Google Drive không trả về mã tệp.');
+    $fileId = (string)$response['id'];
+    if (defined('GOOGLE_DRIVE_SHARE_MODE') && GOOGLE_DRIVE_SHARE_MODE === 'anyone') {
+        drive_share_file_anyone($fileId);
+    }
+    return [
+        'file_id' => $fileId,
+        'stored_name' => (string)($response['name'] ?? $storedName),
+        'mime_type' => (string)($response['mimeType'] ?? $mediaMime),
+        'view_url' => (string)($response['webViewLink'] ?? ('https://drive.google.com/file/d/' . $fileId . '/view')),
+        'download_url' => (string)($response['webContentLink'] ?? ('https://drive.google.com/uc?export=download&id=' . $fileId)),
+    ];
+}
+
+function drive_upload_file_resumable(string $storedName, string $mediaMime, string $tmpPath, array $metadata): array
+{
+    if (!function_exists('curl_init')) {
+        throw new RuntimeException('Hosting cần cURL để tải tệp lớn lên Google Drive.');
+    }
+    $fileSize = filesize($tmpPath);
+    if ($fileSize === false || $fileSize < 1) {
+        throw new RuntimeException('Không đọc được kích thước tệp tạm.');
+    }
+    $timeouts = drive_curl_timeouts();
+    $token = drive_access_token();
+    $initUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,mimeType';
+    $metaJson = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $ch = curl_init($initUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HEADER => true,
+        CURLOPT_CONNECTTIMEOUT => $timeouts['connect'],
+        CURLOPT_TIMEOUT => $timeouts['total'],
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json; charset=utf-8',
+            'X-Upload-Content-Type: ' . $mediaMime,
+            'X-Upload-Content-Length: ' . $fileSize,
+        ],
+        CURLOPT_POSTFIELDS => $metaJson,
+    ]);
+    drive_curl_apply_resolve($ch, $initUrl);
+    $raw = curl_exec($ch);
+    if ($raw === false) {
+        $errno = curl_errno($ch);
+        $message = curl_error($ch);
+        curl_close($ch);
+        throw new RuntimeException(drive_http_connect_error($errno, $message));
+    }
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $headerBlock = substr((string)$raw, 0, $headerSize);
+    curl_close($ch);
+    if ($status < 200 || $status >= 300) {
+        throw new RuntimeException('Google Drive không khởi tạo được phiên tải lên (HTTP ' . $status . ').');
+    }
+    $location = '';
+    foreach (preg_split('/\r\n|\n/', $headerBlock) ?: [] as $line) {
+        if (stripos($line, 'Location:') === 0) {
+            $location = trim(substr($line, 9));
+            break;
+        }
+    }
+    if ($location === '') throw new RuntimeException('Google Drive không trả về URL tải lên.');
+
+    $fp = fopen($tmpPath, 'rb');
+    if ($fp === false) throw new RuntimeException('Không mở được tệp tạm để tải lên Drive.');
+    $ch = curl_init($location);
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => 'PUT',
+        CURLOPT_UPLOAD => true,
+        CURLOPT_INFILE => $fp,
+        CURLOPT_INFILESIZE => $fileSize,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => $timeouts['connect'],
+        CURLOPT_TIMEOUT => $timeouts['total'],
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: ' . $mediaMime,
+            'Content-Length: ' . $fileSize,
+        ],
+    ]);
+    drive_curl_apply_resolve($ch, $location);
+    $body = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    if ($body === false) {
+        $errno = curl_errno($ch);
+        $message = curl_error($ch);
+        curl_close($ch);
+        fclose($fp);
+        throw new RuntimeException(drive_http_connect_error($errno, $message));
+    }
+    curl_close($ch);
+    fclose($fp);
+    if ($status < 200 || $status >= 300) {
+        $decoded = json_decode((string)$body, true);
+        $detail = is_array($decoded)
+            ? ($decoded['error']['message'] ?? ('HTTP ' . $status))
+            : ('HTTP ' . $status);
+        throw new RuntimeException('Google Drive từ chối tải tệp: ' . $detail);
+    }
+    $response = json_decode((string)$body, true);
+    if (!is_array($response)) throw new RuntimeException('Google Drive không trả về dữ liệu tệp sau khi tải lên.');
+    return drive_upload_response($response, $storedName, $mediaMime);
+}
+
 function drive_upload_file(string $folderId, string $storedName, string $mimeType, string $tmpPath, bool $convertToGoogle = true): array
 {
     drive_assert_upload_ready();
-    $content = file_get_contents($tmpPath);
-    if ($content === false) throw new RuntimeException('Không đọc được tệp tạm để tải lên Drive.');
-
     $ext = strtolower(pathinfo($storedName, PATHINFO_EXTENSION));
     $mediaMime = $mimeType !== '' ? $mimeType : 'application/octet-stream';
     $metadata = [
@@ -678,6 +801,15 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
     ];
     $googleMime = $convertToGoogle ? drive_google_convert_mime($ext, $tmpPath) : null;
     if ($googleMime) $metadata['mimeType'] = $googleMime;
+
+    $fileSize = filesize($tmpPath);
+    if ($fileSize === false) throw new RuntimeException('Không đọc được tệp tạm để tải lên Drive.');
+    if ($fileSize > 2 * 1024 * 1024) {
+        return drive_upload_file_resumable($storedName, $mediaMime, $tmpPath, $metadata);
+    }
+
+    $content = file_get_contents($tmpPath);
+    if ($content === false) throw new RuntimeException('Không đọc được tệp tạm để tải lên Drive.');
 
     // Luôn multipart + parents ngay từ đầu. Service Account không có quota Drive cá nhân;
     // uploadType=media (không parents) sẽ lỗi dù thư mục Shared Drive tạo được bình thường.
@@ -702,20 +834,7 @@ function drive_upload_file(string $folderId, string $storedName, string $mimeTyp
         $body
     );
 
-    if (empty($response['id'])) throw new RuntimeException('Google Drive không trả về mã tệp.');
-    $fileId = (string)$response['id'];
-
-    if (defined('GOOGLE_DRIVE_SHARE_MODE') && GOOGLE_DRIVE_SHARE_MODE === 'anyone') {
-        drive_share_file_anyone($fileId);
-    }
-
-    return [
-        'file_id' => $fileId,
-        'stored_name' => (string)($response['name'] ?? $storedName),
-        'mime_type' => (string)($response['mimeType'] ?? $mediaMime),
-        'view_url' => (string)($response['webViewLink'] ?? ('https://drive.google.com/file/d/' . $fileId . '/view')),
-        'download_url' => (string)($response['webContentLink'] ?? ('https://drive.google.com/uc?export=download&id=' . $fileId)),
-    ];
+    return drive_upload_response($response, $storedName, $mediaMime);
 }
 
 /**
