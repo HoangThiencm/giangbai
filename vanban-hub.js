@@ -5,7 +5,14 @@
         dang: { label: 'Đảng', icon: 'fa-flag', accent: 'rose', page: 'quanlyvanban-dang.html' },
     };
 
-    const state = { documents: [], driveReady: false, driveHint: '', driveConfigured: false };
+    const state = { documents: [], driveReady: false, driveHint: '', driveConfigured: false, driveProven: false };
+
+    function applyDriveStatus(data) {
+        state.driveProven = !!data.drive_proven;
+        state.driveConfigured = !!data.drive_configured || state.driveProven;
+        state.driveReady = !!data.drive_ready || state.driveProven;
+        state.driveHint = data.drive_hint || '';
+    }
 
     const $ = id => document.getElementById(id);
     const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -126,13 +133,11 @@
     function renderDriveWarning() {
         const box = $('driveWarning');
         if (!box) return;
-        if (state.driveReady) {
+        if (state.driveReady || state.driveConfigured) {
             box.classList.add('hidden');
             return;
         }
-        const hint = state.driveHint || (state.driveConfigured
-            ? 'Google Drive chưa sẵn sàng để tải tệp.'
-            : 'Google Drive chưa được cấu hình.');
+        const hint = state.driveHint || 'Chưa cấu hình GOOGLE_DRIVE trong api/config.php.';
         box.innerHTML = `<p><i class="fa-solid fa-triangle-exclamation mr-2"></i><strong>Google Drive:</strong> ${esc(hint)}</p>`;
         box.classList.remove('hidden');
     }
@@ -143,9 +148,7 @@
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.error || 'Không tải được dữ liệu.');
             state.documents = data.documents || [];
-            state.driveConfigured = !!data.drive_configured;
-            state.driveReady = !!data.drive_ready;
-            state.driveHint = data.drive_hint || '';
+            applyDriveStatus(data);
             renderDriveWarning();
             renderSummary();
             renderSectors();

@@ -217,7 +217,7 @@
                 state.assignments=data.assignments||[]; state.classes=data.classes||[]; state.users=data.users||[];
                 try { const school=await api('api/tranphu_data.php?action=options'); state.schoolLists=school.lists||[]; } catch { state.schoolLists=[]; }
                 document.getElementById('teacherName').textContent=data.user?.full_name||'';
-                document.getElementById('driveWarning').classList.toggle('hidden',!!data.drive_configured);
+                document.getElementById('driveWarning').classList.toggle('hidden', !!(data.drive_ready || data.drive_configured));
                 document.getElementById('targetClass').innerHTML='<option value="">-- Chọn lớp --</option>'+state.classes.map(c=>`<option>${esc(c)}</option>`).join('');
                 document.getElementById('schoolListCode').innerHTML='<option value="">-- Chọn danh sách --</option>'+state.schoolLists.map(l=>`<option value="${esc(l.list_code)}">${esc(l.title)} (${l.people_count} người)</option>`).join('');
                 populateYearFilter();

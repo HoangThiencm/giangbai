@@ -544,6 +544,20 @@ function vbd_is_local_file_id(string $fileId): bool
     return str_starts_with(trim($fileId), 'local:');
 }
 
+function vbd_documents_have_drive_files(array $documents, array $filesByDocument): bool
+{
+    foreach ($documents as $document) {
+        $docId = (int)($document['id'] ?? 0);
+        foreach (($filesByDocument[$docId] ?? []) as $file) {
+            $fileId = trim((string)($file['drive_file_id'] ?? ''));
+            if ($fileId !== '' && !vbd_is_local_file_id($fileId)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 function vbd_is_upload_validation_error(Throwable $e): bool
 {
     $msg = $e->getMessage();
@@ -957,15 +971,19 @@ if ($action === 'list') {
     }
     unset($document);
     $years = $pdo->query('SELECT name FROM office_school_years ORDER BY name DESC')->fetchAll(PDO::FETCH_COLUMN);
-    $driveStatus = null;
-    if (!empty($_GET['with_drive'])) {
-        require_once __DIR__ . '/google_drive.php';
-        $driveStatus = drive_setup_status(false);
+    require_once __DIR__ . '/google_drive.php';
+    $driveStatus = drive_setup_status(false);
+    $driveProven = vbd_documents_have_drive_files($documents, $files);
+    if ($driveProven) {
+        $driveStatus['drive_configured'] = true;
+        $driveStatus['drive_ready'] = true;
+        $driveStatus['drive_hint'] = '';
     }
     respond([
         'ok' => true,
         'documents' => $documents,
         'school_years' => $years,
+        'drive_proven' => $driveProven,
         'drive_configured' => (bool)($driveStatus['drive_configured'] ?? false),
         'drive_ready' => (bool)($driveStatus['drive_ready'] ?? false),
         'drive_auth_type' => (string)($driveStatus['drive_auth_type'] ?? 'none'),

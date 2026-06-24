@@ -577,13 +577,15 @@ $action = trim((string)($_GET['action'] ?? ''));
 if ($method === 'GET' && $action === 'bootstrap') {
     $teacher = submission_require_teacher($pdo);
     $directory = submission_teacher_directory($pdo, $teacher);
+    $driveStatus = drive_setup_status(false);
     respond([
         'ok' => true,
         'user' => public_user($teacher),
         'assignments' => submission_teacher_assignments($pdo, (int)$teacher['id']),
         'classes' => $directory['classes'],
         'users' => $directory['users'],
-        'drive_configured' => defined('GOOGLE_DRIVE_CREDENTIALS_JSON') && trim((string)GOOGLE_DRIVE_CREDENTIALS_JSON) !== '' && defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') && trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) !== '',
+        'drive_configured' => (bool)($driveStatus['drive_configured'] ?? false),
+        'drive_ready' => (bool)($driveStatus['drive_ready'] ?? false),
     ]);
 }
 

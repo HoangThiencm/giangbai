@@ -19,6 +19,7 @@
         search: '',
         driveConfigured: false,
         driveReady: false,
+        driveProven: false,
         driveHint: '',
         driveDiag: {},
         pendingUploadFiles: [],
@@ -346,16 +347,21 @@
         });
     }
 
+    function applyDriveStatus(data) {
+        state.driveProven = !!data.drive_proven;
+        state.driveConfigured = !!data.drive_configured || state.driveProven;
+        state.driveReady = !!data.drive_ready || state.driveProven;
+        state.driveHint = data.drive_hint || '';
+    }
+
     function renderDriveWarning() {
         const box = $('driveWarning');
         if (!box) return;
-        if (state.driveReady) {
+        if (state.driveReady || state.driveConfigured) {
             box.classList.add('hidden');
             return;
         }
-        const hint = state.driveHint || (state.driveConfigured
-            ? 'Google Drive chưa sẵn sàng để tải tệp.'
-            : 'Google Drive chưa được cấu hình.');
+        const hint = state.driveHint || 'Chưa cấu hình GOOGLE_DRIVE trong api/config.php.';
         box.innerHTML = `<p><i class="fa-solid fa-triangle-exclamation mr-2"></i><strong>Google Drive:</strong> ${esc(hint)}</p>`;
         box.classList.remove('hidden');
     }
@@ -427,9 +433,10 @@
     async function checkDriveRemote() {
         try {
             const data = await api('drive_check');
-            state.driveConfigured = !!data.drive_configured;
-            state.driveReady = !!data.drive_ready;
-            state.driveHint = data.drive_hint || '';
+            // Remote probe may fail while uploads still work — only upgrade status, never downgrade.
+            if (data.drive_configured) state.driveConfigured = true;
+            if (data.drive_ready) state.driveReady = true;
+            if (!state.driveReady && data.drive_hint) state.driveHint = data.drive_hint;
             state.uploadMaxBytes = parseIniSize(data.upload_max_filesize);
             state.postMaxBytes = parseIniSize(data.post_max_size);
             state.appMaxFileMb = Number(data.app_max_file_mb) || 25;
@@ -444,9 +451,7 @@
             const data = await api('list');
             state.documents = data.documents || [];
             state.schoolYears = data.school_years || [];
-            state.driveConfigured = !!data.drive_configured;
-            state.driveReady = !!data.drive_ready;
-            state.driveHint = data.drive_hint || '';
+            applyDriveStatus(data);
             state.driveDiag = data;
             renderYears();
             render();
