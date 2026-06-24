@@ -665,7 +665,11 @@ if ($action === 'upload') {
             $insert->execute([$id, $drive['file_id'], $file['name'], $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
             $uploaded[] = $drive;
         }
-        respond(['ok' => true, 'files' => $uploaded, 'message' => 'Đã lưu tệp lên Google Drive.']);
+        respond([
+            'ok' => true,
+            'files' => $uploaded,
+            'message' => 'Đã lưu ' . count($uploaded) . ' tệp lên Google Drive.',
+        ]);
     } catch (Throwable $e) {
         respond(['error' => $e->getMessage()], 502);
     }

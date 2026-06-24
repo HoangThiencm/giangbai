@@ -418,6 +418,9 @@
     function openModal(doc = null) {
         $('documentForm')?.reset();
         $('formError')?.classList.add('hidden');
+        if ($('selectedFilesNote')) {
+            $('selectedFilesNote').textContent = 'Có thể chọn nhiều tệp cùng lúc · tối đa 25 MB cho mỗi tệp.';
+        }
         if ($('documentId')) $('documentId').value = doc?.id || '';
         if ($('modalTitle')) $('modalTitle').textContent = doc ? 'Cập nhật văn bản' : `Thêm văn bản · ${meta.label}`;
         if ($('academicYear')) $('academicYear').value = doc?.academic_year || state.selectedYear || '';
@@ -784,7 +787,17 @@
         $('sourceText')?.addEventListener('input', scheduleAutoParse);
 
         $('files')?.addEventListener('change', async event => {
-            const file = [...event.target.files][0];
+            const files = [...event.target.files];
+            const selectedNote = $('selectedFilesNote');
+            if (selectedNote) {
+                selectedNote.textContent = files.length
+                    ? `Đã chọn ${files.length} tệp: ${files.map(file => file.name).join(', ')}`
+                    : 'Có thể chọn nhiều tệp cùng lúc · tối đa 25 MB cho mỗi tệp.';
+            }
+
+            // Chỉ dùng tệp PDF đầu tiên để tự nhận diện thông tin văn bản.
+            // Tất cả tệp đã chọn (ảnh, Office, PDF...) vẫn được upload đầy đủ.
+            const file = files.find(item => item.type === 'application/pdf' || /\.pdf$/i.test(item.name));
             if (!file || !$('parseNote') || !$('sourceText')) return;
 
             $('parseNote').textContent = `Đang đọc file ${file.name} (chỉ trang đầu)...`;
