@@ -20,6 +20,8 @@ $lessonTitle = trim($data['lesson_title'] ?? 'bai hoc');
 $subject = trim($data['subject'] ?? 'Toan');
 $lessonContext = trim($data['lesson_context'] ?? '');
 $lessonId = (int)($data['lesson_id'] ?? 0);
+$forceProvider = strtolower(trim((string)($data['force_provider'] ?? '')));
+if (!in_array($forceProvider, ['', 'ds2api'], true)) $forceProvider = '';
 
 $currentUserId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $currentUserRole = '';
@@ -635,6 +637,12 @@ function ai_explain_respond_success(
 }
 
 $runtime = load_ai_runtime_config();
+// The student chat currently doubles as a DS2API verification surface.
+// When requested by the first-party UI, do not let fallback providers hide a
+// DS2API authentication, model, network, or upstream error.
+if ($mode === 'chat' && $forceProvider === 'ds2api') {
+    $runtime['ai_test_ds2api_only'] = true;
+}
 $GLOBALS['ai_explain_user_id'] = $currentUserId;
 $GLOBALS['ai_explain_user_role'] = $currentUserRole;
 

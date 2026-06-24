@@ -2868,6 +2868,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lessonAiPayload(lesson, {
                 mode: 'chat',
+                force_provider: 'ds2api',
                 question,
                 lesson_context: lessonContextText(lesson),
                 history
