@@ -745,6 +745,7 @@
                 button.disabled = true;
                 button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang lưu...';
             }
+            let savedDocumentId = 0;
             try {
                 const data = await api('save', {
                     method: 'POST',
@@ -767,13 +768,20 @@
                         report_note: $('reportNote')?.value,
                     }),
                 });
-                await uploadFiles(data.document.id);
+                savedDocumentId = Number(data.document?.id) || 0;
+                const hasFiles = !!$('files')?.files?.length;
+                if (hasFiles) {
+                    await uploadFiles(savedDocumentId);
+                }
                 closeModal();
-                toast('Đã lưu văn bản.');
+                toast(hasFiles ? 'Đã lưu văn bản và tệp đính kèm.' : 'Đã lưu văn bản.');
                 load();
             } catch (error) {
+                const hint = savedDocumentId > 0 && $('files')?.files?.length
+                    ? `${error.message}\n\nThông tin văn bản đã được lưu nhưng tệp chưa tải lên Drive. Mở lại văn bản và thử tải tệp sau khi hosting kết nối được Google.`
+                    : error.message;
                 if ($('formError')) {
-                    $('formError').textContent = error.message;
+                    $('formError').textContent = hint;
                     $('formError').classList.remove('hidden');
                 }
             } finally {

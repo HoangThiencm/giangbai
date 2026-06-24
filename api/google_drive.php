@@ -192,6 +192,96 @@ function drive_setup_status(bool $checkRemote = true): array
     return $status;
 }
 
+function drive_configured_host_ips(string $host): array
+{
+    $map = [
+        'oauth2.googleapis.com' => defined('GOOGLE_DRIVE_OAUTH_HOST_IPS') ? (string)GOOGLE_DRIVE_OAUTH_HOST_IPS : '',
+        'www.googleapis.com' => defined('GOOGLE_DRIVE_API_HOST_IPS') ? (string)GOOGLE_DRIVE_API_HOST_IPS : '',
+    ];
+    $raw = trim((string)($map[$host] ?? ''));
+    if ($raw === '') return [];
+    $ips = [];
+    foreach (preg_split('/\s*,\s*/', $raw) ?: [] as $ip) {
+        $ip = trim($ip);
+        if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) $ips[] = $ip;
+    }
+    return array_values(array_unique($ips));
+}
+
+function drive_doh_lookup(string $host): array
+{
+    if (!function_exists('curl_init') || !defined('CURLOPT_RESOLVE')) return [];
+    $query = 'https://1.1.1.1/dns-query?' . http_build_query(['name' => $host, 'type' => 'A']);
+    $ch = curl_init($query);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_HTTPHEADER => ['Host: cloudflare-dns.com', 'Accept: application/dns-json'],
+    ]);
+    if (defined('CURL_IPRESOLVE_V4')) {
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    }
+    // Reach Cloudflare DoH by IP so a broken hosting resolver cannot block the lookup itself.
+    curl_setopt($ch, CURLOPT_RESOLVE, ['cloudflare-dns.com:443:1.1.1.1', 'cloudflare-dns.com:443:1.0.0.1']);
+    $raw = curl_exec($ch);
+    curl_close($ch);
+    if (!is_string($raw) || $raw === '') return [];
+    $data = json_decode($raw, true);
+    if (!is_array($data)) return [];
+    $ips = [];
+    foreach ($data['Answer'] ?? [] as $answer) {
+        if ((int)($answer['type'] ?? 0) !== 1) continue;
+        $ip = trim((string)($answer['data'] ?? ''));
+        if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) $ips[] = $ip;
+    }
+    return array_values(array_unique($ips));
+}
+
+function drive_lookup_host_ips(string $host): array
+{
+    static $cache = [];
+    if (isset($cache[$host])) return $cache[$host];
+
+    $ips = drive_configured_host_ips($host);
+    if (!$ips) $ips = drive_doh_lookup($host);
+    if (!$ips) {
+        $resolved = gethostbyname($host);
+        if ($resolved !== $host && filter_var($resolved, FILTER_VALIDATE_IP)) {
+            $ips[] = $resolved;
+        }
+    }
+
+    $cache[$host] = array_values(array_unique($ips));
+    return $cache[$host];
+}
+
+function drive_curl_resolve_list(string $url): array
+{
+    if (!defined('CURLOPT_RESOLVE')) return [];
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!is_string($host) || $host === '') return [];
+    $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
+    $port = (int)(parse_url($url, PHP_URL_PORT) ?: ($scheme === 'https' ? 443 : 80));
+    $ips = drive_lookup_host_ips($host);
+    $entries = [];
+    foreach ($ips as $ip) {
+        $entries[] = $host . ':' . $port . ':' . $ip;
+    }
+    return $entries;
+}
+
+function drive_http_connect_error(int $errno, string $message): string
+{
+    $detail = 'Không kết nối được Google Drive (cURL ' . $errno . '): ' . $message;
+    if ($errno === 6) {
+        $detail .= '. Hosting không phân giải được tên miền Google (oauth2.googleapis.com / www.googleapis.com). '
+            . 'Nhờ quản trị hosting mở outbound HTTPS ra Google hoặc cấu hình DNS 1.1.1.1/8.8.8.8. '
+            . 'Có thể ghim IP tạm trong api/config.php bằng GOOGLE_DRIVE_OAUTH_HOST_IPS và GOOGLE_DRIVE_API_HOST_IPS.';
+    }
+    return $detail;
+}
+
 function drive_http(string $method, string $url, array $headers = [], ?string $body = null): array
 {
     if (function_exists('curl_init')) {
@@ -207,20 +297,19 @@ function drive_http(string $method, string $url, array $headers = [], ?string $b
                 CURLOPT_HTTPHEADER => $headers,
                 CURLOPT_HEADER => true,
             ]);
-            // Shared-hosting DNS can be intermittent. After the first normal
-            // attempt, prefer IPv4 and try public resolvers when this libcurl
-            // build supports CURLOPT_DNS_SERVERS (usually via c-ares).
-            if ($attempt > 1 && defined('CURL_IPRESOLVE_V4')) {
+            if (defined('CURL_IPRESOLVE_V4')) {
                 curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
             }
+            $resolvers = drive_curl_resolve_list($url);
+            if ($resolvers) {
+                curl_setopt($ch, CURLOPT_RESOLVE, $resolvers);
+            }
+            // Extra retries: custom DNS resolvers when libcurl supports them.
             if ($attempt > 1 && defined('CURLOPT_DNS_SERVERS')) {
                 $fallbackDns = defined('GOOGLE_DRIVE_DNS_SERVERS')
                     ? trim((string)GOOGLE_DRIVE_DNS_SERVERS)
                     : '1.1.1.1,8.8.8.8';
                 if ($fallbackDns !== '') {
-                    // Not every shared-hosting cURL build enables custom DNS.
-                    // Failure to set this option is harmless; the normal
-                    // resolver remains in use for the retry.
                     @curl_setopt($ch, CURLOPT_DNS_SERVERS, $fallbackDns);
                 }
             }
@@ -232,9 +321,7 @@ function drive_http(string $method, string $url, array $headers = [], ?string $b
             $message = curl_error($ch);
             curl_close($ch);
             if (!in_array($errno, [6, 7, 28], true) || $attempt === 3) {
-                throw new RuntimeException(
-                    'Không kết nối được Google Drive (cURL ' . $errno . '): ' . $message
-                );
+                throw new RuntimeException(drive_http_connect_error($errno, $message));
             }
             usleep(250000 * $attempt);
         }

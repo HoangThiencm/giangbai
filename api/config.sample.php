@@ -71,6 +71,11 @@ define('GOOGLE_DRIVE_TOKEN_JSON', '');
 // This only takes effect when the hosting cURL build supports custom DNS.
 define('GOOGLE_DRIVE_DNS_SERVERS', '1.1.1.1,8.8.8.8');
 
+// Optional: pin Google API IPv4 when hosting cannot resolve googleapis.com at all.
+// Example lookup: nslookup oauth2.googleapis.com 8.8.8.8
+// define('GOOGLE_DRIVE_OAUTH_HOST_IPS', '142.250.191.74');
+// define('GOOGLE_DRIVE_API_HOST_IPS', '142.250.191.74');
+
 // Keep "private" when the root folder is shared with teachers who review files.
 // Use "anyone" only if every uploaded file may be opened by anyone with its link.
 // Lưu ý: ảnh minh họa trong LESSON_IMAGES luôn được public khi upload (api/lessons.php).
