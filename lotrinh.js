@@ -1061,7 +1061,10 @@
                 const base = data && (data.error || data.message) ? (data.error || data.message) : `HTTP ${res.status}`;
                 const detail = data && data.detail ? String(data.detail) : '';
                 const message = detail && detail !== base ? `${base} (${detail})` : (detail || base);
-                const err = new Error(message);
+                const err = new Error(res.status === 401
+                    ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+                    : message);
+                err.status = res.status;
                 err.code = data?.code || '';
                 err.quota = data?.quota || null;
                 throw err;
@@ -1069,7 +1072,7 @@
             return data;
         } catch (err) {
             if (err?.name === 'AbortError') {
-                throw new Error('Mạng chậm hoặc máy chủ không phản hồi. Vui lòng thử lại.');
+                throw new Error('Máy chủ phản hồi quá chậm. Kiểm tra mạng hoặc đăng nhập lại rồi thử lại.');
             }
             throw err;
         } finally {
@@ -2161,6 +2164,22 @@
         const lesson = currentLesson();
         if (!lesson) {
             els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-300 bg-slate-50 p-5"><p class="text-sm text-slate-600">Chưa có bài học để hiển thị.</p></div>';
+            return;
+        }
+
+        if (lessonNeedsDetail(lesson)) {
+            els.tabContent.innerHTML = '<div class="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải nội dung bài...</div>';
+            void ensureLessonDetail(lesson).then((full) => {
+                if (String(currentLesson()?.id) !== String(full.id)) return;
+                renderTabs();
+                renderSkills(full);
+                bindPracticeInteractions(full);
+                refreshStudentAiAssist(full);
+                typesetMath();
+            }).catch((err) => {
+                if (handleAuthLoadError(err)) return;
+                els.tabContent.innerHTML = `<div class="rounded border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">${escapeHtml(err.message || 'Không tải được nội dung bài.')}</div>`;
+            });
             return;
         }
 
@@ -4500,11 +4519,27 @@
         });
     }
 
+    function lessonNeedsDetail(lesson) {
+        return !!lesson && !lesson._detailLoaded;
+    }
+
+    async function ensureLessonDetail(lesson) {
+        if (!lesson || lesson._detailLoaded) return lesson;
+        const data = await api(`api/lessons.php?lesson_id=${encodeURIComponent(lesson.id)}&subject=${encodeURIComponent(PAGE_SUBJECT)}`, { method: 'GET' });
+        const full = { ...(data.lesson || {}), _detailLoaded: true };
+        const index = state.lessons.findIndex(item => String(item.id) === String(lesson.id));
+        if (index >= 0) {
+            state.lessons[index] = full;
+            return state.lessons[index];
+        }
+        return full;
+    }
+
     async function reloadLessons(reselect = true) {
-        const data = await api(`api/lessons.php?debug=1&subject=${encodeURIComponent(PAGE_SUBJECT)}`, { method: 'GET' });
+        const data = await api(`api/lessons.php?debug=1&summary=1&subject=${encodeURIComponent(PAGE_SUBJECT)}`, { method: 'GET' });
         state.user = data.user;
         ensureStudentOnAllowedLotrinhPage(state.user);
-        state.lessons = (data.lessons || []).filter(lesson => lessonMatchesPageSubject(lesson));
+        state.lessons = (data.lessons || []).map(lesson => ({ ...lesson, _detailLoaded: false })).filter(lesson => lessonMatchesPageSubject(lesson));
         if ((state.user?.role || data.user?.role) === 'student') {
             state.lessons = state.lessons.filter(lesson => !!lesson.is_published);
         }
@@ -5213,7 +5248,13 @@
 
     function handleAuthLoadError(err) {
         const message = String(err?.message || 'Không tải được lộ trình.');
-        if (message.toLowerCase().includes('chưa đăng nhập') || message.toLowerCase().includes('not logged in')) {
+        const lower = message.toLowerCase();
+        const authExpired = err?.status === 401
+            || lower.includes('chưa đăng nhập')
+            || lower.includes('not logged in')
+            || lower.includes('hết hạn')
+            || lower.includes('đăng nhập lại');
+        if (authExpired) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
@@ -5234,6 +5275,10 @@
         let lessonToStart = null;
         try {
             await reloadLessons(true);
+            const initialLesson = currentLesson();
+            if (initialLesson && lessonNeedsDetail(initialLesson)) {
+                ensureLessonDetail(initialLesson).then(() => render()).catch(console.warn);
+            }
             if (!state.selectedLessonId && state.lessons[0]) {
                 state.selectedLessonId = state.lessons[0].id;
                 localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);

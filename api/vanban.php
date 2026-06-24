@@ -16,6 +16,15 @@ function vbd_current_user(PDO $pdo): array
     return $user;
 }
 
+function vbd_maybe_ensure_schema(PDO $pdo): void
+{
+    if (schema_is_ready('vanban', '20260624-v1')) {
+        return;
+    }
+    vbd_ensure_schema($pdo);
+    schema_mark_ready('vanban', '20260624-v1');
+}
+
 function vbd_ensure_schema(PDO $pdo): void
 {
     $pdo->exec("CREATE TABLE IF NOT EXISTS office_documents (
@@ -903,9 +912,32 @@ function vbd_process_document_upload(PDO $pdo, int $id, array $document, array $
     }
 }
 
-vbd_ensure_schema($pdo);
-$user = vbd_current_user($pdo);
+vbd_maybe_ensure_schema($pdo);
 $action = (string)($_GET['action'] ?? $_POST['action'] ?? 'list');
+
+if ($action === 'reminder_count') {
+    $user = vbd_current_user($pdo);
+    $stmt = $pdo->prepare('SELECT report_required, report_due_at, report_status FROM office_documents WHERE owner_id = ?');
+    $stmt->execute([(int)$user['id']]);
+    $today = new DateTime('today');
+    $count = 0;
+    foreach ($stmt->fetchAll() as $document) {
+        if (!((int)($document['report_required'] ?? 0))) continue;
+        if (($document['report_status'] ?? '') === 'completed') continue;
+        $dueRaw = trim((string)($document['report_due_at'] ?? ''));
+        if ($dueRaw === '') continue;
+        try {
+            $due = new DateTime($dueRaw);
+        } catch (Throwable $e) {
+            continue;
+        }
+        $days = (int)$today->diff($due)->format('%r%a');
+        if ($days <= 7) $count++;
+    }
+    respond(['ok' => true, 'count' => $count]);
+}
+
+$user = vbd_current_user($pdo);
 
 if ($action === 'list') {
     $sectorFilter = trim((string)($_GET['sector'] ?? ''));
@@ -925,10 +957,11 @@ if ($action === 'list') {
     }
     unset($document);
     $years = $pdo->query('SELECT name FROM office_school_years ORDER BY name DESC')->fetchAll(PDO::FETCH_COLUMN);
-    require_once __DIR__ . '/google_drive.php';
-    // Only validate the local configuration while loading the dashboard.
-    // Do not make every page view depend on Google OAuth/DNS availability.
-    $driveStatus = drive_setup_status(false);
+    $driveStatus = null;
+    if (!empty($_GET['with_drive'])) {
+        require_once __DIR__ . '/google_drive.php';
+        $driveStatus = drive_setup_status(false);
+    }
     respond([
         'ok' => true,
         'documents' => $documents,

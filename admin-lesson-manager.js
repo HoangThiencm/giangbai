@@ -1995,7 +1995,7 @@
         dashboard.prepend(panel);
 
         el('lessonReloadBtn').onclick = refreshLessons;
-        el('lessonSelect').onchange = () => fillForm(el('lessonSelect').value);
+        el('lessonSelect').onchange = () => { void fillForm(el('lessonSelect').value); };
         el('newLessonBtn').onclick = newLesson;
         el('duplicateLessonBtn').onclick = duplicateLesson;
         el('deleteLessonBtn').onclick = deleteLesson;
@@ -2237,10 +2237,18 @@
         };
     }
 
-    function fillForm(slug) {
+    async function fillForm(slug) {
         const scopedLessons = lessonsForScope();
         const fallback = isPageScopedEditor() ? scopedEmptyLesson() : defaults;
-        const lesson = scopedLessons.find(item => item.slug === slug) || scopedLessons[0] || fallback;
+        let lesson = scopedLessons.find(item => item.slug === slug) || scopedLessons[0] || fallback;
+        if (lesson?.slug && !lesson._detailLoaded) {
+            const full = await fetchLessonDetailBySlug(lesson.slug);
+            if (full) {
+                const index = lessons.findIndex(item => item.slug === full.slug);
+                if (index >= 0) lessons[index] = full;
+                lesson = full;
+            }
+        }
         currentSlug = lesson.slug || '';
         currentLessonId = lesson.id ? Number(lesson.id) : null;
         selectedSubject = isPageScopedEditor() ? PAGE_SUBJECT : (lesson.subject || selectedSubject);
@@ -2711,15 +2719,47 @@
         }
     }
 
-    async function refreshLessons() {
-        const res = await fetch('api/lessons.php?admin=1&debug=1', {
+    function handleLessonAuthFailure(status, message) {
+        if (status !== 401) return false;
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('allowedPages');
+        localStorage.removeItem('userClassName');
+        alert(message || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        window.location.href = 'login.html';
+        return true;
+    }
+
+    async function fetchLessonDetailBySlug(slug) {
+        const targetSlug = String(slug || '').trim();
+        if (!targetSlug) return null;
+        const res = await fetch(`api/lessons.php?admin=1&slug=${encodeURIComponent(targetSlug)}`, {
             credentials: 'include',
             headers: lessonRequestHeaders(false),
             cache: 'no-store'
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Không tải được bài học.');
-        lessons = data.lessons || [];
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (handleLessonAuthFailure(res.status, data.error)) return null;
+            throw new Error(data.error || 'Không tải được chi tiết bài học.');
+        }
+        return { ...(data.lesson || {}), _detailLoaded: true };
+    }
+
+    async function refreshLessons() {
+        const res = await fetch('api/lessons.php?admin=1&summary=1&debug=1', {
+            credentials: 'include',
+            headers: lessonRequestHeaders(false),
+            cache: 'no-store'
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (handleLessonAuthFailure(res.status, data.error)) return;
+            throw new Error(data.error || 'Không tải được bài học.');
+        }
+        lessons = (data.lessons || []).map(lesson => ({ ...lesson, _detailLoaded: false }));
         if (isPageScopedEditor()) {
             selectedSubject = PAGE_SUBJECT;
         }
@@ -2730,7 +2770,7 @@
         applyPageScopeUi();
         renderSubjectPills();
         renderSelect();
-        fillForm(currentSlug);
+        await fillForm(currentSlug);
         document.dispatchEvent(new CustomEvent('adminLessonsChanged', { detail: { lessons } }));
     }
 
@@ -2759,7 +2799,12 @@
         ensurePanel();
         wrapLoadUsers();
         const canLoadFromTeacherPage = !!el('lessonDesignerMount') && localStorage.getItem('userRole') === 'teacher';
-        if (getAdminKey() || canLoadFromTeacherPage) refreshLessons().catch(console.warn);
+        if (getAdminKey() || canLoadFromTeacherPage) {
+            refreshLessons().catch(err => {
+                if (String(err?.message || '').toLowerCase().includes('đăng nhập')) return;
+                console.warn(err);
+            });
+        }
     }
 
     if (document.readyState === 'loading') {

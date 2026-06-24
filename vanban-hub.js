@@ -139,7 +139,7 @@
 
     async function load() {
         try {
-            const response = await fetch(`${API}?action=list`, { credentials: 'include', cache: 'no-store' });
+            const response = await fetch(`${API}?action=list&with_drive=1`, { credentials: 'include', cache: 'no-store' });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.error || 'Không tải được dữ liệu.');
             state.documents = data.documents || [];

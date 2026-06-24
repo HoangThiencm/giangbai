@@ -27,7 +27,7 @@ function decode_json_array($value): array
 
 function scoped_lessons_for_progress(PDO $pdo, ?array $teacherUser): array
 {
-    $lessonStmt = $pdo->query('SELECT * FROM lessons ORDER BY subject ASC, order_index ASC, id ASC');
+    $lessonStmt = $pdo->query('SELECT id, subject, chapter, title, slug, skills_json FROM lessons ORDER BY subject ASC, order_index ASC, id ASC');
     $allLessons = $lessonStmt->fetchAll();
     if ($teacherUser) {
         $allowedSubjects = teacher_allowed_subjects($teacherUser);
@@ -112,7 +112,7 @@ function progress_row_from_student(array $student, ?array $progress): array
         'score' => $score,
         'practice_score_state' => $practiceScoreState,
         'skill_scores' => $skillScores,
-        'state' => $state,
+        'state' => progress_state_summary($state),
         'needs_practice' => $needsPractice,
         'updated_at' => $progress['updated_at'] ?? null,
         'completed_at' => $progress['completed_at'] ?? null,
@@ -237,9 +237,6 @@ foreach ($students as $student) {
     $status = $progress['status'] ?? 'not_started';
     $score = $progress ? (int)$progress['score'] : 0;
     $needsPractice = in_array($status, ['not_started', 'in_progress', 'needs_practice'], true) || $score < 80;
-
-    $state = $progress ? decode_json_array($progress['state_json']) : [];
-    $practiceScoreState = isset($state['practiceScore']) ? (int)$state['practiceScore'] : null;
 
     $rows[] = progress_row_from_student($student, $progress);
 }

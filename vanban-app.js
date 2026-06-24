@@ -109,7 +109,8 @@
     }
 
     async function api(action, options = {}) {
-        const response = await fetch(`${API}?action=${encodeURIComponent(action)}&sector=${encodeURIComponent(SECTOR)}`, {
+        const driveQuery = action === 'list' ? '&with_drive=1' : '';
+        const response = await fetch(`${API}?action=${encodeURIComponent(action)}&sector=${encodeURIComponent(SECTOR)}${driveQuery}`, {
             credentials: 'include',
             cache: 'no-store',
             ...options,

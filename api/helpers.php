@@ -488,6 +488,40 @@ function ensure_users_expires_option_column(PDO $pdo): void
     }
 }
 
+function schema_marker_path(string $name): string
+{
+    $safe = preg_replace('/[^a-z0-9_-]/i', '', $name);
+    $dir = dirname(__DIR__) . '/storage';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    return $dir . '/schema-' . $safe . '.ok';
+}
+
+function schema_is_ready(string $name, string $version): bool
+{
+    $path = schema_marker_path($name);
+    if (!is_file($path)) {
+        return false;
+    }
+    return trim((string)@file_get_contents($path)) === $version;
+}
+
+function schema_mark_ready(string $name, string $version): void
+{
+    @file_put_contents(schema_marker_path($name), $version);
+}
+
+function progress_state_summary(array $state): array
+{
+    return [
+        'theoryDone' => !empty($state['theoryDone']),
+        'examplesDone' => !empty($state['examplesDone']),
+        'practiceDone' => !empty($state['practiceDone']),
+        'practiceScore' => isset($state['practiceScore']) ? (int)$state['practiceScore'] : null,
+    ];
+}
+
 function public_user(array $user): array
 {
     $pages = teacher_allowed_pages_resolved($user);

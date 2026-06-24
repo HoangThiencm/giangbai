@@ -65,6 +65,20 @@
         return;
     }
 
+    function clearLocalAuth() {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('allowedPages');
+        localStorage.removeItem('userClassName');
+    }
+
+    function redirectToLogin() {
+        clearLocalAuth();
+        window.location.replace('login.html');
+    }
+
     function getAllowedPages() {
         try {
             return JSON.parse(localStorage.getItem('allowedPages') || '[]');
@@ -100,6 +114,10 @@
     async function refreshSessionPages() {
         try {
             const res = await fetch('api/me.php', { cache: 'no-store', credentials: 'include' });
+            if (res.status === 401) {
+                redirectToLogin();
+                return [];
+            }
             if (!res.ok) return getAllowedPages();
             const data = await res.json();
             const user = data.user || {};
@@ -128,9 +146,22 @@
 
     async function refreshTeacherTabFlags() {
         try {
+            const cacheKey = 'global_config_cache_v1';
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed?.expiresAt > Date.now() && parsed?.cfg) {
+                    const features = mergedFeaturesForUser(parsed.cfg);
+                    localStorage.setItem('teacher_design_enabled', features.teacher_design !== false ? '1' : '0');
+                    localStorage.setItem('teacher_progress_stats_enabled', features.teacher_progress_stats !== false ? '1' : '0');
+                    localStorage.setItem('teacher_ai_stats_enabled', features.teacher_ai_stats !== false ? '1' : '0');
+                    return;
+                }
+            }
             const res = await fetch('global_config.json', { cache: 'no-store' });
             if (!res.ok) return;
             const cfg = await res.json();
+            sessionStorage.setItem(cacheKey, JSON.stringify({ cfg, expiresAt: Date.now() + 120000 }));
             const features = mergedFeaturesForUser(cfg);
             localStorage.setItem('teacher_design_enabled', features.teacher_design !== false ? '1' : '0');
             localStorage.setItem('teacher_progress_stats_enabled', features.teacher_progress_stats !== false ? '1' : '0');
@@ -138,8 +169,10 @@
         } catch {}
     }
 
-    const allowedPages = await refreshSessionPages();
-    await refreshTeacherTabFlags();
+    const [allowedPages] = await Promise.all([
+        refreshSessionPages(),
+        refreshTeacherTabFlags()
+    ]);
     const role = localStorage.getItem('userRole');
 
     function teacherTabEnabled(flagKey) {

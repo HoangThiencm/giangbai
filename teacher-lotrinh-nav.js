@@ -255,11 +255,24 @@
     async function updateDocumentReminderBadge() {
         const badge = document.getElementById('teacherDocumentReminderBadge');
         if (!badge) return;
+        const cacheKey = 'teacher_vanban_reminder_v1';
         try {
-            const response = await fetch('api/vanban.php?action=list', { credentials: 'include', cache: 'no-store' });
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed?.expiresAt > Date.now()) {
+                    if (parsed.count > 0) {
+                        badge.textContent = parsed.count > 99 ? '99+' : String(parsed.count);
+                        badge.classList.remove('hidden');
+                    }
+                    return;
+                }
+            }
+            const response = await fetch('api/vanban.php?action=reminder_count', { credentials: 'include', cache: 'no-store' });
             if (!response.ok) return;
             const data = await response.json();
-            const count = reminderCount(data.documents);
+            const count = Number(data.count || 0);
+            sessionStorage.setItem(cacheKey, JSON.stringify({ count, expiresAt: Date.now() + 300000 }));
             if (!count) return;
             badge.textContent = count > 99 ? '99+' : String(count);
             badge.classList.remove('hidden');
@@ -289,7 +302,7 @@
         host.innerHTML = html;
         host.classList.remove('hidden');
         bindPreviewButton(options.subject || window.LOTRINH_SUBJECT || '');
-        void updateDocumentReminderBadge();
+        window.setTimeout(() => { void updateDocumentReminderBadge(); }, 1200);
         return host;
     }
 

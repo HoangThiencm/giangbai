@@ -63,6 +63,39 @@ function column_exists(PDO $pdo, string $table, string $column): bool
     }
 }
 
+function lesson_row_to_summary(array $row): array
+{
+    return [
+        'id' => (int)$row['id'],
+        'subject' => $row['subject'] ?? 'Toán 6',
+        'chapter' => $row['chapter'] ?? '',
+        'title' => $row['title'] ?? 'Bài học',
+        'slug' => $row['slug'] ?? '',
+        'order_index' => (int)($row['order_index'] ?? 0),
+        'is_published' => (bool)($row['is_published'] ?? 0),
+        'goal' => $row['goal_text'] ?? '',
+        'skills' => parse_json_or_default($row['skills_json'] ?? null, []),
+    ];
+}
+
+function fetch_lesson_row(PDO $pdo, int $lessonId, string $slug = ''): ?array
+{
+    if ($lessonId > 0) {
+        $stmt = $pdo->prepare('SELECT * FROM lessons WHERE id = ? LIMIT 1');
+        $stmt->execute([$lessonId]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+    $slug = trim($slug);
+    if ($slug === '') {
+        return null;
+    }
+    $stmt = $pdo->prepare('SELECT * FROM lessons WHERE slug = ? LIMIT 1');
+    $stmt->execute([$slug]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
 function lesson_row_to_payload(array $row): array
 {
     return [
@@ -160,8 +193,6 @@ function ensure_lesson_schema(PDO $pdo): void
     }
 }
 
-ensure_lesson_schema($pdo);
-
 function ensure_progress_schema(PDO $pdo): void
 {
     try {
@@ -201,7 +232,17 @@ function ensure_progress_schema(PDO $pdo): void
     }
 }
 
-ensure_progress_schema($pdo);
+const LESSON_SCHEMA_VERSION = '20260624-lessons-v1';
+
+function ensure_lesson_tables_ready(PDO $pdo): void
+{
+    if (schema_is_ready('lessons', LESSON_SCHEMA_VERSION)) {
+        return;
+    }
+    ensure_lesson_schema($pdo);
+    ensure_progress_schema($pdo);
+    schema_mark_ready('lessons', LESSON_SCHEMA_VERSION);
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $requestData = $method === 'POST' ? json_body() : [];
@@ -210,6 +251,10 @@ $adminKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
 $isAdmin = defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $adminKey);
 $sessionUser = current_session_user($pdo);
 $canManageLessons = $isAdmin || (($sessionUser['role'] ?? '') === 'teacher');
+
+if ($method === 'POST') {
+    ensure_lesson_tables_ready($pdo);
+}
 
 // Image upload for rich text editor (teacher pastes image directly -> auto upload to Drive)
 if ($method === 'POST' && $action === 'upload_image') {
@@ -286,21 +331,76 @@ if ($method === 'POST' && $action === 'delete_image') {
     respond(['ok' => true, 'file_id' => $fileId]);
 }
 
-if ($method === 'GET' && $canManageLessons && !empty($_GET['admin'])) {
-    $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
-    respond(['ok' => true, 'lessons' => array_map('lesson_row_to_payload', $stmt->fetchAll())]);
-}
-
-if ($method === 'GET') {
-    $user = ensure_login();
+if ($method === 'GET' && !empty($_GET['admin'])) {
+    if (!$canManageLessons) {
+        ensure_login();
+    }
+    if (!table_exists($pdo, 'lessons')) {
+        ensure_lesson_tables_ready($pdo);
+    }
     if (!table_exists($pdo, 'lessons')) {
         respond([
             'error' => 'Chưa có bảng lessons trên database.',
             'detail' => 'Chạy api/migrate_lessons.php một lần để tạo bảng và dữ liệu mẫu.'
         ], 500);
     }
+    $detailId = (int)($_GET['lesson_id'] ?? 0);
+    $detailSlug = trim((string)($_GET['slug'] ?? ''));
+    if ($detailId > 0 || $detailSlug !== '') {
+        $row = fetch_lesson_row($pdo, $detailId, $detailSlug);
+        if (!$row) {
+            respond(['error' => 'Không tìm thấy bài học.'], 404);
+        }
+        respond(['ok' => true, 'lesson' => lesson_row_to_payload($row)]);
+    }
+    $useSummary = empty($_GET['full']);
+    if ($useSummary) {
+        $stmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, is_published, goal_text, skills_json FROM lessons ORDER BY order_index ASC, id ASC');
+        respond(['ok' => true, 'lessons' => array_map('lesson_row_to_summary', $stmt->fetchAll())]);
+    }
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
-    $lessons = array_map('lesson_row_to_payload', $stmt->fetchAll());
+    respond(['ok' => true, 'lessons' => array_map('lesson_row_to_payload', $stmt->fetchAll())]);
+}
+
+if ($method === 'GET' && !empty($_GET['lesson_id']) && empty($_GET['admin'])) {
+    $user = ensure_login();
+    if (!table_exists($pdo, 'lessons')) {
+        ensure_lesson_tables_ready($pdo);
+    }
+    $lessonId = (int)$_GET['lesson_id'];
+    $row = fetch_lesson_row($pdo, $lessonId);
+    if (!$row) {
+        respond(['error' => 'Không tìm thấy bài học.'], 404);
+    }
+    if ($user['role'] === 'student' && empty($row['is_published'])) {
+        respond(['error' => 'Bài học chưa được mở cho học sinh.'], 403);
+    }
+    $requestedSubject = trim((string)($_GET['subject'] ?? ''));
+    if ($user['role'] === 'student' && $requestedSubject !== '' && trim((string)($row['subject'] ?? '')) !== $requestedSubject) {
+        respond(['error' => 'Em chưa được mở lộ trình ' . $requestedSubject . '.'], 403);
+    }
+    respond(['ok' => true, 'lesson' => lesson_row_to_payload($row)]);
+}
+
+if ($method === 'GET') {
+    $user = ensure_login();
+    if (!table_exists($pdo, 'lessons')) {
+        ensure_lesson_tables_ready($pdo);
+    }
+    if (!table_exists($pdo, 'lessons')) {
+        respond([
+            'error' => 'Chưa có bảng lessons trên database.',
+            'detail' => 'Chạy api/migrate_lessons.php một lần để tạo bảng và dữ liệu mẫu.'
+        ], 500);
+    }
+    $useSummary = !empty($_GET['summary']);
+    if ($useSummary) {
+        $stmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, is_published, goal_text, skills_json FROM lessons ORDER BY order_index ASC, id ASC');
+        $lessons = array_map('lesson_row_to_summary', $stmt->fetchAll());
+    } else {
+        $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
+        $lessons = array_map('lesson_row_to_payload', $stmt->fetchAll());
+    }
     $requestedSubject = trim((string)($_GET['subject'] ?? ''));
 
     if ($user['role'] === 'student') {

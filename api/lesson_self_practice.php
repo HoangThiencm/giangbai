@@ -167,7 +167,10 @@ function lsp_ensure_lesson_folder(PDO $pdo, array $lesson): string
     return $folderId;
 }
 
-lsp_schema($pdo);
+if (!schema_is_ready('lesson_self_practice', '20260624-v1')) {
+    lsp_schema($pdo);
+    schema_mark_ready('lesson_self_practice', '20260624-v1');
+}
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = trim((string)($_GET['action'] ?? $_POST['action'] ?? 'list'));
