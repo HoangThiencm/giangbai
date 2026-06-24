@@ -67,6 +67,10 @@ define('GOOGLE_DRIVE_ROOT_FOLDER_ID', '');
 // Chỉ cần khi dùng OAuth Client (CÁCH 2). Service Account để trống.
 define('GOOGLE_DRIVE_TOKEN_JSON', '');
 
+// Optional DNS fallback for hosting whose resolver intermittently times out.
+// This only takes effect when the hosting cURL build supports custom DNS.
+define('GOOGLE_DRIVE_DNS_SERVERS', '1.1.1.1,8.8.8.8');
+
 // Keep "private" when the root folder is shared with teachers who review files.
 // Use "anyone" only if every uploaded file may be opened by anyone with its link.
 // Lưu ý: ảnh minh họa trong LESSON_IMAGES luôn được public khi upload (api/lessons.php).

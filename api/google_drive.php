@@ -207,10 +207,22 @@ function drive_http(string $method, string $url, array $headers = [], ?string $b
                 CURLOPT_HTTPHEADER => $headers,
                 CURLOPT_HEADER => true,
             ]);
-            // Some shared hosts have an unreliable IPv6 resolver. Retry via
-            // IPv4 after the first normal connection attempt.
+            // Shared-hosting DNS can be intermittent. After the first normal
+            // attempt, prefer IPv4 and try public resolvers when this libcurl
+            // build supports CURLOPT_DNS_SERVERS (usually via c-ares).
             if ($attempt > 1 && defined('CURL_IPRESOLVE_V4')) {
                 curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+            }
+            if ($attempt > 1 && defined('CURLOPT_DNS_SERVERS')) {
+                $fallbackDns = defined('GOOGLE_DRIVE_DNS_SERVERS')
+                    ? trim((string)GOOGLE_DRIVE_DNS_SERVERS)
+                    : '1.1.1.1,8.8.8.8';
+                if ($fallbackDns !== '') {
+                    // Not every shared-hosting cURL build enables custom DNS.
+                    // Failure to set this option is harmless; the normal
+                    // resolver remains in use for the retry.
+                    @curl_setopt($ch, CURLOPT_DNS_SERVERS, $fallbackDns);
+                }
             }
             if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             $raw = curl_exec($ch);
