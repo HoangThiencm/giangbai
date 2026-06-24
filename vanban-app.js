@@ -22,7 +22,32 @@
         driveHint: '',
         driveDiag: {},
         pendingUploadFiles: [],
+        uploadMaxBytes: null,
+        postMaxBytes: null,
+        appMaxFileMb: 25,
     };
+
+    function parseIniSize(value) {
+        const match = String(value || '').trim().match(/^(\d+(?:\.\d+)?)\s*([KMG])?$/i);
+        if (!match) return null;
+        const amount = Number(match[1]);
+        const unit = (match[2] || '').toUpperCase();
+        const mult = unit === 'G' ? 1024 ** 3 : unit === 'M' ? 1024 ** 2 : unit === 'K' ? 1024 : 1;
+        return Math.floor(amount * mult);
+    }
+
+    function effectiveUploadMaxBytes() {
+        const appMax = (state.appMaxFileMb || 25) * 1024 * 1024;
+        const limits = [appMax, state.uploadMaxBytes, state.postMaxBytes].filter(n => Number.isFinite(n) && n > 0);
+        return limits.length ? Math.min(...limits) : appMax;
+    }
+
+    function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+        return `${bytes} B`;
+    }
 
     const $ = id => document.getElementById(id);
     const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -403,6 +428,9 @@
             state.driveConfigured = !!data.drive_configured;
             state.driveReady = !!data.drive_ready;
             state.driveHint = data.drive_hint || '';
+            state.uploadMaxBytes = parseIniSize(data.upload_max_filesize);
+            state.postMaxBytes = parseIniSize(data.post_max_size);
+            state.appMaxFileMb = Number(data.app_max_file_mb) || 25;
             renderDriveWarning();
         } catch (_) {
             // Keep list response values when remote check is unavailable.
@@ -842,13 +870,23 @@
 
         $('files')?.addEventListener('change', async event => {
             const files = [...event.target.files];
-            state.pendingUploadFiles = files;
+            const maxBytes = effectiveUploadMaxBytes();
+            const oversized = files.filter(file => file.size > maxBytes);
+            state.pendingUploadFiles = oversized.length ? [] : files;
             const selectedNote = $('selectedFilesNote');
             if (selectedNote) {
-                selectedNote.textContent = files.length
-                    ? `Đã chọn ${files.length} tệp: ${files.map(file => file.name).join(', ')}`
-                    : 'Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.';
+                if (oversized.length) {
+                    const limitText = formatBytes(maxBytes);
+                    selectedNote.textContent = `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting. Vào cPanel → PHP → đặt upload_max_filesize ≥ 32M.`;
+                    toast(selectedNote.textContent, 'rose');
+                    event.target.value = '';
+                } else {
+                    selectedNote.textContent = files.length
+                        ? `Đã chọn ${files.length} tệp: ${files.map(file => file.name).join(', ')} · tối đa ${formatBytes(maxBytes)}/tệp`
+                        : `Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa ${formatBytes(maxBytes)} cho mỗi tệp.`;
+                }
             }
+            if (oversized.length) return;
 
             // Chỉ dùng tệp PDF đầu tiên để tự nhận diện thông tin văn bản.
             // Tất cả tệp đã chọn (ảnh, Office, PDF...) vẫn được upload đầy đủ.

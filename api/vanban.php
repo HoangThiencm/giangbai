@@ -961,6 +961,9 @@ if ($action === 'drive_check') {
         'upload_backend' => 'vanban-local-fallback-v3',
         'local_storage_root' => vbd_local_storage_root(),
         'local_storage_writable' => is_writable(vbd_local_storage_root()),
+        'upload_max_filesize' => (string)(ini_get('upload_max_filesize') ?: ''),
+        'post_max_size' => (string)(ini_get('post_max_size') ?: ''),
+        'app_max_file_mb' => defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25,
     ] + $status);
 }
 
