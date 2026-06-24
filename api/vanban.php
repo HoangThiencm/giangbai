@@ -557,6 +557,54 @@ function vbd_should_fallback_to_local(Throwable $e): bool
     return true;
 }
 
+function vbd_upload_chunk_bytes(): int
+{
+    $configured = defined('VANBAN_UPLOAD_CHUNK_MB') ? max(1, (int)VANBAN_UPLOAD_CHUNK_MB) : 1;
+    $chunk = $configured * 1024 * 1024;
+    $uploadMax = (int)(ini_get('upload_max_filesize') ?: 0);
+    if ($uploadMax > 0) {
+        // Leave headroom for multipart overhead on shared hosting (often 2M).
+        $safe = max(256 * 1024, $uploadMax - 256 * 1024);
+        $chunk = min($chunk, $safe);
+    }
+    return max(256 * 1024, $chunk);
+}
+
+function vbd_upload_sessions(): array
+{
+    if (!isset($_SESSION['vbd_upload_sessions']) || !is_array($_SESSION['vbd_upload_sessions'])) {
+        $_SESSION['vbd_upload_sessions'] = [];
+    }
+    return $_SESSION['vbd_upload_sessions'];
+}
+
+function vbd_store_upload_session(array $session): string
+{
+    $id = bin2hex(random_bytes(16));
+    $sessions = vbd_upload_sessions();
+    $session['expires_at'] = time() + 7200;
+    $sessions[$id] = $session;
+    $_SESSION['vbd_upload_sessions'] = $sessions;
+    return $id;
+}
+
+function vbd_get_upload_session(string $id, int $userId): ?array
+{
+    $sessions = vbd_upload_sessions();
+    $session = $sessions[$id] ?? null;
+    if (!is_array($session)) return null;
+    if ((int)($session['user_id'] ?? 0) !== $userId) return null;
+    if ((int)($session['expires_at'] ?? 0) < time()) return null;
+    return $session;
+}
+
+function vbd_delete_upload_session(string $id): void
+{
+    $sessions = vbd_upload_sessions();
+    unset($sessions[$id]);
+    $_SESSION['vbd_upload_sessions'] = $sessions;
+}
+
 function vbd_probe_drive_ready(): ?string
 {
     require_once __DIR__ . '/google_drive.php';
@@ -949,15 +997,101 @@ if ($action === 'upload_init') {
             'name' => drive_safe_name($storedName),
             'parents' => [$folderId],
         ]);
+        $sessionId = vbd_store_upload_session([
+            'user_id' => (int)$user['id'],
+            'document_id' => $id,
+            'upload_url' => $session['upload_url'],
+            'mime_type' => $session['mime_type'],
+            'stored_name' => $storedName,
+            'original_name' => $filename,
+            'total_size' => $size,
+        ]);
         respond([
             'ok' => true,
-            'upload_url' => $session['upload_url'],
+            'session_id' => $sessionId,
             'stored_name' => $storedName,
             'mime_type' => $session['mime_type'],
-            'upload_backend' => 'vanban-browser-drive-v4',
+            'chunk_size' => vbd_upload_chunk_bytes(),
+            'upload_backend' => 'vanban-chunk-drive-v5',
         ]);
     } catch (Throwable $e) {
-        respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-browser-drive-v4'], 502);
+        respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-chunk-drive-v5'], 502);
+    }
+}
+
+if ($action === 'upload_chunk') {
+    @set_time_limit(300);
+    $sessionId = trim((string)($_POST['session_id'] ?? ''));
+    $offset = (int)($_POST['offset'] ?? 0);
+    $total = (int)($_POST['total_size'] ?? 0);
+    if ($sessionId === '' || $offset < 0 || $total < 1) {
+        respond(['error' => 'Thiếu thông tin phần tệp cần tải.', 'upload_backend' => 'vanban-chunk-drive-v5'], 422);
+    }
+    $session = vbd_get_upload_session($sessionId, (int)$user['id']);
+    if (!$session) {
+        respond(['error' => 'Phiên tải lên không hợp lệ hoặc đã hết hạn.', 'upload_backend' => 'vanban-chunk-drive-v5'], 404);
+    }
+    $document = vbd_document($pdo, (int)($session['document_id'] ?? 0), (int)$user['id']);
+    if (!$document) {
+        respond(['error' => 'Không tìm thấy văn bản cho phiên tải lên.', 'upload_backend' => 'vanban-chunk-drive-v5'], 404);
+    }
+    $chunks = vbd_uploaded_files('chunk');
+    if (!$chunks) respond(['error' => 'Chưa nhận được phần tệp.', 'upload_backend' => 'vanban-chunk-drive-v5'], 422);
+    $chunkFile = $chunks[0];
+    $chunkMax = vbd_upload_chunk_bytes();
+    try {
+        if ((int)$chunkFile['error'] !== UPLOAD_ERR_OK) {
+            throw new RuntimeException(vbd_upload_error_message((int)$chunkFile['error'], (string)($chunkFile['name'] ?? 'chunk')));
+        }
+        if ((int)$chunkFile['size'] < 1 || (int)$chunkFile['size'] > $chunkMax) {
+            throw new RuntimeException('Mỗi phần tệp không được vượt quá ' . round($chunkMax / 1024 / 1024, 1) . ' MB.');
+        }
+        if (!vbd_is_tmp_upload_path((string)($chunkFile['tmp_name'] ?? ''))) {
+            throw new RuntimeException('Phần tệp tải lên không hợp lệ.' . vbd_upload_ini_hint());
+        }
+        $content = file_get_contents($chunkFile['tmp_name']);
+        if ($content === false || $content === '') throw new RuntimeException('Không đọc được phần tệp tạm.');
+        require_once __DIR__ . '/google_drive.php';
+        $result = drive_upload_resumable_chunk(
+            (string)$session['upload_url'],
+            (string)$session['mime_type'],
+            $offset,
+            (int)($session['total_size'] ?? $total),
+            $content
+        );
+        if (empty($result['complete'])) {
+            respond([
+                'ok' => true,
+                'complete' => false,
+                'uploaded' => (int)($result['uploaded'] ?? ($offset + strlen($content))),
+                'upload_backend' => 'vanban-chunk-drive-v5',
+            ]);
+        }
+        $drive = drive_upload_response(
+            $result['file'],
+            (string)$session['stored_name'],
+            (string)$session['mime_type']
+        );
+        vbd_delete_upload_session($sessionId);
+        $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+        $insert->execute([
+            (int)$session['document_id'],
+            $drive['file_id'],
+            (string)$session['original_name'],
+            $drive['stored_name'],
+            $drive['mime_type'],
+            (int)($session['total_size'] ?? $total),
+            $drive['view_url'],
+            $drive['download_url'],
+        ]);
+        respond([
+            'ok' => true,
+            'complete' => true,
+            'file' => $drive,
+            'upload_backend' => 'vanban-chunk-drive-v5',
+        ]);
+    } catch (Throwable $e) {
+        respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-chunk-drive-v5'], 502);
     }
 }
 
@@ -1032,8 +1166,9 @@ if ($action === 'drive_check') {
     $status = drive_setup_status(true);
     respond([
         'ok' => true,
-        'upload_backend' => 'vanban-browser-drive-v4',
-        'browser_drive_upload' => true,
+        'upload_backend' => 'vanban-chunk-drive-v5',
+        'chunk_upload' => true,
+        'chunk_size' => vbd_upload_chunk_bytes(),
         'local_storage_root' => vbd_local_storage_root(),
         'local_storage_writable' => is_writable(vbd_local_storage_root()),
         'upload_max_filesize' => (string)(ini_get('upload_max_filesize') ?: ''),

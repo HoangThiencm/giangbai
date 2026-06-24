@@ -803,7 +803,7 @@
         };
     }
 
-    async function uploadFileViaBrowser(documentId, file, index) {
+    async function uploadFileViaChunks(documentId, file, index) {
         const mime = file.type || 'application/octet-stream';
         const init = await api('upload_init', {
             method: 'POST',
@@ -816,29 +816,32 @@
                 index,
             }),
         });
-        const put = await fetch(init.upload_url, {
-            method: 'PUT',
-            headers: { 'Content-Type': init.mime_type || mime },
-            body: file,
-        });
-        const driveFile = await put.json().catch(() => ({}));
-        if (!put.ok || !driveFile.id) {
-            throw new Error(driveFile.error?.message || 'Google Drive từ chối tải tệp từ trình duyệt.');
+        const chunkSize = Number(init.chunk_size) || (1024 * 1024);
+        let lastResult = null;
+        for (let offset = 0; offset < file.size; offset += chunkSize) {
+            const blob = file.slice(offset, Math.min(offset + chunkSize, file.size));
+            const form = new FormData();
+            form.append('session_id', init.session_id);
+            form.append('offset', String(offset));
+            form.append('total_size', String(file.size));
+            form.append('chunk', blob, `${file.name}.part`);
+            const response = await fetch(`${API}?action=upload_chunk&sector=${encodeURIComponent(SECTOR)}`, {
+                method: 'POST',
+                credentials: 'include',
+                body: form,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const backend = data.upload_backend ? ` [${data.upload_backend}]` : '';
+                throw new Error((data.error || 'Không tải được phần tệp lên Google Drive.') + backend);
+            }
+            lastResult = data;
+            if (data.complete) return data;
         }
-        return api('upload_finalize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                document_id: documentId,
-                original_name: file.name,
-                stored_name: init.stored_name,
-                size_bytes: file.size,
-                mime_type: driveFile.mimeType || mime,
-                drive_file_id: driveFile.id,
-                view_url: driveFile.webViewLink || '',
-                download_url: driveFile.webContentLink || '',
-            }),
-        });
+        if (!lastResult?.complete) {
+            throw new Error('Google Drive chưa nhận đủ các phần của tệp.');
+        }
+        return lastResult;
     }
 
     async function saveDocument(payload) {
@@ -851,13 +854,13 @@
         if (!pending.length) return saveData;
         if (state.driveReady) {
             for (let index = 0; index < pending.length; index += 1) {
-                await uploadFileViaBrowser(Number(saveData.document?.id) || Number(payload.id) || 0, pending[index], index);
+                await uploadFileViaChunks(Number(saveData.document?.id) || Number(payload.id) || 0, pending[index], index);
             }
             return {
                 ok: true,
                 document: saveData.document,
                 storage: 'drive',
-                message: `Đã lưu văn bản và ${pending.length} tệp lên Google Drive (tải trực tiếp từ trình duyệt).`,
+                message: `Đã lưu văn bản và ${pending.length} tệp lên Google Drive.`,
             };
         }
         const form = new FormData();

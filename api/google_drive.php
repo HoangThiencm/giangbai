@@ -754,6 +754,53 @@ function drive_begin_resumable_upload(string $storedName, string $mediaMime, int
     ];
 }
 
+function drive_upload_resumable_chunk(string $uploadUrl, string $mediaMime, int $offset, int $total, string $chunk): array
+{
+    $len = strlen($chunk);
+    if ($len < 1) throw new RuntimeException('Phần tệp tải lên bị rỗng.');
+    $end = $offset + $len - 1;
+    if ($total > 0 && $end >= $total) {
+        throw new RuntimeException('Phần tệp vượt quá kích thước đã khai báo.');
+    }
+    $timeouts = drive_curl_timeouts();
+    $token = drive_access_token();
+    $ch = curl_init($uploadUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => 'PUT',
+        CURLOPT_POSTFIELDS => $chunk,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => $timeouts['connect'],
+        CURLOPT_TIMEOUT => $timeouts['total'],
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: ' . $mediaMime,
+            'Content-Length: ' . $len,
+            'Content-Range: bytes ' . $offset . '-' . $end . '/' . $total,
+        ],
+    ]);
+    drive_curl_apply_resolve($ch, $uploadUrl);
+    $body = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    if ($body === false) {
+        $errno = curl_errno($ch);
+        $message = curl_error($ch);
+        curl_close($ch);
+        throw new RuntimeException(drive_http_connect_error($errno, $message));
+    }
+    curl_close($ch);
+    if ($status === 308) {
+        return ['complete' => false, 'uploaded' => $end + 1];
+    }
+    if ($status >= 200 && $status < 300) {
+        $decoded = json_decode((string)$body, true);
+        if (!is_array($decoded)) throw new RuntimeException('Google Drive không trả về dữ liệu tệp sau khi tải xong.');
+        return ['complete' => true, 'file' => $decoded, 'uploaded' => $end + 1];
+    }
+    $decoded = json_decode((string)$body, true);
+    $detail = is_array($decoded) ? ($decoded['error']['message'] ?? ('HTTP ' . $status)) : ('HTTP ' . $status);
+    throw new RuntimeException('Google Drive từ chối phần tệp: ' . $detail);
+}
+
 function drive_upload_file_resumable(string $storedName, string $mediaMime, string $tmpPath, array $metadata): array
 {
     $fileSize = filesize($tmpPath);
