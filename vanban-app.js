@@ -21,6 +21,7 @@
         driveReady: false,
         driveHint: '',
         driveDiag: {},
+        pendingUploadFiles: [],
     };
 
     const $ = id => document.getElementById(id);
@@ -443,6 +444,7 @@
     }
 
     function openModal(doc = null) {
+        state.pendingUploadFiles = [];
         $('documentForm')?.reset();
         $('formError')?.classList.add('hidden');
         if ($('selectedFilesNote')) {
@@ -752,17 +754,50 @@
         parseTimer = setTimeout(() => runAutoParse({ silent: true }), 600);
     }
 
-    async function uploadFiles(documentId) {
-        const files = $('files')?.files;
-        if (!files?.length) return null;
+    function buildSavePayload() {
+        return {
+            id: Number($('documentId')?.value) || 0,
+            sector: SECTOR,
+            academic_year: $('academicYear')?.value,
+            direction: $('direction')?.value,
+            document_number: $('documentNumber')?.value,
+            title: $('title')?.value,
+            document_date: parseDMYToYMD($('documentDate')?.value),
+            document_type: $('documentType')?.value,
+            organization: $('organization')?.value,
+            summary_text: $('summaryText')?.value,
+            source_text: $('sourceText')?.value,
+            report_required: !!$('reportRequired')?.checked,
+            report_due_at: parseDMYToYMD($('reportDueAt')?.value),
+            report_status: $('reportStatus')?.value,
+            report_note: $('reportNote')?.value,
+        };
+    }
+
+    async function saveDocument(payload) {
+        const pending = state.pendingUploadFiles || [];
+        if (!pending.length) {
+            return api('save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        }
         const form = new FormData();
-        form.append('document_id', documentId);
-        [...files].forEach(file => form.append('files[]', file));
-        const response = await fetch(`${API}?action=upload&sector=${encodeURIComponent(SECTOR)}`, { method: 'POST', credentials: 'include', body: form });
+        Object.entries(payload).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            form.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
+        });
+        pending.forEach(file => form.append('files[]', file, file.name));
+        const response = await fetch(`${API}?action=save_upload&sector=${encodeURIComponent(SECTOR)}`, {
+            method: 'POST',
+            credentials: 'include',
+            body: form,
+        });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             const backend = data.upload_backend ? ` [${data.upload_backend}]` : '';
-            throw new Error((data.error || 'Không tải được tệp lên Google Drive.') + backend);
+            throw new Error((data.error || 'Không lưu được văn bản và tệp đính kèm.') + backend);
         }
         return data;
     }
@@ -776,46 +811,21 @@
                 button.disabled = true;
                 button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang lưu...';
             }
-            let savedDocumentId = 0;
+            const hadPendingFiles = (state.pendingUploadFiles || []).length > 0;
             try {
-                const data = await api('save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: Number($('documentId')?.value) || 0,
-                        sector: SECTOR,
-                        academic_year: $('academicYear')?.value,
-                        direction: $('direction')?.value,
-                        document_number: $('documentNumber')?.value,
-                        title: $('title')?.value,
-                        document_date: parseDMYToYMD($('documentDate')?.value),
-                        document_type: $('documentType')?.value,
-                        organization: $('organization')?.value,
-                        summary_text: $('summaryText')?.value,
-                        source_text: $('sourceText')?.value,
-                        report_required: $('reportRequired')?.checked,
-                        report_due_at: parseDMYToYMD($('reportDueAt')?.value),
-                        report_status: $('reportStatus')?.value,
-                        report_note: $('reportNote')?.value,
-                    }),
-                });
-                savedDocumentId = Number(data.document?.id) || 0;
-                const hasFiles = !!$('files')?.files?.length;
-                let uploadResult = null;
-                if (hasFiles) {
-                    uploadResult = await uploadFiles(savedDocumentId);
-                }
+                const data = await saveDocument(buildSavePayload());
+                state.pendingUploadFiles = [];
                 closeModal();
-                if (uploadResult?.storage === 'local') {
-                    toast(uploadResult.message || 'Đã lưu tệp tạm trên hosting vì Google Drive chưa kết nối được.');
+                if (data.storage === 'local') {
+                    toast(data.message || 'Đã lưu tệp tạm trên hosting vì Google Drive chưa kết nối được.');
+                } else if (data.storage === 'drive' || hadPendingFiles) {
+                    toast(data.message || 'Đã lưu văn bản và tệp đính kèm.');
                 } else {
-                    toast(hasFiles ? 'Đã lưu văn bản và tệp đính kèm.' : 'Đã lưu văn bản.');
+                    toast(data.message || 'Đã lưu văn bản.');
                 }
                 load();
             } catch (error) {
-                const hint = savedDocumentId > 0 && $('files')?.files?.length
-                    ? `${error.message}\n\nThông tin văn bản đã được lưu nhưng tệp chưa tải lên Drive. Mở lại văn bản và thử tải tệp sau khi hosting kết nối được Google.`
-                    : error.message;
+                const hint = error.message;
                 if ($('formError')) {
                     $('formError').textContent = hint;
                     $('formError').classList.remove('hidden');
@@ -832,6 +842,7 @@
 
         $('files')?.addEventListener('change', async event => {
             const files = [...event.target.files];
+            state.pendingUploadFiles = files;
             const selectedNote = $('selectedFilesNote');
             if (selectedNote) {
                 selectedNote.textContent = files.length

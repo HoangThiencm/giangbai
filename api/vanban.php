@@ -571,13 +571,62 @@ function vbd_probe_drive_ready(): ?string
     }
 }
 
+function vbd_boolish($value): bool
+{
+    if (is_bool($value)) return $value;
+    $normalized = strtolower(trim((string)$value));
+    return in_array($normalized, ['1', 'true', 'on', 'yes'], true);
+}
+
+function vbd_upload_ini_hint(): string
+{
+    $uploadMb = (int)(ini_get('upload_max_filesize') ?: 0);
+    $postMb = (int)(ini_get('post_max_size') ?: 0);
+    if ($uploadMb <= 0 && $postMb <= 0) return '';
+    return ' Giới hạn hosting hiện tại: upload_max_filesize='
+        . (ini_get('upload_max_filesize') ?: '?')
+        . ', post_max_size='
+        . (ini_get('post_max_size') ?: '?')
+        . '.';
+}
+
+function vbd_upload_error_message(int $code, string $name): string
+{
+    $label = $name !== '' ? ('“' . $name . '”') : 'tệp';
+    return match ($code) {
+        UPLOAD_ERR_INI_SIZE => 'Tệp ' . $label . ' vượt upload_max_filesize trên hosting.' . vbd_upload_ini_hint(),
+        UPLOAD_ERR_FORM_SIZE => 'Tệp ' . $label . ' vượt giới hạn form upload.' . vbd_upload_ini_hint(),
+        UPLOAD_ERR_PARTIAL => 'Tệp ' . $label . ' chỉ tải lên được một phần. Thử lại.',
+        UPLOAD_ERR_NO_FILE => 'Hosting không nhận được nội dung tệp ' . $label . '. Kiểm tra post_max_size/upload_max_filesize.' . vbd_upload_ini_hint(),
+        UPLOAD_ERR_NO_TMP_DIR => 'Hosting thiếu thư mục tạm để nhận tệp upload.',
+        UPLOAD_ERR_CANT_WRITE => 'Hosting không ghi được tệp tạm khi nhận upload.',
+        UPLOAD_ERR_EXTENSION => 'Hosting chặn loại tệp này bằng extension PHP.',
+        default => 'Có tệp tải lên bị lỗi (mã ' . $code . ').',
+    };
+}
+
+function vbd_is_tmp_upload_path(string $tmpName): bool
+{
+    if ($tmpName === '' || !is_readable($tmpName)) return false;
+    if (is_uploaded_file($tmpName)) return true;
+    $tmpDir = realpath(sys_get_temp_dir());
+    $real = realpath($tmpName);
+    return $tmpDir && $real && str_starts_with($real, $tmpDir);
+}
+
 function vbd_validate_upload_file(array $file, int $maxBytes): void
 {
-    if ((int)$file['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Có tệp tải lên bị lỗi.');
+    $name = trim((string)($file['name'] ?? ''));
+    $error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($error !== UPLOAD_ERR_OK) {
+        throw new RuntimeException(vbd_upload_error_message($error, $name));
+    }
     if ((int)$file['size'] < 1 || (int)$file['size'] > $maxBytes) {
         throw new RuntimeException('Mỗi tệp không được vượt quá ' . ($maxBytes / 1024 / 1024) . ' MB.');
     }
-    if (!is_uploaded_file($file['tmp_name'])) throw new RuntimeException('Tệp tải lên không hợp lệ.');
+    if (!vbd_is_tmp_upload_path((string)($file['tmp_name'] ?? ''))) {
+        throw new RuntimeException('Tệp tải lên không hợp lệ hoặc hosting chưa nhận được tệp.' . vbd_upload_ini_hint());
+    }
     require_once __DIR__ . '/google_drive.php';
     if ($invalid = drive_validate_upload($file['tmp_name'], (string)$file['name'])) {
         throw new RuntimeException($invalid);
@@ -633,7 +682,7 @@ function vbd_upload_local_files(PDO $pdo, int $id, array $document, array $files
         'ok' => true,
         'files' => $uploaded,
         'storage' => 'local',
-        'upload_backend' => 'vanban-local-fallback-v2',
+        'upload_backend' => 'vanban-local-fallback-v3',
         'drive_error' => $driveError,
         'message' => 'Google Drive chưa kết nối được — đã lưu ' . count($uploaded) . ' tệp trên hosting. Khi Drive hoạt động, tải lại tệp để đồng bộ.',
     ]);
@@ -670,6 +719,127 @@ function vbd_uploaded_files(string $key): array
         ];
     }
     return $files;
+}
+
+function vbd_collect_uploaded_files(): array
+{
+    $files = vbd_uploaded_files('files');
+    if ($files) return $files;
+    foreach (array_keys($_FILES) as $key) {
+        if ($key === 'files' || str_starts_with($key, 'files')) {
+            $found = vbd_uploaded_files($key);
+            if ($found) return $found;
+        }
+    }
+    return [];
+}
+
+function vbd_save_document(PDO $pdo, array $user, array $input): array
+{
+    $id = (int)($input['id'] ?? 0);
+    $title = trim((string)($input['title'] ?? ''));
+    if ($title === '') throw new RuntimeException('Cần nhập trích yếu hoặc tên văn bản.');
+    $academicYear = vbd_academic_year($input['academic_year'] ?? '');
+    if ($academicYear === '') throw new RuntimeException('Cần chọn năm học cho văn bản.');
+    $yearStmt = $pdo->prepare('SELECT id FROM office_school_years WHERE name = ? LIMIT 1');
+    $yearStmt->execute([$academicYear]);
+    if (!$yearStmt->fetch()) throw new RuntimeException('Năm học chưa có trong danh mục. Hãy tạo năm học trước.');
+    $direction = vbd_direction((string)($input['direction'] ?? 'incoming'));
+    $sector = vbd_sector((string)($input['sector'] ?? $_GET['sector'] ?? 'hanhchinh'));
+    $required = vbd_boolish($input['report_required'] ?? false);
+    $status = vbd_status((string)($input['report_status'] ?? ''), $required);
+    $values = [
+        $academicYear,
+        $sector,
+        $direction,
+        trim((string)($input['document_number'] ?? '')) ?: null,
+        vbd_truncate($title, 500),
+        vbd_date($input['document_date'] ?? null),
+        trim((string)($input['organization'] ?? '')) ?: null,
+        trim((string)($input['document_type'] ?? '')) ?: null,
+        trim((string)($input['summary_text'] ?? '')) ?: null,
+        trim((string)($input['source_text'] ?? '')) ?: null,
+        $required ? 1 : 0,
+        $required ? vbd_date($input['report_due_at'] ?? null) : null,
+        $status,
+        trim((string)($input['report_note'] ?? '')) ?: null,
+    ];
+    if ($id > 0) {
+        if (!vbd_document($pdo, $id, (int)$user['id'])) throw new RuntimeException('Không tìm thấy văn bản cần sửa.');
+        $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
+        $stmt = $pdo->prepare('UPDATE office_documents SET academic_year=?, sector=?, direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
+        $stmt->execute(array_merge($values, [$reportedAt, $id, (int)$user['id']]));
+    } else {
+        $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
+        $stmt = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, sector, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt->execute(array_merge([(int)$user['id']], $values, [$reportedAt]));
+        $id = (int)$pdo->lastInsertId();
+    }
+    $document = vbd_document($pdo, $id, (int)$user['id']);
+    if (!$document) throw new RuntimeException('Không đọc lại được văn bản sau khi lưu.');
+    return $document;
+}
+
+function vbd_process_document_upload(PDO $pdo, int $id, array $document, array $files, int $maxBytes): void
+{
+    try {
+        foreach ($files as $file) {
+            vbd_validate_upload_file($file, $maxBytes);
+        }
+    } catch (Throwable $e) {
+        respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-local-fallback-v3'], 422);
+    }
+
+    $driveProbeError = vbd_local_storage_enabled() ? vbd_probe_drive_ready() : null;
+    if ($driveProbeError !== null) {
+        try {
+            vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $driveProbeError);
+        } catch (Throwable $localError) {
+            respond([
+                'error' => 'Google Drive: ' . $driveProbeError . ' | Lưu trên hosting: ' . $localError->getMessage(),
+                'upload_backend' => 'vanban-local-fallback-v3',
+            ], 502);
+        }
+    }
+
+    try {
+        require_once __DIR__ . '/google_drive.php';
+        $folderId = trim((string)($document['drive_folder_id'] ?? '')) ?: vbd_drive_folder($document);
+        if (empty($document['drive_folder_id'])) {
+            $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $id]);
+        }
+        $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+        $uploaded = [];
+        foreach ($files as $index => $file) {
+            $mime = drive_detect_mime($file['tmp_name'], (string)$file['name'], (string)$file['type']);
+            $storedName = drive_safe_name(($document['document_number'] ?: 'VB-' . $id) . ' - ' . $document['title'] . ' - ' . ($index + 1) . ' - ' . $file['name'], 'van-ban');
+            $drive = drive_upload_file($folderId, $storedName, $mime, $file['tmp_name']);
+            $insert->execute([$id, $drive['file_id'], $file['name'], $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
+            $uploaded[] = $drive;
+        }
+        respond([
+            'ok' => true,
+            'files' => $uploaded,
+            'storage' => 'drive',
+            'upload_backend' => 'vanban-local-fallback-v3',
+            'message' => 'Đã lưu ' . count($uploaded) . ' tệp lên Google Drive.',
+        ]);
+    } catch (Throwable $e) {
+        if (vbd_should_fallback_to_local($e)) {
+            try {
+                vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $e->getMessage());
+            } catch (Throwable $localError) {
+                respond([
+                    'error' => 'Google Drive: ' . $e->getMessage() . ' | Lưu trên hosting: ' . $localError->getMessage(),
+                    'upload_backend' => 'vanban-local-fallback-v3',
+                ], 502);
+            }
+        }
+        respond([
+            'error' => $e->getMessage(),
+            'upload_backend' => 'vanban-local-fallback-v3',
+        ], 502);
+    }
 }
 
 vbd_ensure_schema($pdo);
@@ -742,48 +912,34 @@ if ($action === 'parse_document' || $action === 'ai_suggest') {
 }
 
 if ($action === 'save') {
-    $input = json_body();
-    $id = (int)($input['id'] ?? 0);
-    $title = trim((string)($input['title'] ?? ''));
-    if ($title === '') respond(['error' => 'Cần nhập trích yếu hoặc tên văn bản.'], 422);
-    $academicYear = vbd_academic_year($input['academic_year'] ?? '');
-    if ($academicYear === '') respond(['error' => 'Cần chọn năm học cho văn bản.'], 422);
-    $yearStmt = $pdo->prepare('SELECT id FROM office_school_years WHERE name = ? LIMIT 1');
-    $yearStmt->execute([$academicYear]);
-    if (!$yearStmt->fetch()) respond(['error' => 'Năm học chưa có trong danh mục. Hãy tạo năm học trước.'], 422);
-    $direction = vbd_direction((string)($input['direction'] ?? 'incoming'));
-    $sector = vbd_sector((string)($input['sector'] ?? $_GET['sector'] ?? 'hanhchinh'));
-    $required = !empty($input['report_required']);
-    $status = vbd_status((string)($input['report_status'] ?? ''), $required);
-    $values = [
-        $academicYear,
-        $sector,
-        $direction,
-        trim((string)($input['document_number'] ?? '')) ?: null,
-        vbd_truncate($title, 500),
-        vbd_date($input['document_date'] ?? null),
-        trim((string)($input['organization'] ?? '')) ?: null,
-        trim((string)($input['document_type'] ?? '')) ?: null,
-        trim((string)($input['summary_text'] ?? '')) ?: null,
-        trim((string)($input['source_text'] ?? '')) ?: null,
-        $required ? 1 : 0,
-        $required ? vbd_date($input['report_due_at'] ?? null) : null,
-        $status,
-        trim((string)($input['report_note'] ?? '')) ?: null,
-    ];
-    if ($id > 0) {
-        if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản cần sửa.'], 404);
-        $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
-        $stmt = $pdo->prepare('UPDATE office_documents SET academic_year=?, sector=?, direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
-        $stmt->execute(array_merge($values, [$reportedAt, $id, (int)$user['id']]));
-    } else {
-        $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
-        $stmt = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, sector, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-        $stmt->execute(array_merge([(int)$user['id']], $values, [$reportedAt]));
-        $id = (int)$pdo->lastInsertId();
+    try {
+        $document = vbd_save_document($pdo, $user, json_body());
+        respond(['ok' => true, 'document' => $document, 'message' => 'Đã lưu văn bản.']);
+    } catch (RuntimeException $e) {
+        respond(['error' => $e->getMessage()], 422);
     }
-    $document = vbd_document($pdo, $id, (int)$user['id']);
-    respond(['ok' => true, 'document' => $document, 'message' => 'Đã lưu văn bản.']);
+}
+
+if ($action === 'save_upload') {
+    @ini_set('memory_limit', '256M');
+    @set_time_limit(300);
+    try {
+        $input = $_POST;
+        $input['sector'] = $input['sector'] ?? ($_GET['sector'] ?? 'hanhchinh');
+        $document = vbd_save_document($pdo, $user, $input);
+        $files = vbd_collect_uploaded_files();
+        if (!$files) {
+            respond([
+                'ok' => true,
+                'document' => $document,
+                'message' => 'Đã lưu văn bản.',
+                'upload_backend' => 'vanban-local-fallback-v3',
+            ]);
+        }
+        vbd_process_document_upload($pdo, (int)$document['id'], $document, $files, (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024);
+    } catch (RuntimeException $e) {
+        respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-local-fallback-v3'], 422);
+    }
 }
 
 if ($action === 'update_status') {
@@ -802,7 +958,7 @@ if ($action === 'drive_check') {
     $status = drive_setup_status(true);
     respond([
         'ok' => true,
-        'upload_backend' => 'vanban-local-fallback-v2',
+        'upload_backend' => 'vanban-local-fallback-v3',
         'local_storage_root' => vbd_local_storage_root(),
         'local_storage_writable' => is_writable(vbd_local_storage_root()),
     ] + $status);
@@ -841,67 +997,15 @@ if ($action === 'upload') {
     $id = (int)($_POST['document_id'] ?? 0);
     $document = vbd_document($pdo, $id, (int)$user['id']);
     if (!$document) respond(['error' => 'Hãy lưu văn bản trước khi tải tệp.'], 404);
-    $files = vbd_uploaded_files('files');
-    if (!$files) respond(['error' => 'Chưa chọn tệp để tải lên.'], 422);
+    $files = vbd_collect_uploaded_files();
+    if (!$files) {
+        respond([
+            'error' => 'Chưa chọn tệp để tải lên hoặc hosting không nhận được multipart upload.' . vbd_upload_ini_hint(),
+            'upload_backend' => 'vanban-local-fallback-v3',
+        ], 422);
+    }
     $maxBytes = (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024;
-    try {
-        foreach ($files as $file) {
-            vbd_validate_upload_file($file, $maxBytes);
-        }
-    } catch (Throwable $e) {
-        respond(['error' => $e->getMessage()], 422);
-    }
-
-    $driveProbeError = vbd_local_storage_enabled() ? vbd_probe_drive_ready() : null;
-    if ($driveProbeError !== null) {
-        try {
-            vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $driveProbeError);
-        } catch (Throwable $localError) {
-            respond([
-                'error' => 'Google Drive: ' . $driveProbeError . ' | Lưu trên hosting: ' . $localError->getMessage(),
-                'upload_backend' => 'vanban-local-fallback-v2',
-            ], 502);
-        }
-    }
-
-    try {
-        require_once __DIR__ . '/google_drive.php';
-        $folderId = trim((string)($document['drive_folder_id'] ?? '')) ?: vbd_drive_folder($document);
-        if (empty($document['drive_folder_id'])) {
-            $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $id]);
-        }
-        $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
-        $uploaded = [];
-        foreach ($files as $index => $file) {
-            $mime = drive_detect_mime($file['tmp_name'], (string)$file['name'], (string)$file['type']);
-            $storedName = drive_safe_name(($document['document_number'] ?: 'VB-' . $id) . ' - ' . $document['title'] . ' - ' . ($index + 1) . ' - ' . $file['name'], 'van-ban');
-            $drive = drive_upload_file($folderId, $storedName, $mime, $file['tmp_name']);
-            $insert->execute([$id, $drive['file_id'], $file['name'], $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
-            $uploaded[] = $drive;
-        }
-        respond([
-            'ok' => true,
-            'files' => $uploaded,
-            'storage' => 'drive',
-            'upload_backend' => 'vanban-local-fallback-v2',
-            'message' => 'Đã lưu ' . count($uploaded) . ' tệp lên Google Drive.',
-        ]);
-    } catch (Throwable $e) {
-        if (vbd_should_fallback_to_local($e)) {
-            try {
-                vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $e->getMessage());
-            } catch (Throwable $localError) {
-                respond([
-                    'error' => 'Google Drive: ' . $e->getMessage() . ' | Lưu trên hosting: ' . $localError->getMessage(),
-                    'upload_backend' => 'vanban-local-fallback-v2',
-                ], 502);
-            }
-        }
-        respond([
-            'error' => $e->getMessage(),
-            'upload_backend' => 'vanban-local-fallback-v2',
-        ], 502);
-    }
+    vbd_process_document_upload($pdo, $id, $document, $files, $maxBytes);
 }
 
 if ($action === 'delete') {
