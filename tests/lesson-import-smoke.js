@@ -64,5 +64,38 @@ if (rebuilt[0]?.mode !== 'match' || rebuilt[0]?.pairs?.length !== 2) {
     console.log('OK: drag idempotency');
 }
 
+const messyMatchLine = '- Đề: Nối số với cách đọc tương ứng | Trái » 60 006, 66 000 | Phải » Sáu mươi nghìn không trăm linh sáu, Sáu mươi sáu nghìn | Nối » 0-0, 1-1 | gợi ý: Đọc kỹ các chữ số ở hàng nghìn và hàng đơn vị.';
+const messyParsed = LI.parseDragExercises(messyMatchLine, { preferMatch: true });
+if (messyParsed.length !== 1 || messyParsed[0].mode !== 'match') {
+    console.error('FAIL: messy match line parse');
+    failed += 1;
+} else if (messyParsed[0].left.join('|') !== '60 006|66 000') {
+    console.error('FAIL: messy match left', messyParsed[0].left);
+    failed += 1;
+} else if (messyParsed[0].pairs.length !== 2) {
+    console.error('FAIL: messy match pairs', messyParsed[0].pairs);
+    failed += 1;
+} else {
+    console.log('OK: messy match line canonicalized');
+}
+
+const messySortLine = 'Sắp xếp từ bé đến lớn: 12 500; 9 800; 12 050; 12 505 | 12 500 » 9 800 » 12 050 » 12 505 | 9 800 » 12 050 » 12 500 » 12 505 | So sánh hàng nghìn';
+const messySortParsed = LI.parseDragExercises(messySortLine);
+const sortItem = messySortParsed[0];
+const sortSig = arr => [...arr].map(x => String(x).trim()).sort().join('|');
+if (!sortItem || sortItem.mode !== 'sort' || sortSig(sortItem.items) !== sortSig(sortItem.answer)) {
+    console.error('FAIL: messy sort line', sortItem);
+    failed += 1;
+} else {
+    console.log('OK: messy sort line canonicalized');
+}
+
+if (typeof LI.getInteractiveFormatGuide === 'function' && !LI.getInteractiveFormatGuide().includes('lesson-import-v1')) {
+    console.error('FAIL: interactive format guide');
+    failed += 1;
+} else {
+    console.log('OK: interactive format guide');
+}
+
 if (failed) process.exit(1);
 console.log('\nAll smoke checks passed.');

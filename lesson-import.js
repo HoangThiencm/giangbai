@@ -6,7 +6,7 @@
     'use strict';
 
     const SCHEMA_VERSION = 'lesson-import-v1';
-    const PROMPT_VERSION = '2026-06-scope-v3';
+    const PROMPT_VERSION = '2026-06-interactive-canonical-v1';
     const VALID_SUBJECTS = ['Toán 4', 'Toán 5', 'Toán 6', 'Toán 7', 'Toán 8', 'Toán 9'];
     const SUBJECT_CODES = {
         'Toán 4': 'math4', 'Toán 5': 'math5', 'Toán 6': 'math6',
@@ -50,6 +50,150 @@
         return (line.includes('||') ? line.split('||') : line.split('|'))
             .map(part => part.trim())
             .filter(Boolean);
+    }
+
+    const POOL_LABEL_PREFIX_RE = /^(?:trái|phải|nối|mảnh|phần\s*tử|thứ\s*tự(?:\s*đúng)?|đáp\s*án)\s*[:»›]\s*/iu;
+    const PROMPT_PREFIX_RE = /^[-–—*#\s]*(?:đề|bài|câu|question)\s*[:：]\s*/iu;
+    const HINT_PREFIX_RE = /^(?:gợi\s*ý|hint)\s*[:：]\s*/iu;
+    const POOL_LABEL_ONLY_RE = /^(?:trái|phải|nối|mảnh)$/iu;
+
+    function stripPromptPrefix(value) {
+        return String(value || '').replace(PROMPT_PREFIX_RE, '').trim();
+    }
+
+    function stripHintPrefix(value) {
+        return String(value || '').replace(HINT_PREFIX_RE, '').trim();
+    }
+
+    function stripPoolColumnLabel(value) {
+        let text = String(value || '').trim();
+        for (let i = 0; i < 4; i += 1) {
+            const next = text.replace(POOL_LABEL_PREFIX_RE, '').trim();
+            if (next === text) break;
+            text = next;
+        }
+        return text;
+    }
+
+    function normalizePoolToken(token) {
+        return String(token || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function normalizePoolPieces(value) {
+        const stripped = stripPoolColumnLabel(value);
+        if (!stripped) return [];
+        if (POOL_ITEM_SEP_RE.test(stripped)) {
+            return splitPoolText(stripped).map(normalizePoolToken).filter(Boolean);
+        }
+        if (/,/.test(stripped)) {
+            return stripped.split(/\s*,\s*/).map(normalizePoolToken).filter(Boolean);
+        }
+        const single = normalizePoolToken(stripped);
+        return single ? [single] : [];
+    }
+
+    function normalizePoolArray(value) {
+        if (Array.isArray(value)) {
+            const flat = [];
+            value.forEach(item => {
+                normalizePoolPieces(item).forEach(piece => flat.push(piece));
+            });
+            return flat.filter(piece => piece && !POOL_LABEL_ONLY_RE.test(piece));
+        }
+        return normalizePoolPieces(value).filter(piece => piece && !POOL_LABEL_ONLY_RE.test(piece));
+    }
+
+    function extractMatchPairsFromSpec(spec) {
+        const pairs = [];
+        const source = String(spec || '');
+        const re = /(\d+)\s*-\s*(\d+)/g;
+        let match;
+        while ((match = re.exec(source)) !== null) {
+            const left = Number.parseInt(match[1], 10);
+            const right = Number.parseInt(match[2], 10);
+            if (Number.isFinite(left) && Number.isFinite(right)) {
+                pairs.push({ left, right });
+            }
+        }
+        return pairs;
+    }
+
+    function formatMatchPairSpec(pairs) {
+        return (pairs || []).map(pair => `${pair.left}-${pair.right}`).join(',');
+    }
+
+    function normalizeDragLineParts(line) {
+        const parts = splitQuestionParts(line);
+        if (!parts.length) return parts;
+        parts[0] = stripPromptPrefix(parts[0]);
+        if (parts.length > 1) parts[1] = stripPoolColumnLabel(parts[1]);
+        if (parts.length > 2) parts[2] = stripPoolColumnLabel(parts[2]);
+        if (parts.length > 3) {
+            const pairs = extractMatchPairsFromSpec(parts[3]);
+            if (pairs.length) parts[3] = formatMatchPairSpec(pairs);
+            else parts[3] = stripPoolColumnLabel(parts[3]);
+        }
+        if (parts.length > 4) parts[4] = stripHintPrefix(parts[4]);
+        return parts;
+    }
+
+    function getInteractiveFormatGuide() {
+        return `**QUY TẮC BÀI TƯƠNG TÁC (parser lesson-import-v1 — JSON ra lộ trình chuẩn):**
+- Mỗi dòng dùng dấu | phân cột. KHÔNG ghi nhãn cột như "Đề:", "Trái »", "Phải »", "Nối »", "gợi ý:" — chỉ nội dung thuần.
+- Mảnh trong cùng cột PHẢI nối bằng » (không dùng dấu phẩy , giữa các mảnh).
+
+**KÉO THẢ VÀO Ô TRỐNG** — đúng 2 dòng, 4 cột:
+Câu có ___ | mảnh1 » mảnh2 » mảnh_nhiễu | đáp_án1 » đáp_án2 | gợi ý ngắn
+
+**SẮP XẾP THỨ TỰ** — đúng 2 dòng, 4 cột (cột 2 và 3 cùng bộ mảnh, chỉ khác thứ tự; giữ nguyên cách viết từng mảnh):
+Sắp xếp từ bé đến lớn | 9 800 » 12 050 » 12 500 » 12 505 | 9 800 » 12 050 » 12 500 » 12 505 | So sánh hàng nghìn trước
+Sắp xếp từ lớn đến bé | 40 400 » 40 000 » 4 000 » 40 | 40 400 » 40 000 » 4 000 » 40 | So sánh hàng chục nghìn trước
+
+**NỐI Ô** — 1–2 dòng, 5 cột (cột 4 chỉ ghi chỉ số nối, không chữ "Nối"):
+Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Đọc kỹ hàng nghìn`;
+    }
+
+    function canonicalizeDragExerciseItem(item) {
+        if (!item || typeof item !== 'object') return item;
+        const copy = { ...item };
+        copy.prompt = stripPromptPrefix(copy.prompt || '');
+        copy.hint = stripHintPrefix(copy.hint || '');
+
+        const isMatch = copy.mode === 'match'
+            || (Array.isArray(copy.left) && Array.isArray(copy.right))
+            || /\d+\s*-\s*\d+/.test(String(copy.pair_spec || copy.map || ''));
+
+        if (isMatch) {
+            let left = normalizePoolArray(copy.left || copy.items || copy.trai || []);
+            let right = normalizePoolArray(copy.right || copy.answer || copy.phai || []);
+            let pairs = Array.isArray(copy.pairs) && copy.pairs.length
+                ? copy.pairs
+                : extractMatchPairsFromSpec(copy.pair_spec || copy.map || copy.pairs_text || '');
+            if (!pairs.length) {
+                pairs = extractMatchPairsFromSpec(buildDefaultMatchPairSpec(left.length, right.length));
+            }
+            if (!pairs.length && left.length && right.length) {
+                pairs = extractMatchPairsFromSpec(buildDefaultMatchPairSpec(left.length, right.length));
+            }
+            const pairSpec = formatMatchPairSpec(pairs);
+            copy.mode = 'match';
+            copy.left = left;
+            copy.right = right;
+            copy.pairs = pairs;
+            copy.pair_spec = pairSpec;
+            delete copy.items;
+            delete copy.answer;
+            return copy;
+        }
+
+        copy.mode = 'sort';
+        copy.items = normalizePoolArray(copy.items || copy.left || copy.trai || []);
+        copy.answer = normalizePoolArray(copy.answer || copy.right || copy.phai || copy.items || []);
+        delete copy.left;
+        delete copy.right;
+        delete copy.pairs;
+        delete copy.pair_spec;
+        return copy;
     }
 
     function parseContentWithAiMarker(text) {
@@ -525,11 +669,7 @@
     }
 
     function parseMatchPairs(spec) {
-        return String(spec || '').split(',').map(part => part.trim()).filter(Boolean).map(part => {
-            const [left, right] = part.split('-').map(value => Number.parseInt(value, 10));
-            if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
-            return { left, right };
-        }).filter(Boolean);
+        return extractMatchPairsFromSpec(spec);
     }
 
     function buildDefaultMatchPairSpec(leftCount, rightCount) {
@@ -577,19 +717,22 @@
     }
 
     function parseSingleDragLine(line, index, options = {}) {
-        const parts = splitQuestionParts(line);
+        const parts = normalizeDragLineParts(line);
         const prompt = parts[0] || '';
-        let pairSpec = parts[3] || '';
-        if (!(pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) && options.preferMatch) {
-            const left = repairPoolPieces(splitPoolText(parts[1]), 0);
-            const right = repairPoolPieces(splitPoolText(parts[2]), 0);
-            pairSpec = buildDefaultMatchPairSpec(left.length, right.length);
+        let pairs = parts.length > 3 ? extractMatchPairsFromSpec(parts[3]) : [];
+        let hint = parts[4] || '';
+
+        if (!pairs.length && options.preferMatch && parts.length >= 3) {
+            const left = repairPoolPieces(normalizePoolPieces(parts[1]), 0);
+            const right = repairPoolPieces(normalizePoolPieces(parts[2]), 0);
+            pairs = extractMatchPairsFromSpec(buildDefaultMatchPairSpec(left.length, right.length));
         }
-        if (pairSpec && /\d+\s*-\s*\d+/.test(pairSpec)) {
-            const pairs = parseMatchPairs(pairSpec);
-            const left = repairPoolPieces(splitPoolText(parts[1]), pairs.length);
-            const right = repairPoolPieces(splitPoolText(parts[2]), pairs.length);
-            return {
+
+        if (pairs.length && parts.length >= 3) {
+            const left = repairPoolPieces(normalizePoolPieces(parts[1]), pairs.length);
+            const right = repairPoolPieces(normalizePoolPieces(parts[2]), pairs.length);
+            const pairSpec = formatMatchPairSpec(pairs);
+            return canonicalizeDragExerciseItem({
                 id: `drag_${index + 1}`,
                 mode: 'match',
                 prompt,
@@ -597,19 +740,23 @@
                 right,
                 pairs,
                 pair_spec: pairSpec,
-                hint: parts[4] || ''
-            };
+                hint
+            });
         }
-        const items = splitPoolText(parts[1]);
-        const answer = splitPoolText(parts[2] || parts[1]);
-        return {
+
+        const items = normalizePoolPieces(parts[1]);
+        const answer = normalizePoolPieces(parts[2] || parts[1]);
+        if (!hint && parts[3] && !extractMatchPairsFromSpec(parts[3]).length) {
+            hint = stripHintPrefix(parts[3]);
+        }
+        return canonicalizeDragExerciseItem({
             id: `drag_${index + 1}`,
             mode: 'sort',
             prompt,
             items,
             answer,
-            hint: parts[3] || ''
-        };
+            hint
+        });
     }
 
     function parseDragExercises(text, options = {}) {
@@ -979,6 +1126,13 @@
             normalized.is_published = false;
         }
 
+        normalized.drag_exercises = ensureArray(normalized.drag_exercises)
+            .map(canonicalizeDragExerciseItem)
+            .filter(item => {
+                if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
+                return item.prompt && item.items?.length && item.answer?.length;
+            });
+
         return normalized;
     }
 
@@ -987,7 +1141,7 @@
     }
 
     function multisetEqual(a, b) {
-        const sig = arr => [...arr].map(x => String(x).trim()).sort((x, y) => x.localeCompare(y, 'vi')).join('\u0001');
+        const sig = arr => [...arr].map(normalizePoolToken).filter(Boolean).sort((x, y) => x.localeCompare(y, 'vi')).join('\u0001');
         return sig(a) === sig(b);
     }
 
@@ -1441,6 +1595,11 @@
     const LessonImport = {
         SCHEMA_VERSION,
         PROMPT_VERSION,
+        getInteractiveFormatGuide,
+        canonicalizeDragExerciseItem,
+        normalizeDragLineParts,
+        normalizePoolPieces,
+        extractMatchPairsFromSpec,
         VALID_SUBJECTS,
         SUBJECT_CODES,
         AI_MARKER,

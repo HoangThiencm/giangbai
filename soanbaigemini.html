@@ -6,7 +6,7 @@
     <title>Soạn bài Gemini • Tạo bài học hoàn chỉnh (hình ảnh + nội dung)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-humanize-v1" defer></script>
+    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-interactive-canonical-v1" defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
         
@@ -859,9 +859,9 @@ ${imageDescription}
    Câu hỏi có ___ | mảnh1 » mảnh2 » mảnh3 » mảnh_nhiễu | đáp án1 » đáp án2 » đáp án3 | gợi ý ngắn
    BẮT BUỘC đủ 4 cột (đề | mảnh | đáp án | gợi ý). Đáp án nhiều ô dùng » (vd: 4 » 8 » đơn vị). Cột gợi ý KHÔNG thay cột đáp án.
 
-   **c. Nối ô / Sắp xếp** (dán vào ô "Nối ô / sắp xếp"):
-   - Nối: Đề | Trái1 » Trái2 | Phải1 » Phải2 | 0-0,1-1 | gợi ý
-   - Sắp xếp: Đề | Các phần tử » ngăn cách | Thứ tự đúng » | gợi ý
+   **c. Nối ô / Sắp xếp** (dán vào ô "Nối ô / sắp xếp") — cùng format lesson-import-v1 (không nhãn Trái/Phải):
+   - Nối: Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | gợi ý
+   - Sắp xếp: Sắp xếp từ bé đến lớn | 9 800 » 12 050 » 12 500 | 9 800 » 12 050 » 12 500 | gợi ý
 
 6. **TRẮC NGHIỆM** (dán vào ô "Câu hỏi trắc nghiệm"):
    Câu hỏi đầy đủ? | A | B | C | D | B
@@ -1062,7 +1062,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                                 <li><strong>BÀI TẬP TỰ LUẬN NGẮN</strong> — 3–5 dòng <code>Đề | Đáp án | Gợi ý</code></li>
                                 <li><strong>KÉO THẢ VÀO Ô TRỐNG</strong> — 2 dòng <code>Câu ___ | mảnh1 » mảnh2 | đáp án » từng ô | gợi ý</code></li>
                                 <li><strong>SẮP XẾP THỨ TỰ</strong> — 2 dòng <code>Đề | phần tử » ... | thứ tự » ... | gợi ý</code></li>
-                                <li><strong>NỐI Ô</strong> — 1–2 dòng <code>Đề | Trái » ... | Phải » ... | 0-0,1-1 | gợi ý</code></li>
+                                <li><strong>NỐI Ô</strong> — 1–2 dòng <code>Đề | mảnh trái » ... | mảnh phải » ... | 0-0,1-1 | gợi ý</code> (không ghi chữ Trái/Phải/Nối)</li>
                             </ul>
                         </div>
                         
@@ -2178,6 +2178,14 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             };
         }
 
+        function getInteractiveFormatBlock() {
+            const LI = window.LessonImport;
+            if (LI && typeof LI.getInteractiveFormatGuide === 'function') {
+                return LI.getInteractiveFormatGuide();
+            }
+            return `**QUY TẮC BÀI TƯƠNG TÁC (JSON → lộ trình):** Dùng | phân cột; mảnh nối bằng »; không ghi "Đề:", "Trái »", "Phải »", "Nối »".`;
+        }
+
         function buildKnowledgeCeilingBlock(context) {
             return `**TRẦN KIẾN THỨC BẮT BUỘC:**
 - Ảnh sách giáo khoa là nguồn nội dung chính và là **trần kiến thức**. Chỉ dạy các khái niệm, ký hiệu, thuật ngữ, dạng bài và phương pháp nhìn thấy trực tiếp hoặc có thể xác định chắc chắn từ ảnh.
@@ -2300,13 +2308,9 @@ ${approvedTheory}
 
 - **BÀI TẬP NỘP GIÁO VIÊN:** Bài song sinh theo từng dạng ví dụ; chỉ đề, không lời giải.
 
+${getInteractiveFormatBlock()}
+
 **BÀI TẬP TỰ LUẬN NGẮN** — 2–5 dòng: Đề | Đáp án (số) | Gợi ý
-
-**KÉO THẢ VÀO Ô TRỐNG** — đúng 2 dòng 4 cột: Câu có ___ | mảnh » ... | đáp án » ... | gợi ý
-
-**SẮP XẾP THỨ TỰ** — đúng 2 dòng: Đề | phần tử » ... | thứ tự » ... | gợi ý
-
-**NỐI Ô** — 1–2 dòng: Đề | Trái » ... | Phải » ... | 0-0,1-1 | gợi ý
 
 **KỸ NĂNG CẦN ĐẠT** (trước TRẮC NGHIỆM): id_khong_dau | Tên kỹ năng | 80
 
@@ -2784,20 +2788,7 @@ ${notes ? `- Yêu cầu thêm: ${notes}` : ''}
 Tạo từ 2 đến 5 câu tùy ảnh SGK. Mỗi dòng BẮT BUỘC đúng 3 cột: "Đề đầy đủ | Đáp án | Gợi ý"
 - Cột Đáp án KHÔNG được để trống. Chỉ ghi số kết quả (vd: 42, 3/4, √16); không chữ, không đơn vị, không gộp gợi ý vào cột đáp án.
 
-**KÉO THẢ VÀO Ô TRỐNG** (heading riêng):
-Tạo đúng 2 câu. Mỗi dòng BẮT BUỘC 4 cột: "Câu có ___ | mảnh1 » mảnh2 » mảnh_nhiễu | đáp án1 » đáp án2 » đáp án3 | gợi ý ngắn"
-- Cột 1: đề có ___ đúng số ô trống.
-- Cột 2: tất cả mảnh kéo (đáp án đứng trước, mảnh nhiễu đứng sau).
-- Cột 3: đáp án đúng từng ô, dùng » (vd: 4 » 8 » đơn vị). KHÔNG ghi lời giải/hướng dẫn vào cột này.
-- Cột 4: gợi ý ngắn 1 câu.
-
-**SẮP XẾP THỨ TỰ** (heading riêng):
-Tạo đúng 2 câu. Mỗi dòng: "Đề bài | phần tử 1 » phần tử 2 » phần tử 3 | thứ tự đúng 1 » thứ tự đúng 2 » thứ tự đúng 3 | gợi ý"
-- Cột thứ tự đúng phải là hoán vị của cột phần tử: cùng các mảnh, chỉ đổi thứ tự, không thêm/bớt/sửa chữ mảnh.
-
-**NỐI Ô** (heading riêng):
-Tạo từ 1 đến 2 câu. Mỗi dòng: "Đề bài | Trái 1 » Trái 2 » Trái 3 | Phải 1 » Phải 2 » Phải 3 | 0-0,1-1,2-2 | gợi ý"
-Không viết dòng tiêu đề cột, không đánh số ở đầu dòng dữ liệu.
+${getInteractiveFormatBlock()}
 
 **KỸ NĂNG CẦN ĐẠT** (heading riêng, đặt TRƯỚC TRẮC NGHIỆM):
 Mỗi dòng: id_khong_dau | Tên kỹ năng | 80 (không prefix "id:" hay "Tên:")

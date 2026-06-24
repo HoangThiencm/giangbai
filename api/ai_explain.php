@@ -337,12 +337,21 @@ function call_gemini(string $model, string $key, string $payload): array
     return [$raw, $status, $curlError];
 }
 
-function call_openai_compatible_chat(string $baseUrl, string $key, string $payload, int $timeout = 45): array
+function call_openai_compatible_chat(
+    string $baseUrl,
+    string $key,
+    string $payload,
+    int $timeout = 45,
+    array $extraHeaders = []
+): array
 {
     $url = rtrim($baseUrl, '/') . '/chat/completions';
     $headers = ['Content-Type: application/json'];
     if (trim($key) !== '') {
         $headers[] = 'Authorization: Bearer ' . $key;
+    }
+    foreach ($extraHeaders as $header) {
+        if (is_string($header) && trim($header) !== '') $headers[] = trim($header);
     }
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -367,7 +376,10 @@ function call_shopaikey(string $baseUrl, string $key, string $payload): array
 
 function call_ds2api(string $baseUrl, string $key, string $payload): array
 {
-    return call_openai_compatible_chat($baseUrl, $key, $payload, 60);
+    // DS2API officially accepts both Bearer and x-api-key. Send both to remain
+    // compatible with Vercel/runtime variants that only inspect one source.
+    $extraHeaders = trim($key) !== '' ? ['x-api-key: ' . trim($key)] : [];
+    return call_openai_compatible_chat($baseUrl, $key, $payload, 60, $extraHeaders);
 }
 
 function call_cloudflare_worker(string $workerUrl, string $secret, array $payload): array

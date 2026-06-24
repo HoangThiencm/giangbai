@@ -1862,7 +1862,7 @@
 
                 <div id="interactiveBulkPanel" class="rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <p class="text-[11px] text-amber-800 mb-2">Dán nguyên khối từ soanbaigemini/Gemini. Cần heading <strong>NỐI Ô</strong> và <strong>SẮP XẾP THỨ TỰ</strong> riêng. Điền khuyết: <code>Đề có ___ | mảnh » ... | đáp án » từng ô | gợi ý</code> (4 cột).</p>
-                    <textarea id="interactiveBulkPaste" rows="10" class="w-full p-2 border border-amber-300 rounded text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none" placeholder="**BÀI TẬP TỰ LUẬN NGẮN**&#10;Đề 1 | Đáp án | Gợi ý&#10;**KÉO THẢ VÀO Ô TRỐNG**&#10;Số ___ gồm ___ | 4 » 8 » đơn vị | 4 » 8 » đơn vị | Gợi ý&#10;**SẮP XẾP THỨ TỰ**&#10;Đề | 3 » 1 » 2 | 1 » 2 » 3 | Gợi ý&#10;**NỐI Ô**&#10;Đề | Trái1 » Trái2 | Phải1 » Phải2 | 0-0,1-1 | Gợi ý"></textarea>
+                    <textarea id="interactiveBulkPaste" rows="10" class="w-full p-2 border border-amber-300 rounded text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none" placeholder="**BÀI TẬP TỰ LUẬN NGẮN**&#10;Đề 1 | Đáp án | Gợi ý&#10;**KÉO THẢ VÀO Ô TRỐNG**&#10;Số ___ gồm ___ | 4 » 8 » đơn vị | 4 » 8 » đơn vị | Gợi ý&#10;**SẮP XẾP THỨ TỰ**&#10;Đề | 3 » 1 » 2 | 1 » 2 » 3 | Gợi ý&#10;**NỐI Ô**&#10;Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Gợi ý"></textarea>
                 </div>
 
                 <div id="interactiveItemsPanel" class="hidden mt-2 space-y-4">
