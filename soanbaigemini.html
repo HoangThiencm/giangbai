@@ -590,11 +590,7 @@ Bắt đầu tạo bài học.`;
         }
 
         function canAutoDownloadFiles() {
-            if (isSandboxedHost()) return false;
-            try {
-                if (document.permissionsPolicy && !document.permissionsPolicy.allowsFeature('modals')) return false;
-            } catch (ignored) { /* ignore */ }
-            return true;
+            return !isSandboxedHost();
         }
 
         function showAppToast(msg, tone = 'ok') {
