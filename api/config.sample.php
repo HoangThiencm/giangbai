@@ -76,6 +76,10 @@ define('GOOGLE_DRIVE_DNS_SERVERS', '1.1.1.1,8.8.8.8');
 // define('GOOGLE_DRIVE_OAUTH_HOST_IPS', '142.250.191.74');
 // define('GOOGLE_DRIVE_API_HOST_IPS', '142.250.191.74');
 
+// Khi hosting không kết nối được Google Drive, quản lý văn bản lưu tệp tạm trong storage/vanban/.
+define('VANBAN_LOCAL_STORAGE_FALLBACK', true);
+// define('VANBAN_LOCAL_STORAGE_DIR', '/home/user/giangbai/storage/vanban');
+
 // Keep "private" when the root folder is shared with teachers who review files.
 // Use "anyone" only if every uploaded file may be opened by anyone with its link.
 // Lưu ý: ảnh minh họa trong LESSON_IMAGES luôn được public khi upload (api/lessons.php).

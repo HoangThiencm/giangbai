@@ -2,3 +2,5 @@ api/config.php
 nopdulieu.json
 baocaodulieu/
 /qlvb
+storage/vanban/*
+!storage/vanban/.gitkeep

@@ -208,22 +208,24 @@ function drive_configured_host_ips(string $host): array
     return array_values(array_unique($ips));
 }
 
-function drive_doh_lookup(string $host): array
+function drive_doh_query(array $provider, string $host): array
 {
     if (!function_exists('curl_init') || !defined('CURLOPT_RESOLVE')) return [];
-    $query = 'https://1.1.1.1/dns-query?' . http_build_query(['name' => $host, 'type' => 'A']);
+    $query = $provider['url'] . '?' . http_build_query(['name' => $host, 'type' => 'A']);
     $ch = curl_init($query);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 8,
         CURLOPT_TIMEOUT => 15,
-        CURLOPT_HTTPHEADER => ['Host: cloudflare-dns.com', 'Accept: application/dns-json'],
+        CURLOPT_HTTPHEADER => [
+            'Host: ' . $provider['host'],
+            'Accept: application/dns-json',
+        ],
     ]);
     if (defined('CURL_IPRESOLVE_V4')) {
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
     }
-    // Reach Cloudflare DoH by IP so a broken hosting resolver cannot block the lookup itself.
-    curl_setopt($ch, CURLOPT_RESOLVE, ['cloudflare-dns.com:443:1.1.1.1', 'cloudflare-dns.com:443:1.0.0.1']);
+    curl_setopt($ch, CURLOPT_RESOLVE, $provider['resolve']);
     $raw = curl_exec($ch);
     curl_close($ch);
     if (!is_string($raw) || $raw === '') return [];
@@ -236,6 +238,27 @@ function drive_doh_lookup(string $host): array
         if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) $ips[] = $ip;
     }
     return array_values(array_unique($ips));
+}
+
+function drive_doh_lookup(string $host): array
+{
+    $providers = [
+        [
+            'url' => 'https://1.1.1.1/dns-query',
+            'host' => 'cloudflare-dns.com',
+            'resolve' => ['cloudflare-dns.com:443:1.1.1.1', 'cloudflare-dns.com:443:1.0.0.1'],
+        ],
+        [
+            'url' => 'https://8.8.8.8/resolve',
+            'host' => 'dns.google',
+            'resolve' => ['dns.google:443:8.8.8.8', 'dns.google:443:8.8.4.4'],
+        ],
+    ];
+    foreach ($providers as $provider) {
+        $ips = drive_doh_query($provider, $host);
+        if ($ips) return $ips;
+    }
+    return [];
 }
 
 function drive_lookup_host_ips(string $host): array

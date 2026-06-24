@@ -480,6 +480,141 @@ function vbd_try_ai_document_extract(string $source): ?array
     ];
 }
 
+function vbd_local_storage_enabled(): bool
+{
+    if (defined('VANBAN_LOCAL_STORAGE_FALLBACK')) {
+        return (bool)VANBAN_LOCAL_STORAGE_FALLBACK;
+    }
+    return true;
+}
+
+function vbd_local_storage_root(): string
+{
+    $custom = defined('VANBAN_LOCAL_STORAGE_DIR') ? trim((string)VANBAN_LOCAL_STORAGE_DIR) : '';
+    if ($custom !== '') return rtrim($custom, '/\\');
+    return dirname(__DIR__) . '/storage/vanban';
+}
+
+function vbd_request_base_url(): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    $scriptDir = str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/api/vanban.php')));
+    $root = rtrim(str_replace('/api', '', $scriptDir), '/');
+    return $scheme . '://' . $host . ($root !== '' ? $root . '/' : '/');
+}
+
+function vbd_local_file_dir(int $documentId, array $document): string
+{
+    $sector = vbd_sector((string)($document['sector'] ?? 'hanhchinh'));
+    $year = preg_replace('/[^0-9-]/', '', (string)($document['academic_year'] ?? 'NAM_HOC')) ?: 'NAM_HOC';
+    return vbd_local_storage_root() . '/' . $sector . '/' . $year . '/' . $documentId;
+}
+
+function vbd_local_file_path(int $documentId, array $document, string $storedName): string
+{
+    return vbd_local_file_dir($documentId, $document) . '/' . $storedName;
+}
+
+function vbd_local_file_url(int $documentId, string $storedName, bool $download = false): string
+{
+    $url = vbd_request_base_url() . 'api/vanban.php?action=file&document_id=' . $documentId . '&name=' . rawurlencode($storedName);
+    return $download ? $url . '&download=1' : $url;
+}
+
+function vbd_is_local_file_id(string $fileId): bool
+{
+    return str_starts_with(trim($fileId), 'local:');
+}
+
+function vbd_should_fallback_to_local(Throwable $e): bool
+{
+    if (!vbd_local_storage_enabled()) return false;
+    $msg = $e->getMessage();
+    $needles = [
+        'Không kết nối được Google Drive',
+        'Could not resolve host',
+        'Connection timed out',
+        'Failed to connect',
+        'Hosting không thể kết nối',
+        'cURL 6',
+        'cURL 7',
+        'cURL 28',
+        'Không phân giải được',
+    ];
+    foreach ($needles as $needle) {
+        if (str_contains($msg, $needle)) return true;
+    }
+    return false;
+}
+
+function vbd_validate_upload_file(array $file, int $maxBytes): void
+{
+    if ((int)$file['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Có tệp tải lên bị lỗi.');
+    if ((int)$file['size'] < 1 || (int)$file['size'] > $maxBytes) {
+        throw new RuntimeException('Mỗi tệp không được vượt quá ' . ($maxBytes / 1024 / 1024) . ' MB.');
+    }
+    if (!is_uploaded_file($file['tmp_name'])) throw new RuntimeException('Tệp tải lên không hợp lệ.');
+    require_once __DIR__ . '/google_drive.php';
+    if ($invalid = drive_validate_upload($file['tmp_name'], (string)$file['name'])) {
+        throw new RuntimeException($invalid);
+    }
+}
+
+function vbd_store_local_upload(int $documentId, array $document, array $file, int $index): array
+{
+    require_once __DIR__ . '/google_drive.php';
+    $dir = vbd_local_file_dir($documentId, $document);
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('Không tạo được thư mục lưu tệp trên hosting.');
+    }
+    $mime = drive_detect_mime($file['tmp_name'], (string)$file['name'], (string)$file['type']);
+    $storedName = drive_safe_name(
+        ($document['document_number'] ?: 'VB-' . $documentId) . ' - ' . $document['title'] . ' - ' . ($index + 1) . ' - ' . $file['name'],
+        'van-ban'
+    );
+    $dest = vbd_local_file_path($documentId, $document, $storedName);
+    if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        throw new RuntimeException('Không lưu được tệp trên hosting.');
+    }
+    return [
+        'file_id' => 'local:' . $documentId . ':' . rawurlencode($storedName),
+        'stored_name' => $storedName,
+        'mime_type' => $mime,
+        'view_url' => vbd_local_file_url($documentId, $storedName),
+        'download_url' => vbd_local_file_url($documentId, $storedName, true),
+        'storage' => 'local',
+    ];
+}
+
+function vbd_upload_local_files(PDO $pdo, int $id, array $document, array $files, int $maxBytes, ?string $driveError = null): void
+{
+    $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+    $uploaded = [];
+    foreach ($files as $index => $file) {
+        vbd_validate_upload_file($file, $maxBytes);
+        $stored = vbd_store_local_upload($id, $document, $file, $index);
+        $insert->execute([
+            $id,
+            $stored['file_id'],
+            $file['name'],
+            $stored['stored_name'],
+            $stored['mime_type'],
+            (int)$file['size'],
+            $stored['view_url'],
+            $stored['download_url'],
+        ]);
+        $uploaded[] = $stored;
+    }
+    respond([
+        'ok' => true,
+        'files' => $uploaded,
+        'storage' => 'local',
+        'drive_error' => $driveError,
+        'message' => 'Google Drive chưa kết nối được — đã lưu ' . count($uploaded) . ' tệp trên hosting. Khi Drive hoạt động, tải lại tệp để đồng bộ.',
+    ]);
+}
+
 function vbd_drive_folder(array $document): string
 {
     require_once __DIR__ . '/google_drive.php';
@@ -638,6 +773,39 @@ if ($action === 'update_status') {
     respond(['ok' => true, 'message' => 'Đã cập nhật trạng thái báo cáo.']);
 }
 
+if ($action === 'drive_check') {
+    require_once __DIR__ . '/google_drive.php';
+    $status = drive_setup_status(true);
+    respond(['ok' => true] + $status);
+}
+
+if ($action === 'file') {
+    $id = (int)($_GET['document_id'] ?? 0);
+    $storedName = basename(str_replace(['\\', '/'], '', trim((string)($_GET['name'] ?? ''))));
+    $document = vbd_document($pdo, $id, (int)$user['id']);
+    if (!$document || $storedName === '') respond(['error' => 'Không tìm thấy tệp.'], 404);
+    $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id=? AND stored_name=? LIMIT 1');
+    $stmt->execute([$id, $storedName]);
+    $record = $stmt->fetch();
+    if (!$record || !vbd_is_local_file_id((string)($record['drive_file_id'] ?? ''))) {
+        respond(['error' => 'Tệp không tồn tại hoặc không được lưu trên hosting.'], 404);
+    }
+    $path = vbd_local_file_path($id, $document, $storedName);
+    if (!is_file($path)) respond(['error' => 'Không tìm thấy tệp trên hosting.'], 404);
+    $mime = trim((string)($record['mime_type'] ?? '')) ?: 'application/octet-stream';
+    $download = !empty($_GET['download']);
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . (string)filesize($path));
+    header('X-Content-Type-Options: nosniff');
+    if ($download) {
+        header('Content-Disposition: attachment; filename="' . str_replace('"', '', (string)($record['original_name'] ?? $storedName)) . '"');
+    } else {
+        header('Content-Disposition: inline; filename="' . str_replace('"', '', (string)($record['original_name'] ?? $storedName)) . '"');
+    }
+    readfile($path);
+    exit;
+}
+
 if ($action === 'upload') {
     $id = (int)($_POST['document_id'] ?? 0);
     $document = vbd_document($pdo, $id, (int)$user['id']);
@@ -655,10 +823,7 @@ if ($action === 'upload') {
         $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
         $uploaded = [];
         foreach ($files as $index => $file) {
-            if ((int)$file['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Có tệp tải lên bị lỗi.');
-            if ((int)$file['size'] < 1 || (int)$file['size'] > $maxBytes) throw new RuntimeException('Mỗi tệp không được vượt quá ' . ($maxBytes / 1024 / 1024) . ' MB.');
-            if (!is_uploaded_file($file['tmp_name'])) throw new RuntimeException('Tệp tải lên không hợp lệ.');
-            if ($invalid = drive_validate_upload($file['tmp_name'], (string)$file['name'])) throw new RuntimeException($invalid);
+            vbd_validate_upload_file($file, $maxBytes);
             $mime = drive_detect_mime($file['tmp_name'], (string)$file['name'], (string)$file['type']);
             $storedName = drive_safe_name(($document['document_number'] ?: 'VB-' . $id) . ' - ' . $document['title'] . ' - ' . ($index + 1) . ' - ' . $file['name'], 'van-ban');
             $drive = drive_upload_file($folderId, $storedName, $mime, $file['tmp_name']);
@@ -668,9 +833,13 @@ if ($action === 'upload') {
         respond([
             'ok' => true,
             'files' => $uploaded,
+            'storage' => 'drive',
             'message' => 'Đã lưu ' . count($uploaded) . ' tệp lên Google Drive.',
         ]);
     } catch (Throwable $e) {
+        if (vbd_should_fallback_to_local($e)) {
+            vbd_upload_local_files($pdo, $id, $document, $files, $maxBytes, $e->getMessage());
+        }
         respond(['error' => $e->getMessage()], 502);
     }
 }
@@ -686,10 +855,22 @@ if ($action === 'delete') {
         if ($files) {
             require_once __DIR__ . '/google_drive.php';
             $driveErrors = [];
+            $document = vbd_document($pdo, $id, (int)$user['id']) ?: [];
             foreach ($files as $file) {
                 $label = trim((string)($file['original_name'] ?? 'Tệp đính kèm'));
+                $rawId = (string)($file['drive_file_id'] ?? '');
+                if (vbd_is_local_file_id($rawId)) {
+                    $storedName = trim((string)($file['stored_name'] ?? ''));
+                    if ($storedName !== '' && $document) {
+                        $path = vbd_local_file_path($id, $document, $storedName);
+                        if (is_file($path) && !@unlink($path)) {
+                            $driveErrors[] = $label . ': không xóa được tệp trên hosting';
+                        }
+                    }
+                    continue;
+                }
                 $fileId = drive_resolve_file_id(
-                    (string)($file['drive_file_id'] ?? ''),
+                    $rawId,
                     (string)($file['view_url'] ?? ''),
                     (string)($file['download_url'] ?? '')
                 );

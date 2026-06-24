@@ -193,18 +193,26 @@
         });
     }
 
+    function isLocalFile(file) {
+        const id = String(file?.drive_file_id || '').trim();
+        const url = String(file?.view_url || '');
+        return id.startsWith('local:') || url.includes('action=file');
+    }
+
     function driveFileId(file) {
         const direct = String(file?.drive_file_id || '').trim();
+        if (direct.startsWith('local:')) return '';
         if (direct) return direct;
         const url = String(file?.view_url || '');
         const match = url.match(/\/d\/([A-Za-z0-9_-]+)/) || url.match(/[?&]id=([A-Za-z0-9_-]+)/);
         return match ? match[1] : '';
     }
 
-    function openDrivePreview(fileId, title = 'Tệp đính kèm') {
-        if (!fileId) return;
+    function openDrivePreview(fileId, title = 'Tệp đính kèm', directUrl = '') {
+        const src = directUrl || (fileId ? `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview` : '');
+        if (!src) return;
         $('drivePreviewTitle').textContent = title;
-        $('drivePreviewFrame').src = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+        $('drivePreviewFrame').src = src;
         $('drivePreviewModal').classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
     }
@@ -231,10 +239,12 @@
                 : '';
             const files = (doc.files || []).map(file => {
                 const fileId = driveFileId(file);
+                const previewUrl = isLocalFile(file) ? String(file.view_url || '') : '';
+                const canPreview = fileId || previewUrl;
                 return `<span class="inline-flex max-w-full items-center gap-1.5 rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
                     <i class="fa-solid fa-paperclip shrink-0"></i>
                     <span class="truncate">${esc(file.original_name)}</span>
-                    ${fileId ? `<button type="button" data-preview-id="${esc(fileId)}" data-preview-title="${esc(file.original_name)}" class="shrink-0 rounded ${accentPrimary()} px-2 py-0.5 text-[11px] font-bold text-white"><i class="fa-solid fa-eye mr-0.5"></i>Xem</button>` : ''}
+                    ${canPreview ? `<button type="button" data-preview-id="${esc(fileId)}" data-preview-url="${esc(previewUrl)}" data-preview-title="${esc(file.original_name)}" class="shrink-0 rounded ${accentPrimary()} px-2 py-0.5 text-[11px] font-bold text-white"><i class="fa-solid fa-eye mr-0.5"></i>Xem</button>` : ''}
                 </span>`;
             }).join('');
             return `<article class="border-b border-slate-100 p-4 last:border-b-0 hover:bg-slate-50/80">
@@ -261,8 +271,12 @@
         host.querySelectorAll('[data-action]').forEach(button => {
             button.onclick = () => handleAction(button.dataset.action, Number(button.dataset.id));
         });
-        host.querySelectorAll('[data-preview-id]').forEach(button => {
-            button.onclick = () => openDrivePreview(button.dataset.previewId, button.dataset.previewTitle || 'Tệp đính kèm');
+        host.querySelectorAll('[data-preview-id], [data-preview-url]').forEach(button => {
+            button.onclick = () => openDrivePreview(
+                button.dataset.previewId || '',
+                button.dataset.previewTitle || 'Tệp đính kèm',
+                button.dataset.previewUrl || ''
+            );
         });
     }
 
@@ -382,6 +396,18 @@
         toast('Đã xuất file Excel (CSV).');
     }
 
+    async function checkDriveRemote() {
+        try {
+            const data = await api('drive_check');
+            state.driveConfigured = !!data.drive_configured;
+            state.driveReady = !!data.drive_ready;
+            state.driveHint = data.drive_hint || '';
+            renderDriveWarning();
+        } catch (_) {
+            // Keep list response values when remote check is unavailable.
+        }
+    }
+
     async function load() {
         try {
             const data = await api('list');
@@ -393,6 +419,7 @@
             state.driveDiag = data;
             renderYears();
             render();
+            checkDriveRemote();
         } catch (error) {
             toast(error.message, 'rose');
         }
@@ -727,13 +754,14 @@
 
     async function uploadFiles(documentId) {
         const files = $('files')?.files;
-        if (!files?.length) return;
+        if (!files?.length) return null;
         const form = new FormData();
         form.append('document_id', documentId);
         [...files].forEach(file => form.append('files[]', file));
         const response = await fetch(`${API}?action=upload&sector=${encodeURIComponent(SECTOR)}`, { method: 'POST', credentials: 'include', body: form });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Không tải được tệp lên Google Drive.');
+        return data;
     }
 
     function bindEvents() {
@@ -770,11 +798,16 @@
                 });
                 savedDocumentId = Number(data.document?.id) || 0;
                 const hasFiles = !!$('files')?.files?.length;
+                let uploadResult = null;
                 if (hasFiles) {
-                    await uploadFiles(savedDocumentId);
+                    uploadResult = await uploadFiles(savedDocumentId);
                 }
                 closeModal();
-                toast(hasFiles ? 'Đã lưu văn bản và tệp đính kèm.' : 'Đã lưu văn bản.');
+                if (uploadResult?.storage === 'local') {
+                    toast(uploadResult.message || 'Đã lưu tệp tạm trên hosting vì Google Drive chưa kết nối được.');
+                } else {
+                    toast(hasFiles ? 'Đã lưu văn bản và tệp đính kèm.' : 'Đã lưu văn bản.');
+                }
                 load();
             } catch (error) {
                 const hint = savedDocumentId > 0 && $('files')?.files?.length
