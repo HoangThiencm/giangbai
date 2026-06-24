@@ -181,10 +181,10 @@
                                       placeholder="Ví dụ: Tập trung vào dạng bài tập thực tế, thêm nhiều ví dụ hình học..."></textarea>
                         </div>
                         <div class="mt-3">
-                            <label class="text-xs font-medium text-slate-600 block mb-1">Link video bài giảng <span class="text-rose-600">*</span></label>
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Link video bài giảng (tùy chọn)</label>
                             <input id="lesson-video-url" type="url" class="w-full border border-slate-300 rounded-2xl px-4 py-2.5 text-sm"
-                                   placeholder="https://youtube.com/... hoặc Google Drive — bắt buộc để import JSON">
-                            <p class="text-[10px] text-slate-500 mt-1">Gemini không tạo link video; bạn nhập 1 link trước khi xuất JSON.</p>
+                                   placeholder="https://youtube.com/... — để trống sẽ tự điền placeholder khi xuất JSON">
+                            <p class="text-[10px] text-slate-500 mt-1">Gemini không tạo link video. Để trống → tool tự gắn placeholder (cảnh báo, không chặn xuất).</p>
                         </div>
                     </div>
                 </div>
@@ -441,11 +441,42 @@
             document.body.appendChild(modal);
         };
 
-        window.describeValidationFix = function(message) {
+        window.DEFAULT_LESSON_VIDEO_URL = 'https://www.youtube.com/watch?v=PLACEHOLDER_CAP_NHAT_SAU';
+
+        window.ensurePackageVideos = function(pkg, LI) {
+            if (!pkg) return pkg;
+            if (pkg.videos && pkg.videos.length) return pkg;
+            var videoUrl = String((document.getElementById('lesson-video-url') || {}).value || '').trim();
+            if (videoUrl && LI && LI.parseVideos) {
+                pkg.videos = LI.parseVideos(videoUrl);
+                return pkg;
+            }
+            pkg.videos = [{ title: 'Video bài giảng (cập nhật sau)', url: window.DEFAULT_LESSON_VIDEO_URL }];
+            return pkg;
+        };
+
+        window.getEssayRawLine = function(raw, index) {
+            var LI = window.LessonImport;
+            if (!LI || !raw) return '';
+            var section = LI.parseGeminiLessonSections(raw).essay || '';
+            var lines = section.split('\n').map(function(line) { return line.trim(); }).filter(Boolean);
+            return lines[index] || '';
+        };
+
+        window.describeValidationFix = function(message, context) {
             var text = String(message || '');
             var m;
+            context = context || {};
             m = text.match(/essay_exercises\[(\d+)\]\.answer rỗng/);
-            if (m) return 'TỰ LUẬN — dòng ' + (Number(m[1]) + 1) + ': bắt buộc 3 cột Đề | Đáp án (chỉ số) | Gợi ý. Sửa trong ô kết quả hoặc khối TỰ LUẬN.';
+            if (m) {
+                var idx = Number(m[1]);
+                var rawLine = context.essayRawLines && context.essayRawLines[idx];
+                var essay = context.essayItems && context.essayItems[idx];
+                var lineHint = rawLine
+                    ? (' Dòng Gemini: «' + rawLine.slice(0, 120) + (rawLine.length > 120 ? '…' : '') + '»')
+                    : (essay && essay.prompt ? (' Đề: «' + essay.prompt.slice(0, 80) + '…»') : '');
+                return 'TỰ LUẬN — câu ' + (idx + 1) + ': thiếu cột Đáp án (số) giữa Đề và Gợi ý. Đúng format: Đề | 42 | Gợi ý' + lineHint;
+            }
             m = text.match(/drag_exercises\[(\d+)\]/);
             if (m && /hoán vị|số phần tử/.test(text)) {
                 return 'SẮP XẾP — câu ' + (Number(m[1]) + 1) + ': cột 3 phải là thứ tự đúng, dùng đúng các mảnh ở cột 2 (không thêm/bớt).';
@@ -475,11 +506,7 @@
                     prompt_version: LI.PROMPT_VERSION
                 }
             });
-            var videoUrl = (document.getElementById('lesson-video-url') || {}).value || '';
-            videoUrl = String(videoUrl).trim();
-            if (videoUrl && LI.parseVideos) {
-                pkg.videos = LI.parseVideos(videoUrl);
-            }
+            window.ensurePackageVideos(pkg, LI);
             return pkg;
         };
 
@@ -488,6 +515,8 @@
             if (!LI) {
                 return { errors: ['Thiếu lesson-import.js — tải lại trang (Ctrl+F5).'], warnings: [], ready: false, pkg: null, fixes: [] };
             }
+            var rawEl = document.getElementById('gemini-output');
+            var raw = rawEl && rawEl.value ? rawEl.value.trim() : '';
             var pkg = window.buildLessonPackageFromForm();
             if (!pkg) {
                 return { errors: [], warnings: [], ready: false, pkg: null, fixes: [], empty: true };
@@ -495,12 +524,18 @@
             var subject = (document.getElementById('subject') || {}).value || '';
             var validation = LI.validateLessonImportPackage(pkg, { pageSubject: subject });
             var errors = validation.errors || [];
-            var warnings = validation.warnings || [];
-            var fixes = errors.concat(warnings).map(window.describeValidationFix);
+            var warnings = (validation.warnings || []).filter(function(item) {
+                return item !== 'Thiếu video.';
+            });
+            var essayRawLines = (pkg.essay_exercises || []).map(function(_, idx) {
+                return window.getEssayRawLine(raw, idx);
+            });
+            var fixContext = { essayRawLines: essayRawLines, essayItems: pkg.essay_exercises || [] };
+            var fixes = errors.map(function(item) { return window.describeValidationFix(item, fixContext); });
             return {
                 errors: errors,
                 warnings: warnings,
-                ready: errors.length === 0 && warnings.length === 0,
+                ready: errors.length === 0,
                 pkg: pkg,
                 fixes: fixes
             };
@@ -519,15 +554,16 @@
             if (state.ready) {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                label.textContent = 'Xuất / Copy JSON ✓';
-                btn.title = 'Đã đạt 100% — sẵn sàng import';
+                label.textContent = state.warnings.length
+                    ? ('Xuất JSON ✓ (' + state.warnings.length + ' cảnh báo)')
+                    : 'Xuất / Copy JSON ✓';
+                btn.title = 'Không còn lỗi — sẵn sàng import';
                 return;
             }
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed');
-            var blockers = state.errors.length + state.warnings.length;
-            label.textContent = 'Xuất JSON (' + blockers + ' lỗi/cảnh báo)';
-            btn.title = 'Sửa hết lỗi và cảnh báo trước khi xuất';
+            label.textContent = 'Xuất JSON (' + state.errors.length + ' lỗi)';
+            btn.title = 'Sửa hết lỗi trước khi xuất (cảnh báo không chặn)';
         };
 
         window.renderLessonValidationPanel = function(state) {
@@ -544,16 +580,6 @@
                 return state;
             }
             panel.classList.remove('hidden');
-            if (state.ready) {
-                statusEl.className = 'font-semibold text-emerald-700 mb-2';
-                statusEl.textContent = '✓ Đạt 100% — có thể xuất JSON và import vào Lộ trình';
-                errorsEl.classList.add('hidden');
-                warningsEl.classList.add('hidden');
-                fixesEl.classList.add('hidden');
-                return state;
-            }
-            statusEl.className = 'font-semibold text-rose-700 mb-2';
-            statusEl.textContent = 'Chưa đạt 100% — sửa hết lỗi và cảnh báo trước khi xuất JSON';
             function fillList(el, items, prefix) {
                 if (!el) return;
                 if (!items.length) {
@@ -566,6 +592,18 @@
                     return '<li><strong>' + prefix + '</strong> ' + window.escapeHtml(item) + '</li>';
                 }).join('');
             }
+            if (state.ready) {
+                statusEl.className = 'font-semibold text-emerald-700 mb-2';
+                statusEl.textContent = state.warnings.length
+                    ? ('✓ Không còn lỗi — có thể xuất JSON (còn ' + state.warnings.length + ' cảnh báo, không chặn import)')
+                    : '✓ Sẵn sàng xuất JSON và import vào Lộ trình';
+                fillList(errorsEl, [], 'Lỗi:');
+                fillList(fixesEl, [], 'Cách sửa:');
+                fillList(warningsEl, state.warnings, 'Cảnh báo:');
+                return state;
+            }
+            statusEl.className = 'font-semibold text-rose-700 mb-2';
+            statusEl.textContent = 'Chưa xuất được — sửa hết lỗi bên dưới (cảnh báo không chặn)';
             fillList(errorsEl, state.errors, 'Lỗi:');
             fillList(warningsEl, state.warnings, 'Cảnh báo:');
             var uniqueFixes = [];
@@ -573,6 +611,7 @@
                 if (fix && uniqueFixes.indexOf(fix) === -1) uniqueFixes.push(fix);
             });
             fillList(fixesEl, uniqueFixes, 'Cách sửa:');
+            if (!state.errors.length) fillList(fixesEl, [], 'Cách sửa:');
             return state;
         };
 
@@ -589,7 +628,7 @@
             modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4';
             modal.innerHTML = '<div class="bg-white rounded-3xl p-6 w-full max-w-lg">' +
                 '<div class="font-bold text-rose-700 text-lg mb-2">Chưa thể xuất JSON</div>' +
-                '<p class="text-sm text-slate-600 mb-3">Import yêu cầu <strong>0 lỗi và 0 cảnh báo</strong>. Sửa trong ô kết quả / link video, rồi kiểm tra lại.</p>' +
+                '<p class="text-sm text-slate-600 mb-3">Import yêu cầu <strong>0 lỗi</strong> (cảnh báo không chặn). Sửa trong ô kết quả rồi kiểm tra lại.</p>' +
                 '<ul class="text-sm text-slate-700 list-disc pl-5 space-y-1 max-h-64 overflow-auto">' +
                 hints.map(function(h) { return '<li>' + window.escapeHtml(h) + '</li>'; }).join('') +
                 '</ul>' +
