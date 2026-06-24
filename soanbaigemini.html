@@ -6,7 +6,7 @@
     <title>Soạn bài Gemini • Tạo bài học hoàn chỉnh (hình ảnh + nội dung)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-canvas-compat" defer></script>
+    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-mcq-lenient" defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
         
@@ -1178,12 +1178,28 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             const drag = [dragMatch, dragSort, dragLegacy].filter(Boolean).join('\n');
             const skills = sectionValues.skills;
             const skillsParsed = LI ? LI.parseSkills(skills) : [];
-            const questions = LI && sectionValues.questions
-                ? LI.formatQuestionsBulk(LI.parseQuestions(sectionValues.questions, skillsParsed))
-                : String(sectionValues.questions || '').split('\n')
+            let questions = '';
+            if (LI && sectionValues.questions) {
+                const qReport = LI.parseQuestionsReport
+                    ? LI.parseQuestionsReport(sectionValues.questions, skillsParsed)
+                    : { questions: LI.parseQuestions(sectionValues.questions, skillsParsed), skipped: [] };
+                questions = LI.formatQuestionsBulk(qReport.questions);
+                if (qReport.skipped && qReport.skipped.length) {
+                    const skippedLines = qReport.skipped.map(function(item) { return item.line; }).filter(Boolean).join('\n');
+                    if (skippedLines) {
+                        questions = [questions, skippedLines].filter(Boolean).join('\n');
+                    }
+                    showAppToast(
+                        'Đã bỏ qua ' + qReport.skipped.length + ' dòng trắc nghiệm lỗi format — vẫn giữ raw ở cuối khối TN để sửa.',
+                        'warn'
+                    );
+                }
+            } else {
+                questions = String(sectionValues.questions || '').split('\n')
                     .map(line => line.trim())
                     .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/.test(normalizeBulkHeading(line)))
                     .join('\n');
+            }
             const tasks = sectionValues.tasks;
 
             // Try to extract image prompts
@@ -2266,7 +2282,13 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 result = removeLessonSourceAttributions(result);
                 outputArea.value = result;
                 updateGenerationProgress(99, 'Đã kiểm định nội dung', 'Đang tách nội dung thành các phần của bài học...');
-                const imageJobs = parseAndPreview() || [];
+                let imageJobs = [];
+                try {
+                    imageJobs = parseAndPreview() || [];
+                } catch (previewError) {
+                    console.warn('[soanbaigemini] Parse preview lỗi — giữ nguyên nội dung Gemini:', previewError);
+                    showAppToast('Đã tạo bài nhưng parse preview gặp lỗi. Xem/sửa nội dung trong ô kết quả.', 'warn');
+                }
                 const imageToggle = document.getElementById('auto-generate-lesson-images');
                 const shouldGenerateImages = imageToggle ? imageToggle.checked : false;
                 if (shouldGenerateImages && imageJobs.length > 0) {

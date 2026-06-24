@@ -280,6 +280,14 @@
         }
     }
 
+    function flushQuestionBuffer(buffer, blocks, fallbackSkill) {
+        const trimmed = String(buffer || '').trim();
+        if (!trimmed) return;
+        if (canParseQuestionBlock(trimmed, fallbackSkill)) {
+            blocks.push(trimmed);
+        }
+    }
+
     function readQuestionBlocks(text, fallbackSkill) {
         const lines = decodePastedText(text).split('\n').map(line => line.trim()).filter(Boolean);
         const blocks = [];
@@ -287,8 +295,10 @@
         lines.forEach(line => {
             const normalized = normalizeMcqBulkLine(line);
             if (splitQuestionParts(normalized).length >= 6) {
-                if (buffer.trim()) parseQuestionLine(buffer, blocks.length, fallbackSkill);
-                blocks.push(normalized);
+                flushQuestionBuffer(buffer, blocks, fallbackSkill);
+                if (canParseQuestionBlock(normalized, fallbackSkill)) {
+                    blocks.push(normalized);
+                }
                 buffer = '';
                 return;
             }
@@ -298,13 +308,26 @@
                 buffer = '';
             }
         });
-        if (buffer.trim()) parseQuestionLine(buffer, blocks.length, fallbackSkill);
+        flushQuestionBuffer(buffer, blocks, fallbackSkill);
         return blocks;
     }
 
+    function parseQuestionsReport(text, skills = []) {
+        const fallbackSkill = (skills[0] && skills[0].id) || 'tong_hop';
+        const questions = [];
+        const skipped = [];
+        readQuestionBlocks(text, fallbackSkill).forEach((line) => {
+            try {
+                questions.push(parseQuestionLine(line, questions.length, fallbackSkill));
+            } catch (err) {
+                skipped.push({ line, message: err.message || 'Không parse được câu trắc nghiệm.' });
+            }
+        });
+        return { questions, skipped };
+    }
+
     function parseQuestions(text, skills = []) {
-        const fallbackSkill = skills[0]?.id || 'tong_hop';
-        return readQuestionBlocks(text, fallbackSkill).map((line, index) => parseQuestionLine(line, index, fallbackSkill));
+        return parseQuestionsReport(text, skills).questions;
     }
 
     function splitPoolTextByGt(value) {
@@ -1244,6 +1267,7 @@
         parseSkills,
         parseVideos,
         parseQuestions,
+        parseQuestionsReport,
         parseEssayExercises,
         parseFillExercises,
         parseDragExercises,
