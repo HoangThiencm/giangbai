@@ -38,6 +38,7 @@
 
     function effectiveUploadMaxBytes() {
         const appMax = (state.appMaxFileMb || 25) * 1024 * 1024;
+        if (state.driveReady) return appMax;
         const limits = [appMax, state.uploadMaxBytes, state.postMaxBytes].filter(n => Number.isFinite(n) && n > 0);
         return limits.length ? Math.min(...limits) : appMax;
     }
@@ -802,14 +803,62 @@
         };
     }
 
+    async function uploadFileViaBrowser(documentId, file, index) {
+        const mime = file.type || 'application/octet-stream';
+        const init = await api('upload_init', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                document_id: documentId,
+                filename: file.name,
+                size: file.size,
+                mime,
+                index,
+            }),
+        });
+        const put = await fetch(init.upload_url, {
+            method: 'PUT',
+            headers: { 'Content-Type': init.mime_type || mime },
+            body: file,
+        });
+        const driveFile = await put.json().catch(() => ({}));
+        if (!put.ok || !driveFile.id) {
+            throw new Error(driveFile.error?.message || 'Google Drive từ chối tải tệp từ trình duyệt.');
+        }
+        return api('upload_finalize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                document_id: documentId,
+                original_name: file.name,
+                stored_name: init.stored_name,
+                size_bytes: file.size,
+                mime_type: driveFile.mimeType || mime,
+                drive_file_id: driveFile.id,
+                view_url: driveFile.webViewLink || '',
+                download_url: driveFile.webContentLink || '',
+            }),
+        });
+    }
+
     async function saveDocument(payload) {
         const pending = state.pendingUploadFiles || [];
-        if (!pending.length) {
-            return api('save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+        const saveData = await api('save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!pending.length) return saveData;
+        if (state.driveReady) {
+            for (let index = 0; index < pending.length; index += 1) {
+                await uploadFileViaBrowser(Number(saveData.document?.id) || Number(payload.id) || 0, pending[index], index);
+            }
+            return {
+                ok: true,
+                document: saveData.document,
+                storage: 'drive',
+                message: `Đã lưu văn bản và ${pending.length} tệp lên Google Drive (tải trực tiếp từ trình duyệt).`,
+            };
         }
         const form = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
@@ -877,7 +926,10 @@
             if (selectedNote) {
                 if (oversized.length) {
                     const limitText = formatBytes(maxBytes);
-                    selectedNote.textContent = `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting. Vào cPanel → PHP → đặt upload_max_filesize ≥ 32M.`;
+                    const hint = state.driveReady
+                        ? `Tệp vượt giới hạn ${limitText}/tệp của ứng dụng.`
+                        : `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting. Vào cPanel → PHP → đặt upload_max_filesize ≥ 32M, hoặc bật Google Drive.`;
+                    selectedNote.textContent = hint;
                     toast(selectedNote.textContent, 'rose');
                     event.target.value = '';
                 } else {

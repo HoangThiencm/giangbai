@@ -697,14 +697,13 @@ function drive_upload_response(array $response, string $storedName, string $medi
     ];
 }
 
-function drive_upload_file_resumable(string $storedName, string $mediaMime, string $tmpPath, array $metadata): array
+function drive_begin_resumable_upload(string $storedName, string $mediaMime, int $fileSize, array $metadata): array
 {
     if (!function_exists('curl_init')) {
-        throw new RuntimeException('Hosting cần cURL để tải tệp lớn lên Google Drive.');
+        throw new RuntimeException('Hosting cần cURL để khởi tạo phiên tải lên Google Drive.');
     }
-    $fileSize = filesize($tmpPath);
-    if ($fileSize === false || $fileSize < 1) {
-        throw new RuntimeException('Không đọc được kích thước tệp tạm.');
+    if ($fileSize < 1) {
+        throw new RuntimeException('Kích thước tệp không hợp lệ.');
     }
     $timeouts = drive_curl_timeouts();
     $token = drive_access_token();
@@ -748,10 +747,25 @@ function drive_upload_file_resumable(string $storedName, string $mediaMime, stri
         }
     }
     if ($location === '') throw new RuntimeException('Google Drive không trả về URL tải lên.');
+    return [
+        'upload_url' => $location,
+        'mime_type' => $mediaMime,
+        'stored_name' => $storedName,
+    ];
+}
 
+function drive_upload_file_resumable(string $storedName, string $mediaMime, string $tmpPath, array $metadata): array
+{
+    $fileSize = filesize($tmpPath);
+    if ($fileSize === false || $fileSize < 1) {
+        throw new RuntimeException('Không đọc được kích thước tệp tạm.');
+    }
+    $session = drive_begin_resumable_upload($storedName, $mediaMime, $fileSize, $metadata);
+    $timeouts = drive_curl_timeouts();
+    $token = drive_access_token();
     $fp = fopen($tmpPath, 'rb');
     if ($fp === false) throw new RuntimeException('Không mở được tệp tạm để tải lên Drive.');
-    $ch = curl_init($location);
+    $ch = curl_init($session['upload_url']);
     curl_setopt_array($ch, [
         CURLOPT_CUSTOMREQUEST => 'PUT',
         CURLOPT_UPLOAD => true,
@@ -766,7 +780,7 @@ function drive_upload_file_resumable(string $storedName, string $mediaMime, stri
             'Content-Length: ' . $fileSize,
         ],
     ]);
-    drive_curl_apply_resolve($ch, $location);
+    drive_curl_apply_resolve($ch, $session['upload_url']);
     $body = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     if ($body === false) {

@@ -920,6 +920,80 @@ if ($action === 'save') {
     }
 }
 
+if ($action === 'upload_init') {
+    $input = json_body();
+    $id = (int)($input['document_id'] ?? 0);
+    $document = vbd_document($pdo, $id, (int)$user['id']);
+    if (!$document) respond(['error' => 'Hãy lưu văn bản trước khi tải tệp.'], 404);
+    $filename = trim((string)($input['filename'] ?? ''));
+    $size = (int)($input['size'] ?? 0);
+    $mime = trim((string)($input['mime'] ?? '')) ?: 'application/octet-stream';
+    $index = max(0, (int)($input['index'] ?? 0));
+    $maxBytes = (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024;
+    if ($filename === '') respond(['error' => 'Thiếu tên tệp.'], 422);
+    if ($size < 1 || $size > $maxBytes) {
+        respond(['error' => 'Mỗi tệp không được vượt quá ' . ($maxBytes / 1024 / 1024) . ' MB.'], 422);
+    }
+    try {
+        require_once __DIR__ . '/google_drive.php';
+        drive_assert_upload_ready();
+        $folderId = trim((string)($document['drive_folder_id'] ?? '')) ?: vbd_drive_folder($document);
+        if (empty($document['drive_folder_id'])) {
+            $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $id]);
+        }
+        $storedName = drive_safe_name(
+            ($document['document_number'] ?: 'VB-' . $id) . ' - ' . $document['title'] . ' - ' . ($index + 1) . ' - ' . $filename,
+            'van-ban'
+        );
+        $session = drive_begin_resumable_upload($storedName, $mime, $size, [
+            'name' => drive_safe_name($storedName),
+            'parents' => [$folderId],
+        ]);
+        respond([
+            'ok' => true,
+            'upload_url' => $session['upload_url'],
+            'stored_name' => $storedName,
+            'mime_type' => $session['mime_type'],
+            'upload_backend' => 'vanban-browser-drive-v4',
+        ]);
+    } catch (Throwable $e) {
+        respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-browser-drive-v4'], 502);
+    }
+}
+
+if ($action === 'upload_finalize') {
+    $input = json_body();
+    $id = (int)($input['document_id'] ?? 0);
+    $document = vbd_document($pdo, $id, (int)$user['id']);
+    if (!$document) respond(['error' => 'Không tìm thấy văn bản.'], 404);
+    $fileId = trim((string)($input['drive_file_id'] ?? ''));
+    $originalName = trim((string)($input['original_name'] ?? ''));
+    $storedName = trim((string)($input['stored_name'] ?? ''));
+    $size = (int)($input['size_bytes'] ?? 0);
+    $mime = trim((string)($input['mime_type'] ?? '')) ?: 'application/octet-stream';
+    if ($fileId === '' || $originalName === '' || $storedName === '') {
+        respond(['error' => 'Thiếu thông tin tệp sau khi tải lên Drive.'], 422);
+    }
+    $viewUrl = trim((string)($input['view_url'] ?? '')) ?: ('https://drive.google.com/file/d/' . $fileId . '/view');
+    $downloadUrl = trim((string)($input['download_url'] ?? '')) ?: ('https://drive.google.com/uc?export=download&id=' . $fileId);
+    if (defined('GOOGLE_DRIVE_SHARE_MODE') && GOOGLE_DRIVE_SHARE_MODE === 'anyone') {
+        require_once __DIR__ . '/google_drive.php';
+        drive_share_file_anyone($fileId);
+    }
+    $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+    $insert->execute([$id, $fileId, $originalName, $storedName, $mime, max(0, $size), $viewUrl, $downloadUrl]);
+    respond([
+        'ok' => true,
+        'file' => [
+            'file_id' => $fileId,
+            'stored_name' => $storedName,
+            'view_url' => $viewUrl,
+            'download_url' => $downloadUrl,
+        ],
+        'upload_backend' => 'vanban-browser-drive-v4',
+    ]);
+}
+
 if ($action === 'save_upload') {
     @ini_set('memory_limit', '256M');
     @set_time_limit(300);
@@ -958,7 +1032,8 @@ if ($action === 'drive_check') {
     $status = drive_setup_status(true);
     respond([
         'ok' => true,
-        'upload_backend' => 'vanban-local-fallback-v3',
+        'upload_backend' => 'vanban-browser-drive-v4',
+        'browser_drive_upload' => true,
         'local_storage_root' => vbd_local_storage_root(),
         'local_storage_writable' => is_writable(vbd_local_storage_root()),
         'upload_max_filesize' => (string)(ini_get('upload_max_filesize') ?: ''),
