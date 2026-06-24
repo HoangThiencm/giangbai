@@ -520,7 +520,7 @@ Bắt đầu tạo bài học.`;
         function copyPrompt() {
             const textarea = document.getElementById('generated-prompt');
             if (!textarea || !textarea.value.trim()) {
-                alert("Vui lòng nhấn 'Tạo Prompt cho Gemini Canvas' trước.");
+                showAppToast("Vui lòng nhấn 'Tạo Prompt cho Gemini Canvas' trước.", 'warn');
                 return;
             }
 
@@ -569,20 +569,120 @@ Bắt đầu tạo bài học.`;
             setTimeout(() => toast.remove(), 2000);
         }
 
-        function showManualCopy(text) {
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function isSandboxedHost() {
+            try {
+                if (window.self !== window.top) return true;
+                if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) return true;
+                const frame = window.frameElement;
+                if (frame && frame.hasAttribute('sandbox')) return true;
+            } catch (_) {
+                return true;
+            }
+            if (location.protocol === 'blob:' || location.protocol === 'about:') return true;
+            if (/gemini\.google/i.test(document.referrer || '')) return true;
+            return false;
+        }
+
+        function canAutoDownloadFiles() {
+            if (isSandboxedHost()) return false;
+            try {
+                if (document.permissionsPolicy && !document.permissionsPolicy.allowsFeature('modals')) return false;
+            } catch (_) { /* ignore */ }
+            return true;
+        }
+
+        function showAppToast(msg, tone = 'ok') {
+            const palette = {
+                ok: 'bg-emerald-600',
+                err: 'bg-rose-600',
+                warn: 'bg-amber-600',
+                info: 'bg-slate-800',
+            };
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 ${palette[tone] || palette.info} text-white px-4 py-2 rounded-2xl text-sm shadow-lg z-[9999] max-w-sm whitespace-pre-line`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), tone === 'err' ? 5000 : 2800);
+        }
+
+        function triggerBlobDownload(blob, filename) {
+            try {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.rel = 'noopener';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function fallbackCopyTextFromElement(ta, btnEl) {
+            ta.focus();
+            ta.select();
+            try {
+                const ok = document.execCommand('copy');
+                if (ok) {
+                    showAppToast('Đã copy', 'ok');
+                    if (btnEl) {
+                        const old = btnEl.textContent;
+                        btnEl.textContent = '✓ Đã copy';
+                        setTimeout(() => { btnEl.textContent = old; }, 1500);
+                    }
+                } else {
+                    showAppToast('Không copy tự động được — chọn thủ công trong ô text.', 'warn');
+                }
+            } catch (_) {
+                showAppToast('Không copy tự động được — chọn thủ công trong ô text.', 'warn');
+            }
+        }
+
+        function showTextExportModal({ title, filename, text, hints = [] }) {
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[9999]';
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4';
+            const hintHtml = hints.length
+                ? `<ul class="text-sm text-slate-600 mb-3 list-disc pl-5 space-y-1">${hints.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>`
+                : '<p class="text-sm mb-3 text-slate-600">Gemini Canvas chặn tải file tự động. Nhấn <strong>Copy JSON</strong> rồi lưu thành file <strong>.json</strong>, hoặc dán vào Lộ trình → Import.</p>';
             modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 max-w-[90%] w-full max-w-2xl mx-4">
-                    <div class="font-bold mb-2">Gemini chặn Clipboard API (lỗi permissions policy)</div>
-                    <p class="text-sm mb-3">Hãy copy thủ công nội dung dưới đây:</p>
-                    <textarea readonly class="w-full h-80 p-3 border rounded-2xl font-mono text-xs" style="white-space:pre;">${text}</textarea>
-                    <div class="mt-4 text-right">
-                        <button onclick="this.closest('.fixed').remove()" class="px-5 py-2 bg-slate-800 text-white rounded-2xl text-sm">Đóng</button>
+                <div class="bg-white rounded-3xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col">
+                    <div class="font-bold text-slate-900 mb-1">${escapeHtml(title)}</div>
+                    <p class="text-xs text-slate-500 mb-2">${escapeHtml(filename)}</p>
+                    ${hintHtml}
+                    <textarea id="sandbox-export-text" readonly class="w-full flex-1 min-h-[240px] p-3 border rounded-2xl font-mono text-xs bg-slate-50"></textarea>
+                    <div class="mt-4 flex flex-wrap justify-end gap-2">
+                        <button type="button" data-copy class="px-4 py-2 bg-indigo-600 text-white rounded-2xl text-sm font-semibold">Copy JSON</button>
+                        <button type="button" data-close class="px-4 py-2 bg-slate-800 text-white rounded-2xl text-sm">Đóng</button>
                     </div>
                 </div>
             `;
+            modal.querySelector('#sandbox-export-text').value = text;
+            modal.querySelector('[data-close]').onclick = () => modal.remove();
+            modal.querySelector('[data-copy]').onclick = (event) => {
+                fallbackCopyTextFromElement(modal.querySelector('#sandbox-export-text'), event.currentTarget);
+            };
+            modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
             document.body.appendChild(modal);
+        }
+
+        function showManualCopy(text) {
+            showTextExportModal({
+                title: 'Gemini chặn Clipboard API',
+                filename: 'copy-manual.txt',
+                text,
+                hints: ['Hãy copy thủ công nội dung bên dưới.'],
+            });
         }
 
         // Full lesson prompt for option B - user can create the lesson with images here
@@ -1018,7 +1118,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         function parseAndPreview() {
             const raw = document.getElementById('gemini-output').value.trim();
             if (!raw) {
-                alert("Vui lòng dán nội dung Gemini trả về trước.");
+                showAppToast('Vui lòng dán nội dung Gemini trả về trước.', 'warn');
                 return;
             }
 
@@ -1181,18 +1281,18 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
         function handleWordExportError(error) {
             console.error('Xuất Word thất bại:', error);
-            alert(`Không thể xuất Word: ${error?.message || 'Lỗi không xác định.'}`);
+            showAppToast(`Không thể xuất Word: ${error?.message || 'Lỗi không xác định.'}`, 'err');
         }
 
         function exportLessonImportJson() {
             const LI = window.LessonImport;
             if (!LI) {
-                alert('Thiếu lesson-import.js. Tải lại trang (Ctrl+F5).');
+                showAppToast('Thiếu lesson-import.js. Tải lại trang (Ctrl+F5).', 'err');
                 return;
             }
             const raw = document.getElementById('gemini-output').value.trim();
             if (!raw) {
-                alert('Chưa có nội dung Gemini để xuất JSON.');
+                showAppToast('Chưa có nội dung Gemini để xuất JSON.', 'warn');
                 return;
             }
             const subject = document.getElementById('subject').value;
@@ -1209,31 +1309,43 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 }
             });
             const validation = LI.validateLessonImportPackage(pkg, { pageSubject: subject });
-            const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${pkg.slug || 'lesson'}-import-v1.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            if (validation.errors.length) {
-                alert(`Đã tải JSON nhưng có lỗi:\n• ${validation.errors.join('\n• ')}`);
-            } else if (validation.warnings.length) {
-                alert(`Đã tải JSON.\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}`);
+            const jsonText = JSON.stringify(pkg, null, 2);
+            const filename = `${pkg.slug || 'lesson'}-import-v1.json`;
+            const hints = [
+                ...validation.errors.map(item => `Lỗi: ${item}`),
+                ...validation.warnings.map(item => `Cảnh báo: ${item}`),
+            ];
+            const blob = new Blob([jsonText], { type: 'application/json' });
+            const sandboxed = !canAutoDownloadFiles();
+            if (!sandboxed && triggerBlobDownload(blob, filename)) {
+                if (validation.errors.length) {
+                    showAppToast(`Đã tải JSON nhưng có ${validation.errors.length} lỗi.`, 'warn');
+                } else if (validation.warnings.length) {
+                    showAppToast(`Đã tải JSON (${validation.warnings.length} cảnh báo).`, 'warn');
+                } else {
+                    showAppToast(`Đã tải ${filename}`, 'ok');
+                }
+                return;
             }
+            showTextExportModal({
+                title: sandboxed ? 'Xuất JSON trong Gemini Canvas' : 'Không tải tự động được — copy JSON',
+                filename,
+                text: jsonText,
+                hints,
+            });
         }
 
         // Export to Word - Structured for easy copy back to admin editor
         async function exportToWord() {
             if (!window.docx) {
-                alert('Chưa tải được thư viện xuất Word. Hãy tải lại trang Canvas rồi thử lại.');
+                showAppToast('Chưa tải được thư viện xuất Word. Hãy tải lại trang Canvas rồi thử lại.', 'err');
                 return;
             }
             const { Document, Paragraph, TextRun, ImageRun, HeadingLevel, Header, Footer, AlignmentType } = docx;
             
             const raw = document.getElementById('gemini-output').value.trim();
             if (!raw) {
-                alert("Vui lòng dán kết quả từ Gemini trước khi xuất Word.");
+                showAppToast('Vui lòng dán kết quả từ Gemini trước khi xuất Word.', 'warn');
                 return;
             }
 
@@ -1286,7 +1398,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 URL.revokeObjectURL(completeUrl);
 
                 if (imageReport.missing.length) {
-                    alert(`Đã xuất Word đầy đủ nội dung. ${imageReport.embedded} ảnh đã được chèn; còn thiếu ảnh: ${imageReport.missing.join(', ')}.`);
+                    showAppToast(`Đã xuất Word. ${imageReport.embedded} ảnh đã chèn; thiếu: ${imageReport.missing.join(', ')}.`, 'warn');
                 }
                 return;
             }
@@ -1684,7 +1796,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                     setTimeout(() => btnEl.innerHTML = old, 1500);
                 }
             } catch(e) {
-                alert('Không copy được. Hãy copy thủ công từ ô text sau:\n\n' + text.substring(0,200));
+                showAppToast('Không copy được — chọn thủ công trong ô text.', 'warn');
             }
             document.body.removeChild(ta);
         }
