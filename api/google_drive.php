@@ -48,7 +48,17 @@ function drive_service_account_email(): string
 
 function drive_root_folder_id(): string
 {
-    return defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
+    $value = defined('GOOGLE_DRIVE_ROOT_FOLDER_ID') ? trim((string)GOOGLE_DRIVE_ROOT_FOLDER_ID) : '';
+    if ($value === '') return '';
+
+    // Accept either the raw folder ID or a copied Google Drive folder URL.
+    if (preg_match('~/(?:folders|drive/folders)/([A-Za-z0-9_-]{10,})~', $value, $match)) {
+        return $match[1];
+    }
+    if (preg_match('~[?&]id=([A-Za-z0-9_-]{10,})~', $value, $match)) {
+        return $match[1];
+    }
+    return $value;
 }
 
 function drive_service_account_storage_hint(): string
@@ -91,15 +101,29 @@ function drive_assert_upload_ready(): void
     }
     if (!drive_is_service_account()) return;
 
-    $inSharedDrive = drive_root_in_shared_drive();
-    if ($inSharedDrive === true) return;
-    if ($inSharedDrive === false) {
+    try {
+        $meta = drive_get_file_meta($root);
+    } catch (Throwable $e) {
+        throw new RuntimeException(
+            'Không truy cập được thư mục gốc Google Drive. Chi tiết: ' . $e->getMessage(),
+            0,
+            $e
+        );
+    }
+    if (!empty($meta['trashed'])) {
+        throw new RuntimeException('Thư mục gốc Google Drive đã nằm trong thùng rác.');
+    }
+    if (empty($meta['driveId'])) {
         throw new RuntimeException(drive_service_account_storage_hint());
     }
-    throw new RuntimeException(
-        'Không truy cập được thư mục gốc Google Drive. Kiểm tra GOOGLE_DRIVE_ROOT_FOLDER_ID '
-        . 'và quyền của Service Account trên Shared Drive (Quản lý nội dung trở lên).'
-    );
+    if (array_key_exists('canAddChildren', $meta['capabilities'] ?? [])
+        && empty($meta['capabilities']['canAddChildren'])) {
+        throw new RuntimeException(
+            'Service Account thấy thư mục gốc nhưng không có quyền tạo tệp. Thêm '
+            . (drive_service_account_email() ?: 'email Service Account')
+            . ' vào Shared Drive với quyền Quản lý nội dung trở lên.'
+        );
+    }
 }
 
 function drive_setup_status(bool $checkRemote = true): array
@@ -171,22 +195,36 @@ function drive_setup_status(bool $checkRemote = true): array
 function drive_http(string $method, string $url, array $headers = [], ?string $body = null): array
 {
     if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_CONNECTTIMEOUT => 15,
-            CURLOPT_TIMEOUT => 120,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_HEADER => true,
-        ]);
-        if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-        $raw = curl_exec($ch);
-        if ($raw === false) {
+        $raw = false;
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_CUSTOMREQUEST => $method,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => 15,
+                CURLOPT_TIMEOUT => 120,
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_HEADER => true,
+            ]);
+            // Some shared hosts have an unreliable IPv6 resolver. Retry via
+            // IPv4 after the first normal connection attempt.
+            if ($attempt > 1 && defined('CURL_IPRESOLVE_V4')) {
+                curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+            }
+            if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            $raw = curl_exec($ch);
+            if ($raw !== false) break;
+
+            $errno = curl_errno($ch);
             $message = curl_error($ch);
             curl_close($ch);
-            throw new RuntimeException('Không kết nối được Google Drive: ' . $message);
+            if (!in_array($errno, [6, 7, 28], true) || $attempt === 3) {
+                throw new RuntimeException(
+                    'Không kết nối được Google Drive (cURL ' . $errno . '): ' . $message
+                );
+            }
+            usleep(250000 * $attempt);
         }
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
