@@ -536,7 +536,9 @@ if ($action === 'list') {
     unset($document);
     $years = $pdo->query('SELECT name FROM office_school_years ORDER BY name DESC')->fetchAll(PDO::FETCH_COLUMN);
     require_once __DIR__ . '/google_drive.php';
-    $driveStatus = drive_setup_status();
+    // Only validate the local configuration while loading the dashboard.
+    // Do not make every page view depend on Google OAuth/DNS availability.
+    $driveStatus = drive_setup_status(false);
     respond([
         'ok' => true,
         'documents' => $documents,

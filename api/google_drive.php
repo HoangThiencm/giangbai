@@ -102,7 +102,7 @@ function drive_assert_upload_ready(): void
     );
 }
 
-function drive_setup_status(): array
+function drive_setup_status(bool $checkRemote = true): array
 {
     $configured = defined('GOOGLE_DRIVE_CREDENTIALS_JSON')
         && trim((string)GOOGLE_DRIVE_CREDENTIALS_JSON) !== ''
@@ -127,6 +127,13 @@ function drive_setup_status(): array
         drive_credentials();
         $status['drive_auth_type'] = drive_is_service_account() ? 'service_account' : 'oauth';
         $status['drive_service_account_email'] = drive_service_account_email();
+        // Listing documents must remain available even when Google/DNS has a
+        // temporary outage. A remote check is still performed by upload/delete
+        // operations, where connectivity is actually required.
+        if (!$checkRemote) {
+            $status['drive_ready'] = true;
+            return $status;
+        }
         try {
             $meta = drive_get_file_meta(drive_root_folder_id());
             $status['drive_root_folder_name'] = trim((string)($meta['name'] ?? ''));
