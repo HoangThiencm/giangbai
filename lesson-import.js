@@ -991,6 +991,195 @@
         return sig(a) === sig(b);
     }
 
+    const DEFAULT_LESSON_VIDEO_URL = 'https://www.youtube.com/watch?v=PLACEHOLDER_CAP_NHAT_SAU';
+
+    function quoteLine(text, maxLen = 160) {
+        const value = String(text || '').trim();
+        if (!value) return '«(không thấy dòng trong bài)»';
+        if (value.length <= maxLen) return `«${value}»`;
+        return `«${value.slice(0, maxLen)}…»`;
+    }
+
+    function getSectionRawLines(raw, sectionKey) {
+        if (!raw) return [];
+        const sections = parseGeminiLessonSections(raw);
+        const section = sections[sectionKey] || '';
+        return String(section).split('\n').map(line => line.trim()).filter(Boolean);
+    }
+
+    function findEssayRawLine(essayLines, essay, index) {
+        const lines = essayLines || [];
+        if (lines[index]) return lines[index];
+        if (!essay || !essay.prompt) return lines[index] || '';
+        const needle = String(essay.prompt).trim().slice(0, 48);
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes(needle)) return lines[i];
+            if (needle.includes(lines[i].slice(0, 48))) return lines[i];
+        }
+        return lines[index] || '';
+    }
+
+    function buildValidationContext(raw, pkg) {
+        return {
+            raw: raw || '',
+            pkg: pkg || null,
+            tool: 'soanbaigemini',
+            essayLines: getSectionRawLines(raw, 'essay'),
+            fillLines: getSectionRawLines(raw, 'fill'),
+            dragSortLines: getSectionRawLines(raw, 'dragSort'),
+            dragMatchLines: getSectionRawLines(raw, 'dragMatch'),
+            questionLines: getSectionRawLines(raw, 'questions'),
+            essayItems: (pkg && pkg.essay_exercises) || [],
+            fillItems: (pkg && pkg.fill_exercises) || [],
+            dragItems: (pkg && pkg.drag_exercises) || [],
+            questionItems: (pkg && pkg.questions) || []
+        };
+    }
+
+    function humanizeValidationError(message, context = {}) {
+        const text = String(message || '');
+        let m;
+        const pkg = context.pkg || {};
+
+        m = text.match(/essay_exercises\[(\d+)\]\.answer rỗng/);
+        if (m) {
+            const essayIdx = Number(m[1]);
+            const essayNo = essayIdx + 1;
+            const essay = context.essayItems && context.essayItems[essayIdx];
+            const rawLine = findEssayRawLine(context.essayLines, essay, essayIdx);
+            return `【BÀI TẬP TỰ LUẬN — Câu ${essayNo}】Thiếu cột Đáp án (số) ở giữa.\n`
+                + `📍 Tìm heading BÀI TẬP TỰ LUẬN NGẮN, sửa dòng thứ ${essayNo}:\n`
+                + `   Hiện tại: ${quoteLine(rawLine || (essay && essay.prompt))}\n`
+                + `✏️ Đúng 3 cột: Đề bài | Đáp án (chỉ số, vd 42) | Gợi ý\n`
+                + `   Ví dụ: ${quoteLine('Tính 12 + 15 | 27 | Cộng hàng đơn vị trước')}`;
+        }
+
+        m = text.match(/fill_exercises\[(\d+)\]\.pool rỗng/);
+        if (m) {
+            const fillIdx = Number(m[1]);
+            return `【KÉO THẢ VÀO Ô TRỐNG — Câu ${fillIdx + 1}】Thiếu cột mảnh kéo (cột 2).\n`
+                + `📍 Dòng hiện tại: ${quoteLine(context.fillLines && context.fillLines[fillIdx])}\n`
+                + `✏️ Đủ 4 cột: Đề có ___ | mảnh1 » mảnh2 » nhiễu | đáp án1 » đáp án2 | gợi ý`;
+        }
+
+        m = text.match(/drag_exercises\[(\d+)\]/);
+        if (m) {
+            const dragIdx = Number(m[1]);
+            const drag = context.dragItems && context.dragItems[dragIdx];
+            const dragName = drag && drag.mode === 'sort' ? 'SẮP XẾP THỨ TỰ' : 'NỐI Ô';
+            let rawDragLine = '';
+            if (drag && drag.mode === 'sort' && context.dragSortLines) {
+                let sortCount = 0;
+                (context.dragItems || []).forEach((item, i) => {
+                    if (i < dragIdx && item.mode === 'sort') sortCount++;
+                });
+                rawDragLine = context.dragSortLines[sortCount] || '';
+            }
+            if (/số phần tử đáp án/.test(text)) {
+                return `【${dragName} — Câu ${dragIdx + 1}】Số mảnh ở cột 3 không khớp cột 2.\n`
+                    + `📍 Dòng hiện tại: ${quoteLine(rawDragLine || (drag && drag.prompt))}\n`
+                    + `✏️ Cột 3 phải có đúng số mảnh như cột 2.`;
+            }
+            if (/mode phải là match hoặc sort/.test(text)) {
+                return `【NỐI Ô / SẮP XẾP — Câu ${dragIdx + 1}】Dòng chưa đúng dạng bài tập kéo thả.\n`
+                    + `📍 ${quoteLine(rawDragLine || (drag && drag.prompt))}`;
+            }
+            if (/pairs/.test(text)) {
+                return `【NỐI Ô — Câu ${dragIdx + 1}】Chỉ số nối (vd 0-0,1-1) vượt quá số ô Trái/Phải.`;
+            }
+        }
+
+        m = text.match(/questions\[(\d+)\]/);
+        if (m) {
+            const qIdx = Number(m[1]);
+            const qNo = qIdx + 1;
+            const qLine = context.questionLines && context.questionLines[qIdx];
+            if (/answer phải từ 0 đến 3/.test(text)) {
+                return `【TRẮC NGHIỆM — Câu ${qNo}】Đáp án cuối phải là A, B, C hoặc D.\n`
+                    + `📍 Dòng hiện tại: ${quoteLine(qLine)}`;
+            }
+            if (/phải có đúng 4 lựa chọn/.test(text)) {
+                return `【TRẮC NGHIỆM — Câu ${qNo}】Thiếu phương án A/B/C/D.\n`
+                    + `📍 Dòng hiện tại: ${quoteLine(qLine)}\n`
+                    + `✏️ Đủ 7 cột: skill_id | Câu hỏi | A | B | C | D | B`;
+            }
+            if (/skill/.test(text)) {
+                return `【TRẮC NGHIỆM — Câu ${qNo}】skill_id không có trong phần KỸ NĂNG.\n`
+                    + `📍 Dòng hiện tại: ${quoteLine(qLine)}`;
+            }
+        }
+
+        if (text === 'Thiếu title.') {
+            return context.tool === 'admin'
+                ? '【THÔNG TIN BÀI】Chưa có tên bài — điền ô "Tên bài học" ở mục 1.'
+                : '【THÔNG TIN BÀI】Chưa có tên bài — điền ô "Tên bài học" ở mục 1.';
+        }
+        if (text === 'Thiếu slug.') {
+            return context.tool === 'admin'
+                ? '【THÔNG TIN BÀI】Chưa tạo được slug — kiểm tra tên bài và chương ở mục 1.'
+                : '【THÔNG TIN BÀI】Chưa tạo được slug — kiểm tra tên bài và chương.';
+        }
+        if (/Môn ".+" không hợp lệ/.test(text)) return '【LỚP/MÔN】Chọn đúng Toán 4–9 ở mục 1.';
+        if (/schema_version/.test(text)) return '【JSON】Sai phiên bản file import — tải lại trang (Ctrl+F5).';
+
+        const hint = context.tool === 'admin'
+            ? '✏️ Sửa trong ô import Gemini hoặc tab tương ứng rồi bấm Kiểm tra import.'
+            : '✏️ Sửa trong ô kết quả Gemini rồi bấm Kiểm tra import.';
+        return `【LỖI】${text}\n${hint}`;
+    }
+
+    function humanizeValidationWarning(message, context = {}) {
+        const text = String(message || '');
+        const m = text.match(/drag_exercises\[(\d+)\]/);
+        if (m && /hoán vị/.test(text)) {
+            const dragIdx = Number(m[1]);
+            const drag = context.dragItems && context.dragItems[dragIdx];
+            return `【SẮP XẾP — Câu ${dragIdx + 1}】Thứ tự đúng có thể chưa khớp các mảnh.\n`
+                + `📍 Đề: ${quoteLine(drag && drag.prompt, 100)}`;
+        }
+        if (/skill/.test(text) && /80%/.test(text)) return '【TRẮC NGHIỆM】Nhiều câu dùng chung một skill_id — kiểm tra cột đầu mỗi dòng.';
+        if (/Marker/.test(text)) return `【HÌNH ẢNH】${text.replace('Marker ', 'Ảnh ')} — bổ sung trong DANH SÁCH HÌNH ẢNH.`;
+        if (/image_manifest rỗng/.test(text)) return '【HÌNH ẢNH】Có HINH_xx trong bài nhưng chưa khai báo DANH SÁCH HÌNH ẢNH.';
+        if (/trắc nghiệm ít hơn/.test(text)) return '【TRẮC NGHIỆM】Ít hơn 5 câu — có thể vẫn import.';
+        if (/Không có ảnh/.test(text)) return '【HÌNH ẢNH】Bài không có HINH_xx — không bắt buộc nếu không cần minh họa.';
+        if (/fill_exercises/.test(text)) return '【KÉO THẢ】Đáp án có thể không nằm trong danh sách mảnh — kiểm tra cột 2 và 3.';
+        if (/subject/.test(text) && /khác trang/.test(text)) return '【LỚP】Môn trong bài khác mục Lớp đã chọn.';
+        if (/Slug/.test(text)) return `【SLUG】${text} — đổi tên bài nếu cần.`;
+        return `【CẢNH BÁO】${text}`;
+    }
+
+    function filterValidationWarnings(warnings = []) {
+        return (warnings || []).filter(item => item !== 'Thiếu video.');
+    }
+
+    function ensurePackageVideos(pkg, options = {}) {
+        if (!pkg) return pkg;
+        if (pkg.videos && pkg.videos.length) return pkg;
+        const videoUrl = String(options.videoUrl || '').trim();
+        if (videoUrl) {
+            pkg.videos = parseVideos(videoUrl);
+            return pkg;
+        }
+        pkg.videos = [{ title: 'Video bài giảng (cập nhật sau)', url: DEFAULT_LESSON_VIDEO_URL }];
+        return pkg;
+    }
+
+    function enrichLessonValidation(validation, raw, pkg, options = {}) {
+        const context = buildValidationContext(raw, pkg);
+        context.tool = options.tool || context.tool;
+        const errors = validation?.errors || [];
+        const warnings = filterValidationWarnings(validation?.warnings || []);
+        return {
+            errors,
+            errorsVi: errors.map(item => humanizeValidationError(item, context)),
+            warnings,
+            warningsVi: warnings.map(item => humanizeValidationWarning(item, context)),
+            ready: errors.length === 0,
+            pkg: pkg || null,
+            context
+        };
+    }
+
     function validateLessonImportPackage(pkg, options = {}) {
         const errors = [];
         const warnings = [];
@@ -1255,6 +1444,16 @@
         VALID_SUBJECTS,
         SUBJECT_CODES,
         AI_MARKER,
+        DEFAULT_LESSON_VIDEO_URL,
+        quoteLine,
+        getSectionRawLines,
+        findEssayRawLine,
+        buildValidationContext,
+        humanizeValidationError,
+        humanizeValidationWarning,
+        filterValidationWarnings,
+        ensurePackageVideos,
+        enrichLessonValidation,
         slugify,
         parseLines,
         splitQuestionParts,

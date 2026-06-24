@@ -6,7 +6,7 @@
     <title>Soạn bài Gemini • Tạo bài học hoàn chỉnh (hình ảnh + nội dung)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-mcq-lenient" defer></script>
+    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-humanize-v1" defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
         
@@ -440,164 +440,44 @@
             document.body.appendChild(modal);
         };
 
-        window.DEFAULT_LESSON_VIDEO_URL = 'https://www.youtube.com/watch?v=PLACEHOLDER_CAP_NHAT_SAU';
+        window.DEFAULT_LESSON_VIDEO_URL = (window.LessonImport && window.LessonImport.DEFAULT_LESSON_VIDEO_URL)
+            || 'https://www.youtube.com/watch?v=PLACEHOLDER_CAP_NHAT_SAU';
 
         window.ensurePackageVideos = function(pkg, LI) {
-            if (!pkg) return pkg;
-            if (pkg.videos && pkg.videos.length) return pkg;
+            LI = LI || window.LessonImport;
+            if (!LI || !LI.ensurePackageVideos) return pkg;
             var videoUrl = String((document.getElementById('lesson-video-url') || {}).value || '').trim();
-            if (videoUrl && LI && LI.parseVideos) {
-                pkg.videos = LI.parseVideos(videoUrl);
-                return pkg;
-            }
-            pkg.videos = [{ title: 'Video bài giảng (cập nhật sau)', url: window.DEFAULT_LESSON_VIDEO_URL }];
-            return pkg;
+            return LI.ensurePackageVideos(pkg, { videoUrl: videoUrl });
         };
 
         window.getSectionRawLines = function(raw, sectionKey) {
             var LI = window.LessonImport;
-            if (!LI || !raw) return [];
-            var sections = LI.parseGeminiLessonSections(raw);
-            var section = sections[sectionKey] || '';
-            return String(section).split('\n').map(function(line) { return line.trim(); }).filter(Boolean);
+            return LI && LI.getSectionRawLines ? LI.getSectionRawLines(raw, sectionKey) : [];
         };
-
         window.quoteLine = function(text, maxLen) {
-            maxLen = maxLen || 160;
-            var value = String(text || '').trim();
-            if (!value) return '«(không thấy dòng trong bài)»';
-            if (value.length <= maxLen) return '«' + value + '»';
-            return '«' + value.slice(0, maxLen) + '…»';
+            var LI = window.LessonImport;
+            return LI && LI.quoteLine ? LI.quoteLine(text, maxLen) : String(text || '');
         };
-
         window.findEssayRawLine = function(essayLines, essay, index) {
-            essayLines = essayLines || [];
-            if (essayLines[index]) return essayLines[index];
-            if (!essay || !essay.prompt) return essayLines[index] || '';
-            var needle = String(essay.prompt).trim().slice(0, 48);
-            for (var i = 0; i < essayLines.length; i++) {
-                if (essayLines[i].indexOf(needle) >= 0) return essayLines[i];
-                if (needle.indexOf(essayLines[i].slice(0, 48)) >= 0) return essayLines[i];
-            }
-            return essayLines[index] || '';
+            var LI = window.LessonImport;
+            return LI && LI.findEssayRawLine ? LI.findEssayRawLine(essayLines, essay, index) : '';
         };
-
         window.buildValidationContext = function(raw, pkg) {
-            return {
-                raw: raw,
-                pkg: pkg,
-                essayLines: window.getSectionRawLines(raw, 'essay'),
-                fillLines: window.getSectionRawLines(raw, 'fill'),
-                dragSortLines: window.getSectionRawLines(raw, 'dragSort'),
-                dragMatchLines: window.getSectionRawLines(raw, 'dragMatch'),
-                questionLines: window.getSectionRawLines(raw, 'questions'),
-                essayItems: (pkg && pkg.essay_exercises) || [],
-                fillItems: (pkg && pkg.fill_exercises) || [],
-                dragItems: (pkg && pkg.drag_exercises) || [],
-                questionItems: (pkg && pkg.questions) || []
-            };
+            var LI = window.LessonImport;
+            if (!LI || !LI.buildValidationContext) return { raw: raw, pkg: pkg, tool: 'soanbaigemini' };
+            var ctx = LI.buildValidationContext(raw, pkg);
+            ctx.tool = 'soanbaigemini';
+            return ctx;
         };
-
         window.humanizeValidationError = function(message, context) {
-            var text = String(message || '');
-            var m;
+            var LI = window.LessonImport;
             context = context || {};
-            var pkg = context.pkg || {};
-
-            m = text.match(/essay_exercises\[(\d+)\]\.answer rỗng/);
-            if (m) {
-                var essayIdx = Number(m[1]);
-                var essayNo = essayIdx + 1;
-                var essay = context.essayItems && context.essayItems[essayIdx];
-                var rawLine = window.findEssayRawLine(context.essayLines, essay, essayIdx);
-                return '【BÀI TẬP TỰ LUẬN — Câu ' + essayNo + '】Thiếu cột Đáp án (số) ở giữa.\n'
-                    + '📍 Tìm heading BÀI TẬP TỰ LUẬN NGẮN, sửa dòng thứ ' + essayNo + ':\n'
-                    + '   Hiện tại: ' + window.quoteLine(rawLine || (essay && essay.prompt)) + '\n'
-                    + '✏️ Đúng 3 cột: Đề bài | Đáp án (chỉ số, vd 42) | Gợi ý\n'
-                    + '   Ví dụ: ' + window.quoteLine('Tính 12 + 15 | 27 | Cộng hàng đơn vị trước');
-            }
-
-            m = text.match(/fill_exercises\[(\d+)\]\.pool rỗng/);
-            if (m) {
-                var fillIdx = Number(m[1]);
-                return '【KÉO THẢ VÀO Ô TRỐNG — Câu ' + (fillIdx + 1) + '】Thiếu cột mảnh kéo (cột 2).\n'
-                    + '📍 Dòng hiện tại: ' + window.quoteLine(context.fillLines && context.fillLines[fillIdx]) + '\n'
-                    + '✏️ Đủ 4 cột: Đề có ___ | mảnh1 » mảnh2 » nhiễu | đáp án1 » đáp án2 | gợi ý';
-            }
-
-            m = text.match(/drag_exercises\[(\d+)\]/);
-            if (m) {
-                var dragIdx = Number(m[1]);
-                var drag = context.dragItems && context.dragItems[dragIdx];
-                var dragName = drag && drag.mode === 'sort' ? 'SẮP XẾP THỨ TỰ' : 'NỐI Ô';
-                var rawDragLine = '';
-                if (drag && drag.mode === 'sort' && context.dragSortLines) {
-                    var sortCount = 0;
-                    (context.dragItems || []).forEach(function(item, i) {
-                        if (i < dragIdx && item.mode === 'sort') sortCount++;
-                    });
-                    rawDragLine = context.dragSortLines[sortCount] || '';
-                }
-                if (/số phần tử đáp án/.test(text)) {
-                    return '【' + dragName + ' — Câu ' + (dragIdx + 1) + '】Số mảnh ở cột 3 không khớp cột 2.\n'
-                        + '📍 Dòng hiện tại: ' + window.quoteLine(rawDragLine || (drag && drag.prompt)) + '\n'
-                        + '✏️ Cột 3 phải có đúng số mảnh như cột 2.';
-                }
-                if (/mode phải là match hoặc sort/.test(text)) {
-                    return '【NỐI Ô / SẮP XẾP — Câu ' + (dragIdx + 1) + '】Dòng chưa đúng dạng bài tập kéo thả.\n'
-                        + '📍 ' + window.quoteLine(rawDragLine || (drag && drag.prompt));
-                }
-                if (/pairs/.test(text)) {
-                    return '【NỐI Ô — Câu ' + (dragIdx + 1) + '】Chỉ số nối (vd 0-0,1-1) vượt quá số ô Trái/Phải.';
-                }
-            }
-
-            m = text.match(/questions\[(\d+)\]/);
-            if (m) {
-                var qIdx = Number(m[1]);
-                var qNo = qIdx + 1;
-                var qLine = context.questionLines && context.questionLines[qIdx];
-                if (/answer phải từ 0 đến 3/.test(text)) {
-                    return '【TRẮC NGHIỆM — Câu ' + qNo + '】Đáp án cuối phải là A, B, C hoặc D.\n'
-                        + '📍 Dòng hiện tại: ' + window.quoteLine(qLine);
-                }
-                if (/phải có đúng 4 lựa chọn/.test(text)) {
-                    return '【TRẮC NGHIỆM — Câu ' + qNo + '】Thiếu phương án A/B/C/D.\n'
-                        + '📍 Dòng hiện tại: ' + window.quoteLine(qLine) + '\n'
-                        + '✏️ Đủ 7 cột: skill_id | Câu hỏi | A | B | C | D | B';
-                }
-                if (/skill/.test(text)) {
-                    return '【TRẮC NGHIỆM — Câu ' + qNo + '】skill_id không có trong phần KỸ NĂNG.\n'
-                        + '📍 Dòng hiện tại: ' + window.quoteLine(qLine);
-                }
-            }
-
-            if (text === 'Thiếu title.') return '【THÔNG TIN BÀI】Chưa có tên bài — điền ô "Tên bài học" ở mục 1.';
-            if (text === 'Thiếu slug.') return '【THÔNG TIN BÀI】Chưa tạo được slug — kiểm tra tên bài và chương.';
-            if (/Môn ".+" không hợp lệ/.test(text)) return '【LỚP/MÔN】Chọn đúng Toán 4–9 ở mục 1.';
-            if (/schema_version/.test(text)) return '【JSON】Sai phiên bản file import — tải lại trang (Ctrl+F5).';
-
-            return '【LỖI】' + text + '\n✏️ Sửa trong ô kết quả Gemini rồi bấm Kiểm tra import.';
+            context.tool = 'soanbaigemini';
+            return LI && LI.humanizeValidationError ? LI.humanizeValidationError(message, context) : String(message || '');
         };
-
         window.humanizeValidationWarning = function(message, context) {
-            var text = String(message || '');
-            var m = text.match(/drag_exercises\[(\d+)\]/);
-            if (m && /hoán vị/.test(text)) {
-                var dragIdx = Number(m[1]);
-                var drag = context.dragItems && context.dragItems[dragIdx];
-                return '【SẮP XẾP — Câu ' + (dragIdx + 1) + '】Thứ tự đúng có thể chưa khớp các mảnh.\n'
-                    + '📍 Đề: ' + window.quoteLine(drag && drag.prompt, 100);
-            }
-            if (/skill/.test(text) && /80%/.test(text)) return '【TRẮC NGHIỆM】Nhiều câu dùng chung một skill_id — kiểm tra cột đầu mỗi dòng.';
-            if (/Marker/.test(text)) return '【HÌNH ẢNH】' + text.replace('Marker ', 'Ảnh ') + ' — bổ sung trong DANH SÁCH HÌNH ẢNH.';
-            if (/image_manifest rỗng/.test(text)) return '【HÌNH ẢNH】Có HINH_xx trong bài nhưng chưa khai báo DANH SÁCH HÌNH ẢNH.';
-            if (/trắc nghiệm ít hơn/.test(text)) return '【TRẮC NGHIỆM】Ít hơn 5 câu — có thể vẫn import.';
-            if (/Không có ảnh/.test(text)) return '【HÌNH ẢNH】Bài không có HINH_xx — không bắt buộc nếu không cần minh họa.';
-            if (/fill_exercises/.test(text)) return '【KÉO THẢ】Đáp án có thể không nằm trong danh sách mảnh — kiểm tra cột 2 và 3.';
-            if (/subject/.test(text) && /khác trang/.test(text)) return '【LỚP】Môn trong bài khác mục Lớp đã chọn.';
-            if (/Slug/.test(text)) return '【SLUG】' + text + ' — đổi tên bài nếu cần.';
-            return '【CẢNH BÁO】' + text;
+            var LI = window.LessonImport;
+            return LI && LI.humanizeValidationWarning ? LI.humanizeValidationWarning(message, context || {}) : String(message || '');
         };
 
         window.buildLessonPackageFromForm = function() {
@@ -636,20 +516,17 @@
             }
             var subject = (document.getElementById('subject') || {}).value || '';
             var validation = LI.validateLessonImportPackage(pkg, { pageSubject: subject });
-            var errors = validation.errors || [];
-            var warnings = (validation.warnings || []).filter(function(item) {
-                return item !== 'Thiếu video.';
-            });
-            var context = window.buildValidationContext(raw, pkg);
-            var errorsVi = errors.map(function(item) { return window.humanizeValidationError(item, context); });
-            var warningsVi = warnings.map(function(item) { return window.humanizeValidationWarning(item, context); });
+            var enriched = LI.enrichLessonValidation
+                ? LI.enrichLessonValidation(validation, raw, pkg, { tool: 'soanbaigemini' })
+                : { errors: validation.errors || [], warnings: validation.warnings || [], ready: !(validation.errors || []).length, pkg: pkg };
             return {
-                errors: errors,
-                errorsVi: errorsVi,
-                warnings: warnings,
-                warningsVi: warningsVi,
-                ready: errors.length === 0,
-                pkg: pkg
+                errors: enriched.errors,
+                errorsVi: enriched.errorsVi || enriched.errors,
+                warnings: enriched.warnings,
+                warningsVi: enriched.warningsVi || enriched.warnings,
+                ready: enriched.ready,
+                pkg: pkg,
+                empty: false
             };
         };
 

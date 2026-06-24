@@ -1424,13 +1424,16 @@
         return { filled, report };
     }
 
-    function importGeminiLessonRaw(raw) {
-        if (!requireLessonImport()) return;
+    function getImportValidationOptions() {
+        return {
+            pageSubject: PAGE_SUBJECT || '',
+            existingSlugs: lessonsForScope().map(l => l.slug).filter(Boolean)
+        };
+    }
+
+    function buildGeminiImportPackage(raw) {
         const text = String(raw || '').trim();
-        if (!text) {
-            alert('Dán nội dung Gemini trả về trước.');
-            return;
-        }
+        if (!text) return null;
         const pkg = LI.buildLessonImportPackage({
             rawGeminiText: text,
             metadata: {
@@ -1441,20 +1444,103 @@
                 tool: 'gemini-text-import'
             }
         });
-        const validation = LI.validateLessonImportPackage(pkg, {
-            pageSubject: PAGE_SUBJECT || '',
-            existingSlugs: lessonsForScope().map(l => l.slug).filter(Boolean)
-        });
-        const { filled } = applyLessonPackageToForm(pkg, validation);
+        if (!pkg) return null;
+        LI.ensurePackageVideos(pkg, { videoUrl: el('lessonVideos')?.value || '' });
+        return pkg;
+    }
+
+    function validateImportPackage(pkg, raw) {
+        const validation = LI.validateLessonImportPackage(pkg, getImportValidationOptions());
+        return LI.enrichLessonValidation(validation, raw, pkg, { tool: 'admin' });
+    }
+
+    function escapeImportHtml(text) {
+        const node = document.createElement('div');
+        node.textContent = String(text || '');
+        return node.innerHTML;
+    }
+
+    function fillImportValidationBlocks(target, items, borderClass) {
+        if (!target) return;
+        if (!items.length) {
+            target.classList.add('hidden');
+            target.innerHTML = '';
+            return;
+        }
+        target.classList.remove('hidden');
+        target.innerHTML = items.map(item =>
+            `<div class="${borderClass} rounded-xl border border-current/20 bg-white/90 p-3 whitespace-pre-line text-[11px] leading-relaxed">${escapeImportHtml(item).replace(/\n/g, '<br>')}</div>`
+        ).join('');
+    }
+
+    function renderImportValidationPanel(state) {
+        const panel = el('gemini-import-validation-panel');
+        const statusEl = el('gemini-import-validation-status');
+        const errorsEl = el('gemini-import-validation-errors');
+        const warningsEl = el('gemini-import-validation-warnings');
+        if (!panel || !statusEl) return state;
+        if (!state || state.empty) {
+            panel.classList.add('hidden');
+            return state;
+        }
+        panel.classList.remove('hidden');
+        if (state.ready) {
+            statusEl.className = 'font-semibold text-emerald-700';
+            statusEl.textContent = state.warnings.length
+                ? `✓ Không còn lỗi — có thể lưu bài (còn ${state.warnings.length} cảnh báo)`
+                : '✓ Sẵn sàng lưu bài — khớp chuẩn soanbaigemini';
+            fillImportValidationBlocks(errorsEl, [], '');
+            fillImportValidationBlocks(warningsEl, state.warningsVi || state.warnings, 'text-amber-900 border-amber-200');
+            return state;
+        }
+        statusEl.className = 'font-semibold text-rose-700';
+        statusEl.textContent = `Chưa đạt — ${state.errors.length} lỗi cần sửa trước khi lưu`;
+        fillImportValidationBlocks(errorsEl, state.errorsVi || state.errors, 'text-rose-900 border-rose-200');
+        fillImportValidationBlocks(warningsEl, state.warningsVi || state.warnings, 'text-amber-900 border-amber-200');
+        return state;
+    }
+
+    function refreshGeminiImportValidation() {
+        const raw = (el('geminiImportRaw')?.value || '').trim();
+        if (!raw) {
+            renderImportValidationPanel({ empty: true });
+            return null;
+        }
+        const pkg = buildGeminiImportPackage(raw);
+        if (!pkg) {
+            renderImportValidationPanel({ empty: true });
+            return null;
+        }
+        return renderImportValidationPanel(validateImportPackage(pkg, raw));
+    }
+
+    function importGeminiLessonRaw(raw) {
+        if (!requireLessonImport()) return;
+        const text = String(raw || '').trim();
+        if (!text) {
+            alert('Dán nội dung Gemini trả về trước.');
+            return;
+        }
+        const pkg = buildGeminiImportPackage(text);
+        const state = validateImportPackage(pkg, text);
+        renderImportValidationPanel(state);
+        const { filled } = applyLessonPackageToForm(pkg, { errors: state.errors, warnings: state.warnings });
         if (!filled.length) {
             alert('Không nhận diện được section. Hãy đảm bảo Gemini trả về đúng heading: LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG...');
             return;
         }
         if (!el('lessonSlug').value.trim()) suggestSlug();
-        const warnText = validation.warnings.length ? `\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}` : '';
-        const errText = validation.errors.length ? `\n\nLỗi (vẫn điền form, kiểm tra trước khi lưu):\n• ${validation.errors.join('\n• ')}` : '';
-        alert(`Đã điền: ${filled.join(', ')}.${warnText}${errText}\n\nKiểm tra preview → dán ảnh thật thay HINH_xx → bấm Lưu bài học.`);
+        const parts = [`Đã điền: ${filled.join(', ')}.`];
+        if (state.errorsVi.length) {
+            parts.push(`Lỗi (vẫn điền form — sửa trước khi lưu):\n• ${state.errorsVi.join('\n\n• ')}`);
+        }
+        if (state.warningsVi.length) {
+            parts.push(`Cảnh báo:\n• ${state.warningsVi.join('\n\n• ')}`);
+        }
+        parts.push('Kiểm tra preview → dán ảnh thật thay HINH_xx → bấm Lưu bài học.');
+        alert(parts.join('\n\n'));
         el('geminiImportRaw').value = '';
+        renderImportValidationPanel({ empty: true });
     }
 
     function importLessonJsonFile(file) {
@@ -1472,16 +1558,15 @@
                 defaultSubject: isPageScopedEditor() ? PAGE_SUBJECT : selectedSubject,
                 forceUnpublished: true
             });
-            const validation = LI.validateLessonImportPackage(pkg, {
-                pageSubject: PAGE_SUBJECT || '',
-                existingSlugs: lessonsForScope().map(l => l.slug).filter(Boolean)
-            });
-            if (validation.errors.length) {
-                alert(`Không import được:\n• ${validation.errors.join('\n• ')}`);
+            LI.ensurePackageVideos(pkg, { videoUrl: el('lessonVideos')?.value || '' });
+            const state = validateImportPackage(pkg, '');
+            renderImportValidationPanel(state);
+            if (state.errors.length) {
+                alert(`Không import được:\n• ${state.errorsVi.join('\n\n• ')}`);
                 return;
             }
-            const { filled } = applyLessonPackageToForm(pkg, validation);
-            const warnText = validation.warnings.length ? `\n\nCảnh báo:\n• ${validation.warnings.join('\n• ')}` : '';
+            const { filled } = applyLessonPackageToForm(pkg, { errors: state.errors, warnings: state.warnings });
+            const warnText = state.warningsVi.length ? `\n\nCảnh báo:\n• ${state.warningsVi.join('\n\n• ')}` : '';
             alert(`Đã import JSON: ${filled.join(', ')}.${warnText}\n\nChưa lưu — kiểm tra và bấm Lưu bài học.`);
         };
         reader.readAsText(file, 'utf-8');
@@ -1490,7 +1575,9 @@
     function exportLessonJson() {
         if (!requireLessonImport()) return;
         const pkg = buildFormLessonPackage();
-        const validation = LI.validateLessonImportPackage(pkg, { pageSubject: PAGE_SUBJECT || '' });
+        LI.ensurePackageVideos(pkg, { videoUrl: el('lessonVideos')?.value || '' });
+        const state = validateImportPackage(pkg, el('geminiImportRaw')?.value || '');
+        renderImportValidationPanel(state);
         const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1499,11 +1586,11 @@
         a.click();
         URL.revokeObjectURL(url);
         const parts = [`Đã tải file: ${pkg.slug || 'lesson'}-import-v1.json`];
-        if (validation.warnings.length) {
-            parts.push(`Cảnh báo:\n• ${validation.warnings.join('\n• ')}`);
+        if (state.warningsVi.length) {
+            parts.push(`Cảnh báo:\n• ${state.warningsVi.join('\n\n• ')}`);
         }
-        if (validation.errors.length) {
-            parts.push(`Lỗi dữ liệu (sửa tab Tương tác / Trắc nghiệm trước khi lưu):\n• ${validation.errors.join('\n• ')}`);
+        if (state.errorsVi.length) {
+            parts.push(`Lỗi dữ liệu (sửa tab Tương tác / Trắc nghiệm trước khi lưu):\n• ${state.errorsVi.join('\n\n• ')}`);
         }
         if (parts.length > 1) alert(parts.join('\n\n'));
     }
@@ -1843,7 +1930,7 @@
             <div id="tab-khac" class="lesson-tab-content hidden">
                 <div class="mb-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
                     <div class="text-sm font-bold text-violet-900 mb-1"><i class="fas fa-file-import mr-1"></i> Nhập khối từ Gemini / Soạn bài Gemini</div>
-                    <p class="text-[11px] text-violet-800 mb-2">Ưu tiên <strong>Đường A</strong>: dán <strong>toàn bộ</strong> bài Gemini → Import text hoặc Import JSON <code>lesson-import-v1</code>. Sau đó dán ảnh thật thay <code>HINH_xx</code> rồi <strong>Lưu bài</strong> (không tự lưu).</p>
+                    <p class="text-[11px] text-violet-800 mb-2">Ưu tiên <strong>Đường A</strong>: dán <strong>toàn bộ</strong> bài Gemini → <strong>Kiểm tra import</strong> (tự chạy khi gõ) → Import text hoặc Import JSON <code>lesson-import-v1</code>. Lỗi hiển thị tiếng Việt giống soanbaigemini. Video trống sẽ tự gắn placeholder. Sau đó dán ảnh thật thay <code>HINH_xx</code> rồi <strong>Lưu bài</strong> (chặn lưu nếu còn lỗi đỏ).</p>
                     <textarea id="geminiImportRaw" rows="5" class="w-full p-2 border border-violet-300 rounded text-xs font-mono focus:ring-2 focus:ring-violet-500 outline-none" placeholder="Dán nguyên khối MỤC TIÊU, LÝ THUYẾT, NỐI Ô, TRẮC NGHIỆM, KỸ NĂNG..."></textarea>
                     <div class="mt-2 flex flex-wrap gap-2">
                         <button id="geminiImportBtn" type="button" class="rounded bg-violet-700 px-4 py-2 text-xs font-bold text-white hover:bg-violet-800">
@@ -1859,6 +1946,14 @@
                         <button id="lessonStudentPreviewBtn" type="button" class="rounded bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800">
                             <i class="fas fa-eye mr-1"></i> Xem thử
                         </button>
+                        <button id="geminiImportValidateBtn" type="button" class="rounded border border-violet-300 bg-white px-4 py-2 text-xs font-bold text-violet-800 hover:bg-violet-50">
+                            <i class="fas fa-clipboard-check mr-1"></i> Kiểm tra import
+                        </button>
+                    </div>
+                    <div id="gemini-import-validation-panel" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs hidden">
+                        <div id="gemini-import-validation-status" class="font-semibold text-slate-700 mb-2">Chưa kiểm tra import</div>
+                        <div id="gemini-import-validation-errors" class="space-y-2 hidden"></div>
+                        <div id="gemini-import-validation-warnings" class="space-y-2 mt-2 hidden"></div>
                     </div>
                 </div>
                 <label class="block text-sm font-bold text-slate-700 mb-3">Manifest ảnh (từ DANH SÁCH HÌNH Gemini)
@@ -1908,6 +2003,12 @@
         el('saveLessonBtn').onclick = saveLesson;
         el('seedLessonBtn').onclick = fillSeed;
         el('geminiImportBtn')?.addEventListener('click', () => importGeminiLessonRaw(el('geminiImportRaw')?.value || ''));
+        el('geminiImportValidateBtn')?.addEventListener('click', () => refreshGeminiImportValidation());
+        let geminiImportValidationTimer = null;
+        el('geminiImportRaw')?.addEventListener('input', () => {
+            if (geminiImportValidationTimer) clearTimeout(geminiImportValidationTimer);
+            geminiImportValidationTimer = setTimeout(() => refreshGeminiImportValidation(), 400);
+        });
         el('lessonJsonImportInput')?.addEventListener('change', event => {
             const file = event.target.files?.[0];
             if (file) importLessonJsonFile(file);
@@ -2461,6 +2562,14 @@
         };
         if (!payload.slug || !payload.title) {
             alert('Cần nhập slug và tên bài.');
+            return;
+        }
+        const savePkg = buildFormLessonPackage();
+        LI.ensurePackageVideos(savePkg, { videoUrl: el('lessonVideos')?.value || '' });
+        const saveState = validateImportPackage(savePkg, el('geminiImportRaw')?.value || '');
+        renderImportValidationPanel(saveState);
+        if (saveState.errors.length) {
+            alert(`Chưa lưu được — sửa các lỗi sau:\n• ${saveState.errorsVi.join('\n\n• ')}`);
             return;
         }
         const btn = el('saveLessonBtn');
