@@ -3508,6 +3508,7 @@
             <div class="lesson-ai-chat-msg ${msg.role === 'error' ? 'error' : msg.role}">
                 ${msg.role === 'assistant' ? renderAiAnswer(msg.content) : escapeHtml(msg.content)}
                 ${msg.role === 'assistant' && msg.cached ? '<div class="mt-1 text-[11px] font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước</div>' : ''}
+                ${msg.role === 'assistant' && msg.provider ? `<div class="mt-1 text-[11px] font-semibold text-teal-700"><i class="fas fa-microchip mr-1"></i>Nguồn: ${escapeHtml(msg.provider === 'ds2api' ? 'DS2API' : msg.provider)}${msg.model ? ` · ${escapeHtml(msg.model)}` : ''}</div>` : ''}
             </div>
         `).join('');
         box.scrollTop = box.scrollHeight;
@@ -3543,6 +3544,8 @@
                     role: 'assistant',
                     content: data.answer || '',
                     cached: !!data.cached,
+                    provider: data.provider || data.router_tier || '',
+                    model: data.model || '',
                 });
             } catch (err) {
                 aiAssistState.chatHistory.pop();

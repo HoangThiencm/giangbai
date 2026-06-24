@@ -176,7 +176,9 @@ function ai_router_run(array $ctx): array
     }
 
     $tryLight = $providers['light'] ?? null;
-    if (is_callable($tryLight)) {
+    // Student chat must use a real AI provider. Light AI is a deterministic
+    // helper for selected lesson text, not a conversational model.
+    if ($mode !== 'chat' && is_callable($tryLight)) {
         $light = $tryLight();
         if (is_array($light) && !empty($light['answer'])) {
             $tiersTried[] = 'light_ai';

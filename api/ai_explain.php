@@ -243,6 +243,9 @@ function light_ai_linear_term(float $coefficient): string
 
 function try_light_ai_linear_equation(string $input): ?array
 {
+    // Never reduce a higher-degree equation to a linear substring. For
+    // example, 2x^2+3x+1=0 used to be misread as 3x+1=0.
+    if (preg_match('/x\s*(?:\^|\*\*)\s*[2-9]|x\s*[²³⁴⁵⁶⁷⁸⁹]/iu', $input)) return null;
     if (!preg_match('/([0-9xX×*+\-.,\s]+)=([0-9xX×*+\-.,\s]+)/u', $input, $match)) return null;
     $left = light_ai_parse_linear_side($match[1]);
     $right = light_ai_parse_linear_side($match[2]);
@@ -593,7 +596,9 @@ function ai_explain_respond_success(
     $answer = trim((string)($result['answer'] ?? ''));
     $complete = !empty($result['complete']) || answer_looks_complete($answer);
 
-    if (!$fromCache && $answer !== '' && $complete) {
+    // Conversational answers should always reflect the current provider and
+    // current history, so student chat is intentionally never cached.
+    if (!$fromCache && $mode !== 'chat' && $answer !== '' && $complete) {
         ai_explain_cache_put($cacheKey, [
             'answer' => $answer,
             'complete' => true,
@@ -640,7 +645,9 @@ $prompt = $mode === 'chat'
 $cacheKey = ai_explain_cache_make_key($mode, $lessonId, $subject, $lessonTitle, $text, $question, $lessonContext, $history);
 // Test-only mode must hit DS2API on every request; a cached answer would make
 // the UI look successful without exercising DS2API at all.
-if (empty($runtime['ai_test_ds2api_only']) && ai_explain_cache_eligible($mode, $text, $question)) {
+if ($mode !== 'chat'
+    && empty($runtime['ai_test_ds2api_only'])
+    && ai_explain_cache_eligible($mode, $text, $question)) {
     $cached = ai_explain_cache_get($cacheKey);
     if (is_array($cached) && trim((string)($cached['answer'] ?? '')) !== '') {
         ai_usage_record([
