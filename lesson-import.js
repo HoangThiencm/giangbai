@@ -275,7 +275,7 @@
         try {
             parseQuestionLine(block, 0, fallbackSkill);
             return true;
-        } catch {
+        } catch (err) {
             return false;
         }
     }
@@ -400,7 +400,10 @@
             const token = String(answer || '').trim();
             if (!token || token.length > 24) return;
             const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            text = text.replace(new RegExp(`(?<!_)\\b${escaped}\\b(?!_)`), '___');
+            text = text.replace(new RegExp('\\b' + escaped + '\\b(?!_)'), function(match, offset, source) {
+                if (offset > 0 && source.charAt(offset - 1) === '_') return match;
+                return '___';
+            });
         });
         return text;
     }
