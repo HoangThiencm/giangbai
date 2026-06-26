@@ -151,5 +151,37 @@ if (!/4\.\s*So sánh/i.test(theorySections.theory || '')) {
     console.log('OK: theory keeps section 4 when bullet contains "sắp xếp"');
 }
 
+const theoryMarkdownHeadings = `### MỤC TIÊU BÀI HỌC
+Sau bài học này, học sinh nắm phép nhân và chia.
+
+### LÝ THUYẾT
+### 1. Phép nhân số tự nhiên
+Tích $a \\times b$ là tổng $a$ số hạng bằng $b$.
+
+### 4. So sánh
+- Trên dãy số, các số được sắp xếp theo thứ tự tăng dần từ trái sang phải.`;
+
+const markdownTheoryPkg = LI.buildLessonImportPackage({
+    rawGeminiText: '',
+    theoryGeminiText: theoryMarkdownHeadings,
+    restGeminiText: '**VÍ DỤ**\nDẠNG 1: Tính | 2 x 3 = 6',
+    metadata: { subject: 'Toán 6', chapter: 'Ch 1', title: 'Bài 5', tool: 'smoke-test' }
+});
+if (!markdownTheoryPkg.goal_text) {
+    console.error('FAIL: markdown ### MỤC TIÊU not parsed to goal_text');
+    failed += 1;
+} else if (!markdownTheoryPkg.theory.length) {
+    console.error('FAIL: markdown ### LÝ THUYẾT not parsed to theory blocks', markdownTheoryPkg.theory);
+    failed += 1;
+} else if (!/Phép nhân số tự nhiên/i.test(markdownTheoryPkg.theory[0].text || '')) {
+    console.error('FAIL: theory block missing subsection content', markdownTheoryPkg.theory[0]);
+    failed += 1;
+} else if (!/sắp xếp/i.test((markdownTheoryPkg.theory.map(b => b.text).join('\n')))) {
+    console.error('FAIL: markdown theory lost section 4 with sap xep');
+    failed += 1;
+} else {
+    console.log('OK: markdown ### MỤC TIÊU / ### LÝ THUYẾT export to JSON');
+}
+
 if (failed) process.exit(1);
 console.log('\nAll smoke checks passed.');

@@ -1050,11 +1050,32 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         };
     }
 
+    function resolveGeminiSectionKeyFromHeading(heading) {
+        if (!heading) return '';
+        if (/^MỤC TIÊU(?:\s+BÀI HỌC)?/.test(heading)) return 'goal';
+        if (/^LÝ THUYẾT/.test(heading)) return 'theory';
+        if (/^(?:PHẦN\s+)?VÍ DỤ/.test(heading)) return 'examples';
+        if (/^BÀI TẬP NỘP/.test(heading)) return 'selfPractice';
+        if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'interactive';
+        if (/^BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+        if (/^KÉO THẢ|^KÉO VÀO Ô|^KÉO VÀO TRỐNG/.test(heading)) return 'fill';
+        if (/^NỐI Ô/.test(heading) && /^SẮP XẾP/.test(heading)) return 'dragMixed';
+        if (/^NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
+        if (/^SẮP XẾP/.test(heading)) return 'dragSort';
+        if (/^TRẮC NGHIỆM/.test(heading)) return 'questions';
+        if (/^KỸ NĂNG/.test(heading)) return 'skills';
+        if (/^NHIỆM VỤ/.test(heading)) return 'tasks';
+        if (/^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'imageList';
+        return '';
+    }
+
     function isLessonSectionHeadingLine(line) {
         const trimmed = String(line || '').trim();
         if (!trimmed || trimmed.includes('|')) return false;
-        // Markdown subsection (### 4. So sánh) là nội dung lý thuyết, không phải section bài học.
-        if (/^#{1,6}\s+\S/.test(trimmed)) return false;
+        // Markdown: chỉ nhận heading chuẩn (### LÝ THUYẾT), không nhận ### 4. So sánh.
+        if (/^#{1,6}\s+\S/.test(trimmed)) {
+            return !!resolveGeminiSectionKeyFromHeading(normalizeGeminiSectionHeading(line));
+        }
         // Dòng bullet là nội dung — tránh nhầm "sắp xếp" trong câu với heading SẮP XẾP THỨ TỰ.
         if (/^[-*+]\s+\S/.test(trimmed)) return false;
         return true;
@@ -1073,24 +1094,12 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
     function resolveGeminiSectionKey(line) {
         const trimmed = String(line || '').trim();
+        if (!trimmed || trimmed.includes('|')) return '';
+        if (/^#{1,6}\s+\S/.test(trimmed)) {
+            return resolveGeminiSectionKeyFromHeading(normalizeGeminiSectionHeading(line));
+        }
         if (!isLessonSectionHeadingLine(trimmed)) return '';
-        const heading = normalizeGeminiSectionHeading(line);
-        if (!heading) return '';
-        if (/^MỤC TIÊU(?:\s+BÀI HỌC)?/.test(heading)) return 'goal';
-        if (/^LÝ THUYẾT/.test(heading)) return 'theory';
-        if (/^(?:PHẦN\s+)?VÍ DỤ/.test(heading)) return 'examples';
-        if (/^BÀI TẬP NỘP/.test(heading)) return 'selfPractice';
-        if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'interactive';
-        if (/^BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/^KÉO THẢ|^KÉO VÀO Ô|^KÉO VÀO TRỐNG/.test(heading)) return 'fill';
-        if (/^NỐI Ô/.test(heading) && /^SẮP XẾP/.test(heading)) return 'dragMixed';
-        if (/^NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
-        if (/^SẮP XẾP/.test(heading)) return 'dragSort';
-        if (/^TRẮC NGHIỆM/.test(heading)) return 'questions';
-        if (/^KỸ NĂNG/.test(heading)) return 'skills';
-        if (/^NHIỆM VỤ/.test(heading)) return 'tasks';
-        if (/^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'imageList';
-        return '';
+        return resolveGeminiSectionKeyFromHeading(normalizeGeminiSectionHeading(line));
     }
 
     function parseGeminiLessonSections(raw) {

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
         (function () {
-            var VERSION = '20260626-theory-heading-v1';
+            var VERSION = '20260626-markdown-section-v1';
             var SOURCES = [
                 'lesson-import.js?v=' + VERSION,
                 'https://hoangthiencm.id.vn/lesson-import.js?v=' + VERSION
@@ -1298,6 +1298,15 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 caption.className = 'mt-1 text-xs italic text-slate-500';
                 caption.textContent = match[1] || imageId;
                 figure.appendChild(caption);
+
+                const previewLocations = lessonImageLocationById.get(imageId);
+                if (previewLocations && previewLocations.length) {
+                    const locHint = document.createElement('div');
+                    locHint.className = 'mt-1 text-[10px] font-medium text-orange-700';
+                    locHint.textContent = formatImageLocationSummary(previewLocations);
+                    figure.appendChild(locHint);
+                }
+
                 appendLessonImageFigureActions(figure, imageId, image);
                 container.appendChild(figure);
                 cursor = markerPattern.lastIndex;
@@ -1358,6 +1367,156 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             });
 
             return [...byId.entries()].map(([imageId, prompt]) => ({ imageId, prompt }));
+        }
+
+        const LESSON_IMAGE_SECTION_SCANS = [
+            { key: 'goal', label: 'Mục tiêu', adminHint: 'ô Mục tiêu bài học' },
+            { key: 'theory', label: 'Lý thuyết', adminHint: 'tab Lý thuyết' },
+            { key: 'examples', label: 'Ví dụ', adminHint: 'tab Ví dụ' },
+            { key: 'selfPractice', label: 'Bài tập nộp', adminHint: 'Bài tập nộp giáo viên' },
+            { key: 'essay', label: 'Tự luận', adminHint: 'Bài tập tương tác → Tự luận' },
+            { key: 'fill', label: 'Kéo thả / điền khuyết', adminHint: 'Bài tập tương tác → Kéo vào ô' },
+            { key: 'dragMatch', label: 'Nối ô', adminHint: 'Bài tập tương tác → Nối ô' },
+            { key: 'dragSort', label: 'Sắp xếp thứ tự', adminHint: 'Bài tập tương tác → Sắp xếp' },
+            { key: 'drag', label: 'Nối ô / sắp xếp', adminHint: 'Bài tập tương tác' },
+            { key: 'questions', label: 'Trắc nghiệm', adminHint: 'tab Khác → Trắc nghiệm' },
+            { key: 'skills', label: 'Kỹ năng', adminHint: 'ô Kỹ năng cần đạt' },
+            { key: 'tasks', label: 'Nhiệm vụ', adminHint: 'ô Nhiệm vụ học sinh' }
+        ];
+
+        function resolveManifestSectionLabel(code) {
+            const key = String(code || '').trim().toLowerCase().replace(/\s+/g, '_');
+            const map = {
+                theory: 'Lý thuyết',
+                examples: 'Ví dụ',
+                example: 'Ví dụ',
+                vi_du: 'Ví dụ',
+                selfpractice: 'Bài tập nộp',
+                self_practice: 'Bài tập nộp',
+                goal: 'Mục tiêu',
+                questions: 'Trắc nghiệm',
+                content: 'Nội dung bài'
+            };
+            return map[key] || (code ? String(code) : 'Chưa rõ');
+        }
+
+        function resolveManifestSectionAdminHint(code) {
+            const key = String(code || '').trim().toLowerCase().replace(/\s+/g, '_');
+            const map = {
+                theory: 'tab Lý thuyết',
+                examples: 'tab Ví dụ',
+                example: 'tab Ví dụ',
+                vi_du: 'tab Ví dụ',
+                selfpractice: 'Bài tập nộp giáo viên',
+                self_practice: 'Bài tập nộp giáo viên',
+                goal: 'ô Mục tiêu',
+                questions: 'tab Khác → Trắc nghiệm'
+            };
+            return map[key] || '';
+        }
+
+        function extractImageSubsectionContext(text, markerIndex) {
+            const before = String(text || '').slice(0, markerIndex);
+            const lines = before.split('\n').reverse();
+            for (const line of lines) {
+                const trimmed = String(line || '').trim();
+                if (!trimmed) continue;
+                const dang = trimmed.match(/^DẠNG\s*(\d+)\s*[:：]\s*(.+)$/i);
+                if (dang) return `Dạng ${dang[1]}: ${dang[2].slice(0, 72)}`;
+                const md = trimmed.match(/^#{1,6}\s+(.+)$/);
+                if (md) return md[1].replace(/^\d+[.)]\s*/, '').slice(0, 72);
+                const numbered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+                if (numbered) return numbered[1].slice(0, 72);
+                break;
+            }
+            return '';
+        }
+
+        function collectLessonImageLocations(sectionValues) {
+            const locationById = new Map();
+            const markerRe = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
+
+            const addLocation = (imageId, location) => {
+                const list = locationById.get(imageId) || [];
+                const duplicate = list.some(item =>
+                    item.sectionKey === location.sectionKey
+                    && item.alt === location.alt
+                    && item.subsection === location.subsection
+                );
+                if (!duplicate) {
+                    list.push(location);
+                    locationById.set(imageId, list);
+                }
+            };
+
+            LESSON_IMAGE_SECTION_SCANS.forEach(({ key, label, adminHint }) => {
+                const text = String((sectionValues && sectionValues[key]) || '');
+                if (!text) return;
+                let match;
+                markerRe.lastIndex = 0;
+                while ((match = markerRe.exec(text)) !== null) {
+                    const imageId = normalizeLessonImageId(`HINH_${match[2]}`);
+                    const alt = String(match[1] || '').trim();
+                    addLocation(imageId, {
+                        sectionKey: key,
+                        sectionLabel: label,
+                        adminHint,
+                        alt: alt || imageId,
+                        subsection: extractImageSubsectionContext(text, match.index)
+                    });
+                }
+            });
+
+            return locationById;
+        }
+
+        function formatImageLocationSummary(locations) {
+            if (!locations || !locations.length) {
+                return 'Chưa thấy ![...](HINH) trong nội dung — kiểm tra marker';
+            }
+            return locations.map(loc => {
+                const parts = [loc.sectionLabel];
+                if (loc.subsection) parts.push(loc.subsection);
+                return parts.join(' › ');
+            }).join(' · ');
+        }
+
+        function buildLessonImageInventory(raw, LI, sectionValues) {
+            const promptEntries = collectLessonImagePrompts(raw, LI, sectionValues);
+            const locationById = collectLessonImageLocations(sectionValues);
+            const manifestById = new Map();
+            const manifestText = (sectionValues && sectionValues.imageList) || '';
+            if (LI && LI.parseImageManifest) {
+                LI.parseImageManifest(manifestText).forEach(entry => {
+                    manifestById.set(normalizeLessonImageId(entry.id), entry);
+                });
+            }
+
+            return promptEntries.map(entry => {
+                const imageId = entry.imageId;
+                let locations = [...(locationById.get(imageId) || [])];
+                const manifest = manifestById.get(imageId);
+                if (!locations.length && manifest) {
+                    locations = [{
+                        sectionKey: 'manifest',
+                        sectionLabel: resolveManifestSectionLabel(manifest.section),
+                        adminHint: resolveManifestSectionAdminHint(manifest.section),
+                        alt: manifest.alt || imageId,
+                        subsection: '',
+                        fromManifest: true
+                    }];
+                }
+                return {
+                    imageId,
+                    prompt: entry.prompt,
+                    locations,
+                    manifestSection: manifest && manifest.section ? manifest.section : ''
+                };
+            }).sort((a, b) => {
+                const na = parseInt(String(a.imageId).replace(/\D/g, ''), 10) || 0;
+                const nb = parseInt(String(b.imageId).replace(/\D/g, ''), 10) || 0;
+                return na - nb;
+            });
         }
 
         // Parser/validator: lesson-import.js — cùng module với Lộ trình (admin-lesson-manager)
@@ -1481,11 +1640,13 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             }
             const tasks = editorTexts.tasks || sectionValues.tasks;
 
-            const imagePromptEntries = collectLessonImagePrompts(raw, LI, sectionValues);
+            const imagePromptEntries = buildLessonImageInventory(raw, LI, sectionValues);
             lessonImagePromptById.clear();
+            lessonImageLocationById.clear();
             imagePromptEntries.forEach(entry => {
                 imagePrompts.push(entry.prompt);
                 lessonImagePromptById.set(entry.imageId, entry.prompt);
+                lessonImageLocationById.set(entry.imageId, entry.locations || []);
             });
 
             // Render sections with admin-specific copy
@@ -1510,20 +1671,108 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (imagePrompts.length > 0) {
                 const imgDiv = document.createElement('div');
                 imgDiv.className = 'border-2 border-orange-300 bg-orange-50 rounded-2xl p-4';
-                imgDiv.innerHTML = `<div class="font-bold text-orange-700 mb-1">HÌNH ẢNH MINH HỌA</div><div class="text-xs text-orange-700 mb-3">Chỉ tạo các hình Gemini khai báo. <strong>THỰC_TẾ</strong> = ảnh sát tình huống đời sống; <strong>SƠ_ĐỒ</strong> = vector/sơ đồ khái niệm. Không ưng ý → bấm <strong>Tạo lại ảnh</strong> (có ngay dưới từng hình trong preview và ở đây).</div>`;
+
+                const imgTitle = document.createElement('div');
+                imgTitle.className = 'font-bold text-orange-700 mb-1';
+                imgTitle.textContent = 'HÌNH ẢNH MINH HỌA';
+                imgDiv.appendChild(imgTitle);
+
+                const imgIntro = document.createElement('div');
+                imgIntro.className = 'text-xs text-orange-700 mb-3';
+                imgIntro.innerHTML = 'Bảng dưới cho biết <strong>mỗi HINH nằm ở section nào</strong> trong bài. <strong>THỰC_TẾ</strong> = ảnh sát tình huống đời sống; <strong>SƠ_ĐỒ</strong> = vector/sơ đồ. Bấm <strong>Tạo lại ảnh</strong> ở đây hoặc ngay dưới hình trong preview phía trên.';
+                imgDiv.appendChild(imgIntro);
+
+                const summaryWrap = document.createElement('div');
+                summaryWrap.className = 'mb-4 overflow-x-auto rounded-xl border border-orange-200 bg-white';
+                const summaryTable = document.createElement('table');
+                summaryTable.className = 'w-full text-xs border-collapse';
+                summaryTable.innerHTML = `
+                    <thead>
+                        <tr class="bg-orange-100 text-orange-900">
+                            <th class="p-2 text-left font-semibold w-20">Mã</th>
+                            <th class="p-2 text-left font-semibold">Vị trí trong bài</th>
+                            <th class="p-2 text-left font-semibold">Dán vào admin</th>
+                            <th class="p-2 text-left font-semibold w-24">Loại</th>
+                            <th class="p-2 text-left font-semibold w-24">Ảnh</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                `;
+                const summaryBody = summaryTable.querySelector('tbody');
+                summaryWrap.appendChild(summaryTable);
+                imgDiv.appendChild(summaryWrap);
+
                 imagePromptEntries.forEach((entry, i) => {
                     const p = entry.prompt;
                     const imageId = entry.imageId || normalizeLessonImageId('HINH_' + String(i + 1).padStart(2, '0'));
+                    const locations = entry.locations || [];
+                    const locationSummary = formatImageLocationSummary(locations);
+                    const adminHints = [...new Set(locations.map(loc => loc.adminHint).filter(Boolean))].join(' · ')
+                        || resolveManifestSectionAdminHint(entry.manifestSection)
+                        || '—';
+                    const altSummary = locations.map(loc => loc.alt).filter((alt, idx, arr) => alt && arr.indexOf(alt) === idx).join(' · ')
+                        || imageId;
+                    const isRealWorld = isRealWorldLessonImagePrompt(p);
+                    const hasImage = generatedLessonImages.has(imageId);
+
+                    const summaryRow = document.createElement('tr');
+                    summaryRow.className = 'border-t border-orange-100 align-top';
+                    summaryRow.innerHTML = `
+                        <td class="p-2 font-mono font-bold text-orange-800">${imageId}</td>
+                        <td class="p-2 text-slate-700">${locationSummary}</td>
+                        <td class="p-2 text-slate-500">${adminHints}</td>
+                        <td class="p-2"><span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isRealWorld ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800'}">${isRealWorld ? 'THỰC_TẾ' : 'SƠ_ĐỒ'}</span></td>
+                        <td class="p-2 ${hasImage ? 'text-emerald-700' : 'text-amber-700'}">${hasImage ? 'Đã tạo' : 'Chưa tạo'}</td>
+                    `;
+                    summaryBody.appendChild(summaryRow);
+
                     const pDiv = document.createElement('div');
                     pDiv.className = 'mb-3 bg-white p-3 rounded-xl text-xs border border-orange-200';
+                    pDiv.id = `lesson-image-card-${imageId}`;
+
+                    const cardHeader = document.createElement('div');
+                    cardHeader.className = 'mb-2 flex flex-wrap items-start justify-between gap-2';
+
+                    const cardTitleBlock = document.createElement('div');
+                    const cardCode = document.createElement('div');
+                    cardCode.className = 'font-mono text-sm font-bold text-orange-800';
+                    cardCode.textContent = imageId;
+                    cardTitleBlock.appendChild(cardCode);
+
+                    const cardLocation = document.createElement('div');
+                    cardLocation.className = 'mt-1 text-slate-700';
+                    cardLocation.innerHTML = `<span class="font-semibold text-orange-700">Vị trí:</span> ${locationSummary}`;
+                    cardTitleBlock.appendChild(cardLocation);
+
+                    if (adminHints && adminHints !== '—') {
+                        const cardAdmin = document.createElement('div');
+                        cardAdmin.className = 'mt-0.5 text-slate-500';
+                        cardAdmin.innerHTML = `<span class="font-semibold">Admin:</span> ${adminHints}`;
+                        cardTitleBlock.appendChild(cardAdmin);
+                    }
+
+                    if (altSummary && altSummary !== imageId) {
+                        const cardAlt = document.createElement('div');
+                        cardAlt.className = 'mt-0.5 italic text-slate-500';
+                        cardAlt.textContent = `Mô tả chèn: ${altSummary}`;
+                        cardTitleBlock.appendChild(cardAlt);
+                    }
+
+                    cardHeader.appendChild(cardTitleBlock);
 
                     const typeBadge = document.createElement('div');
-                    typeBadge.className = `mb-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isRealWorldLessonImagePrompt(p) ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800'}`;
-                    typeBadge.textContent = isRealWorldLessonImagePrompt(p) ? 'LOẠI: THỰC_TẾ' : 'LOẠI: SƠ_ĐỒ';
-                    pDiv.appendChild(typeBadge);
+                    typeBadge.className = `inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${isRealWorld ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800'}`;
+                    typeBadge.textContent = isRealWorld ? 'LOẠI: THỰC_TẾ' : 'LOẠI: SƠ_ĐỒ';
+                    cardHeader.appendChild(typeBadge);
+                    pDiv.appendChild(cardHeader);
+
+                    const promptLabel = document.createElement('div');
+                    promptLabel.className = 'mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500';
+                    promptLabel.textContent = 'Prompt tạo ảnh';
+                    pDiv.appendChild(promptLabel);
 
                     const promptText = document.createElement('div');
-                    promptText.className = 'font-mono whitespace-pre-wrap';
+                    promptText.className = 'font-mono whitespace-pre-wrap rounded-lg border border-slate-100 bg-slate-50 p-2';
                     promptText.textContent = p;
                     pDiv.appendChild(promptText);
 
@@ -1531,19 +1780,19 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                     actionRow.className = 'mt-3 flex items-center gap-2';
                     const generateButton = document.createElement('button');
                     generateButton.className = 'px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-60';
-                    generateButton.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(imageId));
+                    generateButton.innerHTML = getLessonImageButtonLabel(hasImage);
                     actionRow.appendChild(generateButton);
                     pDiv.appendChild(actionRow);
 
                     const status = document.createElement('div');
                     status.className = 'mt-2 text-xs text-slate-500';
-                    status.textContent = generatedLessonImages.has(imageId) ? 'Ảnh đã được tạo trong phiên này.' : 'Chưa tạo ảnh.';
+                    status.textContent = hasImage ? 'Ảnh đã được tạo trong phiên này.' : 'Chưa tạo ảnh.';
                     pDiv.appendChild(status);
 
                     const image = document.createElement('img');
                     image.alt = `Hình minh họa ${imageId}`;
                     image.className = 'hidden mt-3 max-h-80 w-auto max-w-full rounded-lg border border-slate-200 bg-white';
-                    if (generatedLessonImages.has(imageId)) {
+                    if (hasImage) {
                         image.src = generatedLessonImages.get(imageId);
                         image.classList.remove('hidden');
                     }
@@ -1553,6 +1802,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                     imageGenerationJobs.push({ imageId, prompt: p, button: generateButton, statusEl: status, imageEl: image });
                     imgDiv.appendChild(pDiv);
                 });
+
                 container.appendChild(imgDiv);
             } else if (LI && LI.extractImageMarkers && LI.extractImageMarkers(raw).length) {
                 const hint = document.createElement('div');
@@ -1574,7 +1824,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             const LI = window.LessonImport;
             if (!LI || !LI.parseGeminiLessonSections) return [];
             const sections = LI.parseGeminiLessonSections(raw);
-            return collectLessonImagePrompts(raw, LI, sections).map(entry => ({
+            return buildLessonImageInventory(raw, LI, sections).map(entry => ({
                 imageId: entry.imageId,
                 prompt: entry.prompt
             }));
@@ -2561,6 +2811,7 @@ Không ghi chú nguồn SGK. Không lời mở đầu. Không dùng \`---\` ngă
 
         const generatedLessonImages = new Map();
         const lessonImagePromptById = new Map();
+        const lessonImageLocationById = new Map();
 
         function getInlineImageFromGeminiResponse(data) {
             const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
