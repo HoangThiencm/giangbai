@@ -979,7 +979,8 @@
                 end_time: "",
                 student_mode: "free",
                 class_name: "",
-                roster: []
+                roster: [],
+                max_attempts: 0
             };
             const [examInfo, setExamInfo] = useState(initialData ? {
                 ...defaultExamInfo,
@@ -987,7 +988,8 @@
                 duration: initialData.info.duration_mins ?? initialData.info.duration ?? 45,
                 student_mode: initialData.info.student_mode === "class" ? "class" : "free",
                 class_name: initialData.info.class_name || "",
-                roster: Array.isArray(initialData.info.roster) ? initialData.info.roster : []
+                roster: Array.isArray(initialData.info.roster) ? initialData.info.roster : [],
+                max_attempts: Math.max(0, parseInt(initialData.info.max_attempts, 10) || 0)
             } : defaultExamInfo);
             const [availableClasses, setAvailableClasses] = useState([]);
             const [loadingRoster, setLoadingRoster] = useState(false);
@@ -1035,7 +1037,7 @@
                     setExamInfo(prev => ({ ...prev, student_mode: "class" }));
                     return;
                 }
-                setExamInfo(prev => ({ ...prev, student_mode: "free", class_name: "", roster: [] }));
+                setExamInfo(prev => ({ ...prev, student_mode: "free", class_name: "", roster: [], max_attempts: 0 }));
             };
 
             // Sync page question counts cleanly
@@ -1378,7 +1380,8 @@
                     api_keys: getApiKeys(),
                     student_mode: examInfo.student_mode === "class" ? "class" : "free",
                     class_name: examInfo.student_mode === "class" ? examInfo.class_name : "",
-                    roster: examInfo.student_mode === "class" ? (examInfo.roster || []) : []
+                    roster: examInfo.student_mode === "class" ? (examInfo.roster || []) : [],
+                    max_attempts: examInfo.student_mode === "class" ? Math.max(0, parseInt(examInfo.max_attempts, 10) || 0) : 0
                 };
                 try { await axios.post(examUrl("save"), payload, { withCredentials: true }); alert("Đã lưu thành công!"); onBack(); } catch (e) { alert("Lỗi lưu: " + formatApiError(e, e.message)); }
             };
@@ -1465,6 +1468,20 @@
                                     <span className="text-indigo-700 font-bold whitespace-nowrap">
                                         {loadingRoster ? "Đang tải..." : `${examInfo.roster?.length || 0} HS`}
                                     </span>
+                                )}
+                                {examInfo.student_mode === "class" && (
+                                    <label className="flex items-center gap-1 whitespace-nowrap" title="0 = không giới hạn">
+                                        <span className="text-gray-600">Tối đa</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="99"
+                                            className="w-12 border rounded px-1 text-center allow-select"
+                                            value={examInfo.max_attempts ?? 0}
+                                            onChange={e => setExamInfo(prev => ({ ...prev, max_attempts: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+                                        />
+                                        <span className="text-gray-600">lần thi</span>
+                                    </label>
                                 )}
                             </div>
                         </div>
@@ -1567,10 +1584,11 @@
                 return {
                     student_mode: meta.student_mode === "class" ? "class" : "free",
                     class_name: String(meta.class_name || "").trim(),
-                    roster: Array.isArray(meta.roster) ? meta.roster : []
+                    roster: Array.isArray(meta.roster) ? meta.roster : [],
+                    max_attempts: Math.max(0, parseInt(meta.max_attempts, 10) || 0)
                 };
             } catch {
-                return { student_mode: "free", class_name: "", roster: [] };
+                return { student_mode: "free", class_name: "", roster: [], max_attempts: 0 };
             }
         };
 
@@ -1706,6 +1724,8 @@
             const [isLockedOut, setIsLockedOut] = useState(false);
             const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
             const [submitting, setSubmitting] = useState(false);
+            const [attemptInfo, setAttemptInfo] = useState(null);
+            const [checkingAttempts, setCheckingAttempts] = useState(false);
             const answersRef = useRef({});
             const infoRef = useRef({ name: "", sbd: "", class: "" });
             const nameInputRef = useRef(null);
@@ -1782,12 +1802,35 @@
                 });
             }, [examRoster, rosterSearch]);
 
+            const fetchAttemptInfo = async (name, sbd) => {
+                const trimmedName = String(name || "").trim();
+                const trimmedSbd = String(sbd || "").trim();
+                if (!trimmedName || !trimmedSbd) {
+                    setAttemptInfo(null);
+                    return null;
+                }
+                setCheckingAttempts(true);
+                try {
+                    const res = await axios.get(
+                        `${examUrl("student-attempts")}&exam_id=${encodeURIComponent(examId)}&student_name=${encodeURIComponent(trimmedName)}&sbd=${encodeURIComponent(trimmedSbd)}`
+                    );
+                    setAttemptInfo(res.data || null);
+                    return res.data || null;
+                } catch {
+                    setAttemptInfo(null);
+                    return null;
+                } finally {
+                    setCheckingAttempts(false);
+                }
+            };
+
             const selectRosterStudent = (key) => {
                 setSelectedRosterKey(key);
                 const student = examRoster.find(item => rosterKey(item) === key);
                 if (!student) {
                     persistInfo({ name: "", sbd: "", class: "" });
                     setInfo({ name: "", sbd: "", class: "" });
+                    setAttemptInfo(null);
                     return;
                 }
                 const snapshot = persistInfo({
@@ -1796,6 +1839,7 @@
                     class: student.class_name || exam?.info?.class_name || ""
                 });
                 setInfo(snapshot);
+                fetchAttemptInfo(snapshot.name, snapshot.sbd);
             };
 
             useEffect(() => { answersRef.current = answers; }, [answers]);
@@ -1982,7 +2026,7 @@
                 else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
             };
 
-            const startExam = () => {
+            const startExam = async () => {
                 let snapshot;
                 if (isClassRosterMode) {
                     if (!selectedRosterKey) return alert("Vui lòng chọn tên của bạn trong danh sách lớp!");
@@ -1993,6 +2037,11 @@
                         sbd: student.sbd,
                         class: student.class_name || exam?.info?.class_name || ""
                     });
+                    const latestAttemptInfo = await fetchAttemptInfo(snapshot.name, snapshot.sbd);
+                    if (latestAttemptInfo && latestAttemptInfo.can_attempt === false) {
+                        const maxAttempts = latestAttemptInfo.max_attempts || exam?.info?.max_attempts || 0;
+                        return alert(`Bạn đã thi đủ ${maxAttempts} lần cho đề này. Không thể làm thêm.`);
+                    }
                 } else {
                     const fromInputs = readInfoFromInputs();
                     snapshot = persistInfo({
@@ -2076,16 +2125,27 @@
                                         )}
                                     </div>
                                     {selectedRosterKey && (
-                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                            <div className="bg-gray-50 border rounded p-2">
-                                                <div className="text-[11px] font-bold text-gray-500">SBD</div>
-                                                <div className="font-semibold text-gray-800">{info.sbd}</div>
+                                        <>
+                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                <div className="bg-gray-50 border rounded p-2">
+                                                    <div className="text-[11px] font-bold text-gray-500">SBD</div>
+                                                    <div className="font-semibold text-gray-800">{info.sbd}</div>
+                                                </div>
+                                                <div className="bg-gray-50 border rounded p-2">
+                                                    <div className="text-[11px] font-bold text-gray-500">Lớp</div>
+                                                    <div className="font-semibold text-gray-800">{info.class || exam.info.class_name || "—"}</div>
+                                                </div>
                                             </div>
-                                            <div className="bg-gray-50 border rounded p-2">
-                                                <div className="text-[11px] font-bold text-gray-500">Lớp</div>
-                                                <div className="font-semibold text-gray-800">{info.class || exam.info.class_name || "—"}</div>
-                                            </div>
-                                        </div>
+                                            {checkingAttempts ? (
+                                                <div className="text-xs text-gray-500">Đang kiểm tra số lần thi...</div>
+                                            ) : attemptInfo && (exam.info.max_attempts > 0 || attemptInfo.max_attempts > 0) ? (
+                                                <div className={`text-xs rounded-lg p-3 border ${attemptInfo.can_attempt ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
+                                                    {attemptInfo.can_attempt
+                                                        ? `Bạn còn ${attemptInfo.remaining} / ${attemptInfo.max_attempts} lượt thi.`
+                                                        : `Bạn đã thi đủ ${attemptInfo.max_attempts} lần. Không thể làm thêm.`}
+                                                </div>
+                                            ) : null}
+                                        </>
                                     )}
                                 </>
                             ) : (
@@ -2112,7 +2172,13 @@
                                 </>
                             )}
                         </div>
-                        <button onClick={startExam} className="mt-6 bg-indigo-600 text-white w-full py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">VÀO THI NGAY</button>
+                        <button
+                            onClick={startExam}
+                            disabled={checkingAttempts || (isClassRosterMode && attemptInfo && attemptInfo.can_attempt === false)}
+                            className="mt-6 bg-indigo-600 text-white w-full py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 disabled:active:scale-100"
+                        >
+                            {checkingAttempts ? "ĐANG KIỂM TRA..." : (isClassRosterMode && attemptInfo && attemptInfo.can_attempt === false ? "ĐÃ HẾT LƯỢT THI" : "VÀO THI NGAY")}
+                        </button>
                     </div>
                 </div>
             );
@@ -2195,9 +2261,13 @@
             );
         };
 
+        const studentResultKey = (name, sbd) => `${String(sbd || "").trim().toLowerCase()}|${String(name || "").trim().toLowerCase()}`;
+
         const ResultDetail = ({ examId, onBack }) => {
             const [results, setResults] = useState([]);
             const [examQuestions, setExamQuestions] = useState([]);
+            const [examInfo, setExamInfo] = useState(null);
+            const [expandedKeys, setExpandedKeys] = useState({});
             const [deletingId, setDeletingId] = useState(null);
             const [deletingBatch, setDeletingBatch] = useState(false);
 
@@ -2208,6 +2278,7 @@
                 ]).then(([resResults, resExam]) => {
                     setResults(resResults.data || []);
                     setExamQuestions(resExam.data?.questions || []);
+                    setExamInfo(resExam.data?.info || null);
                 }).catch(() => {
                     axios.get(examUrl(`results/${examId}`), { withCredentials: true })
                         .then(res => setResults(res.data || []))
@@ -2215,46 +2286,65 @@
                 });
             }, [examId]);
 
-            const resultRows = useMemo(() => {
-                const attemptCountByKey = {};
-                results.forEach(r => {
-                    const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
-                    attemptCountByKey[key] = (attemptCountByKey[key] || 0) + 1;
-                });
-                return [...results]
-                    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-                    .map((r, index) => {
-                        const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
-                        return { ...r, attemptNo: attemptCountByKey[key]--, rowKey: `${r.id || index}-${r.created_at || index}` };
+            const studentSummaries = useMemo(() => {
+                const grouped = {};
+                const sorted = [...results].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+                sorted.forEach((r, index) => {
+                    const key = studentResultKey(r.student_name, r.sbd);
+                    if (!grouped[key]) {
+                        grouped[key] = {
+                            key,
+                            name: r.student_name,
+                            sbd: r.sbd,
+                            className: r.student_class,
+                            attempts: []
+                        };
+                    }
+                    const attemptNo = grouped[key].attempts.length + 1;
+                    grouped[key].attempts.push({
+                        ...r,
+                        attemptNo,
+                        rowKey: `${r.id || index}-${r.created_at || index}`
                     });
+                });
+
+                return Object.values(grouped).map(group => {
+                    const best = group.attempts.reduce((currentBest, attempt) => {
+                        if (!currentBest) return attempt;
+                        const bestScore = Number(currentBest.score) || 0;
+                        const attemptScore = Number(attempt.score) || 0;
+                        if (attemptScore > bestScore) return attempt;
+                        if (attemptScore === bestScore && attempt.attemptNo < currentBest.attemptNo) return attempt;
+                        return currentBest;
+                    }, null);
+                    return {
+                        ...group,
+                        best,
+                        attemptCount: group.attempts.length,
+                        hasMultipleAttempts: group.attempts.length > 1
+                    };
+                }).sort((a, b) => {
+                    const scoreDiff = (Number(b.best?.score) || 0) - (Number(a.best?.score) || 0);
+                    if (scoreDiff !== 0) return scoreDiff;
+                    return (a.name || "").localeCompare(b.name || "", "vi");
+                });
             }, [results]);
 
-            const repeatGroups = useMemo(() => {
-                const grouped = {};
-                results.forEach(r => {
-                    const key = `${(r.sbd || "").trim().toLowerCase()}|${(r.student_name || "").trim().toLowerCase()}`;
-                    if (!grouped[key]) grouped[key] = [];
-                    grouped[key].push(r);
-                });
-                const byCount = {};
-                Object.values(grouped).forEach(attempts => {
-                    if (attempts.length < 2) return;
-                    const count = attempts.length;
-                    const sorted = [...attempts].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-                    const latest = sorted[0];
-                    if (!byCount[count]) byCount[count] = [];
-                    byCount[count].push({
-                        name: latest.student_name,
-                        sbd: latest.sbd,
-                        className: latest.student_class,
-                        scores: sorted.map(item => item.score).join(", ")
-                    });
-                });
-                return Object.keys(byCount)
-                    .map(Number)
-                    .sort((a, b) => a - b)
-                    .map(count => ({ count, students: byCount[count].sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi")) }));
-            }, [results]);
+            const notTakenStudents = useMemo(() => {
+                if (examInfo?.student_mode !== "class") return [];
+                const roster = Array.isArray(examInfo.roster) ? examInfo.roster : [];
+                const takenKeys = new Set(results.map(r => studentResultKey(r.student_name, r.sbd)));
+                return roster
+                    .filter(item => {
+                        const key = studentResultKey(item.full_name, item.sbd || item.username);
+                        return key !== "|" && !takenKeys.has(key);
+                    })
+                    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "", "vi"));
+            }, [examInfo, results]);
+
+            const toggleExpanded = (key) => {
+                setExpandedKeys(prev => ({ ...prev, [key]: !prev[key] }));
+            };
 
             const stripMathDelimiters = (text) => String(text || "").replace(/\$/g, "").replace(/\\textbf\{([^}]+)\}/g, "$1").replace(/\\textit\{([^}]+)\}/g, "$1").replace(/\s+/g, " ").trim();
 
@@ -2387,18 +2477,21 @@
             };
 
             const exportExcel = () => {
-                const header = ["STT", "Họ và tên", "Số báo danh", "Lớp học", "Điểm", "Kết quả", "Các câu đúng (đề gốc)", "Các câu sai (đề gốc)"];
-                const note = "Ghi chú: STT câu đúng/sai theo đề gốc của giáo viên. Học sinh làm đề đã trộn nên thứ tự trên màn hình HS khác với đề gốc.";
-                const dataRows = [...resultRows]
-                    .sort((a, b) => (a.student_name || "").localeCompare(b.student_name || "", "vi"))
-                    .map((r, index) => {
+                const header = ["STT", "Họ và tên", "Số báo danh", "Lớp học", "Điểm cao nhất", "Lần đạt điểm cao", "Tổng lần thi", "Kết quả", "Các câu đúng (đề gốc)", "Các câu sai (đề gốc)"];
+                const note = "Ghi chú: Xuất theo điểm cao nhất của từng học sinh. STT câu đúng/sai theo đề gốc của giáo viên.";
+                const dataRows = [...studentSummaries]
+                    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi"))
+                    .map((group, index) => {
+                        const r = group.best;
                         const { correctNums, wrongNums } = splitCorrectWrong(r);
                         return [
                             index + 1,
-                            (r.student_name || "").trim(),
-                            (r.sbd || "").trim(),
-                            (r.student_class || "").trim(),
+                            (group.name || "").trim(),
+                            (group.sbd || "").trim(),
+                            (group.className || "").trim(),
                             r.score,
+                            `Lần ${r.attemptNo}`,
+                            group.attemptCount,
                             `${r.correct_count ?? 0}/${r.total_questions ?? 0}`,
                             formatQuestionNums(correctNums),
                             formatQuestionNums(wrongNums)
@@ -2420,31 +2513,45 @@
                         <i className="fas fa-arrow-left"></i> Quay lại
                     </button>
 
-                    {repeatGroups.length > 0 && (
-                        <div className="mb-6 space-y-3">
-                            <h3 className="font-bold text-lg text-gray-800">Học sinh thi nhiều lần</h3>
-                            {repeatGroups.map(group => (
-                                <div key={group.count} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                                    <div className="font-bold text-amber-800 mb-2">
-                                        Thi {group.count} lần ({group.students.length} em)
+                    {examInfo?.student_mode === "class" && (
+                        <div className="mb-6 bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
+                            <div className="p-4 border-b bg-slate-50 flex flex-wrap gap-3 justify-between items-center">
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-800">Thống kê lớp {examInfo.class_name || "—"}</h3>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {studentSummaries.length}/{examInfo.roster?.length || 0} học sinh đã thi
+                                        {notTakenStudents.length > 0 ? ` · ${notTakenStudents.length} chưa thi` : " · Đã đủ lớp"}
+                                    </p>
+                                </div>
+                                {examInfo.max_attempts > 0 && (
+                                    <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">
+                                        Giới hạn {examInfo.max_attempts} lần thi / HS
+                                    </span>
+                                )}
+                            </div>
+                            {notTakenStudents.length > 0 && (
+                                <div className="p-4">
+                                    <div className="font-bold text-rose-700 mb-2">
+                                        <i className="fas fa-user-clock mr-1"></i> Chưa thi ({notTakenStudents.length} em)
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                        {group.students.map((student, idx) => (
-                                            <span key={`${student.sbd}-${idx}`} className="inline-flex items-center gap-2 bg-white border border-amber-200 rounded-full px-3 py-1 text-sm text-gray-700">
-                                                <span className="font-semibold">{student.name}</span>
+                                        {notTakenStudents.map((student, idx) => (
+                                            <span key={`${student.sbd}-${idx}`} className="inline-flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-full px-3 py-1 text-sm text-gray-700">
+                                                <span className="font-semibold">{student.full_name}</span>
                                                 <span className="text-gray-400 font-mono text-xs">{student.sbd}</span>
-                                                <span className="text-amber-700 text-xs">({student.scores})</span>
                                             </span>
                                         ))}
                                     </div>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
 
                     <div className="bg-white rounded-xl shadow overflow-hidden">
                         <div className="p-4 border-b bg-gray-50 flex flex-wrap gap-2 justify-between items-center">
-                            <h3 className="font-bold text-lg text-gray-800">Kết quả thi ({results.length} lượt)</h3>
+                            <h3 className="font-bold text-lg text-gray-800">
+                                Kết quả thi ({studentSummaries.length} học sinh · {results.length} lượt)
+                            </h3>
                             <div className="flex flex-wrap gap-2">
                                 {testResults.length > 0 && (
                                     <button type="button" disabled={deletingBatch} onClick={handleDeleteTestResults} className="text-red-600 hover:bg-red-50 px-3 py-1 rounded border border-red-200 text-sm font-bold disabled:opacity-60">
@@ -2462,30 +2569,63 @@
                                     <th className="p-3">Tên HS</th>
                                     <th className="p-3">SBD</th>
                                     <th className="p-3">Lớp</th>
-                                    <th className="p-3">Lần</th>
-                                    <th className="p-3">Điểm</th>
+                                    <th className="p-3">Điểm cao nhất</th>
+                                    <th className="p-3">Lần đạt điểm cao</th>
                                     <th className="p-3">Số câu đúng</th>
                                     <th className="p-3">Thời gian</th>
                                     <th className="p-3 text-right">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {resultRows.map(r => (
-                                    <tr key={r.rowKey} className={`border-b hover:bg-gray-50 ${r.attemptNo > 1 ? "bg-amber-50/40" : ""} ${isTestResult(r) ? "bg-red-50/30" : ""}`}>
-                                        <td className="p-3 font-bold text-gray-700">{r.student_name || "—"}</td>
-                                        <td className="p-3 text-gray-600">{r.sbd}</td>
-                                        <td className="p-3 text-gray-600">{r.student_class || "—"}</td>
-                                        <td className="p-3 text-sm font-bold text-amber-700">{r.attemptNo > 1 ? `Lần ${r.attemptNo}` : "Lần 1"}</td>
-                                        <td className="p-3 font-bold text-indigo-600">{r.score}</td>
-                                        <td className="p-3 text-sm">{r.correct_count} / {r.total_questions}</td>
-                                        <td className="p-3 text-xs text-gray-500">{r.created_at ? new Date(r.created_at).toLocaleString("vi-VN") : "—"}</td>
-                                        <td className="p-3 text-right">
-                                            <button type="button" disabled={deletingId === r.id} onClick={() => handleDeleteResult(r)} className="text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-bold disabled:opacity-60" title="Xóa kết quả này">
-                                                <i className="fas fa-trash-alt"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {studentSummaries.map(group => {
+                                    const best = group.best;
+                                    const expanded = !!expandedKeys[group.key];
+                                    return (
+                                        <React.Fragment key={group.key}>
+                                            <tr className={`border-b hover:bg-gray-50 ${group.hasMultipleAttempts ? "bg-amber-50/20" : ""} ${isTestResult(best) ? "bg-red-50/30" : ""}`}>
+                                                <td className="p-3 font-bold text-gray-700">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleExpanded(group.key)}
+                                                        className={`text-left hover:text-indigo-600 ${group.hasMultipleAttempts ? "underline decoration-dotted" : ""}`}
+                                                        title={group.hasMultipleAttempts ? "Bấm để xem từng lần thi" : "Chỉ có 1 lần thi"}
+                                                    >
+                                                        <i className={`fas fa-chevron-${expanded ? "down" : "right"} text-xs mr-2 text-gray-400`}></i>
+                                                        {group.name || "—"}
+                                                        {group.hasMultipleAttempts && <span className="ml-2 text-xs font-normal text-amber-700">({group.attemptCount} lần)</span>}
+                                                    </button>
+                                                </td>
+                                                <td className="p-3 text-gray-600">{group.sbd}</td>
+                                                <td className="p-3 text-gray-600">{group.className || "—"}</td>
+                                                <td className="p-3 font-bold text-indigo-600">{best.score}</td>
+                                                <td className="p-3 text-sm font-bold text-amber-700">Lần {best.attemptNo}</td>
+                                                <td className="p-3 text-sm">{best.correct_count} / {best.total_questions}</td>
+                                                <td className="p-3 text-xs text-gray-500">{best.created_at ? new Date(best.created_at).toLocaleString("vi-VN") : "—"}</td>
+                                                <td className="p-3 text-right">
+                                                    <button type="button" disabled={deletingId === best.id} onClick={() => handleDeleteResult(best)} className="text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-bold disabled:opacity-60" title="Xóa lần thi đạt điểm cao nhất">
+                                                        <i className="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {expanded && group.attempts.slice().sort((a, b) => b.attemptNo - a.attemptNo).map(attempt => (
+                                                <tr key={attempt.rowKey} className={`border-b bg-slate-50/80 ${attempt.id === best.id ? "ring-1 ring-inset ring-indigo-200" : ""} ${isTestResult(attempt) ? "bg-red-50/40" : ""}`}>
+                                                    <td className="p-3 pl-10 text-sm text-gray-600">↳ Lần {attempt.attemptNo}</td>
+                                                    <td className="p-3 text-gray-500">{attempt.sbd}</td>
+                                                    <td className="p-3 text-gray-500">{attempt.student_class || "—"}</td>
+                                                    <td className="p-3 font-semibold text-gray-700">{attempt.score}</td>
+                                                    <td className="p-3 text-xs text-gray-500">{attempt.id === best.id ? "Điểm cao nhất" : "—"}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{attempt.correct_count} / {attempt.total_questions}</td>
+                                                    <td className="p-3 text-xs text-gray-500">{attempt.created_at ? new Date(attempt.created_at).toLocaleString("vi-VN") : "—"}</td>
+                                                    <td className="p-3 text-right">
+                                                        <button type="button" disabled={deletingId === attempt.id} onClick={() => handleDeleteResult(attempt)} className="text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-bold disabled:opacity-60" title="Xóa lần thi này">
+                                                            <i className="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

@@ -253,11 +253,17 @@ function build_exam_meta(array $data, PDO $pdo): array
         $roster = [];
     }
 
+    $maxAttempts = 0;
+    if ($mode === 'class') {
+        $maxAttempts = parse_max_attempts($data['max_attempts'] ?? 0);
+    }
+
     $meta = [
         'google_sheet_id' => $data['google_sheet_id'] ?? null,
         'student_mode' => $mode,
         'class_name' => $className,
         'roster' => $roster,
+        'max_attempts' => $maxAttempts,
     ];
     if (isset($data['matrixConfig']) && is_array($data['matrixConfig'])) {
         $meta['matrixConfig'] = $data['matrixConfig'];
@@ -284,6 +290,28 @@ function roster_matches_submission(array $roster, string $name, string $sbd): bo
     return false;
 }
 
+function student_submission_key(string $name, string $sbd): string
+{
+    return strtolower(trim($sbd)) . '|' . strtolower(trim($name));
+}
+
+function count_student_submissions(PDO $pdo, string $examId, string $name, string $sbd): int
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM exam_submissions WHERE exam_id = ? AND LOWER(TRIM(student_name)) = ? AND LOWER(TRIM(sbd)) = ?');
+    $stmt->execute([
+        $examId,
+        strtolower(trim($name)),
+        strtolower(trim($sbd)),
+    ]);
+    return (int)$stmt->fetchColumn();
+}
+
+function parse_max_attempts($value): int
+{
+    $max = (int)$value;
+    return $max < 0 ? 0 : $max;
+}
+
 function exam_to_public_payload(array $row): array
 {
     $variants = parse_json_or_default($row['variants_json'] ?? null, []);
@@ -305,6 +333,7 @@ function exam_to_public_payload(array $row): array
             'student_mode' => $studentMode,
             'class_name' => trim((string)($meta['class_name'] ?? '')),
             'roster' => $studentMode === 'class' ? normalize_roster($meta['roster'] ?? []) : [],
+            'max_attempts' => $studentMode === 'class' ? parse_max_attempts($meta['max_attempts'] ?? 0) : 0,
             'matrixConfig' => $meta['matrixConfig'] ?? null,
             'subject' => $meta['subject'] ?? '',
             'grade' => $meta['grade'] ?? '',
@@ -507,6 +536,18 @@ if ($method === 'POST' && $action === 'submit') {
         if ($studentClass === '') {
             $studentClass = trim((string)($meta['class_name'] ?? ''));
         }
+
+        $maxAttempts = parse_max_attempts($meta['max_attempts'] ?? 0);
+        if ($maxAttempts > 0) {
+            $attemptCount = count_student_submissions($pdo, $examId, $studentName, $sbd);
+            if ($attemptCount >= $maxAttempts) {
+                respond([
+                    'error' => "Bạn đã thi đủ {$maxAttempts} lần cho đề này. Không thể nộp thêm bài.",
+                    'attempt_count' => $attemptCount,
+                    'max_attempts' => $maxAttempts,
+                ], 403);
+            }
+        }
     }
 
     $answers = $data['answers'] ?? [];
@@ -546,6 +587,32 @@ if ($method === 'POST' && $action === 'submit') {
     ]);
 
     respond(['score' => $score, 'total' => $total, 'feedback' => $feedback]);
+}
+
+if ($method === 'GET' && $action === 'student-attempts') {
+    $examId = trim((string)($_GET['exam_id'] ?? ''));
+    $studentName = trim((string)($_GET['student_name'] ?? ''));
+    $sbd = trim((string)($_GET['sbd'] ?? ''));
+    if ($examId === '' || $studentName === '' || $sbd === '') {
+        respond(['error' => 'Thiếu thông tin thí sinh.'], 422);
+    }
+
+    $exam = fetch_exam($pdo, $examId);
+    if (!$exam) respond(['error' => 'Not Found'], 404);
+
+    $variants = parse_json_or_default($exam['variants_json'] ?? null, []);
+    $meta = parse_exam_meta($variants);
+    $studentMode = in_array($meta['student_mode'] ?? '', ['free', 'class'], true) ? $meta['student_mode'] : 'free';
+    $maxAttempts = $studentMode === 'class' ? parse_max_attempts($meta['max_attempts'] ?? 0) : 0;
+    $attemptCount = count_student_submissions($pdo, $examId, $studentName, $sbd);
+    $remaining = $maxAttempts > 0 ? max(0, $maxAttempts - $attemptCount) : null;
+
+    respond([
+        'attempt_count' => $attemptCount,
+        'max_attempts' => $maxAttempts,
+        'remaining' => $remaining,
+        'can_attempt' => $maxAttempts <= 0 || $attemptCount < $maxAttempts,
+    ]);
 }
 
 if ($method === 'GET' && $action === 'results' && !empty($parts[1])) {
