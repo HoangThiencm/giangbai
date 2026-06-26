@@ -940,15 +940,15 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
     function resolveInteractiveBulkSection(line) {
         const trimmed = String(line || '').trim();
-        if (trimmed.includes('|')) return '';
+        if (!isLessonSectionHeadingLine(trimmed)) return '';
         const heading = normalizeBulkHeading(line);
         if (!heading) return '';
         if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
-        if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/KÉO THẢ|KÉO VÀO Ô|KÉO VÀO TRỐNG/.test(heading)) return 'fill';
-        if (/NỐI Ô/.test(heading) && /SẮP XẾP/.test(heading)) return 'dragMixed';
-        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
-        if (/SẮP XẾP/.test(heading)) return 'dragSort';
+        if (/^BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+        if (/^KÉO THẢ|^KÉO VÀO Ô|^KÉO VÀO TRỐNG/.test(heading)) return 'fill';
+        if (/^NỐI Ô/.test(heading) && /^SẮP XẾP/.test(heading)) return 'dragMixed';
+        if (/^NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
+        if (/^SẮP XẾP/.test(heading)) return 'dragSort';
         if (/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ|^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
         return '';
     }
@@ -1050,6 +1050,16 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         };
     }
 
+    function isLessonSectionHeadingLine(line) {
+        const trimmed = String(line || '').trim();
+        if (!trimmed || trimmed.includes('|')) return false;
+        // Markdown subsection (### 4. So sánh) là nội dung lý thuyết, không phải section bài học.
+        if (/^#{1,6}\s+\S/.test(trimmed)) return false;
+        // Dòng bullet là nội dung — tránh nhầm "sắp xếp" trong câu với heading SẮP XẾP THỨ TỰ.
+        if (/^[-*+]\s+\S/.test(trimmed)) return false;
+        return true;
+    }
+
     function normalizeGeminiSectionHeading(line) {
         return String(line || '')
             .replace(/^\s*#{1,6}\s*/, '')
@@ -1063,7 +1073,7 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
     function resolveGeminiSectionKey(line) {
         const trimmed = String(line || '').trim();
-        if (trimmed.includes('|')) return '';
+        if (!isLessonSectionHeadingLine(trimmed)) return '';
         const heading = normalizeGeminiSectionHeading(line);
         if (!heading) return '';
         if (/^MỤC TIÊU(?:\s+BÀI HỌC)?/.test(heading)) return 'goal';
@@ -1071,11 +1081,11 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         if (/^(?:PHẦN\s+)?VÍ DỤ/.test(heading)) return 'examples';
         if (/^BÀI TẬP NỘP/.test(heading)) return 'selfPractice';
         if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'interactive';
-        if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-        if (/KÉO THẢ|KÉO VÀO Ô|KÉO VÀO TRỐNG/.test(heading)) return 'fill';
-        if (/NỐI Ô/.test(heading) && /SẮP XẾP/.test(heading)) return 'dragMixed';
-        if (/NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
-        if (/SẮP XẾP/.test(heading)) return 'dragSort';
+        if (/^BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
+        if (/^KÉO THẢ|^KÉO VÀO Ô|^KÉO VÀO TRỐNG/.test(heading)) return 'fill';
+        if (/^NỐI Ô/.test(heading) && /^SẮP XẾP/.test(heading)) return 'dragMixed';
+        if (/^NỐI Ô|^NỐI\s/.test(heading)) return 'dragMatch';
+        if (/^SẮP XẾP/.test(heading)) return 'dragSort';
         if (/^TRẮC NGHIỆM/.test(heading)) return 'questions';
         if (/^KỸ NĂNG/.test(heading)) return 'skills';
         if (/^NHIỆM VỤ/.test(heading)) return 'tasks';

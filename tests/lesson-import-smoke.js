@@ -126,5 +126,30 @@ if (!messySortCauParsed[0] || !/45\s*006/.test(messySortCauParsed[0].prompt)) {
     console.log('OK: sort cau prefix stripped');
 }
 
+const theoryWithCompareSection = `LÝ THUYẾT
+### 3. Số liền trước và số liền sau
+- **Số liền trước** của một số ít hơn số đó $1$ đơn vị.
+
+### 4. So sánh
+- Trên dãy số, các số được sắp xếp theo thứ tự tăng dần từ trái sang phải.
+- Số có nhiều chữ số hơn thì lớn hơn.
+
+**DANH SÁCH HÌNH ẢNH CẦN TẠO**
+HINH_01: theory | Bảng | diagram | Prompt`;
+
+const theorySections = LI.parseGeminiLessonSections(theoryWithCompareSection);
+if (!/4\.\s*So sánh/i.test(theorySections.theory || '')) {
+    console.error('FAIL: theory section 4 lost during parse', theorySections.theory);
+    failed += 1;
+} else if (!/sắp xếp/i.test(theorySections.theory || '')) {
+    console.error('FAIL: theory compare bullet lost during parse', theorySections.theory);
+    failed += 1;
+} else if (theorySections.dragSort) {
+    console.error('FAIL: theory prose misclassified as dragSort', theorySections.dragSort);
+    failed += 1;
+} else {
+    console.log('OK: theory keeps section 4 when bullet contains "sắp xếp"');
+}
+
 if (failed) process.exit(1);
 console.log('\nAll smoke checks passed.');
