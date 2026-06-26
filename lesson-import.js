@@ -6,7 +6,7 @@
     'use strict';
 
     const SCHEMA_VERSION = 'lesson-import-v1';
-    const PROMPT_VERSION = '20260626-tabs-v1';
+    const PROMPT_VERSION = '20260626-tabs-v2';
     const VALID_SUBJECTS = ['Toán 4', 'Toán 5', 'Toán 6', 'Toán 7', 'Toán 8', 'Toán 9'];
     const SUBJECT_CODES = {
         'Toán 4': 'math4', 'Toán 5': 'math5', 'Toán 6': 'math6',
@@ -1152,9 +1152,18 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         return chunks.filter(Boolean);
     }
 
+    function flattenManifestLists(lists) {
+        const out = [];
+        (lists || []).forEach(list => {
+            if (!Array.isArray(list)) return;
+            list.forEach(entry => out.push(entry));
+        });
+        return out;
+    }
+
     function mergeImageManifestEntries(...lists) {
         const byId = new Map();
-        lists.flat().forEach(entry => {
+        flattenManifestLists(lists).forEach(entry => {
             if (!entry || !entry.id) return;
             const id = normalizeImageId(entry.id);
             const prev = byId.get(id);
@@ -1698,8 +1707,16 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
             .map(value => String(value || '').trim())
             .filter(Boolean)
             .sort((a, b) => b.length - a.length)[0] || '';
-        const skills = parseSkills(pickLongestSection(sections.skills, restSections?.skills, theorySections?.skills));
-        const questionsText = pickLongestSection(sections.questions, restSections?.questions, theorySections?.questions);
+        const skills = parseSkills(pickLongestSection(
+            sections.skills,
+            restSections && restSections.skills,
+            theorySections && theorySections.skills
+        ));
+        const questionsText = pickLongestSection(
+            sections.questions,
+            restSections && restSections.questions,
+            theorySections && theorySections.questions
+        );
         const qReport = parseQuestionsReport(questionsText, skills);
         const importNotes = [];
         if (qReport.skipped.length) {
@@ -1723,16 +1740,16 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
             slug: meta.slug || '',
             order_index: meta.order_index || 0,
             is_published: false,
-            goal_text: pickLongestSection(theorySections?.goal, sections.goal),
-            theory: parseTheoryBlocks(pickLongestSection(theorySections?.theory, sections.theory)),
-            examples: parseExamples(pickLongestSection(restSections?.examples, sections.examples)),
-            self_practice: parseExamples(pickLongestSection(restSections?.selfPractice, sections.selfPractice)),
-            essay_exercises: parseEssayExercises(pickLongestSection(restSections?.essay, sections.essay)),
-            fill_exercises: parseFillExercises(pickLongestSection(restSections?.fill, sections.fill)),
+            goal_text: pickLongestSection(theorySections && theorySections.goal, sections.goal),
+            theory: parseTheoryBlocks(pickLongestSection(theorySections && theorySections.theory, sections.theory)),
+            examples: parseExamples(pickLongestSection(restSections && restSections.examples, sections.examples)),
+            self_practice: parseExamples(pickLongestSection(restSections && restSections.selfPractice, sections.selfPractice)),
+            essay_exercises: parseEssayExercises(pickLongestSection(restSections && restSections.essay, sections.essay)),
+            fill_exercises: parseFillExercises(pickLongestSection(restSections && restSections.fill, sections.fill)),
             drag_exercises: [
-                ...parseDragExercises(pickLongestSection(restSections?.dragMatch, sections.dragMatch), { preferMatch: true }),
-                ...parseDragExercises(pickLongestSection(restSections?.dragSort, sections.dragSort)),
-                ...parseDragExercises(pickLongestSection(restSections?.drag, sections.drag))
+                ...parseDragExercises(pickLongestSection(restSections && restSections.dragMatch, sections.dragMatch), { preferMatch: true }),
+                ...parseDragExercises(pickLongestSection(restSections && restSections.dragSort, sections.dragSort)),
+                ...parseDragExercises(pickLongestSection(restSections && restSections.drag, sections.drag))
             ],
             questions: qReport.questions,
             skills,

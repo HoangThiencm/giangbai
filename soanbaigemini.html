@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
         (function () {
-            var VERSION = '20260626-tabs-v1';
+            var VERSION = '20260626-tabs-v2';
             var SOURCES = [
                 'lesson-import.js?v=' + VERSION,
                 'https://hoangthiencm.id.vn/lesson-import.js?v=' + VERSION
@@ -420,6 +420,24 @@
         }
         window.showAppToast = showAppToast;
 
+        window.addEventListener('error', function(ev) {
+            try {
+                console.error(
+                    '[soanbaigemini] Script error:',
+                    ev && ev.message,
+                    ev && ev.filename,
+                    ev && ev.lineno,
+                    ev && ev.colno,
+                    ev && ev.error
+                );
+            } catch (logErr) { /* ignore */ }
+        });
+        window.addEventListener('unhandledrejection', function(ev) {
+            try {
+                console.error('[soanbaigemini] Promise lỗi:', ev && ev.reason);
+            } catch (logErr) { /* ignore */ }
+        });
+
         window.escapeHtml = function(value) {
             var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
             return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
@@ -617,18 +635,24 @@
             var title = (document.getElementById('title') || {}).value || '';
             var theoryRaw = (window.getTheoryOutputEl() && window.getTheoryOutputEl().value || '').trim();
             var restRaw = (window.getRestOutputEl() && window.getRestOutputEl().value || '').trim();
-            var pkg = LI.buildLessonImportPackage({
-                rawGeminiText: raw,
-                theoryGeminiText: theoryRaw,
-                restGeminiText: restRaw,
-                metadata: {
-                    subject: subject,
-                    chapter: chapter,
-                    title: title,
-                    tool: 'soanbaigemini',
-                    prompt_version: LI.PROMPT_VERSION
-                }
-            });
+            var pkg;
+            try {
+                pkg = LI.buildLessonImportPackage({
+                    rawGeminiText: raw,
+                    theoryGeminiText: theoryRaw,
+                    restGeminiText: restRaw,
+                    metadata: {
+                        subject: subject,
+                        chapter: chapter,
+                        title: title,
+                        tool: 'soanbaigemini',
+                        prompt_version: LI.PROMPT_VERSION
+                    }
+                });
+            } catch (buildErr) {
+                console.error('[soanbaigemini] buildLessonImportPackage lỗi:', buildErr);
+                return null;
+            }
             window.ensurePackageVideos(pkg, LI);
             return pkg;
         };
@@ -2980,6 +3004,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
         }
 
         function init() {
+            try {
             initializeTailwind();
             setupImageUpload();
 
@@ -3073,12 +3098,23 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 el.addEventListener('change', scheduleLessonValidation);
             });
             updateLessonPhaseUi();
-            if (window.refreshLessonValidation) window.refreshLessonValidation();
 
-            waitForLessonImport(12000).catch(function () {
+            waitForLessonImport(12000).then(function() {
+                if (window.refreshLessonValidation) {
+                    try {
+                        window.refreshLessonValidation();
+                    } catch (validationErr) {
+                        console.error('[soanbaigemini] refreshLessonValidation lỗi:', validationErr);
+                    }
+                }
+            }).catch(function () {
                 showAppToast('Chưa tải lesson-import.js — kiểm tra deploy + Ctrl+F5. Preview/JSON/Lộ trình cần file này.', 'warn');
             });
             console.log('%c[soanbaigemini] Sẵn sàng trong Gemini Canvas — không cần API key.', 'color:#047857');
+            } catch (initErr) {
+                console.error('[soanbaigemini] init() lỗi:', initErr);
+                showAppToast('Lỗi khởi tạo trang: ' + (initErr && initErr.message ? initErr.message : String(initErr)), 'err');
+            }
         }
 
         window.generateTheoryPhase = generateTheoryPhase;
