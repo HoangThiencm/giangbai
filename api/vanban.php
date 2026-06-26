@@ -818,6 +818,38 @@ function vbd_collect_uploaded_files(): array
     return [];
 }
 
+function vbd_delete_document_file_storage(int $documentId, array $document, array $file): ?string
+{
+    $label = trim((string)($file['original_name'] ?? 'Tệp đính kèm'));
+    $rawId = (string)($file['drive_file_id'] ?? '');
+    if (vbd_is_local_file_id($rawId)) {
+        $storedName = trim((string)($file['stored_name'] ?? ''));
+        if ($storedName !== '') {
+            $path = vbd_local_file_path($documentId, $document, $storedName);
+            if (is_file($path) && !@unlink($path)) {
+                return $label . ': không xóa được tệp trên hosting';
+            }
+        }
+        return null;
+    }
+
+    require_once __DIR__ . '/google_drive.php';
+    $fileId = drive_resolve_file_id(
+        $rawId,
+        (string)($file['view_url'] ?? ''),
+        (string)($file['download_url'] ?? '')
+    );
+    if ($fileId === '') {
+        return $label . ': không xác định được mã tệp trên Drive';
+    }
+    try {
+        drive_delete_file($fileId);
+    } catch (Throwable $fileError) {
+        return $label . ': ' . $fileError->getMessage();
+    }
+    return null;
+}
+
 function vbd_save_document(PDO $pdo, array $user, array $input): array
 {
     $id = (int)($input['id'] ?? 0);
@@ -1285,45 +1317,48 @@ if ($action === 'upload') {
     vbd_process_document_upload($pdo, $id, $document, $files, $maxBytes);
 }
 
+if ($action === 'delete_file') {
+    $input = json_body();
+    $documentId = (int)($input['document_id'] ?? $input['id'] ?? 0);
+    $fileId = (int)($input['file_id'] ?? 0);
+    if ($documentId < 1 || $fileId < 1) respond(['error' => 'Thiếu mã văn bản hoặc tệp đính kèm.'], 422);
+    $document = vbd_document($pdo, $documentId, (int)$user['id']);
+    if (!$document) respond(['error' => 'Không tìm thấy văn bản.'], 404);
+    $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE id = ? AND document_id = ? LIMIT 1');
+    $stmt->execute([$fileId, $documentId]);
+    $file = $stmt->fetch();
+    if (!$file) respond(['error' => 'Không tìm thấy tệp đính kèm.'], 404);
+    try {
+        $storageError = vbd_delete_document_file_storage($documentId, $document, $file);
+        if ($storageError) {
+            respond(['error' => 'Không xóa được tệp trên Drive/hosting: ' . $storageError], 502);
+        }
+        $pdo->prepare('DELETE FROM office_document_files WHERE id = ? AND document_id = ?')->execute([$fileId, $documentId]);
+        respond([
+            'ok' => true,
+            'message' => 'Đã xóa tệp “' . trim((string)($file['original_name'] ?? 'đính kèm')) . '”.',
+            'document_id' => $documentId,
+            'file_id' => $fileId,
+        ]);
+    } catch (Throwable $e) {
+        respond(['error' => 'Không thể xóa tệp: ' . $e->getMessage()], 502);
+    }
+}
+
 if ($action === 'delete') {
     $input = json_body();
     $id = (int)($input['id'] ?? 0);
     if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản.'], 404);
-    $fileStmt = $pdo->prepare('SELECT drive_file_id, view_url, download_url, original_name FROM office_document_files WHERE document_id=?');
+    $fileStmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id=?');
     $fileStmt->execute([$id]);
     $files = $fileStmt->fetchAll();
     try {
         if ($files) {
-            require_once __DIR__ . '/google_drive.php';
             $driveErrors = [];
             $document = vbd_document($pdo, $id, (int)$user['id']) ?: [];
             foreach ($files as $file) {
-                $label = trim((string)($file['original_name'] ?? 'Tệp đính kèm'));
-                $rawId = (string)($file['drive_file_id'] ?? '');
-                if (vbd_is_local_file_id($rawId)) {
-                    $storedName = trim((string)($file['stored_name'] ?? ''));
-                    if ($storedName !== '' && $document) {
-                        $path = vbd_local_file_path($id, $document, $storedName);
-                        if (is_file($path) && !@unlink($path)) {
-                            $driveErrors[] = $label . ': không xóa được tệp trên hosting';
-                        }
-                    }
-                    continue;
-                }
-                $fileId = drive_resolve_file_id(
-                    $rawId,
-                    (string)($file['view_url'] ?? ''),
-                    (string)($file['download_url'] ?? '')
-                );
-                if ($fileId === '') {
-                    $driveErrors[] = $label . ': không xác định được mã tệp trên Drive';
-                    continue;
-                }
-                try {
-                    drive_delete_file($fileId);
-                } catch (Throwable $fileError) {
-                    $driveErrors[] = $label . ': ' . $fileError->getMessage();
-                }
+                $storageError = vbd_delete_document_file_storage($id, $document, $file);
+                if ($storageError) $driveErrors[] = $storageError;
             }
             if ($driveErrors) {
                 respond([

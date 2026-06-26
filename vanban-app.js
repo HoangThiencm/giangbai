@@ -237,6 +237,93 @@
         return match ? match[1] : '';
     }
 
+    function renderFileChip(doc, file) {
+        const fileId = driveFileId(file);
+        const previewUrl = isLocalFile(file) ? String(file.view_url || '') : '';
+        const canPreview = fileId || previewUrl;
+        const dbFileId = Number(file.id || 0);
+        return `<span class="inline-flex max-w-full items-center gap-1.5 rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
+            <i class="fa-solid fa-paperclip shrink-0"></i>
+            <span class="truncate">${esc(file.original_name)}</span>
+            ${canPreview ? `<button type="button" data-preview-id="${esc(fileId)}" data-preview-url="${esc(previewUrl)}" data-preview-title="${esc(file.original_name)}" class="shrink-0 rounded ${accentPrimary()} px-2 py-0.5 text-[11px] font-bold text-white"><i class="fa-solid fa-eye mr-0.5"></i>Xem</button>` : ''}
+            ${dbFileId ? `<button type="button" data-delete-file-id="${dbFileId}" data-doc-id="${doc.id}" data-file-name="${esc(file.original_name)}" class="shrink-0 rounded border border-rose-200 bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa tệp này"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+        </span>`;
+    }
+
+    function ensureExistingFilesPanel() {
+        let panel = $('existingFilesPanel');
+        if (panel) return panel;
+        const anchor = $('selectedFilesNote') || $('files');
+        if (!anchor) return null;
+        panel = document.createElement('div');
+        panel.id = 'existingFilesPanel';
+        panel.className = 'hidden rounded-lg border border-slate-200 bg-slate-50 p-3';
+        anchor.parentElement?.insertBefore(panel, anchor);
+        return panel;
+    }
+
+    function renderExistingFilesInModal(doc) {
+        const panel = ensureExistingFilesPanel();
+        if (!panel) return;
+        const files = doc?.files || [];
+        if (!files.length) {
+            panel.classList.add('hidden');
+            panel.innerHTML = '';
+            return;
+        }
+        panel.classList.remove('hidden');
+        panel.innerHTML = `
+            <p class="mb-2 text-xs font-bold text-slate-700">Tệp đã đính kèm (${files.length})</p>
+            <div class="flex flex-wrap gap-2">${files.map(file => renderFileChip(doc, file)).join('')}</div>
+            <p class="mt-2 text-[11px] text-slate-500">Bấm <i class="fa-solid fa-trash-can"></i> để xóa tệp thừa. Thêm tệp mới ở ô bên dưới.</p>`;
+        bindFileActions(panel);
+    }
+
+    async function deleteAttachedFile(documentId, fileId, fileName) {
+        if (!confirm(`Xóa tệp “${fileName}”?\n\nTệp sẽ bị xóa khỏi Drive/hosting và danh mục văn bản.`)) return;
+        try {
+            const data = await api('delete_file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ document_id: documentId, file_id: fileId }),
+            });
+            toast(data.message || 'Đã xóa tệp đính kèm.');
+            await load();
+            const doc = state.documents.find(item => Number(item.id) === Number(documentId));
+            if ($('documentModal') && !$('documentModal').classList.contains('hidden')) {
+                openModal(doc || null);
+            }
+        } catch (error) {
+            toast(error.message, 'rose');
+        }
+    }
+
+    function bindFileActions(root) {
+        if (!root) return;
+        root.querySelectorAll('[data-preview-id], [data-preview-url]').forEach(button => {
+            button.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                openDrivePreview(
+                    button.dataset.previewId || '',
+                    button.dataset.previewTitle || 'Tệp đính kèm',
+                    button.dataset.previewUrl || ''
+                );
+            };
+        });
+        root.querySelectorAll('[data-delete-file-id]').forEach(button => {
+            button.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                deleteAttachedFile(
+                    Number(button.dataset.docId),
+                    Number(button.dataset.deleteFileId),
+                    button.dataset.fileName || 'tệp đính kèm'
+                );
+            };
+        });
+    }
+
     function openDrivePreview(fileId, title = 'Tệp đính kèm', directUrl = '') {
         const src = directUrl || (fileId ? `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview` : '');
         if (!src) return;
@@ -266,16 +353,7 @@
             const due = doc.report_required
                 ? `<span class="text-xs text-slate-500"><i class="fa-regular fa-calendar mr-1"></i>Hạn: ${dateText(doc.report_due_at)}</span>`
                 : '';
-            const files = (doc.files || []).map(file => {
-                const fileId = driveFileId(file);
-                const previewUrl = isLocalFile(file) ? String(file.view_url || '') : '';
-                const canPreview = fileId || previewUrl;
-                return `<span class="inline-flex max-w-full items-center gap-1.5 rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
-                    <i class="fa-solid fa-paperclip shrink-0"></i>
-                    <span class="truncate">${esc(file.original_name)}</span>
-                    ${canPreview ? `<button type="button" data-preview-id="${esc(fileId)}" data-preview-url="${esc(previewUrl)}" data-preview-title="${esc(file.original_name)}" class="shrink-0 rounded ${accentPrimary()} px-2 py-0.5 text-[11px] font-bold text-white"><i class="fa-solid fa-eye mr-0.5"></i>Xem</button>` : ''}
-                </span>`;
-            }).join('');
+            const files = (doc.files || []).map(file => renderFileChip(doc, file)).join('');
             return `<article class="border-b border-slate-100 p-4 last:border-b-0 hover:bg-slate-50/80">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0 flex-1">
@@ -300,13 +378,7 @@
         host.querySelectorAll('[data-action]').forEach(button => {
             button.onclick = () => handleAction(button.dataset.action, Number(button.dataset.id));
         });
-        host.querySelectorAll('[data-preview-id], [data-preview-url]').forEach(button => {
-            button.onclick = () => openDrivePreview(
-                button.dataset.previewId || '',
-                button.dataset.previewTitle || 'Tệp đính kèm',
-                button.dataset.previewUrl || ''
-            );
-        });
+        bindFileActions(host);
     }
 
     function reminderInfo(doc) {
@@ -502,10 +574,12 @@
         if ($('reportNote')) $('reportNote').value = doc?.report_note || '';
         $('parseNote')?.classList.add('hidden');
         setReportVisibility();
+        renderExistingFilesInModal(doc);
         $('documentModal')?.classList.remove('hidden');
     }
 
     function closeModal() {
+        $('existingFilesPanel')?.classList.add('hidden');
         $('documentModal')?.classList.add('hidden');
     }
 
