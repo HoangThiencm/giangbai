@@ -2005,38 +2005,77 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             return /MỤC\s*TIÊU/i.test(raw) && /LÝ\s*THUYẾT/i.test(raw);
         }
 
-        function extractTheoryPhaseFromOutput(text) {
+        function normalizeOutputHeading(line) {
+            return String(line || '')
+                .replace(/^[\s#*>-]+/, '')
+                .replace(/\*\*/g, '')
+                .replace(/[*_`]+/g, '')
+                .replace(/[:：]\s*$/, '')
+                .trim();
+        }
+
+        const THEORY_BOUNDARY_HEADING_RE = /^(VÍ\s*DỤ|BÀI\s*TẬP|TRẮC\s*NGHIỆM|KỸ\s*NĂNG|NHIỆM\s*VỤ)/i;
+        const REST_SECTION_HEADING_RE = /^(VÍ\s*DỤ|BÀI\s*TẬP|TRẮC\s*NGHIỆM|KỸ\s*NĂNG|NHIỆM\s*VỤ|DANH\s*SÁCH\s*HÌNH)/i;
+
+        function isTheoryBoundaryHeading(line) {
+            return THEORY_BOUNDARY_HEADING_RE.test(normalizeOutputHeading(line));
+        }
+
+        function isRestSectionHeading(line) {
+            return REST_SECTION_HEADING_RE.test(normalizeOutputHeading(line));
+        }
+
+        /** Giữ nguyên Mục tiêu + Lý thuyết (+ DANH SÁCH HÌNH Bước 1) — dừng trước VÍ DỤ / bài tập. */
+        function getPreservedTheoryBlock(text) {
             const raw = String(text || '').trim();
             if (!raw) return '';
-            const stopRe = /^(VÍ\s*DỤ|BÀI\s*TẬP|TRẮC\s*NGHIỆM|KỸ\s*NĂNG|NHIỆM\s*VỤ|DANH\s*SÁCH\s*HÌNH)/im;
             const lines = raw.split('\n');
-            const kept = [];
-            let seenTheory = false;
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const heading = line.replace(/^[#*\s]+/, '').trim();
-                if (stopRe.test(heading) && seenTheory) break;
-                if (/^LÝ\s*THUYẾT$/i.test(heading)) seenTheory = true;
-                kept.push(line);
+                if (isTheoryBoundaryHeading(lines[i])) {
+                    return lines.slice(0, i).join('\n').trim();
+                }
             }
-            return kept.join('\n').trim();
+            return raw;
+        }
+
+        function extractTheoryPhaseFromOutput(text) {
+            return getPreservedTheoryBlock(text);
         }
 
         function stripTheorySectionsFromRest(text) {
-            return String(text || '')
-                .replace(/^[\s#*]*MỤC\s*TIÊU[\s\S]*?(?=^[\s#*]*(?:VÍ\s*DỤ|BÀI\s*TẬP|TRẮC\s*NGHIỆM|KỸ\s*NĂNG|NHIỆM\s*VỤ|DANH\s*SÁCH\s*HÌNH))/im, '')
-                .replace(/^[\s#*]*LÝ\s*THUYẾT[\s\S]*?(?=^[\s#*]*(?:VÍ\s*DỤ|BÀI\s*TẬP|TRẮC\s*NGHIỆM|KỸ\s*NĂNG|NHIỆM\s*VỤ|DANH\s*SÁCH\s*HÌNH))/im, '')
-                .trim();
+            const raw = String(text || '').trim();
+            if (!raw) return '';
+            const lines = raw.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (isRestSectionHeading(lines[i])) {
+                    return lines.slice(i).join('\n').trim();
+                }
+            }
+            let i = 0;
+            const kept = [];
+            while (i < lines.length) {
+                const heading = normalizeOutputHeading(lines[i]);
+                if (/^MỤC\s*TIÊU$/i.test(heading) || /^LÝ\s*THUYẾT$/i.test(heading)) {
+                    i++;
+                    while (i < lines.length && !isRestSectionHeading(lines[i])) {
+                        const nextHeading = normalizeOutputHeading(lines[i]);
+                        if (/^MỤC\s*TIÊU$/i.test(nextHeading) || /^LÝ\s*THUYẾT$/i.test(nextHeading)) break;
+                        i++;
+                    }
+                    continue;
+                }
+                kept.push(lines[i]);
+                i++;
+            }
+            return kept.join('\n').trim();
         }
 
         function extractRestFromOutput(text) {
             const raw = String(text || '').trim();
             if (!raw) return '';
-            const restStartRe = /^(VÍ\s*DỤ|BÀI\s*TẬP|TRẮC\s*NGHIỆM|KỸ\s*NĂNG|NHIỆM\s*VỤ|DANH\s*SÁCH\s*HÌNH)/im;
             const lines = raw.split('\n');
             for (let i = 0; i < lines.length; i++) {
-                const heading = lines[i].replace(/^[#*\s]+/, '').trim();
-                if (restStartRe.test(heading)) {
+                if (isRestSectionHeading(lines[i])) {
                     return lines.slice(i).join('\n').trim();
                 }
             }
@@ -2044,7 +2083,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         }
 
         function mergeTheoryAndRest(theoryText, restText) {
-            const theory = extractTheoryPhaseFromOutput(removeLessonSourceAttributions(theoryText));
+            const theory = String(theoryText || '').trim();
             const rest = extractRestFromOutput(removeLessonSourceAttributions(restText));
             if (!theory) return rest;
             if (!rest) return theory;
@@ -2105,6 +2144,8 @@ ${approvedTheory}
 <<<END_THEORY>>>
 
 Ảnh SGK đã được phân tích ở Bước 1. Ở Bước 2 **chỉ bám khối lý thuyết đã duyệt** để soạn ví dụ/bài tập; **không được mở rộng lý thuyết** so với khối trên.
+
+**OUTPUT BẮT ĐẦU NGAY BẰNG VÍ DỤ** — tuyệt đối không MỤC TIÊU, không LÝ THUYẾT, không DANH SÁCH HÌNH của Bước 1. Hai mục đó đã duyệt và sẽ được ghép tự động.
 
 **CHỈ XUẤT CÁC MỤC SAU (KHÔNG lặp lại MỤC TIÊU / LÝ THUYẾT):**
 
@@ -2202,7 +2243,7 @@ Không ghi chú nguồn SGK. Không lời mở đầu. Không dùng \`---\` ngă
         async function generateRemainingSections() {
             if (lessonGenerationInProgress) return;
             const outputArea = document.getElementById('gemini-output');
-            const approvedTheory = extractTheoryPhaseFromOutput(outputArea.value || '');
+            const approvedTheory = getPreservedTheoryBlock(outputArea.value || '');
             if (!hasApprovedTheoryInOutput(approvedTheory)) {
                 window.showAppToast('Chưa có Mục tiêu + Lý thuyết. Chạy Bước 1 hoặc dán thủ công vào ô kết quả.', 'warn');
                 updateLessonPhaseUi();
@@ -2248,7 +2289,10 @@ Không ghi chú nguồn SGK. Không lời mở đầu. Không dùng \`---\` ngă
                     rest = extractRestFromOutput(removeLessonSourceAttributions(rest));
                 }
 
-                const merged = mergeTheoryAndRest(approvedTheory, rest);
+                const merged = mergeTheoryAndRest(
+                    getPreservedTheoryBlock(outputArea.value || approvedTheory),
+                    rest
+                );
                 await finalizeLessonOutput(merged, { phase: 'complete' });
             } catch (error) {
                 const message = describeGeminiError(error);
