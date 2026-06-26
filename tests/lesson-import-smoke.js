@@ -97,5 +97,34 @@ if (typeof LI.getInteractiveFormatGuide === 'function' && !LI.getInteractiveForm
     console.log('OK: interactive format guide');
 }
 
+const messyEssay = `BÀI TẬP TỰ LUẬN NGẮN
+- **Câu 1:** Viết số gồm 4 chục nghìn, 5 nghìn, 6 trăm và 2 đơn vị
+**Đáp án:** 45 602
+**Gợi ý:** Đọc từng hàng
+Viết số 66 006 | 66006 | Đếm hàng`;
+
+const messyEssayParsed = LI.parseEssayExercises(messyEssay);
+if (messyEssayParsed.length < 2) {
+    console.error('FAIL: messy essay parse count', messyEssayParsed.length);
+    failed += 1;
+} else if (!String(messyEssayParsed[0].answer || '').replace(/\s/g, '').includes('45602')) {
+    console.error('FAIL: messy essay answer merge', messyEssayParsed[0]);
+    failed += 1;
+} else if (!messyEssayParsed[0].hint) {
+    console.error('FAIL: messy essay hint', messyEssayParsed[0]);
+    failed += 1;
+} else {
+    console.log('OK: messy essay markdown canonicalized');
+}
+
+const messySortCau = '**Câu 1:** 45 006 | 12 500 » 9 800 » 12 050 | 9 800 » 12 050 » 12 500 | So sánh hàng nghìn';
+const messySortCauParsed = LI.parseDragExercises(messySortCau);
+if (!messySortCauParsed[0] || !/45\s*006/.test(messySortCauParsed[0].prompt)) {
+    console.error('FAIL: sort cau prefix strip', messySortCauParsed[0]);
+    failed += 1;
+} else {
+    console.log('OK: sort cau prefix stripped');
+}
+
 if (failed) process.exit(1);
 console.log('\nAll smoke checks passed.');

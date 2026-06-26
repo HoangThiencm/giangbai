@@ -269,30 +269,9 @@
         }).join('\n');
     }
 
-    function formatEssayExercises(items) {
-        return (items || []).map(item => [item.prompt || '', item.answer || '', item.hint || ''].join(' | ')).join('\n');
-    }
-
-    function formatFillExercises(items) {
-        return (items || []).map(item => {
-            const pool = joinPoolText(item.items || item.pool || []);
-            const answer = Array.isArray(item.answer) ? joinPoolText(item.answer) : (item.answer || '');
-            return [item.prompt || '', pool || answer, answer, item.hint || ''].filter((part, idx, arr) => !(idx === 1 && part === arr[2])).join(' | ');
-        }).join('\n');
-    }
-
-    function formatDragExercises(items) {
-        return (items || []).map(item => {
-            if (item.mode === 'match' || (Array.isArray(item.left) && Array.isArray(item.right))) {
-                const pairs = (item.pairs || []).map(pair => `${pair.left}-${pair.right}`).join(',');
-                const pairCount = (item.pairs || []).length;
-                const left = joinPoolText(repairPoolPieces(item.left || [], pairCount));
-                const right = joinPoolText(repairPoolPieces(item.right || [], pairCount));
-                return [item.prompt || '', left, right, pairs, item.hint || ''].join(' | ');
-            }
-            return [item.prompt || '', joinPoolText(item.items || []), joinPoolText(item.answer || []), item.hint || ''].join(' | ');
-        }).join('\n');
-    }
+    const formatEssayExercises = (...a) => LI.formatEssayExercises(...a);
+    const formatFillExercises = (...a) => LI.formatFillExercises(...a);
+    const formatDragExercises = (...a) => LI.formatDragExercises(...a);
 
     function richToolbarHtml(targetId) {
         return `

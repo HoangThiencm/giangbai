@@ -6,7 +6,7 @@
     <title>Soạn bài Gemini • Tạo bài học hoàn chỉnh (hình ảnh + nội dung)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://hoangthiencm.id.vn/lesson-import.js?v=20260624-interactive-canonical-v1" defer></script>
+    <script src="lesson-import.js?v=20260626-sync-v1" defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
         
@@ -603,7 +603,7 @@
                 statusEl.className = 'font-semibold text-emerald-700 mb-2';
                 statusEl.textContent = state.warnings.length
                     ? ('✓ Không còn lỗi — có thể xuất JSON (còn ' + state.warnings.length + ' cảnh báo, không chặn import)')
-                    : '✓ Sẵn sàng xuất JSON và import vào Lộ trình';
+                    : '✓ Sẵn sàng xuất JSON lesson-import-v1 và import vào Lộ trình';
                 fillBlocks(errorsEl, [], '');
                 fillBlocks(warningsEl, state.warningsVi || state.warnings, '');
                 return state;
@@ -1033,11 +1033,12 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                     <h3 class="text-xl font-semibold mb-4">Cấu trúc bài học bắt buộc</h3>
 
                     <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-                        <div class="font-semibold mb-1">Luồng khuyến nghị (2 bước)</div>
-                        <ol class="list-decimal pl-5 space-y-1">
-                            <li><strong>Bước 1:</strong> Tạo Mục tiêu + Lý thuyết — duyệt/sửa/cắt bớt trong ô kết quả.</li>
-                            <li><strong>Bước 2:</strong> Tạo Ví dụ, bài tập, trắc nghiệm… bám lý thuyết đã duyệt (tránh vượt trình độ SGK).</li>
-                        </ol>
+                            <div class="font-semibold mb-1">Luồng khuyến nghị (2 bước) — đồng bộ Lộ trình</div>
+                            <ol class="list-decimal pl-5 space-y-1">
+                                <li><strong>Bước 1:</strong> Tạo Mục tiêu + Lý thuyết — duyệt/sửa/cắt bớt trong ô kết quả.</li>
+                                <li><strong>Bước 2:</strong> Tạo Ví dụ, bài tập, trắc nghiệm… bám lý thuyết đã duyệt (tránh vượt trình độ SGK).</li>
+                                <li><strong>Kiểm tra import → Xuất JSON</strong> — cùng chuẩn <code>lesson-import-v1</code> với tab Import trên Lộ trình (một file <code>lesson-import.js</code>).</li>
+                            </ol>
                     </div>
                     
                     <div class="space-y-4 text-sm">
@@ -1124,271 +1125,15 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             appendText(content.slice(cursor));
         }
 
-        function normalizeLessonSectionHeading(line) {
-            return String(line || '')
-                .replace(/^\s*#{1,6}\s*/, '')
-                .replace(/^\s*[-*+]\s+/, '')
-                .replace(/^\s*\d+[.)\-:]\s*/, '')
-                .replace(/^\s*[-–—]\s*/, '')
-                .replace(/\*\*/g, '')
-                .replace(/^[=~_*\-–—\s]+|[=~_*\-–—\s]+$/g, '')
-                .replace(/[:：]\s*$/, '')
-                .replace(/\s*[(（][^)）]*[)）]\s*$/g, '')
-                .trim()
-                .toUpperCase();
-        }
-
-        function isTheoryBridgeHeading(heading) {
-            return /^(?:KIẾN THỨC|GHI NHỚ|CHÚ Ý|LƯU Ý|MẸO|NHẬN XÉT|VẬN DỤNG|CỦNG CỐ|BỔ SUNG|CÔNG THỨC|ĐỊNH NGHĨA|TÍNH CHẤT|LƯU Ý QUAN TRỌNG|GHI NHỚ NHANH)(?:\s|$)/.test(heading)
-                || /^VÍ DỤ MINH HỌA(?:\s|$)/.test(heading);
-        }
-
-        function isLessonSectionHeadingLine(line) {
-            const trimmed = String(line || '').trim();
-            if (!trimmed) return false;
-
-            const heading = normalizeLessonSectionHeading(trimmed);
-            if (!heading || heading.length > 80) return false;
-
-            if (/^(MỤC TIÊU|LÝ THUYẾT|VÍ DỤ|BÀI TẬP NỘP|BÀI TẬP TƯƠNG TÁC|BÀI TẬP TỰ LUẬN|KÉO THẢ|KÉO VÀO Ô|SẮP XẾP|NỐI Ô|TRẮC NGHIỆM|KỸ NĂNG|NHIỆM VỤ|DANH SÁCH HÌNH|DẠNG\s+\d+|KIẾN THỨC|GHI NHỚ|CHÚ Ý|LƯU Ý|VẬN DỤNG|CỦNG CỐ|PHẦN\s+VÍ DỤ|VÍ DỤ MINH HỌA|PROMPT TẠO ẢNH)/.test(heading)) {
-                return true;
-            }
-
-            if (isTheoryBridgeHeading(heading)) return true;
-
-            if (/^#{1,6}\s/.test(trimmed)) return true;
-            if (/^\d+[.)\-:]\s+/.test(trimmed)) return true;
-            if (/^[=~_*\-–—\s]*[A-ZÀ-Ỹ0-9][A-ZÀ-Ỹ0-9\s:–\-–|ẢNHỮĐĂÂÊÔƠƯ]+[=~_*\-–—\s]*$/u.test(trimmed.toUpperCase())
-                && /^(MỤC TIÊU|LÝ THUYẾT|VÍ DỤ|BÀI TẬP|TRẮC NGHIỆM|KỸ NĂNG|NHIỆM VỤ|DANH SÁCH HÌNH)/.test(heading)) {
-                return true;
-            }
-
-            return false;
-        }
-
-        function resolveLessonSectionKey(line, currentKey, sectionValues) {
-            if (!isLessonSectionHeadingLine(line)) return '';
-            const heading = normalizeLessonSectionHeading(line);
-            if (!heading) return '';
-
-            if (/^MỤC TIÊU(?:\s+BÀI HỌC)?$/.test(heading)) return 'goal';
-            if (/^LÝ THUYẾT$/.test(heading)) return 'theory';
-
-            if (/^VÍ DỤ MINH HỌA(?:\s|$)/.test(heading)) {
-                return (currentKey === 'theory' || currentKey === 'theoryBridge' || !sectionValues.examples) ? 'theoryBridge' : 'examples';
-            }
-            if (/^(?:PHẦN\s+)?VÍ DỤ$/.test(heading)) return 'examples';
-
-            if (/^DẠNG\s+\d+(?:\s*[:：\-–—]|\s+)/.test(heading) && !sectionValues.examples && (currentKey === 'theory' || currentKey === 'theoryBridge')) {
-                return '__examples_from_dang__';
-            }
-
-            if (isTheoryBridgeHeading(heading)) return 'theoryBridge';
-
-            if (/^BÀI TẬP NỘP(?:\s+GIÁO VIÊN)?$/.test(heading)) return 'selfPractice';
-            if (/^BÀI TẬP TƯƠNG TÁC$/.test(heading)) return 'interactive';
-            if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-            if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
-            if (/SẮP XẾP/.test(heading) && !/NỐI/.test(heading)) return 'drag';
-            if (/NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
-            if (/^TRẮC NGHIỆM$/.test(heading)) return 'questions';
-            if (/^KỸ NĂNG(?:\s+CẦN ĐẠT)?$/.test(heading)) return 'skills';
-            if (/^NHIỆM VỤ(?:\s+HỌC SINH)?$/.test(heading)) return 'tasks';
-            if (/^DANH SÁCH HÌNH(?:\s+ẢNH)?(?:\s+CẦN TẠO)?$/.test(heading)) return 'images';
-            if (/^PROMPT TẠO ẢNH$/.test(heading)) return '';
-
-            return '';
-        }
-
-        function appendLessonSectionValue(sectionValues, key, text) {
-            const value = String(text || '').trim();
-            if (!key || !value) return;
-            sectionValues[key] = sectionValues[key] ? `${sectionValues[key]}\n\n${value}` : value;
-        }
-
-        function splitQuestionParts(line) {
-            return (line.includes('||') ? line.split('||') : line.split('|'))
-                .map(part => part.trim())
-                .filter(Boolean);
-        }
-
-        function normalizeBulkHeading(line) {
-            return String(line || '')
-                .replace(/^\s*#{1,6}\s*/, '')
-                .replace(/^\s*\d+[.)]\s*/, '')
-                .replace(/^\s*\*\*|\*\*\s*$/g, '')
-                .trim()
-                .toUpperCase();
-        }
-
-        function resolveInteractiveBulkSection(line) {
-            const heading = normalizeBulkHeading(line);
-            if (!heading) return '';
-            if (/^BÀI TẬP TƯƠNG TÁC/.test(heading)) return 'skip';
-            if (/BÀI TẬP TỰ LUẬN/.test(heading)) return 'essay';
-            if (/KÉO THẢ|KÉO VÀO Ô/.test(heading)) return 'fill';
-            if (/SẮP XẾP|NỐI Ô|^NỐI\s/.test(heading)) return 'drag';
-            if (/^TRẮC NGHIỆM|^KỸ NĂNG|^NHIỆM VỤ|^DANH SÁCH HÌNH|^PROMPT TẠO/.test(heading)) return 'stop';
-            return '';
-        }
-
-        function poolTextHasMultipleItems(value) {
-            const source = String(value || '');
-            if (!source) return false;
-            if (/\s*»\s*/u.test(source)) return source.split(/\s*»\s*/u).filter(Boolean).length > 1;
-            return false;
-        }
-
-        function isInteractivePipeLine(line) {
-            const text = String(line || '').trim();
-            if (!text || !text.includes('|')) return false;
-            if (/^\*\*.+\*\*$/.test(text)) return false;
-            return !resolveInteractiveBulkSection(text);
-        }
-
-        function classifyInteractivePipeLine(line) {
-            const parts = splitQuestionParts(line);
-            if (parts.length >= 5 && /\d+\s*-\s*\d+/.test(parts[3] || '')) return 'drag';
-            if (parts.length >= 4) {
-                const leftMulti = poolTextHasMultipleItems(parts[1]);
-                const rightMulti = poolTextHasMultipleItems(parts[2]);
-                if (leftMulti && rightMulti) return 'drag';
-                if (leftMulti || /___|…/.test(parts[0] || '')) return 'fill';
-            }
-            return 'essay';
-        }
-
-        function parseInteractiveBulkPaste(text) {
-            const buckets = { essay: [], fill: [], drag: [] };
-            let section = '';
-            let stop = false;
-            const buffer = [];
-
-            const flush = () => {
-                if (!section || section === 'skip' || !buffer.length) {
-                    buffer.length = 0;
-                    return;
-                }
-                buckets[section].push(...buffer.filter(isInteractivePipeLine));
-                buffer.length = 0;
-            };
-
-            String(text || '').split('\n').forEach(rawLine => {
-                if (stop) return;
-                const line = String(rawLine || '').trim();
-                if (!line) return;
-
-                const nextSection = resolveInteractiveBulkSection(line);
-                if (nextSection === 'stop') {
-                    flush();
-                    stop = true;
-                    return;
-                }
-                if (nextSection) {
-                    flush();
-                    if (nextSection !== 'skip') section = nextSection;
-                    return;
-                }
-
-                if (!isInteractivePipeLine(line)) return;
-
-                if (section && section !== 'skip') {
-                    buffer.push(line);
-                    return;
-                }
-
-                buckets[classifyInteractivePipeLine(line)].push(line);
-            });
-
-            flush();
-
-            return {
-                essay: buckets.essay.join('\n'),
-                fill: buckets.fill.join('\n'),
-                drag: buckets.drag.join('\n')
-            };
-        }
-
+        // Parser/validator: lesson-import.js — cùng module với Lộ trình (admin-lesson-manager)
         function parseLessonSectionsFromRaw(raw) {
-            const sectionValues = {
-                goal: '',
-                theory: '',
-                theoryBridge: '',
-                examples: '',
-                selfPractice: '',
-                interactive: '',
-                essay: '',
-                fill: '',
-                drag: '',
-                questions: '',
-                skills: '',
-                tasks: '',
-                images: '',
-                preamble: ''
+            const LI = window.LessonImport;
+            if (LI && LI.parseGeminiLessonSections) return LI.parseGeminiLessonSections(raw);
+            return {
+                goal: '', theory: '', examples: '', selfPractice: '',
+                interactive: '', essay: '', fill: '', drag: '', dragMatch: '', dragSort: '',
+                questions: '', skills: '', tasks: '', imageList: ''
             };
-
-            let currentKey = '';
-            const buffer = [];
-            const flushSection = () => {
-                if (!currentKey || !buffer.length) {
-                    buffer.length = 0;
-                    return;
-                }
-                appendLessonSectionValue(sectionValues, currentKey, buffer.join('\n'));
-                buffer.length = 0;
-            };
-
-            String(raw || '').split('\n').forEach(line => {
-                let nextKey = resolveLessonSectionKey(line, currentKey, sectionValues);
-                if (nextKey === '__examples_from_dang__') {
-                    flushSection();
-                    currentKey = 'examples';
-                    buffer.push(line);
-                    return;
-                }
-                if (nextKey) {
-                    flushSection();
-                    currentKey = nextKey;
-                    if (nextKey === 'theoryBridge') buffer.push(line);
-                    return;
-                }
-                if (currentKey) {
-                    buffer.push(line);
-                    return;
-                }
-                if (String(line || '').trim()) {
-                    sectionValues.preamble = sectionValues.preamble
-                        ? `${sectionValues.preamble}\n${line}`
-                        : line;
-                }
-            });
-            flushSection();
-
-            const theoryParts = [sectionValues.theory, sectionValues.theoryBridge].filter(Boolean);
-            sectionValues.theory = theoryParts.join('\n\n').trim();
-            delete sectionValues.theoryBridge;
-
-            if (sectionValues.preamble) {
-                if (!sectionValues.goal && !sectionValues.theory) {
-                    sectionValues.goal = sectionValues.preamble.trim();
-                } else if (!sectionValues.examples && sectionValues.theory) {
-                    sectionValues.theory = `${sectionValues.theory}\n\n${sectionValues.preamble.trim()}`.trim();
-                }
-            }
-            delete sectionValues.preamble;
-
-            if (sectionValues.images && sectionValues.examples) {
-                const imagesMarker = sectionValues.images.slice(0, 60);
-                const examplesMarker = sectionValues.examples.slice(0, 60);
-                const imagesPos = raw.indexOf(imagesMarker);
-                const examplesPos = raw.indexOf(examplesMarker);
-                if (imagesPos >= 0 && examplesPos >= 0 && imagesPos < examplesPos) {
-                    appendLessonSectionValue(sectionValues, 'theory', sectionValues.images);
-                    sectionValues.images = '';
-                }
-            }
-
-            return sectionValues;
         }
 
         // Parse Gemini output and show preview + admin-ready copies + image prompts
@@ -1446,42 +1191,34 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
             let imagePrompts = [];
             const LI = window.LessonImport;
-            const sectionValues = LI ? LI.parseGeminiLessonSections(raw) : parseLessonSectionsFromRaw(raw);
+            if (!LI || !LI.parseGeminiLessonSections) {
+                showAppToast('Thiếu lesson-import.js — Ctrl+F5. Preview/JSON/Lộ trình dùng chung file này.', 'err');
+                return;
+            }
+            const sectionValues = LI.parseGeminiLessonSections(raw);
+            const skillsParsed = LI.parseSkills(sectionValues.skills || '');
+            const editorTexts = LI.sectionsToEditorTexts(sectionValues, skillsParsed);
             const goal = sectionValues.goal;
             const theory = sectionValues.theory;
             const examples = sectionValues.examples;
             const selfPractice = sectionValues.selfPractice;
-            const essay = sectionValues.essay;
-            const fill = sectionValues.fill;
-            const dragMatch = sectionValues.dragMatch || '';
-            const dragSort = sectionValues.dragSort || '';
-            const dragLegacy = sectionValues.drag || '';
-            const drag = [dragMatch, dragSort, dragLegacy].filter(Boolean).join('\n');
-            const skills = sectionValues.skills;
-            const skillsParsed = LI ? LI.parseSkills(skills) : [];
+            const essay = editorTexts.essay;
+            const fill = editorTexts.fill;
+            const drag = editorTexts.drag;
+            const skills = editorTexts.skills || sectionValues.skills;
             let questions = '';
-            if (LI && sectionValues.questions) {
+            if (sectionValues.questions) {
                 const qReport = LI.parseQuestionsReport
                     ? LI.parseQuestionsReport(sectionValues.questions, skillsParsed)
                     : { questions: LI.parseQuestions(sectionValues.questions, skillsParsed), skipped: [] };
                 questions = LI.formatQuestionsBulk(qReport.questions);
                 if (qReport.skipped && qReport.skipped.length) {
                     const skippedLines = qReport.skipped.map(function(item) { return item.line; }).filter(Boolean).join('\n');
-                    if (skippedLines) {
-                        questions = [questions, skippedLines].filter(Boolean).join('\n');
-                    }
-                    showAppToast(
-                        'Đã bỏ qua ' + qReport.skipped.length + ' dòng trắc nghiệm lỗi format — vẫn giữ raw ở cuối khối TN để sửa.',
-                        'warn'
-                    );
+                    if (skippedLines) questions = [questions, skippedLines].filter(Boolean).join('\n');
+                    showAppToast('Đã bỏ qua ' + qReport.skipped.length + ' dòng TN lỗi format — sửa trong ô kết quả rồi Kiểm tra import.', 'warn');
                 }
-            } else {
-                questions = String(sectionValues.questions || '').split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.includes('|') && !/^TRẮC NGHIỆM$/.test(normalizeBulkHeading(line)))
-                    .join('\n');
             }
-            const tasks = sectionValues.tasks;
+            const tasks = editorTexts.tasks || sectionValues.tasks;
 
             // Try to extract image prompts
             const imgSection = raw.split(/DANH SÁCH HÌNH(?: ẢNH)? CẦN TẠO/i)[1] || sectionValues.images || '';
@@ -1909,75 +1646,25 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             return report;
         }
 
-        // Helper: Parse Gemini output into clean sections for Word
+        // Word export: cùng parser lesson-import.js như Lộ trình
         function parseGeminiOutputToSections(raw) {
-            const result = {
-                goal: '',
-                theory: '',
-                examples: '',
-                essay: [],
-                fill: [],
-                drag: [],
-                questions: [],
-                images: []
+            const LI = window.LessonImport;
+            const splitLines = text => String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+            const empty = { goal: '', theory: '', examples: '', essay: [], fill: [], drag: [], questions: [], images: [] };
+            if (!LI || !LI.parseGeminiLessonSections) return empty;
+            const sections = LI.parseGeminiLessonSections(raw);
+            const skills = LI.parseSkills(sections.skills || '');
+            const texts = LI.sectionsToEditorTexts(sections, skills);
+            return {
+                goal: sections.goal || '',
+                theory: sections.theory || '',
+                examples: sections.examples || '',
+                essay: splitLines(texts.essay),
+                fill: splitLines(texts.fill),
+                drag: splitLines(texts.drag),
+                questions: splitLines(texts.questions),
+                images: splitLines(sections.imageList || '')
             };
-
-            const lines = raw.split('\n');
-            let currentSection = '';
-            let buffer = [];
-
-            lines.forEach(line => {
-                const trimmed = line.trim();
-
-                if (trimmed.match(/MỤC TIÊU/i)) {
-                    currentSection = 'goal';
-                    buffer = [];
-                } else if (trimmed.match(/LÝ THUYẾT/i)) {
-                    if (buffer.length && currentSection === 'goal') result.goal = buffer.join('\n');
-                    currentSection = 'theory';
-                    buffer = [];
-                } else if (trimmed.match(/VÍ DỤ/i)) {
-                    if (buffer.length && currentSection === 'theory') result.theory = buffer.join('\n');
-                    currentSection = 'examples';
-                    buffer = [];
-                } else if (trimmed.match(/BÀI TẬP TỰ LUẬN/i)) {
-                    if (buffer.length && currentSection === 'examples') result.examples = buffer.join('\n');
-                    currentSection = 'essay';
-                    buffer = [];
-                } else if (trimmed.match(/KÉO THẢ|KÉO VÀO Ô/i)) {
-                    if (buffer.length && currentSection === 'essay') result.essay = buffer.filter(l => l.includes('|'));
-                    currentSection = 'fill';
-                    buffer = [];
-                } else if (trimmed.match(/NỐI Ô|NỐI /i)) {
-                    if (buffer.length && currentSection === 'fill') result.fill = buffer.filter(l => l.includes('|'));
-                    currentSection = 'drag';
-                    buffer = [];
-                } else if (trimmed.match(/TRẮC NGHIỆM/i)) {
-                    if (buffer.length && currentSection === 'drag') result.drag = buffer.filter(l => l.includes('|'));
-                    currentSection = 'questions';
-                    buffer = [];
-                } else if (trimmed.match(/HÌNH ẢNH|PROMPT TẠO ẢNH/i)) {
-                    if (buffer.length && currentSection === 'questions') result.questions = buffer.filter(l => l.includes('|'));
-                    currentSection = 'images';
-                    buffer = [];
-                } else if (trimmed) {
-                    buffer.push(trimmed);
-                }
-            });
-
-            // Final flush
-            if (buffer.length) {
-                if (currentSection === 'goal') result.goal = buffer.join('\n');
-                else if (currentSection === 'theory') result.theory = buffer.join('\n');
-                else if (currentSection === 'examples') result.examples = buffer.join('\n');
-                else if (currentSection === 'essay') result.essay = buffer.filter(l => l.includes('|'));
-                else if (currentSection === 'fill') result.fill = buffer.filter(l => l.includes('|'));
-                else if (currentSection === 'drag') result.drag = buffer.filter(l => l.includes('|'));
-                else if (currentSection === 'questions') result.questions = buffer.filter(l => l.includes('|'));
-                else if (currentSection === 'images') result.images = buffer;
-            }
-
-            return result;
         }
 
         function parseToDocxParagraphs(rawText) {
@@ -2310,11 +1997,15 @@ ${approvedTheory}
 
 ${getInteractiveFormatBlock()}
 
-**BÀI TẬP TỰ LUẬN NGẮN** — 2–5 dòng: Đề | Đáp án (số) | Gợi ý
+**ĐỒNG BỘ LỘ TRÌNH:** Output phải pass validator lesson-import-v1 (cùng engine Import text / Import JSON trên Lộ trình). Lỗi đỏ = không xuất JSON.
 
-**KỸ NĂNG CẦN ĐẠT** (trước TRẮC NGHIỆM): id_khong_dau | Tên kỹ năng | 80
+**CẤM TUYỆT ĐỐI** trong TỰ LUẬN / KÉO THẢ / SẮP XẾP / NỐI Ô / TRẮC NGHIỆM: không **Câu N:**, không **Đáp án:**, không bullet -, không tách đề–đáp án thành 2 dòng. Mỗi câu = đúng 1 dòng pipe.
 
-**TRẮC NGHIỆM** — 5–10 câu, 7 cột: skill_id | Câu hỏi | A | B | C | D | B
+**BÀI TẬP TỰ LUẬN NGẮN** — heading riêng, 2–5 dòng, mỗi dòng đúng 3 cột pipe (Đề | Đáp án chỉ số | Gợi ý). Cột Đáp án không được trống.
+
+**KỸ NĂNG CẦN ĐẠT** (heading riêng, trước TRẮC NGHIỆM): id_khong_dau | Tên kỹ năng | 80
+
+**TRẮC NGHIỆM** — heading riêng, 5–10 dòng, mỗi dòng đúng 7 cột: skill_id | Câu hỏi | A | B | C | D | B (skill_id phân bổ đều, không gán cùng 1 id cho hầu hết câu)
 
 **NHIỆM VỤ HỌC SINH** — 3–5 dòng
 
@@ -2784,11 +2475,16 @@ ${notes ? `- Yêu cầu thêm: ${notes}` : ''}
   - Mỗi bài là một **bài tập song sinh** tương ứng với bài ví dụ: cùng dạng, cùng phương pháp và độ khó tương đương nhưng đổi số liệu/ngữ cảnh; không sao chép nguyên đề.
   - Chỉ ghi đề bài để học sinh làm và nộp; không đưa lời giải hoặc đáp án vào phần này.
 
+**CẤM TUYỆT ĐỐI** trong TỰ LUẬN / KÉO THẢ / SẮP XẾP / NỐI Ô / TRẮC NGHIỆM: không **Câu N:**, không **Đáp án:**, không bullet -, không tách đề–đáp án thành 2 dòng. Mỗi câu = đúng 1 dòng pipe.
+
 **BÀI TẬP TỰ LUẬN NGẮN** (heading riêng, không gộp chung):
-Tạo từ 2 đến 5 câu tùy ảnh SGK. Mỗi dòng BẮT BUỘC đúng 3 cột: "Đề đầy đủ | Đáp án | Gợi ý"
+Tạo từ 2 đến 5 câu tùy ảnh SGK. Mỗi dòng BẮT BUỘC đúng 3 cột pipe: "Đề đầy đủ | Đáp án | Gợi ý"
 - Cột Đáp án KHÔNG được để trống. Chỉ ghi số kết quả (vd: 42, 3/4, √16); không chữ, không đơn vị, không gộp gợi ý vào cột đáp án.
+- SAI: - **Câu 1:** Viết số... | SAI: **Câu 1:** ... rồi dòng **Đáp án:** 45602
 
 ${getInteractiveFormatBlock()}
+
+**ĐỒNG BỘ LỘ TRÌNH:** Output phải pass validator lesson-import-v1 (cùng engine Import text / Import JSON trên Lộ trình). Lỗi đỏ = không xuất JSON.
 
 **KỸ NĂNG CẦN ĐẠT** (heading riêng, đặt TRƯỚC TRẮC NGHIỆM):
 Mỗi dòng: id_khong_dau | Tên kỹ năng | 80 (không prefix "id:" hay "Tên:")

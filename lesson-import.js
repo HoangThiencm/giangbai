@@ -6,7 +6,7 @@
     'use strict';
 
     const SCHEMA_VERSION = 'lesson-import-v1';
-    const PROMPT_VERSION = '2026-06-interactive-canonical-v1';
+    const PROMPT_VERSION = '2026-06-sync-v1';
     const VALID_SUBJECTS = ['Toán 4', 'Toán 5', 'Toán 6', 'Toán 7', 'Toán 8', 'Toán 9'];
     const SUBJECT_CODES = {
         'Toán 4': 'math4', 'Toán 5': 'math5', 'Toán 6': 'math6',
@@ -54,11 +54,142 @@
 
     const POOL_LABEL_PREFIX_RE = /^(?:trái|phải|nối|mảnh|phần\s*tử|thứ\s*tự(?:\s*đúng)?|đáp\s*án)\s*[:»›]\s*/iu;
     const PROMPT_PREFIX_RE = /^[-–—*#\s]*(?:đề|bài|câu|question)\s*[:：]\s*/iu;
+    const CAU_NUMBER_PREFIX_RE = /^[-–—*#\s]*(?:\*\*)?(?:câu|bài)\s*\d+\s*(?:\*\*)?\s*[:：]\s*/iu;
+    const ESSAY_ANSWER_INLINE_RE = /\s*(?:\*\*)?(?:đáp\s*án|answer)\s*(?:\*\*)?\s*[:：]\s*/iu;
+    const ESSAY_ANSWER_LINE_RE = /^(?:\*\*)?(?:đáp\s*án|answer)\s*(?:\*\*)?\s*[:：]\s*(.+)$/iu;
+    const ESSAY_HINT_LINE_RE = /^(?:\*\*)?(?:gợi\s*ý|hint)\s*(?:\*\*)?\s*[:：]\s*(.+)$/iu;
+    const ESSAY_CAU_LINE_RE = /^(?:\*\*)?(?:câu|bài)\s*\d+\s*(?:\*\*)?\s*[:：]\s*(.+)$/iu;
     const HINT_PREFIX_RE = /^(?:gợi\s*ý|hint)\s*[:：]\s*/iu;
     const POOL_LABEL_ONLY_RE = /^(?:trái|phải|nối|mảnh)$/iu;
 
     function stripPromptPrefix(value) {
-        return String(value || '').replace(PROMPT_PREFIX_RE, '').trim();
+        let text = String(value || '').trim();
+        for (let i = 0; i < 4; i += 1) {
+            const next = text.replace(PROMPT_PREFIX_RE, '').replace(CAU_NUMBER_PREFIX_RE, '').trim();
+            if (next === text) break;
+            text = next;
+        }
+        return text.replace(/\*\*/g, '').trim();
+    }
+
+    function stripEssayMarkdown(line) {
+        let text = String(line || '').trim();
+        text = text.replace(/^\s*[-*+]\s+/, '');
+        text = text.replace(/^\s*#{1,6}\s+/, '');
+        return text.trim();
+    }
+
+    function stripEssayAnswerPrefix(value) {
+        let text = String(value || '').trim().replace(/^\*\*|\*\*$/g, '').trim();
+        text = text.replace(/^(?:đáp\s*án|answer)\s*[:：]\s*/iu, '').trim();
+        return text.replace(/\*\*/g, '').trim();
+    }
+
+    function splitEssayInlineAnswer(text) {
+        const raw = stripEssayMarkdown(text);
+        if (!ESSAY_ANSWER_INLINE_RE.test(raw)) return null;
+        const parts = raw.split(ESSAY_ANSWER_INLINE_RE);
+        if (parts.length < 2) return null;
+        const promptPart = stripPromptPrefix(parts[0]);
+        let rest = parts.slice(1).join(' ').trim().replace(/^\*\*|\*\*$/g, '').trim();
+        let answer = rest;
+        let hint = '';
+        const hintParts = rest.split(/\s*(?:\*\*)?(?:gợi\s*ý|hint)\s*(?:\*\*)?\s*[:：]\s*/iu);
+        if (hintParts.length >= 2) {
+            answer = stripEssayAnswerPrefix(hintParts[0]);
+            hint = stripHintPrefix(hintParts.slice(1).join(' '));
+        } else {
+            answer = stripEssayAnswerPrefix(answer);
+        }
+        return { prompt: promptPart, answer, hint };
+    }
+
+    function formatEssayLine(item) {
+        const p = stripPromptPrefix(item.prompt || '');
+        const a = stripEssayAnswerPrefix(item.answer || '');
+        const h = stripHintPrefix(item.hint || '');
+        if (!p) return '';
+        if (!a && !h) return p;
+        if (!h) return `${p} | ${a}`;
+        return `${p} | ${a} | ${h}`;
+    }
+
+    function preprocessEssaySectionText(text) {
+        const lines = String(text || '').replace(/\r/g, '').split('\n').map(line => line.trim()).filter(Boolean);
+        const result = [];
+        let pending = null;
+
+        const flushPending = () => {
+            if (pending && pending.prompt) result.push(formatEssayLine(pending));
+            pending = null;
+        };
+
+        lines.forEach(rawLine => {
+            const stripped = stripEssayMarkdown(rawLine);
+            if (!stripped) return;
+            if (/BÀI TẬP TỰ LUẬN/.test(normalizeGeminiSectionHeading(rawLine))) return;
+
+            const inline = stripped.includes('|') ? null : splitEssayInlineAnswer(stripped);
+            if (inline && inline.prompt) {
+                flushPending();
+                result.push(formatEssayLine(inline));
+                return;
+            }
+
+            const answerOnly = stripped.match(ESSAY_ANSWER_LINE_RE);
+            const hintOnly = stripped.match(ESSAY_HINT_LINE_RE);
+            const cauOnly = stripped.match(ESSAY_CAU_LINE_RE);
+
+            if (answerOnly) {
+                if (pending) pending.answer = answerOnly[1].trim();
+                else pending = { prompt: '', answer: answerOnly[1].trim(), hint: '' };
+                return;
+            }
+            if (hintOnly) {
+                if (pending) {
+                    pending.hint = hintOnly[1].trim();
+                    flushPending();
+                }
+                return;
+            }
+            if (cauOnly) {
+                flushPending();
+                pending = { prompt: cauOnly[1].trim(), answer: '', hint: '' };
+                return;
+            }
+
+            if (stripped.includes('|')) {
+                flushPending();
+                const parts = splitQuestionParts(stripped);
+                result.push(formatEssayLine({
+                    prompt: parts[0] || '',
+                    answer: parts[1] || '',
+                    hint: parts[2] || ''
+                }));
+                return;
+            }
+
+            if (pending && !pending.answer) {
+                pending.prompt = pending.prompt ? `${pending.prompt} ${stripped}` : stripped;
+            } else if (pending && pending.answer && !pending.hint) {
+                pending.answer = `${pending.answer} ${stripped}`;
+            } else {
+                flushPending();
+                pending = { prompt: stripped, answer: '', hint: '' };
+            }
+        });
+        flushPending();
+        return result.join('\n');
+    }
+
+    function canonicalizeEssayExercise(item) {
+        if (!item || typeof item !== 'object') return item;
+        return {
+            ...item,
+            prompt: stripPromptPrefix(item.prompt || ''),
+            answer: stripEssayAnswerPrefix(item.answer || ''),
+            hint: stripHintPrefix(item.hint || '')
+        };
     }
 
     function stripHintPrefix(value) {
@@ -138,19 +269,35 @@
     }
 
     function getInteractiveFormatGuide() {
-        return `**QUY TẮC BÀI TƯƠNG TÁC (parser lesson-import-v1 — JSON ra lộ trình chuẩn):**
-- Mỗi dòng dùng dấu | phân cột. KHÔNG ghi nhãn cột như "Đề:", "Trái »", "Phải »", "Nối »", "gợi ý:" — chỉ nội dung thuần.
+        return `**QUY TẮC ĐỊNH DẠNG (parser lesson-import-v1 — copy JSON là chạy, không sửa tay):**
+- Mỗi câu bài tập = **đúng 1 dòng**, các cột phân tách bằng | (pipe).
+- KHÔNG dùng markdown trong các mục pipe: không **Câu 1:**, không **Đáp án:**, không bullet -, không heading ###.
+- KHÔNG tách đề và đáp án thành 2 dòng — ghép thành 1 dòng pipe.
+- KHÔNG ghi nhãn cột như "Đề:", "Trái »", "Phải »", "Nối »", "gợi ý:" — chỉ nội dung thuần.
 - Mảnh trong cùng cột PHẢI nối bằng » (không dùng dấu phẩy , giữa các mảnh).
+
+**BÀI TẬP TỰ LUẬN NGẮN** — 2–5 dòng, đúng 3 cột:
+Viết số gồm 4 chục nghìn, 5 nghìn, 6 trăm và 2 đơn vị | 45602 | Đọc từng hàng
+SAI: - **Câu 1:** Viết số... (markdown, thiếu đáp án)
+SAI: **Câu 1:** ... rồi dòng riêng **Đáp án:** 45602
 
 **KÉO THẢ VÀO Ô TRỐNG** — đúng 2 dòng, 4 cột:
 Câu có ___ | mảnh1 » mảnh2 » mảnh_nhiễu | đáp_án1 » đáp_án2 | gợi ý ngắn
 
-**SẮP XẾP THỨ TỰ** — đúng 2 dòng, 4 cột (cột 2 và 3 cùng bộ mảnh, chỉ khác thứ tự; giữ nguyên cách viết từng mảnh):
+**SẮP XẾP THỨ TỰ** — đúng 2 dòng, 4 cột (cột 2 và 3 cùng bộ mảnh, chỉ khác thứ tự):
 Sắp xếp từ bé đến lớn | 9 800 » 12 050 » 12 500 » 12 505 | 9 800 » 12 050 » 12 500 » 12 505 | So sánh hàng nghìn trước
-Sắp xếp từ lớn đến bé | 40 400 » 40 000 » 4 000 » 40 | 40 400 » 40 000 » 4 000 » 40 | So sánh hàng chục nghìn trước
 
 **NỐI Ô** — 1–2 dòng, 5 cột (cột 4 chỉ ghi chỉ số nối, không chữ "Nối"):
-Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Đọc kỹ hàng nghìn`;
+Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Đọc kỹ hàng nghìn
+
+**KỸ NĂNG CẦN ĐẠT** (heading riêng, trước TRẮC NGHIỆM) — mỗi dòng 3 cột:
+doc_so | Đọc và viết số trong phạm vi 100 000 | 80
+
+**TRẮC NGHIỆM** — 5–10 dòng, đúng 7 cột (cột 1 = skill_id có trong KỸ NĂNG; phân bổ đều, không gán cùng 1 skill cho >80% câu):
+doc_so | Số nào lớn nhất? | 45 006 | 45 602 | 45 062 | 46 052 | B
+
+**DANH SÁCH HÌNH ẢNH CẦN TẠO** — mọi HINH_xx dùng trong bài PHẢI khai báo ở cuối:
+HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh`;
     }
 
     function canonicalizeDragExerciseItem(item) {
@@ -769,9 +916,15 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
     }
 
     function parseEssayExercises(text) {
-        return parseLines(text).map((line, index) => {
+        const preprocessed = preprocessEssaySectionText(text);
+        return parseLines(preprocessed).map((line, index) => {
             const parts = splitQuestionParts(line);
-            return { id: `essay_${index + 1}`, prompt: parts[0] || '', answer: parts[1] || '', hint: parts[2] || '' };
+            return canonicalizeEssayExercise({
+                id: `essay_${index + 1}`,
+                prompt: parts[0] || '',
+                answer: parts[1] || '',
+                hint: parts[2] || ''
+            });
         }).filter(item => item.prompt);
     }
 
@@ -827,7 +980,20 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
         else buckets.drag.push(line);
     }
 
+    function isEssayBulkLine(line, section) {
+        if (section !== 'essay') return false;
+        const text = String(line || '').trim();
+        if (!text || resolveInteractiveBulkSection(text)) return false;
+        if (text.includes('|')) return true;
+        return /(?:câu|bài)\s*\d+|đáp\s*án|gợi\s*ý|^\s*[-*+]\s+/iu.test(text);
+    }
+
     function pushInteractiveBulkLines(buckets, section, lines) {
+        if (section === 'essay') {
+            const preprocessed = preprocessEssaySectionText(lines.join('\n'));
+            if (preprocessed) buckets.essay.push(preprocessed);
+            return;
+        }
         const pipeLines = lines.filter(isInteractivePipeLine);
         if (!pipeLines.length) return;
         if (section === 'dragMatch') { buckets.dragMatch.push(...pipeLines); return; }
@@ -841,7 +1007,7 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
             });
             return;
         }
-        if (section === 'essay' || section === 'fill' || section === 'drag') {
+        if (section === 'fill' || section === 'drag') {
             buckets[section].push(...pipeLines);
         }
     }
@@ -863,7 +1029,10 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
             const nextSection = resolveInteractiveBulkSection(line);
             if (nextSection === 'stop') { flush(); stop = true; return; }
             if (nextSection) { flush(); if (nextSection !== 'skip') section = nextSection; return; }
-            if (!isInteractivePipeLine(line)) return;
+            if (!isInteractivePipeLine(line)) {
+                if (isEssayBulkLine(line, section)) buffer.push(line);
+                return;
+            }
             if (section && section !== 'skip') { buffer.push(line); return; }
             const kind = classifyInteractivePipeLine(line);
             if (kind === 'dragMatch' || kind === 'dragSort') buckets[kind].push(line);
@@ -940,7 +1109,7 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
             theory: sections.theory,
             examples: sections.examples,
             selfPractice: sections.selfPractice,
-            essay: sections.essay || parsedInteractive.essay,
+            essay: preprocessEssaySectionText([sections.essay, parsedInteractive.essay].filter(Boolean).join('\n')),
             fill: sections.fill || parsedInteractive.fill,
             drag: [sections.drag, parsedInteractive.drag, parsedDragMixed.drag].filter(Boolean).join('\n'),
             dragMatch: [sections.dragMatch, parsedInteractive.dragMatch, parsedDragMixed.dragMatch].filter(Boolean).join('\n'),
@@ -1086,7 +1255,7 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
             examples: parseExamples(typeof input.examples === 'string' ? input.examples : formatExamplesFromArray(input.examples)),
             self_practice: parseExamples(typeof input.self_practice === 'string' ? input.self_practice : formatExamplesFromArray(input.self_practice)),
             essay_exercises: ensureArray(input.essay_exercises).length
-                ? ensureArray(input.essay_exercises)
+                ? ensureArray(input.essay_exercises).map(canonicalizeEssayExercise)
                 : parseEssayExercises(input.essay || ''),
             fill_exercises: ensureArray(input.fill_exercises).length
                 ? ensureArray(input.fill_exercises)
@@ -1537,6 +1706,32 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
         };
     }
 
+    function formatEssayExercises(items) {
+        return (items || []).map(item => {
+            const c = canonicalizeEssayExercise(item);
+            return [c.prompt || '', c.answer || '', c.hint || ''].join(' | ');
+        }).join('\n');
+    }
+
+    function formatFillExercises(items) {
+        return (items || []).map(item => {
+            const pool = joinPoolText(item.pool || item.items || []);
+            const answer = Array.isArray(item.answer) ? joinPoolText(item.answer) : String(item.answer || '');
+            const parts = [item.prompt || '', pool, answer, item.hint || ''];
+            return parts.filter((part, idx, arr) => !(idx === 1 && part === arr[2])).join(' | ');
+        }).join('\n');
+    }
+
+    function formatDragExercises(items) {
+        return (items || []).map(item => {
+            const c = canonicalizeDragExerciseItem(item);
+            if (c.mode === 'match') {
+                return [c.prompt, joinPoolText(c.left), joinPoolText(c.right), c.pair_spec || '', c.hint || ''].join(' | ');
+            }
+            return [c.prompt, joinPoolText(c.items), joinPoolText(c.answer), c.hint || ''].join(' | ');
+        }).join('\n');
+    }
+
     function sectionsToEditorTexts(sections, skills) {
         const dragItems = [
             ...parseDragExercises(sections.dragMatch || '', { preferMatch: true }),
@@ -1596,6 +1791,8 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
         SCHEMA_VERSION,
         PROMPT_VERSION,
         getInteractiveFormatGuide,
+        preprocessEssaySectionText,
+        canonicalizeEssayExercise,
         canonicalizeDragExerciseItem,
         normalizeDragLineParts,
         normalizePoolPieces,
@@ -1645,6 +1842,9 @@ Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không tr�
         formatQuestionsBulk,
         questionsToEditorItems,
         sectionsToEditorTexts,
+        formatEssayExercises,
+        formatFillExercises,
+        formatDragExercises,
         normalizeFillParts,
         normalizeMcqBulkLine,
         looksLikeSkillId,
