@@ -6,7 +6,7 @@
     'use strict';
 
     const SCHEMA_VERSION = 'lesson-import-v1';
-    const PROMPT_VERSION = '2026-06-sync-v1';
+    const PROMPT_VERSION = '20260626-tabs-v1';
     const VALID_SUBJECTS = ['Toán 4', 'Toán 5', 'Toán 6', 'Toán 7', 'Toán 8', 'Toán 9'];
     const SUBJECT_CODES = {
         'Toán 4': 'math4', 'Toán 5': 'math5', 'Toán 6': 'math6',
@@ -1129,14 +1129,75 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         return text;
     }
 
+    function countLikelyQuestionLines(text) {
+        return parseLines(text).filter(line => {
+            const normalized = normalizeMcqBulkLine(line);
+            return splitQuestionParts(normalized).length >= 6;
+        }).length;
+    }
+
+    function extractImageListChunksFromRaw(raw) {
+        const text = String(raw || '').replace(/\r/g, '');
+        const re = /^[\s#*>\-]*DANH\s*SÁCH\s*HÌNH(?:\s*ẢNH)?(?:\s*CẦN\s*TẠO)?/gim;
+        const chunks = [];
+        let match;
+        const starts = [];
+        while ((match = re.exec(text)) !== null) starts.push(match.index);
+        starts.forEach((start, index) => {
+            const end = index + 1 < starts.length ? starts[index + 1] : text.length;
+            const chunk = text.slice(start, end);
+            const firstNl = chunk.indexOf('\n');
+            chunks.push(firstNl >= 0 ? chunk.slice(firstNl + 1).trim() : '');
+        });
+        return chunks.filter(Boolean);
+    }
+
+    function mergeImageManifestEntries(...lists) {
+        const byId = new Map();
+        lists.flat().forEach(entry => {
+            if (!entry || !entry.id) return;
+            const id = normalizeImageId(entry.id);
+            const prev = byId.get(id);
+            const next = { ...entry, id };
+            if (!prev || String(next.prompt || '').length > String(prev.prompt || '').length) {
+                byId.set(id, next);
+            }
+        });
+        return [...byId.values()];
+    }
+
+    function buildImageManifestFromRaw(raw) {
+        const chunks = extractImageListChunksFromRaw(raw);
+        return mergeImageManifestEntries(...chunks.map(chunk => parseImageManifest(chunk)));
+    }
+
+    function ensureImageManifestForMarkers(pkg) {
+        if (!pkg || typeof pkg !== 'object') return pkg;
+        const manifest = mergeImageManifestEntries(pkg.image_manifest || []);
+        const manifestIds = new Set(manifest.map(entry => normalizeImageId(entry.id)));
+        collectMarkersFromPackage(pkg).forEach(id => {
+            if (manifestIds.has(id)) return;
+            manifest.push({
+                id,
+                section: 'theory',
+                alt: id,
+                type: 'diagram',
+                prompt: `Minh họa ${id} — cập nhật mô tả trong DANH SÁCH HÌNH ẢNH nếu cần.`
+            });
+            manifestIds.add(id);
+        });
+        pkg.image_manifest = manifest;
+        return pkg;
+    }
+
     function parseImageManifest(text) {
         const entries = [];
         const lines = String(text || '').replace(/\r/g, '').split('\n');
         let current = null;
         lines.forEach(rawLine => {
             const line = String(rawLine || '').trim();
-            if (!line) return;
-            const hinhMatch = line.match(/^(HINH[_\s-]*\d+|HÌNH[_\s-]*\d+)\s*[:：]\s*(.+)$/i);
+            if (!line || /^không\s+cần\s+tạo\s+hình/i.test(line)) return;
+            const hinhMatch = line.match(/^(?:[-*+]\s+)?(?:\*\*)?(HINH[_\s-]*\d+|HÌNH[_\s-]*\d+)(?:\*\*)?\s*[:：\-]\s*(.+)$/i);
             if (hinhMatch) {
                 if (current) entries.push(current);
                 const id = normalizeImageId(hinhMatch[1]);
@@ -1464,6 +1525,7 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         if (/skill/.test(text) && /80%/.test(text)) return '【TRẮC NGHIỆM】Nhiều câu dùng chung một skill_id — kiểm tra cột đầu mỗi dòng.';
         if (/Marker/.test(text)) return `【HÌNH ẢNH】${text.replace('Marker ', 'Ảnh ')} — bổ sung trong DANH SÁCH HÌNH ẢNH.`;
         if (/image_manifest rỗng/.test(text)) return '【HÌNH ẢNH】Có HINH_xx trong bài nhưng chưa khai báo DANH SÁCH HÌNH ẢNH.';
+        if (/Chỉ parse được \d+\/\d+ câu trắc nghiệm/.test(text)) return `【TRẮC NGHIỆM】${text.replace(/^Chỉ parse được /, 'Chỉ đọc được ')}`;
         if (/trắc nghiệm ít hơn/.test(text)) return '【TRẮC NGHIỆM】Ít hơn 5 câu — có thể vẫn import.';
         if (/Không có ảnh/.test(text)) return '【HÌNH ẢNH】Bài không có HINH_xx — không bắt buộc nếu không cần minh họa.';
         if (/fill_exercises/.test(text)) return '【KÉO THẢ】Đáp án có thể không nằm trong danh sách mảnh — kiểm tra cột 2 và 3.';
@@ -1610,16 +1672,49 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
         if (!pkg.videos?.length) warnings.push('Thiếu video.');
         if (!markers.length && !pkg.image_manifest?.length) warnings.push('Không có ảnh/minh họa.');
-        if (pkg.questions?.length < 5) warnings.push('Số lượng trắc nghiệm ít hơn gợi ý (5+).');
+
+        const parsedQuestions = pkg.questions?.length || 0;
+        const rawQuestionLines = Number(options.rawQuestionLineCount) || 0;
+        if (parsedQuestions < 5) {
+            if (rawQuestionLines >= 5) {
+                warnings.push(`Chỉ parse được ${parsedQuestions}/${rawQuestionLines} câu trắc nghiệm — kiểm tra format pipe (skill_id | Câu | A | B | C | D | đáp án).`);
+            } else {
+                warnings.push('Số lượng trắc nghiệm ít hơn gợi ý (5+).');
+            }
+        }
 
         return { errors, warnings };
     }
 
     function buildLessonImportPackage(options = {}) {
         const raw = String(options.rawGeminiText || '').trim();
+        const theoryRaw = String(options.theoryGeminiText || '').trim();
+        const restRaw = String(options.restGeminiText || '').trim();
         const meta = options.metadata || {};
         const sections = parseGeminiLessonSections(raw);
-        const skills = parseSkills(sections.skills);
+        const theorySections = theoryRaw ? parseGeminiLessonSections(theoryRaw) : null;
+        const restSections = restRaw ? parseGeminiLessonSections(restRaw) : null;
+        const pickLongestSection = (...values) => values
+            .map(value => String(value || '').trim())
+            .filter(Boolean)
+            .sort((a, b) => b.length - a.length)[0] || '';
+        const skills = parseSkills(pickLongestSection(sections.skills, restSections?.skills, theorySections?.skills));
+        const questionsText = pickLongestSection(sections.questions, restSections?.questions, theorySections?.questions);
+        const qReport = parseQuestionsReport(questionsText, skills);
+        const importNotes = [];
+        if (qReport.skipped.length) {
+            importNotes.push(`Đã bỏ qua ${qReport.skipped.length} dòng trắc nghiệm không đúng format pipe.`);
+        }
+
+        const imageManifest = mergeImageManifestEntries(
+            parseImageManifest(sections.imageList),
+            theorySections ? parseImageManifest(theorySections.imageList) : [],
+            restSections ? parseImageManifest(restSections.imageList) : [],
+            buildImageManifestFromRaw(raw),
+            theoryRaw ? buildImageManifestFromRaw(theoryRaw) : [],
+            restRaw ? buildImageManifestFromRaw(restRaw) : []
+        );
+
         const pkg = normalizeLessonImportPackage({
             schema_version: SCHEMA_VERSION,
             subject: meta.subject || '',
@@ -1628,31 +1723,31 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
             slug: meta.slug || '',
             order_index: meta.order_index || 0,
             is_published: false,
-            goal_text: sections.goal,
-            theory: parseTheoryBlocks(sections.theory),
-            examples: parseExamples(sections.examples),
-            self_practice: parseExamples(sections.selfPractice),
-            essay_exercises: parseEssayExercises(sections.essay),
-            fill_exercises: parseFillExercises(sections.fill),
+            goal_text: pickLongestSection(theorySections?.goal, sections.goal),
+            theory: parseTheoryBlocks(pickLongestSection(theorySections?.theory, sections.theory)),
+            examples: parseExamples(pickLongestSection(restSections?.examples, sections.examples)),
+            self_practice: parseExamples(pickLongestSection(restSections?.selfPractice, sections.selfPractice)),
+            essay_exercises: parseEssayExercises(pickLongestSection(restSections?.essay, sections.essay)),
+            fill_exercises: parseFillExercises(pickLongestSection(restSections?.fill, sections.fill)),
             drag_exercises: [
-                ...parseDragExercises(sections.dragMatch, { preferMatch: true }),
-                ...parseDragExercises(sections.dragSort),
-                ...parseDragExercises(sections.drag || '')
+                ...parseDragExercises(pickLongestSection(restSections?.dragMatch, sections.dragMatch), { preferMatch: true }),
+                ...parseDragExercises(pickLongestSection(restSections?.dragSort, sections.dragSort)),
+                ...parseDragExercises(pickLongestSection(restSections?.drag, sections.drag))
             ],
-            questions: parseQuestions(sections.questions, skills),
+            questions: qReport.questions,
             skills,
             tasks: parseLines(sections.tasks),
             videos: [],
-            image_manifest: parseImageManifest(sections.imageList),
+            image_manifest: imageManifest,
             generated_at: new Date().toISOString(),
             source: {
                 tool: meta.tool || 'soanbaigemini',
                 prompt_version: meta.prompt_version || PROMPT_VERSION,
                 model: meta.model || ''
             },
-            import_notes: []
+            import_notes: importNotes
         }, { defaultSubject: meta.subject, forceUnpublished: true });
-        return pkg;
+        return ensureImageManifestForMarkers(pkg);
     }
 
     function packageFromSavePayload(payload) {
@@ -1831,6 +1926,10 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         parseGeminiLessonSections,
         parseInteractiveBulkPaste,
         parseImageManifest,
+        countLikelyQuestionLines,
+        buildImageManifestFromRaw,
+        mergeImageManifestEntries,
+        ensureImageManifestForMarkers,
         extractImageMarkers,
         collectMarkersFromPackage,
         normalizeLessonImportPackage,

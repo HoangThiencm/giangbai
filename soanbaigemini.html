@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
         (function () {
-            var VERSION = '20260626-images-v1';
+            var VERSION = '20260626-tabs-v1';
             var SOURCES = [
                 'lesson-import.js?v=' + VERSION,
                 'https://hoangthiencm.id.vn/lesson-import.js?v=' + VERSION
@@ -615,8 +615,12 @@
             var subject = (document.getElementById('subject') || {}).value || '';
             var chapter = (document.getElementById('chapter') || {}).value || '';
             var title = (document.getElementById('title') || {}).value || '';
+            var theoryRaw = (window.getTheoryOutputEl() && window.getTheoryOutputEl().value || '').trim();
+            var restRaw = (window.getRestOutputEl() && window.getRestOutputEl().value || '').trim();
             var pkg = LI.buildLessonImportPackage({
                 rawGeminiText: raw,
+                theoryGeminiText: theoryRaw,
+                restGeminiText: restRaw,
                 metadata: {
                     subject: subject,
                     chapter: chapter,
@@ -640,7 +644,20 @@
                 return { errors: [], warnings: [], ready: false, pkg: null, fixes: [], empty: true };
             }
             var subject = (document.getElementById('subject') || {}).value || '';
-            var validation = LI.validateLessonImportPackage(pkg, { pageSubject: subject });
+            var sections = LI.parseGeminiLessonSections(raw);
+            var restRaw = (window.getRestOutputEl() && window.getRestOutputEl().value || '').trim();
+            var restSections = restRaw ? LI.parseGeminiLessonSections(restRaw) : null;
+            var rawQuestionLineCount = 0;
+            if (LI.countLikelyQuestionLines) {
+                rawQuestionLineCount = LI.countLikelyQuestionLines(sections.questions);
+                if (restSections) {
+                    rawQuestionLineCount = Math.max(rawQuestionLineCount, LI.countLikelyQuestionLines(restSections.questions));
+                }
+            }
+            var validation = LI.validateLessonImportPackage(pkg, {
+                pageSubject: subject,
+                rawQuestionLineCount: rawQuestionLineCount
+            });
             var enriched = LI.enrichLessonValidation
                 ? LI.enrichLessonValidation(validation, raw, pkg, { tool: 'soanbaigemini' })
                 : { errors: validation.errors || [], warnings: validation.warnings || [], ready: !(validation.errors || []).length, pkg: pkg };
