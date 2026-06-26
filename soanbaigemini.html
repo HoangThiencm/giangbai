@@ -1230,6 +1230,34 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             document.body.appendChild(modal);
         }
 
+        function getLessonImageButtonLabel(hasImage) {
+            return hasImage
+                ? '<i class="fas fa-rotate-right"></i> Tạo lại ảnh'
+                : '<i class="fas fa-image"></i> Tạo ảnh minh họa';
+        }
+
+        function appendLessonImageFigureActions(figure, imageId, imageEl) {
+            const prompt = lessonImagePromptById.get(imageId);
+            if (!prompt) return;
+
+            const actionRow = document.createElement('div');
+            actionRow.className = 'mt-2 flex flex-wrap items-center gap-2';
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-semibold inline-flex items-center gap-1 disabled:opacity-60';
+            button.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(imageId));
+
+            const statusEl = document.createElement('span');
+            statusEl.className = 'text-[10px] text-slate-500';
+            statusEl.textContent = generatedLessonImages.has(imageId) ? 'Ảnh đã tạo trong phiên này.' : '';
+
+            button.onclick = () => generateLessonIllustration(imageId, prompt, button, statusEl, imageEl);
+            actionRow.appendChild(button);
+            actionRow.appendChild(statusEl);
+            figure.appendChild(actionRow);
+        }
+
         function renderLessonContentPreview(container, value) {
             const markerPattern = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
             const content = String(value || '');
@@ -1251,22 +1279,26 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 const imageDataUrl = generatedLessonImages.get(imageId);
                 const figure = document.createElement('figure');
                 figure.className = 'my-3 rounded-lg border border-slate-200 bg-white p-2';
+
+                const image = document.createElement('img');
+                image.alt = match[1] || imageId;
+                image.className = 'max-h-72 max-w-full rounded object-contain';
                 if (imageDataUrl) {
-                    const image = document.createElement('img');
                     image.src = imageDataUrl;
-                    image.alt = match[1] || imageId;
-                    image.className = 'max-h-72 max-w-full rounded object-contain';
-                    figure.appendChild(image);
                 } else {
+                    image.classList.add('hidden');
                     const missing = document.createElement('div');
-                    missing.className = 'rounded bg-amber-50 px-3 py-2 text-amber-800';
+                    missing.className = 'lesson-image-placeholder rounded bg-amber-50 px-3 py-2 text-amber-800 text-xs';
                     missing.textContent = `[${imageId}: ảnh sẽ hiển thị tại đây sau khi tạo]`;
                     figure.appendChild(missing);
                 }
+                figure.appendChild(image);
+
                 const caption = document.createElement('figcaption');
                 caption.className = 'mt-1 text-xs italic text-slate-500';
                 caption.textContent = match[1] || imageId;
                 figure.appendChild(caption);
+                appendLessonImageFigureActions(figure, imageId, image);
                 container.appendChild(figure);
                 cursor = markerPattern.lastIndex;
             }
@@ -1450,7 +1482,11 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             const tasks = editorTexts.tasks || sectionValues.tasks;
 
             const imagePromptEntries = collectLessonImagePrompts(raw, LI, sectionValues);
-            imagePromptEntries.forEach(entry => imagePrompts.push(entry.prompt));
+            lessonImagePromptById.clear();
+            imagePromptEntries.forEach(entry => {
+                imagePrompts.push(entry.prompt);
+                lessonImagePromptById.set(entry.imageId, entry.prompt);
+            });
 
             // Render sections with admin-specific copy
             if (goal) container.appendChild(createAdminCopySection('MỤC TIÊU', goal, 'Copy dán vào ô Mục tiêu bài học'));
@@ -1474,7 +1510,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (imagePrompts.length > 0) {
                 const imgDiv = document.createElement('div');
                 imgDiv.className = 'border-2 border-orange-300 bg-orange-50 rounded-2xl p-4';
-                imgDiv.innerHTML = `<div class="font-bold text-orange-700 mb-1">HÌNH ẢNH MINH HỌA</div><div class="text-xs text-orange-700 mb-3">Chỉ tạo các hình Gemini khai báo. <strong>THỰC_TẾ</strong> = ảnh sát tình huống đời sống; <strong>SƠ_ĐỒ</strong> = vector/sơ đồ khái niệm.</div>`;
+                imgDiv.innerHTML = `<div class="font-bold text-orange-700 mb-1">HÌNH ẢNH MINH HỌA</div><div class="text-xs text-orange-700 mb-3">Chỉ tạo các hình Gemini khai báo. <strong>THỰC_TẾ</strong> = ảnh sát tình huống đời sống; <strong>SƠ_ĐỒ</strong> = vector/sơ đồ khái niệm. Không ưng ý → bấm <strong>Tạo lại ảnh</strong> (có ngay dưới từng hình trong preview và ở đây).</div>`;
                 imagePromptEntries.forEach((entry, i) => {
                     const p = entry.prompt;
                     const imageId = entry.imageId || normalizeLessonImageId('HINH_' + String(i + 1).padStart(2, '0'));
@@ -1495,7 +1531,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                     actionRow.className = 'mt-3 flex items-center gap-2';
                     const generateButton = document.createElement('button');
                     generateButton.className = 'px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-60';
-                    generateButton.innerHTML = '<i class="fas fa-image"></i> Tạo ảnh minh họa';
+                    generateButton.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(imageId));
                     actionRow.appendChild(generateButton);
                     pDiv.appendChild(actionRow);
 
@@ -2524,6 +2560,7 @@ Không ghi chú nguồn SGK. Không lời mở đầu. Không dùng \`---\` ngă
         }
 
         const generatedLessonImages = new Map();
+        const lessonImagePromptById = new Map();
 
         function getInlineImageFromGeminiResponse(data) {
             const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
@@ -2600,7 +2637,7 @@ ${source}`;
             if (button.disabled) return;
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo ảnh...';
-            statusEl.className = 'mt-2 text-xs text-sky-700';
+            statusEl.className = statusEl.tagName === 'SPAN' ? 'text-[10px] text-sky-700' : 'mt-2 text-xs text-sky-700';
             statusEl.textContent = 'Gemini đang vẽ hình minh họa; bước này có thể mất khoảng 20–60 giây.';
 
             try {
@@ -2610,15 +2647,20 @@ ${source}`;
                 generatedLessonImages.set(imageId, imageDataUrl);
                 imageEl.src = imageDataUrl;
                 imageEl.classList.remove('hidden');
-                statusEl.className = 'mt-2 text-xs text-emerald-700';
+                const figure = imageEl.closest('figure');
+                if (figure) {
+                    const placeholder = figure.querySelector('.lesson-image-placeholder');
+                    if (placeholder) placeholder.classList.add('hidden');
+                }
+                statusEl.className = statusEl.tagName === 'SPAN' ? 'text-[10px] text-emerald-700' : 'mt-2 text-xs text-emerald-700';
                 statusEl.textContent = 'Đã tạo ảnh minh họa.';
-                button.innerHTML = '<i class="fas fa-rotate-right"></i> Tạo lại ảnh';
+                button.innerHTML = getLessonImageButtonLabel(true);
                 await parseAndPreview();
             } catch (error) {
                 const message = describeGeminiError(error);
-                statusEl.className = 'mt-2 text-xs text-rose-700';
+                statusEl.className = statusEl.tagName === 'SPAN' ? 'text-[10px] text-rose-700' : 'mt-2 text-xs text-rose-700';
                 statusEl.textContent = `Chưa tạo được ảnh: ${message}`;
-                button.innerHTML = '<i class="fas fa-image"></i> Thử tạo ảnh lại';
+                button.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(imageId));
             } finally {
                 button.disabled = false;
             }
@@ -2648,14 +2690,14 @@ ${source}`;
                         job.imageEl.classList.remove('hidden');
                         job.statusEl.className = 'mt-2 text-xs text-emerald-700';
                         job.statusEl.textContent = `Đã tạo ${job.imageId}.`;
-                        job.button.innerHTML = '<i class="fas fa-rotate-right"></i> Tạo lại ảnh';
+                        job.button.innerHTML = getLessonImageButtonLabel(true);
                     }
                 } catch (error) {
                     const message = describeGeminiError(error);
                     if (hasUi) {
                         job.statusEl.className = 'mt-2 text-xs text-rose-700';
                         job.statusEl.textContent = `Chưa tạo được ${job.imageId}: ${message}`;
-                        job.button.innerHTML = '<i class="fas fa-image"></i> Thử tạo ảnh lại';
+                        job.button.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(job.imageId));
                     } else {
                         window.showAppToast(`Chưa tạo được ${job.imageId}: ${message}`, 'err');
                     }
