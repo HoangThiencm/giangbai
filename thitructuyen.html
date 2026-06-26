@@ -2566,6 +2566,7 @@
                         <table className="w-full text-left">
                             <thead className="bg-indigo-50 border-b">
                                 <tr>
+                                    <th className="p-3 w-12 text-center">STT</th>
                                     <th className="p-3">Tên HS</th>
                                     <th className="p-3">SBD</th>
                                     <th className="p-3">Lớp</th>
@@ -2577,12 +2578,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {studentSummaries.map(group => {
+                                {studentSummaries.map((group, index) => {
                                     const best = group.best;
                                     const expanded = !!expandedKeys[group.key];
                                     return (
                                         <React.Fragment key={group.key}>
                                             <tr className={`border-b hover:bg-gray-50 ${group.hasMultipleAttempts ? "bg-amber-50/20" : ""} ${isTestResult(best) ? "bg-red-50/30" : ""}`}>
+                                                <td className="p-3 text-center text-sm font-bold text-gray-500">{index + 1}</td>
                                                 <td className="p-3 font-bold text-gray-700">
                                                     <button
                                                         type="button"
@@ -2609,6 +2611,7 @@
                                             </tr>
                                             {expanded && group.attempts.slice().sort((a, b) => b.attemptNo - a.attemptNo).map(attempt => (
                                                 <tr key={attempt.rowKey} className={`border-b bg-slate-50/80 ${attempt.id === best.id ? "ring-1 ring-inset ring-indigo-200" : ""} ${isTestResult(attempt) ? "bg-red-50/40" : ""}`}>
+                                                    <td className="p-3 text-center text-xs text-gray-300">—</td>
                                                     <td className="p-3 pl-10 text-sm text-gray-600">↳ Lần {attempt.attemptNo}</td>
                                                     <td className="p-3 text-gray-500">{attempt.sbd}</td>
                                                     <td className="p-3 text-gray-500">{attempt.student_class || "—"}</td>
