@@ -270,6 +270,7 @@
 
     function getInteractiveFormatGuide() {
         return `**QUY TẮC ĐỊNH DẠNG (parser lesson-import-v1 — copy JSON là chạy, không sửa tay):**
+- KHÔNG dùng \`---\`, \`===\`, \`***\` để ngăn cách mục, dạng hoặc phần — chỉ dùng heading in đậm hoặc 2 dòng trống.
 - Mỗi câu bài tập = **đúng 1 dòng**, các cột phân tách bằng | (pipe).
 - KHÔNG dùng markdown trong các mục pipe: không **Câu 1:**, không **Đáp án:**, không bullet -, không heading ###.
 - KHÔNG tách đề và đáp án thành 2 dòng — ghép thành 1 dòng pipe.
