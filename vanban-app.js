@@ -157,7 +157,8 @@
         return state.documents.filter(doc => {
             if (year && doc.academic_year !== year) return false;
             if (state.activeDirection && doc.direction !== state.activeDirection) return false;
-            if (status && doc.effective_status !== status) return false;
+            if (state.summaryDrilldown && !matchesSummaryDrilldown(doc, state.summaryDrilldown)) return false;
+            if (status && docEffectiveStatus(doc) !== status) return false;
             if (docType && doc.document_type !== docType) return false;
             if (q && !`${doc.document_number} ${doc.title} ${doc.organization} ${doc.summary_text} ${doc.document_type}`.toLowerCase().includes(q)) return false;
             return true;
@@ -172,6 +173,38 @@
     function yearScopedDocs() {
         const year = $('academicYearFilter')?.value || '';
         return state.documents.filter(doc => !year || doc.academic_year === year);
+    }
+
+    function docEffectiveStatus(doc) {
+        if (doc?.effective_status) return doc.effective_status;
+        if (!Number(doc?.report_required)) return 'not_required';
+        if (doc.report_status === 'completed') return 'completed';
+        if (doc.report_status === 'aware') return 'aware';
+        if (doc.report_due_at) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const due = new Date(`${doc.report_due_at}T00:00:00`);
+            if (!Number.isNaN(due.getTime()) && due < today) return 'overdue';
+        }
+        return doc.report_status === 'in_progress' ? 'in_progress' : 'pending';
+    }
+
+    function needsActionDoc(doc) {
+        return Number(doc.report_required) && ['pending', 'in_progress', 'overdue'].includes(docEffectiveStatus(doc));
+    }
+
+    function isOverdueDoc(doc) {
+        return Number(doc.report_required) && docEffectiveStatus(doc) === 'overdue';
+    }
+
+    function summaryContextDocs() {
+        return yearScopedDocs().filter(doc => !state.activeDirection || doc.direction === state.activeDirection);
+    }
+
+    function matchesSummaryDrilldown(doc, kind) {
+        if (kind === 'overdue') return isOverdueDoc(doc);
+        if (kind === 'need_action') return needsActionDoc(doc);
+        return false;
     }
 
     function renderNav() {
@@ -210,18 +243,14 @@
     }
 
     function getSummaryDrilldownDocs(kind) {
-        const docs = yearScopedDocs();
+        const docs = summaryContextDocs().filter(doc => matchesSummaryDrilldown(doc, kind));
         if (kind === 'overdue') {
-            return docs.filter(d => d.effective_status === 'overdue').sort((a, b) => {
-                const da = a.report_due_at || '';
-                const db = b.report_due_at || '';
-                return da.localeCompare(db);
-            });
+            return docs.sort((a, b) => String(a.report_due_at || '').localeCompare(String(b.report_due_at || '')));
         }
         if (kind === 'need_action') {
-            return docs.filter(d => ['pending', 'in_progress', 'overdue'].includes(d.effective_status)).sort((a, b) => {
+            return docs.sort((a, b) => {
                 const rank = status => (status === 'overdue' ? 0 : status === 'pending' ? 1 : 2);
-                const diff = rank(a.effective_status) - rank(b.effective_status);
+                const diff = rank(docEffectiveStatus(a)) - rank(docEffectiveStatus(b));
                 if (diff !== 0) return diff;
                 return String(a.report_due_at || '').localeCompare(String(b.report_due_at || ''));
             });
@@ -231,8 +260,13 @@
 
     function toggleSummaryDrilldown(kind) {
         state.summaryDrilldown = state.summaryDrilldown === kind ? null : kind;
+        if (state.summaryDrilldown) {
+            const statusSelect = $('statusFilter');
+            if (statusSelect) statusSelect.value = '';
+        }
         renderSummary();
         renderSummaryDrilldown();
+        renderList();
         if (state.summaryDrilldown) {
             $('summaryDrilldown')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
@@ -260,7 +294,10 @@
         panel.className = `mt-3 rounded-xl border p-4 shadow-sm ${borderTone}`;
         panel.classList.remove('hidden');
         if (titleHost) titleHost.textContent = title;
-        if (countHost) countHost.textContent = `${docs.length} văn bản`;
+        if (countHost) {
+            const dirLabel = state.activeDirection === 'outgoing' ? 'văn bản đi' : 'văn bản đến';
+            countHost.textContent = `${docs.length} văn bản · ${dirLabel} · năm học đang chọn`;
+        }
 
         if (!docs.length) {
             listHost.innerHTML = `<div class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">Không có văn bản nào trong mục này.</div>`;
@@ -268,7 +305,7 @@
         }
 
         listHost.innerHTML = `<div class="space-y-2">${docs.map((doc, index) => {
-            const [label, tone] = statusInfo(doc.effective_status);
+            const [label, tone] = statusInfo(docEffectiveStatus(doc));
             const dueLine = doc.report_due_at ? `Hạn ${dateText(doc.report_due_at)}` : 'Chưa ghi hạn';
             return `<button type="button" data-summary-doc-id="${doc.id}" class="flex w-full items-start justify-between gap-3 rounded-lg border border-white/80 bg-white px-3 py-3 text-left shadow-sm transition hover:brightness-[0.98]">
                 <span class="min-w-0 flex-1">
@@ -291,11 +328,12 @@
     }
 
     function renderSummary() {
-        const docs = yearScopedDocs();
-        const incoming = docs.filter(d => d.direction === 'incoming').length;
-        const outgoing = docs.filter(d => d.direction === 'outgoing').length;
-        const needAction = docs.filter(d => ['pending', 'in_progress', 'overdue'].includes(d.effective_status)).length;
-        const overdue = docs.filter(d => d.effective_status === 'overdue').length;
+        const docs = summaryContextDocs();
+        const yearDocs = yearScopedDocs();
+        const incoming = yearDocs.filter(d => d.direction === 'incoming').length;
+        const outgoing = yearDocs.filter(d => d.direction === 'outgoing').length;
+        const needAction = docs.filter(needsActionDoc).length;
+        const overdue = docs.filter(isOverdueDoc).length;
         const cards = [
             { label: 'Văn bản đến', value: incoming, tone: 'text-cyan-700', icon: 'fa-inbox', filter: '' },
             { label: 'Văn bản đi', value: outgoing, tone: 'text-indigo-700', icon: 'fa-paper-plane', filter: '' },
@@ -345,6 +383,7 @@
                 state.activeDirection = button.dataset.directionTab || 'incoming';
                 localStorage.setItem(LS_TAB_KEY, state.activeDirection);
                 renderDirectionTabs();
+                renderSummary();
                 renderList();
                 const dirSelect = $('direction');
                 if (dirSelect) dirSelect.value = state.activeDirection;
@@ -482,7 +521,13 @@
 
     function renderList() {
         const docs = scopedDocs();
-        $('documentCount').textContent = `Hiển thị ${docs.length}/${state.documents.length} văn bản`;
+        const countHost = $('documentCount');
+        if (countHost) {
+            const drillLabel = state.summaryDrilldown === 'overdue'
+                ? ' · chỉ quá hạn'
+                : (state.summaryDrilldown === 'need_action' ? ' · chỉ cần xử lý/báo cáo' : '');
+            countHost.textContent = `Hiển thị ${docs.length}/${state.documents.length} văn bản${drillLabel}`;
+        }
         const host = $('documentList');
         if (!host) return;
         if (!docs.length) {
@@ -1463,6 +1508,7 @@
         $('summaryDrilldownClose')?.addEventListener('click', () => {
             state.summaryDrilldown = null;
             renderSummary();
+            renderList();
         });
     }
 
