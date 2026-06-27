@@ -134,6 +134,12 @@ if (array_key_exists('ai_student_quota_enabled', $nextConfig)) {
 if (isset($nextConfig['ai_student_daily_limit'])) {
     $nextConfig['ai_student_daily_limit'] = max(5, min(200, (int)$nextConfig['ai_student_daily_limit']));
 }
+if (isset($nextConfig['ai_student_min_interval_sec'])) {
+    $nextConfig['ai_student_min_interval_sec'] = max(0, min(30, (int)$nextConfig['ai_student_min_interval_sec']));
+}
+if (isset($nextConfig['ai_student_max_interval_sec'])) {
+    $nextConfig['ai_student_max_interval_sec'] = max(0, min(60, (int)$nextConfig['ai_student_max_interval_sec']));
+}
 if (array_key_exists('ai_student_teacher_unlimited', $nextConfig)) {
     $nextConfig['ai_student_teacher_unlimited'] = (bool)$nextConfig['ai_student_teacher_unlimited'];
 }

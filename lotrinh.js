@@ -472,6 +472,18 @@
         return mathText(cleanAiAnswer(value));
     }
 
+    const AI_THROTTLE_STORAGE_KEY = 'giangbai_ai_last_request_at';
+
+    async function waitForAiThrottle(minMs = 2000, maxMs = 3000) {
+        const required = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
+        const last = Number(localStorage.getItem(AI_THROTTLE_STORAGE_KEY) || 0);
+        const elapsed = Date.now() - last;
+        if (last > 0 && elapsed < required) {
+            await new Promise(resolve => setTimeout(resolve, required - elapsed));
+        }
+        localStorage.setItem(AI_THROTTLE_STORAGE_KEY, String(Date.now()));
+    }
+
     function formatAiProviderLabel(provider) {
         if (provider === 'ds2api') return 'DS2API';
         if (provider === 'cloudflare_workers_ai' || provider === 'cloudflare') return 'Cloudflare';
@@ -480,9 +492,6 @@
 
     function formatAiCacheNote(data) {
         let html = '';
-        if (data?.ds2api_notice) {
-            html += `<p class="mt-2 text-xs font-semibold text-amber-700"><i class="fas fa-triangle-exclamation mr-1"></i>${escapeHtml(data.ds2api_notice)}</p>`;
-        }
         if (data?.cached) {
             const hits = Number(data.cache_hits) > 1 ? ` · dùng lại lần ${data.cache_hits}` : '';
             html += `<p class="mt-2 text-xs font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước${hits} — không tốn quota AI.</p>`;
@@ -1098,6 +1107,9 @@
     }
 
     function formatAiErrorMessage(err) {
+        if (err?.code === 'student_rate_limited') {
+            return err?.message || 'Em hỏi hơi nhanh — chờ vài giây rồi thử lại nhé.';
+        }
         if (err?.code === 'student_quota_exhausted') {
             return err?.message || 'Hôm nay em đã hết lượt hỏi AI. Mai hỏi tiếp hoặc xem lại phần đã giải thích nhé.';
         }
@@ -2869,6 +2881,7 @@
     }
 
     async function requestAiExplain(lesson, text) {
+        await waitForAiThrottle();
         return api('api/ai_explain.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2881,6 +2894,7 @@
     }
 
     async function requestAiChat(lesson, question, history = []) {
+        await waitForAiThrottle();
         return api('api/ai_explain.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3527,7 +3541,6 @@
             <div class="lesson-ai-chat-msg ${msg.role === 'error' ? 'error' : msg.role}">
                 ${msg.role === 'assistant' ? renderAiAnswer(msg.content) : escapeHtml(msg.content)}
                 ${msg.role === 'assistant' && msg.cached ? '<div class="mt-1 text-[11px] font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước</div>' : ''}
-                ${msg.role === 'assistant' && msg.ds2api_notice ? `<div class="mt-1 text-[11px] font-semibold text-amber-700"><i class="fas fa-triangle-exclamation mr-1"></i>${escapeHtml(msg.ds2api_notice)}</div>` : ''}
                 ${msg.role === 'assistant' && msg.provider ? `<div class="mt-1 text-[11px] font-semibold text-teal-700"><i class="fas fa-microchip mr-1"></i>Nguồn: ${escapeHtml(formatAiProviderLabel(msg.provider))}${msg.model ? ` · ${escapeHtml(msg.model)}` : ''}</div>` : ''}
             </div>
         `).join('');
@@ -3566,7 +3579,6 @@
                     cached: !!data.cached,
                     provider: data.provider || data.router_tier || '',
                     model: data.model || '',
-                    ds2api_notice: data.ds2api_notice || '',
                 });
             } catch (err) {
                 aiAssistState.chatHistory.pop();

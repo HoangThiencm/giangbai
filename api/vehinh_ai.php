@@ -2,6 +2,7 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_runtime_config.php';
 require_once __DIR__ . '/ai_usage_log.php';
+require_once __DIR__ . '/ai_student_quota.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -209,6 +210,17 @@ if ($provider === 'ds2api' && $image) {
     respond(['error' => 'DeepSeek/DS2API hiện chỉ dùng cho mô tả chữ trên trang vẽ hình. Nếu có ảnh, hãy chọn Gemini.'], 422);
 }
 
+$currentUserId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+$currentUserRole = '';
+if ($currentUserId) {
+    $userStmt = $pdo->prepare('SELECT role FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
+    $userStmt->execute([$currentUserId]);
+    $currentUserRole = (string)($userStmt->fetchColumn() ?: '');
+}
+ai_student_rate_limit_require($currentUserId, $currentUserRole);
+ai_student_rate_limit_touch($currentUserId, $currentUserRole);
+ai_student_quota_require($currentUserId, $currentUserRole);
+
 $result = $provider === 'gemini'
     ? vehinh_call_gemini($runtime, $systemPrompt, $userInstruction, $image)
     : vehinh_call_ds2api($runtime, $systemPrompt, $userInstruction);
@@ -229,6 +241,8 @@ ai_usage_record([
 if (!$ok) {
     respond(['error' => (string)($result['error'] ?? 'AI vẽ hình không trả lời.'), 'provider' => $provider], 502);
 }
+
+ai_student_quota_consume($currentUserId, $currentUserRole);
 
 respond([
     'ok' => true,

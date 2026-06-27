@@ -747,7 +747,7 @@ respond([
         'Lộ trình: Router AI — cache → light_ai (miễn phí) → DS2API (DeepSeek web) → Cloudflare → Gemini → ShopAIKey/DeepSeek (cuối cùng).',
         'DS2API: log nội bộ đếm giải thích & chat lộ trình qua DeepSeek web (Vercel); không có dashboard bên ngoài.',
         'Cache theo lesson_id + câu hỏi tại data/ai_explain_cache.json — không tốn quota.',
-        'Quota học sinh: data/ai_student_quota.json — mặc định 25 lượt API/ngày (cache không tính).',
+        'Quota học sinh: data/ai_student_quota.json — mặc định 30 lượt API/ngày, chờ 2–3 giây giữa các câu (cache không tính).',
         'Thi trực tuyến: Mistral OCR + Gemini trình duyệt được ghi qua api/ai_usage_report.php.',
         'Smart Quota: Neurons Cloudflare ~10.000/ngày free; hết thì fallback Gemini, cuối cùng ShopAIKey.',
         'Ma trận đề / KTTX / game gọi Gemini trực tiếp — chưa ghi log (sẽ bổ sung sau nếu cần).',

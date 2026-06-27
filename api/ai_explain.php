@@ -660,9 +660,6 @@ function ai_explain_respond_success(
     if (!empty($result['fallback'])) {
         $payload['fallback'] = true;
     }
-    if (!empty($result['ds2api_notice'])) {
-        $payload['ds2api_notice'] = (string)$result['ds2api_notice'];
-    }
     respond($payload);
 }
 
@@ -700,6 +697,8 @@ if ($mode !== 'chat'
     }
 }
 
+ai_student_rate_limit_require($currentUserId, $currentUserRole);
+ai_student_rate_limit_touch($currentUserId, $currentUserRole);
 ai_student_quota_require($currentUserId, $currentUserRole);
 
 function try_cloudflare_ai_explain(array $config, array $payload): ?array

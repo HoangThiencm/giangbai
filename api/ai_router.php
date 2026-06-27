@@ -330,9 +330,6 @@ function ai_router_run(array $ctx): array
                     'tiers_tried' => $tiersTried,
                     'fallback' => $ds2apiSuspended || $usedFallback,
                 ]);
-                if ($ds2apiSuspended) {
-                    $cfResult['ds2api_notice'] = 'DeepSeek qua DS2API tạm bị khóa — đang dùng AI dự phòng (Cloudflare).';
-                }
                 return [
                     'result' => $cfResult,
                     'quota' => $quotaStatus,

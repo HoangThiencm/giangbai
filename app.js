@@ -376,6 +376,18 @@ document.addEventListener('DOMContentLoaded', function () {
     canvas.on('mouse:move', function (opt) { if (isPanning) { const vpt = this.viewportTransform; vpt[4] += opt.e.clientX - lastPanX; vpt[5] += opt.e.clientY - lastPanY; this.requestRenderAll(); lastPanX = opt.e.clientX; lastPanY = opt.e.clientY; } });
     canvas.on('mouse:up', function () { if (isPanning) { this.setViewportTransform(this.viewportTransform); isPanning = false; this.selection = true; } });
 
+    const AI_THROTTLE_STORAGE_KEY = 'giangbai_ai_last_request_at';
+
+    async function waitForAiThrottle(minMs = 2000, maxMs = 3000) {
+        const required = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
+        const last = Number(localStorage.getItem(AI_THROTTLE_STORAGE_KEY) || 0);
+        const elapsed = Date.now() - last;
+        if (last > 0 && elapsed < required) {
+            await new Promise(resolve => setTimeout(resolve, required - elapsed));
+        }
+        localStorage.setItem(AI_THROTTLE_STORAGE_KEY, String(Date.now()));
+    }
+
     // === AI GENERATION LOGIC (UPDATED WITH PRIORITY & FALLBACK) ===
     async function handleGenerateClick(isRegenerating = false) {
         const userPrompt = allDOMElements.promptInput.value;
@@ -399,6 +411,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let userInstruction = `Phân tích và vẽ hình cho yêu cầu sau: ${userPrompt}`;
         if (isRegenerating) { userInstruction += " Vui lòng vẽ lại hình này nhưng sử dụng các tọa độ và tỷ lệ khác với lần trước."; }
         try {
+            await waitForAiThrottle();
             const imagePayload = imageFile
                 ? { mime_type: imageFile.type, data: await imageToBase64(imageFile) }
                 : null;
@@ -415,7 +428,9 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(data.error || 'AI vẽ hình không phản hồi.');
+                const err = new Error(data.error || 'AI vẽ hình không phản hồi.');
+                err.code = data.code || '';
+                throw err;
             }
             const fullResponseText = data.text || '';
             allDOMElements.analysisOutput.innerHTML = fullResponseText.replace(/\n/g, '<br>');

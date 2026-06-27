@@ -17,7 +17,9 @@ function ai_student_quota_load_config(): array
 {
     $defaults = [
         'enabled' => true,
-        'daily_limit' => 25,
+        'daily_limit' => 30,
+        'min_interval_sec' => 2,
+        'max_interval_sec' => 3,
         'teacher_unlimited' => true,
     ];
 
@@ -38,7 +40,100 @@ function ai_student_quota_load_config(): array
     if (array_key_exists('ai_student_teacher_unlimited', $global)) {
         $defaults['teacher_unlimited'] = (bool)$global['ai_student_teacher_unlimited'];
     }
+    if (isset($global['ai_student_min_interval_sec'])) {
+        $defaults['min_interval_sec'] = max(0, min(30, (int)$global['ai_student_min_interval_sec']));
+    }
+    if (isset($global['ai_student_max_interval_sec'])) {
+        $defaults['max_interval_sec'] = max(0, min(60, (int)$global['ai_student_max_interval_sec']));
+    }
+    if ($defaults['max_interval_sec'] < $defaults['min_interval_sec']) {
+        $defaults['max_interval_sec'] = $defaults['min_interval_sec'];
+    }
     return $defaults;
+}
+
+function ai_student_quota_should_enforce(?int $userId, string $role, array $cfg): bool
+{
+    if (!$cfg['enabled'] || $userId === null || $userId <= 0) {
+        return false;
+    }
+    if ($cfg['teacher_unlimited'] && in_array($role, ['teacher', 'admin'], true)) {
+        return false;
+    }
+    return true;
+}
+
+function ai_student_rate_limit_wait_sec(array $cfg): int
+{
+    $minSec = (int)($cfg['min_interval_sec'] ?? 0);
+    $maxSec = (int)($cfg['max_interval_sec'] ?? $minSec);
+    if ($minSec <= 0) {
+        return 0;
+    }
+    if ($maxSec < $minSec) {
+        $maxSec = $minSec;
+    }
+    return $minSec === $maxSec ? $minSec : random_int($minSec, $maxSec);
+}
+
+function ai_student_rate_limit_require(?int $userId, string $role): void
+{
+    $cfg = ai_student_quota_load_config();
+    if (!ai_student_quota_should_enforce($userId, $role, $cfg)) {
+        return;
+    }
+
+    $requiredWait = ai_student_rate_limit_wait_sec($cfg);
+    if ($requiredWait <= 0) {
+        return;
+    }
+
+    $lastAt = 0.0;
+    ai_student_quota_mutate(function (array &$store) use ($userId, &$lastAt) {
+        if (!isset($store['last_request_at']) || !is_array($store['last_request_at'])) {
+            $store['last_request_at'] = [];
+        }
+        $lastAt = (float)($store['last_request_at'][$userId] ?? 0);
+    });
+
+    if ($lastAt <= 0) {
+        return;
+    }
+
+    $elapsed = microtime(true) - $lastAt;
+    if ($elapsed >= $requiredWait) {
+        return;
+    }
+
+    $retryAfter = max(1, (int)ceil($requiredWait - $elapsed));
+    respond([
+        'error' => "Em hỏi hơi nhanh — chờ {$retryAfter} giây rồi thử lại nhé.",
+        'code' => 'student_rate_limited',
+        'retry_after_sec' => $retryAfter,
+        'student_quota' => ai_student_quota_status($userId, $role),
+    ], 429);
+}
+
+function ai_student_rate_limit_touch(?int $userId, string $role): void
+{
+    $cfg = ai_student_quota_load_config();
+    if (!ai_student_quota_should_enforce($userId, $role, $cfg)) {
+        return;
+    }
+    if (ai_student_rate_limit_wait_sec($cfg) <= 0) {
+        return;
+    }
+
+    ai_student_quota_mutate(function (array &$store) use ($userId) {
+        if (!isset($store['last_request_at']) || !is_array($store['last_request_at'])) {
+            $store['last_request_at'] = [];
+        }
+        $store['last_request_at'][$userId] = microtime(true);
+        if (count($store['last_request_at']) > 5000) {
+            arsort($store['last_request_at']);
+            $store['last_request_at'] = array_slice($store['last_request_at'], 0, 3000, true);
+        }
+    });
 }
 
 function ai_student_quota_default_store(): array
