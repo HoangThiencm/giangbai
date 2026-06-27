@@ -29,7 +29,11 @@
     <script src="ai-design-config.js?v=20260624-admin-sync"></script>
     <script src="ai-usage-reporter.js?v=20260622-ai-exam-log2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
     <script src="pdf-page-client.js?v=20260621"></script>
     <script src="mistral-ocr-client.js?v=20260622-ai-track1"></script>
     <script src="exam-stitch-client.js?v=20260621"></script>
@@ -327,20 +331,47 @@
     <div id="react-error"></div>
 
     <script>
-        function isBenignInAppBrowserError(msg, url) {
-            const text = String(msg || "");
+        function shouldIgnoreGlobalError(msg, url, error) {
+            const text = String(msg || "").trim();
             if (/zaloJSV2|zaloJS|ZaloJSBridge/i.test(text)) return true;
             if (!url && /is not defined/i.test(text)) return true;
+            if (/^script error\.?$/i.test(text)) return true;
             return false;
         }
 
+        function logIgnoredGlobalError(kind, msg, url, line, col, error) {
+            try {
+                console.warn(`[thitructuyen] ${kind} (ẩn trên giao diện):`, msg, url || "", line, col, error);
+            } catch { }
+        }
+
         window.onerror = function (msg, url, line, col, error) {
-            if (isBenignInAppBrowserError(msg, url)) return true;
+            if (shouldIgnoreGlobalError(msg, url, error)) {
+                logIgnoredGlobalError("onerror", msg, url, line, col, error);
+                return true;
+            }
             const el = document.getElementById('react-error');
+            if (!el) return false;
             el.style.display = 'block';
-            el.innerHTML = `<strong>Lỗi Hệ Thống:</strong> ${msg}<br><small>${url}:${line}</small><br><pre>${error?.stack}</pre>`;
+            el.innerHTML = `<strong>Lỗi Hệ Thống:</strong> ${msg}<br><small>${url || "nội bộ"}:${line || "?"}</small><br><pre>${error?.stack || ""}</pre>`;
             return false;
         };
+
+        window.addEventListener("error", function (event) {
+            if (!event || event.target === window) return;
+            const tag = (event.target.tagName || "").toLowerCase();
+            if (tag !== "script" && tag !== "link") return;
+            logIgnoredGlobalError("resource", `${tag} load failed`, event.target.src || event.target.href || "", "", "", null);
+        }, true);
+
+        window.addEventListener("unhandledrejection", function (event) {
+            const reason = event?.reason;
+            const message = reason?.message || String(reason || "");
+            if (shouldIgnoreGlobalError(message, "", reason)) {
+                logIgnoredGlobalError("promise", message, "", "", "", reason);
+                event.preventDefault();
+            }
+        });
 
         // Chặn phím tắt
         document.addEventListener('keydown', function (e) {
@@ -2701,18 +2732,52 @@
             );
         };
 
+        class ExamErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false };
+            }
+            static getDerivedStateFromError() {
+                return { hasError: true };
+            }
+            componentDidCatch(error, info) {
+                console.error("[thitructuyen] StudentView crash:", error, info);
+            }
+            render() {
+                if (!this.state.hasError) return this.props.children;
+                return (
+                    <div className="flex h-screen items-center justify-center bg-gray-100 p-4">
+                        <div className="bg-white p-8 rounded-xl shadow text-center max-w-md">
+                            <h2 className="text-xl font-bold text-red-600 mb-2"><i className="fas fa-exclamation-circle"></i> Không tải được giao diện thi</h2>
+                            <p className="text-gray-600 text-sm mb-5">Vui lòng tải lại trang. Nếu vẫn lỗi, mở link bằng Chrome/Safari thay vì Zalo.</p>
+                            <button type="button" onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold">Tải lại trang</button>
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        const readStudentExamParams = () => {
+            const p = new URLSearchParams(window.location.search);
+            const examId = (p.get("examId") || "").trim();
+            if (p.get("mode") === "student" && examId) {
+                return { isStudent: true, examId };
+            }
+            return { isStudent: false, examId: null };
+        };
+
         const App = () => {
+            const studentExam = useMemo(() => readStudentExamParams(), []);
             const [view, setView] = useState("dashboard");
-            const [selectedId, setSelectedId] = useState(null);
-            const [isStudent, setIsStudent] = useState(false);
+            const [selectedId, setSelectedId] = useState(studentExam.examId);
             const [editingData, setEditingData] = useState(null);
             const userEmail = localStorage.getItem('userEmail');
 
             useEffect(() => {
-                const p = new URLSearchParams(window.location.search);
-                if (p.get("mode") === "student") {
-                    setSelectedId(p.get("examId"));
-                    setIsStudent(true);
+                const el = document.getElementById('react-error');
+                if (el) {
+                    el.style.display = 'none';
+                    el.innerHTML = '';
                 }
             }, []);
 
@@ -2726,7 +2791,13 @@
                 }
             };
 
-            if (isStudent) return <StudentView examId={selectedId} />;
+            if (studentExam.isStudent) {
+                return (
+                    <ExamErrorBoundary>
+                        <StudentView examId={studentExam.examId} />
+                    </ExamErrorBoundary>
+                );
+            }
 
             if (!userEmail) return (
                 <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
