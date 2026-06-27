@@ -456,7 +456,7 @@
                                 </button>
                             </div>
                             <button type="button" id="btnTestGeminiKeys" onclick="runGeminiKeyHealthCheck(this)" class="rounded border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100">
-                                <i class="fas fa-heart-pulse mr-1"></i> Test key
+                                <i class="fas fa-heart-pulse mr-1"></i> Kiểm tra key
                             </button>
                             <p id="adminGeminiStorageDetail" class="text-xs text-emerald-800"></p>
                             <div id="adminGeminiKeyHealthPanel" class="hidden rounded border border-emerald-200 bg-white/80 p-3 text-xs text-emerald-950">
@@ -951,7 +951,7 @@
             const okCount = results.filter(item => item.status === 'ok').length;
             const quotaCount = results.filter(item => item.status === 'quota').length;
             const invalidCount = results.filter(item => item.status === 'invalid').length;
-            summary.textContent = `${okCount} OK · ${quotaCount} quota · ${invalidCount} hong/khoa · model ${model}`;
+            summary.textContent = `${okCount} key sống · ${quotaCount} key hết quota · ${invalidCount} key chết / bị khóa · model ${model}`;
             list.innerHTML = results.map((item, index) => `
                 <div class="rounded border px-3 py-2 ${geminiKeyHealthTone(item.status)}">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -982,25 +982,25 @@
                 clearTimeout(timer);
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data?.candidates?.length) {
-                    return { status: 'ok', label: 'song', message: 'Key hoat dong binh thuong.' };
+                    return { status: 'ok', label: 'Sống', message: 'Key hoạt động bình thường.' };
                 }
                 const errorText = String(data?.error?.message || `HTTP ${res.status}`);
                 if (res.status === 429 || /quota|rate limit|resource has been exhausted/i.test(errorText)) {
-                    return { status: 'quota', label: 'het quota', message: errorText };
+                    return { status: 'quota', label: 'Hết quota', message: errorText };
                 }
                 if (res.status === 400 || res.status === 404) {
-                    return { status: 'model', label: 'loi model', message: errorText };
+                    return { status: 'model', label: 'Lỗi model', message: errorText };
                 }
                 if (res.status === 401 || res.status === 403 || /api key not valid|permission denied|invalid/i.test(errorText)) {
-                    return { status: 'invalid', label: 'chet/khoa', message: errorText };
+                    return { status: 'invalid', label: 'Chết / bị khóa', message: errorText };
                 }
-                return { status: 'error', label: 'loi', message: errorText };
+                return { status: 'error', label: 'Lỗi', message: errorText };
             } catch (error) {
                 const message = String(error?.message || error || 'Khong test duoc');
                 if (/abort/i.test(message)) {
-                    return { status: 'error', label: 'timeout', message: 'Het thoi gian cho phan hoi tu Gemini.' };
+                    return { status: 'error', label: 'Timeout', message: 'Hết thời gian chờ phản hồi từ Gemini.' };
                 }
-                return { status: 'error', label: 'loi', message };
+                return { status: 'error', label: 'Lỗi', message };
             }
         }
 
@@ -1124,17 +1124,17 @@
             const summary = document.getElementById('adminGeminiKeyHealthSummary');
             const panel = document.getElementById('adminGeminiKeyHealthPanel');
             if (panel) panel.classList.remove('hidden');
-            if (summary) summary.textContent = `Dang test 0/${keys.length} key...`;
+            if (summary) summary.textContent = `Đang kiểm tra 0/${keys.length} key...`;
             const results = [];
 
             if (buttonEl) {
                 buttonEl.disabled = true;
-                buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Dang test...';
+                buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Đang kiểm tra...';
             }
 
             try {
                 for (let i = 0; i < keys.length; i++) {
-                    if (summary) summary.textContent = `Dang test ${i + 1}/${keys.length} key...`;
+                    if (summary) summary.textContent = `Đang kiểm tra ${i + 1}/${keys.length} key...`;
                     const outcome = await probeSingleGeminiKey(keys[i], model);
                     results.push({ key: keys[i], ...outcome });
                 }
@@ -1144,7 +1144,7 @@
             } finally {
                 if (buttonEl) {
                     buttonEl.disabled = false;
-                    buttonEl.innerHTML = originalText || '<i class="fas fa-heart-pulse mr-1"></i> Test key';
+                    buttonEl.innerHTML = originalText || '<i class="fas fa-heart-pulse mr-1"></i> Kiểm tra key';
                 }
             }
         }
