@@ -165,6 +165,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const allDOMElements = {
         generateBtn: document.getElementById('generate-btn'), regenerateBtn: document.getElementById('regenerate-btn'), promptInput: document.getElementById('prompt-input'), imageUpload: document.getElementById('image-upload'), imagePreview: document.getElementById('image-preview'), analysisOutput: document.getElementById('analysis-output'), loader: document.getElementById('loader'), toolbar: document.getElementById('toolbar'), colorPicker: document.getElementById('color-picker'), deleteBtn: document.getElementById('delete-btn'), apiKeyFile: document.getElementById('api-key-file'), apiKeyFilename: document.getElementById('api-key-filename'), modelSelect: document.getElementById('model-select'), lockAiBtn: document.getElementById('lock-ai-btn'), undoBtn: document.getElementById('undo-btn'), redoBtn: document.getElementById('redo-btn'), copyBtn: document.getElementById('copy-btn'), pasteBtn: document.getElementById('paste-btn'), zoomInBtn: document.getElementById('zoom-in-btn'), zoomOutBtn: document.getElementById('zoom-out-btn'), resetZoomBtn: document.getElementById('reset-zoom-btn'), accordionHeaders: document.querySelectorAll('.accordion-header'), geogebraToggle: document.getElementById('geogebra-toggle'), geogebraContainer: document.getElementById('geogebra-container'), latexToolBtn: document.getElementById('latex-tool-btn'), insertImageBtn: document.getElementById('insert-image-btn'), imageInserter: document.getElementById('image-inserter'), latexModal: document.getElementById('latex-modal'), latexModalBackdrop: document.getElementById('latex-modal-backdrop'), mathInput: document.getElementById('math-input'), latexPreview: document.getElementById('latex-preview'), cancelLatexBtn: document.getElementById('cancel-latex-btn'), insertLatexBtn: document.getElementById('insert-latex-btn'), toggleGridBtn: document.getElementById('toggle-grid-btn'), zoomViewer: document.getElementById('zoom-viewer'), textControls: document.getElementById('text-controls'), fontSize: document.getElementById('font-size'), fontBold: document.getElementById('font-bold'), fontItalic: document.getElementById('font-italic'), fontUnderline: document.getElementById('font-underline'), promptSuggestions: document.getElementById('prompt-suggestions'), toggleSnapBtn: document.getElementById('toggle-snap-btn'), alignControls: document.getElementById('align-controls'), darkModeToggle: document.getElementById('dark-mode-toggle'), miniToolbar: document.getElementById('mini-toolbar'), miniColorPicker: document.getElementById('mini-color-picker'), miniDeleteBtn: document.getElementById('mini-delete-btn'),
     };
+    allDOMElements.aiProviderSelect = document.getElementById('ai-provider-select');
+    allDOMElements.aiModelSummary = document.getElementById('ai-model-summary');
+    let drawingAiConfig = null;
 
     function serializeCanvas() { return canvas.toJSON(['source', 'type']); }
     function saveHistory() { if (isRestoring) return; const json = serializeCanvas(); if (historyIndex < history.length - 1) { history = history.slice(0, historyIndex + 1); } history.push(json); if (history.length > HISTORY_LIMIT) history.shift(); historyIndex = history.length - 1; updateUndoRedoButtons(); }
@@ -197,7 +200,66 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     let zoomViewerTarget = null;
-    function updateZoomViewer(options) { if (!options.target && options.e.type === 'mouse:move') { if (!zoomViewerTarget) return; } const targetObject = options.target || zoomViewerTarget; if (!targetObject) return; if (options.action === 'drag' || options.transform) { zoomViewerTarget = targetObject; showZoomViewer(options.e); } allDOMElements.zoomViewer.style.display = 'block'; if (zoomViewerTarget && zoomViewerCanvas) { zoomViewerCanvas.clear(); const zoomCenter = targetObject.getCenterPoint(); const Vpt = [ZOOM_VIEWER_SCALE, 0, 0, ZOOM_VIEWER_SCALE, -zoomCenter.x * ZOOM_VIEWER_SCALE + ZOOM_VIEWER_SIZE / 2, -zoomCenter.y * ZOOM_VIEWER_SCALE + ZOOM_VIEWER_SIZE / 2]; zoomViewerCanvas.setViewportTransform(Vpt); canvas.getObjects().forEach(obj => { obj.clone(function (cloned) { if (obj === targetObject) { cloned.set({ left: targetObject.left, top: targetObject.top, scaleX: targetObject.scaleX, scaleY: targetObject.scaleY, angle: targetObject.angle, hasControls: true, hasBorders: true, opacity: 0.8 }); } else { cloned.set({ hasControls: false, hasBorders: false, selectable: false, evented: false }); } zoomViewerCanvas.add(cloned); }, ['source']); }); zoomViewerCanvas.renderAll(); } }
+
+    function isZoomViewerTarget(obj, target) {
+        if (!target) return false;
+        if (obj === target) return true;
+        if (target.type === 'activeSelection' && typeof target.contains === 'function') {
+            return target.contains(obj);
+        }
+        return false;
+    }
+
+    function updateZoomViewer(options) {
+        if (!options?.e) return;
+        const isMouseMove = !options.target && options.e.type === 'mousemove';
+        if (isMouseMove && !zoomViewerTarget) return;
+
+        const targetObject = options.target || zoomViewerTarget;
+        if (!targetObject) return;
+
+        if (options.action === 'drag' || options.transform) {
+            zoomViewerTarget = targetObject;
+        }
+        if (!zoomViewerTarget || !zoomViewerCanvas) return;
+
+        allDOMElements.zoomViewer.style.display = 'block';
+
+        const rect = targetObject.getBoundingRect(true, true);
+        const zoomCenterX = rect.left + rect.width / 2;
+        const zoomCenterY = rect.top + rect.height / 2;
+        zoomViewerCanvas.setViewportTransform([
+            ZOOM_VIEWER_SCALE, 0, 0, ZOOM_VIEWER_SCALE,
+            -zoomCenterX * ZOOM_VIEWER_SCALE + ZOOM_VIEWER_SIZE / 2,
+            -zoomCenterY * ZOOM_VIEWER_SCALE + ZOOM_VIEWER_SIZE / 2,
+        ]);
+
+        const objects = canvas.getObjects().filter(obj => obj !== gridGroup && obj.visible !== false);
+        zoomViewerCanvas.clear();
+        if (!objects.length) {
+            zoomViewerCanvas.requestRenderAll();
+            return;
+        }
+
+        let pending = objects.length;
+        objects.forEach(obj => {
+            obj.clone((cloned) => {
+                const isTarget = isZoomViewerTarget(obj, targetObject);
+                cloned.set({
+                    hasControls: isTarget,
+                    hasBorders: isTarget,
+                    selectable: false,
+                    evented: false,
+                    opacity: isTarget ? 0.85 : 1,
+                });
+                cloned.setCoords();
+                zoomViewerCanvas.add(cloned);
+                pending -= 1;
+                if (pending === 0) zoomViewerCanvas.requestRenderAll();
+            }, ['source', 'type']);
+        });
+    }
+
     function showZoomViewer(e) { if (zoomViewerTarget) { allDOMElements.zoomViewer.style.display = 'block'; } }
     function hideZoomViewer() { allDOMElements.zoomViewer.style.display = 'none'; zoomViewerTarget = null; }
 
@@ -209,6 +271,58 @@ document.addEventListener('DOMContentLoaded', function () {
     allDOMElements.fontSize.addEventListener('input', (e) => applyStyleToSelection('fontSize', parseInt(e.target.value, 10))); allDOMElements.fontBold.addEventListener('click', () => { const a = canvas.getActiveObject(); if (a && a.type === 'i-text') { applyStyleToSelection('fontWeight', a.get('fontWeight') === 'bold' ? 'normal' : 'bold'); updateContextualToolbars(); } }); allDOMElements.fontItalic.addEventListener('click', () => { const a = canvas.getActiveObject(); if (a && a.type === 'i-text') { applyStyleToSelection('fontStyle', a.get('fontStyle') === 'italic' ? 'normal' : 'italic'); updateContextualToolbars(); } }); allDOMElements.fontUnderline.addEventListener('click', () => { const a = canvas.getActiveObject(); if (a && a.type === 'i-text') { applyStyleToSelection('underline', !a.get('underline')); updateContextualToolbars(); } });
 
     // --- API Key Management (UPDATED) ---
+    async function loadDrawingAiConfig() {
+        try {
+            const res = await fetch('api/vehinh_ai.php?action=config', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Không đọc được cấu hình AI vẽ hình.');
+            drawingAiConfig = data;
+            const savedProvider = localStorage.getItem('vehinh_ai_provider');
+            const defaultProvider = savedProvider || data.default_provider || 'ds2api';
+            if (allDOMElements.aiProviderSelect) {
+                allDOMElements.aiProviderSelect.value = defaultProvider;
+            }
+            updateDrawingAiSummary();
+        } catch (error) {
+            drawingAiConfig = {
+                default_provider: 'gemini',
+                providers: {
+                    ds2api: { label: 'DeepSeek / DS2API', configured: false, model: localStorage.getItem('default_ds2api_module') || 'deepseek-v4-flash' },
+                    gemini: { label: 'Google Gemini', configured: false, model: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash', keys_count: 0 }
+                }
+            };
+            if (allDOMElements.aiModelSummary) {
+                allDOMElements.aiModelSummary.innerHTML = `<span class="text-amber-300">Không đọc được cấu hình server:</span> ${error.message}`;
+            }
+        }
+    }
+
+    function updateDrawingAiSummary() {
+        const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        const ds2 = drawingAiConfig?.providers?.ds2api || {};
+        const gemini = drawingAiConfig?.providers?.gemini || {};
+        if (allDOMElements.aiProviderSelect) {
+            const ds2Option = allDOMElements.aiProviderSelect.querySelector('option[value="ds2api"]');
+            const geminiOption = allDOMElements.aiProviderSelect.querySelector('option[value="gemini"]');
+            if (ds2Option) ds2Option.textContent = `DeepSeek / DS2API · ${ds2.model || 'deepseek-v4-flash'}${ds2.configured ? '' : ' (chưa cấu hình)'}`;
+            if (geminiOption) geminiOption.textContent = `Google Gemini · ${gemini.model || 'gemini-2.5-flash'}${gemini.configured ? '' : ' (chưa cấu hình)'}`;
+        }
+        if (!allDOMElements.aiModelSummary) return;
+        const selected = provider === 'gemini' ? gemini : ds2;
+        const supportsImage = selected.supports_image ? 'có hỗ trợ ảnh' : 'chỉ mô tả chữ';
+        const readyText = selected.configured ? 'Đã cấu hình' : 'Chưa cấu hình';
+        const extra = provider === 'gemini'
+            ? ` · ${gemini.keys_count || 0} key`
+            : ' · dùng Client Key DS2API trên server';
+        allDOMElements.aiModelSummary.innerHTML = `
+            <div><strong>${selected.label || provider}</strong>: <code>${selected.model || '---'}</code></div>
+            <div>${readyText}${extra} · ${supportsImage}</div>
+        `;
+    }
+
     function loadApiKeys() {
         // Prioritize System Keys
         const systemKeys = localStorage.getItem('global_gemini_keys');
@@ -234,7 +348,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     }
-    loadApiKeys();
+    loadDrawingAiConfig().finally(loadApiKeys);
+
+    allDOMElements.aiProviderSelect?.addEventListener('change', () => {
+        localStorage.setItem('vehinh_ai_provider', allDOMElements.aiProviderSelect.value);
+        updateDrawingAiSummary();
+    });
 
     allDOMElements.apiKeyFile.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (event) => { const keys = event.target.result.trim().split('\n').filter(key => key.trim() !== ''); apiKeysFromFile = keys; allDOMElements.apiKeyFilename.classList.remove('text-green-400', 'text-red-400'); if (keys.length > 0) { localStorage.setItem('geometryAiApiKeys', JSON.stringify(keys)); allDOMElements.apiKeyFilename.textContent = `Đã lưu ${keys.length} khóa.`; allDOMElements.apiKeyFilename.classList.add('text-green-400'); } else { allDOMElements.apiKeyFilename.textContent = `Tệp không hợp lệ.`; allDOMElements.apiKeyFilename.classList.add('text-red-400'); } }; reader.readAsText(file); } });
     allDOMElements.promptInput.addEventListener('paste', handlePaste);
@@ -262,17 +381,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const userPrompt = allDOMElements.promptInput.value;
         const imageFile = activeImageFile;
         if (!userPrompt && !imageFile) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng nhập đề bài hoặc tải ảnh.</span>'; return; }
-        if (apiKeysFromFile.length === 0) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng cung cấp tệp API Key hoặc nạp key hệ thống.</span>'; return; }
-
-        let keysToTry = [...apiKeysFromFile];
-
-        // PRIORITY MODELS: User Preference -> Fallback 1.5
-        const primaryModel = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
-        const fallbackModel = 'gemini-1.5-flash';
+        const selectedProvider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        if (selectedProvider === 'ds2api' && imageFile) {
+            allDOMElements.analysisOutput.innerHTML = '<span class="text-amber-300">DeepSeek/DS2API hiện chỉ dùng cho mô tả chữ trên trang này. Nếu muốn AI đọc ảnh, hãy chọn Google Gemini.</span>';
+            return;
+        }
 
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
-        allDOMElements.analysisOutput.innerHTML = 'AI đang phân tích...';
+        const selectedModel = drawingAiConfig?.providers?.[selectedProvider]?.model || '';
+        allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng ${selectedProvider === 'gemini' ? 'Gemini' : 'DeepSeek/DS2API'}${selectedModel ? ` · ${selectedModel}` : ''}...`;
 
         canvas.getObjects().slice().forEach(obj => { if (obj.source === 'ai' || obj.source === 'ai_primitive') { canvas.remove(obj); } });
         canvas.renderAll();
@@ -280,69 +398,35 @@ document.addEventListener('DOMContentLoaded', function () {
         const systemPrompt = `Bạn là một chuyên gia phân tích hình học, thống kê và lập trình viên JavaScript. Nhiệm vụ của bạn là nhận một mô tả hoặc hình ảnh và tạo ra mã JavaScript để vẽ lại hình học hoặc biểu đồ một cách SẠCH SẼ, RÕ NÉT, và CHÍNH XÁC bằng thư viện Fabric.js. PHẢN HỒI CỦA BẠN PHẢI CÓ 2 PHẦN: PHẦN 1: PHÂN TÍCH trong thẻ <analysis>...</analysis>. PHẦN 2: MÃ JAVASCRIPT trong thẻ <javascript>...</javascript>. A. QUY TẮC HÌNH HỌC: 1. Khai báo điểm trước: const diemA = {x: 150, y: 100}; 2. Dùng trực tiếp Fabric.js: new fabric.Circle(...). 3. Mọi đối tượng phải có selectable, hasControls, hasBorders, originX/Y 'center'. 4. Dùng hàm vẽ ký hiệu: addRightAngleSymbol(), addEqualityTick(), addAngleArc(). B. QUY TẮC BIỂU ĐỒ: 1. Dùng hàm chuyên dụng: drawBarChart(), drawPieChart(). 2. Định dạng data: [{ label: 'Tổ 1', value: 50 }, ...]. 3. ĐỂ IN ĐEN TRẮNG, LUÔN LUÔN đặt usePatterns: true trong options. Môi trường thực thi: KHÔNG khai báo lại biến 'canvas'. Cuối cùng phải gọi canvas.renderAll();`;
         let userInstruction = `Phân tích và vẽ hình cho yêu cầu sau: ${userPrompt}`;
         if (isRegenerating) { userInstruction += " Vui lòng vẽ lại hình này nhưng sử dụng các tọa độ và tỷ lệ khác với lần trước."; }
-        let parts = [{ text: systemPrompt }, { text: userInstruction }];
-
-        if (imageFile) {
-            try { const base64Image = await imageToBase64(imageFile); parts.push({ inlineData: { mimeType: imageFile.type, data: base64Image } }); } catch (error) { allDOMElements.analysisOutput.innerHTML = `<span class="text-red-400">Lỗi xử lý ảnh: ${error.message}</span>`; allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; return; }
+        try {
+            const imagePayload = imageFile
+                ? { mime_type: imageFile.type, data: await imageToBase64(imageFile) }
+                : null;
+            const response = await fetch('api/vehinh_ai.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    provider: selectedProvider,
+                    system_prompt: systemPrompt,
+                    user_instruction: userInstruction,
+                    image: imagePayload,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || 'AI vẽ hình không phản hồi.');
+            }
+            const fullResponseText = data.text || '';
+            allDOMElements.analysisOutput.innerHTML = fullResponseText.replace(/\n/g, '<br>');
+            executeAiCode(fullResponseText);
+        } catch (error) {
+            console.error('Lỗi AI vẽ hình:', error);
+            allDOMElements.analysisOutput.innerHTML = `<span class="text-red-400">Lỗi AI vẽ hình:</span> ${error.message}`;
+            allDOMElements.loader.classList.add('hidden');
+            allDOMElements.generateBtn.disabled = false;
+            allDOMElements.regenerateBtn.disabled = false;
         }
-        const payload = { contents: [{ parts }] };
-
-        const tryNextKey = async (currentModel) => {
-            if (keysToTry.length === 0) {
-                // If failed with primary, switch to fallback and reset keys
-                if (currentModel === primaryModel) {
-                    allDOMElements.analysisOutput.innerHTML += `<br><span class="text-yellow-400">Chuyển sang Gemini 2.0 Flash...</span>`;
-                    keysToTry = [...apiKeysFromFile]; // Reset keys
-                    await tryNextKey(fallbackModel);
-                    return;
-                }
-                allDOMElements.analysisOutput.innerHTML += `<br><span class="text-red-400">Đã thử tất cả API key và Model nhưng đều thất bại.</span>`;
-                allDOMElements.loader.classList.add('hidden');
-                allDOMElements.generateBtn.disabled = false;
-                allDOMElements.regenerateBtn.disabled = false;
-                return;
-            }
-
-            const currentKey = keysToTry.shift();
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:streamGenerateContent?key=${currentKey}`;
-
-            try {
-                const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.status === 429) { allDOMElements.analysisOutput.textContent = `Key hết quota, đang thử key tiếp theo...`; await tryNextKey(currentModel); return; }
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    console.error("API Error", errorBody);
-                    // If 404 or similar, maybe model doesn't exist on this key tier, try next key
-                    throw new Error(`Lỗi API ${response.status}`);
-                }
-
-                const reader = response.body.getReader(); const decoder = new TextDecoder();
-                let fullResponseText = ""; let codeExecuted = false;
-
-                while (true) {
-                    const { value, done } = await reader.read(); if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    const textParts = chunk.match(/"text":\s*"((?:\\.|[^"\\])*)"/g);
-                    if (textParts) { const extractedText = textParts.map(part => { try { return JSON.parse(`{${part}}`).text; } catch (e) { return "" } }).join(''); fullResponseText += extractedText; }
-                    allDOMElements.analysisOutput.innerHTML = fullResponseText.replace(/\n/g, '<br>');
-                    if (!codeExecuted && fullResponseText.includes('<javascript>') && fullResponseText.includes('</javascript>')) { executeAiCode(fullResponseText); codeExecuted = true; }
-                }
-                if (!codeExecuted) { executeAiCode(fullResponseText); }
-            } catch (error) {
-                console.error(`Lỗi với key ...${currentKey.slice(-4)}:`, error);
-                // Just try next key with SAME model first
-                await tryNextKey(currentModel);
-            } finally {
-                if (keysToTry.length === 0 && currentModel === fallbackModel) {
-                    allDOMElements.loader.classList.add('hidden');
-                    allDOMElements.generateBtn.disabled = false;
-                    allDOMElements.regenerateBtn.disabled = false;
-                }
-            }
-        };
-
-        // Start with Primary Model
-        await tryNextKey(primaryModel);
     }
 
     function executeAiCode(fullText) {

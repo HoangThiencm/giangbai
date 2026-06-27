@@ -535,8 +535,22 @@ function try_ds2api_explain(array $config, string $prompt): ?array
         if ($answer === '') {
             return ['error' => 'DS2API tra ve noi dung rong.', 'provider' => 'ds2api'];
         }
+        if (ai_router_ds2api_is_suspended(['answer' => $answer])) {
+            return [
+                'error' => 'Tài khoản DeepSeek qua DS2API tạm bị khóa (vi phạm chính sách). Hệ thống sẽ dùng AI dự phòng.',
+                'provider' => 'ds2api',
+                'ds2api_suspended' => true,
+            ];
+        }
         $finishReason = $response['choices'][0]['finish_reason'] ?? '';
         [$answer, ] = complete_answer_if_needed('ds2api', $caller, $answer, ['finish_reason' => $finishReason]);
+        if (ai_router_ds2api_is_suspended(['answer' => $answer])) {
+            return [
+                'error' => 'Tài khoản DeepSeek qua DS2API tạm bị khóa (vi phạm chính sách). Hệ thống sẽ dùng AI dự phòng.',
+                'provider' => 'ds2api',
+                'ds2api_suspended' => true,
+            ];
+        }
         return array_merge([
             'answer' => $answer,
             'provider' => 'ds2api',
@@ -646,14 +660,15 @@ function ai_explain_respond_success(
     if (!empty($result['fallback'])) {
         $payload['fallback'] = true;
     }
+    if (!empty($result['ds2api_notice'])) {
+        $payload['ds2api_notice'] = (string)$result['ds2api_notice'];
+    }
     respond($payload);
 }
 
 $runtime = load_ai_runtime_config();
-// The student chat currently doubles as a DS2API verification surface.
-// When requested by the first-party UI, do not let fallback providers hide a
-// DS2API authentication, model, network, or upstream error.
-if ($mode === 'chat' && $forceProvider === 'ds2api') {
+// Khi UI yêu cầu DS2API, không để fallback che lỗi auth/model/network của DS2API.
+if ($forceProvider === 'ds2api') {
     $runtime['ai_test_ds2api_only'] = true;
 }
 if ($forceProvider !== '') {

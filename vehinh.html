@@ -118,9 +118,9 @@
             display: none;
         }
 
-        #zoom-canvas {
-            width: 100%;
-            height: 100%;
+        #zoom-viewer .canvas-container {
+            width: 200px !important;
+            height: 200px !important;
         }
 
         #mini-toolbar {
@@ -223,7 +223,7 @@
     <div id="gb-ai-toolbar"></div>
     <div class="flex h-screen bg-gray-100">
         <main class="flex-1 flex flex-col p-4 lg:p-6 gap-6 overflow-y-auto">
-            <h1 class="text-2xl font-bold text-gray-700">Vẽ hình & Biểu đồ AI (Gemini)</h1>
+            <h1 class="text-2xl font-bold text-gray-700">Vẽ hình & Biểu đồ AI</h1>
             <div id="toolbar" class="flex flex-wrap items-center p-2 bg-white rounded-lg shadow-sm gap-2">
                 <div class="flex items-center gap-1">
                     <button data-tool="select" class="tool-btn active p-2 rounded-md hover:bg-gray-200"
@@ -365,6 +365,18 @@
                         class="w-full flex items-center justify-center gap-2 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 transition-all disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <i data-lucide="rotate-cw"></i> <span>Vẽ lại</span>
                     </button>
+                </div>
+
+                <div class="rounded-lg border border-gray-700 bg-gray-900 p-3">
+                    <label for="ai-provider-select" class="mb-2 block text-sm font-semibold text-gray-200">Chọn AI vẽ hình</label>
+                    <select id="ai-provider-select"
+                        class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-semibold text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="ds2api">DeepSeek / DS2API</option>
+                        <option value="gemini">Google Gemini</option>
+                    </select>
+                    <div id="ai-model-summary" class="mt-2 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-xs leading-5 text-gray-300">
+                        Đang đọc model từ Admin...
+                    </div>
                 </div>
 
                 <div class="space-y-2">

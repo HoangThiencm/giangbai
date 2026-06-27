@@ -11,7 +11,7 @@
   "ai_explain_cache_max_entries": 3000,
   "ai_explain_cache_ttl_days": 90,
   "light_ai_enabled": false,
-  "ai_test_ds2api_only": true,
+  "ai_test_ds2api_only": false,
   "gemini_enabled": false,
   "ds2api_enabled": true,
   "ds2api_base_url": "https://freeapideepseek.vercel.app",

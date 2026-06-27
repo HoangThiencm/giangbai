@@ -472,10 +472,27 @@
         return mathText(cleanAiAnswer(value));
     }
 
+    function formatAiProviderLabel(provider) {
+        if (provider === 'ds2api') return 'DS2API';
+        if (provider === 'cloudflare_workers_ai' || provider === 'cloudflare') return 'Cloudflare';
+        return provider || '';
+    }
+
     function formatAiCacheNote(data) {
-        if (!data?.cached) return '';
-        const hits = Number(data.cache_hits) > 1 ? ` · dùng lại lần ${data.cache_hits}` : '';
-        return `<p class="mt-2 text-xs font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước${hits} — không tốn quota AI.</p>`;
+        let html = '';
+        if (data?.ds2api_notice) {
+            html += `<p class="mt-2 text-xs font-semibold text-amber-700"><i class="fas fa-triangle-exclamation mr-1"></i>${escapeHtml(data.ds2api_notice)}</p>`;
+        }
+        if (data?.cached) {
+            const hits = Number(data.cache_hits) > 1 ? ` · dùng lại lần ${data.cache_hits}` : '';
+            html += `<p class="mt-2 text-xs font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước${hits} — không tốn quota AI.</p>`;
+        } else if (data?.provider || data?.router_tier) {
+            const label = formatAiProviderLabel(data.provider || data.router_tier);
+            if (label) {
+                html += `<p class="mt-2 text-xs font-semibold text-teal-700"><i class="fas fa-microchip mr-1"></i>Nguồn: ${escapeHtml(label)}${data.model ? ` · ${escapeHtml(data.model)}` : ''}</p>`;
+            }
+        }
+        return html;
     }
 
     function practiceItems(lesson) {
@@ -2857,6 +2874,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lessonAiPayload(lesson, {
                 text,
+                force_provider: 'ds2api',
                 lesson_context: lessonContextText(lesson)
             }))
         });
@@ -3509,7 +3527,8 @@
             <div class="lesson-ai-chat-msg ${msg.role === 'error' ? 'error' : msg.role}">
                 ${msg.role === 'assistant' ? renderAiAnswer(msg.content) : escapeHtml(msg.content)}
                 ${msg.role === 'assistant' && msg.cached ? '<div class="mt-1 text-[11px] font-semibold text-sky-700"><i class="fas fa-database mr-1"></i>Đã lưu từ trước</div>' : ''}
-                ${msg.role === 'assistant' && msg.provider ? `<div class="mt-1 text-[11px] font-semibold text-teal-700"><i class="fas fa-microchip mr-1"></i>Nguồn: ${escapeHtml(msg.provider === 'ds2api' ? 'DS2API' : msg.provider)}${msg.model ? ` · ${escapeHtml(msg.model)}` : ''}</div>` : ''}
+                ${msg.role === 'assistant' && msg.ds2api_notice ? `<div class="mt-1 text-[11px] font-semibold text-amber-700"><i class="fas fa-triangle-exclamation mr-1"></i>${escapeHtml(msg.ds2api_notice)}</div>` : ''}
+                ${msg.role === 'assistant' && msg.provider ? `<div class="mt-1 text-[11px] font-semibold text-teal-700"><i class="fas fa-microchip mr-1"></i>Nguồn: ${escapeHtml(formatAiProviderLabel(msg.provider))}${msg.model ? ` · ${escapeHtml(msg.model)}` : ''}</div>` : ''}
             </div>
         `).join('');
         box.scrollTop = box.scrollHeight;
@@ -3547,6 +3566,7 @@
                     cached: !!data.cached,
                     provider: data.provider || data.router_tier || '',
                     model: data.model || '',
+                    ds2api_notice: data.ds2api_notice || '',
                 });
             } catch (err) {
                 aiAssistState.chatHistory.pop();
