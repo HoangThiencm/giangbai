@@ -6,6 +6,17 @@
     <title>Quản Lý Thi Trực Tuyến Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
+    <script>
+        (function () {
+            var ua = navigator.userAgent || "";
+            if (!/Zalo/i.test(ua)) return;
+            var noop = function () { return null; };
+            var stub = { postMessage: noop, send: noop, on: noop, off: noop, call: noop, invoke: noop };
+            if (typeof window.zaloJSV2 === "undefined") window.zaloJSV2 = stub;
+            if (typeof window.zaloJS === "undefined") window.zaloJS = stub;
+        })();
+    </script>
+
     <script src="access-control.js?v=20260618-open-exam1"></script>
 
     <!-- Libraries -->
@@ -227,6 +238,23 @@
             border-radius: 8px;
         }
 
+        .student-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 1.5rem;
+            transform: translateX(-50%);
+            z-index: 10050;
+            max-width: min(92vw, 24rem);
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(30, 41, 59, 0.95);
+            color: #fff;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+            text-align: center;
+        }
+
         /* Cropper Styles */
         .cropper-container {
             max-height: 70vh;
@@ -299,7 +327,15 @@
     <div id="react-error"></div>
 
     <script>
+        function isBenignInAppBrowserError(msg, url) {
+            const text = String(msg || "");
+            if (/zaloJSV2|zaloJS|ZaloJSBridge/i.test(text)) return true;
+            if (!url && /is not defined/i.test(text)) return true;
+            return false;
+        }
+
         window.onerror = function (msg, url, line, col, error) {
+            if (isBenignInAppBrowserError(msg, url)) return true;
             const el = document.getElementById('react-error');
             el.style.display = 'block';
             el.innerHTML = `<strong>Lỗi Hệ Thống:</strong> ${msg}<br><small>${url}:${line}</small><br><pre>${error?.stack}</pre>`;
@@ -405,6 +441,8 @@
             return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
                 || /Zalo|FBAN|FBAV|Line|MicroMessenger|Instagram|Twitter/i.test(ua);
         };
+
+        const isZaloWebView = () => /Zalo/i.test(navigator.userAgent || "");
 
         // --- HELPER COMPONENTS ---
 
@@ -1723,7 +1761,9 @@
             const [violationCount, setViolationCount] = useState(0);
             const [isLockedOut, setIsLockedOut] = useState(false);
             const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+            const [studentToast, setStudentToast] = useState("");
             const [submitting, setSubmitting] = useState(false);
+            const toastTimerRef = useRef(null);
             const [attemptInfo, setAttemptInfo] = useState(null);
             const [checkingAttempts, setCheckingAttempts] = useState(false);
             const answersRef = useRef({});
@@ -1736,6 +1776,30 @@
             const timeUpHandledRef = useRef(false);
             const cleanupListenersRef = useRef(null);
             const infoStorageKey = `exam_student_info_${examId}`;
+
+            const showStudentAlert = useCallback((message) => {
+                if (!message) return;
+                if (isMobileClient || isZaloWebView()) {
+                    setStudentToast(String(message));
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                    toastTimerRef.current = setTimeout(() => setStudentToast(""), 4200);
+                    return;
+                }
+                alert(message);
+            }, [isMobileClient]);
+
+            useEffect(() => () => {
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+            }, []);
+
+            const withStudentToast = (node) => (
+                <>
+                    {node}
+                    {studentToast ? (
+                        <div className="student-toast" role="alert" onClick={() => setStudentToast("")}>{studentToast}</div>
+                    ) : null}
+                </>
+            );
 
             const persistInfo = (nextInfo) => {
                 const snapshot = {
@@ -1866,6 +1930,7 @@
             }, [step, exam]);
 
             const safeExitFullscreen = async () => {
+                if (isMobileClient) return;
                 try {
                     const active = document.fullscreenElement || document.webkitFullscreenElement;
                     if (!active) return;
@@ -1890,7 +1955,7 @@
             const handleSubmit = useCallback(async (auto = false) => {
                 const currentExam = examRef.current;
                 if (!currentExam?.questions?.length) {
-                    alert("Không tải được đề thi. Vui lòng tải lại trang.");
+                    showStudentAlert("Không tải được đề thi. Vui lòng tải lại trang.");
                     return;
                 }
                 if (submittingRef.current) return;
@@ -1901,7 +1966,7 @@
                 const totalCount = currentExam.questions.length;
 
                 if (!currentInfo.name || !currentInfo.sbd) {
-                    alert("Thiếu Họ tên hoặc SBD. Vui lòng tải lại trang, nhập đầy đủ thông tin rồi làm bài lại.");
+                    showStudentAlert("Thiếu Họ tên hoặc SBD. Vui lòng tải lại trang, nhập đầy đủ thông tin rồi làm bài lại.");
                     submittingRef.current = false;
                     setSubmitting(false);
                     return;
@@ -1909,7 +1974,7 @@
 
                 if (!auto) {
                     if (answeredCount < totalCount) {
-                        alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                        showStudentAlert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
                         return;
                     }
                     if (!isMobileClient && !window.confirm("Bạn chắc chắn muốn nộp bài?")) return;
@@ -1937,11 +2002,11 @@
                     setStep("result");
                 } catch (e) {
                     const message = formatApiError(e, "Lỗi nộp bài!");
-                    alert(message);
+                    showStudentAlert(message);
                     submittingRef.current = false;
                     setSubmitting(false);
                 }
-            }, [examId, isMobileClient]);
+            }, [examId, isMobileClient, showStudentAlert]);
 
             const requestManualSubmit = () => {
                 const currentExam = examRef.current;
@@ -1949,7 +2014,7 @@
                 const answeredCount = Object.keys(currentAnswers).length;
                 const totalCount = currentExam?.questions?.length || 0;
                 if (answeredCount < totalCount) {
-                    alert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
+                    showStudentAlert(`Bạn mới làm ${answeredCount}/${totalCount} câu. Vui lòng hoàn thành hết các câu hỏi!`);
                     return;
                 }
                 if (isMobileClient) {
@@ -2029,9 +2094,9 @@
             const startExam = async () => {
                 let snapshot;
                 if (isClassRosterMode) {
-                    if (!selectedRosterKey) return alert("Vui lòng chọn tên của bạn trong danh sách lớp!");
+                    if (!selectedRosterKey) return showStudentAlert("Vui lòng chọn tên của bạn trong danh sách lớp!");
                     const student = examRoster.find(item => rosterKey(item) === selectedRosterKey);
-                    if (!student) return alert("Thí sinh không hợp lệ. Vui lòng chọn lại.");
+                    if (!student) return showStudentAlert("Thí sinh không hợp lệ. Vui lòng chọn lại.");
                     snapshot = persistInfo({
                         name: student.full_name,
                         sbd: student.sbd,
@@ -2040,7 +2105,7 @@
                     const latestAttemptInfo = await fetchAttemptInfo(snapshot.name, snapshot.sbd);
                     if (latestAttemptInfo && latestAttemptInfo.can_attempt === false) {
                         const maxAttempts = latestAttemptInfo.max_attempts || exam?.info?.max_attempts || 0;
-                        return alert(`Bạn đã thi đủ ${maxAttempts} lần cho đề này. Không thể làm thêm.`);
+                        return showStudentAlert(`Bạn đã thi đủ ${maxAttempts} lần cho đề này. Không thể làm thêm.`);
                     }
                 } else {
                     const fromInputs = readInfoFromInputs();
@@ -2050,7 +2115,7 @@
                         class: fromInputs.class || info.class
                     });
                     if (!snapshot.name || !snapshot.sbd) {
-                        return alert("Vui lòng nhập Họ tên và SBD!");
+                        return showStudentAlert("Vui lòng nhập Họ tên và SBD!");
                     }
                 }
                 setInfo(snapshot);
@@ -2067,21 +2132,21 @@
                 setAnswers(prev => ({ ...prev, [originalQIdx]: originalOptIdx }));
             };
 
-            if (step === "locked") return <div className="flex justify-center h-screen items-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Đóng Cửa</h2><p>{error}</p></div></div>;
-            if (step === "loading") return <div className="flex justify-center h-screen items-center"><div className="loader border-indigo-600"></div></div>;
+            if (step === "locked") return withStudentToast(<div className="flex justify-center h-screen items-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Đóng Cửa</h2><p>{error}</p></div></div>);
+            if (step === "loading") return withStudentToast(<div className="flex justify-center h-screen items-center"><div className="loader border-indigo-600"></div></div>);
 
             if (step === "info" && isClassRosterMode && examRoster.length === 0) {
-                return (
+                return withStudentToast(
                     <div className="flex justify-center h-screen items-center bg-gray-100 p-4">
                         <div className="bg-white p-8 rounded shadow text-center max-w-md">
                             <h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-exclamation-circle"></i> Không vào thi được</h2>
                             <p className="text-gray-600">Đề thi đang dùng danh sách lớp nhưng chưa có thí sinh. Vui lòng báo giáo viên kiểm tra lại cấu hình đề.</p>
                         </div>
                     </div>
-                );
+                ));
             }
 
-            if (step === "info") return (
+            if (step === "info") return withStudentToast(
                 <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
                     <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg text-center">
                         <div className="mb-4 text-indigo-600"><i className="fas fa-user-graduate text-5xl"></i></div>
@@ -2181,9 +2246,9 @@
                         </button>
                     </div>
                 </div>
-            );
+            ));
 
-            if (step === "result") return (
+            if (step === "result") return withStudentToast(
                 <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
                     <div className="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-lg w-full border border-green-100">
                         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-4xl shadow-inner"><i className="fas fa-check"></i></div>
@@ -2195,9 +2260,9 @@
                         </div>
                     </div>
                 </div>
-            );
+            ));
 
-            return (
+            return withStudentToast(
                 <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
                     {showSubmitConfirm && (
                         <div className="modal-overlay" onClick={() => !submitting && setShowSubmitConfirm(false)}>
@@ -2258,7 +2323,7 @@
                         </div>
                     </div>
                 </div>
-            );
+            ));
         };
 
         const studentResultKey = (name, sbd) => `${String(sbd || "").trim().toLowerCase()}|${String(name || "").trim().toLowerCase()}`;
@@ -2684,6 +2749,13 @@
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const params = new URLSearchParams(window.location.search);
+            const isStudentExam = params.get('mode') === 'student' && params.get('examId');
+            const toolbar = document.getElementById('gb-ai-toolbar');
+            if (isStudentExam) {
+                if (toolbar) toolbar.style.display = 'none';
+                return;
+            }
             if (window.AiDesignConfig) AiDesignConfig.mountBar('gb-ai-toolbar');
         });
     </script>
