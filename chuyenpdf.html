@@ -1,0 +1,3283 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HT Math Canvas - OCR PDF/Ảnh sang Word</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+    window.MathJax = {
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+        processEscapes: true
+      },
+      svg: { fontCache: "none" },
+      startup: { typeset: false }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #61708a;
+      --line: #d9e2ef;
+      --panel: rgba(255, 255, 255, 0.86);
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --green: #16a34a;
+      --rose: #e11d48;
+      --amber: #d97706;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.88), rgba(240,247,255,.7)),
+        repeating-linear-gradient(90deg, rgba(37,99,235,.055) 0 1px, transparent 1px 72px),
+        repeating-linear-gradient(0deg, rgba(8,145,178,.045) 0 1px, transparent 1px 72px),
+        #f6f8fc;
+    }
+
+    button, select, input, textarea { font: inherit; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #eef3f8; }
+    ::-webkit-scrollbar-thumb { background: #aab7ca; border-radius: 999px; border: 2px solid #eef3f8; }
+    ::-webkit-scrollbar-thumb:hover { background: #8291a8; }
+
+    .app-shell {
+      width: min(1560px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 18px 0;
+    }
+
+    .glass {
+      background: var(--panel);
+      border: 1px solid rgba(217,226,239,.86);
+      box-shadow: 0 18px 55px rgba(31, 41, 55, .10);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar {
+      min-height: 82px;
+      border-radius: 18px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(135deg, #2563eb, #0891b2 52%, #16a34a);
+      box-shadow: 0 16px 28px rgba(37,99,235,.26);
+    }
+
+    .brand-title {
+      margin: 0;
+      letter-spacing: 0;
+      font-size: clamp(1.25rem, 2.5vw, 2rem);
+      line-height: 1.05;
+      font-weight: 850;
+    }
+
+    .brand-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      min-height: 38px;
+      padding: 0 13px;
+      border-radius: 999px;
+      border: 1px solid #b7e4c7;
+      background: #ecfdf3;
+      color: #166534;
+      font-weight: 750;
+      font-size: .82rem;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, .68fr) minmax(340px, .9fr) minmax(560px, 1.7fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .panel {
+      border-radius: 18px;
+      min-height: calc(100vh - 134px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-head {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.54);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: .98rem;
+      font-weight: 820;
+    }
+
+    .icon-tile {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: white;
+      flex: 0 0 auto;
+    }
+
+    .panel-body {
+      padding: 16px;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .drop-zone {
+      min-height: 190px;
+      border: 2px dashed #a8b7cc;
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.76), rgba(239,246,255,.78)),
+        linear-gradient(90deg, rgba(37,99,235,.08), rgba(22,163,74,.08));
+      transition: .18s ease;
+      cursor: pointer;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.is-active {
+      border-color: var(--blue);
+      background:
+        linear-gradient(135deg, #ffffff, #eff6ff),
+        linear-gradient(90deg, rgba(37,99,235,.12), rgba(22,163,74,.12));
+      transform: translateY(-1px);
+    }
+
+    .drop-icon {
+      width: 62px;
+      height: 62px;
+      border-radius: 19px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(135deg, #2563eb, #0891b2);
+      box-shadow: 0 20px 35px rgba(37,99,235,.22);
+    }
+
+    .field-label {
+      display: block;
+      margin: 0 0 7px;
+      color: #334155;
+      font-size: .82rem;
+      font-weight: 780;
+    }
+
+    .control {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      background: rgba(255,255,255,.82);
+      padding: 0 12px;
+      outline: none;
+      transition: .16s ease;
+    }
+
+    .control:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    .soft-card {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.68);
+      border-radius: 16px;
+    }
+
+    .primary-btn,
+    .ghost-btn,
+    .success-btn,
+    .danger-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 40px;
+      border: 0;
+      border-radius: 12px;
+      padding: 0 13px;
+      font-weight: 820;
+      transition: .16s ease;
+    }
+
+    .primary-btn {
+      min-height: 50px;
+      width: 100%;
+      color: white;
+      background: linear-gradient(135deg, #2563eb, #0891b2);
+      box-shadow: 0 14px 28px rgba(37,99,235,.22);
+    }
+
+    .primary-btn:hover { transform: translateY(-1px); box-shadow: 0 18px 34px rgba(37,99,235,.28); }
+    .primary-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .ghost-btn {
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #dbe4ef;
+    }
+
+    .ghost-btn:hover { background: #eef6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+    .success-btn {
+      color: white;
+      background: linear-gradient(135deg, #16a34a, #0891b2);
+      box-shadow: 0 10px 22px rgba(22,163,74,.18);
+    }
+
+    .danger-btn {
+      color: #991b1b;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+    }
+
+    .code-editor {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      resize: none;
+      border: 0;
+      outline: none;
+      color: #c7f9cc;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.035), transparent),
+        #111827;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.58;
+      padding: 16px;
+    }
+
+    .preview {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      overflow: auto;
+      background: linear-gradient(180deg, #f8fafc, #eef3f8);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      padding: 12px;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .preview-page {
+      width: 100%;
+      max-width: 900px;
+      min-height: 1123px;
+      margin: 0 auto;
+      padding: 40px 36px;
+      background: #fff;
+      border: 1px solid #d9e2ef;
+      border-radius: 8px;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, .10);
+      color: #111827;
+    }
+
+    .preview h1, .preview h2, .preview h3 {
+      font-family: "Times New Roman", Times, serif;
+      font-weight: 800;
+      line-height: 1.25;
+      margin: 1.05em 0 .45em;
+    }
+
+    .preview p { margin: .45em 0; }
+    .preview .answer-option {
+      display: block;
+      margin: 4px 0 4px 26px;
+      text-indent: -26px;
+    }
+
+    .preview .answer-label {
+      display: inline-block;
+      min-width: 26px;
+      font-weight: 800;
+    }
+
+    .preview .choices-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 42px;
+      margin: 10px 0 10px 28px;
+      max-width: 760px;
+    }
+
+    .preview .choices-grid p {
+      margin: 0;
+    }
+
+    .preview .exam-title {
+      text-align: center;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin: 0 0 6px;
+    }
+
+    .preview .section-title {
+      font-weight: 800;
+      margin-top: 18px;
+      padding-top: 8px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .preview .question {
+      margin-top: 10px;
+    }
+
+    .official-doc {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 16px;
+      line-height: 1.45;
+      color: #000;
+      text-align: justify;
+    }
+
+    .official-doc table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      margin: 10px 0 14px;
+      table-layout: auto;
+    }
+
+    .official-doc td,
+    .official-doc th {
+      border: 1px solid #000 !important;
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+
+    .official-doc p,
+    .official-doc div {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .official-doc p {
+      text-indent: 1.2cm;
+    }
+
+    .official-doc h1,
+    .official-doc h2,
+    .official-doc h3 {
+      margin: 14px 0 8px;
+      text-align: center;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+
+    .official-doc ul,
+    .official-doc ol {
+      margin: 8px 0 10px 24px;
+      padding: 0;
+    }
+
+    .official-doc li {
+      margin: 4px 0;
+    }
+
+    .official-doc .doc-no-indent,
+    .official-doc .doc-center {
+      text-indent: 0;
+    }
+
+    .official-doc .doc-center {
+      text-align: center;
+    }
+
+    .official-doc .doc-strong {
+      font-weight: 800;
+    }
+
+    .preserved-page-image {
+      margin: 14px 0 18px;
+      padding: 10px;
+      border: 1px solid #d9e2ef;
+      border-radius: 8px;
+      background: #f8fafc;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .preserved-page-image figcaption {
+      margin: 0 0 8px;
+      color: #475569;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .preserved-page-image img {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #e2e8f0;
+      background: white;
+    }
+
+    .extracted-figure {
+      display: table;
+      margin: 10px auto 14px;
+      padding: 8px;
+      border: 1px solid #d9e2ef;
+      border-radius: 8px;
+      background: #fff;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .extracted-figure figcaption {
+      margin: 0 0 6px;
+      color: #475569;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .extracted-figure img {
+      display: block;
+      max-width: min(100%, 420px);
+      height: auto;
+      margin: 0 auto;
+      background: white;
+    }
+
+    .preview mjx-container[jax="SVG"] {
+      font-size: 100%;
+    }
+
+    .preview .choices-grid mjx-container[jax="SVG"] {
+      transform: scale(.92);
+      transform-origin: left center;
+    }
+
+    .preview table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+    .preview th, .preview td { border: 1px solid #475569; padding: 7px 9px; vertical-align: top; }
+    .preview th { background: #f1f5f9; }
+    .preview img { max-width: 100%; height: auto; }
+    .preview .page-break {
+      display: block;
+      width: calc(100% + 72px);
+      height: 30px;
+      margin: 32px -36px;
+      border: 0;
+      background: linear-gradient(180deg, #f8fafc, #e2e8f0, #f8fafc);
+      break-after: page;
+      page-break-after: always;
+    }
+
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+      gap: 9px;
+      max-height: 220px;
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .thumb {
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid #dbe4ef;
+      background: #fff;
+      aspect-ratio: 3 / 4;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb span {
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      min-width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: rgba(15, 23, 42, .78);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .meter {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e2e8f0;
+    }
+
+    .meter > div {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2563eb, #0891b2, #16a34a);
+      transition: width .25s ease;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      background: rgba(15, 23, 42, .55);
+      padding: 16px;
+    }
+
+    .modal.is-open { display: flex; }
+
+    .modal-card {
+      width: min(460px, 100%);
+      border-radius: 20px;
+      padding: 24px;
+      background: white;
+      box-shadow: 0 30px 80px rgba(15,23,42,.28);
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 70;
+      transform: translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .floating-progress {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 65;
+      width: min(390px, calc(100vw - 32px));
+      border-radius: 18px;
+      border: 1px solid rgba(203, 213, 225, .95);
+      background: rgba(255, 255, 255, .94);
+      box-shadow: 0 24px 70px rgba(15, 23, 42, .22);
+      backdrop-filter: blur(18px);
+      transform: translateY(18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease, width .2s ease;
+      overflow: hidden;
+    }
+
+    .floating-progress.is-visible {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .floating-progress.is-collapsed {
+      width: min(245px, calc(100vw - 32px));
+    }
+
+    .floating-progress.is-collapsed .floating-progress-body {
+      display: none;
+    }
+
+    .floating-progress-head {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, .10), rgba(8, 145, 178, .10));
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .floating-progress-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-weight: 900;
+      color: #172033;
+    }
+
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #16a34a;
+      box-shadow: 0 0 0 0 rgba(22, 163, 74, .55);
+      animation: pulse 1.3s infinite;
+      flex: 0 0 auto;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, .55); }
+      70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+    }
+
+    .floating-progress-body {
+      padding: 14px;
+    }
+
+    .mini-icon-btn {
+      width: 34px;
+      height: 34px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 11px;
+      border: 1px solid #dbe4ef;
+      background: #fff;
+      color: #334155;
+      transition: .16s ease;
+    }
+
+    .mini-icon-btn:hover {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .floating-progress-stat {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .floating-progress-stat > div {
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+      text-align: center;
+    }
+
+    @media (max-width: 1180px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .panel { min-height: auto; }
+      .code-editor, .preview { min-height: 430px; }
+      .preview-page { max-width: 980px; }
+    }
+
+    @media (max-width: 680px) {
+      .app-shell { width: min(100vw - 20px, 1560px); padding: 10px 0; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .panel-head { align-items: flex-start; flex-direction: column; }
+      .preview { padding: 10px; font-size: 15px; }
+      .preview-page { padding: 28px 22px; }
+      .preview .choices-grid { grid-template-columns: 1fr; margin-left: 18px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app-shell">
+    <header class="topbar glass">
+      <div class="flex items-center gap-4 min-w-0">
+        <div class="brand-mark">
+          <i class="fa-solid fa-square-root-variable text-2xl"></i>
+        </div>
+        <div class="min-w-0">
+          <h1 class="brand-title">HT Math Canvas</h1>
+          <p class="brand-subtitle">Chuyển PDF/ảnh thành Markdown và Word, xử lý trực tiếp trong trình duyệt.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="status-pill"><i class="fa-solid fa-shield-halved"></i> Client-side Canvas</span>
+        <button class="ghost-btn" id="helpBtn" type="button"><i class="fa-solid fa-circle-info"></i> Lưu ý</button>
+      </div>
+    </header>
+
+    <section class="main-grid">
+      <aside class="panel glass">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="icon-tile" style="background:linear-gradient(135deg,#2563eb,#0891b2)"><i class="fa-solid fa-sliders"></i></span> Đầu vào</h2>
+          <button class="ghost-btn" type="button" id="resetBtn"><i class="fa-solid fa-rotate-right"></i> Làm mới</button>
+        </div>
+
+        <div class="panel-body">
+          <input id="fileInput" type="file" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple />
+          <div id="dropZone" class="drop-zone flex flex-col items-center justify-center text-center p-5">
+            <div class="drop-icon mb-4"><i class="fa-solid fa-cloud-arrow-up text-2xl"></i></div>
+            <p class="font-extrabold text-slate-800">Chọn PDF hoặc ảnh</p>
+            <p class="mt-1 text-sm text-slate-500">Kéo thả file vào đây, hoặc dán một/nhiều ảnh bằng Ctrl + V.</p>
+            <p id="fileName" class="hidden mt-4 max-w-full truncate rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700"></p>
+          </div>
+
+          <div class="mt-5 grid gap-4">
+            <div>
+              <label class="field-label" for="providerSelect">Bộ nhận diện OCR</label>
+              <select class="control" id="providerSelect">
+                <option value="mistral" selected>Mistral OCR</option>
+                <option value="gemini">Gemini Vision</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="modelSelect">Module Gemini</label>
+              <select class="control" id="modelSelect">
+                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="modeSelect">Chế độ trích xuất</label>
+              <select class="control" id="modeSelect">
+                <option value="latex">Toán học: Markdown + LaTeX $...$</option>
+                <option value="text">Văn bản thường: OCR nguyên văn</option>
+                <option value="official">Văn bản hành chính: giữ dòng gốc</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="scaleSelect">Độ nét render PDF</label>
+              <select class="control" id="scaleSelect">
+                <option value="2.2">Cao - OCR tốt hơn</option>
+                <option value="1.6">Vừa - nhanh hơn</option>
+                <option value="2.8">Rất cao - file nặng</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="preserveImagesSelect">Giữ hình trong đề</label>
+              <select class="control" id="preserveImagesSelect">
+                <option value="none">Không chèn ảnh gốc</option>
+                <option value="after">Chèn ảnh trang gốc sau mỗi trang</option>
+                <option value="before">Chèn ảnh trang gốc trước mỗi trang</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="ocrTilingSelect">Chống bỏ sót OCR</label>
+              <select class="control" id="ocrTilingSelect">
+                <option value="page">Nhanh: mỗi trang 1 lượt</option>
+                <option value="halves">Kỹ hơn: chia mỗi trang thành 2 nửa</option>
+                <option value="thirds">Rất kỹ: chia mỗi trang thành 3 phần</option>
+                <option value="slices">Nghiêm ngặt: cắt lát nhỏ chống cắt ngang</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="fileSummary" class="soft-card mt-5 hidden p-4">
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <div class="text-2xl font-black text-blue-700" id="pageCount">0</div>
+                <div class="text-xs font-bold text-slate-500">trang/ảnh</div>
+              </div>
+              <div>
+                <div class="text-2xl font-black text-cyan-700" id="doneCount">0</div>
+                <div class="text-xs font-bold text-slate-500">đã xử lý</div>
+              </div>
+              <div>
+                <div class="text-2xl font-black text-green-700" id="percentCount">0%</div>
+                <div class="text-xs font-bold text-slate-500">tiến độ</div>
+              </div>
+            </div>
+            <div class="meter mt-4"><div id="progressBar"></div></div>
+            <p id="progressText" class="mt-3 text-sm font-semibold text-slate-600">Sẵn sàng.</p>
+          </div>
+
+          <div id="thumbWrap" class="soft-card mt-5 hidden">
+            <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <p class="m-0 text-sm font-extrabold text-slate-700">Preview trang</p>
+              <span id="thumbHint" class="text-xs font-bold text-slate-400"></span>
+            </div>
+            <div id="thumbGrid" class="thumb-grid"></div>
+          </div>
+
+          <div class="mt-5">
+            <button id="convertBtn" class="primary-btn" type="button">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Bắt đầu chuyển đổi tất cả trang
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel glass">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="icon-tile" style="background:linear-gradient(135deg,#d97706,#e11d48)"><i class="fa-solid fa-code"></i></span> Markdown</h2>
+          <div class="flex flex-wrap gap-2">
+            <button class="ghost-btn" type="button" id="pasteMarkdownBtn"><i class="fa-solid fa-paste"></i> Dán</button>
+            <button class="ghost-btn" type="button" id="copyBtn"><i class="fa-solid fa-copy"></i> Copy</button>
+            <button class="danger-btn" type="button" id="clearMarkdownBtn"><i class="fa-solid fa-eraser"></i> Xóa</button>
+          </div>
+        </div>
+        <div class="panel-body p-0">
+          <textarea id="markdownText" class="code-editor" spellcheck="false" placeholder="Kết quả Markdown từ Gemini sẽ hiện tại đây..."></textarea>
+        </div>
+      </section>
+
+      <section class="panel glass">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="icon-tile" style="background:linear-gradient(135deg,#16a34a,#0891b2)"><i class="fa-solid fa-eye"></i></span> Xem trước & xuất Word</h2>
+          <div class="flex flex-wrap gap-2">
+            <button class="ghost-btn" type="button" id="rerenderBtn"><i class="fa-solid fa-arrows-rotate"></i> Render</button>
+            <button class="ghost-btn" type="button" id="downloadTextBtn"><i class="fa-solid fa-file-lines"></i> Xuất TXT</button>
+            <button class="success-btn" type="button" id="downloadBtn"><i class="fa-solid fa-file-word"></i> Xuất DOCX</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <article id="preview" class="preview">
+            <div class="flex h-full min-h-[420px] flex-col items-center justify-center text-center text-slate-400">
+              <div class="mb-4 grid h-24 w-24 place-items-center rounded-3xl bg-slate-100 text-5xl text-slate-300">
+                <i class="fa-regular fa-file-lines"></i>
+              </div>
+              <p class="m-0 font-extrabold text-slate-500">Chưa có dữ liệu</p>
+              <p class="mt-2 max-w-xs text-sm">Tải PDF/ảnh lên, chọn model, rồi chuyển đổi để xem kết quả đã render công thức.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="messageModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="flex items-start gap-4">
+        <div id="modalIcon" class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-green-100 text-2xl text-green-700">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <div class="min-w-0">
+          <h3 id="modalTitle" class="m-0 text-xl font-black text-slate-900">Thành công</h3>
+          <p id="modalBody" class="mt-2 text-sm leading-6 text-slate-600">Đã hoàn tất.</p>
+        </div>
+      </div>
+      <button id="modalCloseBtn" class="primary-btn mt-6" type="button">Đóng</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast rounded-2xl border border-slate-200 bg-white px-4 py-3 font-bold text-slate-700 shadow-2xl">
+    <i class="fa-solid fa-check text-green-600"></i>
+    <span id="toastText">Đã copy.</span>
+  </div>
+
+  <aside id="floatingProgress" class="floating-progress" aria-live="polite">
+    <div class="floating-progress-head">
+      <div class="floating-progress-title">
+        <span class="pulse-dot" id="floatingPulse"></span>
+        <div class="min-w-0">
+          <div id="floatingTitle" class="truncate">Đang xử lý</div>
+          <div id="floatingSubtitle" class="truncate text-xs font-bold text-slate-500">Chuẩn bị...</div>
+        </div>
+      </div>
+      <button id="toggleFloatingProgressBtn" class="mini-icon-btn" type="button" title="Thu gọn tiến trình">
+        <i class="fa-solid fa-minus"></i>
+      </button>
+    </div>
+    <div class="floating-progress-body">
+      <div class="flex items-center justify-between gap-3">
+        <span id="floatingStage" class="text-sm font-extrabold text-slate-700">Sẵn sàng</span>
+        <span id="floatingPercent" class="rounded-full bg-blue-50 px-3 py-1 text-sm font-black text-blue-700">0%</span>
+      </div>
+      <div class="meter mt-3"><div id="floatingProgressBar"></div></div>
+      <div class="floating-progress-stat">
+        <div>
+          <div id="floatingDone" class="text-lg font-black text-blue-700">0</div>
+          <div class="text-[11px] font-bold text-slate-500">đã xong</div>
+        </div>
+        <div>
+          <div id="floatingTotal" class="text-lg font-black text-cyan-700">0</div>
+          <div class="text-[11px] font-bold text-slate-500">tổng</div>
+        </div>
+        <div>
+          <div id="floatingCurrent" class="text-lg font-black text-green-700">-</div>
+          <div class="text-[11px] font-bold text-slate-500">trang</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    const canvasApiKey = "";
+    const MISTRAL_API_KEY = "Z19dmmCVuYfII5FEziHcNoMiBPgnqf5m";
+    const MISTRAL_OCR_MODEL = "mistral-ocr-latest";
+    const injectedApiKey =
+      window.GEMINI_API_KEY ||
+      window.__GEMINI_API_KEY__ ||
+      window.googleAiStudioApiKey ||
+      canvasApiKey;
+
+    const prompts = {
+      text: `Đóng vai một CÔNG CỤ OCR CHUYÊN DỤNG cho văn bản tiếng Việt.
+NHIỆM VỤ: Trích xuất nguyên văn nội dung trong ảnh.
+QUY TẮC:
+1. Không thêm lời dẫn đầu, lời kết, nhận xét hoặc giải thích.
+2. Không tóm tắt, không diễn giải, không thay đổi từ ngữ.
+3. Giữ nguyên cấu trúc dòng, đoạn, số hiệu, ngày tháng, bảng biểu.
+4. Nếu chữ quá mờ không đọc được, điền [...]. Không bịa đặt nội dung.
+ĐẦU RA: Chỉ trả về văn bản thuần hoặc Markdown tối thiểu khi cần giữ bảng/danh sách.`,
+      latex: `Đóng vai công cụ số hóa tài liệu Toán học chính xác tuyệt đối.
+NHIỆM VỤ: Chuyển ảnh thành Markdown + LaTeX.
+QUY TẮC:
+1. Mọi công thức, biến số, biểu thức toán học phải nằm trong dấu $...$.
+2. Không thêm lời dẫn như "Kết quả là" hoặc "Đây là nội dung".
+3. Giữ nguyên văn đề bài, lời giải, cấu trúc dòng, danh sách và bảng biểu.
+4. Không tóm tắt, không viết lại theo văn phong khác.
+5. Nếu ảnh mờ: văn bản không chắc thì ghi [...]; công thức có thể suy luận logic thì phục hồi cẩn thận.
+6. Chỉ trả về nội dung Markdown.`
+      ,
+      official: `Đóng vai công cụ OCR văn bản hành chính Việt Nam, ưu tiên giữ xuống dòng và thể thức trình bày.
+NHIỆM VỤ: Trích xuất nội dung trong ảnh/PDF thành văn bản có cấu trúc HTML tối giản để mở trong Word.
+QUY TẮC BẮT BUỘC:
+1. Giữ nguyên xuống dòng theo văn bản gốc. Dòng nào trong ảnh xuống dòng thì đầu ra cũng xuống dòng.
+2. Giữ dòng trống giữa các khối như phần cơ quan ban hành, quốc hiệu, số văn bản, ngày tháng, kính gửi, nội dung.
+3. Không tự nối các dòng ngắn thành một đoạn dài.
+4. Không tự dàn lại theo kiểu đề thi, không tách A/B/C/D, không nhận diện Câu/Bài.
+5. Dùng HTML tối giản: <div>, <p>, <br>, <strong>, <em>, <table>. Không dùng Markdown.
+6. Với phần đầu văn bản hành chính, nếu có hai khối trái/phải, hãy dùng bảng 2 cột không viền để giữ bố cục.
+7. Giữ căn giữa/căn phải/thụt lề bằng style inline đơn giản như text-align, padding-left, margin-left.
+8. Không thêm nhận xét, giải thích, lời chào, hoặc nội dung ngoài tài liệu.
+Nếu không chắc cách dựng bảng/căn lề, vẫn phải trả về nội dung văn bản với <br> để giữ xuống dòng, không được trả rỗng.
+ĐẦU RA: Chỉ trả về HTML fragment, không bọc trong \`\`\`, không thêm <html>, <head>, <body>.`,
+      officialFallback: `Bạn là công cụ OCR văn bản hành chính Việt Nam.
+Hãy trích xuất nguyên văn nội dung trong ảnh.
+Giữ nguyên xuống dòng theo ảnh gốc, giữ dòng trống giữa các khối.
+Không thêm lời dẫn, không giải thích, không tóm tắt.
+Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái rồi phải, nhưng vẫn giữ từng dòng.
+Đầu ra chỉ là văn bản thuần, tuyệt đối không trả rỗng.`
+    };
+
+    const state = {
+      fileName: "",
+      sourceFile: null,
+      sourceBase64: "",
+      sourceMimeType: "",
+      pages: [],
+      markdown: "",
+      isRunning: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const els = {
+      fileInput: $("fileInput"),
+      dropZone: $("dropZone"),
+      fileName: $("fileName"),
+      fileSummary: $("fileSummary"),
+      pageCount: $("pageCount"),
+      doneCount: $("doneCount"),
+      percentCount: $("percentCount"),
+      progressBar: $("progressBar"),
+      progressText: $("progressText"),
+      thumbWrap: $("thumbWrap"),
+      thumbGrid: $("thumbGrid"),
+      thumbHint: $("thumbHint"),
+      providerSelect: $("providerSelect"),
+      modelSelect: $("modelSelect"),
+      modeSelect: $("modeSelect"),
+      scaleSelect: $("scaleSelect"),
+      preserveImagesSelect: $("preserveImagesSelect"),
+      ocrTilingSelect: $("ocrTilingSelect"),
+      convertBtn: $("convertBtn"),
+      markdownText: $("markdownText"),
+      preview: $("preview"),
+      downloadBtn: $("downloadBtn"),
+      messageModal: $("messageModal"),
+      modalIcon: $("modalIcon"),
+      modalTitle: $("modalTitle"),
+      modalBody: $("modalBody"),
+      toast: $("toast"),
+      toastText: $("toastText"),
+      floatingProgress: $("floatingProgress"),
+      floatingTitle: $("floatingTitle"),
+      floatingSubtitle: $("floatingSubtitle"),
+      floatingStage: $("floatingStage"),
+      floatingPercent: $("floatingPercent"),
+      floatingProgressBar: $("floatingProgressBar"),
+      floatingDone: $("floatingDone"),
+      floatingTotal: $("floatingTotal"),
+      floatingCurrent: $("floatingCurrent"),
+      toggleFloatingProgressBtn: $("toggleFloatingProgressBtn")
+    };
+
+    marked.setOptions({
+      breaks: false,
+      gfm: true
+    });
+
+    function showModal(title, body, type = "success") {
+      const styles = {
+        success: ["bg-green-100", "text-green-700", "fa-check"],
+        error: ["bg-red-100", "text-red-700", "fa-triangle-exclamation"],
+        info: ["bg-blue-100", "text-blue-700", "fa-circle-info"]
+      }[type] || ["bg-blue-100", "text-blue-700", "fa-circle-info"];
+
+      els.modalIcon.className = `grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${styles[0]} text-2xl ${styles[1]}`;
+      els.modalIcon.innerHTML = `<i class="fa-solid ${styles[2]}"></i>`;
+      els.modalTitle.textContent = title;
+      els.modalBody.textContent = body;
+      els.messageModal.classList.add("is-open");
+    }
+
+    function toast(message) {
+      els.toastText.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => els.toast.classList.remove("show"), 1700);
+    }
+
+    function setFloatingProgressVisible(visible, autoHide = false) {
+      els.floatingProgress.classList.toggle("is-visible", visible);
+      if (autoHide) {
+        clearTimeout(window.floatingHideTimer);
+        window.floatingHideTimer = setTimeout(() => {
+          if (!state.isRunning) els.floatingProgress.classList.remove("is-visible");
+        }, 2600);
+      }
+    }
+
+    function updateFloatingProgress(done, total, text, options = {}) {
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      const current = options.currentPage || (done && total ? Math.min(done, total) : "-");
+
+      els.floatingTitle.textContent = options.title || (state.isRunning ? "Đang chuyển đổi" : "Tiến trình");
+      els.floatingSubtitle.textContent = text || "Sẵn sàng.";
+      els.floatingStage.textContent = options.stage || text || "Sẵn sàng";
+      els.floatingPercent.textContent = `${pct}%`;
+      els.floatingProgressBar.style.width = `${pct}%`;
+      els.floatingDone.textContent = done;
+      els.floatingTotal.textContent = total;
+      els.floatingCurrent.textContent = current;
+
+      if (total > 0) setFloatingProgressVisible(true, options.autoHide === true);
+    }
+
+    function updateProgress(done, total, text) {
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      els.fileSummary.classList.remove("hidden");
+      els.pageCount.textContent = total;
+      els.doneCount.textContent = done;
+      els.percentCount.textContent = `${pct}%`;
+      els.progressBar.style.width = `${pct}%`;
+      els.progressText.textContent = text || "Sẵn sàng.";
+      updateFloatingProgress(done, total, text);
+    }
+
+    function resetAll() {
+      if (state.isRunning) return;
+      state.fileName = "";
+      state.sourceFile = null;
+      state.sourceBase64 = "";
+      state.sourceMimeType = "";
+      state.pages = [];
+      state.markdown = "";
+      els.fileInput.value = "";
+      els.fileName.textContent = "";
+      els.fileName.classList.add("hidden");
+      els.fileSummary.classList.add("hidden");
+      els.thumbWrap.classList.add("hidden");
+      els.thumbGrid.innerHTML = "";
+      els.markdownText.value = "";
+      els.preview.innerHTML = `<div class="flex h-full min-h-[420px] flex-col items-center justify-center text-center text-slate-400">
+        <div class="mb-4 grid h-24 w-24 place-items-center rounded-3xl bg-slate-100 text-5xl text-slate-300"><i class="fa-regular fa-file-lines"></i></div>
+        <p class="m-0 font-extrabold text-slate-500">Chưa có dữ liệu</p>
+        <p class="mt-2 max-w-xs text-sm">Tải PDF/ảnh lên, chọn model, rồi chuyển đổi để xem kết quả đã render công thức.</p>
+      </div>`;
+      updateProgress(0, 0, "Sẵn sàng.");
+      setFloatingProgressVisible(false);
+    }
+
+    function setRunning(isRunning) {
+      state.isRunning = isRunning;
+      els.convertBtn.disabled = isRunning;
+      els.fileInput.disabled = isRunning;
+      els.providerSelect.disabled = isRunning;
+      els.modelSelect.disabled = isRunning || els.providerSelect.value === "mistral";
+      els.modeSelect.disabled = isRunning;
+      els.scaleSelect.disabled = isRunning;
+      els.preserveImagesSelect.disabled = isRunning;
+      els.ocrTilingSelect.disabled = isRunning || els.providerSelect.value === "mistral";
+      els.convertBtn.innerHTML = isRunning
+        ? `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...`
+        : `<i class="fa-solid fa-wand-magic-sparkles"></i> Bắt đầu chuyển đổi tất cả trang`;
+    }
+
+    function canvasToPage(canvas, index) {
+      const dataUrl = canvas.toDataURL("image/png", 0.95);
+      return {
+        index,
+        dataUrl,
+        base64: dataUrl.split(",")[1],
+        width: canvas.width,
+        height: canvas.height,
+        figures: [],
+        questionAnchors: [],
+        status: "pending",
+        markdown: ""
+      };
+    }
+
+    function isMostlyWhite(r, g, b, a) {
+      return a < 12 || (r > 242 && g > 242 && b > 242);
+    }
+
+    function rectsOverlap(a, b, gap = 0) {
+      return !(a.x + a.w + gap < b.x || b.x + b.w + gap < a.x || a.y + a.h + gap < b.y || b.y + b.h + gap < a.y);
+    }
+
+    function mergeRects(rects, gap = 18) {
+      const list = rects.map((r) => ({ ...r }));
+      let changed = true;
+      while (changed) {
+        changed = false;
+        outer: for (let i = 0; i < list.length; i++) {
+          for (let j = i + 1; j < list.length; j++) {
+            if (!rectsOverlap(list[i], list[j], gap)) continue;
+            const x1 = Math.min(list[i].x, list[j].x);
+            const y1 = Math.min(list[i].y, list[j].y);
+            const x2 = Math.max(list[i].x + list[i].w, list[j].x + list[j].w);
+            const y2 = Math.max(list[i].y + list[i].h, list[j].y + list[j].h);
+            list.splice(j, 1);
+            list[i] = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+            changed = true;
+            break outer;
+          }
+        }
+      }
+      return list;
+    }
+
+    async function getPdfTextGeometry(pdfPage, viewport) {
+      const content = await pdfPage.getTextContent().catch(() => ({ items: [] }));
+      const rows = [];
+      const boxes = [];
+
+      for (const item of content.items || []) {
+        const text = (item.str || "").trim();
+        if (!text) continue;
+        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+        const x = tx[4];
+        const baseline = tx[5];
+        const h = Math.max(6, Math.abs(tx[3]) || item.height * viewport.scale || 10);
+        const w = Math.max(2, item.width * viewport.scale || text.length * h * .55);
+        const y = baseline - h;
+        const box = { x, y, w, h, text };
+        boxes.push(box);
+
+        let row = rows.find((entry) => Math.abs(entry.y - y) < Math.max(7, h * .65));
+        if (!row) {
+          row = { y, items: [] };
+          rows.push(row);
+        }
+        row.items.push(box);
+      }
+
+      rows.sort((a, b) => a.y - b.y);
+      const questionAnchors = [];
+      for (const row of rows) {
+        row.items.sort((a, b) => a.x - b.x);
+        const line = row.items.map((item) => item.text).join(" ").replace(/\s+/g, " ").trim();
+        const match = line.match(/\b(Câu|Cau|Bài|Bai)\s*(\d+)/i);
+        if (match) {
+          const kind = /b/i.test(match[1]) ? "Bài" : "Câu";
+          questionAnchors.push({
+            label: `${kind} ${match[2]}`,
+            y: row.y,
+            text: line
+          });
+        }
+      }
+
+      return { boxes, questionAnchors };
+    }
+
+    function extractFigureRects(canvas, textBoxes) {
+      const cell = 6;
+      const cols = Math.ceil(canvas.width / cell);
+      const rows = Math.ceil(canvas.height / cell);
+      const blocked = new Uint8Array(cols * rows);
+      const occupied = new Uint8Array(cols * rows);
+      const ctx = canvas.getContext("2d");
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+      for (const box of textBoxes) {
+        const pad = 4;
+        const x1 = Math.max(0, Math.floor((box.x - pad) / cell));
+        const y1 = Math.max(0, Math.floor((box.y - pad) / cell));
+        const x2 = Math.min(cols - 1, Math.ceil((box.x + box.w + pad) / cell));
+        const y2 = Math.min(rows - 1, Math.ceil((box.y + box.h + pad) / cell));
+        for (let y = y1; y <= y2; y++) {
+          for (let x = x1; x <= x2; x++) blocked[y * cols + x] = 1;
+        }
+      }
+
+      for (let gy = 0; gy < rows; gy++) {
+        for (let gx = 0; gx < cols; gx++) {
+          const idx = gy * cols + gx;
+          if (blocked[idx]) continue;
+          let ink = 0;
+          const startX = gx * cell;
+          const startY = gy * cell;
+          for (let y = startY; y < Math.min(startY + cell, canvas.height); y += 2) {
+            for (let x = startX; x < Math.min(startX + cell, canvas.width); x += 2) {
+              const p = (y * canvas.width + x) * 4;
+              if (!isMostlyWhite(image[p], image[p + 1], image[p + 2], image[p + 3])) ink++;
+            }
+          }
+          if (ink >= 2) occupied[idx] = 1;
+        }
+      }
+
+      const seen = new Uint8Array(cols * rows);
+      const rects = [];
+      const stack = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const start = y * cols + x;
+          if (!occupied[start] || seen[start]) continue;
+          let minX = x, maxX = x, minY = y, maxY = y, count = 0;
+          seen[start] = 1;
+          stack.push(start);
+          while (stack.length) {
+            const current = stack.pop();
+            const cy = Math.floor(current / cols);
+            const cx = current - cy * cols;
+            count++;
+            minX = Math.min(minX, cx); maxX = Math.max(maxX, cx);
+            minY = Math.min(minY, cy); maxY = Math.max(maxY, cy);
+            const neighbors = [current - 1, current + 1, current - cols, current + cols];
+            for (const next of neighbors) {
+              if (next < 0 || next >= occupied.length || seen[next] || !occupied[next]) continue;
+              const nx = next % cols;
+              if (Math.abs(nx - cx) > 1) continue;
+              seen[next] = 1;
+              stack.push(next);
+            }
+          }
+          const rect = {
+            x: Math.max(0, minX * cell - 8),
+            y: Math.max(0, minY * cell - 8),
+            w: Math.min(canvas.width, (maxX - minX + 1) * cell + 16),
+            h: Math.min(canvas.height, (maxY - minY + 1) * cell + 16),
+            count
+          };
+          if (rect.w < 38 || rect.h < 28 || rect.count < 18) continue;
+          if (rect.w > canvas.width * .92 && rect.h > canvas.height * .65) continue;
+          rects.push(rect);
+        }
+      }
+
+      return mergeRects(rects, 24)
+        .filter((r) => r.w >= 44 && r.h >= 32 && r.w * r.h >= 1800)
+        .sort((a, b) => a.y - b.y || a.x - b.x);
+    }
+
+    function cropCanvasToDataUrl(canvas, rect) {
+      const crop = document.createElement("canvas");
+      crop.width = Math.ceil(rect.w);
+      crop.height = Math.ceil(rect.h);
+      crop.getContext("2d").drawImage(canvas, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+      return crop.toDataURL("image/png", 0.95);
+    }
+
+    async function makePageTiles(page) {
+      const mode = els.ocrTilingSelect.value;
+      const count = mode === "slices" ? 0 : mode === "thirds" ? 3 : mode === "halves" ? 2 : 1;
+      if (count === 1) return [{ index: 1, total: 1, base64: page.base64, dataUrl: page.dataUrl }];
+
+      const img = new Image();
+      img.src = page.dataUrl;
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          if (mode === "slices") {
+            const sliceHeight = Math.min(1250, Math.max(780, Math.round(img.naturalWidth * 1.05)));
+            const overlap = Math.round(sliceHeight * 0.18);
+            const step = Math.max(420, sliceHeight - overlap);
+            const tiles = [];
+            for (let y = 0, i = 0; y < img.naturalHeight; y += step, i++) {
+              const h = Math.min(sliceHeight, img.naturalHeight - y);
+              if (h < 160 && tiles.length) break;
+              const canvas = document.createElement("canvas");
+              canvas.width = img.naturalWidth;
+              canvas.height = h;
+              canvas.getContext("2d").drawImage(img, 0, y, img.naturalWidth, h, 0, 0, img.naturalWidth, h);
+              const dataUrl = canvas.toDataURL("image/png", 0.95);
+              tiles.push({ index: i + 1, total: 0, base64: dataUrl.split(",")[1], dataUrl });
+              if (y + h >= img.naturalHeight) break;
+            }
+            tiles.forEach((tile) => tile.total = tiles.length);
+            resolve(tiles);
+            return;
+          }
+
+          const overlap = Math.round(img.naturalHeight * 0.06);
+          const tiles = [];
+          for (let i = 0; i < count; i++) {
+            const rawY = Math.round((img.naturalHeight / count) * i);
+            const rawH = Math.round(img.naturalHeight / count);
+            const y = Math.max(0, rawY - (i > 0 ? overlap : 0));
+            const endY = Math.min(img.naturalHeight, rawY + rawH + (i < count - 1 ? overlap : 0));
+            const h = endY - y;
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, y, img.naturalWidth, h, 0, 0, img.naturalWidth, h);
+            const dataUrl = canvas.toDataURL("image/png", 0.95);
+            tiles.push({ index: i + 1, total: count, base64: dataUrl.split(",")[1], dataUrl });
+          }
+          resolve(tiles);
+        };
+        img.onerror = reject;
+      });
+    }
+
+    function assignFigureToQuestion(rect, anchors) {
+      if (!anchors?.length) return "";
+      const centerY = rect.y + rect.h / 2;
+      let candidate = anchors[0];
+      for (const anchor of anchors) {
+        if (anchor.y <= centerY + 12) candidate = anchor;
+        else break;
+      }
+      return candidate?.label || "";
+    }
+
+    async function extractPageFigures(pdfPage, viewport, canvas) {
+      const { boxes, questionAnchors } = await getPdfTextGeometry(pdfPage, viewport);
+      const rects = extractFigureRects(canvas, boxes);
+      const figures = rects.map((rect, index) => ({
+        id: index + 1,
+        rect,
+        anchor: assignFigureToQuestion(rect, questionAnchors),
+        dataUrl: cropCanvasToDataUrl(canvas, rect)
+      }));
+      return { figures, questionAnchors };
+    }
+
+    function renderThumbs() {
+      els.thumbGrid.innerHTML = "";
+      state.pages.forEach((page) => {
+        const node = document.createElement("div");
+        node.className = "thumb";
+        node.innerHTML = `<img src="${page.dataUrl}" alt="Trang ${page.index}" /><span>${page.index}</span>`;
+        els.thumbGrid.appendChild(node);
+      });
+      els.thumbHint.textContent = `${state.pages.length} trang`;
+      els.thumbWrap.classList.remove("hidden");
+    }
+
+    async function readImageFile(file) {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      state.pages = [canvasToPage(canvas, 1)];
+    }
+
+    async function imageFileToPage(file, index) {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      return canvasToPage(canvas, index);
+    }
+
+    async function readImageFiles(files) {
+      const pages = [];
+      for (let i = 0; i < files.length; i++) {
+        updateProgress(i, files.length, `Đang nạp ảnh ${i + 1}/${files.length}...`);
+        updateFloatingProgress(i, files.length, `Đang nạp ảnh ${i + 1}/${files.length}...`, {
+          title: "Đang chuẩn bị dữ liệu",
+          stage: "Nạp ảnh",
+          currentPage: i + 1
+        });
+        pages.push(await imageFileToPage(files[i], i + 1));
+        await wait(10);
+      }
+      state.pages = pages;
+    }
+
+    async function readPdfFile(file) {
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      const scale = Number(els.scaleSelect.value || 2.2);
+      const pages = [];
+
+      updateProgress(0, pdf.numPages, "Đang render PDF thành ảnh...");
+      updateFloatingProgress(0, pdf.numPages, "Đang render PDF thành ảnh...", {
+        title: "Đang chuẩn bị dữ liệu",
+        stage: "Render PDF",
+        currentPage: "-"
+      });
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        const pageData = canvasToPage(canvas, pageNumber);
+        const extracted = await extractPageFigures(page, viewport, canvas);
+        pageData.figures = extracted.figures;
+        pageData.questionAnchors = extracted.questionAnchors;
+        pages.push(pageData);
+        updateProgress(pageNumber, pdf.numPages, `Đã render trang ${pageNumber}/${pdf.numPages}.`);
+        updateFloatingProgress(pageNumber, pdf.numPages, `Đã render trang ${pageNumber}/${pdf.numPages}.`, {
+          title: "Đang chuẩn bị dữ liệu",
+          stage: "Render PDF",
+          currentPage: pageNumber
+        });
+        await wait(20);
+      }
+
+      state.pages = pages;
+    }
+
+    async function processFile(file) {
+      if (!file) return;
+      if (state.isRunning) return;
+
+      resetAll();
+      state.fileName = file.name;
+      state.sourceFile = file;
+      state.sourceMimeType = file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/png");
+      state.sourceBase64 = await fileToBase64(file);
+      els.fileName.textContent = file.name;
+      els.fileName.classList.remove("hidden");
+      els.fileSummary.classList.remove("hidden");
+      updateProgress(0, 1, "Đang đọc file...");
+
+      try {
+        if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+          await readPdfFile(file);
+        } else if (file.type.startsWith("image/")) {
+          await readImageFile(file);
+          updateProgress(0, 1, "Đã sẵn sàng xử lý ảnh.");
+        } else {
+          throw new Error("Chỉ hỗ trợ PDF, PNG, JPG, JPEG hoặc WEBP.");
+        }
+
+        renderThumbs();
+        updateProgress(0, state.pages.length, `Đã nạp ${state.pages.length} trang/ảnh. Sẵn sàng chuyển đổi.`);
+      } catch (error) {
+        console.error(error);
+        showModal("Lỗi đọc file", error.message || "Không thể đọc file này.", "error");
+        resetAll();
+      }
+    }
+
+    function isImageFile(file) {
+      return file?.type?.startsWith("image/")
+        || /\.(png|jpe?g|webp)$/i.test(file?.name || "");
+    }
+
+    async function processFiles(fileList, label = "") {
+      const files = Array.from(fileList || []).filter(Boolean);
+      if (!files.length) return;
+      if (state.isRunning) return;
+
+      if (files.length === 1) {
+        await processFile(files[0]);
+        return;
+      }
+
+      const imageFiles = files.filter(isImageFile);
+      if (imageFiles.length !== files.length) {
+        showModal("Chỉ hỗ trợ nhiều ảnh", "Khi chọn hoặc dán nhiều file, vui lòng chỉ dùng PNG, JPG, JPEG hoặc WEBP. PDF chỉ xử lý từng file một.", "error");
+        return;
+      }
+
+      resetAll();
+      state.fileName = label || `${imageFiles.length} ảnh`;
+      state.sourceFile = null;
+      state.sourceMimeType = "image/png";
+      state.sourceBase64 = "";
+      els.fileName.textContent = state.fileName;
+      els.fileName.classList.remove("hidden");
+      els.fileSummary.classList.remove("hidden");
+
+      try {
+        await readImageFiles(imageFiles);
+        renderThumbs();
+        updateProgress(0, state.pages.length, `Đã nạp ${state.pages.length} ảnh. Sẵn sàng chuyển đổi.`);
+      } catch (error) {
+        console.error(error);
+        showModal("Lỗi đọc ảnh", error.message || "Không thể đọc một hoặc nhiều ảnh.", "error");
+        resetAll();
+      }
+    }
+
+    async function appendImageFiles(fileList, label = "") {
+      const files = Array.from(fileList || []).filter(Boolean);
+      if (!files.length) return;
+      if (state.isRunning) return;
+
+      const imageFiles = files.filter(isImageFile);
+      if (imageFiles.length !== files.length) {
+        showModal("Chỉ dán ảnh", "Clipboard có dữ liệu không phải ảnh nên app chỉ nhận các ảnh PNG, JPG, JPEG hoặc WEBP.", "error");
+        return;
+      }
+
+      const hadPages = state.pages.length > 0;
+      if (!hadPages) {
+        resetAll();
+      }
+
+      els.fileSummary.classList.remove("hidden");
+      const startIndex = state.pages.length + 1;
+
+      try {
+        for (let i = 0; i < imageFiles.length; i++) {
+          const pageIndex = startIndex + i;
+          updateProgress(state.pages.length, state.pages.length + imageFiles.length, `Đang thêm ảnh ${i + 1}/${imageFiles.length}...`);
+          const page = await imageFileToPage(imageFiles[i], pageIndex);
+          state.pages.push(page);
+          await wait(10);
+        }
+
+        state.pages.forEach((page, index) => { page.index = index + 1; });
+        state.fileName = label || `${state.pages.length} ảnh đã dán`;
+        state.sourceFile = null;
+        state.sourceMimeType = "image/png";
+        state.sourceBase64 = "";
+        state.markdown = "";
+        els.markdownText.value = "";
+        els.fileName.textContent = `${state.pages.length} ảnh đã dán`;
+        els.fileName.classList.remove("hidden");
+        renderThumbs();
+        await renderPreview();
+        updateProgress(0, state.pages.length, `Đã có ${state.pages.length} ảnh. Sẵn sàng chuyển đổi.`);
+      } catch (error) {
+        console.error(error);
+        showModal("Lỗi dán ảnh", error.message || "Không thể thêm ảnh đã dán.", "error");
+      }
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function callGemini(page, prompt, modelName, retries = 5) {
+      const key = injectedApiKey || "";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(key)}`;
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: "image/png", data: page.base64 } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0,
+          topP: 1,
+          maxOutputTokens: 8192
+        }
+      };
+
+      let delay = 1200;
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch((error) => {
+          throw new Error(`Không kết nối được Gemini API: ${error.message}`);
+        });
+
+        if (response.status === 429 || response.status >= 500) {
+          if (attempt < retries) {
+            updateProgress(
+              state.pages.filter((p) => p.status === "done").length,
+              state.pages.length,
+              `Trang ${page.index}: API bận, thử lại lần ${attempt + 1}/${retries}...`
+            );
+            updateFloatingProgress(
+              state.pages.filter((p) => p.status === "done").length,
+              state.pages.length,
+              `Trang ${page.index}: API bận, thử lại lần ${attempt + 1}/${retries}...`,
+              {
+                title: "Đang chuyển đổi",
+                stage: "Chờ API",
+                currentPage: page.index
+              }
+            );
+            await wait(delay);
+            delay *= 1.7;
+            continue;
+          }
+        }
+
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(`Gemini API lỗi ${response.status}: ${detail.slice(0, 480)}`);
+        }
+
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        const finishReason = candidate?.finishReason || "";
+        if (!candidate) {
+          const promptBlock = data.promptFeedback?.blockReason ? ` Prompt bị chặn: ${data.promptFeedback.blockReason}.` : "";
+          throw new Error(`Gemini không trả về candidate.${promptBlock}`);
+        }
+
+        if (String(finishReason).includes("RECITING") || finishReason === 4) {
+          throw new Error("Gemini từ chối nội dung do chính sách bản quyền/an toàn.");
+        }
+
+        const text = extractGeminiText(data);
+        if (!text) {
+          const safety = (candidate.safetyRatings || [])
+            .map((item) => `${item.category || "SAFETY"}=${item.probability || item.blocked || ""}`)
+            .filter(Boolean)
+            .join(", ");
+          const finish = finishReason ? ` finishReason=${finishReason}.` : "";
+          const block = data.promptFeedback?.blockReason ? ` promptFeedback=${data.promptFeedback.blockReason}.` : "";
+          const safetyText = safety ? ` safetyRatings: ${safety}.` : "";
+          throw new Error(`Gemini không trả về nội dung.${finish}${block}${safetyText}`);
+        }
+        return normalizeLatex(text);
+      }
+
+      throw new Error("Hết số lần thử lại với Gemini API.");
+    }
+
+    async function ocrPageWithTiles(page, prompt, model, mode) {
+      const tiles = await makePageTiles(page);
+      if (tiles.length === 1) return callGemini(page, prompt, model);
+
+      const parts = [];
+      for (const tile of tiles) {
+        updateFloatingProgress(
+          state.pages.filter((p) => p.status === "done").length,
+          state.pages.length,
+          `Trang ${page.index}: OCR phần ${tile.index}/${tile.total}...`,
+          {
+            title: "Đang chuyển đổi",
+            stage: "OCR chia vùng",
+            currentPage: `${page.index}.${tile.index}`
+          }
+        );
+
+        const tilePrompt = `${prompt}
+
+LƯU Ý CHỐNG BỎ SÓT:
+- Đây là phần ${tile.index}/${tile.total} của cùng một trang, có thể chồng lấn với phần trước/sau.
+- Hãy OCR từ mép trên xuống mép dưới của ảnh phần này.
+- Không bỏ qua dòng nào. Nếu gặp dòng bị cắt ở đầu/cuối ảnh, vẫn ghi phần đọc được.
+- Không dừng ở giữa ảnh. Phải đọc tới dòng cuối cùng nhìn thấy ở mép dưới ảnh.
+- Nếu có nội dung lặp lại do vùng chồng lấn, vẫn cứ ghi lại; hệ thống sẽ khử trùng lặp sau.
+- Không tự nhảy sang đoạn khác, không tóm tắt.`;
+        const result = await callGemini({ ...page, base64: tile.base64, dataUrl: tile.dataUrl }, tilePrompt, model);
+        parts.push(result);
+        await wait(250);
+      }
+
+      return mergeTileResults(parts, mode);
+    }
+
+    function mergeTileResults(parts, mode) {
+      const joined = parts
+        .map((part) => stripCodeFences(part).trim())
+        .filter(Boolean)
+        .join(mode === "official" ? "\n\n" : "\n\n");
+
+      return removeAdjacentDuplicateLines(joined);
+    }
+
+    function removeAdjacentDuplicateLines(text) {
+      const lines = text.split(/\n/);
+      const out = [];
+      for (const line of lines) {
+        const current = line.trim();
+        const previous = out.length ? out[out.length - 1].trim() : "";
+        if (current && previous && current === previous) continue;
+        if (current && previous && isNearDuplicateLine(previous, current)) continue;
+        out.push(line);
+      }
+      return out.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+    }
+
+    function isNearDuplicateLine(a, b) {
+      const x = a.replace(/\s+/g, " ").trim();
+      const y = b.replace(/\s+/g, " ").trim();
+      if (x.length < 18 || y.length < 18) return false;
+      return x.includes(y) || y.includes(x);
+    }
+
+    async function runMistralOcr(mode) {
+      if (!MISTRAL_API_KEY || MISTRAL_API_KEY === "DAN_KEY_MISTRAL_CUA_BAN_VAO_DAY") {
+        throw new Error("Bạn chưa nhập Mistral API key trong biến MISTRAL_API_KEY ở đầu file index.html.");
+      }
+      if (!state.pages.length) {
+        throw new Error("Chưa có trang ảnh để gửi Mistral OCR.");
+      }
+
+      updateFloatingProgress(0, state.pages.length || 1, "Đang gửi file sang Mistral OCR...", {
+        title: "Mistral OCR",
+        stage: "Upload OCR",
+        currentPage: "-"
+      });
+
+      const merged = [];
+      const total = state.pages.length;
+      for (let idx = 0; idx < state.pages.length; idx++) {
+        const page = state.pages[idx];
+        const imageUrl = page.dataUrl || `data:image/png;base64,${page.base64}`;
+        const document = {
+          type: "image_url",
+          image_url: imageUrl
+        };
+
+        updateFloatingProgress(idx, total, `Mistral OCR trang ${idx + 1}/${total}...`, {
+          title: "Mistral OCR",
+          stage: "OCR ảnh trang",
+          currentPage: idx + 1
+        });
+
+        const data = await fetchMistralOcr(document);
+        const ocrPages = data.pages || [];
+        if (!ocrPages.length) {
+          throw new Error(`Mistral OCR không trả về nội dung trang ${idx + 1}.`);
+        }
+
+        const ocrPage = ocrPages[0];
+        page.status = "done";
+        page.markdown = mistralPageToMarkdown(ocrPage, mode);
+        assertMistralPageComplete(page.markdown, idx + 1);
+        page.figures = dedupeFigures(mistralImagesToFigures(ocrPage, idx + 1), page);
+        merged.push(page.markdown);
+        updateProgress(idx + 1, total, `Mistral OCR xong trang ${idx + 1}/${total}.`);
+        await wait(80);
+      }
+
+      state.markdown = merged.join("\n\n<div class=\"page-break\"></div>\n\n").trim();
+      els.markdownText.value = state.markdown;
+      await renderPreview();
+      updateFloatingProgress(total, total, "Mistral OCR hoàn tất.", {
+        title: "Mistral OCR",
+        stage: "Xong",
+        currentPage: total,
+        autoHide: true
+      });
+      toast("Mistral OCR đã xử lý xong.");
+    }
+
+    async function fetchMistralOcr(document) {
+      const response = await fetch("https://api.mistral.ai/v1/ocr", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${MISTRAL_API_KEY}`
+        },
+        body: JSON.stringify(buildMistralOcrPayload(document))
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`Mistral OCR lỗi ${response.status}: ${detail.slice(0, 800)}`);
+      }
+
+      return response.json();
+    }
+
+    function buildMistralOcrPayload(document) {
+      return {
+        model: MISTRAL_OCR_MODEL,
+        document,
+        include_image_base64: true,
+        extract_header: true,
+        extract_footer: true
+        // Cố ý KHÔNG set table_format.
+        // Theo Mistral, table_format=null/default giúp bảng nằm inline trong markdown,
+        // tránh placeholder kiểu [tbl-0.html](tbl-0.html) làm mất nội dung khi render.
+      };
+    }
+
+    function validateMistralPageCount(pages) {
+      const expected = state.pages.length || pages.length;
+      if (pages.length < expected) {
+        throw new Error(`Mistral OCR chỉ trả ${pages.length}/${expected} trang. Không coi là hoàn tất.`);
+      }
+    }
+
+    function assertMistralPageComplete(markdown, pageNumber) {
+      const unresolved = findUnresolvedMistralPlaceholders(markdown);
+      if (unresolved.length) {
+        throw new Error(`Trang ${pageNumber} còn placeholder chưa bung: ${unresolved.slice(0, 5).join(", ")}. Không coi là chuyển chính xác.`);
+      }
+      if (!stripCodeFences(markdown).trim()) {
+        throw new Error(`Trang ${pageNumber} rỗng sau OCR. Không coi là hoàn tất.`);
+      }
+    }
+
+    function findUnresolvedMistralPlaceholders(markdown) {
+      return [...String(markdown || "").matchAll(/!?\[(?:tbl|img)-\d+[^\\]]*\]\((?:tbl|img)-\d+[^)]*\)/g)]
+        .map((match) => match[0]);
+    }
+
+    function mistralPageToMarkdown(page, mode) {
+      let markdown = page.markdown || page.text || "";
+      markdown = prependMistralHeaderFooter(markdown, page);
+      markdown = replaceMistralTablePlaceholders(markdown, page);
+      markdown = cleanOcrMarkdownNoise(markdown);
+      if (mode !== "official") return stripCodeFences(markdown);
+      // Mistral already returns document layout. Avoid rebuilding the official
+      // header here because broad heuristics can accidentally pull body text
+      // into a two-column table.
+      if (/<[a-z][\s\S]*>/i.test(markdown)) return stripCodeFences(markdown);
+      return plainTextToOfficialHtml(markdown);
+    }
+
+    function prependMistralHeaderFooter(markdown, page) {
+      let output = String(markdown || "");
+      const header = String(page.header || "").trim();
+      const footer = String(page.footer || "").trim();
+      if (header && !output.includes(header)) output = `${header}\n\n${output}`;
+      if (footer && !output.includes(footer)) output = `${output}\n\n${footer}`;
+      return output;
+    }
+
+    function enhanceOfficialMistralLayout(markdown) {
+      let text = stripCodeFences(markdown);
+      text = text
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+      if (/<table[\s\S]*?>/i.test(text)) return text;
+
+      const lines = text.split(/\n/).map((line) => line.trim()).filter(Boolean);
+      const ubIndex = lines.findIndex((line) => /ỦY BAN NHÂN DÂN|UY BAN NHAN DAN/i.test(line));
+      const chIndex = lines.findIndex((line) => /CỘNG HÒA XÃ HỘI|CONG HOA XA HOI/i.test(line));
+      if (ubIndex === -1 || chIndex === -1 || Math.abs(ubIndex - chIndex) > 4) {
+        return text;
+      }
+
+      const left = [];
+      const right = [];
+      for (let i = ubIndex; i < Math.min(lines.length, ubIndex + 6); i++) {
+        if (/Số:|So:|V\/v|Kính gửi|Kinh gui/i.test(lines[i])) break;
+        if (i < chIndex) left.push(lines[i]);
+      }
+      for (let i = chIndex; i < Math.min(lines.length, chIndex + 6); i++) {
+        if (/Số:|So:|V\/v|Kính gửi|Kinh gui/i.test(lines[i])) break;
+        right.push(lines[i]);
+      }
+
+      if (!left.length || !right.length) return text;
+      const consumed = new Set([...left, ...right]);
+      const remaining = lines.filter((line) => !consumed.has(line));
+      const header = `<table><tr><td style="width:38%;text-align:center"><strong>${left.join("<br>")}</strong></td><td style="width:62%;text-align:center"><strong>${right.join("<br>")}</strong></td></tr></table>`;
+      const body = remaining.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+      return `${header}${body}`;
+    }
+
+    function replaceMistralTablePlaceholders(markdown, page) {
+      let output = String(markdown || "");
+      const tables = page.tables || page.table_data || [];
+      for (const table of tables) {
+        const id = table.id || table.name || "";
+        const html = table.html || table.content || table.markdown || table.text || "";
+        if (!html) continue;
+        const candidates = new Set();
+        if (id) {
+          candidates.add(`[${id}](${id})`);
+          candidates.add(`[${id}.html](${id}.html)`);
+        }
+        if (typeof table.index === "number") {
+          candidates.add(`[tbl-${table.index}.html](tbl-${table.index}.html)`);
+          candidates.add(`[tbl-${table.index}](${table.index})`);
+        }
+        const maybeFile = id.endsWith(".html") ? id : `${id}.html`;
+        if (id) candidates.add(`[${maybeFile}](${maybeFile})`);
+        for (const placeholder of candidates) {
+          output = output.split(placeholder).join(html);
+        }
+      }
+
+      return output;
+    }
+
+    function replaceMistralImagePlaceholders(markdown, page) {
+      let output = String(markdown || "");
+      const images = page.images || page.image_data || [];
+      for (const image of images) {
+        const id = image.id || image.name || "";
+        const raw = image.image_base64 || image.base64 || image.image || "";
+        if (!id || !raw) continue;
+        const dataUrl = raw.startsWith("data:") ? raw : `data:image/png;base64,${raw}`;
+        const imgMarkdown = buildMarkdownImageBlock(dataUrl, "", id);
+        const maybeFile = id.includes(".") ? id : `${id}.jpeg`;
+        const candidates = [
+          `![${id}](${id})`,
+          `![${maybeFile}](${maybeFile})`,
+          `[${id}](${id})`,
+          `[${maybeFile}](${maybeFile})`
+        ];
+        for (const placeholder of candidates) {
+          output = output.split(placeholder).join(imgMarkdown);
+        }
+      }
+      return output;
+    }
+
+    function mistralImagesToFigures(page, pageIndex) {
+      const images = page.images || page.image_data || [];
+      return images.map((image, index) => {
+        const raw = image.image_base64 || image.base64 || image.image || "";
+        const dataUrl = raw.startsWith("data:")
+          ? raw
+          : raw
+            ? `data:image/png;base64,${raw}`
+            : "";
+        return {
+          id: image.id || index + 1,
+          rect: image.bbox || image.bounding_box || null,
+          anchor: "",
+          dataUrl,
+          pageIndex
+        };
+      }).filter((figure) => figure.dataUrl);
+    }
+
+    function figureImageKey(dataUrl) {
+      const compact = String(dataUrl || "").replace(/\s+/g, "");
+      if (!compact) return "";
+      return `${compact.length}:${compact.slice(0, 96)}:${compact.slice(-96)}`;
+    }
+
+    function normalizeFigureRect(rect) {
+      if (!rect) return null;
+      if (Array.isArray(rect) && rect.length >= 4) {
+        const [x0, y0, a, b] = rect.map(Number);
+        if (![x0, y0, a, b].every(Number.isFinite)) return null;
+        return {
+          x: x0,
+          y: y0,
+          w: a > x0 ? a - x0 : a,
+          h: b > y0 ? b - y0 : b
+        };
+      }
+
+      const x = Number(rect.x ?? rect.left ?? rect.x0 ?? rect.x_min ?? rect.top_left_x ?? 0);
+      const y = Number(rect.y ?? rect.top ?? rect.y0 ?? rect.y_min ?? rect.top_left_y ?? 0);
+      const right = Number(rect.x1 ?? rect.x_max ?? rect.right ?? rect.bottom_right_x);
+      const bottom = Number(rect.y1 ?? rect.y_max ?? rect.bottom ?? rect.bottom_right_y);
+      const width = Number(rect.w ?? rect.width ?? (Number.isFinite(right) ? right - x : NaN));
+      const height = Number(rect.h ?? rect.height ?? (Number.isFinite(bottom) ? bottom - y : NaN));
+      if (![x, y, width, height].every(Number.isFinite)) return null;
+      return { x, y, w: width, h: height };
+    }
+
+    function isSameRect(a, b) {
+      if (!a || !b) return false;
+      const relative = Math.max(a.w, a.h, b.w, b.h) <= 2;
+      const tolerance = relative ? 0.025 : 18;
+      return Math.abs(a.x - b.x) <= tolerance
+        && Math.abs(a.y - b.y) <= tolerance
+        && Math.abs(a.w - b.w) <= tolerance
+        && Math.abs(a.h - b.h) <= tolerance;
+    }
+
+    function isLikelyFullPageFigure(figure, page) {
+      const rect = normalizeFigureRect(figure?.rect);
+      if (!rect || !page?.width || !page?.height) return false;
+      const relative = Math.max(rect.x, rect.y, rect.w, rect.h) <= 2;
+      const wRatio = relative ? rect.w : rect.w / page.width;
+      const hRatio = relative ? rect.h : rect.h / page.height;
+      return wRatio >= 0.78 && hRatio >= 0.55;
+    }
+
+    function dedupeFigures(figures, page) {
+      const seenImages = new Set();
+      const seenRects = [];
+      const output = [];
+
+      for (const figure of figures || []) {
+        if (!figure?.dataUrl) continue;
+        if (isLikelyFullPageFigure(figure, page)) continue;
+
+        const imageKey = figureImageKey(figure.dataUrl);
+        if (imageKey && seenImages.has(imageKey)) continue;
+
+        const rect = normalizeFigureRect(figure.rect);
+        if (rect && seenRects.some((item) => isSameRect(item, rect))) continue;
+
+        if (imageKey) seenImages.add(imageKey);
+        if (rect) seenRects.push(rect);
+        output.push(figure);
+      }
+
+      return output;
+    }
+
+    function extractGeminiText(data) {
+      const candidates = data?.candidates || [];
+      const pieces = [];
+
+      for (const candidate of candidates) {
+        for (const part of candidate?.content?.parts || []) {
+          if (typeof part.text === "string") pieces.push(part.text);
+        }
+      }
+
+      if (!pieces.length && typeof data?.text === "string") pieces.push(data.text);
+      return pieces.join("\n").trim();
+    }
+
+    function normalizeLatex(text) {
+      return text
+        .replace(/```(?:markdown|md)?/gi, "")
+        .replace(/```(?:html)?/gi, "")
+        .replace(/```/g, "")
+        .replace(/\$\s+([^$]*?)\s+\$/g, "$$$1$$")
+        .replace(/\n{4,}/g, "\n\n\n")
+        .trim();
+    }
+
+    function isOfficialMode() {
+      return els.modeSelect.value === "official";
+    }
+
+    function stripCodeFences(text) {
+      return String(text || "")
+        .replace(/```(?:html|markdown|md)?/gi, "")
+        .replace(/```/g, "")
+        .trim();
+    }
+
+    function cleanOcrMarkdownNoise(text) {
+      const cleaned = stripCodeFences(text)
+        .replace(/<figure\b[^>]*>\s*<img\b[^>]*src=["']data:image\/[^"']+["'][\s\S]*?<\/figure>/gi, "")
+        .replace(/!\[[^\]]*\]\(\s*data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+?\s*\)/gi, "")
+        .replace(/<img\b[^>]*src=["']data:image\/[^"']+["'][^>]*>/gi, "")
+        .replace(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/gi, "")
+        .replace(/!?\[(?:img|image)-[^\]]*\]\((?:img|image)-[^)]*\)/gi, "")
+        .replace(/(?:^|[\s.,;:!?()[\]{}])Misplaced\s*(?:&(?:amp;|lt;|gt;|#\d+;|#x[0-9a-f]+;)?|&[A-Za-z](?=\s|$|[.,;:!?()[\]{}])|[#;])+[\s&#;]*/gi, " ")
+        .replace(/(?:^|[\s.,;:!?()[\]{}])Misplaced\b[\s&#;]*/gi, " ")
+        .replace(/^\s*#{1,6}\s*/gm, "")
+        .replace(/\s+#{1,6}\s*$/gm, "")
+        .split(/\n/)
+        .filter((line) => {
+          const compact = line.trim().replace(/\s+/g, "");
+          return !(compact.length > 300 && /^[A-Za-z0-9+/=]+$/.test(compact));
+        })
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      return normalizeMistralVietnameseOcr(normalizeMarkdownTableSpacing(normalizeMarkdownMathArtifacts(cleaned)));
+    }
+
+    function normalizeMarkdownTableSpacing(text) {
+      let output = String(text || "")
+        .replace(/\|\s+(?=\|)/g, "|\n");
+      const tableGap = /(\|[^\n]+\|)\n{2,}(?=\|[^\n]+\|)/g;
+      while (tableGap.test(output)) {
+        output = output.replace(tableGap, "$1\n");
+        tableGap.lastIndex = 0;
+      }
+      return output;
+    }
+
+    function slashFractionToLatex(value) {
+      const match = String(value || "").trim().match(/^([+-]?\d+)\s*\/\s*(\d+)$/);
+      if (!match) return "";
+      return `\\frac{${match[1]}}{${match[2]}}`;
+    }
+
+    function normalizeMarkdownMathArtifacts(text) {
+      return String(text || "")
+        .replace(/~\s*~\s*([+-]?\d+)\s*\/\s*(\d+)\s*([.,;:]?)\s*~\s*~/g, (_match, numerator, denominator, punctuation) => {
+          return `$\\frac{${numerator}}{${denominator}}$${punctuation || ""}`;
+        })
+        .replace(/~~\s*([+-]?\d+)\s*\/\s*(\d+)\s*([.,;:]?)\s*~~/g, (_match, numerator, denominator, punctuation) => {
+          return `$\\frac{${numerator}}{${denominator}}$${punctuation || ""}`;
+        })
+        .replace(/\b(là|bang|bằng)\s+([+-]?\d+)\s*\/\s*(\d+)(?=\s|[.,;:!?)]|$)/gi, (match, prefix, numerator, denominator) => {
+          return `${prefix} $\\frac{${numerator}}{${denominator}}$`;
+        });
+    }
+
+    function normalizeMistralVietnameseOcr(text) {
+      const protectedMath = protectMathSegments(String(text || ""));
+      let output = protectedMath.text
+        .replace(/([a-zà-ỹ])([A-ZĐ]{2,})(?=\s|\d|[.,;:!?)]|$)/g, "$1 $2")
+        .replace(/([.;:!?])(?=\S)/g, "$1 ")
+        .replace(/[ \t]{2,}/g, " ");
+
+      const fixes = [
+        [/\bMOT\b/g, "một"],
+        [/\bMỘT\b/g, "một"],
+        [/\bMot\b/g, "Một"],
+        [/\bmot\b/g, "một"],
+        [/\bcoc\b/gi, "cọc"],
+        [/\bchieu\b/gi, "chiều"],
+        [/\bday\b/gi, "đáy"],
+        [/\bhinh\b/gi, "hình"],
+        [/\btron\b/gi, "tròn"],
+        [/\bduong\b/gi, "đường"],
+        [/\bcua\b/gi, "của"],
+        [/\btren\b/gi, "trên"],
+        [/\bduoi\b/gi, "dưới"],
+        [/\bphan\b/gi, "phần"],
+        [/\bthe\s+tich\b/gi, "thể tích"],
+        [/\bthe\s+tích\b/gi, "thể tích"],
+        [/\bban\s+kinh\b/gi, "bán kính"],
+        [/\bmat\s+dat\b/gi, "mặt đất"],
+        [/\bthang\s+dang\b/gi, "thẳng đứng"],
+        [/\btoà\b/gi, "tòa"],
+        [/\btoa\b/gi, "tòa"],
+        [/\b1\s*ô\b/gi, "lỗ"],
+        [/\b1o\b/gi, "lỗ"]
+      ];
+
+      for (const [pattern, replacement] of fixes) {
+        output = output.replace(pattern, replacement);
+      }
+
+      output = output
+        .replace(/\bkhoét\s+một\s+lỗ\b/gi, "khoét một lỗ")
+        .replace(/\bvoi\s+hình\b/gi, "với hình")
+        .replace(/\bVới\s+và\b/g, "Với")
+        .replace(/\bvới\s+và\b/g, "với")
+        .replace(/\s+([.,;:!?])/g, "$1")
+        .replace(/\n[ \t]+/g, "\n")
+        .trim();
+
+      return restoreMathSegments(output, protectedMath.tokens);
+    }
+
+    function escapeUnsafeHtml(html) {
+      const template = document.createElement("template");
+      template.innerHTML = stripCodeFences(html);
+      template.content.querySelectorAll("script, iframe, object, embed, link, meta").forEach((node) => node.remove());
+      template.content.querySelectorAll("*").forEach((node) => {
+        [...node.attributes].forEach((attr) => {
+          if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
+          if (attr.name === "href" && /^\s*javascript:/i.test(attr.value)) node.removeAttribute(attr.name);
+        });
+      });
+      return template.innerHTML;
+    }
+
+    function plainTextToOfficialHtml(text) {
+      return String(text || "")
+        .split(/\n{2,}/)
+        .map((block) => {
+          const lines = block.split(/\n/).map((line) => escapeHtml(line)).join("<br>");
+          return `<p>${lines}</p>`;
+        })
+        .join("");
+    }
+
+    function escapeMarkdownText(value) {
+      return String(value || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/([\[\]()_*`!])/g, "\\$1");
+    }
+
+    function buildMarkdownImageBlock(dataUrl, caption = "", alt = "") {
+      const safeAlt = escapeMarkdownText(alt || caption || "Hinh");
+      const output = [`![${safeAlt}](${dataUrl})`];
+      if (caption) output.push(`*${escapeMarkdownText(caption)}*`);
+      return output.join("\n\n");
+    }
+
+    function normalizeEmbeddedFigureBlocks(markdown) {
+      return String(markdown || "").replace(/<figure\b[^>]*>([\s\S]*?)<\/figure>/gi, (match, inner) => {
+        const src = inner.match(/<img\b[^>]*src=["']([^"']+)["']/i)?.[1] || "";
+        if (!src) return "";
+        const caption = inner.match(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i)?.[1] || "";
+        const alt = inner.match(/<img\b[^>]*alt=["']([^"']*)["']/i)?.[1] || "";
+        const plainCaption = caption.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        const plainAlt = alt.replace(/\s+/g, " ").trim();
+        return `\n\n${buildMarkdownImageBlock(src, plainCaption, plainAlt)}\n\n`;
+      });
+    }
+
+    function looksLikeMarkdownContent(text) {
+      const source = stripCodeFences(text);
+      return /^\s*\|.+\|\s*$/m.test(source)
+        || /^\s{0,3}#{1,6}\s+\S/m.test(source)
+        || /^\s*([-*+]\s+|\d+[.)]\s+)/m.test(source)
+        || /(^|\s)\*\*[^*\n]+\*\*(?=\s|$)/m.test(source)
+        || /(^|\s)_[^_\n]+_(?=\s|$)/m.test(source)
+        || /\[[^\]]+\]\([^)]+\)/.test(source)
+        || /^\s*>/m.test(source);
+    }
+
+    function preserveMarkdownParagraphBreaks(markdown) {
+      return String(markdown || "")
+        .split(/\n{2,}/)
+        .map((block) => {
+          const trimmed = block.trim();
+          if (!trimmed) return "";
+          if (/^\s*(```|~~~|<|#{1,6}\s|>|[-*+]\s|\d+[.)]\s|\|)/m.test(trimmed)) return trimmed;
+          const lines = trimmed.split(/\n/).map((line) => line.trim()).filter(Boolean);
+          if (lines.length <= 1) return trimmed;
+          return lines.join("  \n");
+        })
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    function normalizeOfficialMarkdown(markdown) {
+      return preserveMarkdownParagraphBreaks(stripCodeFences(markdown).replace(/\r\n?/g, "\n")).trim();
+    }
+
+    function normalizeAsciiVietnamese(text) {
+      return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function classifyOfficialParagraph(text) {
+      const line = String(text || "").trim();
+      const ascii = normalizeAsciiVietnamese(line).toUpperCase();
+      if (!line) return "";
+      if (/^(SO:|S[O0]:|V\/V|KINH GUI|NOI NHAN|CAN CU|DIEU )/i.test(ascii)) return "doc-no-indent";
+      if (/^[-+]\s/.test(line)) return "doc-no-indent";
+      if (line.length <= 90 && /^[A-Z0-9 .,;:()\/-]+$/.test(ascii) && /[A-Z]/.test(ascii)) {
+        return "doc-center doc-strong";
+      }
+      return "";
+    }
+
+    function buildOfficialPlainTextHtml(text) {
+      const layout = enhanceOfficialMistralLayout(text);
+      if (/<[a-z][\s\S]*?>/i.test(layout)) return escapeUnsafeHtml(layout);
+      return String(layout || "")
+        .split(/\n{2,}/)
+        .map((block) => {
+          const lines = block.split(/\n/).map((line) => line.trim()).filter(Boolean);
+          if (!lines.length) return "";
+          const joined = lines.join("<br>");
+          const classes = classifyOfficialParagraph(lines.join(" "));
+          const classAttr = classes ? ` class="${classes}"` : "";
+          return `<p${classAttr}>${joined.split("<br>").map((line) => escapeHtml(line)).join("<br>")}</p>`;
+        })
+        .filter(Boolean)
+        .join("");
+    }
+
+    function renderOfficialContent(markdown, { forWord = false } = {}) {
+      const source = stripCodeFences(markdown);
+      if (!source) return `<div class="official-doc"></div>`;
+      if (/<[a-z][\s\S]*?>/i.test(source)) {
+        return `<div class="official-doc">${escapeUnsafeHtml(source)}</div>`;
+      }
+      if (looksLikeMarkdownContent(source)) {
+        const normalized = normalizeOfficialMarkdown(source);
+        const html = forWord ? renderMarkdownForWord(normalized) : marked.parse(normalized);
+        return `<div class="official-doc">${html}</div>`;
+      }
+      return `<div class="official-doc">${buildOfficialPlainTextHtml(source)}</div>`;
+    }
+
+    function shouldKeepLineBreak(previous, next) {
+      const prev = previous.trim();
+      const cur = next.trim();
+      if (!prev || !cur) return true;
+      if (/^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s|<div\b|<\/div>)/i.test(cur)) return true;
+      if (/^(\*\*)?(I|II|III|IV|V|VI|VII|VIII|IX|X)[.)\s]/i.test(cur)) return true;
+      if (/^(\*\*)?(Câu|Bài|Dạng|Phần)\s+\d+/i.test(cur)) return true;
+      if (/^\|/.test(prev) || /^\|/.test(cur)) return true;
+      if (/^\s*([A-D])\.\s*$/i.test(prev)) return false;
+      return false;
+    }
+
+    function unwrapSoftLineBreaks(markdown) {
+      const blocks = markdown.split(/\n{2,}/);
+      return blocks.map((block) => {
+        if (/^\s*(```|\|)/.test(block)) return block;
+        const lines = block.split(/\n/);
+        let out = "";
+        for (const line of lines) {
+          if (!out) {
+            out = line.trim();
+            continue;
+          }
+          out += shouldKeepLineBreak(out, line) ? `\n${line.trim()}` : ` ${line.trim()}`;
+        }
+        return out;
+      }).join("\n\n");
+    }
+
+    function protectMathSegments(text) {
+      const { markdown, tokens } = tokenizeMath(text);
+      return { text: markdown, tokens };
+    }
+
+    function restoreMathSegments(text, tokens) {
+      let output = text;
+      for (const item of tokens) {
+        const open = item.display ? "$$" : "$";
+        const close = item.display ? "$$" : "$";
+        output = output.split(item.token).join(`${open}${item.tex}${close}`);
+      }
+      return output;
+    }
+
+    function smartFormatExamMarkdown(markdown) {
+      const protectedMath = protectMathSegments(normalizeEmbeddedFigureBlocks(markdown));
+      let text = protectedMath.text
+        .replace(/\r\n?/g, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\*\*\s*([^*\n]*?)\s+\*\*/g, "**$1**")
+        .replace(/\*\*\s*((?:Câu|Cau|Bài|Bai|Dạng|Dang)\s*\d+\s*[.:]?)\s*\*\*/gi, "**$1**")
+        .replace(/\*\*\s*([A-D])\s*[.)]\s*\*\*/g, "**$1.**")
+        .replace(/\n{3,}/g, "\n\n");
+
+      text = compactOcrLines(text);
+
+      text = text
+        .replace(/([^\n])(\*\*)?((?:Câu|Cau|Bài|Bai|Dạng|Dang)\s*\d+\s*[.:])/gi, "$1\n\n$2$3 ")
+        .replace(/\s+(\*\*)?((?:PHẦN|PHAN)\s+[IVX]+[.:]?)/gi, "\n\n$1$2")
+        .replace(/\s+(\*\*)?((?:I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+(?:PHẦN|PHAN|TRẮC|TRAC|TỰ|TU|BÀI|BAI))/gi, "\n\n$1$2")
+        .replace(/\s+(\*\*)?((?:Câu|Cau)\s*\d+\s*[.:])/gi, "\n\n$1$2 ")
+        .replace(/\s+(\*\*)?((?:Bài|Bai)\s*\d+\s*[.:])/gi, "\n\n$1$2 ")
+        .replace(/\s+(\*\*)?((?:Dạng|Dang)\s*\d+\s*[.:])/gi, "\n\n$1$2 ");
+
+      text = text
+        .replace(/(^|[\n:;?!])\s*([A-D])\s*[.)]\s*(?=@@HT_MATH_TOKEN_|\$|[-−+0-9A-Za-zÀ-ỹ])/gm, "$1\n\n**$2.** ")
+        .replace(/(\)\s*|<\/p>\s*|<br\s*\/?>\s*)([A-D])\s*[.)]\s*(?=@@HT_MATH_TOKEN_|\$|[-−+0-9A-Za-zÀ-ỹ])/gi, "$1\n\n**$2.** ")
+        .replace(/(:)\s+\n\n\*\*([A-D])\.\*\*/g, "$1\n\n**$2.**")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      text = restoreMathSegments(text, protectedMath.tokens);
+      return text;
+    }
+
+    function compactOcrLines(text) {
+      const rawLines = text.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+      const out = [];
+      let current = "";
+
+      const isTitle = (line) => /^(ĐỀ|DE)\s+|^(NĂM HỌC|NAM HOC)\s+|^(MÔN|MON)\s*:/i.test(line);
+      const isSection = (line) => /^(\*\*)?((I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+|PHẦN\s+[IVX]+|PHAN\s+[IVX]+)/i.test(line);
+      const isQuestion = (line) => /^(\*\*)?(Câu|Cau|Bài|Bai|Dạng|Dang)\s*\d+\s*[.:]?/i.test(line);
+      const isChoice = (line) => /^(\*\*)?[A-D]\s*[.)](\*\*)?(\s|$)/.test(line);
+      const isTableRow = (line) => /^\|.+\|\s*$/.test(line);
+      const isStructural = (line) => isTitle(line) || isSection(line) || isQuestion(line) || isChoice(line) || isTableRow(line) || /^<div\b/i.test(line) || /^<\/div>/i.test(line);
+
+      const flush = () => {
+        if (current.trim()) out.push(current.trim());
+        current = "";
+      };
+
+      for (const line of rawLines) {
+        if (isTableRow(line)) {
+          flush();
+          out.push(line);
+          continue;
+        }
+
+        if (isStructural(line)) {
+          flush();
+          current = line;
+          if (isTitle(line) || isSection(line)) flush();
+          continue;
+        }
+
+        if (!current) {
+          current = line;
+        } else {
+          current += ` ${line}`;
+        }
+      }
+
+      flush();
+      return normalizeMarkdownTableSpacing(out.join("\n\n"));
+    }
+
+    function formatAnswerOptions(markdown) {
+      return markdown
+        .replace(/\*\*\s*([^*\n]*?)\s+\*\*/g, "**$1**")
+        .replace(/([^\n])(\*\*)?((?:Câu|Cau|Bài|Bai|Dạng|Dang)\s*\d+\s*[.:])/gi, "$1\n\n$2$3 ")
+        .replace(/\n(\*\*)?((?:Câu|Bài|Dạng|Phần)\s+\d+)/gi, "\n\n$1$2")
+        .replace(/\n(\*\*)?((?:I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+)/g, "\n\n$1$2")
+        .replace(/\*\*\s*((?:Câu|Cau|Bài|Bai|Dạng|Dang)\s*\d+\s*[.:]?)\s*\*\*/gi, "**$1**")
+        .replace(/\*\*([A-D])\.\*\*/g, "**$1.**")
+        .replace(/([:;?!]\s*)([A-D])\.\s*(?=(?:\$|[-−+]|[A-ZÀ-Ỹa-zà-ỹ0-9]))/g, "$1\n\n**$2.** ")
+        .replace(/(\n\s*)([A-D])\.\s*(?=(?:\$|[-−+]|[A-ZÀ-Ỹa-zà-ỹ0-9]))/g, "$1**$2.** ")
+        .replace(/(<\/p>\s*|<br\s*\/?>\s*)([A-D])\.\s*(?=(?:\$|[-−+]|[A-ZÀ-Ỹa-zà-ỹ0-9]))/gi, "$1\n\n**$2.** ")
+        .replace(/\*\*([A-D])\.\*\*\s*(?=\*\*[A-D]\.\*\*)/g, "**$1.**\n\n")
+        .replace(/\n{3,}/g, "\n\n");
+    }
+
+    function finalSplitAnswerChoices(markdown) {
+      let text = markdown;
+      text = text.replace(/(^|[\n:;?!>])\s*([A-D])\.\s*(?=\$|@@HT_MATH_TOKEN_|[-−+0-9A-Za-zÀ-ỹ])/gm, (match, prefix, label) => {
+        return `${prefix}\n\n**${label}.** `;
+      });
+      text = text.replace(/\*\*([A-D])\.\*\*\s*(?=\*\*[A-D]\.\*\*)/g, "**$1.**\n\n");
+      return text
+        .replace(/\n\n\*\*\s*\n\n/g, "\n\n")
+        .replace(/\n{3,}/g, "\n\n");
+    }
+
+    function getLayoutMarkdown() {
+      const cleanMarkdown = cleanOcrMarkdownNoise(els.markdownText.value.trim());
+      if (isOfficialMode()) return cleanMarkdown;
+      return finalSplitAnswerChoices(formatAnswerOptions(smartFormatExamMarkdown(cleanMarkdown)));
+    }
+
+    function getPageLayoutMarkdown(page) {
+      const cleanMarkdown = cleanOcrMarkdownNoise(page.markdown || "");
+      if (isOfficialMode()) return cleanMarkdown;
+      return finalSplitAnswerChoices(formatAnswerOptions(smartFormatExamMarkdown(cleanMarkdown)));
+    }
+
+    function imageFigureHtml(page) {
+      if (!page?.dataUrl) return "";
+      return `<figure class="preserved-page-image"><figcaption>Ảnh gốc trang ${page.index}</figcaption><img src="${page.dataUrl}" alt="Ảnh gốc trang ${page.index}" /></figure>`;
+    }
+
+    function extractedFigureHtml(figure, pageIndex) {
+      if (!figure?.dataUrl) return "";
+      const caption = figure.anchor ? `Hình cho ${figure.anchor}` : `Hình trang ${pageIndex}`;
+      return `<figure class="extracted-figure"><figcaption>${caption}</figcaption><img src="${figure.dataUrl}" alt="${caption}" /></figure>`;
+    }
+
+    function extractedFiguresHtml(page) {
+      if (!page?.figures?.length) return "";
+      return dedupeFigures(page.figures, page)
+        .map((figure) => extractedFigureHtml(figure, page.index))
+        .filter(Boolean)
+        .join("");
+    }
+
+    function hasConvertedPageMarkdown() {
+      return state.pages.length > 0 && state.pages.some((page) => (page.markdown || "").trim());
+    }
+
+    function splitEditorMarkdownPages(rawMarkdown) {
+      const text = String(rawMarkdown || "").trim();
+      if (!text) return [];
+      return text
+        .split(/\s*<div class="page-break"><\/div>\s*/i)
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+    }
+
+    function getRenderableEditorPages() {
+      if (!hasConvertedPageMarkdown()) return [];
+      const segments = splitEditorMarkdownPages(els.markdownText.value);
+      if (!segments.length) return [];
+      if (segments.length === state.pages.length) return segments;
+      if (segments.length === 1 && state.pages.length === 1) return segments;
+      return [];
+    }
+
+    function buildDocumentBodyHtml({ forWord = false } = {}) {
+      const preserveMode = els.preserveImagesSelect.value;
+      const official = isOfficialMode();
+      const renderMarkdown = forWord
+        ? (markdown) => official ? renderOfficialContent(markdown, { forWord: true }) : renderMarkdownForWord(markdown)
+        : (markdown) => official ? renderOfficialContent(markdown, { forWord: false }) : marked.parse(markdown);
+      const editorPages = getRenderableEditorPages();
+
+      if (editorPages.length) {
+        return state.pages.map((page, index) => {
+          const pageMarkdown = isOfficialMode()
+            ? cleanOcrMarkdownNoise(editorPages[index] || "")
+            : finalSplitAnswerChoices(formatAnswerOptions(smartFormatExamMarkdown(cleanOcrMarkdownNoise(editorPages[index] || ""))));
+          const contentHtml = renderMarkdown(pageMarkdown);
+          const extractedHtml = preserveMode === "none" ? extractedFiguresHtml(page) : "";
+          const imageHtml = preserveMode === "none" ? "" : imageFigureHtml(page);
+          const pageBreak = index < state.pages.length - 1 ? `<div class="page-break"></div>` : "";
+
+          if (preserveMode === "before") {
+            return `${imageHtml}${contentHtml}${extractedHtml}${pageBreak}`;
+          }
+
+          return `${contentHtml}${extractedHtml}${imageHtml}${pageBreak}`;
+        }).join("");
+      }
+
+      return renderMarkdown(getLayoutMarkdown());
+    }
+
+    function enhancePreviewLayout(page) {
+      splitInlineChoiceParagraphs(page);
+
+      Array.from(page.querySelectorAll("p")).forEach((paragraph) => {
+        const text = paragraph.textContent.trim();
+        if (/^(ĐỀ|DE)\s+|^(NĂM HỌC|NAM HOC)\s+|^(MÔN|MON)\s*:/i.test(text)) {
+          paragraph.classList.add("exam-title");
+        }
+        if (/^((I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+|PHẦN\s+[IVX]+|PHAN\s+[IVX]+)/i.test(text)) {
+          paragraph.classList.add("section-title");
+        }
+        if (/^(Câu|Cau|Bài|Bai)\s*\d+/i.test(text)) {
+          paragraph.classList.add("question");
+        }
+      });
+
+      const paragraphs = Array.from(page.querySelectorAll("p")).filter((paragraph) => !paragraph.closest(".choices-grid"));
+      let i = 0;
+      while (i < paragraphs.length) {
+        const text = paragraphs[i].textContent.trim();
+        if (!/^([A-D]\.|[A-D]\s)/.test(text)) {
+          i++;
+          continue;
+        }
+
+        const group = [];
+        while (i < paragraphs.length && /^([A-D]\.|[A-D]\s)/.test(paragraphs[i].textContent.trim())) {
+          group.push(paragraphs[i]);
+          i++;
+        }
+
+        if (group.length >= 2) {
+          const wrapper = document.createElement("div");
+          wrapper.className = "choices-grid";
+          group[0].before(wrapper);
+          group.forEach((item) => wrapper.appendChild(item));
+        }
+      }
+    }
+
+    function stripMarkdownArtifacts(text) {
+      return text.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+    }
+
+    function splitInlineChoiceParagraphs(page) {
+      const paragraphs = Array.from(page.querySelectorAll("p"));
+      for (const paragraph of paragraphs) {
+        const text = stripMarkdownArtifacts(paragraph.textContent);
+        if (!/A\.\s*\S/.test(text) || !/B\.\s*\S/.test(text)) continue;
+
+        const firstChoice = text.search(/A\.\s*\S/);
+        if (firstChoice < 0) continue;
+
+        const stem = text.slice(0, firstChoice).trim();
+        const choiceText = text.slice(firstChoice).trim();
+        const matches = [...choiceText.matchAll(/([A-D])\.\s*/g)];
+        if (matches.length < 2) continue;
+
+        const fragment = document.createDocumentFragment();
+        if (stem) {
+          const stemP = document.createElement("p");
+          stemP.textContent = stem;
+          fragment.appendChild(stemP);
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "choices-grid";
+        for (let i = 0; i < matches.length; i++) {
+          const label = matches[i][1];
+          const start = matches[i].index + matches[i][0].length;
+          const end = i + 1 < matches.length ? matches[i + 1].index : choiceText.length;
+          const value = choiceText.slice(start, end).trim();
+          const item = document.createElement("p");
+          item.innerHTML = `<strong>${label}.</strong> ${escapeHtml(value)}`;
+          grid.appendChild(item);
+        }
+        fragment.appendChild(grid);
+        paragraph.replaceWith(fragment);
+      }
+    }
+
+    function pageBreakMarkdown(pageIndex, totalPages) {
+      return pageIndex < totalPages ? "\n\n<div class=\"page-break\"></div>\n\n" : "";
+    }
+
+    async function convertAllPages() {
+      if (!state.pages.length) {
+        showModal("Thiếu dữ liệu", "Vui lòng chọn PDF hoặc ảnh trước khi chuyển đổi.", "error");
+        return;
+      }
+
+      setRunning(true);
+      state.markdown = "";
+      els.markdownText.value = "";
+      await renderPreview();
+
+      const mode = els.modeSelect.value;
+      const provider = els.providerSelect.value;
+      const model = els.modelSelect.value;
+      const prompt = prompts[mode];
+      const total = state.pages.length;
+
+      if (provider === "mistral") {
+        try {
+          await runMistralOcr(mode);
+        } catch (error) {
+          console.error(error);
+          showModal("Lỗi Mistral OCR", error.message || "Mistral OCR bị lỗi.", "error");
+        } finally {
+          setRunning(false);
+        }
+        return;
+      }
+
+      updateFloatingProgress(0, total, `Bắt đầu xử lý bằng ${model}...`, {
+        title: "Đang chuyển đổi",
+        stage: "Khởi động",
+        currentPage: "-"
+      });
+
+      try {
+        for (const page of state.pages) {
+          page.status = "running";
+          updateProgress(
+            state.pages.filter((p) => p.status === "done").length,
+            total,
+            `Đang gọi ${model} cho trang ${page.index}/${total}...`
+          );
+          updateFloatingProgress(
+            state.pages.filter((p) => p.status === "done").length,
+            total,
+            `Đang gọi ${model} cho trang ${page.index}/${total}...`,
+            {
+              title: "Đang chuyển đổi",
+              stage: "Nhận diện OCR",
+              currentPage: page.index
+            }
+          );
+
+          let markdown;
+          try {
+            markdown = await ocrPageWithTiles(page, prompt, model, mode);
+          } catch (error) {
+            if (mode !== "official") throw error;
+            updateFloatingProgress(
+              state.pages.filter((p) => p.status === "done").length,
+              total,
+              `Trang ${page.index}: HTML rỗng, thử lại OCR giữ dòng gốc...`,
+              {
+                title: "Đang chuyển đổi",
+                stage: "Thử lại OCR",
+                currentPage: page.index
+              }
+            );
+            markdown = await ocrPageWithTiles(page, prompts.officialFallback, model, mode);
+            markdown = plainTextToOfficialHtml(markdown);
+          }
+          page.status = "done";
+          page.markdown = markdown;
+
+          const segment = `${markdown}${pageBreakMarkdown(page.index, total)}`;
+          state.markdown = state.markdown ? `${state.markdown}\n\n${segment}` : segment;
+          els.markdownText.value = state.markdown.trim();
+          await renderPreview();
+
+          updateProgress(
+            state.pages.filter((p) => p.status === "done").length,
+            total,
+            `Đã xử lý trang ${page.index}/${total}.`
+          );
+          updateFloatingProgress(
+            state.pages.filter((p) => p.status === "done").length,
+            total,
+            `Đã xử lý trang ${page.index}/${total}.`,
+            {
+              title: "Đang chuyển đổi",
+              stage: "Ghép kết quả",
+              currentPage: page.index
+            }
+          );
+          await wait(120);
+        }
+
+        updateProgress(total, total, "Hoàn tất tất cả trang. Có thể xuất Word.");
+        updateFloatingProgress(total, total, "Hoàn tất tất cả trang. Có thể xuất Word.", {
+          title: "Hoàn tất",
+          stage: "Xong",
+          currentPage: total,
+          autoHide: true
+        });
+        toast("Đã chuyển đổi xong tất cả trang.");
+      } catch (error) {
+        console.error(error);
+        showModal("Lỗi chuyển đổi", error.message || "Quá trình chuyển đổi bị lỗi.", "error");
+      } finally {
+        setRunning(false);
+      }
+    }
+
+    async function renderPreview() {
+      const cleanedMarkdown = cleanOcrMarkdownNoise(els.markdownText.value.trim());
+      if (cleanedMarkdown !== els.markdownText.value.trim()) {
+        els.markdownText.value = cleanedMarkdown;
+      }
+      state.markdown = cleanedMarkdown;
+      const layoutMarkdown = getLayoutMarkdown();
+      if (!state.markdown) {
+        els.preview.innerHTML = `<div class="flex h-full min-h-[420px] flex-col items-center justify-center text-center text-slate-400">
+          <div class="mb-4 grid h-24 w-24 place-items-center rounded-3xl bg-slate-100 text-5xl text-slate-300"><i class="fa-regular fa-file-lines"></i></div>
+          <p class="m-0 font-extrabold text-slate-500">Chưa có dữ liệu</p>
+        </div>`;
+        return;
+      }
+
+      els.preview.innerHTML = `<div class="preview-page">${buildDocumentBodyHtml({ forWord: false })}</div>`;
+      const page = els.preview.querySelector(".preview-page");
+      if (page && !isOfficialMode()) enhancePreviewLayout(page);
+      if (window.MathJax?.typesetPromise && page) {
+        await MathJax.typesetPromise([page]);
+      }
+    }
+
+    function copyMarkdown() {
+      const text = els.markdownText.value;
+      if (!text) return;
+      navigator.clipboard?.writeText(text)
+        .then(() => toast("Đã copy Markdown."))
+        .catch(() => {
+          const tmp = document.createElement("textarea");
+          tmp.value = text;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand("copy");
+          tmp.remove();
+          toast("Đã copy Markdown.");
+        });
+    }
+
+    async function pasteMarkdownFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text.trim()) {
+          toast("Clipboard không có văn bản.");
+          return;
+        }
+
+        els.markdownText.value = text;
+        state.markdown = text.trim();
+        await renderPreview();
+        toast("Đã dán và render Markdown.");
+      } catch (error) {
+        els.markdownText.focus();
+        showModal(
+          "Không đọc được clipboard",
+          "Trình duyệt không cho app đọc clipboard tự động. Bạn vẫn có thể bấm vào khung Markdown rồi dùng Ctrl + V, sau đó bấm Xuất Word.",
+          "info"
+        );
+      }
+    }
+
+    function decodeTexEntities(tex) {
+      return String(tex || "")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&le;/gi, "\\le ")
+        .replace(/&ge;/gi, "\\ge ")
+        .replace(/&times;/gi, "\\times ")
+        .replace(/&middot;/gi, "\\cdot ");
+    }
+
+    function balanceTexBraces(tex) {
+      let depth = 0;
+      let output = "";
+      for (const char of String(tex || "")) {
+        if (char === "{") depth++;
+        if (char === "}") {
+          if (depth <= 0) continue;
+          depth--;
+        }
+        output += char;
+      }
+      return output + "}".repeat(depth);
+    }
+
+    function sanitizeTex(tex) {
+      let output = decodeTexEntities(tex)
+        .replace(/[−–—]/g, "-")
+        .replace(/[×·]/g, "\\cdot ")
+        .replace(/[≤]/g, "\\le ")
+        .replace(/[≥]/g, "\\ge ")
+        .replace(/[π]/g, "\\pi ")
+        .replace(/[√]\s*([A-Za-z0-9]+)/g, "\\sqrt{$1}")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const allowsAlignment = /\\begin\{(?:aligned|align|array|matrix|pmatrix|bmatrix|vmatrix|cases)\}/.test(output);
+      if (!allowsAlignment) {
+        output = output
+          .replace(/\\?&(?:amp;)?/gi, " ")
+          .replace(/(?:^|\s)Misplaced\b[\s&#;]*/gi, " ");
+      }
+
+      output = output
+        .replace(/\\frac\s+([^\s{}]+)\s+([^\s{}]+)/g, "\\frac{$1}{$2}")
+        .replace(/\\sqrt\s+([A-Za-z0-9]+)/g, "\\sqrt{$1}")
+        .replace(/\s*([=+\-*/^_<>])\s*/g, "$1")
+        .replace(/\s+([,.;:!?])/g, "$1")
+        .trim();
+
+      return balanceTexBraces(output);
+    }
+
+    function tokenizeMath(markdown) {
+      const tokens = [];
+      let output = "";
+      let i = 0;
+
+      const pushText = (text) => { output += text; };
+      const pushMath = (tex, display) => {
+        const token = `@@HT_MATH_TOKEN_${tokens.length}@@`;
+        tokens.push({ token, tex: sanitizeTex(tex), display });
+        output += token;
+      };
+
+      while (i < markdown.length) {
+        if (markdown.startsWith("\\[", i)) {
+          const end = markdown.indexOf("\\]", i + 2);
+          if (end !== -1) {
+            pushMath(markdown.slice(i + 2, end), true);
+            i = end + 2;
+            continue;
+          }
+        }
+
+        if (markdown.startsWith("\\(", i)) {
+          const end = markdown.indexOf("\\)", i + 2);
+          if (end !== -1) {
+            pushMath(markdown.slice(i + 2, end), false);
+            i = end + 2;
+            continue;
+          }
+        }
+
+        if (markdown.startsWith("$$", i)) {
+          const end = markdown.indexOf("$$", i + 2);
+          if (end !== -1) {
+            pushMath(markdown.slice(i + 2, end), true);
+            i = end + 2;
+            continue;
+          }
+        }
+
+        if (markdown[i] === "$" && markdown[i - 1] !== "\\") {
+          const end = findClosingDollar(markdown, i + 1);
+          if (end !== -1) {
+            pushMath(markdown.slice(i + 1, end), false);
+            i = end + 1;
+            continue;
+          }
+        }
+
+        pushText(markdown[i]);
+        i++;
+      }
+
+      return { markdown: output, tokens };
+    }
+
+    function findClosingDollar(text, start) {
+      for (let i = start; i < text.length; i++) {
+        if (text[i] === "$" && text[i - 1] !== "\\") return i;
+      }
+      return -1;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function texToMathML(tex, display) {
+      tex = sanitizeTex(tex);
+      try {
+        if (window.MathJax?.tex2mml) {
+          return MathJax.tex2mml(tex, { display });
+        }
+
+        if (window.MathJax?.tex2mmlPromise) {
+          throw new Error("Async MathML conversion is not available in this export path.");
+        }
+      } catch (error) {
+        console.warn("MathML conversion failed:", tex, error);
+      }
+
+      const delimiter = display ? ["\\[", "\\]"] : ["\\(", "\\)"];
+      return `<span class="math-source">${escapeHtml(delimiter[0] + tex + delimiter[1])}</span>`;
+    }
+
+    function renderMarkdownForWord(markdown) {
+      const { markdown: tokenizedMarkdown, tokens } = tokenizeMath(markdown);
+      let html = marked.parse(tokenizedMarkdown);
+
+      for (const item of tokens) {
+        const mathML = texToMathML(item.tex, item.display);
+        const wrapped = item.display
+          ? `<div class="word-equation">${mathML}</div>`
+          : `<span class="word-equation-inline">${mathML}</span>`;
+        html = html.split(item.token).join(wrapped);
+      }
+
+      return html;
+    }
+
+    function escapeXml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    async function buildDocxFromHtml(htmlBody) {
+      if (!window.JSZip) {
+        throw new Error("Chưa tải được JSZip, không thể tạo DOCX. Hãy kiểm tra kết nối CDN.");
+      }
+
+      const zip = new JSZip();
+      zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="html" ContentType="text/html"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+
+      zip.folder("_rels").file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+      zip.folder("word").file("document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:altChunk r:id="htmlChunk"/>
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1134" w:right="964" w:bottom="1134" w:left="964" w:header="708" w:footer="708" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`);
+
+      zip.folder("word").folder("_rels").file("document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="htmlChunk" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk" Target="afchunk.html"/>
+</Relationships>`);
+
+      zip.folder("word").file("afchunk.html", `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <title>HT Math Output</title>
+  <style>
+    @page { size: A4; margin: 2cm 1.7cm; }
+    body { font-family: "Times New Roman", serif; font-size: 14pt; line-height: 1.45; color: #000; }
+    h1, h2, h3, h4 { font-family: "Times New Roman", serif; margin: 10pt 0 6pt; line-height: 1.25; }
+    p { margin: 0 0 6pt 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10pt 0; }
+    th, td { border: 1pt solid #000; padding: 5pt; vertical-align: top; }
+    th { background: #f2f2f2; }
+    math { font-family: "Cambria Math", "Times New Roman", serif; }
+    .official-doc { font-family: "Times New Roman", serif; font-size: 14pt; line-height: 1.45; color: #000; text-align: justify; }
+    .official-doc table { width: 100%; border-collapse: collapse; border: 1pt solid #000; margin: 10pt 0 12pt; }
+    .official-doc td, .official-doc th { border: 1pt solid #000 !important; padding: 5pt 6pt; vertical-align: top; }
+    .official-doc p, .official-doc div { margin-top: 0; margin-bottom: 6pt; }
+    .official-doc p { text-indent: 1.2cm; }
+    .official-doc h1, .official-doc h2, .official-doc h3 { margin: 10pt 0 6pt; text-align: center; font-weight: 800; text-transform: uppercase; line-height: 1.3; }
+    .official-doc ul, .official-doc ol { margin: 8pt 0 10pt 20pt; padding: 0; }
+    .official-doc li { margin: 3pt 0; }
+    .official-doc .doc-no-indent, .official-doc .doc-center { text-indent: 0; }
+    .official-doc .doc-center { text-align: center; }
+    .official-doc .doc-strong { font-weight: 800; }
+    .word-equation { text-align: center; margin: 8pt 0; }
+    .word-equation-inline { display: inline; }
+    .preserved-page-image { margin: 10pt 0 14pt; padding: 6pt; border: 1pt solid #cccccc; page-break-inside: avoid; }
+    .preserved-page-image figcaption { margin: 0 0 5pt; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; color: #555555; }
+    .preserved-page-image img { display: block; width: 100%; max-width: 100%; height: auto; }
+    .extracted-figure { display: table; margin: 8pt auto 12pt; padding: 5pt; border: 1pt solid #cccccc; page-break-inside: avoid; }
+    .extracted-figure figcaption { margin: 0 0 4pt; text-align: center; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; color: #555555; }
+    .extracted-figure img { display: block; max-width: 10cm; height: auto; margin: 0 auto; }
+    .page-break { page-break-after: always; height: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+${htmlBody}
+</body>
+</html>`);
+
+      return zip.generateAsync({
+        type: "blob",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      });
+    }
+
+    async function downloadWord() {
+      const cleanedMarkdown = cleanOcrMarkdownNoise(els.markdownText.value.trim());
+      if (cleanedMarkdown !== els.markdownText.value.trim()) {
+        els.markdownText.value = cleanedMarkdown;
+      }
+      state.markdown = cleanedMarkdown;
+      if (!state.markdown) {
+        showModal("Chưa có nội dung", "Hãy chuyển đổi hoặc nhập Markdown trước khi xuất Word.", "error");
+        return;
+      }
+
+      await renderPreview();
+      const wordBody = buildDocumentBodyHtml({ forWord: true });
+      const blob = await buildDocxFromHtml(wordBody);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const base = (state.fileName || "HT_MATH_OUTPUT").replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|]+/g, "_");
+      link.href = url;
+      link.download = `${base}_converted.docx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast("Đã xuất DOCX với công thức MathML, không xuất ảnh.");
+    }
+
+    function markdownToPlainText(markdown) {
+      markdown = cleanOcrMarkdownNoise(markdown);
+      if (isOfficialMode()) {
+        const template = document.createElement("template");
+        template.innerHTML = renderOfficialContent(markdown, { forWord: false })
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<\/(p|div|tr|h[1-6])>/gi, "\n")
+          .replace(/<\/t[dh]>/gi, "\t")
+          .replace(/<\/table>/gi, "\n");
+        return (template.content.textContent || "")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim();
+      }
+
+      return markdown
+        .replace(/<figure[\s\S]*?<\/figure>/gi, "")
+        .replace(/<div class="page-break"><\/div>/gi, "\n\n--- Hết trang ---\n\n")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/__(.*?)__/g, "$1")
+        .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+        .replace(/^\s{0,3}[-*+]\s+/gm, "- ")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function buildTextExport() {
+      const editorPages = getRenderableEditorPages();
+      if (editorPages.length) {
+        return state.pages.map((page, index) => {
+          const pageMarkdown = isOfficialMode()
+            ? cleanOcrMarkdownNoise(editorPages[index] || "")
+            : finalSplitAnswerChoices(formatAnswerOptions(smartFormatExamMarkdown(cleanOcrMarkdownNoise(editorPages[index] || ""))));
+          const pageText = markdownToPlainText(pageMarkdown);
+          return state.pages.length > 1
+            ? `===== Trang ${page.index} =====\n\n${pageText}`
+            : pageText;
+        }).join("\n\n");
+      }
+
+      return markdownToPlainText(getLayoutMarkdown());
+    }
+
+    function downloadText() {
+      state.markdown = els.markdownText.value.trim();
+      if (!state.markdown) {
+        showModal("Chưa có nội dung", "Hãy chuyển đổi hoặc nhập Markdown trước khi xuất TXT.", "error");
+        return;
+      }
+
+      const text = buildTextExport();
+      const blob = new Blob(["\ufeff", text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const base = (state.fileName || "HT_MATH_OUTPUT").replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|]+/g, "_");
+      link.href = url;
+      link.download = `${base}_converted.txt`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast("Đã xuất TXT.");
+    }
+
+    els.dropZone.addEventListener("click", () => els.fileInput.click());
+    els.fileInput.addEventListener("change", (event) => processFiles(event.target.files));
+
+    ["dragenter", "dragover"].forEach((name) => {
+      els.dropZone.addEventListener(name, (event) => {
+        event.preventDefault();
+        els.dropZone.classList.add("is-active");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((name) => {
+      els.dropZone.addEventListener(name, (event) => {
+        event.preventDefault();
+        els.dropZone.classList.remove("is-active");
+      });
+    });
+
+    els.dropZone.addEventListener("drop", (event) => {
+      processFiles(event.dataTransfer.files);
+    });
+
+    document.addEventListener("paste", async (event) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") return;
+      const items = Array.from(event.clipboardData?.items || []).filter((entry) => entry.type.startsWith("image/"));
+      if (!items.length) return;
+      event.preventDefault();
+      const files = items
+        .map((item, index) => {
+          const file = item.getAsFile();
+          if (!file) return null;
+          const ext = file.type.includes("jpeg") ? "jpg" : file.type.includes("webp") ? "webp" : "png";
+          return new File([file], `pasted-image-${index + 1}.${ext}`, { type: file.type || "image/png" });
+        })
+        .filter(Boolean);
+      await appendImageFiles(files, files.length > 1 ? `Đã dán ${files.length} ảnh` : "Ảnh đã dán");
+    });
+
+    function syncProviderControls() {
+      const isMistral = els.providerSelect.value === "mistral";
+      els.modelSelect.disabled = isMistral || state.isRunning;
+      els.ocrTilingSelect.disabled = isMistral || state.isRunning;
+      if (isMistral) {
+        els.progressText.textContent = "Mistral OCR đang dùng ảnh từng trang đã render, có thể xử lý nhiều ảnh như nhiều trang.";
+      }
+    }
+
+    $("resetBtn").addEventListener("click", resetAll);
+    $("convertBtn").addEventListener("click", convertAllPages);
+    $("pasteMarkdownBtn").addEventListener("click", pasteMarkdownFromClipboard);
+    $("copyBtn").addEventListener("click", copyMarkdown);
+    els.preserveImagesSelect.addEventListener("change", renderPreview);
+    els.providerSelect.addEventListener("change", syncProviderControls);
+    els.toggleFloatingProgressBtn.addEventListener("click", () => {
+      const collapsed = els.floatingProgress.classList.toggle("is-collapsed");
+      els.toggleFloatingProgressBtn.innerHTML = collapsed
+        ? `<i class="fa-solid fa-up-right-and-down-left-from-center"></i>`
+        : `<i class="fa-solid fa-minus"></i>`;
+      els.toggleFloatingProgressBtn.title = collapsed ? "Mở rộng tiến trình" : "Thu gọn tiến trình";
+    });
+    $("clearMarkdownBtn").addEventListener("click", () => {
+      if (state.isRunning) return;
+      state.markdown = "";
+      els.markdownText.value = "";
+      renderPreview();
+    });
+    $("rerenderBtn").addEventListener("click", renderPreview);
+    $("downloadTextBtn").addEventListener("click", downloadText);
+    $("downloadBtn").addEventListener("click", downloadWord);
+    $("modalCloseBtn").addEventListener("click", () => els.messageModal.classList.remove("is-open"));
+    $("helpBtn").addEventListener("click", () => showModal(
+      "Lưu ý về xuất Word",
+      "File .docx được tạo trực tiếp trên trình duyệt. Khi xuất Word, app chuyển LaTeX sang MathML trong gói DOCX để Word nhận như công thức, không chuyển công thức thành ảnh.",
+      "info"
+    ));
+
+    els.markdownText.addEventListener("input", () => {
+      clearTimeout(window.renderTimer);
+      window.renderTimer = setTimeout(renderPreview, 450);
+    });
+
+    syncProviderControls();
+  </script>
+</body>
+</html>

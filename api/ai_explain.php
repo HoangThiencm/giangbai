@@ -21,7 +21,7 @@ $subject = trim($data['subject'] ?? 'Toan');
 $lessonContext = trim($data['lesson_context'] ?? '');
 $lessonId = (int)($data['lesson_id'] ?? 0);
 $forceProvider = strtolower(trim((string)($data['force_provider'] ?? '')));
-if (!in_array($forceProvider, ['', 'ds2api'], true)) $forceProvider = '';
+if (!in_array($forceProvider, ['', 'ds2api', 'cloudflare', 'gemini', 'shopaikey'], true)) $forceProvider = '';
 
 $currentUserId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $currentUserRole = '';
@@ -654,6 +654,9 @@ $runtime = load_ai_runtime_config();
 // DS2API authentication, model, network, or upstream error.
 if ($mode === 'chat' && $forceProvider === 'ds2api') {
     $runtime['ai_test_ds2api_only'] = true;
+}
+if ($forceProvider !== '') {
+    $runtime['ai_force_provider'] = $forceProvider;
 }
 $GLOBALS['ai_explain_user_id'] = $currentUserId;
 $GLOBALS['ai_explain_user_role'] = $currentUserRole;

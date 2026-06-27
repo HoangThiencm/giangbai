@@ -126,6 +126,38 @@ function ai_router_run(array $ctx): array
     $usedFallback = false;
     $tiersTried = [];
     $geminiTriedAsCfFallback = false;
+    $forceProvider = (string)($config['ai_force_provider'] ?? '');
+
+    if ($forceProvider !== '' && isset($providers[$forceProvider]) && is_callable($providers[$forceProvider])) {
+        $forced = $providers[$forceProvider]();
+        $tiersTried[] = $forceProvider;
+        if (is_array($forced) && !empty($forced['answer'])) {
+            if (is_callable($log)) {
+                $log($mode, $forced, true, false);
+            }
+            return [
+                'result' => array_merge($forced, [
+                    'router_tier' => $forceProvider,
+                    'tiers_tried' => $tiersTried,
+                    'test_mode' => true,
+                    'complete' => true,
+                ]),
+                'quota' => $quotaStatus,
+                'used_api' => true,
+                'test_mode' => true,
+            ];
+        }
+        $forcedErr = is_array($forced) ? (string)($forced['error'] ?? 'Provider khong tra loi.') : 'Provider khong tra loi.';
+        if (is_callable($log) && is_array($forced)) {
+            $log($mode, $forced, false, false);
+        }
+        return [
+            'error' => 'Che do test ' . $forceProvider . ': ' . $forcedErr,
+            'quota' => $quotaStatus,
+            'tiers_tried' => $tiersTried,
+            'test_mode' => true,
+        ];
+    }
 
     if (!empty($config['ai_test_ds2api_only'])) {
         $tryDs2apiOnly = $providers['ds2api'] ?? null;

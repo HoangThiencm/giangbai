@@ -3306,36 +3306,46 @@
                 card.id = 'adminAiQuickTestCard';
                 card.className = 'bg-white rounded-xl shadow-lg border border-slate-200 mb-8 p-6';
                 card.innerHTML = `
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between mb-4">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between mb-5">
                         <div>
-                            <h3 class="font-bold text-slate-700 text-lg"><i class="fas fa-flask text-indigo-600 mr-2"></i>Kiem tra AI nhanh</h3>
-                            <p class="text-sm text-slate-500 mt-1">Nhap mot cau ngan va bam test de xem DS2API / router co tra loi khong. Ban co the mo tab Theo doi AI de xem chi so day du hon.</p>
+                            <h3 class="font-bold text-slate-800 text-lg"><i class="fas fa-flask text-indigo-600 mr-2"></i>Kiểm tra AI nhanh</h3>
+                            <p class="text-sm text-slate-500 mt-1">Bấm từng nút để kiểm tra nguồn AI tương ứng. Kết quả lỗi sẽ hiện ngay tại đây, không cần qua trang học sinh.</p>
                         </div>
                         <button id="aiQuickRefreshBtn" type="button" onclick="refreshAiQuickTestPanel(true)" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                            <i class="fas fa-rotate-right mr-2"></i>Lam moi
+                            <i class="fas fa-rotate-right mr-2"></i>Làm mới trạng thái
                         </button>
                     </div>
-                    <div id="aiQuickTestSummary" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-4"></div>
-                    <div class="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4">
-                        <div class="space-y-3">
-                            <label class="block text-xs font-bold text-slate-700">Cau test</label>
-                            <textarea id="aiQuickTestPrompt" rows="4" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Vi du: Xin chao, ban co hoat dong khong?"></textarea>
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" onclick="runAiQuickTest('router', this)" class="rounded bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700">
-                                    <i class="fas fa-sitemap mr-1"></i>Thu AI lo trinh
+                    <div id="aiQuickTestSummary" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-5"></div>
+                    <div class="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-4">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                            <label class="block text-xs font-bold uppercase tracking-wide text-slate-500">Câu hỏi dùng để test</label>
+                            <textarea id="aiQuickTestPrompt" rows="4" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-6 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: Giải phương trình 2x^2 + 3x + 1 = 0"></textarea>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button type="button" onclick="runAiQuickTest('router', this)" class="rounded bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-900">
+                                    <i class="fas fa-route mr-1"></i>Test toàn bộ lộ trình
                                 </button>
                                 <button type="button" onclick="runAiQuickTest('ds2api', this)" class="rounded bg-cyan-700 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-800">
-                                    <i class="fas fa-bolt mr-1"></i>Thu DS2API
+                                    <i class="fas fa-bolt mr-1"></i>Test DS2API
                                 </button>
-                                <button type="button" onclick="fillAiQuickPrompt('2x^2 + 3x + 1 = 0')"
-                                    class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                                    Lay cau mau
+                                <button type="button" onclick="runAiQuickTest('cloudflare', this)" class="rounded bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-700">
+                                    <i class="fas fa-cloud mr-1"></i>Test Cloudflare
+                                </button>
+                                <button type="button" onclick="runAiQuickTest('gemini', this)" class="rounded bg-emerald-700 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-800">
+                                    <i class="fas fa-gem mr-1"></i>Test Gemini
+                                </button>
+                                <button type="button" onclick="runAiQuickTest('shopaikey', this)" class="rounded bg-indigo-700 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-800">
+                                    <i class="fas fa-key mr-1"></i>Test ShopAIKey
+                                </button>
+                                <button type="button" onclick="fillAiQuickPrompt('Giải phương trình 2x^2 + 3x + 1 = 0')"
+                                    class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-white">
+                                    <i class="fas fa-wand-magic-sparkles mr-1"></i>Dùng câu mẫu
                                 </button>
                             </div>
+                            <p class="mt-3 text-xs leading-5 text-slate-500">Mistral OCR dùng cho quét PDF nên được kiểm tra bằng trạng thái cấu hình và log sử dụng, không chạy bằng câu chat.</p>
                         </div>
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Ket qua</div>
-                            <div id="aiQuickTestStatus" class="mt-2 text-sm text-slate-700">Chua test.</div>
+                        <div class="rounded-lg border border-slate-200 bg-white p-4">
+                            <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Kết quả kiểm tra</div>
+                            <div id="aiQuickTestStatus" class="mt-2 text-sm font-bold text-slate-700">Chưa test.</div>
                             <div id="aiQuickTestMeta" class="mt-2 text-xs text-slate-500"></div>
                             <div id="aiQuickTestAnswer" class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-800 min-h-[88px] whitespace-pre-wrap"></div>
                         </div>
@@ -3356,12 +3366,12 @@
                 : 'border-amber-200 bg-amber-50 text-amber-900';
             const mark = ok ? 'fa-circle-check' : 'fa-triangle-exclamation';
             return `
-                <div class="rounded-xl border ${tone} p-3">
+                <div class="rounded-lg border ${tone} p-3">
                     <div class="flex items-center justify-between gap-2">
                         <div class="text-xs font-bold uppercase tracking-wide">${label}</div>
                         <i class="fas ${mark}"></i>
                     </div>
-                    <div class="mt-2 text-sm font-bold">${ok ? 'San sang' : 'Can kiem tra'}</div>
+                    <div class="mt-2 text-sm font-bold">${ok ? 'Sẵn sàng' : 'Cần kiểm tra'}</div>
                     <div class="mt-1 text-xs leading-5 opacity-90">${detail || ''}</div>
                 </div>
             `;
@@ -3377,9 +3387,9 @@
 
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Dang tai...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang tải...';
             }
-            status.textContent = 'Dang lay trang thai AI...';
+            status.textContent = 'Đang lấy trạng thái AI...';
             meta.textContent = '';
             answer.textContent = '';
 
@@ -3389,7 +3399,7 @@
                     cache: 'no-store'
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.error || 'Khong tai duoc trang thai AI.');
+                if (!res.ok) throw new Error(data.error || 'Không tải được trạng thái AI.');
 
                 const ds2 = data.providers?.ds2api || {};
                 const cf = data.providers?.cloudflare || {};
@@ -3412,31 +3422,31 @@
                     renderAiQuickStatusChip(
                         'Gemini',
                         !!gemini.configured,
-                        `${gemini.keys_count || 0} key(s)<br>Model: ${gemini.model || '---'}`
+                        `${gemini.keys_count || 0} key<br>Model: ${gemini.model || '---'}`
                     ),
                     renderAiQuickStatusChip(
                         'Mistral OCR',
                         true,
-                        `${mistral.requests_today_internal || 0} luot hom nay<br>Quet PDF cho thi truc tuyen`
+                        `${mistral.requests_today_internal || 0} lượt hôm nay<br>Quét PDF cho thi trực tuyến`
                     ),
                     renderAiQuickStatusChip(
                         'ShopAIKey',
                         !!router.shopaikey_configured,
-                        `Model: ${data.config?.shopaikey_model || '---'}<br>Fallback cuoi`
+                        `Model: ${data.config?.shopaikey_model || '---'}<br>Dự phòng cuối`
                     ),
                 ].join('');
 
-                status.textContent = router.message || 'Trang thai AI da san sang.';
-                meta.textContent = `Tong so san sang: ${router.ready_tiers || 0} | Test DS2API: ${router.ds2api_key_configured ? 'co key' : 'chua co key'}`;
-                answer.textContent = force ? 'Da cap nhat trang thai.' : 'San sang test.';
+                status.textContent = router.message || 'Trạng thái AI đã sẵn sàng.';
+                meta.textContent = `Số nguồn sẵn sàng: ${router.ready_tiers || 0} | DS2API: ${router.ds2api_key_configured ? 'đã có key' : 'chưa có key'}`;
+                answer.textContent = force ? 'Đã cập nhật trạng thái.' : 'Sẵn sàng test.';
             } catch (err) {
-                status.textContent = err.message || 'Khong tai duoc trang thai AI.';
+                status.textContent = err.message || 'Không tải được trạng thái AI.';
                 meta.textContent = '';
                 answer.textContent = '';
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-rotate-right mr-2"></i>Lam moi';
+                    btn.innerHTML = '<i class="fas fa-rotate-right mr-2"></i>Làm mới trạng thái';
                 }
             }
         }
@@ -3446,15 +3456,15 @@
             const status = document.getElementById('aiQuickTestStatus');
             const meta = document.getElementById('aiQuickTestMeta');
             const answer = document.getElementById('aiQuickTestAnswer');
-            const prompt = (promptInput?.value || '').trim() || 'Xin chao, ban co hoat dong khong?';
+            const prompt = (promptInput?.value || '').trim() || 'Xin chào, bạn có hoạt động không?';
             if (!status || !meta || !answer) return;
 
             if (buttonEl) {
                 buttonEl.disabled = true;
-                buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Dang test...';
+                buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang test...';
             }
 
-            status.textContent = 'Dang gui yeu cau test...';
+            status.textContent = 'Đang gửi yêu cầu test...';
             meta.textContent = '';
             answer.textContent = '';
 
@@ -3464,30 +3474,35 @@
                     headers: adminHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         mode: 'chat',
-                        subject: 'Toan',
-                        lesson_title: 'Kiem tra AI',
-                        lesson_context: 'Day la cau hoi test ngan de kiem tra AI co tra loi hay khong.',
+                        subject: 'Toán',
+                        lesson_title: 'Kiểm tra AI',
+                        lesson_context: 'Đây là câu hỏi test ngắn để kiểm tra AI có trả lời hay không.',
                         question: prompt,
                         history: [],
-                        force_provider: provider === 'ds2api' ? 'ds2api' : ''
+                        force_provider: provider === 'router' ? '' : provider
                     }),
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.error || 'Test AI that bai.');
+                if (!res.ok) throw new Error(data.error || 'Test AI thất bại.');
 
-                status.textContent = `OK · ${data.provider || provider}${data.model ? ` · ${data.model}` : ''}`;
+                status.textContent = `Hoạt động tốt · ${data.provider || provider}${data.model ? ` · ${data.model}` : ''}`;
                 meta.textContent = data.router_tier ? `Router tier: ${data.router_tier}` : '';
-                answer.textContent = data.answer || '(Khong co noi dung tra ve)';
+                answer.textContent = data.answer || '(Không có nội dung trả về)';
             } catch (err) {
-                status.textContent = 'Loi test AI';
+                status.textContent = 'Test AI bị lỗi';
                 meta.textContent = '';
-                answer.textContent = err.message || 'Khong test duoc.';
+                answer.textContent = err.message || 'Không test được.';
             } finally {
                 if (buttonEl) {
                     buttonEl.disabled = false;
-                    buttonEl.innerHTML = provider === 'ds2api'
-                        ? '<i class="fas fa-bolt mr-1"></i>Thu DS2API'
-                        : '<i class="fas fa-sitemap mr-1"></i>Thu AI lo trinh';
+                    const labels = {
+                        router: '<i class="fas fa-route mr-1"></i>Test toàn bộ lộ trình',
+                        ds2api: '<i class="fas fa-bolt mr-1"></i>Test DS2API',
+                        cloudflare: '<i class="fas fa-cloud mr-1"></i>Test Cloudflare',
+                        gemini: '<i class="fas fa-gem mr-1"></i>Test Gemini',
+                        shopaikey: '<i class="fas fa-key mr-1"></i>Test ShopAIKey',
+                    };
+                    buttonEl.innerHTML = labels[provider] || '<i class="fas fa-flask mr-1"></i>Test AI';
                 }
             }
         }
