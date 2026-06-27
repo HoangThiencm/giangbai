@@ -3294,10 +3294,207 @@
                 if (saveUserBtn) saveUserBtn.innerHTML = '<i class="fas fa-check"></i> Lưu thay đổi';
             }
 
-            function settingsCard() {
-                cleanupLegacyGithubSettings();
-                return $('cfg_gslides')?.closest('.bg-white.rounded-xl') || $('cfg_vehinh')?.closest('.bg-white.rounded-xl');
+        function settingsCard() {
+            cleanupLegacyGithubSettings();
+            return $('cfg_gslides')?.closest('.bg-white.rounded-xl') || $('cfg_vehinh')?.closest('.bg-white.rounded-xl');
+        }
+
+        function aiQuickTestCard() {
+            let card = document.getElementById('adminAiQuickTestCard');
+            if (!card) {
+                card = document.createElement('div');
+                card.id = 'adminAiQuickTestCard';
+                card.className = 'bg-white rounded-xl shadow-lg border border-slate-200 mb-8 p-6';
+                card.innerHTML = `
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-700 text-lg"><i class="fas fa-flask text-indigo-600 mr-2"></i>Kiem tra AI nhanh</h3>
+                            <p class="text-sm text-slate-500 mt-1">Nhap mot cau ngan va bam test de xem DS2API / router co tra loi khong. Ban co the mo tab Theo doi AI de xem chi so day du hon.</p>
+                        </div>
+                        <button id="aiQuickRefreshBtn" type="button" onclick="refreshAiQuickTestPanel(true)" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                            <i class="fas fa-rotate-right mr-2"></i>Lam moi
+                        </button>
+                    </div>
+                    <div id="aiQuickTestSummary" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-4"></div>
+                    <div class="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4">
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-slate-700">Cau test</label>
+                            <textarea id="aiQuickTestPrompt" rows="4" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Vi du: Xin chao, ban co hoat dong khong?"></textarea>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="runAiQuickTest('router', this)" class="rounded bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700">
+                                    <i class="fas fa-sitemap mr-1"></i>Thu AI lo trinh
+                                </button>
+                                <button type="button" onclick="runAiQuickTest('ds2api', this)" class="rounded bg-cyan-700 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-800">
+                                    <i class="fas fa-bolt mr-1"></i>Thu DS2API
+                                </button>
+                                <button type="button" onclick="fillAiQuickPrompt('2x^2 + 3x + 1 = 0')"
+                                    class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                                    Lay cau mau
+                                </button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Ket qua</div>
+                            <div id="aiQuickTestStatus" class="mt-2 text-sm text-slate-700">Chua test.</div>
+                            <div id="aiQuickTestMeta" class="mt-2 text-xs text-slate-500"></div>
+                            <div id="aiQuickTestAnswer" class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-800 min-h-[88px] whitespace-pre-wrap"></div>
+                        </div>
+                    </div>
+                `;
             }
+            return card;
+        }
+
+        function fillAiQuickPrompt(value) {
+            const input = document.getElementById('aiQuickTestPrompt');
+            if (input) input.value = value;
+        }
+
+        function renderAiQuickStatusChip(label, ok, detail) {
+            const tone = ok
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                : 'border-amber-200 bg-amber-50 text-amber-900';
+            const mark = ok ? 'fa-circle-check' : 'fa-triangle-exclamation';
+            return `
+                <div class="rounded-xl border ${tone} p-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-xs font-bold uppercase tracking-wide">${label}</div>
+                        <i class="fas ${mark}"></i>
+                    </div>
+                    <div class="mt-2 text-sm font-bold">${ok ? 'San sang' : 'Can kiem tra'}</div>
+                    <div class="mt-1 text-xs leading-5 opacity-90">${detail || ''}</div>
+                </div>
+            `;
+        }
+
+        async function refreshAiQuickTestPanel(force = false) {
+            const summary = document.getElementById('aiQuickTestSummary');
+            const status = document.getElementById('aiQuickTestStatus');
+            const meta = document.getElementById('aiQuickTestMeta');
+            const answer = document.getElementById('aiQuickTestAnswer');
+            const btn = document.getElementById('aiQuickRefreshBtn');
+            if (!summary || !status || !meta || !answer) return;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Dang tai...';
+            }
+            status.textContent = 'Dang lay trang thai AI...';
+            meta.textContent = '';
+            answer.textContent = '';
+
+            try {
+                const res = await fetch('api/ai_stats.php', {
+                    headers: adminHeaders(),
+                    cache: 'no-store'
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Khong tai duoc trang thai AI.');
+
+                const ds2 = data.providers?.ds2api || {};
+                const cf = data.providers?.cloudflare || {};
+                const gemini = data.providers?.gemini || {};
+                const mistral = data.providers?.mistral_ocr || {};
+                const shop = data.providers?.shopaikey || {};
+                const router = data.ai_router || {};
+
+                summary.innerHTML = [
+                    renderAiQuickStatusChip(
+                        'DS2API',
+                        !!ds2.configured,
+                        `URL: ${ds2.base_url || data.config?.ds2api_base_url || '---'}<br>Model: ${ds2.model || data.config?.ds2api_model || '---'}`
+                    ),
+                    renderAiQuickStatusChip(
+                        'Cloudflare',
+                        !!router.cloudflare_worker_configured,
+                        `Worker: ${data.config?.cloudflare_worker_url || '---'}<br>Model: ${data.config?.cloudflare_model || '---'}`
+                    ),
+                    renderAiQuickStatusChip(
+                        'Gemini',
+                        !!gemini.configured,
+                        `${gemini.keys_count || 0} key(s)<br>Model: ${gemini.model || '---'}`
+                    ),
+                    renderAiQuickStatusChip(
+                        'Mistral OCR',
+                        true,
+                        `${mistral.requests_today_internal || 0} luot hom nay<br>Quet PDF cho thi truc tuyen`
+                    ),
+                    renderAiQuickStatusChip(
+                        'ShopAIKey',
+                        !!router.shopaikey_configured,
+                        `Model: ${data.config?.shopaikey_model || '---'}<br>Fallback cuoi`
+                    ),
+                ].join('');
+
+                status.textContent = router.message || 'Trang thai AI da san sang.';
+                meta.textContent = `Tong so san sang: ${router.ready_tiers || 0} | Test DS2API: ${router.ds2api_key_configured ? 'co key' : 'chua co key'}`;
+                answer.textContent = force ? 'Da cap nhat trang thai.' : 'San sang test.';
+            } catch (err) {
+                status.textContent = err.message || 'Khong tai duoc trang thai AI.';
+                meta.textContent = '';
+                answer.textContent = '';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-rotate-right mr-2"></i>Lam moi';
+                }
+            }
+        }
+
+        async function runAiQuickTest(provider, buttonEl) {
+            const promptInput = document.getElementById('aiQuickTestPrompt');
+            const status = document.getElementById('aiQuickTestStatus');
+            const meta = document.getElementById('aiQuickTestMeta');
+            const answer = document.getElementById('aiQuickTestAnswer');
+            const prompt = (promptInput?.value || '').trim() || 'Xin chao, ban co hoat dong khong?';
+            if (!status || !meta || !answer) return;
+
+            if (buttonEl) {
+                buttonEl.disabled = true;
+                buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Dang test...';
+            }
+
+            status.textContent = 'Dang gui yeu cau test...';
+            meta.textContent = '';
+            answer.textContent = '';
+
+            try {
+                const res = await fetch('api/ai_explain.php', {
+                    method: 'POST',
+                    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        mode: 'chat',
+                        subject: 'Toan',
+                        lesson_title: 'Kiem tra AI',
+                        lesson_context: 'Day la cau hoi test ngan de kiem tra AI co tra loi hay khong.',
+                        question: prompt,
+                        history: [],
+                        force_provider: provider === 'ds2api' ? 'ds2api' : ''
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Test AI that bai.');
+
+                status.textContent = `OK · ${data.provider || provider}${data.model ? ` · ${data.model}` : ''}`;
+                meta.textContent = data.router_tier ? `Router tier: ${data.router_tier}` : '';
+                answer.textContent = data.answer || '(Khong co noi dung tra ve)';
+            } catch (err) {
+                status.textContent = 'Loi test AI';
+                meta.textContent = '';
+                answer.textContent = err.message || 'Khong test duoc.';
+            } finally {
+                if (buttonEl) {
+                    buttonEl.disabled = false;
+                    buttonEl.innerHTML = provider === 'ds2api'
+                        ? '<i class="fas fa-bolt mr-1"></i>Thu DS2API'
+                        : '<i class="fas fa-sitemap mr-1"></i>Thu AI lo trinh';
+                }
+            }
+        }
+
+        window.refreshAiQuickTestPanel = refreshAiQuickTestPanel;
+        window.runAiQuickTest = runAiQuickTest;
+        window.fillAiQuickPrompt = fillAiQuickPrompt;
 
             function accountsTable() {
                 return $('tableBody')?.closest('.bg-white.rounded-xl');
@@ -3323,6 +3520,9 @@
                 });
                 if (id === 'aiusage' && typeof window.loadAiStats === 'function') {
                     window.loadAiStats(true);
+                }
+                if (id === 'settings' && typeof window.refreshAiQuickTestPanel === 'function') {
+                    window.refreshAiQuickTestPanel(true);
                 }
                 localStorage.setItem('admin_active_tab', id);
             }
@@ -3368,6 +3568,7 @@
                 move(panel('tranphu'), $('tranPhuDataPanel'));
                 move(panel('aiusage'), $('aiUsageStatsPanel'));
                 move(panel('settings'), settingsCard());
+                move(panel('settings'), aiQuickTestCard());
 
                 nav.querySelectorAll('.admin-tab-button').forEach(btn => {
                     btn.onclick = () => activate(btn.dataset.tab);
@@ -3376,6 +3577,10 @@
                 const saved = localStorage.getItem('admin_active_tab');
                 const fallbackTab = saved === 'lessons' ? 'accounts' : saved;
                 activate(TAB_DEFS.some(([id]) => id === fallbackTab) ? fallbackTab : 'accounts');
+
+                if (typeof window.refreshAiQuickTestPanel === 'function') {
+                    setTimeout(() => window.refreshAiQuickTestPanel(false), 0);
+                }
             };
 
             document.addEventListener('click', event => {
