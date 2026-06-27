@@ -221,11 +221,11 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-sm font-bold ${meta.text}"><i class="fas ${meta.icon} mr-1"></i>Smart Quota · Cloudflare Neurons</h3>
+                            <h3 class="text-sm font-bold ${meta.text}"><i class="fas ${meta.icon} mr-1"></i>Smart Quota · Cloudflare fallback</h3>
                             <span class="inline-flex rounded-full border border-white/70 bg-white/80 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${meta.text}">${escapeHtml(meta.label)}</span>
                             ${sq.enabled ? '' : '<span class="text-[11px] font-semibold text-slate-500">(đang tắt)</span>'}
                         </div>
-                        <p class="mt-2 text-sm leading-6 ${meta.text}">${notice || 'Áp dụng Cloudflare cho lộ trình học + quản lý văn bản. Thi trực tuyến dùng Mistral + Gemini riêng.'}</p>
+                        <p class="mt-2 text-sm leading-6 ${meta.text}">${notice || 'Chỉ theo dõi quota Cloudflare khi hệ thống fallback sau DS2API. Thi trực tuyến dùng Mistral + Gemini riêng.'}</p>
                         <p class="mt-1 text-xs ${meta.text} opacity-80">Khi hết: <strong>${escapeHtml(modeLabel)}</strong> · Reset ${resetsAt}</p>
                     </div>
                     <div class="shrink-0 text-right text-xs ${meta.text}">
@@ -350,6 +350,7 @@
         const generatedAt = data.generated_at || '';
         const cfBucket = providers.cloudflare_workers_ai || {};
         const cfLogTotal = cfBucket.success || cf.requests_today_internal || 0;
+        const cfDisplayRequests = cf.available ? cf.requests_today : cfLogTotal;
         const cfLogLotrinh = providerInModule(moduleBucket(byModule, 'lotrinh'), 'cloudflare_workers_ai');
         const cfLogVanban = providerInModule(moduleBucket(byModule, 'vanban'), 'cloudflare_workers_ai');
 
@@ -413,8 +414,8 @@
                         <div class="text-sm font-bold text-orange-900">Cloudflare Worker</div>
                         ${cf.available ? '<span class="text-xs font-semibold text-emerald-700">GraphQL OK</span>' : '<span class="text-xs font-semibold text-amber-700">GraphQL chưa có</span>'}
                     </div>
-                    <div class="mt-2 text-2xl font-black text-orange-950">${cf.available ? formatNumber(cf.requests_today) : '—'}</div>
-                    <div class="text-xs text-orange-800">HTTP request tới Worker (Dashboard CF)</div>
+                    <div class="mt-2 text-2xl font-black text-orange-950">${cfDisplayRequests != null ? formatNumber(cfDisplayRequests) : '—'}</div>
+                    <div class="text-xs text-orange-800">${cf.available ? 'HTTP request tới Worker (Dashboard CF)' : 'Lượt Cloudflare theo log nội bộ'}</div>
                     <div class="mt-1 text-xs text-orange-700">Khác số lộ trình — cache/Light AI không gọi Worker</div>
                     <div class="mt-2 text-xs text-orange-800">Log nội bộ CF: ${formatNumber(cfLogTotal)} (lộ trình ${formatNumber(cfLogLotrinh)} · văn bản ${formatNumber(cfLogVanban)})</div>
                     <div class="mt-1 text-xs text-orange-700"><code>${escapeHtml(data.config?.cloudflare_model || '')}</code></div>
@@ -435,7 +436,7 @@
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                     <div class="text-sm font-bold text-emerald-900">Gemini fallback</div>
                     <div class="mt-2 text-2xl font-black text-emerald-950">${formatNumber(gemini.requests_today_internal || 0)}</div>
-                    <div class="text-xs text-emerald-800">Lộ trình · khi hết Cloudflare</div>
+                    <div class="text-xs text-emerald-800">Lộ trình · dự phòng sau DS2API/Cloudflare khi cần</div>
                     <div class="mt-2 text-xs text-emerald-700">${formatNumber(gemini.keys_count || 0)} key · <code>${escapeHtml(gemini.model || '')}</code></div>
                 </div>
                 <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">

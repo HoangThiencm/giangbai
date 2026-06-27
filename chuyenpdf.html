@@ -229,6 +229,37 @@
       box-shadow: 0 0 0 4px rgba(37,99,235,.12);
     }
 
+    .provider-suggestion {
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: .84rem;
+      line-height: 1.5;
+    }
+
+    .provider-suggestion.is-ok {
+      border: 1px solid #bbf7d0;
+      background: #f0fdf4;
+      color: #14532d;
+    }
+
+    .provider-suggestion.is-info {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+    }
+
+    .provider-suggestion.is-warn {
+      border: 1px solid #fde68a;
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .provider-suggestion.is-muted {
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #475569;
+    }
+
     .soft-card {
       border: 1px solid var(--line);
       background: rgba(255,255,255,.68);
@@ -777,7 +808,21 @@
               <select class="control" id="providerSelect">
                 <option value="mistral" selected>Mistral OCR</option>
                 <option value="gemini">Gemini Vision</option>
+                <option value="liteparse">LiteParse (local, PDF có chữ)</option>
               </select>
+            </div>
+
+            <div id="providerSuggestion" class="provider-suggestion is-muted hidden" role="status" aria-live="polite">
+              <div class="flex items-start gap-2">
+                <i id="suggestionIcon" class="fa-solid fa-circle-info mt-0.5"></i>
+                <div class="min-w-0 flex-1">
+                  <p id="suggestionTitle" class="m-0 font-extrabold">Gợi ý bộ nhận diện</p>
+                  <p id="suggestionBody" class="mt-1 mb-0 font-semibold">Tải PDF hoặc ảnh để nhận gợi ý.</p>
+                  <button id="applySuggestionBtn" class="ghost-btn mt-2 hidden" type="button">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Dùng gợi ý này
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -791,8 +836,8 @@
             <div>
               <label class="field-label" for="modeSelect">Chế độ trích xuất</label>
               <select class="control" id="modeSelect">
+                <option value="text" selected>Văn bản thường: OCR nguyên văn</option>
                 <option value="latex">Toán học: Markdown + LaTeX $...$</option>
-                <option value="text">Văn bản thường: OCR nguyên văn</option>
                 <option value="official">Văn bản hành chính: giữ dòng gốc</option>
               </select>
             </div>
@@ -1010,10 +1055,103 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       sourceFile: null,
       sourceBase64: "",
       sourceMimeType: "",
+      pdfBytes: null,
+      isPdfSource: false,
+      pdfAnalysis: null,
+      liteParseAnalysis: null,
+      providerSuggestion: null,
       pages: [],
       markdown: "",
       isRunning: false
     };
+
+    const LITEPARSE_VERSION = "2.2.1";
+    const LITEPARSE_PKG = `https://cdn.jsdelivr.net/npm/@llamaindex/liteparse-wasm@${LITEPARSE_VERSION}/pkg`;
+    let liteParseWasmReady = null;
+    let LiteParseClass = null;
+
+    async function ensureLiteParseWasm() {
+      if (!liteParseWasmReady) {
+        liteParseWasmReady = (async () => {
+          const mod = await import(`${LITEPARSE_PKG}/liteparse_wasm.js`);
+          await mod.default(`${LITEPARSE_PKG}/liteparse_wasm_bg.wasm`);
+          LiteParseClass = mod.LiteParse;
+          return mod;
+        })();
+      }
+      return liteParseWasmReady;
+    }
+
+    async function liteParseAnalyzeComplexity(pdfBytes) {
+      await ensureLiteParseWasm();
+      const parser = new LiteParseClass({ ocrEnabled: false, quiet: true });
+      try {
+        const pages = await parser.isComplex(pdfBytes);
+        const list = Array.isArray(pages) ? pages : [];
+        const ocrPages = list.filter((page) => page?.needsOcr);
+        return {
+          pages: list,
+          needsOcr: ocrPages.length > 0,
+          ocrPageCount: ocrPages.length,
+          totalPages: list.length,
+          reasons: [...new Set(ocrPages.flatMap((page) => page?.reasons || []))]
+        };
+      } finally {
+        parser.free();
+      }
+    }
+
+    async function liteParseParseMarkdown(pdfBytes, options = {}) {
+      await ensureLiteParseWasm();
+      const parser = new LiteParseClass({
+        ocrEnabled: false,
+        outputFormat: "markdown",
+        imageMode: "placeholder",
+        extractLinks: true,
+        quiet: true,
+        ...options
+      });
+      try {
+        return await parser.parse(pdfBytes);
+      } finally {
+        parser.free();
+      }
+    }
+
+    function liteParsePagePlainText(page) {
+      if (!page) return "";
+      if (typeof page.text === "string" && page.text.trim()) return page.text.trim();
+      if (typeof page.markdown === "string" && page.markdown.trim()) return page.markdown.trim();
+      const items = page.items || page.lines || [];
+      if (!Array.isArray(items) || !items.length) return "";
+      return items
+        .map((item) => (typeof item === "string" ? item : (item?.text || "")).trim())
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+    }
+
+    function liteParseSplitResultPerPage(result, expectedPages) {
+      const pages = Array.isArray(result?.pages) ? result.pages : [];
+      const out = [];
+      const fullText = String(result?.text || "").trim();
+
+      if (pages.length) {
+        for (let i = 0; i < expectedPages; i++) {
+          out.push(liteParsePagePlainText(pages[i]));
+        }
+        if (out.some((text) => text)) return out;
+      }
+
+      if (fullText) {
+        const chunks = fullText.split(/\f/g).map((part) => part.trim()).filter(Boolean);
+        if (chunks.length === expectedPages) return chunks;
+        if (chunks.length === 1 && expectedPages === 1) return chunks;
+        return [fullText, ...Array(Math.max(0, expectedPages - 1)).fill("")];
+      }
+
+      return Array(expectedPages).fill("");
+    }
 
     const $ = (id) => document.getElementById(id);
 
@@ -1031,6 +1169,11 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       thumbGrid: $("thumbGrid"),
       thumbHint: $("thumbHint"),
       providerSelect: $("providerSelect"),
+      providerSuggestion: $("providerSuggestion"),
+      suggestionIcon: $("suggestionIcon"),
+      suggestionTitle: $("suggestionTitle"),
+      suggestionBody: $("suggestionBody"),
+      applySuggestionBtn: $("applySuggestionBtn"),
       modelSelect: $("modelSelect"),
       modeSelect: $("modeSelect"),
       scaleSelect: $("scaleSelect"),
@@ -1127,8 +1270,14 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       state.sourceFile = null;
       state.sourceBase64 = "";
       state.sourceMimeType = "";
+      state.pdfBytes = null;
+      state.isPdfSource = false;
+      state.pdfAnalysis = null;
+      state.liteParseAnalysis = null;
+      state.providerSuggestion = null;
       state.pages = [];
       state.markdown = "";
+      renderProviderSuggestion(null);
       els.fileInput.value = "";
       els.fileName.textContent = "";
       els.fileName.classList.add("hidden");
@@ -1150,11 +1299,13 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       els.convertBtn.disabled = isRunning;
       els.fileInput.disabled = isRunning;
       els.providerSelect.disabled = isRunning;
-      els.modelSelect.disabled = isRunning || els.providerSelect.value === "mistral";
+      const provider = els.providerSelect.value;
+      const isCloudOcr = provider === "mistral" || provider === "gemini";
+      els.modelSelect.disabled = isRunning || provider !== "gemini";
       els.modeSelect.disabled = isRunning;
       els.scaleSelect.disabled = isRunning;
       els.preserveImagesSelect.disabled = isRunning;
-      els.ocrTilingSelect.disabled = isRunning || els.providerSelect.value === "mistral";
+      els.ocrTilingSelect.disabled = isRunning || provider !== "gemini";
       els.convertBtn.innerHTML = isRunning
         ? `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...`
         : `<i class="fa-solid fa-wand-magic-sparkles"></i> Bắt đầu chuyển đổi tất cả trang`;
@@ -1483,8 +1634,8 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       state.pages = pages;
     }
 
-    async function readPdfFile(file) {
-      const data = await file.arrayBuffer();
+    async function readPdfFile(file, arrayBuffer = null) {
+      const data = arrayBuffer || await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data }).promise;
       const scale = Number(els.scaleSelect.value || 2.2);
       const pages = [];
@@ -1535,9 +1686,18 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
 
       try {
         if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-          await readPdfFile(file);
+          const pdfBuffer = await file.arrayBuffer();
+          state.pdfBytes = new Uint8Array(pdfBuffer);
+          state.isPdfSource = true;
+          await readPdfFile(file, pdfBuffer);
+          await inspectPdfSource(pdfBuffer);
         } else if (file.type.startsWith("image/")) {
+          state.pdfBytes = null;
+          state.isPdfSource = false;
+          state.pdfAnalysis = null;
+          state.liteParseAnalysis = null;
           await readImageFile(file);
+          await refreshProviderSuggestion();
           updateProgress(0, 1, "Đã sẵn sàng xử lý ảnh.");
         } else {
           throw new Error("Chỉ hỗ trợ PDF, PNG, JPG, JPEG hoặc WEBP.");
@@ -1583,7 +1743,12 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       els.fileSummary.classList.remove("hidden");
 
       try {
+        state.pdfBytes = null;
+        state.isPdfSource = false;
+        state.pdfAnalysis = null;
+        state.liteParseAnalysis = null;
         await readImageFiles(imageFiles);
+        await refreshProviderSuggestion();
         renderThumbs();
         updateProgress(0, state.pages.length, `Đã nạp ${state.pages.length} ảnh. Sẵn sàng chuyển đổi.`);
       } catch (error) {
@@ -1630,7 +1795,12 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
         els.markdownText.value = "";
         els.fileName.textContent = `${state.pages.length} ảnh đã dán`;
         els.fileName.classList.remove("hidden");
+        state.pdfBytes = null;
+        state.isPdfSource = false;
+        state.pdfAnalysis = null;
+        state.liteParseAnalysis = null;
         renderThumbs();
+        await refreshProviderSuggestion();
         await renderPreview();
         updateProgress(0, state.pages.length, `Đã có ${state.pages.length} ảnh. Sẵn sàng chuyển đổi.`);
       } catch (error) {
@@ -1641,6 +1811,334 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
 
     function wait(ms) {
       return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function analyzePdfWithPdfJs(arrayBuffer) {
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let totalChars = 0;
+      let emptyPages = 0;
+      let sparsePages = 0;
+      const pageCount = pdf.numPages;
+
+      for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent().catch(() => ({ items: [] }));
+        const text = (content.items || []).map((item) => item.str || "").join("").replace(/\s+/g, "");
+        const len = text.length;
+        totalChars += len;
+        if (len < 8) emptyPages += 1;
+        else if (len < 50) sparsePages += 1;
+      }
+
+      const avgChars = pageCount ? totalChars / pageCount : 0;
+      const emptyRatio = emptyPages / pageCount;
+      const sparseRatio = sparsePages / pageCount;
+      let kind = "digital";
+
+      // Chỉ coi là scan khi hầu hết trang không có lớp chữ (không nhầm với trang có chữ ký/ảnh).
+      if (emptyRatio >= 0.8 || (avgChars < 15 && emptyRatio >= 0.45)) {
+        kind = "scan";
+      } else if (
+        (emptyRatio > 0.12 || sparseRatio > 0.35)
+        && avgChars < 120
+      ) {
+        kind = "mixed";
+      }
+
+      return {
+        kind,
+        pageCount,
+        totalChars,
+        emptyPages,
+        sparsePages,
+        avgChars: Math.round(avgChars),
+        emptyRatio,
+        sparseRatio
+      };
+    }
+
+    function isHardScanPdf(pdfAnalysis, liteParseAnalysis) {
+      if (!pdfAnalysis) return false;
+      const pages = Math.max(1, pdfAnalysis.pageCount || 1);
+      const avg = pdfAnalysis.avgChars || 0;
+      const emptyRatio = pdfAnalysis.emptyPages / pages;
+
+      if (emptyRatio >= 0.75 && avg < 30) return true;
+      if (avg < 12 && emptyRatio >= 0.5) return true;
+
+      if (liteParseAnalysis?.needsOcr) {
+        const ocrRatio = (liteParseAnalysis.ocrPageCount || 0) / Math.max(1, liteParseAnalysis.totalPages || pages);
+        if (ocrRatio >= 0.75 && avg < 35) return true;
+      }
+
+      return false;
+    }
+
+    function canUseLiteParse(pdfAnalysis, liteParseAnalysis) {
+      if (!pdfAnalysis) return true;
+      if (isHardScanPdf(pdfAnalysis, liteParseAnalysis)) return false;
+      if (pdfAnalysis.kind === "digital") return true;
+      if ((pdfAnalysis.avgChars || 0) >= 40) return true;
+      if ((pdfAnalysis.totalChars || 0) >= (pdfAnalysis.pageCount || 1) * 80) return true;
+      return pdfAnalysis.kind === "mixed";
+    }
+
+    function hasSignatureOrImageHints(pdfAnalysis, liteParseAnalysis) {
+      const reasons = liteParseAnalysis?.reasons || [];
+      const imageFlags = ["embedded-images", "sparse-text", "vector-text"];
+      const hasImageReason = reasons.some((reason) => imageFlags.includes(reason));
+      return hasImageReason || pdfAnalysis?.kind === "mixed" || (pdfAnalysis?.sparsePages || 0) > 0;
+    }
+
+    function providerDisplayName(provider) {
+      if (provider === "liteparse") return "LiteParse (local)";
+      if (provider === "mistral") return "Mistral OCR";
+      return "Gemini Vision";
+    }
+
+    function modeDisplayName(mode) {
+      if (mode === "latex") return "Toán + LaTeX";
+      if (mode === "official") return "Văn bản hành chính";
+      return "Văn bản thường";
+    }
+
+    function describePdfFile(pdfAnalysis, liteParseAnalysis) {
+      if (!pdfAnalysis) return "Đang phân tích PDF...";
+      const pages = pdfAnalysis.pageCount || "?";
+      const kindMap = {
+        digital: "có lớp chữ (PDF số)",
+        scan: "bản scan / ảnh",
+        mixed: "PDF số có ảnh/chữ ký hoặc vài trang ít chữ"
+      };
+      const kindText = kindMap[pdfAnalysis.kind] || "chưa rõ";
+      const density = pdfAnalysis.avgChars ? ` ~${pdfAnalysis.avgChars} ký tự/trang` : "";
+      let text = `PDF ${pages} trang · ${kindText}${density}`;
+      if (liteParseAnalysis?.needsOcr && !canUseLiteParse(pdfAnalysis, liteParseAnalysis)) {
+        text += ` · ${liteParseAnalysis.ocrPageCount}/${liteParseAnalysis.totalPages || pages} trang cần OCR`;
+      } else if (hasSignatureOrImageHints(pdfAnalysis, liteParseAnalysis)) {
+        text += " · có thể có chữ ký/ảnh nhúng";
+      }
+      return text;
+    }
+
+    function buildProviderSuggestion({
+      isPdf = false,
+      pdfAnalysis = null,
+      liteParseAnalysis = null,
+      mode = "latex",
+      geminiModel = "gemini-2.5-flash"
+    } = {}) {
+      if (!isPdf) {
+        return {
+          provider: "mistral",
+          level: "warn",
+          title: "Gợi ý: Mistral OCR",
+          message: "Ảnh đã tải. LiteParse chỉ dùng cho PDF có lớp chữ — với ảnh nên dùng Mistral OCR hoặc Gemini Vision.",
+          autoApply: true
+        };
+      }
+
+      const fileLine = describePdfFile(pdfAnalysis, liteParseAnalysis);
+      const hardScan = isHardScanPdf(pdfAnalysis, liteParseAnalysis);
+      const liteParseOk = canUseLiteParse(pdfAnalysis, liteParseAnalysis);
+      const signatureHints = hasSignatureOrImageHints(pdfAnalysis, liteParseAnalysis);
+
+      if (mode === "latex") {
+        const geminiNote = hardScan
+          ? "File có vẻ là bản scan — Gemini Vision đọc ảnh từng trang và tạo công thức $...$."
+          : "Chế độ Toán + LaTeX cần Gemini Vision; LiteParse không tạo LaTeX.";
+        return {
+          provider: "gemini",
+          level: hardScan ? "warn" : "info",
+          title: `Gợi ý: Gemini Vision · ${geminiModel}`,
+          message: `${fileLine}. ${geminiNote}`,
+          autoApply: true
+        };
+      }
+
+      if (liteParseOk) {
+        const signatureNote = signatureHints
+          ? " Có chữ ký/ảnh nhúng — LiteParse vẫn trích phần chữ; chữ ký scan có thể cần Mistral/Gemini."
+          : "";
+        const officialNote = mode === "official"
+          ? " Văn bản hành chính phức tạp có thể thử Gemini nếu cần giữ dòng/căn lề hơn."
+          : "";
+        return {
+          provider: "liteparse",
+          level: signatureHints ? "info" : "ok",
+          title: "Gợi ý: LiteParse (local)",
+          message: `${fileLine}. Có thể dùng LiteParse — nhanh, local, không tốn API.${signatureNote}${officialNote} Bạn vẫn đổi sang Mistral/Gemini nếu muốn.`,
+          autoApply: true
+        };
+      }
+
+      if (hardScan) {
+        return {
+          provider: "mistral",
+          level: "warn",
+          title: "Gợi ý: Mistral OCR",
+          message: `${fileLine}. PDF scan thật — nên Mistral OCR hoặc Gemini Vision. Vẫn có thể thử LiteParse nhưng có thể trống.`,
+          autoApply: true
+        };
+      }
+
+      return {
+        provider: "mistral",
+        level: "info",
+        title: "Gợi ý: Mistral OCR",
+        message: `${fileLine}. Ưu tiên Mistral OCR. Nếu copy chữ từ PDF được tốt, vẫn chọn LiteParse thủ công.`,
+        autoApply: false
+      };
+    }
+
+    function renderProviderSuggestion(suggestion) {
+      state.providerSuggestion = suggestion || null;
+      if (!suggestion) {
+        els.providerSuggestion.classList.add("hidden");
+        els.applySuggestionBtn.classList.add("hidden");
+        return;
+      }
+
+      const styles = {
+        ok: ["is-ok", "fa-circle-check", "text-green-700"],
+        info: ["is-info", "fa-circle-info", "text-blue-700"],
+        warn: ["is-warn", "fa-triangle-exclamation", "text-amber-700"],
+        muted: ["is-muted", "fa-circle-info", "text-slate-500"]
+      }[suggestion.level] || ["is-muted", "fa-circle-info", "text-slate-500"];
+
+      els.providerSuggestion.className = `provider-suggestion ${styles[0]}`;
+      els.suggestionIcon.className = `fa-solid ${styles[1]} mt-0.5 ${styles[2]}`;
+      els.suggestionTitle.textContent = suggestion.title;
+      els.suggestionBody.textContent = suggestion.message;
+      els.providerSuggestion.classList.remove("hidden");
+
+      const alreadySelected = els.providerSelect.value === suggestion.provider;
+      els.applySuggestionBtn.classList.toggle("hidden", alreadySelected);
+      els.applySuggestionBtn.innerHTML = alreadySelected
+        ? `<i class="fa-solid fa-check"></i> Đang dùng gợi ý`
+        : `<i class="fa-solid fa-wand-magic-sparkles"></i> Dùng ${suggestion.title.replace(/^Gợi ý:\s*/i, "")}`;
+    }
+
+    function applyProviderSuggestion(force = false) {
+      const suggestion = state.providerSuggestion;
+      if (!suggestion) return;
+      if (!force && els.providerSelect.value === suggestion.provider) return;
+      els.providerSelect.value = suggestion.provider;
+      syncProviderControls();
+      renderProviderSuggestion(suggestion);
+      toast(`Đã chọn ${suggestion.provider === "liteparse" ? "LiteParse" : suggestion.provider === "mistral" ? "Mistral OCR" : "Gemini Vision"}.`);
+    }
+
+    async function refreshProviderSuggestion() {
+      const mode = els.modeSelect.value;
+      const geminiModel = els.modelSelect.value;
+      if (!state.isPdfSource || !state.pdfBytes) {
+        renderProviderSuggestion(buildProviderSuggestion({ isPdf: false, mode, geminiModel }));
+        if (!state.pages.length) return;
+        applyProviderSuggestion(true);
+        return;
+      }
+
+      const suggestion = buildProviderSuggestion({
+        isPdf: true,
+        pdfAnalysis: state.pdfAnalysis,
+        liteParseAnalysis: state.liteParseAnalysis || null,
+        mode,
+        geminiModel
+      });
+      renderProviderSuggestion(suggestion);
+      if (suggestion.autoApply) applyProviderSuggestion(true);
+    }
+
+    async function inspectPdfSource(arrayBuffer) {
+      renderProviderSuggestion({
+        provider: "mistral",
+        level: "muted",
+        title: "Đang phân tích PDF...",
+        message: "Đang kiểm tra PDF có lớp chữ hay bản scan để gợi ý bộ nhận diện phù hợp.",
+        autoApply: false
+      });
+
+      state.pdfAnalysis = await analyzePdfWithPdfJs(arrayBuffer);
+      state.liteParseAnalysis = null;
+      await refreshProviderSuggestion();
+
+      liteParseAnalyzeComplexity(state.pdfBytes)
+        .then((analysis) => {
+          if (!state.isPdfSource || !state.pdfBytes) return;
+          state.liteParseAnalysis = analysis;
+          return refreshProviderSuggestion();
+        })
+        .catch((error) => {
+          console.warn("LiteParse isComplex:", error);
+        });
+    }
+
+    async function runLiteParse(mode) {
+      if (!state.isPdfSource || !state.pdfBytes?.length) {
+        throw new Error("LiteParse chỉ dùng cho file PDF. Với ảnh, hãy chọn Mistral OCR hoặc Gemini Vision.");
+      }
+
+      if (isHardScanPdf(state.pdfAnalysis, state.liteParseAnalysis)) {
+        throw new Error(
+          "PDF này gần như không có lớp chữ (bản scan thật). LiteParse trên trình duyệt chưa bật OCR — hãy chọn Mistral OCR hoặc Gemini Vision."
+        );
+      }
+
+      const total = state.pages.length;
+      updateFloatingProgress(0, total, "Đang tải LiteParse WASM...", {
+        title: "LiteParse",
+        stage: "Khởi động",
+        currentPage: "-"
+      });
+
+      await ensureLiteParseWasm();
+      updateFloatingProgress(0, total, "Đang phân tích PDF bằng LiteParse...", {
+        title: "LiteParse",
+        stage: "Parse PDF",
+        currentPage: "-"
+      });
+
+      const result = await liteParseParseMarkdown(state.pdfBytes);
+      const pageTexts = liteParseSplitResultPerPage(result, total);
+      const merged = [];
+
+      for (let i = 0; i < total; i++) {
+        const page = state.pages[i];
+        let markdown = pageTexts[i] || "";
+        if (mode === "official") {
+          markdown = plainTextToOfficialHtml(markdown);
+        }
+        page.status = "done";
+        page.markdown = markdown;
+        merged.push(markdown);
+        updateProgress(i + 1, total, `LiteParse xong trang ${i + 1}/${total}.`);
+        updateFloatingProgress(i + 1, total, `LiteParse xong trang ${i + 1}/${total}.`, {
+          title: "LiteParse",
+          stage: "Ghép kết quả",
+          currentPage: i + 1
+        });
+        await wait(20);
+      }
+
+      const nonEmpty = merged.filter((text) => String(text || "").trim()).length;
+      if (!nonEmpty) {
+        throw new Error("LiteParse không trích được nội dung. PDF có thể là bản scan — hãy chuyển sang Mistral OCR hoặc Gemini Vision.");
+      }
+
+      state.markdown = merged
+        .map((text, index) => `${text}${pageBreakMarkdown(index + 1, total)}`)
+        .join("\n\n")
+        .trim();
+      els.markdownText.value = state.markdown;
+      await renderPreview();
+      updateFloatingProgress(total, total, "LiteParse hoàn tất.", {
+        title: "LiteParse",
+        stage: "Xong",
+        currentPage: total,
+        autoHide: true
+      });
+      toast("LiteParse đã xử lý xong.");
     }
 
     function fileToBase64(file) {
@@ -2680,9 +3178,28 @@ LƯU Ý CHỐNG BỎ SÓT:
       return pageIndex < totalPages ? "\n\n<div class=\"page-break\"></div>\n\n" : "";
     }
 
+    function explainLiteParseModeConflict(mode) {
+      if (mode !== "latex") return "";
+      return "LiteParse chỉ trích chữ thường, không bọc công thức $...$. "
+        + "Nếu file không có toán: đổi Chế độ trích xuất sang \"Văn bản thường\" rồi bấm Chuyển đổi lại. "
+        + "Nếu có công thức toán: chọn Gemini Vision.";
+    }
+
     async function convertAllPages() {
       if (!state.pages.length) {
         showModal("Thiếu dữ liệu", "Vui lòng chọn PDF hoặc ảnh trước khi chuyển đổi.", "error");
+        return;
+      }
+
+      const mode = els.modeSelect.value;
+      const provider = els.providerSelect.value;
+      const modeConflict = provider === "liteparse" && mode === "latex";
+      if (modeConflict) {
+        showModal(
+          "Chế độ Toán + LaTeX không dùng được với LiteParse",
+          explainLiteParseModeConflict(mode),
+          "info"
+        );
         return;
       }
 
@@ -2691,8 +3208,6 @@ LƯU Ý CHỐNG BỎ SÓT:
       els.markdownText.value = "";
       await renderPreview();
 
-      const mode = els.modeSelect.value;
-      const provider = els.providerSelect.value;
       const model = els.modelSelect.value;
       const prompt = prompts[mode];
       const total = state.pages.length;
@@ -2703,6 +3218,18 @@ LƯU Ý CHỐNG BỎ SÓT:
         } catch (error) {
           console.error(error);
           showModal("Lỗi Mistral OCR", error.message || "Mistral OCR bị lỗi.", "error");
+        } finally {
+          setRunning(false);
+        }
+        return;
+      }
+
+      if (provider === "liteparse") {
+        try {
+          await runLiteParse(mode);
+        } catch (error) {
+          console.error(error);
+          showModal("Lỗi LiteParse", error.message || "LiteParse bị lỗi.", "error");
         } finally {
           setRunning(false);
         }
@@ -3235,11 +3762,30 @@ ${htmlBody}
     });
 
     function syncProviderControls() {
-      const isMistral = els.providerSelect.value === "mistral";
-      els.modelSelect.disabled = isMistral || state.isRunning;
-      els.ocrTilingSelect.disabled = isMistral || state.isRunning;
-      if (isMistral) {
-        els.progressText.textContent = "Mistral OCR đang dùng ảnh từng trang đã render, có thể xử lý nhiều ảnh như nhiều trang.";
+      const provider = els.providerSelect.value;
+      const mode = els.modeSelect.value;
+      const isGemini = provider === "gemini";
+      els.modelSelect.disabled = !isGemini || state.isRunning;
+      els.ocrTilingSelect.disabled = !isGemini || state.isRunning;
+
+      if (provider === "mistral") {
+        els.progressText.textContent = "Mistral OCR dùng ảnh từng trang đã render, phù hợp scan và ảnh.";
+      } else if (provider === "liteparse") {
+        els.progressText.textContent = "LiteParse đọc lớp chữ PDF trực tiếp trong trình duyệt — nhanh, không tốn API.";
+      } else {
+        els.progressText.textContent = "Gemini Vision OCR từng trang — phù hợp toán LaTeX và văn bản khó.";
+      }
+
+      if (provider === "liteparse" && mode === "latex") {
+        renderProviderSuggestion({
+          provider: "liteparse",
+          level: "warn",
+          title: "LiteParse không dùng với chế độ Toán",
+          message: explainLiteParseModeConflict(mode),
+          autoApply: false
+        });
+      } else if (state.providerSuggestion) {
+        els.applySuggestionBtn.classList.toggle("hidden", provider === state.providerSuggestion.provider);
       }
     }
 
@@ -3249,6 +3795,9 @@ ${htmlBody}
     $("copyBtn").addEventListener("click", copyMarkdown);
     els.preserveImagesSelect.addEventListener("change", renderPreview);
     els.providerSelect.addEventListener("change", syncProviderControls);
+    els.modeSelect.addEventListener("change", () => { refreshProviderSuggestion(); });
+    els.modelSelect.addEventListener("change", () => { refreshProviderSuggestion(); });
+    els.applySuggestionBtn.addEventListener("click", () => applyProviderSuggestion(true));
     els.toggleFloatingProgressBtn.addEventListener("click", () => {
       const collapsed = els.floatingProgress.classList.toggle("is-collapsed");
       els.toggleFloatingProgressBtn.innerHTML = collapsed
@@ -3267,8 +3816,8 @@ ${htmlBody}
     $("downloadBtn").addEventListener("click", downloadWord);
     $("modalCloseBtn").addEventListener("click", () => els.messageModal.classList.remove("is-open"));
     $("helpBtn").addEventListener("click", () => showModal(
-      "Lưu ý về xuất Word",
-      "File .docx được tạo trực tiếp trên trình duyệt. Khi xuất Word, app chuyển LaTeX sang MathML trong gói DOCX để Word nhận như công thức, không chuyển công thức thành ảnh.",
+      "Lưu ý sử dụng",
+      "Sau khi tải PDF, app gợi ý bộ nhận diện: LiteParse cho PDF có lớp chữ (nhanh, local), Mistral cho scan/ảnh, Gemini cho toán LaTeX và văn bản hành chính. Bạn vẫn có thể đổi tay trước khi bấm Chuyển đổi. File .docx xuất trên trình duyệt; LaTeX được chuyển sang MathML trong DOCX.",
       "info"
     ));
 

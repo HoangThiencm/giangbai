@@ -547,20 +547,45 @@ if (is_array($internalCf)) {
     $cloudflareStats['errors_today_internal'] = (int)($internalCf['error'] ?? 0);
 }
 $today['providers'] = ai_stats_enrich_today_providers($today, $cloudflareStats);
+$todayProviderModes = is_array($store['by_day'][$todayKey]['by_provider_mode'] ?? null)
+    ? $store['by_day'][$todayKey]['by_provider_mode']
+    : [];
+foreach (['ds2api', 'gemini', 'shopaikey', 'cloudflare_workers_ai'] as $providerId) {
+    $modeTotal = (int)array_sum(is_array($todayProviderModes[$providerId] ?? null) ? $todayProviderModes[$providerId] : []);
+    if ($modeTotal <= 0) {
+        continue;
+    }
+    if (!isset($today['providers'][$providerId]) || !is_array($today['providers'][$providerId])) {
+        $today['providers'][$providerId] = ['calls' => 0, 'success' => 0, 'error' => 0];
+    }
+    $today['providers'][$providerId]['success'] = max((int)($today['providers'][$providerId]['success'] ?? 0), $modeTotal);
+    $today['providers'][$providerId]['calls'] = max((int)($today['providers'][$providerId]['calls'] ?? 0), $modeTotal);
+}
 $internalToday['summary'] = $today;
 
 $geminiInternal = $today['providers']['gemini'] ?? null;
 $geminiBrowserInternal = $today['providers']['gemini_browser'] ?? null;
 $mistralInternal = $today['providers']['mistral_ocr'] ?? null;
+$shopaikeyStats['requests_today_internal'] = max(
+    (int)($shopaikeyStats['requests_today_internal'] ?? 0),
+    (int)array_sum(is_array($todayProviderModes['shopaikey'] ?? null) ? $todayProviderModes['shopaikey'] : [])
+);
+$cloudflareStats['requests_today_internal'] = max(
+    (int)($cloudflareStats['requests_today_internal'] ?? 0),
+    (int)array_sum(is_array($todayProviderModes['cloudflare_workers_ai'] ?? null) ? $todayProviderModes['cloudflare_workers_ai'] : [])
+);
 
 $geminiStats = [
     'configured' => !empty($runtime['gemini_enabled']) && !empty($runtime['gemini_keys']),
     'keys_count' => count($runtime['gemini_keys'] ?? []),
     'model' => $runtime['gemini_model'],
-    'requests_today_internal' => is_array($geminiInternal) ? (int)($geminiInternal['success'] ?? 0) : 0,
+    'requests_today_internal' => max(
+        is_array($geminiInternal) ? (int)($geminiInternal['success'] ?? 0) : 0,
+        (int)array_sum(is_array($todayProviderModes['gemini'] ?? null) ? $todayProviderModes['gemini'] : [])
+    ),
     'fallback_success_today' => is_array($geminiInternal) ? (int)($geminiInternal['fallback_success'] ?? 0) : 0,
     'tokens_today_internal' => is_array($geminiInternal) ? (int)($geminiInternal['total_tokens'] ?? 0) : 0,
-    'message' => 'Fallback server khi hết Cloudflare (lộ trình). Khác với Gemini trình duyệt của Thi trực tuyến.',
+    'message' => 'Fallback server cho lộ trình khi DS2API/Cloudflare không dùng được. Khác với Gemini trình duyệt của Thi trực tuyến.',
     'dashboard_url' => 'https://aistudio.google.com/',
 ];
 
@@ -580,15 +605,20 @@ $mistralStats = [
 ];
 
 $ds2apiInternal = $today['providers']['ds2api'] ?? null;
-$ds2apiProviderMode = is_array($store['by_day'][$todayKey]['by_provider_mode']['ds2api'] ?? null)
-    ? $store['by_day'][$todayKey]['by_provider_mode']['ds2api']
+$ds2apiProviderMode = is_array($todayProviderModes['ds2api'] ?? null)
+    ? $todayProviderModes['ds2api']
     : [];
+$ds2apiTodayByMode = (int)array_sum($ds2apiProviderMode);
+$ds2apiActive = !empty($runtime['ds2api_enabled']) || !empty($runtime['ai_test_ds2api_only']);
 $ds2apiStats = [
-    'configured' => !empty($runtime['ds2api_enabled']) && trim((string)($runtime['ds2api_base_url'] ?? '')) !== '',
-    'enabled' => !empty($runtime['ds2api_enabled']),
+    'configured' => $ds2apiActive && trim((string)($runtime['ds2api_base_url'] ?? '')) !== '',
+    'enabled' => $ds2apiActive,
     'model' => $runtime['ds2api_model'] ?? 'deepseek-v4-flash',
     'base_url' => $runtime['ds2api_base_url'] ?? '',
-    'requests_today_internal' => is_array($ds2apiInternal) ? (int)($ds2apiInternal['success'] ?? 0) : 0,
+    'requests_today_internal' => max(
+        is_array($ds2apiInternal) ? (int)($ds2apiInternal['success'] ?? 0) : 0,
+        $ds2apiTodayByMode
+    ),
     'errors_today_internal' => is_array($ds2apiInternal) ? (int)($ds2apiInternal['error'] ?? 0) : 0,
     'tokens_today_internal' => is_array($ds2apiInternal) ? (int)($ds2apiInternal['total_tokens'] ?? 0) : 0,
     'explain_today_internal' => (int)($ds2apiProviderMode['explain'] ?? 0),
