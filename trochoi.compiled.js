@@ -140,17 +140,22 @@ YÊU CẦU:
 Level 1-3: dễ, 4-7: vừa, 8-10: khó`;
         break;
       case 'matching':
-        schema = `SCHEMA:
+        schema = `SCHEMA (game ghép cặp — mỗi left khớp DUY NHẤT 1 right theo thứ tự id):
 {
+  "topicTitle": "Tên chủ đề ngắn",
+  "codewordHint": "Gợi ý từ khóa khi ghép xong (vd: Tổng các chữ cái đầu)",
   "pairs": [
     {
       "id": 1,
-      "left": "Khái niệm/công thức",
-      "right": "Định nghĩa/tên",
-      "explanation": "Giải thích"
+      "left": "Khái niệm hoặc công thức (ngắn)",
+      "right": "Định nghĩa hoặc tên tương ứng",
+      "chip": "A",
+      "explanation": "Giải thích ngắn khi ghép đúng"
     }
   ]
-}`;
+}
+- Tạo đúng ${numQuestions} cặp, left/right không trùng nhau giữa các cặp
+- chip: 1 chữ cái in hoa (A,B,C...) dùng ghép từ khóa bí mật theo thứ tự id`;
         break;
       case 'treasure':
         schema = `SCHEMA:
@@ -260,7 +265,7 @@ value: 10/20/30, isSpecial: true cho câu đặc biệt`;
     };
 
     // Simple validation
-    if (!content || !content.questions && !content.pairs && !content.locks) {
+    if (!content || (!content.questions && !content.pairs && !content.locks && !content.levels)) {
       throw new Error('Invalid content structure');
     }
     return content;
@@ -424,8 +429,7 @@ const App = () => {
     color: 'from-green-400 to-emerald-500',
     purpose: 'Củng cố',
     description: 'Ghép khái niệm với định nghĩa, công thức với tên',
-    suitable: 'Củng cố khái niệm',
-    disabled: true
+    suitable: 'Củng cố khái niệm'
   }, {
     id: 'treasure',
     name: 'Truy Tìm Kho Báu',
@@ -503,7 +507,7 @@ const App = () => {
       className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
     }, games.map(game => /*#__PURE__*/React.createElement("div", {
       key: game.id,
-      onClick: () => !game.disabled && (window.location.href = `game-${game.id}.html`),
+      onClick: () => !game.disabled && setSelectedGame(game),
       className: `game-card bg-white rounded-2xl shadow-lg p-6 border-2 border-transparent relative ${game.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-purple-400'}`
     }, game.disabled && /*#__PURE__*/React.createElement("div", {
       className: "absolute top-3 right-3 px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full"
@@ -685,7 +689,28 @@ const App = () => {
       text: choice
     })))))), generatedContent.questions && generatedContent.questions.length > 3 && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-gray-500 text-sm"
-    }, "... và ", generatedContent.questions.length - 3, " câu nữa")), /*#__PURE__*/React.createElement("div", {
+    }, "... và ", generatedContent.questions.length - 3, " câu nữa"), generatedContent.pairs && generatedContent.pairs.slice(0, 4).map((pair, idx) => /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      className: "bg-green-50 p-4 rounded-xl border border-green-200"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-bold text-gray-700 mb-2"
+    }, "Cặp ", idx + 1, ":"), /*#__PURE__*/React.createElement("div", {
+      className: "grid md:grid-cols-2 gap-3 text-sm"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-white p-3 rounded-lg"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-green-700 font-semibold"
+    }, "Trái: "), /*#__PURE__*/React.createElement(MathText, {
+      text: pair.left
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "bg-white p-3 rounded-lg"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-emerald-700 font-semibold"
+    }, "Phải: "), /*#__PURE__*/React.createElement(MathText, {
+      text: pair.right
+    }))))), generatedContent.pairs && generatedContent.pairs.length > 4 && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-gray-500 text-sm"
+    }, "... và ", generatedContent.pairs.length - 4, " cặp nữa")), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-4"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setStep('SETUP'),

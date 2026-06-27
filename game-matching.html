@@ -3,81 +3,89 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Game 5: Giải Mã Ghép Đúng</title>
+    <title>Game: Giải Mã Ghép Đúng</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css">
+    <script src="vendor/katex.min.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .katex {
-            font-size: 1.1em;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .matched {
-            animation: matchPulse 0.5s ease-out;
-            background: #10b981 !important;
-            color: white !important;
+        .shake { animation: shake 0.45s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
         }
-
-        @keyframes matchPulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-            }
+        .decode-pop { animation: decodePop 0.55s ease-out; }
+        @keyframes decodePop {
+            0% { transform: scale(0.92); filter: brightness(1.2); }
+            60% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        .cipher-grid {
+            background-image:
+                linear-gradient(rgba(16, 185, 129, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 185, 129, 0.06) 1px, transparent 1px);
+            background-size: 18px 18px;
+        }
+        .chip-glow {
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
         }
     </style>
 </head>
 
-<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen">
-    <div id="root"></div>
+<body class="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">
+            Đang tải trò chơi...
+        </div>
+    </div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const shuffleArray = (arr) => {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        };
 
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                let processed = String(text)
+                    .replace(/`([^`]+)`/g, '$$$1$$')
+                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
                 if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
-                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
-                ref.current.innerHTML = "";
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
+                    } else if (part.startsWith('$') && part.endsWith('$')) {
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else {
+                    } else if (part) {
                         ref.current.appendChild(document.createTextNode(part));
                     }
                 });
@@ -87,105 +95,140 @@
 
         const MatchingGame = () => {
             const [gameData, setGameData] = useState(null);
-            const [matches, setMatches] = useState({});
+            const [pairs, setPairs] = useState([]);
+            const [rightOrder, setRightOrder] = useState([]);
+            const [matchedMap, setMatchedMap] = useState({});
             const [selectedLeft, setSelectedLeft] = useState(null);
             const [score, setScore] = useState(0);
+            const [streak, setStreak] = useState(0);
+            const [mistakes, setMistakes] = useState(0);
+            const [lastExplanation, setLastExplanation] = useState('');
+            const [wrongSlot, setWrongSlot] = useState(null);
+            const [hintPair, setHintPair] = useState(null);
             const [gameOver, setGameOver] = useState(false);
             const [showInstructions, setShowInstructions] = useState(true);
+            const [decodedChips, setDecodedChips] = useState([]);
 
             useEffect(() => {
-                const data = localStorage.getItem('gameData');
-                if (!data) {
-                    alert('Không có dữ liệu game!');
+                const raw = localStorage.getItem('gameData');
+                if (!raw) {
+                    alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.');
                     window.location.href = 'trochoi.html';
                     return;
                 }
-                setGameData(JSON.parse(data));
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'matching') {
+                    alert('Dữ liệu không thuộc game Ghép Đúng. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+                const loadedPairs = (parsed.content?.pairs || []).map((pair, idx) => ({
+                    id: pair.id ?? idx + 1,
+                    left: pair.left || pair.prompt || '',
+                    right: pair.right || '',
+                    chip: pair.chip || String.fromCharCode(65 + idx),
+                    explanation: pair.explanation || ''
+                })).filter(p => p.left && p.right);
+
+                if (!loadedPairs.length) {
+                    alert('Không có cặp ghép hợp lệ trong dữ liệu game.');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+
+                setGameData(parsed);
+                setPairs(loadedPairs);
+                setRightOrder(shuffleArray(loadedPairs.map((_, idx) => idx)));
             }, []);
 
-            const handleLeftClick = (idx) => {
-                if (matches[idx] !== undefined) return;
-                setSelectedLeft(idx);
-            };
+            const matchedCount = Object.keys(matchedMap).length;
+            const progressPct = pairs.length ? Math.round((matchedCount / pairs.length) * 100) : 0;
+            const usedRightSlots = useMemo(() => new Set(Object.values(matchedMap)), [matchedMap]);
 
-            const handleRightClick = (idx) => {
-                if (selectedLeft === null) return;
-                if (Object.values(matches).includes(idx)) return;
+            const codeword = useMemo(() => {
+                if (!pairs.length) return '';
+                const ordered = [...pairs].sort((a, b) => Number(a.id) - Number(b.id));
+                return ordered.map(p => (p.chip || '').trim()).join('');
+            }, [pairs]);
 
-                const newMatches = { ...matches, [selectedLeft]: idx };
-                setMatches(newMatches);
-
-                const pairs = gameData.content.pairs || gameData.content.questions;
-                const isCorrect = pairs[selectedLeft].answer === idx ||
-                    (pairs[selectedLeft].right && pairs.findIndex(p => p.right === pairs[idx]?.left) === selectedLeft);
+            const tryMatch = (leftIdx, rightSlot) => {
+                const pairIndexAtSlot = rightOrder[rightSlot];
+                const isCorrect = pairIndexAtSlot === leftIdx;
 
                 if (isCorrect) {
-                    setScore(score + 10);
-                }
+                    const pair = pairs[leftIdx];
+                    const bonus = Math.min(streak, 5) * 2;
+                    setScore(prev => prev + 12 + bonus);
+                    setStreak(prev => prev + 1);
+                    setMatchedMap(prev => ({ ...prev, [leftIdx]: rightSlot }));
+                    setDecodedChips(prev => [...prev, pair.chip || '?']);
+                    setLastExplanation(pair.explanation || 'Ghép đúng! Khái niệm và định nghĩa khớp nhau.');
+                    setHintPair(null);
 
+                    const nextCount = matchedCount + 1;
+                    if (nextCount >= pairs.length) {
+                        setTimeout(() => setGameOver(true), 700);
+                    }
+                } else {
+                    setMistakes(prev => prev + 1);
+                    setStreak(0);
+                    setWrongSlot(rightSlot);
+                    setLastExplanation('Chưa khớp — thử cặp khác nhé!');
+                    setTimeout(() => setWrongSlot(null), 500);
+                    if (mistakes + 1 >= 3 && hintPair === null) {
+                        const firstUnmatched = pairs.findIndex((_, idx) => matchedMap[idx] === undefined);
+                        if (firstUnmatched >= 0) setHintPair(firstUnmatched);
+                    }
+                }
                 setSelectedLeft(null);
-
-                if (Object.keys(newMatches).length === pairs.length) {
-                    setTimeout(() => setGameOver(true), 1000);
-                }
             };
 
-            if (!gameData) return <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Đang tải...</div></div>;
+            const handleLeftClick = (leftIdx) => {
+                if (matchedMap[leftIdx] !== undefined) return;
+                setSelectedLeft(leftIdx);
+            };
 
-            const pairs = gameData.content.pairs || gameData.content.questions || [];
+            const handleRightClick = (rightSlot) => {
+                if (selectedLeft === null || usedRightSlots.has(rightSlot)) return;
+                tryMatch(selectedLeft, rightSlot);
+            };
+
+            if (!gameData || !pairs.length) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="text-xl text-emerald-800 font-semibold">
+                            <i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị bảng giải mã...
+                        </div>
+                    </div>
+                );
+            }
+
+            const topicTitle = gameData.content?.topicTitle || gameData.formData?.topic || 'Giải mã kiến thức';
 
             if (showInstructions) {
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-3xl font-bold text-green-700">
-                                    <i className="fas fa-puzzle-piece mr-3"></i>GIẢI MÃ GHÉP ĐÚNG
-                                </h2>
-                                <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
-                                    <i className="fas fa-times text-2xl"></i>
-                                </button>
-                            </div>
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto fade-in">
+                            <h2 className="text-3xl font-bold text-emerald-700 mb-4">
+                                <i className="fas fa-puzzle-piece mr-2"></i>Giải Mã Ghép Đúng
+                            </h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
                             <div className="space-y-4 text-gray-700">
-                                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-lg text-green-800 mb-2">
-                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
-                                    </h3>
-                                    <p>Củng cố khái niệm, công thức, định nghĩa</p>
+                                <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4">
+                                    <h3 className="font-bold text-emerald-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
+                                    <p>Củng cố khái niệm — ghép đúng từng cặp để giải mã dần bảng kiến thức.</p>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
-                                    </h3>
-                                    <ul className="space-y-2 ml-6">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-green-600 font-bold">1.</span>
-                                            <span>Click vào <strong>cột trái</strong> (khái niệm/công thức)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-green-600 font-bold">2.</span>
-                                            <span>Click vào <strong>cột phải</strong> (định nghĩa/tên) để ghép</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-green-600 font-bold">3.</span>
-                                            <span>Ghép đúng tất cả để hoàn thành</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-calculator mr-2"></i>Tính điểm
-                                    </h3>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                        <p>Mỗi cặp đúng = <strong>+10 điểm</strong></p>
-                                    </div>
-                                </div>
+                                <ul className="space-y-2 ml-2">
+                                    <li><strong>1.</strong> Chọn thẻ <span className="text-emerald-700">bên trái</span> (khái niệm / công thức)</li>
+                                    <li><strong>2.</strong> Chọn thẻ <span className="text-teal-700">bên phải</span> (định nghĩa / tên) — cột phải đã bị xáo trộn</li>
+                                    <li><strong>3.</strong> Ghép đúng liên tiếp để được <strong>điểm thưởng chuỗi</strong></li>
+                                    <li><strong>4.</strong> Hoàn thành để lộ <strong>mã bí mật</strong> từ các chip giải mã</li>
+                                </ul>
+                                <p className="text-sm text-gray-500">Khác game Nối ô: không có thời gian gấp, tập trung suy nghĩ và ghi nhớ.</p>
                             </div>
-                            <button
-                                onClick={() => setShowInstructions(false)}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
-                            >
-                                <i className="fas fa-play mr-2"></i>Bắt đầu chơi
+                            <button onClick={() => setShowInstructions(false)}
+                                className="w-full mt-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-lg hover:shadow-xl">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu giải mã ({pairs.length} cặp)
                             </button>
                         </div>
                     </div>
@@ -195,14 +238,24 @@
             if (gameOver) {
                 return (
                     <div className="max-w-3xl mx-auto p-6 fade-in">
-                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
-                            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <i className="fas fa-check-circle text-5xl text-green-600"></i>
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center cipher-grid">
+                            <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                                <i className="fas fa-unlock-alt text-5xl text-emerald-600"></i>
                             </div>
-                            <h2 className="text-4xl font-bold mb-4 text-gray-800">Hoàn thành!</h2>
-                            <div className="text-6xl font-bold text-green-600 mb-8">{score}đ</div>
-                            <div className="flex gap-4 justify-center">
-                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
+                            <h2 className="text-4xl font-bold text-gray-800 mb-2">Giải mã hoàn tất!</h2>
+                            <p className="text-gray-600 mb-6">{topicTitle}</p>
+                            <div className="text-5xl font-black text-emerald-600 mb-4">{score} điểm</div>
+                            {codeword && (
+                                <div className="mb-6 p-4 bg-emerald-50 border-2 border-emerald-200 rounded-2xl inline-block">
+                                    <div className="text-sm text-emerald-800 font-semibold mb-1">Mã bí mật</div>
+                                    <div className="text-2xl font-black tracking-[0.35em] text-emerald-700">{codeword}</div>
+                                    {gameData.content?.codewordHint && (
+                                        <div className="text-xs text-emerald-600 mt-2">{gameData.content.codewordHint}</div>
+                                    )}
+                                </div>
+                            )}
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700">
                                     <i className="fas fa-redo mr-2"></i>Chơi lại
                                 </button>
                                 <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700">
@@ -215,63 +268,104 @@
             }
 
             return (
-                <div className="max-w-6xl mx-auto p-6 fade-in">
-                    <div className="flex justify-between items-center mb-6">
+                <div className="max-w-6xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                         <div className="flex gap-2">
                             <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                                <i className="fas fa-arrow-left mr-2"></i>Thoát
+                                <i className="fas fa-arrow-left mr-1"></i>Thoát
                             </button>
                             <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 <i className="fas fa-question-circle"></i>
                             </button>
                         </div>
-
-                        <h1 className="text-3xl font-bold text-green-700">
-                            <i className="fas fa-puzzle-piece mr-2"></i>GIẢI MÃ GHÉP ĐÚNG
-                        </h1>
-
-                        <div className="px-6 py-3 bg-green-600 text-white rounded-lg font-bold text-xl">
-                            <i className="fas fa-star mr-2"></i>{score}
+                        <div className="text-center">
+                            <h1 className="text-2xl md:text-3xl font-bold text-emerald-700">
+                                <i className="fas fa-fingerprint mr-2"></i>Giải Mã Ghép Đúng
+                            </h1>
+                            <p className="text-sm text-gray-600">{topicTitle}</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="px-4 py-2 bg-white border-2 border-emerald-200 rounded-lg font-bold text-emerald-700">
+                                <i className="fas fa-star mr-1"></i>{score}
+                            </div>
+                            <div className="px-4 py-2 bg-white border-2 border-amber-200 rounded-lg font-bold text-amber-700">
+                                <i className="fas fa-fire mr-1"></i>x{streak}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl shadow-2xl p-8">
-                        <div className="text-center mb-6">
-                            <div className="text-sm text-gray-600">Đã ghép: {Object.keys(matches).length}/{pairs.length}</div>
+                    <div className="bg-white/90 rounded-2xl shadow-lg p-4 mb-5">
+                        <div className="flex justify-between text-sm text-gray-600 mb-2">
+                            <span>Tiến độ giải mã</span>
+                            <span>{matchedCount}/{pairs.length} cặp ({progressPct}%)</span>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-center text-gray-700 mb-4">Khái niệm / Công thức</h3>
-                                {pairs.map((pair, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => handleLeftClick(idx)}
-                                        disabled={matches[idx] !== undefined}
-                                        className={`w-full p-4 rounded-xl border-2 text-left transition ${matches[idx] !== undefined ? 'matched border-green-500' :
-                                                selectedLeft === idx ? 'bg-blue-100 border-blue-500' :
-                                                    'border-gray-300 hover:border-green-400 hover:bg-green-50'
-                                            }`}
-                                    >
-                                        <MathText text={pair.left || pair.prompt} />
-                                    </button>
+                        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500" style={{ width: `${progressPct}%` }}></div>
+                        </div>
+                        {decodedChips.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2 items-center">
+                                <span className="text-xs font-semibold text-emerald-700">Chip đã giải:</span>
+                                {[...decodedChips].sort().map((chip, i) => (
+                                    <span key={`${chip}-${i}`} className="px-2 py-1 rounded-md bg-emerald-100 text-emerald-800 text-sm font-bold chip-glow">{chip}</span>
                                 ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {lastExplanation && (
+                        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
+                            <i className="fas fa-info-circle mr-2"></i>{lastExplanation}
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-3xl shadow-2xl p-5 md:p-8 cipher-grid">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <h3 className="font-bold text-center text-emerald-800 mb-1">
+                                    <i className="fas fa-lock mr-1"></i> Mã hóa — Khái niệm / Công thức
+                                </h3>
+                                {pairs.map((pair, leftIdx) => {
+                                    const isMatched = matchedMap[leftIdx] !== undefined;
+                                    const isSelected = selectedLeft === leftIdx;
+                                    const isHint = hintPair === leftIdx;
+                                    return (
+                                        <button key={`left-${leftIdx}`} onClick={() => handleLeftClick(leftIdx)} disabled={isMatched}
+                                            className={`w-full p-4 rounded-xl border-2 text-left transition text-sm md:text-base ${isMatched ? 'bg-emerald-600 border-emerald-700 text-white decode-pop' :
+                                                isSelected ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' :
+                                                    isHint ? 'bg-amber-50 border-amber-400 animate-pulse' :
+                                                        'bg-white border-gray-200 hover:border-emerald-400 hover:bg-emerald-50'
+                                                } ${wrongSlot !== null && isSelected ? 'shake' : ''}`}>
+                                            <div className="flex items-start gap-3">
+                                                <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isMatched ? 'bg-white/20' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                    {isMatched ? <i className="fas fa-check"></i> : pair.chip}
+                                                </span>
+                                                <MathText text={pair.left} />
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
 
                             <div className="space-y-3">
-                                <h3 className="font-bold text-center text-gray-700 mb-4">Định nghĩa / Tên</h3>
-                                {pairs.map((pair, idx) => {
-                                    const isMatched = Object.values(matches).includes(idx);
+                                <h3 className="font-bold text-center text-teal-800 mb-1">
+                                    <i className="fas fa-key mr-1"></i> Giải mã — Định nghĩa / Tên <span className="text-xs font-normal text-gray-500">(đã xáo trộn)</span>
+                                </h3>
+                                {rightOrder.map((pairIdx, slot) => {
+                                    const pair = pairs[pairIdx];
+                                    const isUsed = usedRightSlots.has(slot);
+                                    const isWrong = wrongSlot === slot;
                                     return (
-                                        <button
-                                            key={idx}
-                                            onClick={() => handleRightClick(idx)}
-                                            disabled={isMatched}
-                                            className={`w-full p-4 rounded-xl border-2 text-left transition ${isMatched ? 'matched border-green-500' :
-                                                    'border-gray-300 hover:border-green-400 hover:bg-green-50'
-                                                }`}
-                                        >
-                                            <MathText text={pair.right || pair.choices?.[pair.answer]} />
+                                        <button key={`right-${slot}`} onClick={() => handleRightClick(slot)} disabled={isUsed}
+                                            className={`w-full p-4 rounded-xl border-2 text-left transition text-sm md:text-base ${isUsed ? 'bg-teal-600 border-teal-700 text-white decode-pop' :
+                                                isWrong ? 'bg-red-50 border-red-400 shake' :
+                                                    'bg-white border-gray-200 hover:border-teal-400 hover:bg-teal-50'
+                                                }`}>
+                                            <div className="flex items-start gap-3">
+                                                <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isUsed ? 'bg-white/20' : 'bg-teal-100 text-teal-700'}`}>
+                                                    {isUsed ? <i className="fas fa-link"></i> : slot + 1}
+                                                </span>
+                                                <MathText text={pair.right} />
+                                            </div>
                                         </button>
                                     );
                                 })}

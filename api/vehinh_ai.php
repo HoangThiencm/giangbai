@@ -68,11 +68,46 @@ function vehinh_post_json(string $url, array $headers, array $payload, int $time
     ];
 }
 
-function vehinh_call_ds2api(array $runtime, string $systemPrompt, string $userInstruction): array
+function vehinh_provider_models(): array
+{
+    return [
+        'ds2api' => [
+            'deepseek-v4-flash',
+            'deepseek-v4-flash-nothinking',
+            'deepseek-v4-pro',
+            'deepseek-v4-pro-nothinking',
+        ],
+        'gemini' => [
+            'gemini-3-flash-preview',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash-exp',
+        ],
+    ];
+}
+
+function vehinh_resolve_model(string $provider, array $runtime, ?string $requestedModel = null): string
+{
+    $provider = strtolower(trim($provider));
+    $allowed = vehinh_provider_models()[$provider] ?? [];
+    $runtimeModel = $provider === 'gemini'
+        ? trim((string)($runtime['gemini_model'] ?? 'gemini-2.5-flash'))
+        : trim((string)($runtime['ds2api_model'] ?? 'deepseek-v4-flash'));
+    $fallback = $runtimeModel !== '' ? $runtimeModel : (($allowed[0] ?? '') ?: 'deepseek-v4-flash');
+    $requested = trim((string)$requestedModel);
+    if ($requested !== '' && in_array($requested, $allowed, true)) {
+        return $requested;
+    }
+    if ($runtimeModel !== '' && in_array($runtimeModel, $allowed, true)) {
+        return $runtimeModel;
+    }
+    return $fallback;
+}
+
+function vehinh_call_ds2api(array $runtime, string $systemPrompt, string $userInstruction, ?string $requestedModel = null): array
 {
     $baseUrl = normalize_ds2api_base_url((string)($runtime['ds2api_base_url'] ?? ''));
     $apiKey = ds2api_effective_api_key((string)($runtime['ds2api_api_key'] ?? ''));
-    $model = trim((string)($runtime['ds2api_model'] ?? 'deepseek-v4-flash')) ?: 'deepseek-v4-flash';
+    $model = vehinh_resolve_model('ds2api', $runtime, $requestedModel);
     if ($baseUrl === '' || $apiKey === '') {
         return ['error' => 'DS2API chưa có Base URL hoặc Client API Key trong Admin/config.php.'];
     }
@@ -105,10 +140,10 @@ function vehinh_call_ds2api(array $runtime, string $systemPrompt, string $userIn
     ], ai_usage_extract_shopaikey_tokens($response['json']));
 }
 
-function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userInstruction, ?array $image): array
+function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userInstruction, ?array $image, ?string $requestedModel = null): array
 {
     $keys = $runtime['gemini_keys'] ?? [];
-    $model = trim((string)($runtime['gemini_model'] ?? 'gemini-2.5-flash')) ?: 'gemini-2.5-flash';
+    $model = vehinh_resolve_model('gemini', $runtime, $requestedModel);
     if (empty($runtime['gemini_enabled']) || empty($keys)) {
         return ['error' => 'Gemini chưa bật hoặc chưa có key trong Admin.'];
     }
@@ -162,6 +197,7 @@ vehinh_require_login();
 $runtime = load_ai_runtime_config();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $providerModels = vehinh_provider_models();
     $ds2Active = !empty($runtime['ds2api_enabled']) || !empty($runtime['ai_test_ds2api_only']);
     $ds2Ready = $ds2Active
         && trim((string)($runtime['ds2api_base_url'] ?? '')) !== ''
@@ -175,14 +211,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'label' => 'DeepSeek / DS2API',
                 'configured' => $ds2Ready,
                 'enabled' => $ds2Active,
-                'model' => $runtime['ds2api_model'] ?? 'deepseek-v4-flash',
+                'model' => vehinh_resolve_model('ds2api', $runtime),
+                'models' => $providerModels['ds2api'],
                 'supports_image' => false,
             ],
             'gemini' => [
                 'label' => 'Google Gemini',
                 'configured' => $geminiReady,
                 'enabled' => !empty($runtime['gemini_enabled']),
-                'model' => $runtime['gemini_model'] ?? 'gemini-2.5-flash',
+                'model' => vehinh_resolve_model('gemini', $runtime),
+                'models' => $providerModels['gemini'],
                 'keys_count' => count($runtime['gemini_keys'] ?? []),
                 'supports_image' => true,
             ],
@@ -196,6 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_body();
 $provider = strtolower(trim((string)($data['provider'] ?? 'ds2api')));
+$requestedModel = trim((string)($data['model'] ?? ''));
 if (!in_array($provider, ['ds2api', 'gemini'], true)) {
     respond(['error' => 'Nguồn AI vẽ hình không hợp lệ.'], 422);
 }
@@ -222,8 +261,8 @@ ai_student_rate_limit_touch($currentUserId, $currentUserRole);
 ai_student_quota_require($currentUserId, $currentUserRole);
 
 $result = $provider === 'gemini'
-    ? vehinh_call_gemini($runtime, $systemPrompt, $userInstruction, $image)
-    : vehinh_call_ds2api($runtime, $systemPrompt, $userInstruction);
+    ? vehinh_call_gemini($runtime, $systemPrompt, $userInstruction, $image, $requestedModel)
+    : vehinh_call_ds2api($runtime, $systemPrompt, $userInstruction, $requestedModel);
 
 $ok = empty($result['error']) && trim((string)($result['text'] ?? '')) !== '';
 ai_usage_record([

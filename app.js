@@ -166,8 +166,56 @@ document.addEventListener('DOMContentLoaded', function () {
         generateBtn: document.getElementById('generate-btn'), regenerateBtn: document.getElementById('regenerate-btn'), promptInput: document.getElementById('prompt-input'), imageUpload: document.getElementById('image-upload'), imagePreview: document.getElementById('image-preview'), analysisOutput: document.getElementById('analysis-output'), loader: document.getElementById('loader'), toolbar: document.getElementById('toolbar'), colorPicker: document.getElementById('color-picker'), deleteBtn: document.getElementById('delete-btn'), apiKeyFile: document.getElementById('api-key-file'), apiKeyFilename: document.getElementById('api-key-filename'), modelSelect: document.getElementById('model-select'), lockAiBtn: document.getElementById('lock-ai-btn'), undoBtn: document.getElementById('undo-btn'), redoBtn: document.getElementById('redo-btn'), copyBtn: document.getElementById('copy-btn'), pasteBtn: document.getElementById('paste-btn'), zoomInBtn: document.getElementById('zoom-in-btn'), zoomOutBtn: document.getElementById('zoom-out-btn'), resetZoomBtn: document.getElementById('reset-zoom-btn'), accordionHeaders: document.querySelectorAll('.accordion-header'), geogebraToggle: document.getElementById('geogebra-toggle'), geogebraContainer: document.getElementById('geogebra-container'), latexToolBtn: document.getElementById('latex-tool-btn'), insertImageBtn: document.getElementById('insert-image-btn'), imageInserter: document.getElementById('image-inserter'), latexModal: document.getElementById('latex-modal'), latexModalBackdrop: document.getElementById('latex-modal-backdrop'), mathInput: document.getElementById('math-input'), latexPreview: document.getElementById('latex-preview'), cancelLatexBtn: document.getElementById('cancel-latex-btn'), insertLatexBtn: document.getElementById('insert-latex-btn'), toggleGridBtn: document.getElementById('toggle-grid-btn'), zoomViewer: document.getElementById('zoom-viewer'), textControls: document.getElementById('text-controls'), fontSize: document.getElementById('font-size'), fontBold: document.getElementById('font-bold'), fontItalic: document.getElementById('font-italic'), fontUnderline: document.getElementById('font-underline'), promptSuggestions: document.getElementById('prompt-suggestions'), toggleSnapBtn: document.getElementById('toggle-snap-btn'), alignControls: document.getElementById('align-controls'), darkModeToggle: document.getElementById('dark-mode-toggle'), miniToolbar: document.getElementById('mini-toolbar'), miniColorPicker: document.getElementById('mini-color-picker'), miniDeleteBtn: document.getElementById('mini-delete-btn'),
     };
     allDOMElements.aiProviderSelect = document.getElementById('ai-provider-select');
+    allDOMElements.aiModelSelect = document.getElementById('ai-model-select');
     allDOMElements.aiModelSummary = document.getElementById('ai-model-summary');
     let drawingAiConfig = null;
+    const VEHINH_PROVIDER_STORAGE_KEY = 'vehinh_ai_provider';
+    const VEHINH_MODEL_STORAGE_PREFIX = 'vehinh_ai_model_';
+
+    function getDrawingProviderConfig(provider) {
+        return drawingAiConfig?.providers?.[provider] || null;
+    }
+
+    function getSavedDrawingModel(provider) {
+        return localStorage.getItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`) || '';
+    }
+
+    function getCurrentDrawingModel(provider) {
+        const providerConfig = getDrawingProviderConfig(provider);
+        if (!providerConfig) return '';
+        const models = Array.isArray(providerConfig.models) ? providerConfig.models : [];
+        const savedModel = getSavedDrawingModel(provider);
+        if (savedModel && models.includes(savedModel)) return savedModel;
+        if (providerConfig.model && models.includes(providerConfig.model)) return providerConfig.model;
+        return providerConfig.model || models[0] || '';
+    }
+
+    function syncDrawingModelSelect() {
+        const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        const providerConfig = getDrawingProviderConfig(provider);
+        const select = allDOMElements.aiModelSelect;
+        if (!select) return;
+
+        select.innerHTML = '';
+        const models = Array.isArray(providerConfig?.models) ? providerConfig.models : [];
+        if (!models.length) {
+            const option = document.createElement('option');
+            option.value = providerConfig?.model || '';
+            option.textContent = providerConfig?.model || 'Chưa có model';
+            select.appendChild(option);
+            select.disabled = true;
+            return;
+        }
+
+        models.forEach((model) => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.textContent = model;
+            select.appendChild(option);
+        });
+        select.disabled = false;
+        select.value = getCurrentDrawingModel(provider);
+    }
 
     function serializeCanvas() { return canvas.toJSON(['source', 'type']); }
     function saveHistory() { if (isRestoring) return; const json = serializeCanvas(); if (historyIndex < history.length - 1) { history = history.slice(0, historyIndex + 1); } history.push(json); if (history.length > HISTORY_LIMIT) history.shift(); historyIndex = history.length - 1; updateUndoRedoButtons(); }
@@ -279,21 +327,37 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'Không đọc được cấu hình AI vẽ hình.');
+            if (!data || typeof data !== 'object' || !data.providers?.ds2api || !data.providers?.gemini) {
+                throw new Error('Cáº¥u hÃ¬nh AI váº½ hÃ¬nh tráº£ vá» khÃ´ng Ä‘á»§ dá»¯ liá»‡u.');
+            }
             drawingAiConfig = data;
-            const savedProvider = localStorage.getItem('vehinh_ai_provider');
+            const savedProvider = localStorage.getItem(VEHINH_PROVIDER_STORAGE_KEY);
             const defaultProvider = savedProvider || data.default_provider || 'ds2api';
             if (allDOMElements.aiProviderSelect) {
                 allDOMElements.aiProviderSelect.value = defaultProvider;
             }
+            syncDrawingModelSelect();
             updateDrawingAiSummary();
         } catch (error) {
             drawingAiConfig = {
                 default_provider: 'gemini',
                 providers: {
-                    ds2api: { label: 'DeepSeek / DS2API', configured: false, model: localStorage.getItem('default_ds2api_module') || 'deepseek-v4-flash' },
-                    gemini: { label: 'Google Gemini', configured: false, model: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash', keys_count: 0 }
+                    ds2api: {
+                        label: 'DeepSeek / DS2API',
+                        configured: false,
+                        model: localStorage.getItem('default_ds2api_module') || 'deepseek-v4-flash',
+                        models: ['deepseek-v4-flash', 'deepseek-v4-flash-nothinking', 'deepseek-v4-pro', 'deepseek-v4-pro-nothinking']
+                    },
+                    gemini: {
+                        label: 'Google Gemini',
+                        configured: false,
+                        model: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
+                        models: ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'],
+                        keys_count: 0
+                    }
                 }
             };
+            syncDrawingModelSelect();
             if (allDOMElements.aiModelSummary) {
                 allDOMElements.aiModelSummary.innerHTML = `<span class="text-amber-300">Không đọc được cấu hình server:</span> ${error.message}`;
             }
@@ -304,6 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
         const ds2 = drawingAiConfig?.providers?.ds2api || {};
         const gemini = drawingAiConfig?.providers?.gemini || {};
+        const currentModel = getCurrentDrawingModel(provider);
         if (allDOMElements.aiProviderSelect) {
             const ds2Option = allDOMElements.aiProviderSelect.querySelector('option[value="ds2api"]');
             const geminiOption = allDOMElements.aiProviderSelect.querySelector('option[value="gemini"]');
@@ -318,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function () {
             ? ` · ${gemini.keys_count || 0} key`
             : ' · dùng Client Key DS2API trên server';
         allDOMElements.aiModelSummary.innerHTML = `
-            <div><strong>${selected.label || provider}</strong>: <code>${selected.model || '---'}</code></div>
+            <div><strong>${selected.label || provider}</strong>: <code>${currentModel || selected.model || '---'}</code></div>
             <div>${readyText}${extra} · ${supportsImage}</div>
         `;
     }
@@ -351,7 +416,13 @@ document.addEventListener('DOMContentLoaded', function () {
     loadDrawingAiConfig().finally(loadApiKeys);
 
     allDOMElements.aiProviderSelect?.addEventListener('change', () => {
-        localStorage.setItem('vehinh_ai_provider', allDOMElements.aiProviderSelect.value);
+        localStorage.setItem(VEHINH_PROVIDER_STORAGE_KEY, allDOMElements.aiProviderSelect.value);
+        syncDrawingModelSelect();
+        updateDrawingAiSummary();
+    });
+    allDOMElements.aiModelSelect?.addEventListener('change', () => {
+        const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        localStorage.setItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`, allDOMElements.aiModelSelect.value || '');
         updateDrawingAiSummary();
     });
 
@@ -394,6 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const imageFile = activeImageFile;
         if (!userPrompt && !imageFile) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng nhập đề bài hoặc tải ảnh.</span>'; return; }
         const selectedProvider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        const selectedModel = allDOMElements.aiModelSelect?.value || getCurrentDrawingModel(selectedProvider) || '';
         if (selectedProvider === 'ds2api' && imageFile) {
             allDOMElements.analysisOutput.innerHTML = '<span class="text-amber-300">DeepSeek/DS2API hiện chỉ dùng cho mô tả chữ trên trang này. Nếu muốn AI đọc ảnh, hãy chọn Google Gemini.</span>';
             return;
@@ -401,7 +473,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
-        const selectedModel = drawingAiConfig?.providers?.[selectedProvider]?.model || '';
         allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng ${selectedProvider === 'gemini' ? 'Gemini' : 'DeepSeek/DS2API'}${selectedModel ? ` · ${selectedModel}` : ''}...`;
 
         canvas.getObjects().slice().forEach(obj => { if (obj.source === 'ai' || obj.source === 'ai_primitive') { canvas.remove(obj); } });
@@ -421,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 credentials: 'same-origin',
                 body: JSON.stringify({
                     provider: selectedProvider,
+                    model: selectedModel,
                     system_prompt: systemPrompt,
                     user_instruction: userInstruction,
                     image: imagePayload,
