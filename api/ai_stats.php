@@ -334,6 +334,25 @@ function ai_stats_count_recent_module_success(array $recent, string $todayKey, s
     return $total;
 }
 
+function ai_stats_count_recent_provider_success(array $recent, string $dayKey, string $provider): int
+{
+    $total = 0;
+    foreach ($recent as $item) {
+        if (!is_array($item) || empty($item['ok'])) {
+            continue;
+        }
+        $ts = (string)($item['ts'] ?? '');
+        if ($dayKey !== '' && !str_starts_with($ts, $dayKey)) {
+            continue;
+        }
+        if ((string)($item['provider'] ?? '') !== $provider) {
+            continue;
+        }
+        $total++;
+    }
+    return $total;
+}
+
 function ai_stats_providers_for_module(string $moduleId): array
 {
     return [
@@ -361,6 +380,52 @@ function ai_stats_provider_module_totals(array $providers, string $moduleId): ar
     }
 
     return ['success' => $success, 'providers' => $providerHits];
+}
+
+function ai_stats_enrich_providers_for_day(array $providers, array $day, array $recent = [], string $dayKey = ''): array
+{
+    $providerIds = ai_usage_allowed_providers();
+    $byProviderMode = is_array($day['by_provider_mode'] ?? null) ? $day['by_provider_mode'] : [];
+    $byModule = is_array($day['by_module'] ?? null) ? $day['by_module'] : [];
+    $moduleProviderTotals = [];
+
+    foreach ($byModule as $moduleBucket) {
+        if (!is_array($moduleBucket)) {
+            continue;
+        }
+        $moduleProviders = is_array($moduleBucket['providers'] ?? null) ? $moduleBucket['providers'] : [];
+        foreach ($moduleProviders as $providerId => $bucket) {
+            if (!is_array($bucket)) {
+                continue;
+            }
+            $moduleProviderTotals[$providerId] = max(
+                (int)($moduleProviderTotals[$providerId] ?? 0),
+                (int)($bucket['success'] ?? 0)
+            );
+        }
+    }
+
+    foreach ($providerIds as $providerId) {
+        $modeTotal = (int)array_sum(is_array($byProviderMode[$providerId] ?? null) ? $byProviderMode[$providerId] : []);
+        $moduleTotal = (int)($moduleProviderTotals[$providerId] ?? 0);
+        $recentTotal = ai_stats_count_recent_provider_success($recent, $dayKey, $providerId);
+        $targetSuccess = max(
+            (int)($providers[$providerId]['success'] ?? 0),
+            $modeTotal,
+            $moduleTotal,
+            $recentTotal
+        );
+        if ($targetSuccess <= 0) {
+            continue;
+        }
+        if (!isset($providers[$providerId]) || !is_array($providers[$providerId])) {
+            $providers[$providerId] = ['calls' => 0, 'success' => 0, 'error' => 0];
+        }
+        $providers[$providerId]['success'] = $targetSuccess;
+        $providers[$providerId]['calls'] = max((int)($providers[$providerId]['calls'] ?? 0), $targetSuccess);
+    }
+
+    return $providers;
 }
 
 function ai_stats_enrich_by_module(array $byModule, array $byMode, array $recent = [], string $todayKey = '', array $providers = []): array
@@ -417,6 +482,7 @@ function ai_stats_summarize_day(?array $day, array $recent = [], string $todayKe
         ];
     }
     $providers = is_array($day['providers'] ?? null) ? $day['providers'] : [];
+    $providers = ai_stats_enrich_providers_for_day($providers, $day, $recent, $todayKey);
     $byMode = is_array($day['by_mode'] ?? null) ? $day['by_mode'] : [];
     $byModule = is_array($day['by_module'] ?? null) ? $day['by_module'] : [];
     $byModule = ai_stats_enrich_by_module($byModule, $byMode, $recent, $todayKey, $providers);
@@ -483,14 +549,14 @@ function ai_stats_enrich_today_providers(array $today, array $cloudflareStats): 
     return $providers;
 }
 
-function ai_stats_build_history(array $byDay, int $days = 14): array
+function ai_stats_build_history(array $byDay, int $days = 14, array $recent = []): array
 {
     $keys = array_keys($byDay);
     rsort($keys);
     $keys = array_slice($keys, 0, $days);
     $history = [];
     foreach (array_reverse($keys) as $key) {
-        $summary = ai_stats_summarize_day($byDay[$key] ?? null);
+        $summary = ai_stats_summarize_day($byDay[$key] ?? null, $recent, $key);
         $history[] = [
             'date' => $key,
             'total_success' => $summary['total_success'],
@@ -663,7 +729,7 @@ respond([
         'shopaikey_model' => $runtime['shopaikey_model'],
     ],
     'internal' => $internalToday,
-    'history' => ai_stats_build_history($store['by_day'] ?? [], 14),
+    'history' => ai_stats_build_history($store['by_day'] ?? [], 14, $store['recent'] ?? []),
     'providers' => [
         'ds2api' => $ds2apiStats,
         'cloudflare' => $cloudflareStats,
