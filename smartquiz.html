@@ -1508,7 +1508,21 @@
                     const extractedText = await readTextFromDocumentFile(file);
                     if (!extractedText.trim()) throw new Error("Không thể đọc được nội dung từ file.");
 
-                    const prompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các câu hỏi trắc nghiệm từ nội dung sau và trả về định dạng JSON mảng phẳng.
+                    const prompt = mode === "essay"
+                        ? `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ bài tập tự luận từ nội dung sau và trả về JSON mảng phẳng.
+                    NHIỆM VỤ:
+                    - Chỉ lấy các bài/câu tự luận, bài tập giải chi tiết, câu hỏi mở hoặc bài toán cần trình bày lời giải.
+                    - Nếu nội dung có sẵn lời giải/đáp án, đưa vào field "solution".
+                    - Nếu chưa có lời giải, tự viết lời giải chi tiết, đúng chương trình và bám sát nội dung gốc.
+                    - QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức toán học.
+
+                    Định dạng JSON Output bắt buộc:
+                    [{"question":"Đề bài...", "solution":"Lời giải chi tiết..."}, ...]
+
+                    Nội dung văn bản gốc:
+                    ${extractedText.substring(0, 30000)}
+                    `
+                        : `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các câu hỏi trắc nghiệm từ nội dung sau và trả về định dạng JSON mảng phẳng.
                     NHIỆM VỤ:
                     - Xác định loại câu hỏi: multiple-choice (4 đáp án A,B,C,D), true-false (Đúng/Sai), fill-blank (Điền khuyết), matching (Nối ô), short-answer (Trả lời ngắn bằng 1 con số).
                     - Nhận diện đáp án đúng đi kèm câu hỏi nếu có.
@@ -1533,10 +1547,13 @@
                         parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
                     }
 
-                    if (!parsedData || parsedData.length === 0) throw new Error("Không nhận diện được câu hỏi nào từ file.");
+                    if (!parsedData || parsedData.length === 0) throw new Error("Không nhận diện được nội dung phù hợp từ file.");
 
-                    setMode("quiz");
-                    setQuestions(parsedData);
+                    if (mode === "essay") {
+                        setEssays(parsedData);
+                    } else {
+                        setQuestions(parsedData);
+                    }
                     setStep(2);
 
                 } catch (error) {
@@ -1823,7 +1840,11 @@
                         <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-indigo-50 relative overflow-hidden fade-in">
                             <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-100 to-transparent w-40 h-full opacity-50 pointer-events-none"></div>
                             <h2 className="text-2xl font-bold text-slate-800 mb-6">THIẾT LẬP YÊU CẦU</h2>
-                            <p className="text-slate-600 mb-6 text-sm">Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng; nếu nạp học liệu nguồn, AI sẽ tạo câu hỏi bám theo nội dung đó để tránh vượt phạm vi chương trình.</p>
+                            <p className="text-slate-600 mb-6 text-sm">
+                                {mode === "quiz"
+                                    ? "Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng; nếu nạp học liệu nguồn, AI sẽ tạo câu hỏi bám theo nội dung đó để tránh vượt phạm vi chương trình."
+                                    : "Mỗi chủ đề sẽ sinh bài tập tự luận có lời giải chi tiết; nếu nạp học liệu nguồn, AI sẽ bám theo nội dung đó để tránh vượt phạm vi chương trình."}
+                            </p>
 
                             {/* Chọn chế độ */}
                             <div className="mb-6">
@@ -1981,7 +2002,9 @@
                             {/* DANH SÁCH CHỦ ĐỀ */}
                             <div className="mb-6 space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <label className="block font-bold text-slate-700 text-sm uppercase tracking-wide">Danh sách chủ đề và hình thức trắc nghiệm</label>
+                                    <label className="block font-bold text-slate-700 text-sm uppercase tracking-wide">
+                                        {mode === "quiz" ? "Danh sách chủ đề và hình thức trắc nghiệm" : "Danh sách chủ đề tự luận"}
+                                    </label>
                                     <button onClick={addTopic} className="text-sm bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-bold hover:bg-indigo-100 transition"><i className="fas fa-plus mr-1"></i> Thêm chủ đề</button>
                                 </div>
 
@@ -2023,23 +2046,23 @@
                                                 </select>
                                             </div>
                                             <div className="md:col-span-3">
-                                                <select
-                                                    value={topic.quizType}
-                                                    onChange={(e) => updateTopic(topic.id, 'quizType', e.target.value)}
-                                                    disabled={mode === "essay"}
-                                                    className={`w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm ${mode === "essay" ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
-                                                >
-                                                    <option value="multiple-choice">🔤 Nhiều lựa chọn</option>
-                                                    <option value="true-false">✅ Đúng/Sai</option>
-                                                    <option value="fill-blank">📝 Điền khuyết</option>
-                                                    <option value="short-answer">🔢 Trả lời ngắn</option>
-                                                    <option value="matching">🔗 Nối ô</option>
-                                                </select>
-                                                {mode === "essay" && (
-                                                    <p className="text-xs text-gray-500 mt-1 italic">
-                                                        <i className="fas fa-info-circle mr-1"></i>
-                                                        Chế độ tự luận không cần chọn hình thức
-                                                    </p>
+                                                {mode === "quiz" ? (
+                                                    <select
+                                                        value={topic.quizType}
+                                                        onChange={(e) => updateTopic(topic.id, 'quizType', e.target.value)}
+                                                        className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white"
+                                                    >
+                                                        <option value="multiple-choice">🔤 Nhiều lựa chọn</option>
+                                                        <option value="true-false">✅ Đúng/Sai</option>
+                                                        <option value="fill-blank">📝 Điền khuyết</option>
+                                                        <option value="short-answer">🔢 Trả lời ngắn</option>
+                                                        <option value="matching">🔗 Nối ô</option>
+                                                    </select>
+                                                ) : (
+                                                    <div className="w-full border border-green-200 bg-green-50 text-green-700 p-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                                        <i className="fas fa-edit"></i>
+                                                        <span>Tự luận</span>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -2050,11 +2073,14 @@
                             {/* TỔNG KẾT */}
                             <div className="mb-6 flex justify-end items-center gap-4 text-slate-600 text-sm">
                                 <div className="flex items-center gap-2 font-bold">
-                                    <span>Tổng câu hỏi:</span>
+                                    <span>{mode === "quiz" ? "Tổng câu hỏi:" : "Tổng bài tự luận:"}</span>
                                     <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-lg">{topics.reduce((acc, t) => acc + t.count, 0)}</span>
                                 </div>
                                 <div className="text-xs text-slate-500">
                                     {topics.map((t, idx) => {
+                                        if (mode === "essay") {
+                                            return `✍️ ${idx + 1}: ${t.count}`;
+                                        }
                                         const typeName = t.quizType === 'multiple-choice' ? '🔤' :
                                             t.quizType === 'true-false' ? '✅' :
                                                 t.quizType === 'fill-blank' ? '📝' :

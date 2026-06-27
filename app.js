@@ -171,6 +171,69 @@ document.addEventListener('DOMContentLoaded', function () {
     let drawingAiConfig = null;
     const VEHINH_PROVIDER_STORAGE_KEY = 'vehinh_ai_provider';
     const VEHINH_MODEL_STORAGE_PREFIX = 'vehinh_ai_model_';
+    const DRAWING_AI_MODEL_CATALOG = {
+        ds2api: ['deepseek-v4-flash', 'deepseek-v4-flash-nothinking', 'deepseek-v4-pro', 'deepseek-v4-pro-nothinking'],
+        gemini: ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'],
+    };
+    const DRAWING_MODEL_LABELS = {
+        'deepseek-v4-flash': 'DeepSeek V4 Flash (nhanh)',
+        'deepseek-v4-flash-nothinking': 'DeepSeek V4 Flash — không suy luận',
+        'deepseek-v4-pro': 'DeepSeek V4 Pro',
+        'deepseek-v4-pro-nothinking': 'DeepSeek V4 Pro — không suy luận',
+        'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
+        'gemini-2.5-flash': 'Gemini 2.5 Flash',
+        'gemini-2.0-flash-exp': 'Gemini 2.0 Flash Exp',
+    };
+
+    function getDefaultDrawingAiConfig() {
+        return {
+            default_provider: 'ds2api',
+            providers: {
+                ds2api: {
+                    label: 'DeepSeek / DS2API',
+                    configured: false,
+                    enabled: true,
+                    model: localStorage.getItem('default_ds2api_module') || 'deepseek-v4-flash',
+                    models: [...DRAWING_AI_MODEL_CATALOG.ds2api],
+                    supports_image: false,
+                },
+                gemini: {
+                    label: 'Google Gemini',
+                    configured: false,
+                    enabled: true,
+                    model: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
+                    models: [...DRAWING_AI_MODEL_CATALOG.gemini],
+                    keys_count: 0,
+                    supports_image: true,
+                },
+            },
+        };
+    }
+
+    function normalizeDrawingAiConfig(data) {
+        const defaults = getDefaultDrawingAiConfig();
+        const merged = {
+            default_provider: data?.default_provider || defaults.default_provider,
+            providers: {
+                ds2api: { ...defaults.providers.ds2api, ...(data?.providers?.ds2api || {}) },
+                gemini: { ...defaults.providers.gemini, ...(data?.providers?.gemini || {}) },
+            },
+        };
+        ['ds2api', 'gemini'].forEach((provider) => {
+            const cfg = merged.providers[provider];
+            const catalog = DRAWING_AI_MODEL_CATALOG[provider] || [];
+            const serverModels = Array.isArray(cfg.models) ? cfg.models.filter(Boolean) : [];
+            cfg.models = serverModels.length ? serverModels : [...catalog];
+            if (!cfg.model || !cfg.models.includes(cfg.model)) {
+                cfg.model = cfg.models[0] || catalog[0] || '';
+            }
+        });
+        return merged;
+    }
+
+    function getDrawingModelLabel(model) {
+        return DRAWING_MODEL_LABELS[model] || model;
+    }
 
     function getDrawingProviderConfig(provider) {
         return drawingAiConfig?.providers?.[provider] || null;
@@ -210,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function () {
         models.forEach((model) => {
             const option = document.createElement('option');
             option.value = model;
-            option.textContent = model;
+            option.textContent = getDrawingModelLabel(model);
             select.appendChild(option);
         });
         select.disabled = false;
@@ -320,51 +383,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- API Key Management (UPDATED) ---
     async function loadDrawingAiConfig() {
+        let loadError = '';
+        drawingAiConfig = getDefaultDrawingAiConfig();
+        syncDrawingModelSelect();
+        updateDrawingAiSummary();
         try {
-            const res = await fetch('api/vehinh_ai.php?action=config', {
+            const res = await fetch('api/vehinh_ai.php', {
                 credentials: 'same-origin',
                 cache: 'no-store'
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.error || 'Không đọc được cấu hình AI vẽ hình.');
-            if (!data || typeof data !== 'object' || !data.providers?.ds2api || !data.providers?.gemini) {
-                throw new Error('Cáº¥u hÃ¬nh AI váº½ hÃ¬nh tráº£ vá» khÃ´ng Ä‘á»§ dá»¯ liá»‡u.');
+            if (!res.ok) {
+                throw new Error(data.error || 'Không đọc được cấu hình AI vẽ hình.');
             }
-            drawingAiConfig = data;
+            drawingAiConfig = normalizeDrawingAiConfig(data);
             const savedProvider = localStorage.getItem(VEHINH_PROVIDER_STORAGE_KEY);
-            const defaultProvider = savedProvider || data.default_provider || 'ds2api';
+            const defaultProvider = savedProvider || drawingAiConfig.default_provider || 'ds2api';
             if (allDOMElements.aiProviderSelect) {
                 allDOMElements.aiProviderSelect.value = defaultProvider;
             }
-            syncDrawingModelSelect();
-            updateDrawingAiSummary();
         } catch (error) {
-            drawingAiConfig = {
-                default_provider: 'gemini',
-                providers: {
-                    ds2api: {
-                        label: 'DeepSeek / DS2API',
-                        configured: false,
-                        model: localStorage.getItem('default_ds2api_module') || 'deepseek-v4-flash',
-                        models: ['deepseek-v4-flash', 'deepseek-v4-flash-nothinking', 'deepseek-v4-pro', 'deepseek-v4-pro-nothinking']
-                    },
-                    gemini: {
-                        label: 'Google Gemini',
-                        configured: false,
-                        model: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
-                        models: ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'],
-                        keys_count: 0
-                    }
-                }
-            };
+            loadError = error.message || 'Không đọc được cấu hình server.';
+            drawingAiConfig = getDefaultDrawingAiConfig();
+        } finally {
             syncDrawingModelSelect();
-            if (allDOMElements.aiModelSummary) {
-                allDOMElements.aiModelSummary.innerHTML = `<span class="text-amber-300">Không đọc được cấu hình server:</span> ${error.message}`;
-            }
+            updateDrawingAiSummary(loadError);
         }
     }
 
-    function updateDrawingAiSummary() {
+    function updateDrawingAiSummary(loadError = '') {
         const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
         const ds2 = drawingAiConfig?.providers?.ds2api || {};
         const gemini = drawingAiConfig?.providers?.gemini || {};
@@ -372,19 +419,23 @@ document.addEventListener('DOMContentLoaded', function () {
         if (allDOMElements.aiProviderSelect) {
             const ds2Option = allDOMElements.aiProviderSelect.querySelector('option[value="ds2api"]');
             const geminiOption = allDOMElements.aiProviderSelect.querySelector('option[value="gemini"]');
-            if (ds2Option) ds2Option.textContent = `DeepSeek / DS2API · ${ds2.model || 'deepseek-v4-flash'}${ds2.configured ? '' : ' (chưa cấu hình)'}`;
-            if (geminiOption) geminiOption.textContent = `Google Gemini · ${gemini.model || 'gemini-2.5-flash'}${gemini.configured ? '' : ' (chưa cấu hình)'}`;
+            if (ds2Option) ds2Option.textContent = `DeepSeek / DS2API${ds2.configured ? '' : ' (chưa cấu hình)'}`;
+            if (geminiOption) geminiOption.textContent = `Google Gemini${gemini.configured ? '' : ' (chưa cấu hình)'}`;
         }
         if (!allDOMElements.aiModelSummary) return;
         const selected = provider === 'gemini' ? gemini : ds2;
         const supportsImage = selected.supports_image ? 'có hỗ trợ ảnh' : 'chỉ mô tả chữ';
-        const readyText = selected.configured ? 'Đã cấu hình' : 'Chưa cấu hình';
+        const readyText = selected.configured ? 'Đã cấu hình' : 'Chưa cấu hình trên server';
         const extra = provider === 'gemini'
             ? ` · ${gemini.keys_count || 0} key`
-            : ' · dùng Client Key DS2API trên server';
+            : ' · Client Key DS2API trong Admin';
+        const errorLine = loadError
+            ? `<div class="text-amber-300 mt-1">Không đọc cấu hình server: ${loadError}. Vẫn chọn được model bên trên.</div>`
+            : '';
         allDOMElements.aiModelSummary.innerHTML = `
             <div><strong>${selected.label || provider}</strong>: <code>${currentModel || selected.model || '---'}</code></div>
-            <div>${readyText}${extra} · ${supportsImage}</div>
+            <div>${getDrawingModelLabel(currentModel || selected.model || '')} · ${readyText}${extra} · ${supportsImage}</div>
+            ${errorLine}
         `;
     }
 

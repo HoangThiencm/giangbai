@@ -3,77 +3,170 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Game 6: Truy Tìm Kho Báu</title>
+    <title>Game: Đua Vịt Kiến Thức</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="vendor/react.production.min.js"></script>
     <script src="vendor/react-dom.production.min.js"></script>
     <script src="vendor/babel.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="vendor/katex.min.css">
     <script src="vendor/katex.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .katex {
-            font-size: 1.1em;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .cell-opened {
-            animation: openCell 0.5s ease-out;
+        .duck-hop { animation: duckHop 0.55s ease-out; }
+        @keyframes duckHop {
+            0% { transform: translateX(0) scale(1); }
+            40% { transform: translateX(6px) scale(1.12); }
+            100% { transform: translateX(0) scale(1); }
         }
-
-        @keyframes openCell {
-            0% {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
+        .shake { animation: shake 0.45s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
         }
+        .race-track {
+            background-image:
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0, rgba(255,255,255,0.35) 2px, transparent 2px, transparent 48px),
+                linear-gradient(180deg, #e0f2fe 0%, #bae6fd 45%, #7dd3fc 100%);
+        }
+        .finish-flag {
+            background: repeating-linear-gradient(45deg, #111 0 8px, #fff 8px 16px);
+        }
+        .splash { animation: splash 0.6s ease-out; }
+        @keyframes splash {
+            0% { opacity: 0; transform: scale(0.6); }
+            60% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(1.4); }
+        }
+        .lane-active { box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45); }
     </style>
 </head>
 
-<body class="bg-gradient-to-br from-pink-50 to-rose-100 min-h-screen">
-    <div id="root"></div>
+<body class="bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-100 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">
+            Đang tải cuộc đua...
+        </div>
+    </div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        const DUCK_STYLES = [
+            { lane: 'border-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+            { lane: 'border-amber-400', text: 'text-amber-700', bg: 'bg-amber-50' },
+            { lane: 'border-pink-400', text: 'text-pink-700', bg: 'bg-pink-50' },
+            { lane: 'border-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
+            { lane: 'border-cyan-500', text: 'text-cyan-700', bg: 'bg-cyan-50' },
+            { lane: 'border-orange-400', text: 'text-orange-700', bg: 'bg-orange-50' },
+            { lane: 'border-rose-500', text: 'text-rose-700', bg: 'bg-rose-50' },
+            { lane: 'border-indigo-400', text: 'text-indigo-700', bg: 'bg-indigo-50' },
+            { lane: 'border-teal-500', text: 'text-teal-700', bg: 'bg-teal-50' },
+            { lane: 'border-lime-500', text: 'text-lime-700', bg: 'bg-lime-50' },
+        ];
+
+        const normalizeHeader = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+
+        const buildRacers = (participants) => participants.map((p, idx) => {
+            const style = DUCK_STYLES[idx % DUCK_STYLES.length];
+            return {
+                id: p.id || `p${idx + 1}`,
+                name: p.name,
+                className: p.className || '',
+                emoji: '🦆',
+                ...style,
+            };
+        });
+
+        const extractNamesFromRows = (rows) => {
+            const result = [];
+            if (!rows?.length) return result;
+            let headerIdx = 0, nameCol = -1, classCol = -1;
+            for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                const cells = (rows[i] || []).map(c => String(c).trim());
+                const norm = cells.map(normalizeHeader);
+                const nIdx = norm.findIndex(h => h.includes('ho va ten') || h.includes('ho ten') || h === 'ten' || h === 'name');
+                const cIdx = norm.findIndex(h => h.includes('lop') || h.includes('class') || h.includes('nhom'));
+                if (nIdx >= 0) { headerIdx = i; nameCol = nIdx; classCol = cIdx; break; }
+            }
+            if (nameCol >= 0) {
+                for (let i = headerIdx + 1; i < rows.length; i++) {
+                    const row = rows[i] || [];
+                    const name = String(row[nameCol] || '').trim();
+                    if (!name || normalizeHeader(name).startsWith('huong dan')) break;
+                    result.push({ name, className: classCol >= 0 ? String(row[classCol] || '').trim() : '' });
+                }
+            } else {
+                rows.forEach(row => {
+                    const first = (row || []).map(c => String(c).trim()).find(c => c && c.length >= 2 && !/^\d+$/.test(c));
+                    if (first) result.push({ name: first.replace(/^\d+[\.\)\-]\s*/, ''), className: '' });
+                });
+            }
+            const seen = new Set();
+            return result.filter(item => {
+                const key = item.name.toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        };
+
+        const parseWorkbookFile = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    if (typeof XLSX === 'undefined') throw new Error('Thư viện Excel chưa tải.');
+                    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    resolve(extractNamesFromRows(rows));
+                } catch (err) { reject(err); }
+            };
+            reader.onerror = () => reject(new Error('Không đọc được file.'));
+            reader.readAsArrayBuffer(file);
+        });
+
+        const downloadTemplate = () => {
+            if (typeof XLSX === 'undefined') return alert('Thư viện Excel chưa tải.');
+            const rows = [['STT', 'Họ và tên', 'Lớp/Nhóm'], [1, 'Nguyễn Văn An', '6A'], [2, 'Trần Thị Bình', '6A']];
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'DanhSachDuaVit');
+            XLSX.writeFile(wb, 'DanhSachDuaVit_Mau.xlsx');
+        };
+
+        const initPositions = (racers) => racers.reduce((acc, r) => ({ ...acc, [r.id]: 0 }), {});
 
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                let processed = String(text)
+                    .replace(/`([^`]+)`/g, '$$$1$$')
+                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
                 if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
-                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
-                ref.current.innerHTML = "";
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
+                    } else if (part.startsWith('$') && part.endsWith('$')) {
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else {
+                    } else if (part) {
                         ref.current.appendChild(document.createTextNode(part));
                     }
                 });
@@ -81,189 +174,294 @@
             return <span ref={ref} />;
         };
 
-        const TreasureGame = () => {
+        const RosterSetup = ({ onConfirm, topicTitle }) => {
+            const [mode, setMode] = useState('manual');
+            const [manualText, setManualText] = useState('');
+            const [preview, setPreview] = useState([]);
+            const [excelHint, setExcelHint] = useState('');
+
+            const syncManual = (text) => {
+                setManualText(text);
+                const names = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => ({
+                    name: l.replace(/^\d+[\.\)\-]\s*/, ''),
+                    className: ''
+                }));
+                const seen = new Set();
+                setPreview(names.filter(n => {
+                    const k = n.name.toLowerCase();
+                    if (!k || seen.has(k)) return false;
+                    seen.add(k);
+                    return true;
+                }));
+            };
+
+            const handleExcel = async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                    const names = await parseWorkbookFile(file);
+                    setPreview(names);
+                    setManualText(names.map(n => n.name).join('\n'));
+                    setExcelHint(names.length ? `Đã đọc ${names.length} học sinh.` : 'Không tìm thấy tên hợp lệ.');
+                } catch (err) {
+                    setExcelHint('');
+                    alert(err.message);
+                }
+                e.target.value = '';
+            };
+
+            const confirm = () => {
+                if (!preview.length) return alert('Vui lòng nhập ít nhất 1 học sinh!');
+                onConfirm(preview.map((p, i) => ({ id: `p${i + 1}`, name: p.name, className: p.className || '' })));
+            };
+
+            return (
+                <div className="max-w-3xl mx-auto p-6 fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8">
+                        <h2 className="text-3xl font-bold text-sky-700 mb-2">
+                            <i className="fas fa-users mr-2"></i>Danh sách đua vịt
+                        </h2>
+                        <p className="text-gray-600 mb-6">Chủ đề: <strong>{topicTitle}</strong></p>
+                        <div className="flex gap-2 mb-4">
+                            <button onClick={() => setMode('manual')} className={`px-4 py-2 rounded-lg text-sm font-bold ${mode === 'manual' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                                <i className="fas fa-keyboard mr-1"></i>Nhập tay
+                            </button>
+                            <button onClick={() => setMode('excel')} className={`px-4 py-2 rounded-lg text-sm font-bold ${mode === 'excel' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                                <i className="fas fa-file-excel mr-1"></i>Import Excel
+                            </button>
+                            <button onClick={downloadTemplate} className="ml-auto px-4 py-2 rounded-lg text-sm font-bold bg-white border border-cyan-300 text-cyan-800 hover:bg-cyan-50">
+                                <i className="fas fa-download mr-1"></i>Mẫu Excel
+                            </button>
+                        </div>
+                        {mode === 'manual' ? (
+                            <textarea value={manualText} onChange={e => syncManual(e.target.value)}
+                                className="w-full p-4 border-2 border-gray-200 rounded-xl min-h-[160px] font-mono text-sm focus:border-cyan-500 outline-none"
+                                placeholder="Mỗi dòng một học sinh&#10;Nguyễn Văn An&#10;Trần Thị Bình" />
+                        ) : (
+                            <div>
+                                <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcel}
+                                    className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:font-bold file:text-white" />
+                                {excelHint && <p className="text-sm text-cyan-800 font-semibold mt-2">{excelHint}</p>}
+                            </div>
+                        )}
+                        {preview.length > 0 && (
+                            <div className="mt-4 p-3 bg-cyan-50 border border-cyan-200 rounded-xl">
+                                <div className="text-sm font-bold text-cyan-900 mb-2">{preview.length} học sinh sẽ tham gia:</div>
+                                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                    {preview.map((p, i) => (
+                                        <span key={i} className="px-2 py-1 bg-white rounded-lg text-xs font-semibold text-cyan-900 border border-cyan-100">
+                                            {i + 1}. {p.name}{p.className ? ` (${p.className})` : ''}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <button onClick={confirm} className="w-full mt-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl">
+                            <i className="fas fa-flag-checkered mr-2"></i>Xác nhận danh sách
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const DuckRaceGame = () => {
             const [gameData, setGameData] = useState(null);
-            const [grid, setGrid] = useState([]);
-            const [openedCells, setOpenedCells] = useState([]);
-            const [currentCell, setCurrentCell] = useState(null);
-            const [showQuestion, setShowQuestion] = useState(false);
+            const [questions, setQuestions] = useState([]);
+            const [participants, setParticipants] = useState(null);
+            const [racers, setRacers] = useState([]);
+            const [qIndex, setQIndex] = useState(0);
+            const [positions, setPositions] = useState({});
+            const [activeRacerId, setActiveRacerId] = useState(null);
             const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [showResult, setShowResult] = useState(false);
+            const [lastMove, setLastMove] = useState(null);
             const [score, setScore] = useState(0);
+            const [correctCount, setCorrectCount] = useState(0);
+            const [streak, setStreak] = useState(0);
             const [gameOver, setGameOver] = useState(false);
-            const [showInstructions, setShowInstructions] = useState(true);
+            const [winner, setWinner] = useState(null);
+            const [showInstructions, setShowInstructions] = useState(false);
+            const [splashId, setSplashId] = useState(null);
+            const positionsRef = useRef({});
+            const finishedRef = useRef(false);
+
+            const finishSteps = useMemo(() => {
+                if (!questions.length) return 8;
+                return Math.min(Math.max(6, Math.ceil(questions.length * 0.7)), 12);
+            }, [questions.length]);
+
+            const setupRacers = useCallback((list) => {
+                const built = buildRacers(list);
+                const pos = initPositions(built);
+                setParticipants(list);
+                setRacers(built);
+                setPositions(pos);
+                positionsRef.current = pos;
+                setActiveRacerId(built[0]?.id || null);
+                setShowInstructions(true);
+            }, []);
 
             useEffect(() => {
-                const data = localStorage.getItem('gameData');
-                if (!data) {
+                const raw = localStorage.getItem('gameData');
+                if (!raw) {
                     alert('Không có dữ liệu game!');
                     window.location.href = 'trochoi.html';
                     return;
                 }
-                const parsed = JSON.parse(data);
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'treasure') {
+                    alert('Dữ liệu không thuộc game Đua Vịt.');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+                const loaded = (parsed.content?.questions || []).map((q, idx) => ({
+                    id: q.id || `q${idx + 1}`,
+                    prompt: q.prompt || '',
+                    choices: q.choices || [],
+                    answer: q.answer ?? 0,
+                    explanation: q.explanation || ''
+                })).filter(q => q.prompt && q.choices.length >= 2);
+
+                if (!loaded.length) {
+                    alert('Không có câu hỏi hợp lệ.');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
                 setGameData(parsed);
+                setQuestions(loaded);
 
-                const questions = parsed.content.questions || [];
-                const gridSize = 3;
-                const newGrid = Array(gridSize * gridSize).fill(null).map((_, idx) => {
-                    if (idx < questions.length) {
-                        const cellTypes = ['normal', 'normal', 'normal', 'bonus', 'trap'];
-                        return {
-                            question: questions[idx],
-                            cellType: cellTypes[Math.floor(Math.random() * cellTypes.length)],
-                            index: idx
-                        };
-                    }
-                    return null;
-                }).filter(c => c);
-                setGrid(newGrid);
-            }, []);
+                const roster = parsed.participants || [];
+                if (roster.length) setupRacers(roster);
+            }, [setupRacers]);
 
-            const handleCellClick = (cell) => {
-                if (openedCells.includes(cell.index)) return;
-                setCurrentCell(cell);
-                setShowQuestion(true);
-                setSelectedAnswer(null);
+            const raceTitle = gameData?.content?.raceTitle || gameData?.formData?.topic || 'Cuộc đua kiến thức';
+            const currentQ = questions[qIndex];
+            const activeRacer = racers.find(r => r.id === activeRacerId);
+
+            const checkFinish = (nextPositions) => {
+                const finished = Object.entries(nextPositions).filter(([, pos]) => pos >= finishSteps);
+                if (finished.length) {
+                    const top = finished.sort((a, b) => b[1] - a[1])[0][0];
+                    finishedRef.current = true;
+                    setWinner(top);
+                    setTimeout(() => setGameOver(true), 900);
+                    return true;
+                }
+                return false;
             };
 
-            const handleAnswer = () => {
-                if (selectedAnswer === null) return;
+            const advanceRacer = (racerId) => {
+                setPositions(prev => {
+                    const next = { ...prev, [racerId]: Math.min((prev[racerId] || 0) + 1, finishSteps) };
+                    positionsRef.current = next;
+                    checkFinish(next);
+                    return next;
+                });
+                setLastMove(racerId);
+                setSplashId(racerId);
+                setTimeout(() => setSplashId(null), 600);
+            };
 
-                const isCorrect = selectedAnswer === currentCell.question.answer;
-                let points = 0;
+            const handleSubmit = () => {
+                if (selectedAnswer === null || showResult || !currentQ || !activeRacerId) return;
+                setShowResult(true);
+                const isCorrect = selectedAnswer === currentQ.answer;
 
                 if (isCorrect) {
-                    points = currentCell.cellType === 'bonus' ? 50 :
-                        currentCell.cellType === 'trap' ? -50 : 10;
+                    const bonus = Math.min(streak, 4) * 3;
+                    setScore(prev => prev + 15 + bonus);
+                    setCorrectCount(prev => prev + 1);
+                    setStreak(prev => prev + 1);
+                    setTimeout(() => advanceRacer(activeRacerId), 200);
+                } else {
+                    setStreak(0);
                 }
 
-                setScore(score + points);
-                setOpenedCells([...openedCells, currentCell.index]);
-                setShowQuestion(false);
-                setCurrentCell(null);
-
-                if (openedCells.length + 1 >= grid.length) {
-                    setTimeout(() => setGameOver(true), 1000);
-                }
+                setTimeout(() => {
+                    if (finishedRef.current) return;
+                    if (qIndex < questions.length - 1) {
+                        const nextIdx = (racers.findIndex(r => r.id === activeRacerId) + 1) % racers.length;
+                        setQIndex(prev => prev + 1);
+                        setActiveRacerId(racers[nextIdx]?.id || activeRacerId);
+                        setSelectedAnswer(null);
+                        setShowResult(false);
+                        setLastMove(null);
+                    } else {
+                        const leader = Object.entries(positionsRef.current).sort((a, b) => b[1] - a[1])[0];
+                        setWinner(leader?.[0] || activeRacerId);
+                        setGameOver(true);
+                    }
+                }, 1600);
             };
 
-            if (!gameData) return <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Đang tải...</div></div>;
+            const progressPct = (pos) => Math.round(((pos || 0) / finishSteps) * 100);
+
+            if (!gameData || !questions.length) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="text-xl text-sky-800 font-semibold">
+                            <i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị đường đua...
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!participants) {
+                return <RosterSetup topicTitle={raceTitle} onConfirm={setupRacers} />;
+            }
 
             if (showInstructions) {
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-3xl font-bold text-pink-700">
-                                    <i className="fas fa-gem mr-3"></i>TRUY TÌM KHO BÁU
-                                </h2>
-                                <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
-                                    <i className="fas fa-times text-2xl"></i>
-                                </button>
-                            </div>
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto fade-in">
+                            <h2 className="text-3xl font-bold text-sky-700 mb-4">
+                                <i className="fas fa-flag-checkered mr-2"></i>Đua Vịt Kiến Thức
+                            </h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{raceTitle}</strong> · <strong>{racers.length}</strong> học sinh</p>
                             <div className="space-y-4 text-gray-700">
-                                <div className="bg-pink-50 border-2 border-pink-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-lg text-pink-800 mb-2">
-                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
-                                    </h3>
-                                    <p>Ôn tập cuối bài với yếu tố may mắn!</p>
+                                <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4">
+                                    <h3 className="font-bold text-sky-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
+                                    <p>Mỗi học sinh có một vịt — trả lời đúng để vịt tiến về đích trước!</p>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
-                                    </h3>
-                                    <ul className="space-y-2 ml-6">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-pink-600 font-bold">1.</span>
-                                            <span>Lưới <strong>3×3</strong> với 9 ô</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-pink-600 font-bold">2.</span>
-                                            <span>Click ô → trả lời câu hỏi</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-pink-600 font-bold">3.</span>
-                                            <span>Ô đặc biệt: <strong className="text-yellow-600">Bonus (+50)</strong>, <strong className="text-red-600">Trap (-50)</strong></span>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-calculator mr-2"></i>Tính điểm
-                                    </h3>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                                        <p>Ô thường: <strong>+10 điểm</strong></p>
-                                        <p>Ô Bonus: <strong className="text-yellow-600">+50 điểm</strong></p>
-                                        <p>Ô Trap: <strong className="text-red-600">-50 điểm</strong></p>
-                                    </div>
-                                </div>
+                                <ul className="space-y-2 ml-2">
+                                    <li><strong>1.</strong> Chọn học sinh đang trả lời (bấm vào làn vịt hoặc dùng lượt luân phiên)</li>
+                                    <li><strong>2.</strong> Trả lời <span className="text-emerald-600 font-bold">đúng</span> → vịt của học sinh đó tiến <strong>1 bước</strong></li>
+                                    <li><strong>3.</strong> Trả lời <span className="text-red-600 font-bold">sai</span> → vịt đứng yên, chuyển lượt</li>
+                                    <li><strong>4.</strong> Ai về đích trước (hoặc hết câu) thắng cuộc đua</li>
+                                </ul>
                             </div>
-                            <button
-                                onClick={() => setShowInstructions(false)}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
-                            >
-                                <i className="fas fa-play mr-2"></i>Bắt đầu chơi
+                            <button onClick={() => setShowInstructions(false)}
+                                className="w-full mt-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu đua ({questions.length} câu · {finishSteps} bước)
                             </button>
                         </div>
                     </div>
                 );
             }
 
-            if (showQuestion && currentCell) {
-                const q = currentCell.question;
-                return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
-                            <div className={`p-4 rounded-xl mb-4 ${currentCell.cellType === 'bonus' ? 'bg-yellow-100 border-2 border-yellow-500' :
-                                    currentCell.cellType === 'trap' ? 'bg-red-100 border-2 border-red-500' :
-                                        'bg-gray-100'
-                                }`}>
-                                <div className="font-bold text-center">
-                                    {currentCell.cellType === 'bonus' && <span className="text-yellow-600">🎁 Ô BONUS +50</span>}
-                                    {currentCell.cellType === 'trap' && <span className="text-red-600">⚠️ Ô TRAP -50</span>}
-                                    {currentCell.cellType === 'normal' && <span>Ô thường +10</span>}
-                                </div>
-                            </div>
-
-                            <h3 className="text-xl font-bold mb-4"><MathText text={q.prompt} /></h3>
-
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                {q.choices.map((choice, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => setSelectedAnswer(idx)}
-                                        className={`p-3 rounded-xl border-2 transition ${selectedAnswer === idx ? 'bg-blue-100 border-blue-500' : 'border-gray-300 hover:border-blue-400'
-                                            }`}
-                                    >
-                                        <MathText text={choice} />
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowQuestion(false)} className="flex-1 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600">
-                                    Hủy
-                                </button>
-                                <button onClick={handleAnswer} disabled={selectedAnswer === null} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 disabled:opacity-50">
-                                    Xác nhận
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
             if (gameOver) {
+                const winnerInfo = racers.find(r => r.id === winner) || racers[0];
+                const ranking = [...racers].sort((a, b) => (positions[b.id] || 0) - (positions[a.id] || 0));
                 return (
                     <div className="max-w-3xl mx-auto p-6 fade-in">
-                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
-                            <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <i className="fas fa-gem text-5xl text-pink-600"></i>
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
+                            <div className="text-6xl mb-4">🏆</div>
+                            <h2 className="text-4xl font-bold text-gray-800 mb-2">{winnerInfo?.name || '—'} về đích!</h2>
+                            <p className="text-gray-600 mb-6">{raceTitle}</p>
+                            <div className="text-5xl font-black text-sky-600 mb-2">{score} điểm lớp</div>
+                            <div className="text-sm text-gray-500 mb-6">Đúng {correctCount}/{questions.length} câu</div>
+                            <div className="text-left max-w-md mx-auto mb-8 space-y-2">
+                                <div className="text-sm font-bold text-gray-700 mb-2">Bảng xếp hạng:</div>
+                                {ranking.map((r, i) => (
+                                    <div key={r.id} className={`flex justify-between px-4 py-2 rounded-lg text-sm ${i === 0 ? 'bg-amber-50 border border-amber-200 font-bold' : 'bg-gray-50'}`}>
+                                        <span>{i + 1}. {r.name}</span>
+                                        <span>{positions[r.id] || 0}/{finishSteps} bước</span>
+                                    </div>
+                                ))}
                             </div>
-                            <h2 className="text-4xl font-bold mb-4">Hoàn thành!</h2>
-                            <div className="text-6xl font-bold text-pink-600 mb-8">{score}đ</div>
-                            <div className="flex gap-4 justify-center">
-                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
-                                    <i className="fas fa-redo mr-2"></i>Chơi lại
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-cyan-600 text-white rounded-xl font-bold hover:bg-cyan-700">
+                                    <i className="fas fa-redo mr-2"></i>Đua lại
                                 </button>
                                 <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700">
                                     <i className="fas fa-home mr-2"></i>Về menu
@@ -274,61 +472,131 @@
                 );
             }
 
+            const compactLanes = racers.length > 10;
+
             return (
-                <div className="max-w-4xl mx-auto p-6 fade-in">
-                    <div className="flex justify-between items-center mb-6">
+                <div className="max-w-5xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                         <div className="flex gap-2">
                             <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                                <i className="fas fa-arrow-left mr-2"></i>Thoát
+                                <i className="fas fa-arrow-left mr-1"></i>Thoát
                             </button>
                             <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 <i className="fas fa-question-circle"></i>
                             </button>
                         </div>
-
-                        <h1 className="text-3xl font-bold text-pink-700">
-                            <i className="fas fa-gem mr-2"></i>TRUY TÌM KHO BÁU
-                        </h1>
-
-                        <div className="px-6 py-3 bg-pink-600 text-white rounded-lg font-bold text-xl">
-                            {score}đ
+                        <div className="text-center">
+                            <h1 className="text-2xl md:text-3xl font-bold text-sky-700">
+                                <i className="fas fa-water mr-2"></i>Đua Vịt Kiến Thức
+                            </h1>
+                            <p className="text-sm text-gray-600">{raceTitle} · {racers.length} HS</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="px-4 py-2 bg-white border-2 border-sky-200 rounded-lg font-bold text-sky-700">
+                                <i className="fas fa-star mr-1"></i>{score}
+                            </div>
+                            <div className="px-4 py-2 bg-white border-2 border-amber-200 rounded-lg font-bold text-amber-700">
+                                <i className="fas fa-fire mr-1"></i>x{streak}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl shadow-2xl p-8">
-                        <div className="text-center mb-6">
-                            <div className="text-sm text-gray-600">Đã mở: {openedCells.length}/{grid.length} ô</div>
+                    {activeRacer && (
+                        <div className="mb-4 p-3 rounded-xl bg-sky-100 border-2 border-sky-300 text-center">
+                            <span className="text-sm text-sky-800">Lượt trả lời: </span>
+                            <span className="font-bold text-lg text-sky-900">{activeRacer.name}</span>
+                            {activeRacer.className && <span className="text-sm text-sky-700 ml-2">({activeRacer.className})</span>}
                         </div>
+                    )}
 
-                        <div className="grid grid-cols-3 gap-4">
-                            {grid.map((cell) => {
-                                const isOpened = openedCells.includes(cell.index);
+                    <div className={`bg-white/90 rounded-2xl shadow-lg p-4 md:p-6 mb-5 race-track border-2 border-sky-200 ${racers.length > 8 ? 'max-h-80 overflow-y-auto' : ''}`}>
+                        <div className="flex justify-between text-xs text-sky-900 font-semibold mb-3 px-1">
+                            <span>Xuất phát</span>
+                            <span>🏁 Đích ({finishSteps} bước)</span>
+                        </div>
+                        <div className={compactLanes ? 'space-y-1.5' : 'space-y-3'}>
+                            {racers.map(racer => {
+                                const pos = positions[racer.id] || 0;
+                                const pct = progressPct(pos);
+                                const isMoving = lastMove === racer.id;
+                                const isActive = activeRacerId === racer.id;
                                 return (
                                     <button
-                                        key={cell.index}
-                                        onClick={() => handleCellClick(cell)}
-                                        disabled={isOpened}
-                                        className={`aspect-square rounded-2xl border-4 flex items-center justify-center text-4xl font-bold transition ${isOpened
-                                                ? cell.cellType === 'bonus' ? 'bg-yellow-100 border-yellow-500 cell-opened' :
-                                                    cell.cellType === 'trap' ? 'bg-red-100 border-red-500 cell-opened' :
-                                                        'bg-green-100 border-green-500 cell-opened'
-                                                : 'bg-gradient-to-br from-pink-200 to-rose-300 border-pink-400 hover:scale-105 hover:shadow-xl cursor-pointer'
-                                            }`}
+                                        key={racer.id}
+                                        type="button"
+                                        onClick={() => !showResult && setActiveRacerId(racer.id)}
+                                        disabled={showResult}
+                                        className={`w-full relative rounded-xl border-2 ${racer.lane} ${racer.bg} p-2 md:p-3 text-left transition ${isActive ? 'lane-active ring-2 ring-sky-300' : 'hover:brightness-105'} ${compactLanes ? 'py-1.5' : ''}`}
                                     >
-                                        {isOpened ? (
-                                            cell.cellType === 'bonus' ? '🎁' :
-                                                cell.cellType === 'trap' ? '⚠️' : '✓'
-                                        ) : '?'}
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-xs font-bold ${racer.text} truncate max-w-[55%]`}>{racer.name}</span>
+                                            {isActive && <span className="text-[10px] bg-sky-600 text-white px-2 py-0.5 rounded-full font-bold shrink-0">ĐANG TRẢ LỜI</span>}
+                                            <span className="text-xs text-gray-500 ml-auto shrink-0">{pos}/{finishSteps}</span>
+                                        </div>
+                                        <div className={`relative ${compactLanes ? 'h-8' : 'h-10 md:h-12'} bg-sky-100/80 rounded-lg overflow-hidden`}>
+                                            <div className="absolute right-0 top-0 bottom-0 w-3 finish-flag rounded-r-lg opacity-80"></div>
+                                            <div
+                                                className={`absolute top-1/2 -translate-y-1/2 ${compactLanes ? 'text-xl' : 'text-2xl md:text-3xl'} transition-all duration-700 ease-out ${isMoving ? 'duck-hop' : ''}`}
+                                                style={{ left: `calc(${pct}% - ${pct > 0 ? 16 : 4}px)` }}
+                                            >{racer.emoji}</div>
+                                            {splashId === racer.id && (
+                                                <span className="absolute splash text-lg" style={{ left: `calc(${pct}% - 8px)`, top: '10%' }}>💦</span>
+                                            )}
+                                        </div>
                                     </button>
                                 );
                             })}
                         </div>
                     </div>
+
+                    <div className="bg-white rounded-3xl shadow-2xl p-5 md:p-8">
+                        <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
+                            <span>Câu {qIndex + 1}/{questions.length}</span>
+                            <span>Bấm làn vịt để đổi học sinh trả lời</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6">
+                            <MathText text={currentQ.prompt} />
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                            {currentQ.choices.map((choice, idx) => {
+                                const isSelected = selectedAnswer === idx;
+                                const isCorrect = currentQ.answer === idx;
+                                let cls = 'p-4 rounded-xl border-2 text-left transition font-medium ';
+                                if (showResult) {
+                                    if (isCorrect) cls += 'bg-emerald-100 border-emerald-500 text-emerald-900';
+                                    else if (isSelected) cls += 'bg-red-100 border-red-500 text-red-900 shake';
+                                    else cls += 'border-gray-200 opacity-50';
+                                } else {
+                                    cls += isSelected ? 'bg-sky-100 border-sky-500 ring-2 ring-sky-200' : 'bg-white border-gray-200 hover:border-sky-400 hover:bg-sky-50';
+                                }
+                                return (
+                                    <button key={idx} onClick={() => !showResult && setSelectedAnswer(idx)} disabled={showResult} className={cls}>
+                                        <div className="flex items-start gap-3">
+                                            <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold shrink-0">
+                                                {String.fromCharCode(65 + idx)}
+                                            </span>
+                                            <div className="flex-1"><MathText text={choice} /></div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {showResult && currentQ.explanation && (
+                            <div className="mb-4 p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-sm">
+                                <i className="fas fa-info-circle mr-2"></i><MathText text={currentQ.explanation} />
+                            </div>
+                        )}
+                        {!showResult && selectedAnswer !== null && activeRacerId && (
+                            <button onClick={handleSubmit} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-lg">
+                                <i className="fas fa-paper-plane mr-2"></i>Xác nhận — {activeRacer?.name} đẩy vịt!
+                            </button>
+                        )}
+                    </div>
                 </div>
             );
         };
 
-        ReactDOM.render(<TreasureGame />, document.getElementById('root'));
+        ReactDOM.render(<DuckRaceGame />, document.getElementById('root'));
     </script>
 </body>
 

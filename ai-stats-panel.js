@@ -359,16 +359,20 @@
             const knownTotal = ['ds2api', 'cloudflare_workers_ai', 'mistral_ocr', 'gemini_browser', 'gemini', 'shopaikey']
                 .reduce((sum, pid) => sum + (Number(p[pid]?.success) || 0), 0);
             const unclassified = Math.max(0, (Number(row.total_success) || 0) - knownTotal);
+            const displayTotal = knownTotal + unclassified;
             return `<tr class="border-t border-slate-100">
                 <td class="px-3 py-2 text-sm font-semibold">${escapeHtml(row.date)}</td>
-                <td class="px-3 py-2 text-sm">${formatNumber(row.total_success || 0)}</td>
+                <td class="px-3 py-2 text-sm">
+                    <div class="font-semibold">${formatNumber(displayTotal || 0)}</div>
+                    ${unclassified > 0 ? `<div class="text-[11px] text-slate-500">gồm ${formatNumber(unclassified)} khác/log cũ</div>` : ''}
+                </td>
+                <td class="px-3 py-2 text-sm text-slate-500">${formatNumber(unclassified)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.ds2api?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.cloudflare_workers_ai?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.mistral_ocr?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.gemini_browser?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.gemini?.success || 0)}</td>
                 <td class="px-3 py-2 text-sm">${formatNumber(p.shopaikey?.success || 0)}</td>
-                <td class="px-3 py-2 text-sm text-slate-500">${formatNumber(unclassified)}</td>
             </tr>`;
         }).join('');
 
@@ -475,7 +479,7 @@
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
                     <table class="min-w-full text-left">
                         <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
-                            <tr><th class="px-3 py-2">Ngày</th><th class="px-3 py-2">Tổng</th><th class="px-3 py-2">DS2</th><th class="px-3 py-2">CF</th><th class="px-3 py-2">Mistral</th><th class="px-3 py-2">Gemini TB</th><th class="px-3 py-2">Gemini FB</th><th class="px-3 py-2">ShopAIKey</th><th class="px-3 py-2">Khác/log cũ</th></tr>
+                            <tr><th class="px-3 py-2">Ngày</th><th class="px-3 py-2">Tổng</th><th class="px-3 py-2">Khác/log cũ</th><th class="px-3 py-2">DS2</th><th class="px-3 py-2">CF</th><th class="px-3 py-2">Mistral</th><th class="px-3 py-2">Gemini TB</th><th class="px-3 py-2">Gemini FB</th><th class="px-3 py-2">ShopAIKey</th></tr>
                         </thead>
                         <tbody>${historyRows || '<tr><td colspan="9" class="px-3 py-4 text-sm text-slate-400">Chưa có dữ liệu.</td></tr>'}</tbody>
                     </table>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Game 7: Escape Room</title>
+    <title>Game: Hứng Trứng Vàng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="vendor/react.production.min.js"></script>
     <script src="vendor/react-dom.production.min.js"></script>
@@ -12,70 +12,93 @@
     <script src="vendor/katex.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .katex {
-            font-size: 1.1em;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .lock-open {
-            animation: lockOpen 0.6s ease-out;
+        .egg-fall { animation: eggFall linear forwards; }
+        @keyframes eggFall {
+            from { transform: translateY(-20px); opacity: 0.9; }
+            to { transform: translateY(320px); opacity: 1; }
         }
-
-        @keyframes lockOpen {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            50% {
-                transform: rotate(15deg) scale(1.1);
-            }
-
-            100% {
-                transform: rotate(0deg);
-            }
+        .egg-pop { animation: eggPop 0.5s ease-out; }
+        @keyframes eggPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.25); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .rotten-shake { animation: rottenShake 0.6s ease-in-out; }
+        @keyframes rottenShake {
+            0%, 100% { transform: rotate(0deg); filter: hue-rotate(0deg); }
+            25% { transform: rotate(-8deg); filter: hue-rotate(90deg); }
+            75% { transform: rotate(8deg); filter: hue-rotate(180deg); }
+        }
+        .golden-glow {
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 40px rgba(245, 158, 11, 0.4);
+        }
+        .barn-bg {
+            background: linear-gradient(180deg, #fef9c3 0%, #fde68a 35%, #fcd34d 100%);
+        }
+        .cloud-drift { animation: cloudDrift 18s linear infinite; }
+        @keyframes cloudDrift {
+            from { transform: translateX(-10%); }
+            to { transform: translateX(110%); }
         }
     </style>
 </head>
 
-<body class="bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen">
-    <div id="root"></div>
+<body class="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-100 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">
+            Đang tải trò chơi...
+        </div>
+    </div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        const LANE_X = [12, 34, 56, 78];
+        const MAX_LIVES = 3;
+
+        const shuffleArray = (arr) => {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        };
+
+        const truncate = (text, max = 28) => {
+            const s = String(text || '').replace(/\s+/g, ' ').trim();
+            return s.length > max ? s.slice(0, max - 1) + '…' : s;
+        };
 
         const MathText = ({ text }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = text.replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                let processed = String(text)
+                    .replace(/`([^`]+)`/g, '$$$1$$')
+                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
+                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
                 if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
-                const parts = processed.split(/($$[\s\S]+?$$|\$[\s\S]+?\$)/g);
-                ref.current.innerHTML = "";
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else if (part.startsWith("$") && part.endsWith("$")) {
-                        const span = document.createElement("span");
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
+                    } else if (part.startsWith('$') && part.endsWith('$')) {
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
-                    } else {
+                    } else if (part) {
                         ref.current.appendChild(document.createTextNode(part));
                     }
                 });
@@ -83,132 +106,178 @@
             return <span ref={ref} />;
         };
 
-        const EscapeGame = () => {
+        const EggCatchGame = () => {
             const [gameData, setGameData] = useState(null);
-            const [currentLockIndex, setCurrentLockIndex] = useState(0);
-            const [selectedAnswer, setSelectedAnswer] = useState(null);
-            const [showAnswer, setShowAnswer] = useState(false);
-            const [hintsUsed, setHintsUsed] = useState(0);
-            const [showHint, setShowHint] = useState(false);
-            const [collectedCode, setCollectedCode] = useState([]);
-            const [escaped, setEscaped] = useState(false);
+            const [questions, setQuestions] = useState([]);
+            const [qIndex, setQIndex] = useState(0);
+            const [laneOrder, setLaneOrder] = useState([0, 1, 2, 3]);
+            const [fallKey, setFallKey] = useState(0);
+            const [fallDuration, setFallDuration] = useState(5.5);
+            const [score, setScore] = useState(0);
+            const [lives, setLives] = useState(MAX_LIVES);
+            const [streak, setStreak] = useState(0);
+            const [caught, setCaught] = useState(null);
+            const [phase, setPhase] = useState('falling');
+            const [lastMsg, setLastMsg] = useState('');
             const [showInstructions, setShowInstructions] = useState(true);
+            const [gameOver, setGameOver] = useState(false);
+            const [correctTotal, setCorrectTotal] = useState(0);
+            const timeoutRef = useRef(null);
+
+            const currentQ = questions[qIndex];
+
+            const resetRound = useCallback((nextIndex, questionsLen) => {
+                setLaneOrder(shuffleArray([0, 1, 2, 3]));
+                setFallKey(k => k + 1);
+                const speed = 5.8 - Math.min(nextIndex * 0.12, 2.2);
+                setFallDuration(Math.max(speed, 3.2));
+                setCaught(null);
+                setPhase('falling');
+            }, []);
 
             useEffect(() => {
-                const data = localStorage.getItem('gameData');
-                if (!data) {
-                    alert('Không có dữ liệu game!');
+                const raw = localStorage.getItem('gameData');
+                if (!raw) {
+                    alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.');
                     window.location.href = 'trochoi.html';
                     return;
                 }
-                setGameData(JSON.parse(data));
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'escape') {
+                    alert('Dữ liệu không thuộc game Hứng Trứng. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+                const loaded = (parsed.content?.questions || parsed.content?.locks || []).map((q, idx) => ({
+                    id: q.id || `q${idx + 1}`,
+                    prompt: q.prompt || '',
+                    choices: q.choices || [],
+                    answer: q.answer ?? 0,
+                    explanation: q.explanation || ''
+                })).filter(q => q.prompt && q.choices.length >= 2);
+
+                if (!loaded.length) {
+                    alert('Không có câu hỏi hợp lệ trong dữ liệu game.');
+                    window.location.href = 'trochoi.html';
+                    return;
+                }
+                setGameData(parsed);
+                setQuestions(loaded);
+                setLaneOrder(shuffleArray([0, 1, 2, 3]));
             }, []);
 
-            const handleSubmit = () => {
-                if (selectedAnswer === null) return;
-                setShowAnswer(true);
+            useEffect(() => {
+                return () => {
+                    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                };
+            }, []);
 
-                const locks = gameData.content.locks || gameData.content.questions;
-                const currentLock = locks[currentLockIndex];
-                const isCorrect = selectedAnswer === currentLock.answer;
+            const topicTitle = gameData?.formData?.topic || 'Hứng trứng kiến thức';
+
+            const goNext = useCallback((nextLives) => {
+                if (qIndex >= questions.length - 1 || nextLives <= 0) {
+                    setGameOver(true);
+                    return;
+                }
+                const ni = qIndex + 1;
+                setQIndex(ni);
+                resetRound(ni, questions.length);
+            }, [qIndex, questions.length, resetRound]);
+
+            const handleCatch = (choiceIdx) => {
+                if (phase !== 'falling' || !currentQ) return;
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                setPhase('result');
+                setCaught(choiceIdx);
+                const isCorrect = choiceIdx === currentQ.answer;
 
                 if (isCorrect) {
-                    const codeChar = currentLock.codeChar || String.fromCharCode(65 + currentLockIndex);
-                    setCollectedCode([...collectedCode, codeChar]);
-
-                    setTimeout(() => {
-                        if (currentLockIndex < locks.length - 1) {
-                            setCurrentLockIndex(currentLockIndex + 1);
-                            setSelectedAnswer(null);
-                            setShowAnswer(false);
-                            setShowHint(false);
-                        } else {
-                            setEscaped(true);
-                        }
-                    }, 1500);
+                    const bonus = Math.min(streak, 5) * 4;
+                    setScore(prev => prev + 20 + bonus);
+                    setStreak(prev => prev + 1);
+                    setCorrectTotal(prev => prev + 1);
+                    setLastMsg(currentQ.explanation || 'Trứng vàng! Đáp án chính xác!');
+                } else {
+                    const nextLives = lives - 1;
+                    setLives(nextLives);
+                    setStreak(0);
+                    setLastMsg(`Trứng thối! Đáp án đúng là ${String.fromCharCode(65 + currentQ.answer)}.`);
+                    timeoutRef.current = setTimeout(() => goNext(nextLives), 1400);
+                    return;
                 }
+                timeoutRef.current = setTimeout(() => goNext(lives), 1200);
             };
 
-            if (!gameData) return <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Đang tải...</div></div>;
+            useEffect(() => {
+                if (phase !== 'falling' || !currentQ || showInstructions || gameOver) return;
+                timeoutRef.current = setTimeout(() => {
+                    const nextLives = lives - 1;
+                    setLives(nextLives);
+                    setStreak(0);
+                    setPhase('result');
+                    setCaught(-1);
+                    setLastMsg('Trứng rơi mất! Mất 1 mạng.');
+                    timeoutRef.current = setTimeout(() => goNext(nextLives), 1400);
+                }, (fallDuration + 0.5) * 1000);
+                return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+            }, [fallKey, phase, currentQ, showInstructions, gameOver, fallDuration, lives, goNext]);
 
-            const locks = gameData.content.locks || gameData.content.questions || [];
+            if (!gameData || !questions.length) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="text-xl text-amber-800 font-semibold">
+                            <i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị chuồng gà...
+                        </div>
+                    </div>
+                );
+            }
 
             if (showInstructions) {
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-3xl font-bold text-indigo-700">
-                                    <i className="fas fa-door-open mr-3"></i>ESCAPE ROOM
-                                </h2>
-                                <button onClick={() => setShowInstructions(false)} className="text-gray-500 hover:text-gray-700">
-                                    <i className="fas fa-times text-2xl"></i>
-                                </button>
-                            </div>
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto fade-in">
+                            <h2 className="text-3xl font-bold text-amber-700 mb-4">
+                                <i className="fas fa-egg mr-2"></i>Hứng Trứng Vàng
+                            </h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
                             <div className="space-y-4 text-gray-700">
-                                <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-lg text-indigo-800 mb-2">
-                                        <i className="fas fa-bullseye mr-2"></i>Mục tiêu
-                                    </h3>
-                                    <p>Ôn tập đỉnh cao, làm việc nhóm để thoát khỏi phòng!</p>
+                                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                                    <h3 className="font-bold text-amber-800 mb-2"><i className="fas fa-bullseye mr-2"></i>Mục tiêu</h3>
+                                    <p>Đọc câu hỏi, bấm đúng trứng mang đáp án đúng trước khi trứng chạm đất!</p>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">
-                                        <i className="fas fa-gamepad mr-2"></i>Luật chơi
-                                    </h3>
-                                    <ul className="space-y-2 ml-6">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-indigo-600 font-bold">1.</span>
-                                            <span>Có <strong>5-8 ổ khóa</strong> liên tiếp</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-indigo-600 font-bold">2.</span>
-                                            <span>Đúng → mở khóa + <strong className="text-green-600">lấy 1 ký tự</strong></span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-indigo-600 font-bold">3.</span>
-                                            <span>Sai → xem <strong>gợi ý</strong> (max 2-3 hint)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-indigo-600 font-bold">4.</span>
-                                            <span>Ghép ký tự → <strong className="text-green-600">MÃ TẨU THOÁT</strong></span>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                    <p className="text-sm">
-                                        <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
-                                        <strong>Mẹo:</strong> Đọc kỹ câu hỏi, sử dụng hint khôn ngoan!
-                                    </p>
-                                </div>
+                                <ul className="space-y-2 ml-2">
+                                    <li><strong>1.</strong> Mỗi lượt có <strong>4 trứng rơi</strong> — mỗi trứng là một đáp án (A–D)</li>
+                                    <li><strong>2.</strong> Bấm <span className="text-amber-600 font-bold">trứng đúng</span> → trứng vàng, cộng điểm + chuỗi</li>
+                                    <li><strong>3.</strong> Bấm sai hoặc để rơi hết → <span className="text-red-600 font-bold">trứng thối</span>, mất 1 mạng</li>
+                                    <li><strong>4.</strong> Tốc độ rơi tăng dần — luyện phản xạ!</li>
+                                </ul>
+                                <p className="text-sm text-gray-500">Bạn có {MAX_LIVES} mạng. Hết câu hoặc hết mạng là kết thúc.</p>
                             </div>
-                            <button
-                                onClick={() => setShowInstructions(false)}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
-                            >
-                                <i className="fas fa-play mr-2"></i>Bắt đầu thoát
+                            <button onClick={() => setShowInstructions(false)}
+                                className="w-full mt-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-lg hover:shadow-xl">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu hứng ({questions.length} câu)
                             </button>
                         </div>
                     </div>
                 );
             }
 
-            if (escaped) {
-                const finalCode = collectedCode.join('');
+            if (gameOver) {
+                const survived = lives > 0;
                 return (
                     <div className="max-w-3xl mx-auto p-6 fade-in">
-                        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
-                            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 lock-open">
-                                <i className="fas fa-door-open text-5xl text-green-600"></i>
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
+                            <div className="text-6xl mb-4">{survived ? '🥇' : '💔'}</div>
+                            <h2 className="text-4xl font-bold text-gray-800 mb-2">
+                                {survived ? 'Hoàn thành!' : 'Hết mạng!'}
+                            </h2>
+                            <p className="text-gray-600 mb-6">{topicTitle}</p>
+                            <div className="text-5xl font-black text-amber-600 mb-2">{score} điểm</div>
+                            <div className="text-sm text-gray-500 mb-8">
+                                Hứng đúng {correctTotal}/{questions.length} · Còn {lives} mạng
                             </div>
-                            <h2 className="text-4xl font-bold mb-4 text-gray-800">Thoát thành công!</h2>
-                            <div className="bg-indigo-100 border-2 border-indigo-500 rounded-xl p-6 mb-8">
-                                <div className="text-sm text-gray-600 mb-2">Mã tẩu thoát:</div>
-                                <div className="text-5xl font-bold text-indigo-600 tracking-widest">{finalCode}</div>
-                            </div>
-                            <div className="text-gray-600 mb-8">Hints sử dụng: {hintsUsed}</div>
-                            <div className="flex gap-4 justify-center">
-                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600">
                                     <i className="fas fa-redo mr-2"></i>Chơi lại
                                 </button>
                                 <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700">
@@ -220,106 +289,105 @@
                 );
             }
 
-            const currentLock = locks[currentLockIndex];
-
             return (
-                <div className="max-w-4xl mx-auto p-6 fade-in">
-                    <div className="flex justify-between items-center mb-6">
+                <div className="max-w-4xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                         <div className="flex gap-2">
                             <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                                <i className="fas fa-arrow-left mr-2"></i>Thoát
+                                <i className="fas fa-arrow-left mr-1"></i>Thoát
                             </button>
                             <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 <i className="fas fa-question-circle"></i>
                             </button>
                         </div>
-
-                        <h1 className="text-3xl font-bold text-indigo-700">
-                            <i className="fas fa-door-open mr-2"></i>ESCAPE ROOM
-                        </h1>
-
-                        <div className="text-xl font-bold text-indigo-600">
-                            {currentLockIndex}/{locks.length} khóa
+                        <div className="text-center">
+                            <h1 className="text-2xl md:text-3xl font-bold text-amber-700">
+                                <i className="fas fa-egg mr-2"></i>Hứng Trứng Vàng
+                            </h1>
+                            <p className="text-sm text-gray-600">{topicTitle}</p>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                            <div className="px-3 py-2 bg-white border-2 border-amber-200 rounded-lg font-bold text-amber-700">
+                                <i className="fas fa-star mr-1"></i>{score}
+                            </div>
+                            <div className="px-3 py-2 bg-white border-2 border-orange-200 rounded-lg font-bold text-orange-700">
+                                <i className="fas fa-fire mr-1"></i>x{streak}
+                            </div>
+                            <div className="flex gap-1 px-2">
+                                {Array.from({ length: MAX_LIVES }).map((_, i) => (
+                                    <span key={i} className={`text-xl ${i < lives ? '' : 'opacity-25 grayscale'}`}>❤️</span>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex justify-center gap-3 mb-8">
-                        {locks.map((_, idx) => (
-                            <div key={idx} className={`w-16 h-20 rounded-lg flex items-center justify-center transition ${idx < currentLockIndex ? 'bg-green-500 lock-open' :
-                                    idx === currentLockIndex ? 'bg-yellow-500 animate-pulse' :
-                                        'bg-gray-300'
-                                }`}>
-                                <i className={`fas ${idx < currentLockIndex ? 'fa-unlock text-white' : 'fa-lock text-gray-600'} text-3xl`}></i>
-                            </div>
-                        ))}
+                    <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
+                        <div className="flex justify-between text-sm text-gray-500 mb-2">
+                            <span>Câu {qIndex + 1}/{questions.length}</span>
+                            <span>Tốc độ: {(6 - fallDuration).toFixed(1)}×</span>
+                        </div>
+                        <h3 className="text-lg md:text-xl font-bold text-gray-800 text-center">
+                            <MathText text={currentQ.prompt} />
+                        </h3>
                     </div>
 
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-                        <div className="text-sm text-gray-500 mb-2">Khóa {currentLockIndex + 1}/{locks.length}</div>
-                        <h3 className="text-2xl font-bold text-gray-800 mb-6">
-                            <MathText text={currentLock.prompt} />
-                        </h3>
+                    <div className="relative barn-bg rounded-3xl shadow-2xl border-4 border-amber-300 overflow-hidden min-h-[400px]">
+                        <div className="absolute top-4 left-0 right-0 h-8 opacity-40 pointer-events-none overflow-hidden">
+                            <div className="cloud-drift text-4xl whitespace-nowrap">☁️ ☁️ ☁️</div>
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            {currentLock.choices.map((choice, idx) => {
-                                const isSelected = selectedAnswer === idx;
-                                const isCorrect = currentLock.answer === idx;
-
-                                let className = "p-4 rounded-xl border-2 cursor-pointer transition font-medium ";
-                                if (showAnswer) {
-                                    if (isCorrect) className += "bg-green-100 border-green-500 text-green-900";
-                                    else if (isSelected) className += "bg-red-100 border-red-500 text-red-900";
-                                    else className += "border-gray-200 opacity-50";
-                                } else {
-                                    className += isSelected ? "bg-blue-100 border-blue-500" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50";
-                                }
+                        <div className="relative h-[360px] mx-2 mt-6" key={fallKey}>
+                            {laneOrder.map((choiceIdx, lane) => {
+                                const isCorrect = choiceIdx === currentQ.answer;
+                                const wasCaught = caught === choiceIdx;
+                                const isRotten = phase === 'result' && wasCaught && !isCorrect;
+                                const isGolden = phase === 'result' && wasCaught && isCorrect;
+                                const eggEmoji = phase === 'result' && wasCaught
+                                    ? (isCorrect ? '🥚' : '🤢')
+                                    : '🥚';
 
                                 return (
-                                    <button key={idx} onClick={() => setSelectedAnswer(idx)} disabled={showAnswer} className={className}>
-                                        <div className="flex items-center gap-3">
-                                            <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">
-                                                {String.fromCharCode(65 + idx)}
-                                            </span>
-                                            <div className="flex-1 text-left"><MathText text={choice} /></div>
-                                        </div>
+                                    <button
+                                        key={`${fallKey}-${lane}`}
+                                        onClick={() => handleCatch(choiceIdx)}
+                                        disabled={phase !== 'falling'}
+                                        className={`absolute top-0 w-[20%] flex flex-col items-center transition ${phase === 'falling' ? 'cursor-pointer hover:scale-105' : 'cursor-default'} ${isRotten ? 'rotten-shake' : ''} ${isGolden ? 'egg-pop golden-glow' : ''} ${phase === 'falling' ? 'egg-fall' : ''}`}
+                                        style={{
+                                            left: `${LANE_X[lane]}%`,
+                                            animationDuration: phase === 'falling' ? `${fallDuration}s` : '0s',
+                                        }}
+                                    >
+                                        <span className={`text-4xl md:text-5xl ${isGolden ? 'golden-glow rounded-full' : ''}`}>{eggEmoji}</span>
+                                        <span className="mt-1 px-2 py-1 bg-white/90 rounded-lg text-xs font-bold text-amber-900 border border-amber-200 shadow-sm max-w-full text-center leading-tight">
+                                            <span className="text-amber-600">{String.fromCharCode(65 + choiceIdx)}.</span> {truncate(currentQ.choices[choiceIdx])}
+                                        </span>
                                     </button>
                                 );
                             })}
                         </div>
 
-                        {showHint && (currentLock.hint1 || currentLock.hint) && (
-                            <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl mb-4">
-                                <div className="font-bold text-yellow-800 mb-1">
-                                    <i className="fas fa-lightbulb mr-2"></i>Gợi ý:
-                                </div>
-                                <div className="text-gray-700"><MathText text={currentLock.hint1 || currentLock.hint} /></div>
-                            </div>
-                        )}
-
-                        <div className="flex gap-4">
-                            {!showHint && !showAnswer && (currentLock.hint1 || currentLock.hint) && hintsUsed < 3 && (
-                                <button onClick={() => { setShowHint(true); setHintsUsed(hintsUsed + 1); }} className="px-6 py-3 bg-yellow-500 text-white rounded-xl font-bold hover:bg-yellow-600">
-                                    <i className="fas fa-lightbulb mr-2"></i>Xem gợi ý ({3 - hintsUsed} còn)
-                                </button>
-                            )}
-
-                            {!showAnswer && selectedAnswer !== null && (
-                                <button onClick={handleSubmit} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">
-                                    <i className="fas fa-key mr-2"></i>Mở khóa
-                                </button>
-                            )}
+                        <div className="absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-amber-700/30 to-transparent flex items-end justify-center pb-2">
+                            <div className="text-4xl">🧺</div>
                         </div>
                     </div>
 
-                    <div className="bg-indigo-100 border-2 border-indigo-300 rounded-xl p-4 text-center">
-                        <div className="text-sm text-gray-600 mb-2">Mã đã thu thập:</div>
-                        <div className="text-3xl font-bold text-indigo-600 tracking-widest">{collectedCode.join(' ')}</div>
-                    </div>
+                    {lastMsg && phase === 'result' && (
+                        <div className={`mt-4 p-3 rounded-xl text-sm border ${caught === currentQ.answer ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-red-50 border-red-300 text-red-900'}`}>
+                            <i className={`fas ${caught === currentQ.answer ? 'fa-check-circle' : 'fa-times-circle'} mr-2`}></i>
+                            <MathText text={lastMsg} />
+                        </div>
+                    )}
+
+                    {phase === 'falling' && (
+                        <p className="text-center text-sm text-amber-800 mt-3 font-medium animate-pulse">
+                            <i className="fas fa-hand-pointer mr-1"></i>Bấm trứng mang đáp án đúng!
+                        </p>
+                    )}
                 </div>
             );
         };
 
-        ReactDOM.render(<EscapeGame />, document.getElementById('root'));
+        ReactDOM.render(<EggCatchGame />, document.getElementById('root'));
     </script>
 </body>
 

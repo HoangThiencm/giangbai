@@ -158,40 +158,37 @@ Level 1-3: dễ, 4-7: vừa, 8-10: khó`;
 - chip: 1 chữ cái in hoa (A,B,C...) dùng ghép từ khóa bí mật theo thứ tự id`;
         break;
       case 'treasure':
-        schema = `SCHEMA:
+        schema = `SCHEMA (game đua vịt — mỗi câu đúng giúp vịt tiến 1 bước về đích):
 {
-  "gridSize": 3,
+  "raceTitle": "Tên cuộc đua ngắn theo chủ đề",
   "questions": [
     {
-      "id": "cell1",
-      "cellType": "normal",
+      "id": "q1",
       "type": "mcq",
       "prompt": "Câu hỏi",
       "choices": ["A", "B", "C", "D"],
       "answer": 0,
-      "points": 10
+      "explanation": "Giải thích ngắn khi trả lời"
     }
   ]
 }
-cellType: normal (70%), bonus (15%), trap (15%)`;
+- Tạo đúng ${numQuestions} câu trắc nghiệm 4 đáp án`;
         break;
       case 'escape':
-        schema = `SCHEMA:
+        schema = `SCHEMA (game hứng trứng — mỗi câu là 1 lượt, 4 trứng mang 4 đáp án):
 {
-  "locks": [
+  "questions": [
     {
-      "id": "lock1",
+      "id": "q1",
       "type": "mcq",
-      "prompt": "Câu hỏi khóa",
+      "prompt": "Câu hỏi",
       "choices": ["A", "B", "C", "D"],
       "answer": 0,
-      "hint1": "Gợi ý 1",
-      "hint2": "Gợi ý 2",
-      "codeChar": "A"
+      "explanation": "Giải thích ngắn khi hứng đúng"
     }
-  ],
-  "finalCode": "Mã cuối cùng ghép từ codeChar"
-}`;
+  ]
+}
+- Tạo đúng ${numQuestions} câu, đáp án ngắn gọn (vừa hiển thị trên trứng rơi)`;
         break;
       case 'teambattle':
         schema = `SCHEMA:
@@ -318,6 +315,109 @@ const MathText = ({
   });
 };
 
+// ============ DUCK RACE ROSTER ============
+const normalizeParticipantHeader = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+
+const extractParticipantNamesFromRows = rows => {
+  const result = [];
+  if (!rows?.length) return result;
+  let headerIdx = 0;
+  let nameCol = -1;
+  let classCol = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const cells = (rows[i] || []).map(cell => String(cell).trim());
+    const normalized = cells.map(normalizeParticipantHeader);
+    const foundName = normalized.findIndex(h => h.includes('ho va ten') || h.includes('ho ten') || h === 'ten' || h === 'name' || h.includes('hoten'));
+    const foundClass = normalized.findIndex(h => h.includes('lop nhom') || h.includes('lop') || h.includes('class') || h.includes('nhom'));
+    if (foundName >= 0) {
+      headerIdx = i;
+      nameCol = foundName;
+      classCol = foundClass;
+      break;
+    }
+  }
+  if (nameCol >= 0) {
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const name = String(row[nameCol] || '').trim();
+      if (!name || normalizeParticipantHeader(name).startsWith('huong dan')) break;
+      const className = classCol >= 0 ? String(row[classCol] || '').trim() : '';
+      result.push({
+        name,
+        className
+      });
+    }
+  } else {
+    for (const row of rows) {
+      const first = (row || []).map(cell => String(cell).trim()).find(cell => cell && cell.length >= 2 && !/^\d+$/.test(cell));
+      if (first) result.push({
+        name: first.replace(/^\d+[\.\)\-]\s*/, ''),
+        className: ''
+      });
+    }
+  }
+  const seen = new Set();
+  return result.filter(item => {
+    const key = item.name.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const buildParticipantList = items => items.map((item, idx) => ({
+  id: `p${idx + 1}`,
+  name: typeof item === 'string' ? item : item.name,
+  className: typeof item === 'string' ? '' : item.className || ''
+}));
+
+const parseManualParticipantText = text => buildParticipantList(text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => ({
+  name: line.replace(/^\d+[\.\)\-]\s*/, ''),
+  className: ''
+})));
+
+const parseParticipantWorkbook = file => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = event => {
+    try {
+      if (typeof XLSX === 'undefined') throw new Error('Thư viện Excel chưa tải. Vui lòng tải lại trang.');
+      const data = new Uint8Array(event.target.result);
+      const workbook = XLSX.read(data, {
+        type: 'array'
+      });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        defval: ''
+      });
+      resolve(buildParticipantList(extractParticipantNamesFromRows(rows)));
+    } catch (error) {
+      reject(error);
+    }
+  };
+  reader.onerror = () => reject(new Error('Không đọc được file Excel.'));
+  reader.readAsArrayBuffer(file);
+});
+
+const downloadDuckRaceTemplate = () => {
+  if (typeof XLSX === 'undefined') {
+    alert('Thư viện Excel chưa tải. Vui lòng tải lại trang.');
+    return;
+  }
+  const rows = [['STT', 'Họ và tên', 'Lớp/Nhóm'], [1, 'Nguyễn Văn An', '6A'], [2, 'Trần Thị Bình', '6A'], [3, 'Lê Văn Cường', '6A'], [], ['Hướng dẫn: Cột Họ và tên bắt buộc. Có thể dùng file danh sách học sinh từ Admin.']];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{
+    wch: 6
+  }, {
+    wch: 28
+  }, {
+    wch: 12
+  }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'DanhSachDuaVit');
+  XLSX.writeFile(wb, 'DanhSachDuaVit_Mau.xlsx');
+};
+
 // ============ MAIN APP ============
 const App = () => {
   const [step, setStep] = useState('SETUP'); // SETUP, GENERATING, REVIEW, EDIT, PLAYING
@@ -331,6 +431,10 @@ const App = () => {
   });
   const [generatedContent, setGeneratedContent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [participantMode, setParticipantMode] = useState('manual');
+  const [manualParticipantText, setManualParticipantText] = useState('');
+  const [participants, setParticipants] = useState([]);
+  const [participantExcelHint, setParticipantExcelHint] = useState('');
 
   // EDIT screen states - MUST be at top level, not inside conditional!
   const [editingContent, setEditingContent] = useState(null);
@@ -432,26 +536,48 @@ const App = () => {
     suitable: 'Củng cố khái niệm'
   }, {
     id: 'treasure',
-    name: 'Truy Tìm Kho Báu',
-    icon: 'fa-gem',
-    color: 'from-pink-400 to-rose-500',
-    purpose: 'Ôn tập cuối bài',
-    description: 'Chọn ô trên bản đồ. Có bonus, trap, steal!',
-    suitable: 'Ôn tập + may mắn',
-    disabled: true
+    name: 'Đua Vịt Kiến Thức',
+    icon: 'fa-flag-checkered',
+    color: 'from-cyan-400 to-blue-500',
+    purpose: 'Thi đua nhóm',
+    description: 'Mỗi học sinh một vịt — trả lời đúng để tiến về đích. Nhập danh sách tay hoặc Excel',
+    suitable: 'Khởi động, thi đua giữa các nhóm'
   }, {
     id: 'escape',
-    name: 'Escape Room',
-    icon: 'fa-door-open',
-    color: 'from-indigo-400 to-purple-600',
-    purpose: 'Ôn tập đỉnh cao',
-    description: 'Giải 5-8 khóa liên tiếp. Có gợi ý + mật mã',
-    suitable: 'Ôn tập theo nhóm',
-    disabled: true
+    name: 'Hứng Trứng Vàng',
+    icon: 'fa-egg',
+    color: 'from-amber-400 to-yellow-500',
+    purpose: 'Phản xạ nhanh',
+    description: 'Trứng rơi mang đáp án — hứng đúng trứng vàng, sai là trứng thối!',
+    suitable: 'Ôn tập vui, luyện phản xạ'
   }];
+  const syncManualParticipants = text => {
+    setManualParticipantText(text);
+    setParticipants(parseManualParticipantText(text));
+  };
+
+  const handleParticipantExcel = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parseParticipantWorkbook(file);
+      setParticipants(parsed);
+      setManualParticipantText(parsed.map(p => p.name).join('\n'));
+      setParticipantExcelHint(parsed.length ? `Đã đọc ${parsed.length} học sinh từ "${file.name}".` : 'Không tìm thấy tên hợp lệ trong file.');
+    } catch (error) {
+      setParticipantExcelHint('');
+      alert(error.message || 'Không đọc được file Excel.');
+    }
+    event.target.value = '';
+  };
+
   const handleGenerateContent = async () => {
     if (!formData.topic.trim()) {
       alert('Vui lòng nhập chủ đề!');
+      return;
+    }
+    if (selectedGame.id === 'treasure' && participants.length < 1) {
+      alert('Vui lòng nhập ít nhất 1 học sinh tham gia đua vịt!');
       return;
     }
     setLoading(true);
@@ -472,7 +598,8 @@ const App = () => {
     localStorage.setItem('gameData', JSON.stringify({
       gameType: selectedGame.id,
       content: generatedContent,
-      formData: formData
+      formData: formData,
+      participants: selectedGame.id === 'treasure' ? participants : undefined
     }));
 
     // Chuyển sang trang game tương ứng
@@ -608,7 +735,68 @@ const App = () => {
         numQuestions: parseInt(e.target.value)
       }),
       className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
-    }))), /*#__PURE__*/React.createElement("button", {
+    }))), selectedGame.id === 'treasure' && /*#__PURE__*/React.createElement("div", {
+      className: "border-2 border-cyan-200 bg-cyan-50 rounded-2xl p-5 space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+      className: "font-bold text-cyan-900 text-lg"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-users mr-2"
+    }), "Danh sách học sinh đua vịt"), /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-cyan-800 mt-1"
+    }, "Nhập tay hoặc import Excel — mỗi học sinh là một vịt trên đường đua")), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: downloadDuckRaceTemplate,
+      className: "px-4 py-2 bg-white border border-cyan-300 text-cyan-800 rounded-lg text-sm font-bold hover:bg-cyan-100"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-download mr-1"
+    }), "Tải mẫu Excel")), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setParticipantMode('manual'),
+      className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'manual' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-keyboard mr-1"
+    }), "Nhập tay"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setParticipantMode('excel'),
+      className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'excel' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-file-excel mr-1"
+    }), "Import Excel")), participantMode === 'manual' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block font-bold mb-2 text-gray-700"
+    }, "Mỗi dòng một học sinh"), /*#__PURE__*/React.createElement("textarea", {
+      value: manualParticipantText,
+      onChange: e => syncManualParticipants(e.target.value),
+      className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-cyan-500 outline-none min-h-[140px] font-mono text-sm",
+      placeholder: "Nguyễn Văn An\nTrần Thị Bình\nLê Văn Cường\n..."
+    }), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-500 mt-2"
+    }, "Gợi ý: dán danh sách từ Word/Excel hoặc gõ trực tiếp, mỗi tên một dòng.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block font-bold mb-2 text-gray-700"
+    }, "Chọn file Excel (.xlsx, .xls, .csv)"), /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      accept: ".xlsx,.xls,.csv",
+      onChange: handleParticipantExcel,
+      className: "block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-cyan-700"
+    }), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-500 mt-2"
+    }, "Hỗ trợ cột ", /*#__PURE__*/React.createElement("strong", null, "Họ và tên"), " / ", /*#__PURE__*/React.createElement("strong", null, "Họ tên"), " — hoặc file mẫu từ Admin."), participantExcelHint && /*#__PURE__*/React.createElement("p", {
+      className: "text-sm font-semibold text-cyan-800 mt-2"
+    }, participantExcelHint)), participants.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "bg-white border border-cyan-200 rounded-xl p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-sm font-bold text-cyan-900 mb-2"
+    }, "Đã có ", participants.length, " học sinh:"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap gap-2 max-h-28 overflow-y-auto"
+    }, participants.slice(0, 30).map((p, idx) => /*#__PURE__*/React.createElement("span", {
+      key: p.id,
+      className: "px-2 py-1 bg-cyan-100 text-cyan-900 rounded-lg text-xs font-semibold"
+    }, idx + 1, ". ", p.name)), participants.length > 30 && /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-500"
+    }, "... và ", participants.length - 30, " học sinh nữa")))), /*#__PURE__*/React.createElement("button", {
       onClick: handleGenerateContent,
       className: "w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition mt-6"
     }, /*#__PURE__*/React.createElement("i", {
