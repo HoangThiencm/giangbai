@@ -455,7 +455,17 @@
                                     <i class="fas fa-trash mr-1"></i> Xóa
                                 </button>
                             </div>
+                            <button type="button" id="btnTestGeminiKeys" onclick="runGeminiKeyHealthCheck(this)" class="rounded border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100">
+                                <i class="fas fa-heart-pulse mr-1"></i> Test key
+                            </button>
                             <p id="adminGeminiStorageDetail" class="text-xs text-emerald-800"></p>
+                            <div id="adminGeminiKeyHealthPanel" class="hidden rounded border border-emerald-200 bg-white/80 p-3 text-xs text-emerald-950">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="font-bold">Trang thai Gemini key</div>
+                                    <div id="adminGeminiKeyHealthSummary" class="text-[11px] text-emerald-700"></div>
+                                </div>
+                                <div id="adminGeminiKeyHealthList" class="mt-2 space-y-2"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
