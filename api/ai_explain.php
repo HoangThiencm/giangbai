@@ -505,7 +505,8 @@ function try_gemini_explain(array $config, string $prompt): ?array
 
 function try_ds2api_explain(array $config, string $prompt): ?array
 {
-    if (empty($config['ds2api_enabled'])) return null;
+    $forcedDs2api = !empty($config['ai_test_ds2api_only']) || (($config['ai_force_provider'] ?? '') === 'ds2api');
+    if (empty($config['ds2api_enabled']) && !$forcedDs2api) return null;
     $baseUrl = normalize_ds2api_base_url((string)($config['ds2api_base_url'] ?? ''));
     $apiKey = ds2api_effective_api_key((string)($config['ds2api_api_key'] ?? ''));
     if ($baseUrl === '') return null;

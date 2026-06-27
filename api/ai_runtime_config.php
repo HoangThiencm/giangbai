@@ -149,7 +149,8 @@ function load_ai_runtime_config(): array
 function ai_router_runtime_status(?array $config = null): array
 {
     $config = $config ?? load_ai_runtime_config();
-    $ds2Ready = !empty($config['ds2api_enabled'])
+    $ds2Active = !empty($config['ds2api_enabled']) || !empty($config['ai_test_ds2api_only']);
+    $ds2Ready = $ds2Active
         && trim((string)($config['ds2api_base_url'] ?? '')) !== ''
         && trim((string)($config['ds2api_api_key'] ?? '')) !== '';
     $cfReady = trim((string)($config['cloudflare_worker_url'] ?? '')) !== ''

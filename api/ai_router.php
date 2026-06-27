@@ -161,14 +161,6 @@ function ai_router_run(array $ctx): array
 
     if (!empty($config['ai_test_ds2api_only'])) {
         $tryDs2apiOnly = $providers['ds2api'] ?? null;
-        if (empty($config['ds2api_enabled'])) {
-            return [
-                'error' => 'Chế độ test DS2API: ds2api_enabled đang tắt.',
-                'quota' => $quotaStatus,
-                'tiers_tried' => [],
-                'test_mode' => true,
-            ];
-        }
         if (!is_callable($tryDs2apiOnly)) {
             return [
                 'error' => 'Chế độ test DS2API: chưa cấu hình provider.',
