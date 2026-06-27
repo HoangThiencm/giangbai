@@ -25,6 +25,7 @@
         typeFilter: '',
         search: '',
         detailDocId: null,
+        summaryDrilldown: null,
         driveConfigured: false,
         driveReady: false,
         driveProven: false,
@@ -207,6 +208,87 @@
         $('exportExcelBtn')?.addEventListener('click', exportExcel);
     }
 
+    function getSummaryDrilldownDocs(kind) {
+        const docs = yearScopedDocs();
+        if (kind === 'overdue') {
+            return docs.filter(d => d.effective_status === 'overdue').sort((a, b) => {
+                const da = a.report_due_at || '';
+                const db = b.report_due_at || '';
+                return da.localeCompare(db);
+            });
+        }
+        if (kind === 'need_action') {
+            return docs.filter(d => ['pending', 'in_progress', 'overdue'].includes(d.effective_status)).sort((a, b) => {
+                const rank = status => (status === 'overdue' ? 0 : status === 'pending' ? 1 : 2);
+                const diff = rank(a.effective_status) - rank(b.effective_status);
+                if (diff !== 0) return diff;
+                return String(a.report_due_at || '').localeCompare(String(b.report_due_at || ''));
+            });
+        }
+        return [];
+    }
+
+    function toggleSummaryDrilldown(kind) {
+        state.summaryDrilldown = state.summaryDrilldown === kind ? null : kind;
+        renderSummary();
+        renderSummaryDrilldown();
+        if (state.summaryDrilldown) {
+            $('summaryDrilldown')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function renderSummaryDrilldown() {
+        const panel = $('summaryDrilldown');
+        const listHost = $('summaryDrilldownList');
+        const titleHost = $('summaryDrilldownTitle');
+        const countHost = $('summaryDrilldownCount');
+        if (!panel || !listHost) return;
+
+        if (!state.summaryDrilldown) {
+            panel.classList.add('hidden');
+            listHost.innerHTML = '';
+            return;
+        }
+
+        const docs = getSummaryDrilldownDocs(state.summaryDrilldown);
+        const isOverdue = state.summaryDrilldown === 'overdue';
+        const title = isOverdue ? 'Văn bản quá hạn báo cáo' : 'Văn bản cần xử lý / báo cáo';
+        const borderTone = isOverdue ? 'border-rose-200 bg-rose-50' : 'border-amber-200 bg-amber-50';
+        const titleTone = isOverdue ? 'text-rose-950' : 'text-amber-950';
+
+        panel.className = `mt-3 rounded-xl border p-4 shadow-sm ${borderTone}`;
+        panel.classList.remove('hidden');
+        if (titleHost) titleHost.textContent = title;
+        if (countHost) countHost.textContent = `${docs.length} văn bản`;
+
+        if (!docs.length) {
+            listHost.innerHTML = `<div class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">Không có văn bản nào trong mục này.</div>`;
+            return;
+        }
+
+        listHost.innerHTML = `<div class="space-y-2">${docs.map((doc, index) => {
+            const [label, tone] = statusInfo(doc.effective_status);
+            const dueLine = doc.report_due_at ? `Hạn ${dateText(doc.report_due_at)}` : 'Chưa ghi hạn';
+            return `<button type="button" data-summary-doc-id="${doc.id}" class="flex w-full items-start justify-between gap-3 rounded-lg border border-white/80 bg-white px-3 py-3 text-left shadow-sm transition hover:brightness-[0.98]">
+                <span class="min-w-0 flex-1">
+                    <span class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500">${index + 1}.</span>
+                        ${doc.document_number ? `<span class="text-xs font-bold text-slate-700">${esc(doc.document_number)}</span>` : ''}
+                        ${doc.document_type ? `<span class="rounded-full px-2 py-0.5 text-[10px] font-bold ${documentTypeTone(doc.document_type)}">${esc(doc.document_type)}</span>` : ''}
+                        <span class="rounded-full px-2 py-0.5 text-[10px] font-bold ${tone}">${label}</span>
+                    </span>
+                    <span class="mt-1 block font-bold text-slate-900">${esc(doc.title)}</span>
+                    <span class="mt-1 block text-xs text-slate-500">${esc(doc.organization || 'Chưa ghi nơi gửi/nhận')} · ${dueLine}</span>
+                </span>
+                <span class="shrink-0 pt-1 text-slate-400"><i class="fa-solid fa-chevron-right"></i></span>
+            </button>`;
+        }).join('')}</div>`;
+
+        listHost.querySelectorAll('[data-summary-doc-id]').forEach(button => {
+            button.onclick = () => openDetailModal(state.documents.find(doc => Number(doc.id) === Number(button.dataset.summaryDocId)));
+        });
+    }
+
     function renderSummary() {
         const docs = yearScopedDocs();
         const incoming = docs.filter(d => d.direction === 'incoming').length;
@@ -214,21 +296,35 @@
         const needAction = docs.filter(d => ['pending', 'in_progress', 'overdue'].includes(d.effective_status)).length;
         const overdue = docs.filter(d => d.effective_status === 'overdue').length;
         const cards = [
-            ['Văn bản đến', incoming, 'text-cyan-700', 'fa-inbox'],
-            ['Văn bản đi', outgoing, 'text-indigo-700', 'fa-paper-plane'],
-            ['Cần xử lý / báo cáo', needAction, 'text-amber-700', 'fa-clipboard-list'],
-            ['Quá hạn', overdue, 'text-rose-700', 'fa-clock'],
+            { label: 'Văn bản đến', value: incoming, tone: 'text-cyan-700', icon: 'fa-inbox', filter: '' },
+            { label: 'Văn bản đi', value: outgoing, tone: 'text-indigo-700', icon: 'fa-paper-plane', filter: '' },
+            { label: 'Cần xử lý / báo cáo', value: needAction, tone: 'text-amber-700', icon: 'fa-clipboard-list', filter: 'need_action' },
+            { label: 'Quá hạn', value: overdue, tone: 'text-rose-700', icon: 'fa-clock', filter: 'overdue' },
         ];
         const host = $('summary');
         if (!host) return;
-        host.innerHTML = cards.map(([label, value, tone, icon]) => `
-            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        host.innerHTML = cards.map(card => {
+            const active = card.filter && state.summaryDrilldown === card.filter;
+            const ringTone = card.filter === 'overdue' ? 'ring-rose-300' : 'ring-amber-300';
+            const baseClass = 'rounded-xl border bg-white p-4 shadow-sm text-left transition';
+            const borderClass = active ? `border-transparent ring-2 ${ringTone}` : 'border-slate-200';
+            const hoverClass = card.filter ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : '';
+            const hint = card.filter ? '<div class="mt-2 text-[10px] font-semibold text-slate-400">Bấm để xem danh sách</div>' : '';
+            const tag = card.filter ? 'button' : 'div';
+            const attrs = card.filter ? ` type="button" data-summary-filter="${card.filter}"` : '';
+            return `<${tag}${attrs} class="${baseClass} ${borderClass} ${hoverClass}">
                 <div class="flex items-center justify-between gap-2">
-                    <div class="text-xs font-bold uppercase tracking-wide text-slate-500">${label}</div>
-                    <i class="fa-solid ${icon} ${tone} opacity-80"></i>
+                    <div class="text-xs font-bold uppercase tracking-wide text-slate-500">${card.label}</div>
+                    <i class="fa-solid ${card.icon} ${card.tone} opacity-80"></i>
                 </div>
-                <div class="mt-2 text-3xl font-black ${tone}">${value}</div>
-            </div>`).join('');
+                <div class="mt-2 text-3xl font-black ${card.tone}">${card.value}</div>
+                ${hint}
+            </${tag}>`;
+        }).join('');
+        host.querySelectorAll('[data-summary-filter]').forEach(button => {
+            button.onclick = () => toggleSummaryDrilldown(button.dataset.summaryFilter);
+        });
+        renderSummaryDrilldown();
     }
 
     function renderDirectionTabs() {
@@ -1216,6 +1312,10 @@
         $('closeDetailBtn')?.addEventListener('click', closeDetailModal);
         $('documentDetailModal')?.addEventListener('click', event => {
             if (event.target === $('documentDetailModal')) closeDetailModal();
+        });
+        $('summaryDrilldownClose')?.addEventListener('click', () => {
+            state.summaryDrilldown = null;
+            renderSummary();
         });
     }
 
