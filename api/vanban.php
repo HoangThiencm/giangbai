@@ -111,7 +111,7 @@ function vbd_sector_label(string $sector): string
 function vbd_status(string $value, bool $required): string
 {
     if (!$required) return 'not_required';
-    return in_array($value, ['pending', 'in_progress', 'completed'], true) ? $value : 'pending';
+    return in_array($value, ['pending', 'in_progress', 'completed', 'aware'], true) ? $value : 'pending';
 }
 
 function vbd_date($value): ?string
@@ -136,6 +136,7 @@ function vbd_effective_status(array $document): string
 {
     if (!(bool)$document['report_required']) return 'not_required';
     if (($document['report_status'] ?? '') === 'completed') return 'completed';
+    if (($document['report_status'] ?? '') === 'aware') return 'aware';
     $due = vbd_date($document['report_due_at'] ?? null);
     if ($due && $due < date('Y-m-d')) return 'overdue';
     return ($document['report_status'] ?? '') === 'in_progress' ? 'in_progress' : 'pending';
@@ -969,7 +970,7 @@ if ($action === 'reminder_count') {
     $count = 0;
     foreach ($stmt->fetchAll() as $document) {
         if (!((int)($document['report_required'] ?? 0))) continue;
-        if (($document['report_status'] ?? '') === 'completed') continue;
+        if (in_array(($document['report_status'] ?? ''), ['completed', 'aware'], true)) continue;
         $dueRaw = trim((string)($document['report_due_at'] ?? ''));
         if ($dueRaw === '') continue;
         try {

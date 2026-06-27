@@ -32,7 +32,7 @@
     }
 
     function reminderInfo(doc) {
-        if (!Number(doc.report_required) || doc.effective_status === 'completed' || !doc.report_due_at) return null;
+        if (!Number(doc.report_required) || doc.effective_status === 'completed' || doc.effective_status === 'aware' || !doc.report_due_at) return null;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const due = new Date(`${doc.report_due_at}T00:00:00`);

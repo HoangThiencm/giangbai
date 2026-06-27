@@ -173,17 +173,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const VEHINH_MODEL_STORAGE_PREFIX = 'vehinh_ai_model_';
     const DRAWING_AI_MODEL_CATALOG = {
         ds2api: ['deepseek-v4-flash', 'deepseek-v4-flash-nothinking', 'deepseek-v4-pro', 'deepseek-v4-pro-nothinking'],
-        gemini: ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'],
+        gemini: ['gemini-3-flash-preview', 'gemini-2.5-flash'],
     };
     const DRAWING_MODEL_LABELS = {
         'deepseek-v4-flash': 'DeepSeek V4 Flash (nhanh)',
         'deepseek-v4-flash-nothinking': 'DeepSeek V4 Flash — không suy luận',
         'deepseek-v4-pro': 'DeepSeek V4 Pro',
         'deepseek-v4-pro-nothinking': 'DeepSeek V4 Pro — không suy luận',
-        'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
-        'gemini-2.5-flash': 'Gemini 2.5 Flash',
-        'gemini-2.0-flash-exp': 'Gemini 2.0 Flash Exp',
+        'gemini-3-flash-preview': 'Gemini 3 Flash (mới nhất)',
+        'gemini-2.5-flash': 'Gemini 2.5 Flash (ổn định)',
     };
+
+    function normalizeDrawingProvider(provider) {
+        return provider === 'gemini' ? 'gemini' : 'ds2api';
+    }
+
+    function getProviderModelCatalog(provider) {
+        const key = normalizeDrawingProvider(provider);
+        const catalog = DRAWING_AI_MODEL_CATALOG[key] || [];
+        const providerConfig = getDrawingProviderConfig(key);
+        const fromServer = Array.isArray(providerConfig?.models) ? providerConfig.models : [];
+        const validServer = fromServer.filter(model => catalog.includes(model));
+        return validServer.length ? validServer : [...catalog];
+    }
 
     function getDefaultDrawingAiConfig() {
         return {
@@ -222,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ['ds2api', 'gemini'].forEach((provider) => {
             const cfg = merged.providers[provider];
             const catalog = DRAWING_AI_MODEL_CATALOG[provider] || [];
-            const serverModels = Array.isArray(cfg.models) ? cfg.models.filter(Boolean) : [];
+            const serverModels = Array.isArray(cfg.models) ? cfg.models.filter(model => catalog.includes(model)) : [];
             cfg.models = serverModels.length ? serverModels : [...catalog];
             if (!cfg.model || !cfg.models.includes(cfg.model)) {
                 cfg.model = cfg.models[0] || catalog[0] || '';
@@ -243,41 +255,53 @@ document.addEventListener('DOMContentLoaded', function () {
         return localStorage.getItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`) || '';
     }
 
+    function getActiveDrawingProvider() {
+        const raw = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        return normalizeDrawingProvider(raw);
+    }
+
     function getCurrentDrawingModel(provider) {
-        const providerConfig = getDrawingProviderConfig(provider);
-        if (!providerConfig) return '';
-        const models = Array.isArray(providerConfig.models) ? providerConfig.models : [];
-        const savedModel = getSavedDrawingModel(provider);
+        const key = normalizeDrawingProvider(provider);
+        const models = getProviderModelCatalog(key);
+        const providerConfig = getDrawingProviderConfig(key);
+        const savedModel = getSavedDrawingModel(key);
         if (savedModel && models.includes(savedModel)) return savedModel;
-        if (providerConfig.model && models.includes(providerConfig.model)) return providerConfig.model;
-        return providerConfig.model || models[0] || '';
+        const configured = providerConfig?.model || '';
+        if (configured && models.includes(configured)) return configured;
+        return models[0] || '';
     }
 
     function syncDrawingModelSelect() {
-        const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
-        const providerConfig = getDrawingProviderConfig(provider);
         const select = allDOMElements.aiModelSelect;
         if (!select) return;
 
-        select.innerHTML = '';
-        const models = Array.isArray(providerConfig?.models) ? providerConfig.models : [];
-        if (!models.length) {
-            const option = document.createElement('option');
-            option.value = providerConfig?.model || '';
-            option.textContent = providerConfig?.model || 'Chưa có model';
-            select.appendChild(option);
-            select.disabled = true;
-            return;
-        }
+        const provider = getActiveDrawingProvider();
+        const models = getProviderModelCatalog(provider);
 
+        select.innerHTML = '';
         models.forEach((model) => {
             const option = document.createElement('option');
             option.value = model;
             option.textContent = getDrawingModelLabel(model);
             select.appendChild(option);
         });
-        select.disabled = false;
-        select.value = getCurrentDrawingModel(provider);
+        select.disabled = models.length === 0;
+        const currentModel = getCurrentDrawingModel(provider);
+        select.value = currentModel;
+        if (!select.value && models.length) select.value = models[0];
+    }
+
+    function handleDrawingProviderChange() {
+        const provider = getActiveDrawingProvider();
+        localStorage.setItem(VEHINH_PROVIDER_STORAGE_KEY, provider);
+        syncDrawingModelSelect();
+        updateDrawingAiSummary();
+    }
+
+    function handleDrawingModelChange() {
+        const provider = getActiveDrawingProvider();
+        localStorage.setItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`, allDOMElements.aiModelSelect?.value || '');
+        updateDrawingAiSummary();
     }
 
     function serializeCanvas() { return canvas.toJSON(['source', 'type']); }
@@ -398,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             drawingAiConfig = normalizeDrawingAiConfig(data);
             const savedProvider = localStorage.getItem(VEHINH_PROVIDER_STORAGE_KEY);
-            const defaultProvider = savedProvider || drawingAiConfig.default_provider || 'ds2api';
+            const defaultProvider = normalizeDrawingProvider(savedProvider || drawingAiConfig.default_provider || 'ds2api');
             if (allDOMElements.aiProviderSelect) {
                 allDOMElements.aiProviderSelect.value = defaultProvider;
             }
@@ -412,7 +436,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateDrawingAiSummary(loadError = '') {
-        const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        const provider = getActiveDrawingProvider();
         const ds2 = drawingAiConfig?.providers?.ds2api || {};
         const gemini = drawingAiConfig?.providers?.gemini || {};
         const currentModel = getCurrentDrawingModel(provider);
@@ -466,16 +490,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     loadDrawingAiConfig().finally(loadApiKeys);
 
-    allDOMElements.aiProviderSelect?.addEventListener('change', () => {
-        localStorage.setItem(VEHINH_PROVIDER_STORAGE_KEY, allDOMElements.aiProviderSelect.value);
-        syncDrawingModelSelect();
-        updateDrawingAiSummary();
-    });
-    allDOMElements.aiModelSelect?.addEventListener('change', () => {
-        const provider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
-        localStorage.setItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`, allDOMElements.aiModelSelect.value || '');
-        updateDrawingAiSummary();
-    });
+    allDOMElements.aiProviderSelect?.addEventListener('change', handleDrawingProviderChange);
+    allDOMElements.aiModelSelect?.addEventListener('change', handleDrawingModelChange);
+    window.__vehinhOnProviderChange = handleDrawingProviderChange;
+    window.__vehinhOnModelChange = handleDrawingModelChange;
+    window.__vehinhSyncModels = syncDrawingModelSelect;
 
     allDOMElements.apiKeyFile.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (event) => { const keys = event.target.result.trim().split('\n').filter(key => key.trim() !== ''); apiKeysFromFile = keys; allDOMElements.apiKeyFilename.classList.remove('text-green-400', 'text-red-400'); if (keys.length > 0) { localStorage.setItem('geometryAiApiKeys', JSON.stringify(keys)); allDOMElements.apiKeyFilename.textContent = `Đã lưu ${keys.length} khóa.`; allDOMElements.apiKeyFilename.classList.add('text-green-400'); } else { allDOMElements.apiKeyFilename.textContent = `Tệp không hợp lệ.`; allDOMElements.apiKeyFilename.classList.add('text-red-400'); } }; reader.readAsText(file); } });
     allDOMElements.promptInput.addEventListener('paste', handlePaste);
@@ -515,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const userPrompt = allDOMElements.promptInput.value;
         const imageFile = activeImageFile;
         if (!userPrompt && !imageFile) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng nhập đề bài hoặc tải ảnh.</span>'; return; }
-        const selectedProvider = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        const selectedProvider = getActiveDrawingProvider();
         const selectedModel = allDOMElements.aiModelSelect?.value || getCurrentDrawingModel(selectedProvider) || '';
         if (selectedProvider === 'ds2api' && imageFile) {
             allDOMElements.analysisOutput.innerHTML = '<span class="text-amber-300">DeepSeek/DS2API hiện chỉ dùng cho mô tả chữ trên trang này. Nếu muốn AI đọc ảnh, hãy chọn Google Gemini.</span>';

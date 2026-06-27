@@ -69,8 +69,11 @@
         pending: ['Chưa xử lý', 'bg-amber-100 text-amber-800'],
         in_progress: ['Đang xử lý', 'bg-sky-100 text-sky-800'],
         completed: ['Đã báo cáo', 'bg-teal-100 text-teal-800'],
+        aware: ['Chỉ biết', 'bg-slate-100 text-slate-700'],
         overdue: ['Quá hạn', 'bg-rose-100 text-rose-800'],
     }[status] || ['Chưa xử lý', 'bg-amber-100 text-amber-800']);
+
+    const isResolvedReportStatus = status => status === 'completed' || status === 'aware';
 
     const documentTypeTone = type => ({
         'Quyết định': 'bg-violet-100 text-violet-800',
@@ -428,7 +431,7 @@
                                 <td class="px-3 py-3 align-top">
                                     <div class="flex flex-wrap justify-end gap-1">
                                         <button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Sửa"><i class="fa-solid fa-pen"></i></button>
-                                        ${doc.report_required && doc.effective_status !== 'completed' ? `<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-800" title="Đang xử lý"><i class="fa-solid fa-spinner"></i></button><button data-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-2 py-1 text-[11px] font-bold text-white" title="Đã báo cáo"><i class="fa-solid fa-check"></i></button>` : ''}
+                                        ${doc.report_required && !isResolvedReportStatus(doc.effective_status) ? `<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-800" title="Đang xử lý"><i class="fa-solid fa-spinner"></i></button><button data-action="aware" data-id="${doc.id}" class="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700" title="Chỉ biết"><i class="fa-solid fa-eye"></i></button><button data-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-2 py-1 text-[11px] font-bold text-white" title="Đã báo cáo"><i class="fa-solid fa-check"></i></button>` : ''}
                                         <button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 </td>
@@ -489,7 +492,7 @@
 
         actions.innerHTML = `
             <button type="button" data-detail-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"><i class="fa-solid fa-pen mr-1"></i>Sửa</button>
-            ${doc.report_required && doc.effective_status !== 'completed' ? `<button type="button" data-detail-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800">Đang xử lý</button><button type="button" data-detail-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-4 py-2 text-sm font-bold text-white">Đã báo cáo</button>` : ''}
+            ${doc.report_required && !isResolvedReportStatus(doc.effective_status) ? `<button type="button" data-detail-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800">Đang xử lý</button><button type="button" data-detail-action="aware" data-id="${doc.id}" class="rounded border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">Chỉ biết</button><button type="button" data-detail-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-4 py-2 text-sm font-bold text-white">Đã báo cáo</button>` : ''}
             <button type="button" id="closeDetailFooterBtn" class="ml-auto rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>`;
 
         actions.querySelectorAll('[data-detail-action]').forEach(button => {
@@ -512,7 +515,7 @@
     }
 
     function reminderInfo(doc) {
-        if (!Number(doc.report_required) || doc.effective_status === 'completed' || !doc.report_due_at) return null;
+        if (!Number(doc.report_required) || isResolvedReportStatus(doc.effective_status) || !doc.report_due_at) return null;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const due = new Date(`${doc.report_due_at}T00:00:00`);
@@ -706,7 +709,7 @@
         if ($('sourceText')) $('sourceText').value = doc?.source_text || '';
         if ($('reportRequired')) $('reportRequired').checked = !!Number(doc?.report_required || 0);
         if ($('reportDueAt')) $('reportDueAt').value = formatYMDToDMY(doc?.report_due_at) || '';
-        if ($('reportStatus')) $('reportStatus').value = ['pending', 'in_progress', 'completed'].includes(doc?.report_status) ? doc.report_status : 'pending';
+        if ($('reportStatus')) $('reportStatus').value = ['pending', 'in_progress', 'completed', 'aware'].includes(doc?.report_status) ? doc.report_status : 'pending';
         if ($('reportNote')) $('reportNote').value = doc?.report_note || '';
         $('parseNote')?.classList.add('hidden');
         setReportVisibility();
@@ -735,10 +738,10 @@
             }
             return;
         }
-        const status = action === 'complete' ? 'completed' : 'in_progress';
+        const status = action === 'complete' ? 'completed' : (action === 'aware' ? 'aware' : 'in_progress');
         try {
             await api('update_status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, report_status: status }) });
-            toast(status === 'completed' ? 'Đã xác nhận hoàn thành báo cáo.' : 'Đã chuyển sang đang xử lý.');
+            toast(status === 'completed' ? 'Đã xác nhận hoàn thành báo cáo.' : (status === 'aware' ? 'Đã đánh dấu chỉ biết.' : 'Đã chuyển sang đang xử lý.'));
             load();
         } catch (error) {
             toast(error.message, 'rose');

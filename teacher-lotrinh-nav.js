@@ -245,7 +245,7 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return (documents || []).filter(document => {
-            if (!Number(document.report_required) || document.effective_status === 'completed' || !document.report_due_at) return false;
+            if (!Number(document.report_required) || document.effective_status === 'completed' || document.effective_status === 'aware' || !document.report_due_at) return false;
             const due = new Date(`${document.report_due_at}T00:00:00`);
             if (Number.isNaN(due.getTime())) return false;
             return Math.round((due - today) / 86400000) <= 7;

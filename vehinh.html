@@ -370,17 +370,16 @@
                 <div class="rounded-lg border border-gray-700 bg-gray-900 p-3">
                     <label for="ai-provider-select" class="mb-2 block text-sm font-semibold text-gray-200">Chọn AI vẽ hình</label>
                     <select id="ai-provider-select"
-                        class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-semibold text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                        class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-semibold text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                        onchange="window.__vehinhOnProviderChange && window.__vehinhOnProviderChange()">
                         <option value="ds2api">DeepSeek / DS2API</option>
                         <option value="gemini">Google Gemini</option>
                     </select>
                     <label for="ai-model-select" class="mb-2 mt-3 block text-sm font-semibold text-gray-200">Chọn model</label>
                     <select id="ai-model-select"
-                        class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-                        <option value="deepseek-v4-flash-nothinking">deepseek-v4-flash-nothinking</option>
-                        <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-                        <option value="deepseek-v4-pro-nothinking">deepseek-v4-pro-nothinking</option>
+                        class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                        onchange="window.__vehinhOnModelChange && window.__vehinhOnModelChange()">
+                        <option value="">Đang tải danh sách model...</option>
                     </select>
                     <div id="ai-model-summary" class="mt-2 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-xs leading-5 text-gray-300">
                         Đang kiểm tra cấu hình AI...
@@ -486,7 +485,7 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260627-gemini-models"></script>
     <script>
         lucide.createIcons();
         document.addEventListener('DOMContentLoaded', function () {
