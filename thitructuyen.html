@@ -2201,7 +2201,7 @@
                             <p className="text-gray-600">Đề thi đang dùng danh sách lớp nhưng chưa có thí sinh. Vui lòng báo giáo viên kiểm tra lại cấu hình đề.</p>
                         </div>
                     </div>
-                ));
+                );
             }
 
             if (step === "info") return withStudentToast(
@@ -2304,7 +2304,7 @@
                         </button>
                     </div>
                 </div>
-            ));
+            );
 
             if (step === "result") return withStudentToast(
                 <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
@@ -2318,7 +2318,7 @@
                         </div>
                     </div>
                 </div>
-            ));
+            );
 
             return withStudentToast(
                 <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
@@ -2381,7 +2381,7 @@
                         </div>
                     </div>
                 </div>
-            ));
+            );
         };
 
         const studentResultKey = (name, sbd) => `${String(sbd || "").trim().toLowerCase()}|${String(name || "").trim().toLowerCase()}`;
