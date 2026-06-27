@@ -2732,54 +2732,18 @@
             );
         };
 
-        class ExamErrorBoundary extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = { hasError: false };
-            }
-            static getDerivedStateFromError() {
-                return { hasError: true };
-            }
-            componentDidCatch(error, info) {
-                console.error("[thitructuyen] StudentView crash:", error, info);
-            }
-            render() {
-                if (!this.state.hasError) return this.props.children;
-                return (
-                    <div className="flex h-screen items-center justify-center bg-gray-100 p-4">
-                        <div className="bg-white p-8 rounded-xl shadow text-center max-w-md">
-                            <h2 className="text-xl font-bold text-red-600 mb-2"><i className="fas fa-exclamation-circle"></i> Không tải được giao diện thi</h2>
-                            <p className="text-gray-600 text-sm mb-5">Vui lòng tải lại trang. Nếu vẫn lỗi, mở link bằng Chrome/Safari thay vì Zalo.</p>
-                            <button type="button" onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold">Tải lại trang</button>
-                        </div>
-                    </div>
-                );
-            }
-        }
-
-        const readStudentExamParams = () => {
+        const readStudentExamId = () => {
             const p = new URLSearchParams(window.location.search);
             const examId = (p.get("examId") || "").trim();
-            if (p.get("mode") === "student" && examId) {
-                return { isStudent: true, examId };
-            }
-            return { isStudent: false, examId: null };
+            return p.get("mode") === "student" && examId ? examId : null;
         };
 
         const App = () => {
-            const studentExam = useMemo(() => readStudentExamParams(), []);
+            const studentExamId = useMemo(() => readStudentExamId(), []);
             const [view, setView] = useState("dashboard");
-            const [selectedId, setSelectedId] = useState(studentExam.examId);
+            const [selectedId, setSelectedId] = useState(studentExamId);
             const [editingData, setEditingData] = useState(null);
             const userEmail = localStorage.getItem('userEmail');
-
-            useEffect(() => {
-                const el = document.getElementById('react-error');
-                if (el) {
-                    el.style.display = 'none';
-                    el.innerHTML = '';
-                }
-            }, []);
 
             const handleEdit = async (id) => {
                 try {
@@ -2791,13 +2755,7 @@
                 }
             };
 
-            if (studentExam.isStudent) {
-                return (
-                    <ExamErrorBoundary>
-                        <StudentView examId={studentExam.examId} />
-                    </ExamErrorBoundary>
-                );
-            }
+            if (studentExamId) return <StudentView examId={studentExamId} />;
 
             if (!userEmail) return (
                 <div className="flex h-screen items-center justify-center bg-gray-100 flex-col gap-4">
@@ -2815,8 +2773,24 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch (bootErr) {
+            console.error("[thitructuyen] React boot failed:", bootErr);
+            const el = document.getElementById('react-error');
+            if (el) {
+                el.style.display = 'block';
+                el.innerHTML = '<strong>Lỗi khởi tạo giao diện.</strong> Vui lòng tải lại trang (Ctrl+F5).';
+            }
+        }
+    </script>
+    <script>
+        setTimeout(function () {
+            const root = document.getElementById('root');
+            if (!root || root.childElementCount > 0) return;
+            root.innerHTML = '<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,sans-serif;text-align:center;color:#334155"><div><p style="font-weight:700;margin-bottom:8px">Không tải được giao diện thi</p><p style="font-size:14px;margin-bottom:16px">Thử tải lại trang hoặc mở bằng Chrome/Safari.</p><button type="button" onclick="location.reload()" style="background:#4f46e5;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer">Tải lại</button></div></div>';
+        }, 5000);
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
