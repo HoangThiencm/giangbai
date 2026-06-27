@@ -1,4 +1,12 @@
-(async function () {
+function getQueryParamInsensitive(params, name) {
+    const wanted = String(name).toLowerCase();
+    for (const [key, value] of params.entries()) {
+        if (String(key).toLowerCase() === wanted) return String(value || '').trim();
+    }
+    return '';
+}
+
+async function accessControlMain() {
     const pageKeys = {
         'lotrinh.html': 'lotrinh',
         'lotrinhtoan4.html': 'lotrinhtoan4',
@@ -50,10 +58,12 @@
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
-    const fileName = window.location.pathname.split('/').pop() || 'index.html';
+    const fileName = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
     const pageKey = pageKeys[fileName];
     const params = new URLSearchParams(window.location.search);
-    const isOpenExamLink = pageKey === 'thitructuyen' && params.get('mode') === 'student' && !!params.get('examId');
+    const isOpenExamLink = pageKey === 'thitructuyen'
+        && params.get('mode') === 'student'
+        && !!getQueryParamInsensitive(params, 'examId');
     const token = localStorage.getItem('authToken');
 
     if (isOpenExamLink) {
@@ -272,4 +282,6 @@
             window.location.href = fallback || 'index.html';
         }
     }
-})();
+}
+
+accessControlMain();
