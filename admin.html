@@ -903,6 +903,107 @@
             ));
         }
 
+        function maskApiKey(value) {
+            const text = String(value || '').trim();
+            if (!text) return '(trong)';
+            if (text.length <= 12) return text.slice(0, 4) + '...' + text.slice(-2);
+            return text.slice(0, 6) + '...' + text.slice(-4);
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function geminiKeyHealthTone(status) {
+            const tones = {
+                ok: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+                quota: 'border-amber-200 bg-amber-50 text-amber-900',
+                invalid: 'border-rose-200 bg-rose-50 text-rose-900',
+                model: 'border-sky-200 bg-sky-50 text-sky-900',
+                error: 'border-slate-200 bg-slate-50 text-slate-800',
+            };
+            return tones[status] || tones.error;
+        }
+
+        function clearGeminiKeyHealthUI(message = '') {
+            const panel = document.getElementById('adminGeminiKeyHealthPanel');
+            const summary = document.getElementById('adminGeminiKeyHealthSummary');
+            const list = document.getElementById('adminGeminiKeyHealthList');
+            if (summary) summary.textContent = message;
+            if (list) list.innerHTML = '';
+            if (panel) {
+                panel.classList.toggle('hidden', !message);
+            }
+        }
+
+        function renderGeminiKeyHealthResults(results, model) {
+            const panel = document.getElementById('adminGeminiKeyHealthPanel');
+            const summary = document.getElementById('adminGeminiKeyHealthSummary');
+            const list = document.getElementById('adminGeminiKeyHealthList');
+            if (!panel || !summary || !list) return;
+
+            const okCount = results.filter(item => item.status === 'ok').length;
+            const quotaCount = results.filter(item => item.status === 'quota').length;
+            const invalidCount = results.filter(item => item.status === 'invalid').length;
+            summary.textContent = `${okCount} OK · ${quotaCount} quota · ${invalidCount} hong/khoa · model ${model}`;
+            list.innerHTML = results.map((item, index) => `
+                <div class="rounded border px-3 py-2 ${geminiKeyHealthTone(item.status)}">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="font-bold">#${index + 1} · ${escapeHtml(maskApiKey(item.key))}</div>
+                        <div class="text-[11px] font-bold uppercase tracking-wide">${escapeHtml(item.label)}</div>
+                    </div>
+                    <div class="mt-1 text-[11px] opacity-80">${escapeHtml(item.message || '')}</div>
+                </div>
+            `).join('');
+            panel.classList.remove('hidden');
+        }
+
+        async function probeSingleGeminiKey(key, model) {
+            const prompt = 'Tra loi dung 2 tu: KEY OK';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 12000);
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0, maxOutputTokens: 8 }
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timer);
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data?.candidates?.length) {
+                    return { status: 'ok', label: 'song', message: 'Key hoat dong binh thuong.' };
+                }
+                const errorText = String(data?.error?.message || `HTTP ${res.status}`);
+                if (res.status === 429 || /quota|rate limit|resource has been exhausted/i.test(errorText)) {
+                    return { status: 'quota', label: 'het quota', message: errorText };
+                }
+                if (res.status === 400 || res.status === 404) {
+                    return { status: 'model', label: 'loi model', message: errorText };
+                }
+                if (res.status === 401 || res.status === 403 || /api key not valid|permission denied|invalid/i.test(errorText)) {
+                    return { status: 'invalid', label: 'chet/khoa', message: errorText };
+                }
+                return { status: 'error', label: 'loi', message: errorText };
+            } catch (error) {
+                const message = String(error?.message || error || 'Khong test duoc');
+                if (/abort/i.test(message)) {
+                    return { status: 'error', label: 'timeout', message: 'Het thoi gian cho phan hoi tu Gemini.' };
+                }
+                return { status: 'error', label: 'loi', message };
+            }
+        }
+
         function configSourceLabel(source) {
             const labels = {
                 hosting: 'hosting (global_config.json)',
@@ -1001,6 +1102,7 @@
                     ? `Nguồn hiện tại: ${configSourceLabel(configStorageMeta.source)}. AI lộ trình Toán 4-9 (gồm Toán 5) và các công cụ đọc từ file trên hosting.`
                     : 'Chưa có Gemini key trong global_config.json trên hosting. Nhập key và bấm Lưu Gemini.';
             }
+            clearGeminiKeyHealthUI('');
             renderConfigStorageBanner();
         }
 
@@ -1009,6 +1111,50 @@
             if (custom) return custom;
             return document.getElementById('adminGeminiModuleSelect')?.value || 'gemini-2.5-flash';
         }
+
+        async function runGeminiKeyHealthCheck(buttonEl) {
+            const keys = parseGeminiKeys(document.getElementById('adminGeminiKeysInput')?.value || '');
+            const model = readGeminiModelFromUI();
+            if (!keys.length) {
+                clearGeminiKeyHealthUI('Chua co key de test.');
+                return;
+            }
+
+            const originalText = buttonEl ? buttonEl.innerHTML : '';
+            const summary = document.getElementById('adminGeminiKeyHealthSummary');
+            const panel = document.getElementById('adminGeminiKeyHealthPanel');
+            if (panel) panel.classList.remove('hidden');
+            if (summary) summary.textContent = `Dang test 0/${keys.length} key...`;
+            const results = [];
+
+            if (buttonEl) {
+                buttonEl.disabled = true;
+                buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Dang test...';
+            }
+
+            try {
+                for (let i = 0; i < keys.length; i++) {
+                    if (summary) summary.textContent = `Dang test ${i + 1}/${keys.length} key...`;
+                    const outcome = await probeSingleGeminiKey(keys[i], model);
+                    results.push({ key: keys[i], ...outcome });
+                }
+                renderGeminiKeyHealthResults(results, model);
+            } catch (error) {
+                clearGeminiKeyHealthUI(String(error?.message || error || 'Khong test duoc key.'));
+            } finally {
+                if (buttonEl) {
+                    buttonEl.disabled = false;
+                    buttonEl.innerHTML = originalText || '<i class="fas fa-heart-pulse mr-1"></i> Test key';
+                }
+            }
+        }
+
+        ['adminGeminiKeysInput', 'adminGeminiModuleSelect', 'adminGeminiModelCustom'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', () => clearGeminiKeyHealthUI(''));
+            el.addEventListener('change', () => clearGeminiKeyHealthUI(''));
+        });
 
         function syncMistralAdminUI(content) {
             const keys = Array.isArray(content?.mistral_keys) ? content.mistral_keys : [];

@@ -32,6 +32,7 @@
         driveHint: '',
         driveDiag: {},
         pendingUploadFiles: [],
+        primaryParseFileIndex: 0,
         uploadMaxBytes: null,
         postMaxBytes: null,
         appMaxFileMb: 25,
@@ -785,13 +786,153 @@
         select.value = type;
     }
 
+    function isPdfFile(file) {
+        return !!file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
+    }
+
+    function defaultPrimaryParseIndex(files) {
+        const pdfIndex = files.findIndex(isPdfFile);
+        return pdfIndex >= 0 ? pdfIndex : 0;
+    }
+
+    function syncPrimaryParseIndex() {
+        const files = state.pendingUploadFiles || [];
+        if (!files.length) {
+            state.primaryParseFileIndex = 0;
+            return;
+        }
+        if (!isPdfFile(files[state.primaryParseFileIndex])) {
+            state.primaryParseFileIndex = defaultPrimaryParseIndex(files);
+        }
+    }
+
+    function pendingPdfCount() {
+        return (state.pendingUploadFiles || []).filter(isPdfFile).length;
+    }
+
+    function updateSelectedFilesNote() {
+        const note = $('selectedFilesNote');
+        if (!note) return;
+        const files = state.pendingUploadFiles || [];
+        const maxBytes = effectiveUploadMaxBytes();
+        if (!files.length) {
+            note.textContent = 'Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.';
+            return;
+        }
+        note.textContent = `Đã chọn ${files.length} tệp · tối đa ${formatBytes(maxBytes)}/tệp`;
+    }
+
+    function renderPendingFilesPicker() {
+        const host = $('pendingFilesPicker');
+        if (!host) return;
+        const files = state.pendingUploadFiles || [];
+        if (!files.length) {
+            host.classList.add('hidden');
+            host.innerHTML = '';
+            return;
+        }
+
+        syncPrimaryParseIndex();
+        const pdfCount = pendingPdfCount();
+        const showPicker = files.length > 1 || pdfCount > 1;
+        if (!showPicker) {
+            host.classList.add('hidden');
+            host.innerHTML = '';
+            return;
+        }
+
+        const accent = meta.accent === 'rose'
+            ? { row: 'border-rose-300 bg-rose-50', hint: 'text-rose-800', btn: 'bg-rose-700 hover:bg-rose-800', radio: 'accent-rose-700' }
+            : { row: 'border-teal-300 bg-teal-50', hint: 'text-teal-800', btn: 'bg-teal-700 hover:bg-teal-800', radio: 'accent-teal-700' };
+        const rows = files.map((file, index) => {
+            const pdf = isPdfFile(file);
+            const primary = pdf && index === state.primaryParseFileIndex;
+            const rowTone = primary ? accent.row : 'border-slate-200 bg-white';
+            const badge = pdf
+                ? '<span class="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800">PDF</span>'
+                : '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Đính kèm</span>';
+            const radio = pdf
+                ? `<label class="inline-flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold text-slate-700">
+                        <input type="radio" name="primaryParseFile" value="${index}" class="${accent.radio}" ${primary ? 'checked' : ''}>
+                        <span>Chủ đạo</span>
+                   </label>`
+                : '<span class="shrink-0 text-[11px] font-semibold text-slate-400">Chỉ đính kèm</span>';
+            return `<div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${rowTone}">
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        ${badge}
+                        <span class="truncate text-sm font-bold text-slate-900">${esc(file.name)}</span>
+                        <span class="text-[11px] text-slate-500">${formatBytes(file.size)}</span>
+                    </div>
+                    ${primary ? `<p class="mt-1 text-[11px] font-semibold ${accent.hint}">Hệ thống sẽ đọc tệp này để nhận diện số VB, trích yếu, ngày...</p>` : ''}
+                </div>
+                ${radio}
+            </div>`;
+        }).join('');
+
+        const parseHint = pdfCount > 1
+            ? 'Có nhiều PDF — hãy chọn văn bản chủ đạo rồi bấm nút bên dưới.'
+            : (pdfCount === 1 ? 'Tệp PDF được chọn làm văn bản chủ đạo để tự nhận diện thông tin.' : 'Không có PDF — chỉ lưu đính kèm hoặc dán nội dung thủ công ở trên.');
+        const parseButton = pdfCount > 0
+            ? `<button id="parsePrimaryFileBtn" type="button" class="mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-white ${accent.btn}">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Đọc &amp; nhận diện từ văn bản chủ đạo
+               </button>`
+            : '';
+
+        host.classList.remove('hidden');
+        host.innerHTML = `
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                        <h3 class="font-bold text-slate-900"><i class="fa-solid fa-paperclip mr-2 text-slate-500"></i>Tệp đính kèm (${files.length})</h3>
+                        <p class="mt-1 text-xs text-slate-600">${parseHint}</p>
+                    </div>
+                </div>
+                <div class="mt-3 space-y-2">${rows}</div>
+                ${parseButton}
+            </div>`;
+
+        host.querySelectorAll('input[name="primaryParseFile"]').forEach(input => {
+            input.addEventListener('change', () => {
+                state.primaryParseFileIndex = Number(input.value) || 0;
+                renderPendingFilesPicker();
+            });
+        });
+        $('parsePrimaryFileBtn')?.addEventListener('click', () => parseFromPrimaryFile());
+    }
+
+    async function parseFromPrimaryFile(options = {}) {
+        const files = state.pendingUploadFiles || [];
+        syncPrimaryParseIndex();
+        const file = files[state.primaryParseFileIndex];
+        if (!file || !isPdfFile(file)) {
+            if (!options.silent) toast('Chọn tệp PDF làm văn bản chủ đạo để tự nhận diện.', 'rose');
+            return;
+        }
+        if (!$('parseNote') || !$('sourceText')) return;
+
+        $('parseNote').textContent = `Đang đọc văn bản chủ đạo: ${file.name} (chỉ trang đầu)...`;
+        $('parseNote').classList.remove('hidden');
+
+        try {
+            const extracted = await extractPdf(file);
+            const modeLabel = extracted.mode === 'mistral-ocr' ? 'Mistral OCR' : 'lớp chữ';
+            $('sourceText').value = extracted.text;
+            $('parseNote').textContent = `Đã đọc văn bản chủ đạo “${file.name}” bằng ${modeLabel}. Đang tự điền thông tin...`;
+            await runAutoParse({ silent: true });
+        } catch (error) {
+            $('parseNote').textContent = error.message || 'Không đọc được văn bản chủ đạo. Thử chọn tệp PDF khác hoặc dán text thủ công.';
+            if (!options.silent) toast(error.message || 'Không đọc được PDF. Thử tệp khác hoặc dán text thủ công.', 'rose');
+        }
+    }
+
     function openModal(doc = null) {
         state.pendingUploadFiles = [];
+        state.primaryParseFileIndex = 0;
         $('documentForm')?.reset();
         $('formError')?.classList.add('hidden');
-        if ($('selectedFilesNote')) {
-            $('selectedFilesNote').textContent = 'Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.';
-        }
+        renderPendingFilesPicker();
+        updateSelectedFilesNote();
         if ($('documentId')) $('documentId').value = doc?.id || '';
         if ($('modalTitle')) $('modalTitle').textContent = doc ? 'Cập nhật văn bản' : `Thêm văn bản · ${meta.label}`;
         if ($('academicYear')) $('academicYear').value = doc?.academic_year || state.selectedYear || '';
@@ -1210,6 +1351,7 @@
             try {
                 const data = await saveDocument(buildSavePayload());
                 state.pendingUploadFiles = [];
+                state.primaryParseFileIndex = 0;
                 closeModal();
                 if (data.storage === 'local') {
                     toast(data.message || 'Đã lưu tệp tạm trên hosting vì Google Drive chưa kết nối được.');
@@ -1239,42 +1381,47 @@
             const files = [...event.target.files];
             const maxBytes = effectiveUploadMaxBytes();
             const oversized = files.filter(file => file.size > maxBytes);
-            state.pendingUploadFiles = oversized.length ? [] : files;
-            const selectedNote = $('selectedFilesNote');
-            if (selectedNote) {
-                if (oversized.length) {
-                    const limitText = formatBytes(maxBytes);
-                    const hint = state.driveReady
-                        ? `Tệp vượt giới hạn ${limitText}/tệp của ứng dụng.`
-                        : `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting. Vào cPanel → PHP → đặt upload_max_filesize ≥ 32M, hoặc bật Google Drive.`;
-                    selectedNote.textContent = hint;
-                    toast(selectedNote.textContent, 'rose');
-                    event.target.value = '';
-                } else {
-                    selectedNote.textContent = files.length
-                        ? `Đã chọn ${files.length} tệp: ${files.map(file => file.name).join(', ')} · tối đa ${formatBytes(maxBytes)}/tệp`
-                        : `Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa ${formatBytes(maxBytes)} cho mỗi tệp.`;
-                }
+            if (oversized.length) {
+                state.pendingUploadFiles = [];
+                state.primaryParseFileIndex = 0;
+                renderPendingFilesPicker();
+                const limitText = formatBytes(maxBytes);
+                const hint = state.driveReady
+                    ? `Tệp vượt giới hạn ${limitText}/tệp của ứng dụng.`
+                    : `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting. Vào cPanel → PHP → đặt upload_max_filesize ≥ 32M, hoặc bật Google Drive.`;
+                if ($('selectedFilesNote')) $('selectedFilesNote').textContent = hint;
+                toast(hint, 'rose');
+                event.target.value = '';
+                return;
             }
-            if (oversized.length) return;
 
-            // Chỉ dùng tệp PDF đầu tiên để tự nhận diện thông tin văn bản.
-            // Tất cả tệp đã chọn (ảnh, Office, PDF...) vẫn được upload đầy đủ.
-            const file = files.find(item => item.type === 'application/pdf' || /\.pdf$/i.test(item.name));
-            if (!file || !$('parseNote') || !$('sourceText')) return;
+            state.pendingUploadFiles = files;
+            state.primaryParseFileIndex = defaultPrimaryParseIndex(files);
+            updateSelectedFilesNote();
+            renderPendingFilesPicker();
 
-            $('parseNote').textContent = `Đang đọc file ${file.name} (chỉ trang đầu)...`;
-            $('parseNote').classList.remove('hidden');
+            const pdfCount = files.filter(isPdfFile).length;
+            if (!pdfCount) {
+                if (files.length > 1 && $('parseNote')) {
+                    $('parseNote').textContent = 'Không có PDF trong danh sách — hệ thống chỉ lưu đính kèm. Dán nội dung thủ công nếu cần tự nhận diện.';
+                    $('parseNote').classList.remove('hidden');
+                }
+                return;
+            }
 
-            try {
-                const extracted = await extractPdf(file);
-                const modeLabel = extracted.mode === 'mistral-ocr' ? 'Mistral OCR' : 'lớp chữ';
-                $('sourceText').value = extracted.text;
-                $('parseNote').textContent = `Đã đọc bằng ${modeLabel}. Đang tự điền thông tin...`;
-                await runAutoParse({ silent: true });
-            } catch (error) {
-                $('parseNote').textContent = error.message || 'Không đọc được file. Thử lại hoặc dán text thủ công.';
-                toast(error.message || 'Lỗi đọc PDF trên Android. Thử file khác hoặc dùng ảnh.', 'rose');
+            if (files.length === 1 && pdfCount === 1) {
+                await parseFromPrimaryFile({ silent: true });
+                return;
+            }
+
+            if (pdfCount === 1) {
+                await parseFromPrimaryFile({ silent: true });
+                return;
+            }
+
+            if ($('parseNote')) {
+                $('parseNote').textContent = 'Có nhiều PDF — chọn văn bản chủ đạo rồi bấm “Đọc & nhận diện”.';
+                $('parseNote').classList.remove('hidden');
             }
         });
 
