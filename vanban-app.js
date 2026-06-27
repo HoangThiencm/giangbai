@@ -9,6 +9,12 @@
     const LS_YEAR_KEY = `vbd_academic_year_${SECTOR}`;
     const LS_TAB_KEY = `vbd_direction_tab_${SECTOR}`;
 
+    const DOCUMENT_TYPES = [
+        'Công văn', 'Thông báo', 'Quyết định', 'Nghị quyết', 'Chỉ thị',
+        'Kế hoạch', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Tờ trình',
+        'Báo cáo', 'Triển khai',
+    ];
+
     const state = {
         documents: [],
         schoolYears: [],
@@ -16,7 +22,9 @@
         yearInitialized: false,
         activeDirection: localStorage.getItem(LS_TAB_KEY) || 'incoming',
         statusFilter: '',
+        typeFilter: '',
         search: '',
+        detailDocId: null,
         driveConfigured: false,
         driveReady: false,
         driveProven: false,
@@ -63,6 +71,21 @@
         completed: ['Đã báo cáo', 'bg-teal-100 text-teal-800'],
         overdue: ['Quá hạn', 'bg-rose-100 text-rose-800'],
     }[status] || ['Chưa xử lý', 'bg-amber-100 text-amber-800']);
+
+    const documentTypeTone = type => ({
+        'Quyết định': 'bg-violet-100 text-violet-800',
+        'Nghị quyết': 'bg-purple-100 text-purple-800',
+        'Hướng dẫn': 'bg-blue-100 text-blue-800',
+        'Thông tư': 'bg-cyan-100 text-cyan-800',
+        'Kế hoạch': 'bg-indigo-100 text-indigo-800',
+        'Công văn': 'bg-slate-200 text-slate-800',
+        'Thông báo': 'bg-sky-100 text-sky-800',
+        'Tờ trình': 'bg-amber-100 text-amber-900',
+        'Báo cáo': 'bg-emerald-100 text-emerald-800',
+        'Quy định': 'bg-rose-100 text-rose-800',
+        'Chỉ thị': 'bg-orange-100 text-orange-900',
+        'Triển khai': 'bg-teal-100 text-teal-800',
+    }[type] || 'bg-slate-100 text-slate-700');
 
     const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '—';
 
@@ -125,12 +148,19 @@
         const year = $('academicYearFilter')?.value || '';
         const q = ($('searchInput')?.value || '').trim().toLowerCase();
         const status = $('statusFilter')?.value || '';
+        const docType = $('typeFilter')?.value || state.typeFilter || '';
         return state.documents.filter(doc => {
             if (year && doc.academic_year !== year) return false;
             if (state.activeDirection && doc.direction !== state.activeDirection) return false;
             if (status && doc.effective_status !== status) return false;
-            if (q && !`${doc.document_number} ${doc.title} ${doc.organization} ${doc.summary_text}`.toLowerCase().includes(q)) return false;
+            if (docType && doc.document_type !== docType) return false;
+            if (q && !`${doc.document_number} ${doc.title} ${doc.organization} ${doc.summary_text} ${doc.document_type}`.toLowerCase().includes(q)) return false;
             return true;
+        }).sort((a, b) => {
+            const da = a.document_date || '';
+            const db = b.document_date || '';
+            if (da !== db) return db.localeCompare(da);
+            return String(a.title || '').localeCompare(String(b.title || ''), 'vi');
         });
     }
 
@@ -339,6 +369,17 @@
         document.body.classList.remove('overflow-hidden');
     }
 
+    function renderTypeFilter() {
+        const select = $('typeFilter');
+        if (!select) return;
+        const current = select.value || state.typeFilter || '';
+        const typesInData = [...new Set(state.documents.map(doc => doc.document_type).filter(Boolean))];
+        const allTypes = [...new Set([...DOCUMENT_TYPES, ...typesInData])].sort((a, b) => a.localeCompare(b, 'vi'));
+        select.innerHTML = ['<option value="">Tất cả loại</option>', ...allTypes.map(type => `<option value="${esc(type)}">${esc(type)}</option>`)].join('');
+        select.value = allTypes.includes(current) || current === '' ? current : '';
+        state.typeFilter = select.value;
+    }
+
     function renderList() {
         const docs = scopedDocs();
         $('documentCount').textContent = `Hiển thị ${docs.length}/${state.documents.length} văn bản`;
@@ -348,37 +389,126 @@
             host.innerHTML = '<div class="p-10 text-center text-slate-500"><i class="fa-regular fa-folder-open mb-3 text-3xl"></i><p>Chưa có văn bản trong mục này.</p></div>';
             return;
         }
-        host.innerHTML = docs.map(doc => {
-            const [label, tone] = statusInfo(doc.effective_status);
-            const due = doc.report_required
-                ? `<span class="text-xs text-slate-500"><i class="fa-regular fa-calendar mr-1"></i>Hạn: ${dateText(doc.report_due_at)}</span>`
-                : '';
-            const files = (doc.files || []).map(file => renderFileChip(doc, file)).join('');
-            return `<article class="border-b border-slate-100 p-4 last:border-b-0 hover:bg-slate-50/80">
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">${esc(doc.academic_year || '')}</span>
-                            <span class="rounded-full px-2.5 py-1 text-xs font-bold ${tone}">${label}</span>
-                            ${doc.document_number ? `<span class="text-xs font-bold text-slate-600">${esc(doc.document_number)}</span>` : ''}
-                        </div>
-                        <h3 class="mt-2 text-base font-bold text-slate-900">${esc(doc.title)}</h3>
-                        <p class="mt-1 text-sm text-slate-600">${esc(doc.organization || 'Chưa ghi nơi gửi/nhận')}${doc.document_date ? ` · ${dateText(doc.document_date)}` : ''}${doc.document_type ? ` · ${esc(doc.document_type)}` : ''}</p>
-                        ${doc.summary_text ? `<p class="mt-2 text-sm leading-6 text-slate-700">${esc(doc.summary_text)}</p>` : ''}
-                        <div class="mt-3 flex flex-wrap items-center gap-2">${due}${files}</div>
-                    </div>
-                    <div class="flex shrink-0 flex-wrap gap-2">
-                        <button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"><i class="fa-solid fa-pen mr-1"></i>Sửa</button>
-                        ${doc.report_required && doc.effective_status !== 'completed' ? `<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100">Đang xử lý</button><button data-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-3 py-2 text-xs font-bold text-white">Đã báo cáo</button>` : ''}
-                        <button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            </article>`;
-        }).join('');
+        host.innerHTML = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-600">
+                        <tr>
+                            <th class="w-12 px-3 py-3 text-center">STT</th>
+                            <th class="min-w-[120px] px-3 py-3">Số/KH</th>
+                            <th class="min-w-[100px] px-3 py-3">Loại VB</th>
+                            <th class="min-w-[280px] px-3 py-3">Trích yếu</th>
+                            <th class="min-w-[90px] px-3 py-3">Ngày VB</th>
+                            <th class="min-w-[110px] px-3 py-3">Báo cáo</th>
+                            <th class="min-w-[120px] px-3 py-3 text-right">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${docs.map((doc, index) => {
+                            const [label, tone] = statusInfo(doc.effective_status);
+                            const typeBadge = doc.document_type
+                                ? `<span class="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${documentTypeTone(doc.document_type)}">${esc(doc.document_type)}</span>`
+                                : '<span class="text-xs text-slate-400">—</span>';
+                            return `<tr class="border-b border-slate-100 hover:bg-slate-50/80">
+                                <td class="px-3 py-3 text-center font-bold text-slate-500">${index + 1}</td>
+                                <td class="px-3 py-3 align-top">
+                                    <div class="font-bold text-slate-800">${doc.document_number ? esc(doc.document_number) : '—'}</div>
+                                    <div class="mt-1 text-[11px] text-slate-500">${esc(doc.academic_year || '')}</div>
+                                </td>
+                                <td class="px-3 py-3 align-top">${typeBadge}</td>
+                                <td class="px-3 py-3 align-top">
+                                    <button type="button" data-view-id="${doc.id}" class="text-left font-bold text-slate-900 ${meta.accent === 'rose' ? 'hover:text-rose-700' : 'hover:text-teal-700'} hover:underline">${esc(doc.title)}</button>
+                                    <p class="mt-1 line-clamp-2 text-xs text-slate-500">${esc(doc.organization || 'Chưa ghi nơi gửi/nhận')}</p>
+                                </td>
+                                <td class="px-3 py-3 align-top text-slate-700">${doc.document_date ? dateText(doc.document_date) : '—'}</td>
+                                <td class="px-3 py-3 align-top">
+                                    <span class="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${tone}">${label}</span>
+                                    ${doc.report_required && doc.report_due_at ? `<div class="mt-1 text-[11px] text-slate-500">Hạn ${dateText(doc.report_due_at)}</div>` : ''}
+                                </td>
+                                <td class="px-3 py-3 align-top">
+                                    <div class="flex flex-wrap justify-end gap-1">
+                                        <button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                        ${doc.report_required && doc.effective_status !== 'completed' ? `<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-800" title="Đang xử lý"><i class="fa-solid fa-spinner"></i></button><button data-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-2 py-1 text-[11px] font-bold text-white" title="Đã báo cáo"><i class="fa-solid fa-check"></i></button>` : ''}
+                                        <button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <p class="border-t border-slate-100 px-4 py-2 text-xs text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i>Bấm <strong>trích yếu</strong> để xem đầy đủ nội dung, tóm tắt và tệp đính kèm.</p>`;
         host.querySelectorAll('[data-action]').forEach(button => {
             button.onclick = () => handleAction(button.dataset.action, Number(button.dataset.id));
         });
+        host.querySelectorAll('[data-view-id]').forEach(button => {
+            button.onclick = () => openDetailModal(state.documents.find(doc => Number(doc.id) === Number(button.dataset.viewId)));
+        });
         bindFileActions(host);
+    }
+
+    function openDetailModal(doc) {
+        if (!doc) return;
+        state.detailDocId = doc.id;
+        const modal = $('documentDetailModal');
+        const body = $('detailBody');
+        const actions = $('detailActions');
+        if (!modal || !body || !actions) return openModal(doc);
+
+        const [label, tone] = statusInfo(doc.effective_status);
+        const files = (doc.files || []).map(file => renderFileChip(doc, file)).join('') || '<span class="text-sm text-slate-500">Chưa có tệp đính kèm.</span>';
+
+        if ($('detailTitle')) $('detailTitle').textContent = doc.title || 'Văn bản';
+        if ($('detailSubtitle')) {
+            $('detailSubtitle').innerHTML = [
+                doc.document_number ? `<span class="font-bold">${esc(doc.document_number)}</span>` : '',
+                doc.document_type ? `<span class="rounded-full px-2 py-0.5 text-xs font-bold ${documentTypeTone(doc.document_type)}">${esc(doc.document_type)}</span>` : '',
+                doc.document_date ? `<span>${dateText(doc.document_date)}</span>` : '',
+                `<span class="rounded-full px-2 py-0.5 text-xs font-bold ${tone}">${label}</span>`,
+            ].filter(Boolean).join(' · ');
+        }
+
+        body.innerHTML = `
+            <div class="grid gap-3 sm:grid-cols-2">
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div class="text-[11px] font-bold uppercase text-slate-500">Năm học</div>
+                    <div class="mt-1 font-semibold text-slate-900">${esc(doc.academic_year || '—')}</div>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div class="text-[11px] font-bold uppercase text-slate-500">Loại danh mục</div>
+                    <div class="mt-1 font-semibold text-slate-900">${doc.direction === 'outgoing' ? 'Văn bản đi' : 'Văn bản đến'}</div>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
+                    <div class="text-[11px] font-bold uppercase text-slate-500">Nơi gửi / nhận</div>
+                    <div class="mt-1 font-semibold text-slate-900">${esc(doc.organization || 'Chưa ghi')}</div>
+                </div>
+            </div>
+            ${doc.summary_text ? `<section><h3 class="text-sm font-bold text-slate-800">Tóm tắt việc cần làm</h3><p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">${esc(doc.summary_text)}</p></section>` : ''}
+            ${Number(doc.report_required) ? `<section class="rounded-xl border border-amber-200 bg-amber-50 p-4"><h3 class="text-sm font-bold text-amber-950">Theo dõi báo cáo</h3><p class="mt-2 text-sm text-amber-900">Hạn: <strong>${dateText(doc.report_due_at)}</strong>${doc.report_note ? ` · ${esc(doc.report_note)}` : ''}</p></section>` : ''}
+            <section><h3 class="text-sm font-bold text-slate-800">Tệp đính kèm</h3><div class="mt-2 flex flex-wrap gap-2">${files}</div></section>`;
+
+        actions.innerHTML = `
+            <button type="button" data-detail-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"><i class="fa-solid fa-pen mr-1"></i>Sửa</button>
+            ${doc.report_required && doc.effective_status !== 'completed' ? `<button type="button" data-detail-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800">Đang xử lý</button><button type="button" data-detail-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-4 py-2 text-sm font-bold text-white">Đã báo cáo</button>` : ''}
+            <button type="button" id="closeDetailFooterBtn" class="ml-auto rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>`;
+
+        actions.querySelectorAll('[data-detail-action]').forEach(button => {
+            button.onclick = async () => {
+                const id = Number(button.dataset.id);
+                closeDetailModal();
+                await handleAction(button.dataset.detailAction, id);
+            };
+        });
+        $('closeDetailFooterBtn')?.addEventListener('click', closeDetailModal, { once: true });
+        bindFileActions(body);
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeDetailModal() {
+        $('documentDetailModal')?.classList.add('hidden');
+        state.detailDocId = null;
+        document.body.classList.remove('overflow-hidden');
     }
 
     function reminderInfo(doc) {
@@ -415,7 +545,7 @@
             </button>`).join('');
         panel.classList.remove('hidden');
         panel.querySelectorAll('[data-reminder-id]').forEach(button => {
-            button.onclick = () => openModal(state.documents.find(doc => Number(doc.id) === Number(button.dataset.reminderId)));
+            button.onclick = () => openDetailModal(state.documents.find(doc => Number(doc.id) === Number(button.dataset.reminderId)));
         });
     }
 
@@ -458,11 +588,17 @@
     }
 
     function render() {
+        renderTypeFilter();
         renderSummary();
         renderDirectionTabs();
         renderReminders();
         renderDriveWarning();
         renderList();
+        if (state.detailDocId) {
+            const doc = state.documents.find(item => Number(item.id) === Number(state.detailDocId));
+            if (doc) openDetailModal(doc);
+            else closeDetailModal();
+        }
     }
 
     function statusLabel(status) {
@@ -1069,7 +1205,15 @@
             render();
         });
         $('statusFilter')?.addEventListener('change', render);
+        $('typeFilter')?.addEventListener('change', event => {
+            state.typeFilter = event.target.value;
+            render();
+        });
         $('searchInput')?.addEventListener('input', render);
+        $('closeDetailBtn')?.addEventListener('click', closeDetailModal);
+        $('documentDetailModal')?.addEventListener('click', event => {
+            if (event.target === $('documentDetailModal')) closeDetailModal();
+        });
     }
 
     function init() {
