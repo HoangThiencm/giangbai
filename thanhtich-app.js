@@ -232,12 +232,25 @@
         window.__prizeRankOptions = presets.prize_ranks || [];
     }
 
+    function campaignPlaceholder(tab = state.activeTab) {
+        return tab === 'teacher'
+            ? 'Tự nhập tên phong trào, cuộc thi (giáo viên)'
+            : 'Tự nhập tên phong trào, cuộc thi (học sinh)';
+    }
+
+    function refreshCampaignField() {
+        const input = $('campaignName');
+        if (!input) return;
+        input.placeholder = campaignPlaceholder(state.activeTab);
+    }
+
     function setActiveTab(tab) {
         state.activeTab = tab;
         localStorage.setItem(LS_TAB_KEY, tab);
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
+        refreshCampaignField();
         renderEntries();
     }
 
@@ -299,6 +312,10 @@
         $('formError').classList.add('hidden');
         $('entryId').value = entry ? entry.id : '';
         $('editorTitle').textContent = entry ? 'Sửa thành tích' : 'Thêm thành tích';
+        if (entry?.participant_type && entry.participant_type !== state.activeTab) {
+            setActiveTab(entry.participant_type);
+        }
+        refreshCampaignField();
         $('campaignName').value = entry?.campaign_name || '';
         populateOrganizerSelect(entry?.organizer || '');
         $('scopeLevel').value = entry?.scope_level || 'school';
