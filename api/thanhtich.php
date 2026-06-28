@@ -95,7 +95,7 @@ function tt_participant_type($value): string
 
 function tt_scope_level($value): string
 {
-    $allowed = ['school', 'district', 'province', 'national', 'international'];
+    $allowed = ['school', 'ward', 'city', 'national', 'international'];
     return in_array($value, $allowed, true) ? $value : 'school';
 }
 
@@ -103,10 +103,12 @@ function tt_scope_label(string $scope): string
 {
     return [
         'school' => 'Cấp trường',
-        'district' => 'Cấp huyện',
-        'province' => 'Cấp tỉnh',
+        'ward' => 'Cấp phường/xã',
+        'city' => 'Cấp thành phố',
         'national' => 'Cấp quốc gia',
         'international' => 'Cấp quốc tế',
+        'district' => 'Cấp huyện',
+        'province' => 'Cấp tỉnh',
     ][$scope] ?? 'Cấp trường';
 }
 
@@ -172,8 +174,8 @@ function tt_presets(): array
         ],
         'scope_levels' => [
             ['value' => 'school', 'label' => 'Cấp trường'],
-            ['value' => 'district', 'label' => 'Cấp huyện'],
-            ['value' => 'province', 'label' => 'Cấp tỉnh'],
+            ['value' => 'ward', 'label' => 'Cấp phường/xã'],
+            ['value' => 'city', 'label' => 'Cấp thành phố'],
             ['value' => 'national', 'label' => 'Cấp quốc gia'],
             ['value' => 'international', 'label' => 'Cấp quốc tế'],
         ],

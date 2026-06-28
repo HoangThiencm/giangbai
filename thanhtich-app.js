@@ -21,12 +21,26 @@
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[ch]));
 
+    const SCOPE_LABELS = {
+        school: 'Cấp trường',
+        ward: 'Cấp phường/xã',
+        city: 'Cấp thành phố',
+        national: 'Cấp quốc gia',
+        international: 'Cấp quốc tế',
+        district: 'Cấp huyện',
+        province: 'Cấp tỉnh',
+    };
+
+    const scopeLabel = scope => SCOPE_LABELS[scope] || scope || '—';
+
     const scopeTone = scope => ({
         school: 'bg-slate-100 text-slate-700',
-        district: 'bg-sky-100 text-sky-800',
-        province: 'bg-indigo-100 text-indigo-800',
+        ward: 'bg-sky-100 text-sky-800',
+        city: 'bg-indigo-100 text-indigo-800',
         national: 'bg-amber-100 text-amber-900',
         international: 'bg-rose-100 text-rose-800',
+        district: 'bg-sky-100 text-sky-800',
+        province: 'bg-indigo-100 text-indigo-800',
     }[scope] || 'bg-slate-100 text-slate-700');
 
     const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '—';
@@ -336,7 +350,7 @@
         ];
         (summary.by_organizer || []).forEach(group => {
             const typeLabel = group.participant_type === 'teacher' ? 'GV' : 'HS';
-            lines.push(`- [${typeLabel}] ${group.organizer || 'Chưa rõ'} (${group.scope_level}): ${group.competition_count} cuộc, ${group.participants} tham gia, ${group.prizes} giải`);
+            lines.push(`- [${typeLabel}] ${group.organizer || 'Chưa rõ'} (${scopeLabel(group.scope_level)}): ${group.competition_count} cuộc, ${group.participants} tham gia, ${group.prizes} giải`);
         });
         if ((summary.prize_breakdown || []).length) {
             lines.push('', 'Phân loại giải:');
@@ -354,7 +368,7 @@
             <tr class="border-t border-slate-100">
                 <td class="px-3 py-2 text-sm">${group.participant_type === 'teacher' ? 'Giáo viên' : 'Học sinh'}</td>
                 <td class="px-3 py-2 text-sm">${esc(group.organizer || '—')}</td>
-                <td class="px-3 py-2 text-sm">${esc(group.scope_level || '')}</td>
+                <td class="px-3 py-2 text-sm">${esc(scopeLabel(group.scope_level))}</td>
                 <td class="px-3 py-2 text-right text-sm font-bold">${group.competition_count}</td>
                 <td class="px-3 py-2 text-right text-sm font-bold">${group.participants}</td>
                 <td class="px-3 py-2 text-right text-sm font-bold text-amber-700">${group.prizes}</td>
