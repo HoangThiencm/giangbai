@@ -128,8 +128,11 @@
                     </label>
                     <label>
                         <span class="label">Cơ quan tổ chức</span>
-                        <input id="organizer" maxlength="300" class="field" list="organizerSuggestions" placeholder="Sở GD&amp;ĐT, Phòng GD&amp;ĐT...">
-                        <datalist id="organizerSuggestions"></datalist>
+                        <select id="organizerSelect" class="field"></select>
+                    </label>
+                    <label id="organizerCustomWrap" class="hidden sm:col-span-2">
+                        <span class="label">Ghi rõ cơ quan khác</span>
+                        <input id="organizerCustom" maxlength="300" class="field" placeholder="Nhập tên cơ quan tổ chức">
                     </label>
                     <label>
                         <span class="label">Cấp tổ chức</span>

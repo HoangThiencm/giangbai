@@ -124,15 +124,10 @@ function tt_presets(): array
 {
     return [
         'organizers' => [
-            'Bộ Giáo dục và Đào tạo',
-            'Sở Giáo dục và Đào tạo',
-            'Phòng Giáo dục và Đào tạo',
-            'Đoàn Thanh niên Cộng sản Hồ Chí Minh',
-            'Liên đoàn Thiếu niên Tiền phong Hồ Chí Minh',
-            'Công đoàn Giáo dục',
-            'Hội Liên hiệp Phụ nữ',
-            'Công an nhân dân',
-            'Nhà trường',
+            'Bộ Giáo dục',
+            'Sở Giáo dục',
+            'Phòng Văn hoá',
+            'Khác',
         ],
         'campaigns_teacher' => [
             'Hội thi giáo viên dạy giỏi cấp trường',

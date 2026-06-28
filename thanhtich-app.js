@@ -3,6 +3,9 @@
     const LS_YEAR_KEY = 'thanhtich_academic_year';
     const LS_TAB_KEY = 'thanhtich_participant_tab';
 
+    const ORGANIZER_OTHER = 'Khác';
+    const DEFAULT_ORGANIZERS = ['Bộ Giáo dục', 'Sở Giáo dục', 'Phòng Văn hoá', ORGANIZER_OTHER];
+
     const state = {
         meta: null,
         entries: [],
@@ -165,9 +168,52 @@
         localStorage.setItem(LS_YEAR_KEY, state.selectedYear);
     }
 
+    function organizerOptions() {
+        return state.meta?.presets?.organizers || DEFAULT_ORGANIZERS;
+    }
+
+    function populateOrganizerSelect(selected = '') {
+        const options = organizerOptions();
+        $('organizerSelect').innerHTML = [
+            '<option value="">-- Chọn cơ quan --</option>',
+            ...options.map(item => `<option value="${esc(item)}">${esc(item)}</option>`),
+        ].join('');
+        if (selected && options.includes(selected)) {
+            $('organizerSelect').value = selected;
+            $('organizerCustom').value = '';
+            $('organizerCustomWrap').classList.add('hidden');
+            return;
+        }
+        if (selected) {
+            $('organizerSelect').value = ORGANIZER_OTHER;
+            $('organizerCustom').value = selected;
+            $('organizerCustomWrap').classList.remove('hidden');
+            return;
+        }
+        $('organizerSelect').value = '';
+        $('organizerCustom').value = '';
+        $('organizerCustomWrap').classList.add('hidden');
+    }
+
+    function toggleOrganizerCustom() {
+        const isOther = $('organizerSelect').value === ORGANIZER_OTHER;
+        $('organizerCustomWrap').classList.toggle('hidden', !isOther);
+        if (!isOther) {
+            $('organizerCustom').value = '';
+        }
+    }
+
+    function readOrganizer() {
+        const selected = $('organizerSelect').value.trim();
+        if (selected === ORGANIZER_OTHER) {
+            return $('organizerCustom').value.trim();
+        }
+        return selected;
+    }
+
     function populatePresets() {
         const presets = state.meta?.presets || {};
-        $('organizerSuggestions').innerHTML = (presets.organizers || []).map(item => `<option value="${esc(item)}">`).join('');
+        populateOrganizerSelect();
         $('scopeLevel').innerHTML = (presets.scope_levels || []).map(item => `<option value="${esc(item.value)}">${esc(item.label)}</option>`).join('');
         refreshCampaignSuggestions();
         window.__prizeRankOptions = presets.prize_ranks || [];
@@ -250,7 +296,7 @@
         $('entryId').value = entry ? entry.id : '';
         $('editorTitle').textContent = entry ? 'Sửa thành tích' : 'Thêm thành tích';
         $('campaignName').value = entry?.campaign_name || '';
-        $('organizer').value = entry?.organizer || '';
+        populateOrganizerSelect(entry?.organizer || '');
         $('scopeLevel').value = entry?.scope_level || 'school';
         $('eventDate').value = entry?.event_date || '';
         $('participantCount').value = entry?.participant_count ?? 0;
@@ -432,12 +478,18 @@
         $('formError').classList.add('hidden');
         const winners = collectWinnerDraft();
         const prizeCount = Math.max(Number($('prizeCount').value || 0), winners.length);
+        const organizer = readOrganizer();
+        if (!organizer) {
+            $('formError').textContent = 'Vui lòng chọn cơ quan tổ chức (hoặc ghi rõ nếu chọn Khác).';
+            $('formError').classList.remove('hidden');
+            return;
+        }
         const payload = {
             id: Number($('entryId').value || 0) || undefined,
             academic_year: state.selectedYear,
             participant_type: state.activeTab,
             campaign_name: $('campaignName').value.trim(),
-            organizer: $('organizer').value.trim(),
+            organizer,
             scope_level: $('scopeLevel').value,
             event_date: $('eventDate').value,
             participant_count: Number($('participantCount').value || 0),
@@ -500,6 +552,7 @@
         $('btnCloseEditor').addEventListener('click', closeEditor);
         $('btnCancelEditor').addEventListener('click', closeEditor);
         $('entryForm').addEventListener('submit', saveEntry);
+        $('organizerSelect').addEventListener('change', toggleOrganizerCustom);
         $('btnCreateYear').addEventListener('click', createSchoolYear);
         $('btnShowSummary').addEventListener('click', () => openSummary().catch(err => showToast(err.message)));
         $('btnExportSummary').addEventListener('click', () => {
