@@ -229,16 +229,7 @@
         const presets = state.meta?.presets || {};
         populateOrganizerSelect();
         $('scopeLevel').innerHTML = (presets.scope_levels || []).map(item => `<option value="${esc(item.value)}">${esc(item.label)}</option>`).join('');
-        refreshCampaignSuggestions();
         window.__prizeRankOptions = presets.prize_ranks || [];
-    }
-
-    function refreshCampaignSuggestions() {
-        const presets = state.meta?.presets || {};
-        const list = state.activeTab === 'teacher'
-            ? (presets.campaigns_teacher || [])
-            : (presets.campaigns_student || []);
-        $('campaignSuggestions').innerHTML = list.map(item => `<option value="${esc(item)}">`).join('');
     }
 
     function setActiveTab(tab) {
@@ -247,7 +238,6 @@
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
-        refreshCampaignSuggestions();
         renderEntries();
     }
 
