@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê thành tích — THCS Trần Phú</title>
+    <script src="access-control.js?v=20260628-thanhtich"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
+        .soft-shadow { box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
+        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 14px; padding: .72rem .9rem; outline: none; background: #fff; }
+        .field:focus { border-color: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, .12); }
+        .label { display: block; font-size: .78rem; font-weight: 800; color: #334155; margin-bottom: .42rem; }
+        .chip { display: inline-flex; align-items: center; border-radius: 999px; padding: .28rem .62rem; font-size: .72rem; font-weight: 800; }
+        .modal-backdrop { background: rgba(15, 23, 42, .58); backdrop-filter: blur(5px); }
+        .scroll-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        .tab-btn.active { background: #fff; color: #b45309; box-shadow: 0 1px 3px rgba(15, 23, 42, .08); }
+        .winner-row { border: 1px dashed #e2e8f0; border-radius: 16px; padding: .85rem; background: #fffbeb; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#f8f6f2] text-slate-900">
+    <header class="sticky top-0 z-30 border-b border-amber-100/80 bg-white/90 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div>
+                <p class="text-[11px] font-extrabold uppercase tracking-[.18em] text-amber-700">THCS Trần Phú</p>
+                <h1 class="text-lg font-black tracking-tight">Thống kê thành tích</h1>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="index.html" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 shadow-sm hover:bg-slate-50">
+                    <i class="fas fa-home text-amber-700"></i> Trang chủ
+                </a>
+                <span id="teacherName" class="hidden text-sm font-bold text-slate-600 sm:block"></span>
+                <button id="btnAddEntry" type="button" class="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-amber-600/20 hover:bg-amber-700">
+                    <i class="fas fa-plus mr-2"></i>Thêm thành tích
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6">
+        <section class="overflow-hidden rounded-[28px] bg-gradient-to-br from-amber-950 via-amber-900 to-orange-800 p-6 text-white soft-shadow sm:p-8">
+            <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div class="max-w-2xl">
+                    <span class="chip bg-white/10 text-amber-100"><i class="fas fa-trophy mr-2"></i>Phong trào &amp; cuộc thi</span>
+                    <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Ghi nhận thành tích giáo viên, học sinh theo năm học.</h2>
+                    <p class="mt-3 text-sm leading-6 text-amber-50/85">Theo dõi phong trào do cơ quan cấp trên tổ chức, số người tham gia, danh sách đạt giải — tổng hợp cuối năm nhanh gọn.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statCompetitions" class="text-2xl font-black">0</div><div class="text-[11px] text-amber-100/80">Cuộc thi</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statParticipants" class="text-2xl font-black">0</div><div class="text-[11px] text-amber-100/80">Tham gia</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statPrizes" class="text-2xl font-black">0</div><div class="text-[11px] text-amber-100/80">Đạt giải</div></div>
+                    <div class="rounded-2xl bg-white/10 px-4 py-3"><div id="statWinners" class="text-2xl font-black">0</div><div class="text-[11px] text-amber-100/80">Người đạt giải</div></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-6 rounded-[24px] border border-amber-100 bg-white p-4 soft-shadow sm:p-5">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+                <div class="flex flex-wrap items-end gap-3">
+                    <label>
+                        <span class="label">Năm học</span>
+                        <div class="flex gap-2">
+                            <select id="yearSelect" class="field !w-auto min-w-[150px] text-sm font-bold"></select>
+                            <button id="btnCreateYear" type="button" class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-extrabold text-amber-800 hover:bg-amber-100">
+                                <i class="fas fa-plus mr-1"></i>Tạo năm học
+                            </button>
+                        </div>
+                    </label>
+                    <label>
+                        <span class="label">Tìm kiếm</span>
+                        <input id="searchInput" class="field !w-56 text-sm" placeholder="Phong trào, cơ quan tổ chức...">
+                    </label>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button id="btnExportSummary" type="button" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
+                        <i class="fas fa-file-export mr-2 text-amber-700"></i>Xuất tổng hợp
+                    </button>
+                    <button id="btnShowSummary" type="button" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-slate-800">
+                        <i class="fas fa-chart-pie mr-2"></i>Báo cáo năm
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-4 inline-flex rounded-2xl bg-slate-100 p-1">
+                <button type="button" data-tab="teacher" class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-600 transition">
+                    <i class="fas fa-chalkboard-user mr-2"></i>Giáo viên
+                </button>
+                <button type="button" data-tab="student" class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-600 transition">
+                    <i class="fas fa-user-graduate mr-2"></i>Học sinh
+                </button>
+            </div>
+        </section>
+
+        <div id="loadError" class="mt-4 hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"></div>
+
+        <section class="mt-5">
+            <div id="loading" class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+                <i class="fas fa-circle-notch fa-spin mr-2 text-amber-700"></i>Đang tải dữ liệu...
+            </div>
+            <div id="emptyState" class="hidden rounded-[24px] border-2 border-dashed border-amber-200 bg-white p-12 text-center">
+                <div class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-amber-50 text-2xl text-amber-700"><i class="fas fa-trophy"></i></div>
+                <h3 class="mt-4 text-lg font-black">Chưa có thành tích nào</h3>
+                <p class="mt-1 text-sm text-slate-500">Bắt đầu ghi nhận phong trào, cuộc thi của năm học đang chọn.</p>
+                <button id="btnAddEmpty" type="button" class="mt-5 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-extrabold text-white">Thêm ngay</button>
+            </div>
+            <div id="entryList" class="hidden space-y-3"></div>
+        </section>
+    </main>
+
+    <div id="editorModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-3 max-w-5xl overflow-hidden rounded-[26px] bg-white soft-shadow">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-amber-700">Nhập dữ liệu</p>
+                    <h2 id="editorTitle" class="text-xl font-black">Thêm thành tích</h2>
+                </div>
+                <button id="btnCloseEditor" type="button" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fas fa-xmark"></i></button>
+            </div>
+            <form id="entryForm" class="p-5 sm:p-7">
+                <input type="hidden" id="entryId">
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <label class="sm:col-span-2">
+                        <span class="label">Tên phong trào / cuộc thi <span class="text-rose-600">*</span></span>
+                        <input id="campaignName" required maxlength="300" class="field" list="campaignSuggestions" placeholder="Ví dụ: Hội thi học sinh giỏi cấp huyện">
+                        <datalist id="campaignSuggestions"></datalist>
+                    </label>
+                    <label>
+                        <span class="label">Cơ quan tổ chức</span>
+                        <input id="organizer" maxlength="300" class="field" list="organizerSuggestions" placeholder="Sở GD&amp;ĐT, Phòng GD&amp;ĐT...">
+                        <datalist id="organizerSuggestions"></datalist>
+                    </label>
+                    <label>
+                        <span class="label">Cấp tổ chức</span>
+                        <select id="scopeLevel" class="field"></select>
+                    </label>
+                    <label>
+                        <span class="label">Ngày tổ chức</span>
+                        <input id="eventDate" type="date" class="field">
+                    </label>
+                    <label>
+                        <span class="label">Số người tham gia</span>
+                        <input id="participantCount" type="number" min="0" value="0" class="field">
+                    </label>
+                    <label>
+                        <span class="label">Số người đạt giải</span>
+                        <input id="prizeCount" type="number" min="0" value="0" class="field">
+                    </label>
+                    <label class="sm:col-span-2">
+                        <span class="label">Tóm tắt giải thưởng</span>
+                        <input id="prizeSummary" maxlength="500" class="field" placeholder="Ví dụ: 1 Nhất, 2 Nhì, 3 Khuyến khích">
+                    </label>
+                    <label class="sm:col-span-2">
+                        <span class="label">Ghi chú</span>
+                        <textarea id="entryNote" rows="2" class="field" placeholder="Thông tin bổ sung, hồ sơ minh chứng..."></textarea>
+                    </label>
+                </div>
+
+                <div class="mt-6 border-t border-slate-200 pt-6">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <strong class="text-sm">Danh sách đạt giải</strong>
+                            <p class="mt-1 text-xs text-slate-600">Nhập họ tên, lớp/chức vụ và hạng giải từng người.</p>
+                        </div>
+                        <button id="btnAddWinner" type="button" class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-extrabold text-white">
+                            <i class="fas fa-plus mr-1"></i>Thêm người
+                        </button>
+                    </div>
+                    <div id="winnerRows" class="scroll-thin mt-3 max-h-[320px] space-y-3 overflow-y-auto"></div>
+                </div>
+
+                <div id="formError" class="mt-4 hidden rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button id="btnCancelEditor" type="button" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-600">Hủy</button>
+                    <button id="btnSaveEntry" type="submit" class="rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-extrabold text-white">
+                        <i class="fas fa-check mr-2"></i>Lưu thành tích
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="summaryModal" class="modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto p-3 sm:p-6">
+        <div class="mx-auto my-3 max-w-4xl overflow-hidden rounded-[26px] bg-white soft-shadow">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-amber-700">Tổng hợp cuối năm</p>
+                    <h2 id="summaryTitle" class="text-xl font-black">Báo cáo thành tích</h2>
+                </div>
+                <button id="btnCloseSummary" type="button" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div id="summaryBody" class="p-5 sm:p-7"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 left-1/2 z-[70] hidden -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-xl"></div>
+
+    <script src="thanhtich-app.js?v=20260628-v1"></script>
+</body>
+</html>

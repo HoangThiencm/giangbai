@@ -308,6 +308,47 @@ CREATE TABLE IF NOT EXISTS short_link_clicks (
     CONSTRAINT fk_short_link_click_link FOREIGN KEY (link_id) REFERENCES short_links(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS achievement_school_years (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(40) NOT NULL UNIQUE,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_achievement_school_years_name (name)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS achievement_entries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    academic_year VARCHAR(40) NOT NULL DEFAULT '',
+    participant_type ENUM('teacher', 'student') NOT NULL,
+    campaign_name VARCHAR(300) NOT NULL,
+    organizer VARCHAR(300) NOT NULL DEFAULT '',
+    scope_level VARCHAR(40) NOT NULL DEFAULT 'school',
+    event_date DATE DEFAULT NULL,
+    participant_count INT NOT NULL DEFAULT 0,
+    prize_count INT NOT NULL DEFAULT 0,
+    prize_summary VARCHAR(500) DEFAULT NULL,
+    note TEXT DEFAULT NULL,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_achievement_entries_year (academic_year),
+    INDEX idx_achievement_entries_type (participant_type),
+    INDEX idx_achievement_entries_organizer (organizer)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS achievement_winners (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    entry_id INT NOT NULL,
+    full_name VARCHAR(180) NOT NULL,
+    class_or_role VARCHAR(120) DEFAULT NULL,
+    prize_rank VARCHAR(80) NOT NULL DEFAULT '',
+    prize_title VARCHAR(300) DEFAULT NULL,
+    note TEXT DEFAULT NULL,
+    order_index INT NOT NULL DEFAULT 0,
+    INDEX idx_achievement_winners_entry (entry_id),
+    CONSTRAINT fk_achievement_winner_entry FOREIGN KEY (entry_id) REFERENCES achievement_entries(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
 VALUES
     ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),

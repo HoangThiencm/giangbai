@@ -425,6 +425,19 @@
             background: rgba(216, 180, 254, 0.42);
         }
 
+        .tool-tile--thanhtich {
+            background: linear-gradient(145deg, #78350f 0%, #d97706 52%, #fbbf24 100%);
+            box-shadow: 0 14px 36px rgba(217, 119, 6, 0.22);
+        }
+
+        .tool-tile--thanhtich .tool-tile-glow {
+            width: 150px;
+            height: 150px;
+            right: -30px;
+            bottom: -55px;
+            background: rgba(251, 191, 36, 0.42);
+        }
+
         .tool-tile--vietbaocao {
             background: linear-gradient(145deg, #134e4a 0%, #0f766e 50%, #14b8a6 100%);
             box-shadow: 0 14px 36px rgba(20, 184, 166, 0.2);
@@ -795,6 +808,7 @@
             nopbai: 'nopbai-quanly.html',
             padlet: 'padlet_ht.html',
             vietbaocao: 'vietbaocao.html',
+            thanhtich: 'thanhtich.html',
             rutgon: 'rutgon.html'
         };
         const LOTRINH_PAGE_KEYS = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
@@ -1166,6 +1180,17 @@
                             <span class="tool-tile-eyebrow">Hành chính</span>
                             <h3 class="tool-tile-title">Viết báo cáo</h3>
                             <p class="tool-tile-desc">AI soạn báo cáo giáo dục đúng văn phong.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="thanhtich.html" data-tool="thanhtich" class="tool-tile tool-tile--colored tool-tile--thanhtich">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-trophy"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Nhà trường</span>
+                            <h3 class="tool-tile-title">Thống kê thành tích</h3>
+                            <p class="tool-tile-desc">Ghi nhận phong trào, cuộc thi và giải thưởng GV/HS theo năm học.</p>
                         </div>
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>

@@ -250,6 +250,16 @@
                             <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
                         </label>
                     </div>
+                    <!-- 12. Thống kê thành tích -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Thống Kê Thành Tích</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_thanhtich"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
                 </div>
 
                 <div class="rounded-xl border border-teal-200 bg-teal-50/60 p-5 mb-6">
@@ -838,7 +848,7 @@
 
         const CLIENT_FEATURE_CHECKS = [
             'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx',
-            'nopbai', 'padlet', 'vietbaocao', 'rutgon'
+            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'rutgon'
         ];
 
         const FEATURE_NAMES = {
@@ -852,6 +862,7 @@
             nopbai: "Giao & Nhận Bài",
             padlet: "Bảng Chia Sẻ Padlet",
             vietbaocao: "Viết Báo Cáo AI",
+            thanhtich: "Thống Kê Thành Tích",
             rutgon: "Link Rút Gọn & QR",
             teacher_design: "Soạn bài lộ trình",
             teacher_progress_stats: "Thống kê tiến trình",
@@ -861,7 +872,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'rutgon']
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'rutgon']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -2066,6 +2077,7 @@
             nopbai: { title: 'Giao & nhận bài', url: 'nopbai-quanly.html' },
             padlet: { title: 'Bảng chia sẻ Padlet', url: 'padlet_ht.html' },
             vietbaocao: { title: 'Viết báo cáo AI', url: 'vietbaocao.html' },
+            thanhtich: { title: 'Thống kê thành tích', url: 'thanhtich.html' },
             rutgon: { title: 'Link rút gọn & QR', url: 'rutgon.html' },
             thongketientrinh: { title: 'Thống kê tiến trình lớp', url: 'thongketientrinh.html' },
             quanlyvanban: { title: 'Quản lý văn bản', url: 'quanlyvanban.html' },
@@ -2086,12 +2098,12 @@
             {
                 title: 'Theo dõi & quản lý',
                 hint: 'Các tab trong không gian giáo viên.',
-                pages: ['thongketientrinh', 'quanlyvanban', 'theodoiai']
+                pages: ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'theodoiai']
             },
             {
                 title: 'Công cụ giảng dạy',
                 hint: 'Hiện trên trang chính của giáo viên.',
-                pages: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'rutgon']
+                pages: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'rutgon']
             }
         ];
         let editingStudent = null;
@@ -2727,7 +2739,7 @@
         }
 
         const mathRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
-        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban'];
+        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban', 'thanhtich'];
 
         function allTeacherPageIds() {
             return teacherFeatureGroups.flatMap(group => group.pages);

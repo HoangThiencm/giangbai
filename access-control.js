@@ -30,7 +30,8 @@ async function accessControlMain() {
         'nopbai-quanly.html': 'nopbai',
         'padlet_ht.html': 'padlet',
         'vietbaocao.html': 'vietbaocao',
-        'rutgon.html': 'rutgon'
+        'rutgon.html': 'rutgon',
+        'thanhtich.html': 'thanhtich'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
@@ -53,7 +54,8 @@ async function accessControlMain() {
         nopbai: 'nopbai-quanly.html',
         padlet: 'padlet_ht.html',
         vietbaocao: 'vietbaocao.html',
-        rutgon: 'rutgon.html'
+        rutgon: 'rutgon.html',
+        thanhtich: 'thanhtich.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];

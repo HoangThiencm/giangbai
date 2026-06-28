@@ -48,6 +48,7 @@ function page_catalog(): array
         'thongketientrinh' => ['title' => 'Thống kê tiến trình lớp', 'url' => 'thongketientrinh.html'],
         'quanlyvanban' => ['title' => 'Quản lý văn bản', 'url' => 'quanlyvanban.html'],
         'theodoiai' => ['title' => 'Theo dõi AI lộ trình', 'url' => 'theodoi-ai.html'],
+        'thanhtich' => ['title' => 'Thống kê thành tích', 'url' => 'thanhtich.html'],
     ];
 }
 
@@ -56,6 +57,7 @@ function teacher_workspace_page_ids(): array
     return [
         'thongketientrinh',
         'quanlyvanban',
+        'thanhtich',
         'theodoiai',
         'gslides',
         'vehinh',
@@ -73,7 +75,7 @@ function teacher_workspace_page_ids(): array
 
 function teacher_default_workspace_extras(): array
 {
-    return ['thongketientrinh', 'quanlyvanban'];
+    return ['thongketientrinh', 'quanlyvanban', 'thanhtich'];
 }
 
 function teacher_all_page_ids(): array
@@ -98,6 +100,7 @@ function teacher_feature_keys_for_pages(): array
         'padlet' => 'padlet',
         'vietbaocao' => 'vietbaocao',
         'rutgon' => 'rutgon',
+        'thanhtich' => 'thanhtich',
     ];
 }
 
