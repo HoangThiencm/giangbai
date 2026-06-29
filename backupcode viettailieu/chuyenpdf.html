@@ -854,10 +854,17 @@
             <div>
               <label class="field-label" for="preserveImagesSelect">Giữ hình trong đề</label>
               <select class="control" id="preserveImagesSelect">
-                <option value="none">Không chèn ảnh gốc</option>
+                <option value="none" selected>Không chèn ảnh (chỉ text)</option>
                 <option value="after">Chèn ảnh trang gốc sau mỗi trang</option>
                 <option value="before">Chèn ảnh trang gốc trước mỗi trang</option>
               </select>
+            </div>
+
+            <div id="mistralRefineWrap" class="hidden">
+              <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input id="mistralRefineVietnamese" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500" />
+                Mistral xong rồi dùng Gemini sửa dấu tiếng Việt (chậm hơn)
+              </label>
             </div>
 
             <div>
@@ -1178,6 +1185,8 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       modeSelect: $("modeSelect"),
       scaleSelect: $("scaleSelect"),
       preserveImagesSelect: $("preserveImagesSelect"),
+      mistralRefineWrap: $("mistralRefineWrap"),
+      mistralRefineVietnamese: $("mistralRefineVietnamese"),
       ocrTilingSelect: $("ocrTilingSelect"),
       convertBtn: $("convertBtn"),
       markdownText: $("markdownText"),
@@ -1305,6 +1314,7 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
       els.modeSelect.disabled = isRunning;
       els.scaleSelect.disabled = isRunning;
       els.preserveImagesSelect.disabled = isRunning;
+      els.mistralRefineVietnamese.disabled = isRunning || provider !== "mistral" || !hasGeminiKey();
       els.ocrTilingSelect.disabled = isRunning || provider !== "gemini";
       els.convertBtn.innerHTML = isRunning
         ? `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...`
@@ -1904,7 +1914,7 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
           provider: "mistral",
           level: "warn",
           title: "Gợi ý: Mistral OCR",
-          message: "Ảnh đã tải. LiteParse chỉ dùng cho PDF có lớp chữ — với ảnh nên dùng Mistral OCR hoặc Gemini Vision.",
+          message: "Ảnh đã tải. LiteParse chỉ dùng cho PDF có lớp chữ — với ảnh nên dùng Mistral OCR (nhanh) hoặc Gemini Vision (đúng dấu hơn).",
           autoApply: true
         };
       }
@@ -1943,7 +1953,7 @@ Nếu có hai cột tiêu đề trái/phải, hãy ghi theo thứ tự trái r�
         provider: "mistral",
         level: "warn",
         title: "Gợi ý: Mistral OCR",
-        message: `${fileLine}. PDF scan thật (gần như không có lớp chữ) — dùng Mistral OCR hoặc Gemini Vision.`,
+        message: `${fileLine}. PDF scan thật (gần như không có lớp chữ) — Mistral OCR nhanh; cần đúng dấu tiếng Việt thì chọn Gemini Vision hoặc bật sửa dấu sau Mistral.`,
         autoApply: true
       };
     }
@@ -2247,6 +2257,43 @@ LƯU Ý CHỐNG BỎ SÓT:
       return x.includes(y) || y.includes(x);
     }
 
+    function hasGeminiKey() {
+      return Boolean(String(injectedApiKey || "").trim());
+    }
+
+    function buildVietnameseCorrectionPrompt(ocrText, mode) {
+      const formatRule = mode === "official"
+        ? "Giữ nguyên HTML tối giản (<p>, <br>, <table>, <strong>...) nếu đầu vào là HTML."
+        : mode === "latex"
+          ? "Giữ nguyên công thức LaTeX trong $...$ hoặc $$...$$; không đổi ký hiệu toán."
+          : "Giữ nguyên Markdown (bảng, danh sách, tiêu đề) nếu có.";
+      return `Bạn là công cụ sửa lỗi OCR tiếng Việt.
+Mistral OCR đã quét ảnh nhưng thường thiếu dấu hoặc sai dấu tiếng Việt.
+So sánh với ẢNH GỐC đính kèm và sửa lại cho đúng chữ tiếng Việt có dấu.
+
+QUY TẮC BẮT BUỘC:
+1. Giữ nguyên cấu trúc xuống dòng, đoạn, bảng và thứ tự nội dung.
+2. Không thêm, không bớt, không tóm tắt, không giải thích.
+3. Chỉ sửa dấu tiếng Việt và lỗi nhận dạng ký tự rõ ràng.
+4. ${formatRule}
+5. Chỉ trả về nội dung đã sửa, không bọc trong \`\`\`.
+
+VĂN BẢN OCR CẦN SỬA:
+---
+${ocrText}
+---`;
+    }
+
+    async function refineMistralVietnamese(page, markdown, mode, modelName) {
+      const body = String(markdown || "").trim();
+      if (!body || !hasGeminiKey()) return markdown;
+      const corrected = await callGemini(page, buildVietnameseCorrectionPrompt(body, mode), modelName);
+      const cleaned = mode === "official"
+        ? (/<[a-z][\s\S]*>/i.test(corrected) ? stripCodeFences(corrected) : plainTextToOfficialHtml(corrected))
+        : stripCodeFences(corrected);
+      return cleanOcrMarkdownNoise(cleaned || body);
+    }
+
     async function runMistralOcr(mode) {
       if (!MISTRAL_API_KEY || MISTRAL_API_KEY === "DAN_KEY_MISTRAL_CUA_BAN_VAO_DAY") {
         throw new Error("Bạn chưa nhập Mistral API key trong biến MISTRAL_API_KEY ở đầu file index.html.");
@@ -2255,8 +2302,11 @@ LƯU Ý CHỐNG BỎ SÓT:
         throw new Error("Chưa có trang ảnh để gửi Mistral OCR.");
       }
 
+      const geminiModel = els.modelSelect.value;
+      const useGeminiRefine = hasGeminiKey() && !!els.mistralRefineVietnamese?.checked;
+
       updateFloatingProgress(0, state.pages.length || 1, "Đang gửi file sang Mistral OCR...", {
-        title: "Mistral OCR",
+        title: useGeminiRefine ? "Mistral OCR + Gemini sửa dấu" : "Mistral OCR",
         stage: "Upload OCR",
         currentPage: "-"
       });
@@ -2272,7 +2322,7 @@ LƯU Ý CHỐNG BỎ SÓT:
         };
 
         updateFloatingProgress(idx, total, `Mistral OCR trang ${idx + 1}/${total}...`, {
-          title: "Mistral OCR",
+          title: useGeminiRefine ? "Mistral OCR + Gemini sửa dấu" : "Mistral OCR",
           stage: "OCR ảnh trang",
           currentPage: idx + 1
         });
@@ -2284,25 +2334,44 @@ LƯU Ý CHỐNG BỎ SÓT:
         }
 
         const ocrPage = ocrPages[0];
+        let markdown = mistralPageToMarkdown(ocrPage, mode);
+        assertMistralPageComplete(markdown, idx + 1);
+
+        if (useGeminiRefine) {
+          updateFloatingProgress(idx, total, `Gemini sửa dấu tiếng Việt trang ${idx + 1}/${total}...`, {
+            title: "Mistral OCR + Gemini sửa dấu",
+            stage: "Sửa dấu tiếng Việt",
+            currentPage: idx + 1
+          });
+          try {
+            markdown = await refineMistralVietnamese(page, markdown, mode, geminiModel);
+            assertMistralPageComplete(markdown, idx + 1);
+          } catch (error) {
+            console.warn(`Gemini sửa dấu trang ${idx + 1} thất bại, giữ bản Mistral:`, error);
+            toast(`Trang ${idx + 1}: không sửa được dấu bằng Gemini, giữ bản Mistral.`);
+          }
+        }
+
         page.status = "done";
-        page.markdown = mistralPageToMarkdown(ocrPage, mode);
-        assertMistralPageComplete(page.markdown, idx + 1);
+        page.markdown = markdown;
         page.figures = dedupeFigures(mistralImagesToFigures(ocrPage, idx + 1), page);
         merged.push(page.markdown);
-        updateProgress(idx + 1, total, `Mistral OCR xong trang ${idx + 1}/${total}.`);
+        updateProgress(idx + 1, total, useGeminiRefine
+          ? `Mistral + Gemini xong trang ${idx + 1}/${total}.`
+          : `Mistral OCR xong trang ${idx + 1}/${total}.`);
         await wait(80);
       }
 
       state.markdown = merged.join("\n\n<div class=\"page-break\"></div>\n\n").trim();
       els.markdownText.value = state.markdown;
       await renderPreview();
-      updateFloatingProgress(total, total, "Mistral OCR hoàn tất.", {
-        title: "Mistral OCR",
+      updateFloatingProgress(total, total, useGeminiRefine ? "Mistral OCR + Gemini sửa dấu hoàn tất." : "Mistral OCR hoàn tất.", {
+        title: useGeminiRefine ? "Mistral OCR + Gemini sửa dấu" : "Mistral OCR",
         stage: "Xong",
         currentPage: total,
         autoHide: true
       });
-      toast("Mistral OCR đã xử lý xong.");
+      toast(useGeminiRefine ? "Mistral OCR + Gemini sửa dấu đã xử lý xong." : "Mistral OCR đã xử lý xong.");
     }
 
     async function fetchMistralOcr(document) {
@@ -3013,8 +3082,15 @@ LƯU Ý CHỐNG BỎ SÓT:
       return [];
     }
 
+    function stripEmbeddedImagesFromHtml(html) {
+      return String(html || "")
+        .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, "")
+        .replace(/<img\b[^>]*>/gi, "");
+    }
+
     function buildDocumentBodyHtml({ forWord = false } = {}) {
       const preserveMode = els.preserveImagesSelect.value;
+      const includeImages = preserveMode !== "none";
       const official = isOfficialMode();
       const renderMarkdown = forWord
         ? (markdown) => official ? renderOfficialContent(markdown, { forWord: true }) : renderMarkdownForWord(markdown)
@@ -3026,9 +3102,10 @@ LƯU Ý CHỐNG BỎ SÓT:
           const pageMarkdown = isOfficialMode()
             ? cleanOcrMarkdownNoise(editorPages[index] || "")
             : finalSplitAnswerChoices(formatAnswerOptions(smartFormatExamMarkdown(cleanOcrMarkdownNoise(editorPages[index] || ""))));
-          const contentHtml = renderMarkdown(pageMarkdown);
-          const extractedHtml = preserveMode === "none" ? extractedFiguresHtml(page) : "";
-          const imageHtml = preserveMode === "none" ? "" : imageFigureHtml(page);
+          let contentHtml = renderMarkdown(pageMarkdown);
+          if (!includeImages) contentHtml = stripEmbeddedImagesFromHtml(contentHtml);
+          const extractedHtml = includeImages ? extractedFiguresHtml(page) : "";
+          const imageHtml = includeImages ? imageFigureHtml(page) : "";
           const pageBreak = index < state.pages.length - 1 ? `<div class="page-break"></div>` : "";
 
           if (preserveMode === "before") {
@@ -3039,7 +3116,9 @@ LƯU Ý CHỐNG BỎ SÓT:
         }).join("");
       }
 
-      return renderMarkdown(getLayoutMarkdown());
+      let fallbackHtml = renderMarkdown(getLayoutMarkdown());
+      if (!includeImages) fallbackHtml = stripEmbeddedImagesFromHtml(fallbackHtml);
+      return fallbackHtml;
     }
 
     function enhancePreviewLayout(page) {
@@ -3604,7 +3683,9 @@ ${htmlBody}
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      toast("Đã xuất DOCX với công thức MathML, không xuất ảnh.");
+      toast(els.preserveImagesSelect.value === "none"
+        ? "Đã xuất DOCX chỉ text (không chèn ảnh)."
+        : "Đã xuất DOCX kèm ảnh theo cài đặt.");
     }
 
     function markdownToPlainText(markdown) {
@@ -3714,11 +3795,17 @@ ${htmlBody}
       const provider = els.providerSelect.value;
       const mode = els.modeSelect.value;
       const isGemini = provider === "gemini";
+      const isMistral = provider === "mistral";
       els.modelSelect.disabled = !isGemini || state.isRunning;
       els.ocrTilingSelect.disabled = !isGemini || state.isRunning;
+      els.mistralRefineWrap?.classList.toggle("hidden", !isMistral);
+      if (els.mistralRefineVietnamese) {
+        els.mistralRefineVietnamese.disabled = state.isRunning || !isMistral || !hasGeminiKey();
+        if (!hasGeminiKey()) els.mistralRefineVietnamese.checked = false;
+      }
 
       if (provider === "mistral") {
-        els.progressText.textContent = "Mistral OCR dùng ảnh từng trang đã render, phù hợp scan và ảnh.";
+        els.progressText.textContent = "Mistral OCR dùng ảnh từng trang đã render — nhanh, phù hợp scan và ảnh.";
       } else if (provider === "liteparse") {
         els.progressText.textContent = "LiteParse đọc lớp chữ PDF trực tiếp trong trình duyệt — nhanh, không tốn API.";
       } else {
