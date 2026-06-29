@@ -2509,6 +2509,106 @@ ${ocrText}
       return output;
     }
 
+    function splitMarkdownTableRow(line) {
+      const source = String(line || "").trim().replace(/^\|/, "").replace(/\|$/, "");
+      const cells = [];
+      let current = "";
+      let escaped = false;
+      for (const char of source) {
+        if (escaped) {
+          current += char;
+          escaped = false;
+          continue;
+        }
+        if (char === "\\") {
+          current += char;
+          escaped = true;
+          continue;
+        }
+        if (char === "|") {
+          cells.push(current.trim());
+          current = "";
+          continue;
+        }
+        current += char;
+      }
+      cells.push(current.trim());
+      return cells;
+    }
+
+    function isMarkdownTableSeparator(line) {
+      const cells = splitMarkdownTableRow(line);
+      return cells.length >= 2 && cells.every((cell) => /^:?-{2,}:?$/.test(cell.replace(/\s+/g, "")));
+    }
+
+    function isPipeTableLine(line) {
+      const text = String(line || "").trim();
+      if (!text || /^</.test(text) || /^```/.test(text)) return false;
+      if (/^!\[[^\]]*\]\([^)]+\)$/.test(text)) return false;
+      return splitMarkdownTableRow(text).length >= 2 && /(^|[^\\])\|/.test(text);
+    }
+
+    function isLikelyMarkdownTableBlock(lines) {
+      const rows = lines.map(splitMarkdownTableRow).filter((row) => row.length >= 2);
+      if (rows.length < 2) return false;
+      if (lines.some(isMarkdownTableSeparator)) return true;
+      const widths = rows.map((row) => row.length);
+      const bestWidth = widths.sort((a, b) => {
+        const countA = rows.filter((row) => row.length === a).length;
+        const countB = rows.filter((row) => row.length === b).length;
+        return countB - countA || b - a;
+      })[0];
+      return bestWidth >= 2 && rows.filter((row) => row.length === bestWidth).length >= 2;
+    }
+
+    function markdownPipeTableBlockToHtml(lines) {
+      const hasHeaderSeparator = lines.length > 1 && isMarkdownTableSeparator(lines[1]);
+      const bodyLines = hasHeaderSeparator ? [lines[0], ...lines.slice(2)] : lines;
+      const rows = bodyLines
+        .map(splitMarkdownTableRow)
+        .filter((row) => row.length >= 2);
+      const columnCount = Math.max(...rows.map((row) => row.length));
+      const normalizeRow = (row) => {
+        const copy = row.slice(0, columnCount);
+        while (copy.length < columnCount) copy.push("");
+        return copy;
+      };
+      const htmlRows = rows.map((row, index) => {
+        const tag = hasHeaderSeparator && index === 0 ? "th" : "td";
+        const cells = normalizeRow(row)
+          .map((cell) => `<${tag}>${escapeHtml(cell)}</${tag}>`)
+          .join("");
+        return `<tr>${cells}</tr>`;
+      });
+      if (!hasHeaderSeparator) return `<table><tbody>${htmlRows.join("")}</tbody></table>`;
+      return `<table><thead>${htmlRows[0] || ""}</thead><tbody>${htmlRows.slice(1).join("")}</tbody></table>`;
+    }
+
+    function markdownPipeTablesToHtml(markdown) {
+      const lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n");
+      const output = [];
+      for (let i = 0; i < lines.length; i += 1) {
+        if (!isPipeTableLine(lines[i])) {
+          output.push(lines[i]);
+          continue;
+        }
+
+        const block = [];
+        while (i < lines.length && (isPipeTableLine(lines[i]) || isMarkdownTableSeparator(lines[i]))) {
+          block.push(lines[i]);
+          i += 1;
+        }
+        i -= 1;
+
+        if (isLikelyMarkdownTableBlock(block)) {
+          output.push("", markdownPipeTableBlockToHtml(block), "");
+        } else {
+          output.push(...block);
+        }
+      }
+      return output.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    }
+
     function replaceMistralImagePlaceholders(markdown, page) {
       let output = String(markdown || "");
       const images = page.images || page.image_data || [];
@@ -2775,6 +2875,8 @@ ${ocrText}
       return String(text || "")
         .split(/\n{2,}/)
         .map((block) => {
+          const tableHtml = markdownPipeTablesToHtml(block);
+          if (/<table[\s\S]*?>/i.test(tableHtml)) return escapeUnsafeHtml(tableHtml);
           const lines = block.split(/\n/).map((line) => escapeHtml(line)).join("<br>");
           return `<p>${lines}</p>`;
         })
@@ -2860,6 +2962,8 @@ ${ocrText}
       return String(layout || "")
         .split(/\n{2,}/)
         .map((block) => {
+          const tableHtml = markdownPipeTablesToHtml(block);
+          if (/<table[\s\S]*?>/i.test(tableHtml)) return escapeUnsafeHtml(tableHtml);
           const lines = block.split(/\n/).map((line) => line.trim()).filter(Boolean);
           if (!lines.length) return "";
           const joined = lines.join("<br>");
@@ -2879,7 +2983,7 @@ ${ocrText}
       }
       if (looksLikeMarkdownContent(source)) {
         const normalized = normalizeOfficialMarkdown(source);
-        const html = forWord ? renderMarkdownForWord(normalized) : marked.parse(normalized);
+        const html = forWord ? renderMarkdownForWord(normalized) : renderMarkdownHtml(normalized);
         return `<div class="official-doc">${html}</div>`;
       }
       return `<div class="official-doc">${buildOfficialPlainTextHtml(source)}</div>`;
@@ -3094,7 +3198,7 @@ ${ocrText}
       const official = isOfficialMode();
       const renderMarkdown = forWord
         ? (markdown) => official ? renderOfficialContent(markdown, { forWord: true }) : renderMarkdownForWord(markdown)
-        : (markdown) => official ? renderOfficialContent(markdown, { forWord: false }) : marked.parse(markdown);
+        : (markdown) => official ? renderOfficialContent(markdown, { forWord: false }) : renderMarkdownHtml(markdown);
       const editorPages = getRenderableEditorPages();
 
       if (editorPages.length) {
@@ -3536,6 +3640,10 @@ ${ocrText}
         .replace(/'/g, "&#039;");
     }
 
+    function renderMarkdownHtml(markdown) {
+      return marked.parse(markdownPipeTablesToHtml(markdown));
+    }
+
     function texToMathML(tex, display) {
       tex = sanitizeTex(tex);
       try {
@@ -3556,7 +3664,7 @@ ${ocrText}
 
     function renderMarkdownForWord(markdown) {
       const { markdown: tokenizedMarkdown, tokens } = tokenizeMath(markdown);
-      let html = marked.parse(tokenizedMarkdown);
+      let html = renderMarkdownHtml(tokenizedMarkdown);
 
       for (const item of tokens) {
         const mathML = texToMathML(item.tex, item.display);
