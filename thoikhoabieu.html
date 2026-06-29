@@ -666,6 +666,21 @@
                 }
             });
 
+            const classSubjectLoad = {};
+            lessons.forEach(lesson => {
+                const key = `${lesson.classId}|${normalizeText(lesson.subject)}`;
+                classSubjectLoad[key] = (classSubjectLoad[key] || 0) + 1;
+            });
+            Object.entries(classSubjectLoad).forEach(([key, load]) => {
+                const [classId, subjectKey] = key.split('|');
+                const classItem = state.classes.find(c => c.id === classId);
+                const lesson = lessons.find(item => item.classId === classId && normalizeText(item.subject) === subjectKey);
+                const capacity = state.rules.days.length * state.rules.maxSameSubjectDay;
+                if (load > capacity) {
+                    issues.push(makeIssue(`${classItem?.name || 'Lớp'} - ${lesson?.subject || 'môn học'} có ${load} tiết/tuần, vượt giới hạn ${state.rules.maxSameSubjectDay} tiết/môn/ngày trong ${state.rules.days.length} ngày học.`));
+                }
+            });
+
             lessons.forEach((lesson, index) => {
                 if (!domains[index]?.length) {
                     issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, buổi tránh của giáo viên và phòng bộ môn.`));
@@ -740,14 +755,16 @@
         }
 
         function solveByConstraints(lessons, domains) {
-            const maxDepth = lessons.length > 700 ? 10 : 16;
-            const maxAttempts = lessons.length > 700 ? 10 : 18;
-            const nodeBudget = lessons.length > 700 ? 260000 : 420000;
+            const maxDepth = lessons.length > 1000 ? 12 : lessons.length > 700 ? 14 : 22;
+            const maxAttempts = lessons.length > 1000 ? 12 : lessons.length > 700 ? 16 : 28;
+            const nodeBudget = lessons.length > 1000 ? 520000 : lessons.length > 700 ? 760000 : 1150000;
             let totalNodes = 0;
             let deepest = 0;
             let bestBlocked = null;
             let bestSolution = null;
             let bestBeauty = null;
+            let bestPartial = null;
+            let bestPartialPlaced = 0;
 
             const subjectDayKey = (lesson, option) => `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}`;
             const resourceKeys = (lesson, option) => ({
@@ -762,6 +779,15 @@
                 size: domains[index].length,
                 load: lessons.filter(other => other.teacherId === lesson.teacherId || other.classId === lesson.classId).length,
             })).sort((a, b) => a.size - b.size || b.load - a.load).map(item => item.index);
+
+            function rememberPartial(assignments, beauty = null) {
+                const placed = assignments.filter(Boolean).length;
+                if (placed > bestPartialPlaced) {
+                    bestPartialPlaced = placed;
+                    bestPartial = assignments.slice();
+                    bestBeauty = beauty ? { ...beauty, placed } : bestBeauty;
+                }
+            }
 
             function makeSolver(attempt) {
                 let assignments = new Array(lessons.length).fill(null);
@@ -873,14 +899,21 @@
                     return domains[index].map(option => {
                         const conflicts = conflictsFor(index, option, path);
                         return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
-                    }).sort((a, b) => a.cost - b.cost);
+                    }).sort((a, b) => {
+                        const jitterA = ((attempt + 3) * (a.option.period + 5) * (a.option.day.charCodeAt(1) + 7)) % 17;
+                        const jitterB = ((attempt + 3) * (b.option.period + 5) * (b.option.day.charCodeAt(1) + 7)) % 17;
+                        return (a.cost + jitterA * 0.02) - (b.cost + jitterB * 0.02);
+                    });
                 }
 
                 function recursivePlace(index, depth, path) {
                     nodes++;
                     totalNodes++;
                     deepest = Math.max(deepest, assignments.filter(Boolean).length);
-                    if (totalNodes > nodeBudget) return false;
+                    if (totalNodes > nodeBudget) {
+                        rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                        return false;
+                    }
                     if (assignments[index]) return true;
 
                     const candidates = orderedOptions(index, path);
@@ -908,6 +941,7 @@
                         restore(snap);
                     }
 
+                    rememberPartial(assignments, evaluateBeauty(lessons, assignments));
                     bestBlocked = lessons[index];
                     return false;
                 }
@@ -954,7 +988,9 @@
                         : difficultyOrder;
                     for (const index of order) {
                         if (!recursivePlace(index, maxDepth, new Set([index]))) {
-                            return { ok: false, assignments, nodes, placed: assignments.filter(Boolean).length, beauty: evaluateBeauty(lessons, assignments) };
+                            const beauty = evaluateBeauty(lessons, assignments);
+                            rememberPartial(assignments, beauty);
+                            return { ok: false, assignments: assignments.slice(), nodes, placed: assignments.filter(Boolean).length, beauty };
                         }
                     }
                     const beauty = improve(lessons.length > 700 ? 1800 : 3500);
@@ -973,12 +1009,131 @@
                     }
                 } else if (!bestSolution && (!bestBeauty || result.placed > (bestBeauty.placed || 0))) {
                     bestBeauty = { ...result.beauty, placed: result.placed };
+                    rememberPartial(result.assignments, result.beauty);
                 }
+            }
+
+            function runMrvFallback() {
+                if (bestSolution || lessons.length > 420 || totalNodes > nodeBudget) return null;
+
+                let assignments = new Array(lessons.length).fill(null);
+                let classSlotMap = new Map();
+                let teacherSlotMap = new Map();
+                let roomSlotMap = new Map();
+                let subjectDayMap = new Map();
+                const maxFallbackNodes = lessons.length > 240 ? 160000 : 260000;
+                let fallbackNodes = 0;
+
+                function keysFor(index, option) {
+                    const lesson = lessons[index];
+                    return resourceKeys(lesson, option);
+                }
+
+                function canPlace(index, option) {
+                    const keys = keysFor(index, option);
+                    if (classSlotMap.has(keys.classKey) || teacherSlotMap.has(keys.teacherKey) || roomSlotMap.has(keys.roomKey)) return false;
+                    return (subjectDayMap.get(keys.subjectKey)?.size || 0) < state.rules.maxSameSubjectDay;
+                }
+
+                function place(index, option) {
+                    const keys = keysFor(index, option);
+                    assignments[index] = option;
+                    classSlotMap.set(keys.classKey, index);
+                    teacherSlotMap.set(keys.teacherKey, index);
+                    roomSlotMap.set(keys.roomKey, index);
+                    if (!subjectDayMap.has(keys.subjectKey)) subjectDayMap.set(keys.subjectKey, new Set());
+                    subjectDayMap.get(keys.subjectKey).add(index);
+                }
+
+                function unplace(index) {
+                    const option = assignments[index];
+                    if (!option) return;
+                    const keys = keysFor(index, option);
+                    assignments[index] = null;
+                    classSlotMap.delete(keys.classKey);
+                    teacherSlotMap.delete(keys.teacherKey);
+                    roomSlotMap.delete(keys.roomKey);
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    if (subjectSet) {
+                        subjectSet.delete(index);
+                        if (!subjectSet.size) subjectDayMap.delete(keys.subjectKey);
+                    }
+                }
+
+                function fallbackCost(index, option) {
+                    const lesson = lessons[index];
+                    const classPeriods = [];
+                    const teacherPeriods = [];
+                    assignments.forEach((placed, placedIndex) => {
+                        if (!placed) return;
+                        const other = lessons[placedIndex];
+                        if (placed.day === option.day && placed.session === option.session && other.classId === lesson.classId) classPeriods.push(placed.period);
+                        if (placed.day === option.day && placed.session === option.session && other.teacherId === lesson.teacherId) teacherPeriods.push(placed.period);
+                    });
+                    const classAfter = gapCount([...classPeriods, option.period]);
+                    const teacherAfter = gapCount([...teacherPeriods, option.period]);
+                    const sameSubject = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
+                    return classAfter * 120 + teacherAfter * 80 + sameSubject * 30 + option.period * 0.5;
+                }
+
+                function nextIndex() {
+                    let best = null;
+                    for (let index = 0; index < lessons.length; index++) {
+                        if (assignments[index]) continue;
+                        const feasible = domains[index].filter(option => canPlace(index, option));
+                        if (!feasible.length) return { index, candidates: [] };
+                        const item = { index, candidates: feasible };
+                        if (!best || feasible.length < best.candidates.length || (feasible.length === best.candidates.length && domains[index].length < domains[best.index].length)) best = item;
+                    }
+                    return best;
+                }
+
+                function search() {
+                    fallbackNodes++;
+                    totalNodes++;
+                    deepest = Math.max(deepest, assignments.filter(Boolean).length);
+                    if (fallbackNodes > maxFallbackNodes || totalNodes > nodeBudget) {
+                        rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                        return false;
+                    }
+
+                    const next = nextIndex();
+                    if (!next) return true;
+                    if (!next.candidates.length) {
+                        bestBlocked = lessons[next.index];
+                        rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                        return false;
+                    }
+
+                    const cap = lessons.length > 240 ? 30 : next.candidates.length;
+                    const candidates = next.candidates
+                        .sort((a, b) => fallbackCost(next.index, a) - fallbackCost(next.index, b))
+                        .slice(0, cap);
+
+                    for (const option of candidates) {
+                        place(next.index, option);
+                        if (search()) return true;
+                        unplace(next.index);
+                    }
+                    bestBlocked = lessons[next.index];
+                    return false;
+                }
+
+                const ok = search();
+                const beauty = evaluateBeauty(lessons, assignments);
+                rememberPartial(assignments, beauty);
+                return { ok, assignments: assignments.slice(), nodes: fallbackNodes, placed: assignments.filter(Boolean).length, beauty };
+            }
+
+            const fallback = runMrvFallback();
+            if (fallback?.ok) {
+                bestSolution = fallback.assignments.slice();
+                bestBeauty = fallback.beauty;
             }
 
             return {
                 ok: !!bestSolution,
-                assignments: bestSolution || new Array(lessons.length).fill(null),
+                assignments: bestSolution || bestPartial || new Array(lessons.length).fill(null),
                 nodes: totalNodes,
                 deepest,
                 blockedLesson: bestBlocked,
@@ -1014,9 +1169,10 @@
             const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
             const issues = [];
 
-            if (solved.ok) {
+            if (solved.assignments.some(Boolean)) {
                 lessons.forEach((lesson, index) => {
                     const option = solved.assignments[index];
+                    if (!option) return;
                     const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
                     byClass[lesson.classId][option.key] = cell;
                     teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
@@ -1030,12 +1186,22 @@
                 ));
             }
 
+            if (!solved.ok && !issues.length) {
+                const placed = solved.assignments.filter(Boolean).length;
+                const blocked = solved.blockedLesson;
+                issues.push(makeIssue(
+                    blocked
+                        ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                        : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.`
+                ));
+            }
+
             state.result = {
                 byClass,
                 issues,
                 generatedAt: new Date().toISOString(),
                 teacherLoad,
-                status: solved.ok ? 'complete' : 'infeasible',
+                status: solved.ok ? 'complete' : (solved.assignments.some(Boolean) ? 'partial' : 'infeasible'),
                 solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
                 beauty: solved.beauty,
             };
