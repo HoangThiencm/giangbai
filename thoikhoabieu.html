@@ -50,8 +50,8 @@
                 <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa">
                     <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Dữ liệu thử
                 </button>
-                <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu cấu hình vào trình duyệt">
-                    <i class="fas fa-floppy-disk mr-2 text-teal-700"></i>Lưu nháp
+                <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu thời khóa biểu lên hosting">
+                    <i class="fas fa-cloud-arrow-up mr-2 text-teal-700"></i>Lưu hosting
                 </button>
                 <a href="index.html" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
                     <i class="fas fa-home mr-2 text-teal-700"></i>Trang chủ
@@ -265,6 +265,7 @@
             rules: { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 },
             result: null,
             activeResult: 'class',
+            projectMeta: null,
         };
 
         const $ = id => document.getElementById(id);
@@ -1201,17 +1202,90 @@
             downloadBlob('ThoiKhoaBieu.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
         }
 
-        function saveDraft() {
+        function projectPayload() {
             readRulesFromInputs();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            return {
                 teachers: state.teachers,
                 importedAssignments: state.importedAssignments,
                 classes: state.classes,
                 rooms: state.rooms,
                 assignments: state.assignments,
                 rules: state.rules,
-            }));
-            alert('Đã lưu nháp thời khóa biểu trên trình duyệt này.');
+            };
+        }
+
+        function applyProject(project, result = null, meta = null) {
+            if (!project || typeof project !== 'object') return false;
+            Object.assign(state, {
+                teachers: Array.isArray(project.teachers) ? project.teachers : [],
+                importedAssignments: Array.isArray(project.importedAssignments) ? project.importedAssignments : [],
+                classes: Array.isArray(project.classes) ? project.classes : [],
+                rooms: Array.isArray(project.rooms) ? project.rooms : [],
+                assignments: Array.isArray(project.assignments) ? project.assignments : [],
+                rules: project.rules || state.rules,
+                result: result || null,
+                activeResult: result?.status === 'infeasible' ? 'issues' : 'class',
+                projectMeta: meta,
+            });
+            syncRuleInputs();
+            renderAll();
+            renderResultControls();
+            renderSchedule();
+            return true;
+        }
+
+        async function loadHostingProject() {
+            try {
+                const res = await fetch('api/thoikhoabieu.php?action=latest', { cache: 'no-store', credentials: 'include' });
+                if (!res.ok) return false;
+                const data = await res.json();
+                if (!data.ok || !data.project?.project) return false;
+                return applyProject(data.project.project, data.project.result, {
+                    id: data.project.id,
+                    name: data.project.name,
+                    schoolYear: data.project.school_year,
+                    updatedAt: data.project.updated_at,
+                });
+            } catch {
+                return false;
+            }
+        }
+
+        async function saveDraft() {
+            const payload = projectPayload();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            const button = $('btnSaveDraft');
+            const oldText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2 text-teal-700"></i>Đang lưu...';
+            try {
+                const res = await fetch('api/thoikhoabieu.php?action=save', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Thời khóa biểu nhà trường',
+                        project: payload,
+                        result: state.result,
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok) {
+                    throw new Error(data.error || 'Không lưu được thời khóa biểu lên hosting.');
+                }
+                state.projectMeta = {
+                    id: data.project?.id || null,
+                    name: data.project?.name || 'Thời khóa biểu nhà trường',
+                    schoolYear: data.project?.school_year || '',
+                    updatedAt: data.project?.updated_at || null,
+                };
+                alert(data.message || 'Đã lưu thời khóa biểu lên hosting.');
+            } catch (error) {
+                alert(`${error.message}\n\nĐã giữ một bản dự phòng tạm trên trình duyệt này, nhưng chưa lưu lên hosting.`);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = oldText;
+            }
         }
 
         function loadDraft() {
@@ -1219,15 +1293,7 @@
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return false;
                 const data = JSON.parse(raw);
-                Object.assign(state, {
-                    teachers: data.teachers || [],
-                    importedAssignments: data.importedAssignments || [],
-                    classes: data.classes || [],
-                    rooms: data.rooms || [],
-                    assignments: data.assignments || [],
-                    rules: data.rules || state.rules,
-                });
-                return true;
+                return applyProject(data, null, { source: 'localStorage' });
             } catch {
                 return false;
             }
@@ -1304,12 +1370,18 @@
             });
         }
 
-        bindEvents();
-        if (!loadDraft()) loadSampleData();
-        syncRuleInputs();
-        renderAll();
-        renderResultControls();
-        renderSchedule();
+        async function initTimetablePage() {
+            bindEvents();
+            if (!await loadHostingProject()) {
+                if (!loadDraft()) loadSampleData();
+                syncRuleInputs();
+                renderAll();
+                renderResultControls();
+                renderSchedule();
+            }
+        }
+
+        initTimetablePage();
     </script>
 </body>
 </html>

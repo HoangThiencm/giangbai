@@ -349,6 +349,23 @@ CREATE TABLE IF NOT EXISTS achievement_winners (
     CONSTRAINT fk_achievement_winner_entry FOREIGN KEY (entry_id) REFERENCES achievement_entries(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS timetable_projects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_key VARCHAR(80) NOT NULL UNIQUE,
+    name VARCHAR(180) NOT NULL DEFAULT 'Thời khóa biểu nhà trường',
+    school_year VARCHAR(40) NOT NULL DEFAULT '',
+    project_json LONGTEXT NOT NULL,
+    result_json LONGTEXT DEFAULT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_timetable_projects_updated (updated_at),
+    INDEX idx_timetable_projects_school_year (school_year),
+    CONSTRAINT fk_timetable_project_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_timetable_project_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
 VALUES
     ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),
