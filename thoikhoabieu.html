@@ -617,69 +617,429 @@
             });
         }
 
-        function generateSchedule() {
-            readRulesFromInputs();
-            const byClass = {};
-            const teacherBusy = new Set();
-            const roomBusy = new Set();
-            const issues = [];
+        function roomOptionsForLesson(lesson, slot) {
+            const classItem = state.classes.find(c => c.id === lesson.classId);
+            const need = lesson.roomNeed || lesson.subject;
+            const specialized = state.rooms
+                .filter(room => roomMatches(room, need))
+                .map(room => room.name)
+                .filter(Boolean);
+            const rooms = specialized.length ? specialized : [classItem?.homeRoom || classItem?.name || ''];
+            return Array.from(new Set(rooms.filter(Boolean))).map(room => ({ ...slot, room }));
+        }
+
+        function buildBaseDomains(lessons) {
             const teacherUnavailable = Object.fromEntries(state.teachers.map(t => [t.id, parseUnavailable(t.unavailable)]));
-            const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
-
-            state.classes.forEach(c => { byClass[c.id] = {}; });
-
-            const lessons = buildLessonUnits();
-            lessons.forEach(lesson => {
+            return lessons.map(lesson => {
                 const classItem = state.classes.find(c => c.id === lesson.classId);
-                const teacher = state.teachers.find(t => t.id === lesson.teacherId);
-                if (!classItem || !teacher) return;
-                const slots = slotsForClass(classItem);
-                let best = null;
-                let bestScore = Infinity;
+                if (!classItem) return [];
+                const slots = slotsForClass(classItem).filter(slot => !teacherUnavailable[lesson.teacherId]?.has(`${slot.day}-${slot.session}`));
+                return slots.flatMap(slot => roomOptionsForLesson(lesson, slot));
+            });
+        }
 
-                slots.forEach(slot => {
-                    if (byClass[classItem.id][slot.key]) return;
-                    if (teacherBusy.has(`${teacher.id}|${slot.day}|${slot.session}|${slot.period}`)) return;
-                    if (teacherUnavailable[teacher.id]?.has(`${slot.day}-${slot.session}`)) return;
-                    const roomName = chooseRoom(lesson, slot, roomBusy);
-                    if (roomName && roomBusy.has(`${roomName}|${slot.day}|${slot.session}|${slot.period}`)) return;
-                    const sameSubjectDay = Object.values(byClass[classItem.id]).filter(cell => cell.day === slot.day && normalizeText(cell.subject) === normalizeText(lesson.subject)).length;
-                    if (sameSubjectDay >= state.rules.maxSameSubjectDay) return;
-                    const sameTeacherDay = teacherLoad[teacher.id] || 0;
-                    const score = sameSubjectDay * 8 + sameTeacherDay * .05 + slot.period + (slot.session === 'afternoon' ? .35 : 0);
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = { slot, roomName };
-                    }
-                });
+        function makeIssue(message, type = 'infeasible') {
+            return { type, message };
+        }
 
-                if (!best) {
-                    issues.push({ type: 'unplaced', lesson, message: `Không tìm được ô trống phù hợp cho ${lesson.subject} - ${lesson.className} (${lesson.teacherName}).` });
-                    return;
+        function precheckSchedule(lessons, domains) {
+            const issues = [];
+            const classLoad = {};
+            const teacherLoad = {};
+            lessons.forEach(lesson => {
+                classLoad[lesson.classId] = (classLoad[lesson.classId] || 0) + 1;
+                teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+            });
+
+            state.classes.forEach(c => {
+                const capacity = slotsForClass(c).length;
+                if ((classLoad[c.id] || 0) > capacity) {
+                    issues.push(makeIssue(`${c.name} có ${classLoad[c.id]} tiết cần xếp nhưng chỉ có ${capacity} ô học theo cấu hình buổi học.`));
                 }
-
-                const cell = {
-                    ...lesson,
-                    day: best.slot.day,
-                    session: best.slot.session,
-                    period: best.slot.period,
-                    slotKey: best.slot.key,
-                    room: best.roomName,
-                };
-                byClass[classItem.id][best.slot.key] = cell;
-                teacherBusy.add(`${teacher.id}|${best.slot.day}|${best.slot.session}|${best.slot.period}`);
-                teacherLoad[teacher.id] = (teacherLoad[teacher.id] || 0) + 1;
-                if (best.roomName) roomBusy.add(`${best.roomName}|${best.slot.day}|${best.slot.session}|${best.slot.period}`);
             });
 
             state.teachers.forEach(t => {
-                if (teacherLoad[t.id] > Number(t.maxPeriods || 99)) {
-                    issues.push({ type: 'load', message: `${t.name} vượt định mức ${t.maxPeriods} tiết/tuần (${teacherLoad[t.id]} tiết đã xếp).` });
+                const load = teacherLoad[t.id] || 0;
+                if (load > Number(t.maxPeriods || 99)) {
+                    issues.push(makeIssue(`${t.name} được phân công ${load} tiết/tuần, vượt định mức ${t.maxPeriods} tiết/tuần.`));
                 }
             });
 
-            state.result = { byClass, issues, generatedAt: new Date().toISOString(), teacherLoad };
-            state.activeResult = 'class';
+            lessons.forEach((lesson, index) => {
+                if (!domains[index]?.length) {
+                    issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, buổi tránh của giáo viên và phòng bộ môn.`));
+                }
+            });
+
+            return issues;
+        }
+
+        function gapCount(periods) {
+            const list = Array.from(new Set(periods.filter(Number))).sort((a, b) => a - b);
+            if (list.length <= 1) return 0;
+            let gaps = 0;
+            for (let period = list[0]; period <= list[list.length - 1]; period++) {
+                if (!list.includes(period)) gaps++;
+            }
+            return gaps;
+        }
+
+        function evaluateBeauty(lessons, assignments) {
+            const classBuckets = new Map();
+            const teacherBuckets = new Map();
+            const subjectDay = new Map();
+            let latePenalty = 0;
+            let roomPenalty = 0;
+
+            assignments.forEach((option, index) => {
+                if (!option) return;
+                const lesson = lessons[index];
+                const classKey = `${lesson.classId}|${option.day}|${option.session}`;
+                const teacherKey = `${lesson.teacherId}|${option.day}|${option.session}`;
+                const subjectKey = `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}`;
+                if (!classBuckets.has(classKey)) classBuckets.set(classKey, []);
+                if (!teacherBuckets.has(teacherKey)) teacherBuckets.set(teacherKey, []);
+                if (!subjectDay.has(subjectKey)) subjectDay.set(subjectKey, 0);
+                classBuckets.get(classKey).push(option.period);
+                teacherBuckets.get(teacherKey).push(option.period);
+                subjectDay.set(subjectKey, subjectDay.get(subjectKey) + 1);
+                latePenalty += option.period * 0.35 + (option.session === 'afternoon' ? 0.4 : 0);
+                if (lesson.roomNeed && !roomMatches({ name: option.room, subjects: lesson.roomNeed }, lesson.roomNeed)) roomPenalty += 6;
+            });
+
+            let classGaps = 0;
+            let teacherGaps = 0;
+            let singleLessonTeacherSessions = 0;
+            classBuckets.forEach(periods => { classGaps += gapCount(periods); });
+            teacherBuckets.forEach(periods => {
+                teacherGaps += gapCount(periods);
+                if (periods.length === 1) singleLessonTeacherSessions++;
+            });
+
+            let sameSubjectSameDay = 0;
+            subjectDay.forEach(count => {
+                if (count > 1) sameSubjectSameDay += count - 1;
+            });
+
+            const score =
+                classGaps * 130 +
+                teacherGaps * 90 +
+                sameSubjectSameDay * 38 +
+                singleLessonTeacherSessions * 12 +
+                latePenalty +
+                roomPenalty;
+
+            return {
+                score: Math.round(score * 100) / 100,
+                classGaps,
+                teacherGaps,
+                sameSubjectSameDay,
+                singleLessonTeacherSessions,
+            };
+        }
+
+        function solveByConstraints(lessons, domains) {
+            const maxDepth = lessons.length > 700 ? 10 : 16;
+            const maxAttempts = lessons.length > 700 ? 10 : 18;
+            const nodeBudget = lessons.length > 700 ? 260000 : 420000;
+            let totalNodes = 0;
+            let deepest = 0;
+            let bestBlocked = null;
+            let bestSolution = null;
+            let bestBeauty = null;
+
+            const subjectDayKey = (lesson, option) => `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}`;
+            const resourceKeys = (lesson, option) => ({
+                classKey: `${lesson.classId}|${option.day}|${option.session}|${option.period}`,
+                teacherKey: `${lesson.teacherId}|${option.day}|${option.session}|${option.period}`,
+                roomKey: `${option.room}|${option.day}|${option.session}|${option.period}`,
+                subjectKey: subjectDayKey(lesson, option),
+            });
+
+            const difficultyOrder = lessons.map((lesson, index) => ({
+                index,
+                size: domains[index].length,
+                load: lessons.filter(other => other.teacherId === lesson.teacherId || other.classId === lesson.classId).length,
+            })).sort((a, b) => a.size - b.size || b.load - a.load).map(item => item.index);
+
+            function makeSolver(attempt) {
+                let assignments = new Array(lessons.length).fill(null);
+                let classSlotMap = new Map();
+                let teacherSlotMap = new Map();
+                let roomSlotMap = new Map();
+                let subjectDayMap = new Map();
+                let nodes = 0;
+
+                function snapshot() {
+                    return {
+                        assignments: assignments.slice(),
+                        classSlotMap: new Map(classSlotMap),
+                        teacherSlotMap: new Map(teacherSlotMap),
+                        roomSlotMap: new Map(roomSlotMap),
+                        subjectDayMap: new Map(Array.from(subjectDayMap, ([key, value]) => [key, new Set(value)])),
+                    };
+                }
+
+                function restore(snap) {
+                    assignments = snap.assignments;
+                    classSlotMap = snap.classSlotMap;
+                    teacherSlotMap = snap.teacherSlotMap;
+                    roomSlotMap = snap.roomSlotMap;
+                    subjectDayMap = snap.subjectDayMap;
+                }
+
+                function addSubjectDay(key, index) {
+                    if (!subjectDayMap.has(key)) subjectDayMap.set(key, new Set());
+                    subjectDayMap.get(key).add(index);
+                }
+
+                function place(index, option) {
+                    const lesson = lessons[index];
+                    const keys = resourceKeys(lesson, option);
+                    assignments[index] = option;
+                    classSlotMap.set(keys.classKey, index);
+                    teacherSlotMap.set(keys.teacherKey, index);
+                    roomSlotMap.set(keys.roomKey, index);
+                    addSubjectDay(keys.subjectKey, index);
+                }
+
+                function unplace(index) {
+                    const option = assignments[index];
+                    if (!option) return;
+                    const lesson = lessons[index];
+                    const keys = resourceKeys(lesson, option);
+                    assignments[index] = null;
+                    classSlotMap.delete(keys.classKey);
+                    teacherSlotMap.delete(keys.teacherKey);
+                    roomSlotMap.delete(keys.roomKey);
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    if (subjectSet) {
+                        subjectSet.delete(index);
+                        if (!subjectSet.size) subjectDayMap.delete(keys.subjectKey);
+                    }
+                }
+
+                function conflictsFor(index, option, path) {
+                    const lesson = lessons[index];
+                    const keys = resourceKeys(lesson, option);
+                    const conflicts = new Set();
+                    [classSlotMap.get(keys.classKey), teacherSlotMap.get(keys.teacherKey), roomSlotMap.get(keys.roomKey)]
+                        .forEach(conflict => {
+                            if (conflict !== undefined && conflict !== index) conflicts.add(conflict);
+                        });
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    const subjectCount = subjectSet ? subjectSet.size : 0;
+                    if (subjectCount >= state.rules.maxSameSubjectDay) {
+                        const movable = Array.from(subjectSet || [])
+                            .filter(conflict => conflict !== index && !path.has(conflict))
+                            .sort((a, b) => domains[b].length - domains[a].length)[0];
+                        if (movable !== undefined) conflicts.add(movable);
+                        else conflicts.add(Array.from(subjectSet || [])[0]);
+                    }
+                    return Array.from(conflicts).filter(conflict => conflict !== undefined && conflict !== index);
+                }
+
+                function localSoftCost(index, option) {
+                    const lesson = lessons[index];
+                    const classPeriods = [];
+                    const teacherPeriods = [];
+                    assignments.forEach((placed, placedIndex) => {
+                        if (!placed || placedIndex === index) return;
+                        const other = lessons[placedIndex];
+                        if (placed.day === option.day && placed.session === option.session && other.classId === lesson.classId) classPeriods.push(placed.period);
+                        if (placed.day === option.day && placed.session === option.session && other.teacherId === lesson.teacherId) teacherPeriods.push(placed.period);
+                    });
+                    const classBefore = gapCount(classPeriods);
+                    const teacherBefore = gapCount(teacherPeriods);
+                    const classAfter = gapCount([...classPeriods, option.period]);
+                    const teacherAfter = gapCount([...teacherPeriods, option.period]);
+                    const adjacentClass = classPeriods.some(period => Math.abs(period - option.period) === 1);
+                    const adjacentTeacher = teacherPeriods.some(period => Math.abs(period - option.period) === 1);
+                    const subjectCount = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
+                    return (
+                        (classAfter - classBefore) * 110 +
+                        (teacherAfter - teacherBefore) * 70 +
+                        subjectCount * 35 +
+                        option.period * 0.8 +
+                        (option.session === 'afternoon' ? 0.6 : 0) -
+                        (adjacentClass ? 16 : 0) -
+                        (adjacentTeacher ? 10 : 0) +
+                        ((attempt * 17 + option.period * 13 + option.day.charCodeAt(1)) % 11) * 0.03
+                    );
+                }
+
+                function orderedOptions(index, path) {
+                    return domains[index].map(option => {
+                        const conflicts = conflictsFor(index, option, path);
+                        return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
+                    }).sort((a, b) => a.cost - b.cost);
+                }
+
+                function recursivePlace(index, depth, path) {
+                    nodes++;
+                    totalNodes++;
+                    deepest = Math.max(deepest, assignments.filter(Boolean).length);
+                    if (totalNodes > nodeBudget) return false;
+                    if (assignments[index]) return true;
+
+                    const candidates = orderedOptions(index, path);
+                    for (const candidate of candidates) {
+                        if (candidate.conflicts.some(conflict => path.has(conflict))) continue;
+                        if (candidate.conflicts.length && depth <= 0) continue;
+                        if (candidate.conflicts.length > 4) continue;
+
+                        const snap = snapshot();
+                        candidate.conflicts.forEach(unplace);
+                        place(index, candidate.option);
+
+                        let ok = true;
+                        const nextPath = new Set(path);
+                        nextPath.add(index);
+                        const displaced = candidate.conflicts.sort((a, b) => domains[a].length - domains[b].length);
+                        for (const conflict of displaced) {
+                            if (!recursivePlace(conflict, depth - 1, nextPath)) {
+                                ok = false;
+                                bestBlocked = lessons[conflict];
+                                break;
+                            }
+                        }
+                        if (ok) return true;
+                        restore(snap);
+                    }
+
+                    bestBlocked = lessons[index];
+                    return false;
+                }
+
+                function improve(maxChecks = 2500) {
+                    let currentBeauty = evaluateBeauty(lessons, assignments);
+                    let checks = 0;
+                    let improved = true;
+                    while (improved && checks < maxChecks) {
+                        improved = false;
+                        const order = lessons.map((_, index) => index).sort((a, b) => domains[a].length - domains[b].length);
+                        for (const index of order) {
+                            if (checks >= maxChecks) break;
+                            const current = assignments[index];
+                            if (!current) continue;
+                            const snap = snapshot();
+                            unplace(index);
+                            const candidates = domains[index]
+                                .filter(option => !conflictsFor(index, option, new Set()).length)
+                                .sort((a, b) => localSoftCost(index, a) - localSoftCost(index, b))
+                                .slice(0, 12);
+                            let accepted = false;
+                            for (const option of candidates) {
+                                checks++;
+                                place(index, option);
+                                const beauty = evaluateBeauty(lessons, assignments);
+                                if (beauty.score + 0.01 < currentBeauty.score) {
+                                    currentBeauty = beauty;
+                                    accepted = true;
+                                    improved = true;
+                                    break;
+                                }
+                                unplace(index);
+                            }
+                            if (!accepted) restore(snap);
+                        }
+                    }
+                    return currentBeauty;
+                }
+
+                function run() {
+                    const order = attempt % 2
+                        ? difficultyOrder.slice().sort((a, b) => domains[a].length - domains[b].length || ((a * 31 + attempt) % 7) - ((b * 31 + attempt) % 7))
+                        : difficultyOrder;
+                    for (const index of order) {
+                        if (!recursivePlace(index, maxDepth, new Set([index]))) {
+                            return { ok: false, assignments, nodes, placed: assignments.filter(Boolean).length, beauty: evaluateBeauty(lessons, assignments) };
+                        }
+                    }
+                    const beauty = improve(lessons.length > 700 ? 1800 : 3500);
+                    return { ok: true, assignments, nodes, placed: assignments.filter(Boolean).length, beauty };
+                }
+
+                return { run };
+            }
+
+            for (let attempt = 0; attempt < maxAttempts && totalNodes <= nodeBudget; attempt++) {
+                const result = makeSolver(attempt).run();
+                if (result.ok) {
+                    if (!bestSolution || result.beauty.score < bestBeauty.score) {
+                        bestSolution = result.assignments.slice();
+                        bestBeauty = result.beauty;
+                    }
+                } else if (!bestSolution && (!bestBeauty || result.placed > (bestBeauty.placed || 0))) {
+                    bestBeauty = { ...result.beauty, placed: result.placed };
+                }
+            }
+
+            return {
+                ok: !!bestSolution,
+                assignments: bestSolution || new Array(lessons.length).fill(null),
+                nodes: totalNodes,
+                deepest,
+                blockedLesson: bestBlocked,
+                beauty: bestBeauty,
+            };
+        }
+
+        function generateSchedule() {
+            readRulesFromInputs();
+            const byClass = {};
+            state.classes.forEach(c => { byClass[c.id] = {}; });
+            const lessons = buildLessonUnits();
+            const domains = buildBaseDomains(lessons);
+            const precheckIssues = precheckSchedule(lessons, domains);
+
+            if (precheckIssues.length) {
+                state.result = {
+                    byClass,
+                    issues: precheckIssues,
+                    generatedAt: new Date().toISOString(),
+                    teacherLoad: {},
+                    status: 'infeasible',
+                    solver: { nodes: 0, deepest: 0, total: lessons.length },
+                };
+                state.activeResult = 'issues';
+                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+                renderResultControls();
+                renderSchedule();
+                return;
+            }
+
+            const solved = solveByConstraints(lessons, domains);
+            const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
+            const issues = [];
+
+            if (solved.ok) {
+                lessons.forEach((lesson, index) => {
+                    const option = solved.assignments[index];
+                    const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
+                    byClass[lesson.classId][option.key] = cell;
+                    teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+                });
+            } else {
+                const blocked = solved.blockedLesson;
+                issues.push(makeIssue(
+                    blocked
+                        ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                        : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
+                ));
+            }
+
+            state.result = {
+                byClass,
+                issues,
+                generatedAt: new Date().toISOString(),
+                teacherLoad,
+                status: solved.ok ? 'complete' : 'infeasible',
+                solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
+                beauty: solved.beauty,
+            };
+            state.activeResult = solved.ok ? 'class' : 'issues';
+            document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
             renderResultControls();
             renderSchedule();
         }
@@ -776,7 +1136,14 @@
                 return;
             }
             const totalPlaced = Object.values(state.result.byClass).reduce((sum, map) => sum + Object.keys(map).length, 0);
-            $('resultSummary').textContent = `Đã xếp ${totalPlaced} tiết. Còn ${state.result.issues.length} cảnh báo/chưa xếp.`;
+            const solverText = state.result.solver ? ` Solver đã xét ${state.result.solver.nodes} nhánh.` : '';
+            const beauty = state.result.beauty;
+            const beautyText = beauty
+                ? ` Điểm đẹp: ${beauty.score}; trống lớp: ${beauty.classGaps}, trống GV: ${beauty.teacherGaps}, môn dồn ngày: ${beauty.sameSubjectSameDay}.`
+                : '';
+            $('resultSummary').textContent = state.result.status === 'complete'
+                ? `Đã xếp đủ 100%: ${totalPlaced}/${state.result.solver?.total || totalPlaced} tiết, không vi phạm ràng buộc.${solverText}${beautyText}`
+                : `Chưa có lịch khả thi: mới xếp ${totalPlaced}/${state.result.solver?.total || totalPlaced} tiết. Cần xử lý ${state.result.issues.length} điểm nghẽn.${solverText}`;
 
             const selected = $('viewSelector').value || 'all';
             if (state.activeResult === 'issues') {
