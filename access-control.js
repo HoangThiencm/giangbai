@@ -31,7 +31,8 @@ async function accessControlMain() {
         'padlet_ht.html': 'padlet',
         'vietbaocao.html': 'vietbaocao',
         'rutgon.html': 'rutgon',
-        'thanhtich.html': 'thanhtich'
+        'thanhtich.html': 'thanhtich',
+        'thoikhoabieu.html': 'thoikhoabieu'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
@@ -55,7 +56,8 @@ async function accessControlMain() {
         padlet: 'padlet_ht.html',
         vietbaocao: 'vietbaocao.html',
         rutgon: 'rutgon.html',
-        thanhtich: 'thanhtich.html'
+        thanhtich: 'thanhtich.html',
+        thoikhoabieu: 'thoikhoabieu.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
@@ -192,10 +194,10 @@ async function accessControlMain() {
     }
 
     if (role === 'student') {
-        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon' || pageKey === 'quanlyvanban') {
+        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon' || pageKey === 'thoikhoabieu' || pageKey === 'quanlyvanban') {
             const msg = pageKey === 'rutgon'
                 ? 'Trang rút gọn link chỉ dành cho giáo viên.'
-                : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : (pageKey === 'quanlyvanban' ? 'Trang quản lý văn bản chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.'));
+                : (pageKey === 'thoikhoabieu' ? 'Trang xếp thời khóa biểu chỉ dành cho giáo viên.' : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : (pageKey === 'quanlyvanban' ? 'Trang quản lý văn bản chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.')));
             alert(msg);
             window.location.href = firstAllowedPageUrl(allowedPages) || 'login.html';
             return;
@@ -251,7 +253,7 @@ async function accessControlMain() {
         return;
     }
 
-    const teacherWorkspaceTools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao'];
+    const teacherWorkspaceTools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu'];
     if (role === 'teacher' && teacherWorkspaceTools.includes(pageKey)) {
         if (!canOpenPage(pageKey, allowedPages)) {
             alert('Tài khoản chưa được admin cấp quyền mở công cụ này.');

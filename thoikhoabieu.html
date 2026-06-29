@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xếp thời khóa biểu nhà trường</title>
+    <script src="access-control.js?v=20260629-thoikhoabieu"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
+        .soft-shadow { box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
+        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 12px; padding: .68rem .82rem; outline: none; background: #fff; }
+        .field:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, .12); }
+        .label { display: block; margin-bottom: .38rem; color: #334155; font-size: .75rem; font-weight: 800; }
+        .pill { display: inline-flex; align-items: center; gap: .38rem; border-radius: 999px; padding: .28rem .62rem; font-size: .72rem; font-weight: 800; }
+        .tab-btn.active { background: #0f766e; color: #fff; box-shadow: 0 8px 18px rgba(15, 118, 110, .18); }
+        .schedule-table { border-collapse: separate; border-spacing: 0; min-width: 900px; }
+        .schedule-table th { position: sticky; top: 0; z-index: 1; background: #f8fafc; }
+        .schedule-table th, .schedule-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+        .schedule-table tr > *:first-child { border-left: 1px solid #e2e8f0; }
+        .schedule-table thead tr:first-child > * { border-top: 1px solid #e2e8f0; }
+        .lesson-chip { border-radius: 10px; padding: .42rem .48rem; line-height: 1.25; }
+        .scroll-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        .conflict-row { border-left: 4px solid #f43f5e; }
+        .compact-input { border: 1px solid #dbe3ef; border-radius: 10px; padding: .5rem .58rem; outline: none; width: 100%; background: #fff; }
+        .compact-input:focus { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15, 118, 110, .10); }
+        @media print {
+            header, .no-print, #setupPanel, #resultTabs { display: none !important; }
+            main { max-width: none !important; padding: 0 !important; }
+            .print-panel { box-shadow: none !important; border: 0 !important; }
+            body { background: #fff !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <div class="flex items-center gap-3">
+                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-teal-700 text-white">
+                    <i class="fas fa-calendar-days"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-teal-700">Nhà trường</p>
+                    <h1 class="text-lg font-black tracking-tight sm:text-xl">Xếp thời khóa biểu</h1>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 no-print">
+                <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa">
+                    <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Dữ liệu thử
+                </button>
+                <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu cấu hình vào trình duyệt">
+                    <i class="fas fa-floppy-disk mr-2 text-teal-700"></i>Lưu nháp
+                </button>
+                <a href="index.html" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
+                    <i class="fas fa-home mr-2 text-teal-700"></i>Trang chủ
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <section class="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
+            <div class="overflow-hidden rounded-3xl bg-slate-950 text-white soft-shadow">
+                <div class="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end">
+                    <div>
+                        <span class="pill bg-teal-400/15 text-teal-100"><i class="fas fa-school"></i>100 giáo viên · 1 buổi · 2 buổi · phòng bộ môn</span>
+                        <h2 class="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Thiết kế lịch từ dữ liệu thật, rà trùng và xuất bảng dùng ngay.</h2>
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Nhập danh sách giáo viên từ Excel, khai báo lớp học theo buổi, phòng bộ môn và phân công môn. Bộ xếp lịch sẽ tránh trùng giáo viên, lớp, phòng và báo rõ phần chưa xếp được.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-center sm:grid-cols-4 lg:w-[430px]">
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statTeachers" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">GV</div></div>
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statClasses" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">Lớp</div></div>
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statRooms" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">Phòng</div></div>
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statAssignments" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">PC</div></div>
+                    </div>
+                </div>
+            </div>
+            <aside class="rounded-3xl border border-teal-100 bg-white p-5 soft-shadow">
+                <h3 class="text-sm font-black uppercase tracking-[.12em] text-teal-800">Quy trình</h3>
+                <div class="mt-4 space-y-3 text-sm text-slate-600">
+                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">1</span><p>Nhập Excel giáo viên hoặc nạp dữ liệu thử.</p></div>
+                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">2</span><p>Chỉnh lớp, phòng, phân công môn-lớp.</p></div>
+                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">3</span><p>Bấm xếp lịch, xem phần nghẽn rồi xuất CSV/in.</p></div>
+                </div>
+            </aside>
+        </section>
+
+        <section id="setupPanel" class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5">
+            <div class="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div id="setupTabs" class="flex flex-wrap gap-2">
+                    <button class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="teachers"><i class="fas fa-chalkboard-user mr-2"></i>Giáo viên</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="classes"><i class="fas fa-users-rectangle mr-2"></i>Lớp học</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rooms"><i class="fas fa-door-open mr-2"></i>Phòng bộ môn</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="assignments"><i class="fas fa-list-check mr-2"></i>Phân công</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rules"><i class="fas fa-sliders mr-2"></i>Thiết lập</button>
+                </div>
+                <button id="btnGenerate" type="button" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800">
+                    <i class="fas fa-gears mr-2"></i>Xếp lịch
+                </button>
+            </div>
+
+            <div class="mt-5">
+                <section data-panel="teachers">
+                    <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="font-black text-slate-800">Nhập danh sách giáo viên</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Mẫu đọc tốt các cột: Họ tên, Môn, Lớp, Số tiết/tuần, Buổi tránh, Phòng ưu tiên, Số tiết tối đa.</p>
+                            <label class="mt-4 block">
+                                <span class="label">File Excel/CSV</span>
+                                <input id="teacherFile" type="file" accept=".xlsx,.xls,.csv" class="field bg-white text-sm">
+                            </label>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button id="btnDownloadTeacherTemplate" type="button" class="rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-extrabold text-teal-800 hover:bg-teal-50">
+                                    <i class="fas fa-file-excel mr-2"></i>Tải mẫu
+                                </button>
+                                <button id="btnAddTeacher" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
+                                    <i class="fas fa-plus mr-2 text-teal-700"></i>Thêm GV
+                                </button>
+                            </div>
+                            <div id="importNotice" class="mt-3 hidden rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-bold text-teal-900"></div>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="max-h-[420px] overflow-auto scroll-thin">
+                                <table class="w-full min-w-[780px] text-left text-sm">
+                                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr>
+                                            <th class="px-3 py-2">Họ tên</th>
+                                            <th class="px-3 py-2">Môn chính</th>
+                                            <th class="px-3 py-2">Tối đa/tuần</th>
+                                            <th class="px-3 py-2">Buổi tránh</th>
+                                            <th class="px-3 py-2">Phòng ưu tiên</th>
+                                            <th class="px-3 py-2"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teacherRows" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="classes" class="hidden">
+                    <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="font-black text-slate-800">Khai báo lớp học</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Chọn lớp học 1 buổi sáng, 1 buổi chiều hoặc 2 buổi theo quy định nhà trường.</p>
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <label><span class="label">Tên lớp</span><input id="classNameInput" class="field" placeholder="6A"></label>
+                                <label><span class="label">Buổi học</span><select id="classShiftInput" class="field"><option value="morning">1 buổi sáng</option><option value="afternoon">1 buổi chiều</option><option value="both">2 buổi</option></select></label>
+                            </div>
+                            <label class="mt-3 block"><span class="label">Phòng lớp</span><input id="classHomeRoomInput" class="field" placeholder="6A hoặc P201"></label>
+                            <button id="btnAddClass" type="button" class="mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">
+                                <i class="fas fa-plus mr-2"></i>Thêm lớp
+                            </button>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="max-h-[420px] overflow-auto scroll-thin">
+                                <table class="w-full min-w-[620px] text-left text-sm">
+                                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr><th class="px-3 py-2">Lớp</th><th class="px-3 py-2">Buổi học</th><th class="px-3 py-2">Phòng lớp</th><th class="px-3 py-2"></th></tr>
+                                    </thead>
+                                    <tbody id="classRows" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="rooms" class="hidden">
+                    <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="font-black text-slate-800">Phòng học bộ môn</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Ghi môn áp dụng cách nhau bằng dấu phẩy. Ví dụ: Tin học, Công nghệ.</p>
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <label><span class="label">Tên phòng</span><input id="roomNameInput" class="field" placeholder="Tin 1"></label>
+                                <label><span class="label">Môn/phân loại</span><input id="roomSubjectInput" class="field" placeholder="Tin học"></label>
+                            </div>
+                            <button id="btnAddRoom" type="button" class="mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">
+                                <i class="fas fa-plus mr-2"></i>Thêm phòng
+                            </button>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="max-h-[420px] overflow-auto scroll-thin">
+                                <table class="w-full min-w-[600px] text-left text-sm">
+                                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr><th class="px-3 py-2">Phòng</th><th class="px-3 py-2">Môn/phân loại</th><th class="px-3 py-2"></th></tr>
+                                    </thead>
+                                    <tbody id="roomRows" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="assignments" class="hidden">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="flex flex-wrap items-end justify-between gap-3">
+                            <div>
+                                <h3 class="font-black text-slate-800">Phân công môn-lớp</h3>
+                                <p class="mt-1 text-sm text-slate-500">Mỗi dòng là số tiết/tuần của một môn, một lớp, một giáo viên.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button id="btnAddAssignment" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-plus mr-2 text-teal-700"></i>Thêm phân công</button>
+                                <button id="btnBuildAssignments" type="button" class="rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-extrabold text-teal-800 hover:bg-teal-50"><i class="fas fa-rotate mr-2"></i>Tạo từ Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                        <div class="max-h-[460px] overflow-auto scroll-thin">
+                            <table class="w-full min-w-[980px] text-left text-sm">
+                                <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                    <tr><th class="px-3 py-2">Lớp</th><th class="px-3 py-2">Môn</th><th class="px-3 py-2">Giáo viên</th><th class="px-3 py-2">Tiết/tuần</th><th class="px-3 py-2">Phòng yêu cầu</th><th class="px-3 py-2">Ghi chú</th><th class="px-3 py-2"></th></tr>
+                                </thead>
+                                <tbody id="assignmentRows" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="rules" class="hidden">
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Số tiết buổi sáng</span><input id="morningPeriods" type="number" min="1" max="8" class="field" value="5"></label>
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Số tiết buổi chiều</span><input id="afternoonPeriods" type="number" min="1" max="8" class="field" value="4"></label>
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Ngày học</span><input id="schoolDays" class="field" value="T2,T3,T4,T5,T6,T7"></label>
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Tối đa cùng môn/ngày/lớp</span><input id="maxSameSubjectDay" type="number" min="1" max="5" class="field" value="2"></label>
+                    </div>
+                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                        <strong>Ghi chú:</strong> ô “Buổi tránh” của giáo viên nhận dạng dạng <code>T2S</code>, <code>T3C</code>, <code>T5 sáng</code>, <code>thứ 6 chiều</code>. Ký hiệu S là sáng, C là chiều.
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5 print-panel">
+            <div class="no-print flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-black">Kết quả thời khóa biểu</h2>
+                    <p id="resultSummary" class="mt-1 text-sm text-slate-500">Chưa xếp lịch. Bấm “Xếp lịch” sau khi nhập dữ liệu.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <select id="viewSelector" class="field !w-auto min-w-[180px] text-sm font-bold"></select>
+                    <button id="btnExportSchedule" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-file-export mr-2 text-teal-700"></i>Xuất CSV</button>
+                    <button id="btnPrint" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-print mr-2 text-teal-700"></i>In</button>
+                </div>
+            </div>
+            <div id="resultTabs" class="no-print mt-4 flex flex-wrap gap-2">
+                <button class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="class">Theo lớp</button>
+                <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="teacher">Theo giáo viên</button>
+                <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="issues">Chưa xếp / cảnh báo</button>
+            </div>
+            <div id="scheduleMount" class="mt-4 overflow-auto scroll-thin"></div>
+        </section>
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'gb_timetable_builder_v1';
+        const state = {
+            teachers: [],
+            importedAssignments: [],
+            classes: [],
+            rooms: [],
+            assignments: [],
+            rules: { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 },
+            result: null,
+            activeResult: 'class',
+        };
+
+        const $ = id => document.getElementById(id);
+        const uid = prefix => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        const clean = value => String(value ?? '').trim();
+        const normalizeText = value => clean(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        const splitList = value => clean(value).split(/[,\n;]+/).map(v => v.trim()).filter(Boolean);
+
+        function headerValue(row, aliases) {
+            const keys = Object.keys(row || {});
+            const normalized = keys.map(key => [key, normalizeText(key).replace(/\s+/g, '')]);
+            for (const alias of aliases) {
+                const wanted = normalizeText(alias).replace(/\s+/g, '');
+                const found = normalized.find(([, key]) => key === wanted || key.includes(wanted));
+                if (found) return clean(row[found[0]]);
+            }
+            return '';
+        }
+
+        function teacherOptions(selectedId) {
+            const options = state.teachers.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escapeHtml(t.name || 'Chưa đặt tên')}</option>`);
+            return `<option value="">Chọn giáo viên</option>${options.join('')}`;
+        }
+
+        function classOptions(selectedId) {
+            const options = state.classes.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.name || 'Lớp')}</option>`);
+            return `<option value="">Chọn lớp</option>${options.join('')}`;
+        }
+
+        function shiftLabel(value) {
+            return value === 'both' ? '2 buổi' : (value === 'afternoon' ? '1 buổi chiều' : '1 buổi sáng');
+        }
+
+        function updateStats() {
+            $('statTeachers').textContent = state.teachers.length;
+            $('statClasses').textContent = state.classes.length;
+            $('statRooms').textContent = state.rooms.length;
+            $('statAssignments').textContent = state.assignments.length;
+        }
+
+        function readRulesFromInputs() {
+            state.rules.morningPeriods = Math.max(1, Number($('morningPeriods').value || 5));
+            state.rules.afternoonPeriods = Math.max(1, Number($('afternoonPeriods').value || 4));
+            state.rules.days = splitList($('schoolDays').value || 'T2,T3,T4,T5,T6,T7');
+            state.rules.maxSameSubjectDay = Math.max(1, Number($('maxSameSubjectDay').value || 2));
+        }
+
+        function syncRuleInputs() {
+            $('morningPeriods').value = state.rules.morningPeriods;
+            $('afternoonPeriods').value = state.rules.afternoonPeriods;
+            $('schoolDays').value = state.rules.days.join(',');
+            $('maxSameSubjectDay').value = state.rules.maxSameSubjectDay;
+        }
+
+        function renderTeachers() {
+            $('teacherRows').innerHTML = state.teachers.map(t => `
+                <tr data-id="${t.id}">
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(t.name)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subject" value="${escapeHtml(t.subject)}"></td>
+                    <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="maxPeriods" value="${escapeHtml(t.maxPeriods || 24)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="unavailable" value="${escapeHtml(t.unavailable)}" placeholder="T2S, T5C"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="preferredRooms" value="${escapeHtml(t.preferredRooms)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có giáo viên. Hãy nhập Excel hoặc bấm thêm giáo viên.</td></tr>`;
+            $('teacherRows').querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const teacher = state.teachers.find(t => t.id === tr.dataset.id);
+                if (!teacher) return;
+                teacher[e.target.dataset.field] = e.target.type === 'number' ? Number(e.target.value || 0) : e.target.value;
+                updateStats();
+            }));
+            $('teacherRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.teachers = state.teachers.filter(t => t.id !== id);
+                state.assignments = state.assignments.filter(a => a.teacherId !== id);
+                renderAll();
+            }));
+        }
+
+        function renderClasses() {
+            $('classRows').innerHTML = state.classes.map(c => `
+                <tr data-id="${c.id}">
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(c.name)}"></td>
+                    <td class="px-3 py-2">
+                        <select class="compact-input text-sm" data-field="shift">
+                            <option value="morning" ${c.shift === 'morning' ? 'selected' : ''}>1 buổi sáng</option>
+                            <option value="afternoon" ${c.shift === 'afternoon' ? 'selected' : ''}>1 buổi chiều</option>
+                            <option value="both" ${c.shift === 'both' ? 'selected' : ''}>2 buổi</option>
+                        </select>
+                    </td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="homeRoom" value="${escapeHtml(c.homeRoom)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có lớp học.</td></tr>`;
+            $('classRows').querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const item = state.classes.find(c => c.id === tr.dataset.id);
+                if (!item) return;
+                item[e.target.dataset.field] = e.target.value;
+                renderAssignments();
+                updateStats();
+            }));
+            $('classRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.classes = state.classes.filter(c => c.id !== id);
+                state.assignments = state.assignments.filter(a => a.classId !== id);
+                renderAll();
+            }));
+        }
+
+        function renderRooms() {
+            $('roomRows').innerHTML = state.rooms.map(r => `
+                <tr data-id="${r.id}">
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(r.name)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subjects" value="${escapeHtml(r.subjects)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="3" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phòng bộ môn. Hệ thống vẫn dùng phòng lớp mặc định.</td></tr>`;
+            $('roomRows').querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const item = state.rooms.find(r => r.id === tr.dataset.id);
+                if (!item) return;
+                item[e.target.dataset.field] = e.target.value;
+                updateStats();
+            }));
+            $('roomRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.rooms = state.rooms.filter(r => r.id !== id);
+                renderAll();
+            }));
+        }
+
+        function renderAssignments() {
+            $('assignmentRows').innerHTML = state.assignments.map(a => `
+                <tr data-id="${a.id}">
+                    <td class="px-3 py-2"><select class="compact-input text-sm" data-field="classId">${classOptions(a.classId)}</select></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="subject" value="${escapeHtml(a.subject)}"></td>
+                    <td class="px-3 py-2"><select class="compact-input text-sm" data-field="teacherId">${teacherOptions(a.teacherId)}</select></td>
+                    <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="periods" value="${escapeHtml(a.periods || 1)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="roomNeed" value="${escapeHtml(a.roomNeed)}" placeholder="Tin học"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="note" value="${escapeHtml(a.note)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phân công. Nhập từ Excel hoặc thêm thủ công.</td></tr>`;
+            $('assignmentRows').querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const item = state.assignments.find(a => a.id === tr.dataset.id);
+                if (!item) return;
+                item[e.target.dataset.field] = e.target.type === 'number' ? Number(e.target.value || 0) : e.target.value;
+                updateStats();
+            }));
+            $('assignmentRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.assignments = state.assignments.filter(a => a.id !== id);
+                renderAll();
+            }));
+            updateStats();
+        }
+
+        function renderAll() {
+            renderTeachers();
+            renderClasses();
+            renderRooms();
+            renderAssignments();
+            updateStats();
+        }
+
+        function addTeacher(data = {}) {
+            state.teachers.push({
+                id: data.id || uid('t'),
+                name: clean(data.name) || 'Giáo viên mới',
+                subject: clean(data.subject),
+                maxPeriods: Number(data.maxPeriods || 24),
+                unavailable: clean(data.unavailable),
+                preferredRooms: clean(data.preferredRooms),
+            });
+        }
+
+        function addClass(data = {}) {
+            const name = clean(data.name) || 'Lớp mới';
+            state.classes.push({ id: data.id || uid('c'), name, shift: data.shift || 'morning', homeRoom: clean(data.homeRoom) || name });
+        }
+
+        function addRoom(data = {}) {
+            state.rooms.push({ id: data.id || uid('r'), name: clean(data.name) || 'Phòng mới', subjects: clean(data.subjects) });
+        }
+
+        function addAssignment(data = {}) {
+            state.assignments.push({
+                id: data.id || uid('a'),
+                classId: data.classId || state.classes[0]?.id || '',
+                subject: clean(data.subject) || state.teachers.find(t => t.id === data.teacherId)?.subject || '',
+                teacherId: data.teacherId || state.teachers[0]?.id || '',
+                periods: Number(data.periods || 1),
+                roomNeed: clean(data.roomNeed),
+                note: clean(data.note),
+            });
+        }
+
+        function ensureClassByName(name, shift = 'morning') {
+            const wanted = normalizeText(name);
+            let found = state.classes.find(c => normalizeText(c.name) === wanted);
+            if (!found) {
+                found = { id: uid('c'), name: clean(name), shift, homeRoom: clean(name) };
+                state.classes.push(found);
+            }
+            return found;
+        }
+
+        function findTeacherByName(name) {
+            const wanted = normalizeText(name);
+            return state.teachers.find(t => normalizeText(t.name) === wanted);
+        }
+
+        async function importTeacherFile(file) {
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            const importedAssignments = [];
+            let addedTeachers = 0;
+
+            rows.forEach(row => {
+                const name = headerValue(row, ['Họ tên', 'Ho ten', 'Giáo viên', 'Giao vien', 'Tên giáo viên', 'Ten giao vien']);
+                if (!name) return;
+                const subject = headerValue(row, ['Môn', 'Mon', 'Môn chính', 'Mon chinh', 'Bộ môn', 'Bo mon']);
+                const className = headerValue(row, ['Lớp', 'Lop', 'Lớp dạy', 'Lop day']);
+                const periods = Number(headerValue(row, ['Số tiết/tuần', 'So tiet/tuan', 'Số tiết', 'So tiet', 'Tiet']) || 0);
+                const unavailable = headerValue(row, ['Buổi tránh', 'Buoi tranh', 'Lịch bận', 'Lich ban', 'Không dạy', 'Khong day']);
+                const preferredRooms = headerValue(row, ['Phòng ưu tiên', 'Phong uu tien', 'Phòng', 'Phong']);
+                const maxPeriods = Number(headerValue(row, ['Số tiết tối đa', 'So tiet toi da', 'Định mức', 'Dinh muc']) || 24);
+
+                let teacher = findTeacherByName(name);
+                if (!teacher) {
+                    teacher = { id: uid('t'), name, subject, maxPeriods, unavailable, preferredRooms };
+                    state.teachers.push(teacher);
+                    addedTeachers++;
+                } else {
+                    teacher.subject = teacher.subject || subject;
+                    teacher.unavailable = teacher.unavailable || unavailable;
+                    teacher.preferredRooms = teacher.preferredRooms || preferredRooms;
+                    teacher.maxPeriods = teacher.maxPeriods || maxPeriods;
+                }
+
+                if (className && periods > 0) {
+                    const classes = splitList(className);
+                    classes.forEach(label => importedAssignments.push({
+                        className: label,
+                        teacherName: name,
+                        teacherId: teacher.id,
+                        subject,
+                        periods,
+                        roomNeed: preferredRooms,
+                    }));
+                }
+            });
+
+            state.importedAssignments = importedAssignments;
+            buildAssignmentsFromImport(false);
+            $('importNotice').textContent = `Đã nhập ${addedTeachers} giáo viên mới, nhận diện ${importedAssignments.length} dòng phân công.`;
+            $('importNotice').classList.remove('hidden');
+            renderAll();
+        }
+
+        function buildAssignmentsFromImport(showNotice = true) {
+            if (!state.importedAssignments.length) {
+                if (showNotice) alert('Chưa có dòng phân công trong Excel. Cần có cột Lớp và Số tiết/tuần.');
+                return;
+            }
+            const existingKeys = new Set(state.assignments.map(a => `${a.classId}|${a.teacherId}|${normalizeText(a.subject)}`));
+            state.importedAssignments.forEach(item => {
+                const classItem = ensureClassByName(item.className);
+                const key = `${classItem.id}|${item.teacherId}|${normalizeText(item.subject)}`;
+                if (existingKeys.has(key)) return;
+                addAssignment({ classId: classItem.id, teacherId: item.teacherId, subject: item.subject, periods: item.periods, roomNeed: item.roomNeed });
+                existingKeys.add(key);
+            });
+            renderAll();
+        }
+
+        function parseUnavailable(value) {
+            const text = normalizeText(value).replace(/thu\s*/g, 't').replace(/sang/g, 's').replace(/chieu/g, 'c');
+            const set = new Set();
+            text.split(/[,\n;]+/).forEach(part => {
+                const compact = part.replace(/\s+/g, '').toUpperCase();
+                const match = compact.match(/T?([2-7])([SC])?/);
+                if (!match) return;
+                const day = `T${match[1]}`;
+                const session = match[2];
+                if (session) set.add(`${day}-${session === 'S' ? 'morning' : 'afternoon'}`);
+                else {
+                    set.add(`${day}-morning`);
+                    set.add(`${day}-afternoon`);
+                }
+            });
+            return set;
+        }
+
+        function slotsForClass(classItem) {
+            const sessions = classItem.shift === 'both' ? ['morning', 'afternoon'] : [classItem.shift || 'morning'];
+            const slots = [];
+            state.rules.days.forEach(day => {
+                sessions.forEach(session => {
+                    const count = session === 'morning' ? state.rules.morningPeriods : state.rules.afternoonPeriods;
+                    for (let period = 1; period <= count; period++) {
+                        slots.push({ day, session, period, key: `${day}-${session}-${period}` });
+                    }
+                });
+            });
+            return slots;
+        }
+
+        function roomMatches(room, needOrSubject) {
+            const need = normalizeText(needOrSubject);
+            if (!need) return false;
+            return splitList(room.subjects).some(s => {
+                const ns = normalizeText(s);
+                return ns && (need.includes(ns) || ns.includes(need));
+            }) || normalizeText(room.name).includes(need);
+        }
+
+        function chooseRoom(assignment, slot, roomBusy) {
+            const classItem = state.classes.find(c => c.id === assignment.classId);
+            const need = assignment.roomNeed || assignment.subject;
+            const candidates = state.rooms.filter(room => roomMatches(room, need));
+            for (const room of candidates) {
+                const key = `${room.name}|${slot.day}|${slot.session}|${slot.period}`;
+                if (!roomBusy.has(key)) return room.name;
+            }
+            return classItem?.homeRoom || classItem?.name || '';
+        }
+
+        function buildLessonUnits() {
+            const units = [];
+            state.assignments.forEach(assignment => {
+                const classItem = state.classes.find(c => c.id === assignment.classId);
+                const teacher = state.teachers.find(t => t.id === assignment.teacherId);
+                const periods = Math.max(0, Number(assignment.periods || 0));
+                if (!classItem || !teacher || !assignment.subject || periods <= 0) return;
+                for (let i = 0; i < periods; i++) {
+                    units.push({ ...assignment, unit: i + 1, className: classItem.name, teacherName: teacher.name });
+                }
+            });
+            return units.sort((a, b) => {
+                const ta = state.assignments.filter(x => x.teacherId === a.teacherId).reduce((sum, x) => sum + Number(x.periods || 0), 0);
+                const tb = state.assignments.filter(x => x.teacherId === b.teacherId).reduce((sum, x) => sum + Number(x.periods || 0), 0);
+                return tb - ta || b.periods - a.periods;
+            });
+        }
+
+        function generateSchedule() {
+            readRulesFromInputs();
+            const byClass = {};
+            const teacherBusy = new Set();
+            const roomBusy = new Set();
+            const issues = [];
+            const teacherUnavailable = Object.fromEntries(state.teachers.map(t => [t.id, parseUnavailable(t.unavailable)]));
+            const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
+
+            state.classes.forEach(c => { byClass[c.id] = {}; });
+
+            const lessons = buildLessonUnits();
+            lessons.forEach(lesson => {
+                const classItem = state.classes.find(c => c.id === lesson.classId);
+                const teacher = state.teachers.find(t => t.id === lesson.teacherId);
+                if (!classItem || !teacher) return;
+                const slots = slotsForClass(classItem);
+                let best = null;
+                let bestScore = Infinity;
+
+                slots.forEach(slot => {
+                    if (byClass[classItem.id][slot.key]) return;
+                    if (teacherBusy.has(`${teacher.id}|${slot.day}|${slot.session}|${slot.period}`)) return;
+                    if (teacherUnavailable[teacher.id]?.has(`${slot.day}-${slot.session}`)) return;
+                    const roomName = chooseRoom(lesson, slot, roomBusy);
+                    if (roomName && roomBusy.has(`${roomName}|${slot.day}|${slot.session}|${slot.period}`)) return;
+                    const sameSubjectDay = Object.values(byClass[classItem.id]).filter(cell => cell.day === slot.day && normalizeText(cell.subject) === normalizeText(lesson.subject)).length;
+                    if (sameSubjectDay >= state.rules.maxSameSubjectDay) return;
+                    const sameTeacherDay = teacherLoad[teacher.id] || 0;
+                    const score = sameSubjectDay * 8 + sameTeacherDay * .05 + slot.period + (slot.session === 'afternoon' ? .35 : 0);
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = { slot, roomName };
+                    }
+                });
+
+                if (!best) {
+                    issues.push({ type: 'unplaced', lesson, message: `Không tìm được ô trống phù hợp cho ${lesson.subject} - ${lesson.className} (${lesson.teacherName}).` });
+                    return;
+                }
+
+                const cell = {
+                    ...lesson,
+                    day: best.slot.day,
+                    session: best.slot.session,
+                    period: best.slot.period,
+                    slotKey: best.slot.key,
+                    room: best.roomName,
+                };
+                byClass[classItem.id][best.slot.key] = cell;
+                teacherBusy.add(`${teacher.id}|${best.slot.day}|${best.slot.session}|${best.slot.period}`);
+                teacherLoad[teacher.id] = (teacherLoad[teacher.id] || 0) + 1;
+                if (best.roomName) roomBusy.add(`${best.roomName}|${best.slot.day}|${best.slot.session}|${best.slot.period}`);
+            });
+
+            state.teachers.forEach(t => {
+                if (teacherLoad[t.id] > Number(t.maxPeriods || 99)) {
+                    issues.push({ type: 'load', message: `${t.name} vượt định mức ${t.maxPeriods} tiết/tuần (${teacherLoad[t.id]} tiết đã xếp).` });
+                }
+            });
+
+            state.result = { byClass, issues, generatedAt: new Date().toISOString(), teacherLoad };
+            state.activeResult = 'class';
+            renderResultControls();
+            renderSchedule();
+        }
+
+        function sessionText(session) {
+            return session === 'afternoon' ? 'Chiều' : 'Sáng';
+        }
+
+        function scheduleCellHtml(cell, mode) {
+            if (!cell) return '<div class="min-h-[54px] text-xs text-slate-300">Trống</div>';
+            const title = mode === 'teacher' ? cell.className : cell.subject;
+            const sub = mode === 'teacher' ? cell.subject : cell.teacherName;
+            return `<div class="lesson-chip bg-teal-50 text-teal-950">
+                <div class="font-black">${escapeHtml(title)}</div>
+                <div class="mt-1 text-xs text-teal-800">${escapeHtml(sub)}</div>
+                <div class="mt-1 text-[11px] font-bold text-slate-500">${escapeHtml(cell.room || '')}</div>
+            </div>`;
+        }
+
+        function renderTableForClass(classItem) {
+            const slots = slotsForClass(classItem);
+            const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) })).filter(g => g.slots.length);
+            const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
+            let rows = '';
+            for (let i = 0; i < maxRows; i++) {
+                rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
+                    const slot = group.slots[i];
+                    if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
+                    const cell = state.result?.byClass?.[classItem.id]?.[slot.key];
+                    return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'class')}</td>`;
+                }).join('')}</tr>`;
+            }
+            return `<div class="mb-5">
+                <h3 class="mb-2 text-base font-black">${escapeHtml(classItem.name)} <span class="text-sm font-bold text-slate-500">· ${shiftLabel(classItem.shift)}</span></h3>
+                <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
+                    <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+
+        function teacherCells(teacherId) {
+            const cells = [];
+            Object.values(state.result?.byClass || {}).forEach(map => {
+                Object.values(map).forEach(cell => { if (cell.teacherId === teacherId) cells.push(cell); });
+            });
+            return cells;
+        }
+
+        function renderTableForTeacher(teacher) {
+            const cells = teacherCells(teacher.id);
+            const slotMap = Object.fromEntries(cells.map(cell => [`${cell.day}-${cell.session}-${cell.period}`, cell]));
+            const slots = [];
+            state.rules.days.forEach(day => {
+                ['morning', 'afternoon'].forEach(session => {
+                    const count = session === 'morning' ? state.rules.morningPeriods : state.rules.afternoonPeriods;
+                    for (let period = 1; period <= count; period++) slots.push({ day, session, period });
+                });
+            });
+            const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) }));
+            const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
+            let rows = '';
+            for (let i = 0; i < maxRows; i++) {
+                rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
+                    const slot = group.slots[i];
+                    if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
+                    const cell = slotMap[`${slot.day}-${slot.session}-${slot.period}`];
+                    return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'teacher')}</td>`;
+                }).join('')}</tr>`;
+            }
+            return `<div class="mb-5">
+                <h3 class="mb-2 text-base font-black">${escapeHtml(teacher.name)} <span class="text-sm font-bold text-slate-500">· ${escapeHtml(teacher.subject || '')} · ${cells.length} tiết</span></h3>
+                <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
+                    <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+
+        function renderResultControls() {
+            const selector = $('viewSelector');
+            if (state.activeResult === 'teacher') {
+                selector.innerHTML = `<option value="all">Tất cả giáo viên</option>${state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}`;
+            } else {
+                selector.innerHTML = `<option value="all">Tất cả lớp</option>${state.classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}`;
+            }
+        }
+
+        function renderSchedule() {
+            const mount = $('scheduleMount');
+            if (!state.result) {
+                mount.innerHTML = `<div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500">Chưa có kết quả xếp lịch.</div>`;
+                $('resultSummary').textContent = 'Chưa xếp lịch. Bấm “Xếp lịch” sau khi nhập dữ liệu.';
+                return;
+            }
+            const totalPlaced = Object.values(state.result.byClass).reduce((sum, map) => sum + Object.keys(map).length, 0);
+            $('resultSummary').textContent = `Đã xếp ${totalPlaced} tiết. Còn ${state.result.issues.length} cảnh báo/chưa xếp.`;
+
+            const selected = $('viewSelector').value || 'all';
+            if (state.activeResult === 'issues') {
+                mount.innerHTML = state.result.issues.length ? `
+                    <div class="space-y-2">
+                        ${state.result.issues.map(issue => `<div class="conflict-row rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900">${escapeHtml(issue.message)}</div>`).join('')}
+                    </div>
+                ` : `<div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center text-sm font-bold text-emerald-900">Không có cảnh báo. Lịch đã xếp hết theo các ràng buộc hiện tại.</div>`;
+                return;
+            }
+
+            if (state.activeResult === 'teacher') {
+                const teachers = selected === 'all' ? state.teachers : state.teachers.filter(t => t.id === selected);
+                mount.innerHTML = teachers.map(renderTableForTeacher).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có giáo viên.</div>`;
+                return;
+            }
+
+            const classes = selected === 'all' ? state.classes : state.classes.filter(c => c.id === selected);
+            mount.innerHTML = classes.map(renderTableForClass).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có lớp.</div>`;
+        }
+
+        function downloadBlob(filename, content, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadTeacherTemplate() {
+            const rows = [
+                ['Họ tên', 'Môn', 'Lớp', 'Số tiết/tuần', 'Buổi tránh', 'Phòng ưu tiên', 'Số tiết tối đa'],
+                ['Nguyễn Văn A', 'Toán', '6A,6B', 4, 'T2S, T5C', '', 24],
+                ['Trần Thị B', 'Tin học', '6A', 2, 'T3C', 'Tin 1', 20],
+            ];
+            if (window.XLSX) {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                XLSX.utils.book_append_sheet(wb, ws, 'GiaoVien');
+                XLSX.writeFile(wb, 'Mau_GiaoVien_ThoiKhoaBieu.xlsx');
+                return;
+            }
+            downloadBlob('Mau_GiaoVien_ThoiKhoaBieu.csv', '\ufeff' + rows.map(r => r.join(',')).join('\n'), 'text/csv;charset=utf-8');
+        }
+
+        function exportScheduleCsv() {
+            if (!state.result) return alert('Chưa có lịch để xuất.');
+            const rows = [['Lớp', 'Thứ', 'Buổi', 'Tiết', 'Môn', 'Giáo viên', 'Phòng']];
+            state.classes.forEach(c => {
+                Object.values(state.result.byClass[c.id] || {}).forEach(cell => rows.push([c.name, cell.day, sessionText(cell.session), cell.period, cell.subject, cell.teacherName, cell.room]));
+            });
+            const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            downloadBlob('ThoiKhoaBieu.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
+        }
+
+        function saveDraft() {
+            readRulesFromInputs();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                teachers: state.teachers,
+                importedAssignments: state.importedAssignments,
+                classes: state.classes,
+                rooms: state.rooms,
+                assignments: state.assignments,
+                rules: state.rules,
+            }));
+            alert('Đã lưu nháp thời khóa biểu trên trình duyệt này.');
+        }
+
+        function loadDraft() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const data = JSON.parse(raw);
+                Object.assign(state, {
+                    teachers: data.teachers || [],
+                    importedAssignments: data.importedAssignments || [],
+                    classes: data.classes || [],
+                    rooms: data.rooms || [],
+                    assignments: data.assignments || [],
+                    rules: data.rules || state.rules,
+                });
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function loadSampleData() {
+            state.teachers = [];
+            state.classes = [];
+            state.rooms = [];
+            state.assignments = [];
+            [
+                ['Nguyễn Văn An', 'Toán', 24, 'T2S', ''],
+                ['Trần Thị Bình', 'Ngữ văn', 24, '', ''],
+                ['Lê Minh Châu', 'Tiếng Anh', 22, 'T4C', ''],
+                ['Phạm Quốc Dũng', 'Tin học', 18, 'T3C', 'Tin 1'],
+                ['Hoàng Thu Hà', 'Vật lý', 20, '', 'Lý 1'],
+                ['Vũ Hải Nam', 'Hóa học', 20, 'T6S', 'Hóa 1'],
+            ].forEach(([name, subject, maxPeriods, unavailable, preferredRooms]) => addTeacher({ name, subject, maxPeriods, unavailable, preferredRooms }));
+            ['6A', '6B', '7A', '7B'].forEach((name, index) => addClass({ name, shift: index % 2 ? 'morning' : 'both', homeRoom: name }));
+            addRoom({ name: 'Tin 1', subjects: 'Tin học' });
+            addRoom({ name: 'Lý 1', subjects: 'Vật lý, Công nghệ' });
+            addRoom({ name: 'Hóa 1', subjects: 'Hóa học, Sinh học' });
+            state.classes.forEach(c => {
+                addAssignment({ classId: c.id, teacherId: state.teachers[0].id, subject: 'Toán', periods: 4 });
+                addAssignment({ classId: c.id, teacherId: state.teachers[1].id, subject: 'Ngữ văn', periods: 4 });
+                addAssignment({ classId: c.id, teacherId: state.teachers[2].id, subject: 'Tiếng Anh', periods: 3 });
+                addAssignment({ classId: c.id, teacherId: state.teachers[3].id, subject: 'Tin học', periods: 2, roomNeed: 'Tin học' });
+                addAssignment({ classId: c.id, teacherId: state.teachers[4].id, subject: 'Vật lý', periods: 2, roomNeed: 'Vật lý' });
+                addAssignment({ classId: c.id, teacherId: state.teachers[5].id, subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' });
+            });
+            renderAll();
+        }
+
+        function bindEvents() {
+            $('setupTabs').addEventListener('click', e => {
+                const btn = e.target.closest('[data-tab]');
+                if (!btn) return;
+                document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== btn.dataset.tab));
+            });
+            $('resultTabs').addEventListener('click', e => {
+                const btn = e.target.closest('[data-result]');
+                if (!btn) return;
+                state.activeResult = btn.dataset.result;
+                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                renderResultControls();
+                renderSchedule();
+            });
+            $('viewSelector').addEventListener('change', renderSchedule);
+            $('btnAddTeacher').addEventListener('click', () => { addTeacher(); renderAll(); });
+            $('btnAddClass').addEventListener('click', () => {
+                addClass({ name: $('classNameInput').value, shift: $('classShiftInput').value, homeRoom: $('classHomeRoomInput').value });
+                $('classNameInput').value = '';
+                $('classHomeRoomInput').value = '';
+                renderAll();
+            });
+            $('btnAddRoom').addEventListener('click', () => {
+                addRoom({ name: $('roomNameInput').value, subjects: $('roomSubjectInput').value });
+                $('roomNameInput').value = '';
+                $('roomSubjectInput').value = '';
+                renderAll();
+            });
+            $('btnAddAssignment').addEventListener('click', () => { addAssignment(); renderAll(); });
+            $('btnBuildAssignments').addEventListener('click', () => buildAssignmentsFromImport(true));
+            $('btnGenerate').addEventListener('click', generateSchedule);
+            $('btnDownloadTeacherTemplate').addEventListener('click', downloadTeacherTemplate);
+            $('btnExportSchedule').addEventListener('click', exportScheduleCsv);
+            $('btnPrint').addEventListener('click', () => window.print());
+            $('btnSaveDraft').addEventListener('click', saveDraft);
+            $('btnSampleData').addEventListener('click', loadSampleData);
+            $('teacherFile').addEventListener('change', e => {
+                const file = e.target.files?.[0];
+                if (file) importTeacherFile(file).catch(err => alert(`Không đọc được file: ${err.message}`));
+            });
+        }
+
+        bindEvents();
+        if (!loadDraft()) loadSampleData();
+        syncRuleInputs();
+        renderAll();
+        renderResultControls();
+        renderSchedule();
+    </script>
+</body>
+</html>
