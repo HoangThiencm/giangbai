@@ -260,6 +260,16 @@
                             <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
                         </label>
                     </div>
+                    <!-- 13. Xếp thời khóa biểu -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Xếp Thời Khóa Biểu</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_thoikhoabieu"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
                 </div>
 
                 <div class="rounded-xl border border-teal-200 bg-teal-50/60 p-5 mb-6">
@@ -848,7 +858,7 @@
 
         const CLIENT_FEATURE_CHECKS = [
             'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx',
-            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'rutgon'
+            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'rutgon'
         ];
 
         const FEATURE_NAMES = {
@@ -863,6 +873,7 @@
             padlet: "Bảng Chia Sẻ Padlet",
             vietbaocao: "Viết Báo Cáo AI",
             thanhtich: "Thống Kê Thành Tích",
+            thoikhoabieu: "Xếp Thời Khóa Biểu",
             rutgon: "Link Rút Gọn & QR",
             teacher_design: "Soạn bài lộ trình",
             teacher_progress_stats: "Thống kê tiến trình",
@@ -872,7 +883,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'rutgon']
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'rutgon']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -2078,6 +2089,7 @@
             padlet: { title: 'Bảng chia sẻ Padlet', url: 'padlet_ht.html' },
             vietbaocao: { title: 'Viết báo cáo AI', url: 'vietbaocao.html' },
             thanhtich: { title: 'Thống kê thành tích', url: 'thanhtich.html' },
+            thoikhoabieu: { title: 'Xếp thời khóa biểu', url: 'thoikhoabieu.html' },
             rutgon: { title: 'Link rút gọn & QR', url: 'rutgon.html' },
             thongketientrinh: { title: 'Thống kê tiến trình lớp', url: 'thongketientrinh.html' },
             quanlyvanban: { title: 'Quản lý văn bản', url: 'quanlyvanban.html' },
@@ -2085,6 +2097,7 @@
         };
         const teacherOnlyPages = {
             rutgon: hostingPages.rutgon,
+            thoikhoabieu: hostingPages.thoikhoabieu,
             thongketientrinh: hostingPages.thongketientrinh,
             quanlyvanban: hostingPages.quanlyvanban,
             theodoiai: hostingPages.theodoiai
@@ -2098,7 +2111,7 @@
             {
                 title: 'Theo dõi & quản lý',
                 hint: 'Các tab trong không gian giáo viên.',
-                pages: ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'theodoiai']
+                pages: ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'theodoiai']
             },
             {
                 title: 'Công cụ giảng dạy',
@@ -2739,7 +2752,7 @@
         }
 
         const mathRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
-        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban', 'thanhtich'];
+        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu'];
 
         function allTeacherPageIds() {
             return teacherFeatureGroups.flatMap(group => group.pages);

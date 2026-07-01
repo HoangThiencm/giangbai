@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xếp thời khóa biểu nhà trường</title>
+    <script src="access-control.js?v=20260629-thoikhoabieu"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
+        .soft-shadow { box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
+        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 12px; padding: .68rem .82rem; outline: none; background: #fff; }
+        .field:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, .12); }
+        .label { display: block; margin-bottom: .38rem; color: #334155; font-size: .75rem; font-weight: 800; }
+        .pill { display: inline-flex; align-items: center; gap: .38rem; border-radius: 999px; padding: .28rem .62rem; font-size: .72rem; font-weight: 800; }
+        .tab-btn.active { background: #0f766e; color: #fff; box-shadow: 0 8px 18px rgba(15, 118, 110, .18); }
+        .schedule-table { border-collapse: separate; border-spacing: 0; min-width: 900px; }
+        .schedule-table th { position: sticky; top: 0; z-index: 1; background: #f8fafc; }
+        .schedule-table th, .schedule-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+        .schedule-table tr > *:first-child { border-left: 1px solid #e2e8f0; }
+        .schedule-table thead tr:first-child > * { border-top: 1px solid #e2e8f0; }
+        .lesson-chip { border-radius: 10px; padding: .42rem .48rem; line-height: 1.25; }
+        .scroll-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        .conflict-row { border-left: 4px solid #f43f5e; }
+        .compact-input { border: 1px solid #dbe3ef; border-radius: 10px; padding: .5rem .58rem; outline: none; width: 100%; background: #fff; }
+        .compact-input:focus { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15, 118, 110, .10); }
+        @media print {
+            header, .no-print, #setupPanel, #resultTabs { display: none !important; }
+            main { max-width: none !important; padding: 0 !important; }
+            .print-panel { box-shadow: none !important; border: 0 !important; }
+            body { background: #fff !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <div class="flex items-center gap-3">
+                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-teal-700 text-white">
+                    <i class="fas fa-calendar-days"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-teal-700">Nhà trường</p>
+                    <h1 class="text-lg font-black tracking-tight sm:text-xl">Xếp thời khóa biểu</h1>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 no-print">
+                <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa">
+                    <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Dữ liệu thử
+                </button>
+                <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu thời khóa biểu lên hosting">
+                    <i class="fas fa-cloud-arrow-up mr-2 text-teal-700"></i>Lưu hosting
+                </button>
+                <a href="index.html" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
+                    <i class="fas fa-home mr-2 text-teal-700"></i>Trang chủ
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <section class="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
+            <div class="overflow-hidden rounded-3xl bg-slate-950 text-white soft-shadow">
+                <div class="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end">
+                    <div>
+                        <span class="pill bg-teal-400/15 text-teal-100"><i class="fas fa-school"></i>100 giáo viên · 1 buổi · 2 buổi · phòng bộ môn</span>
+                        <h2 class="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Thiết kế lịch từ dữ liệu thật, rà trùng và xuất bảng dùng ngay.</h2>
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Nhập danh sách giáo viên từ Excel, khai báo lớp học theo buổi, phòng bộ môn và phân công môn. Bộ xếp lịch sẽ tránh trùng giáo viên, lớp, phòng và báo rõ phần chưa xếp được.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-center sm:grid-cols-4 lg:w-[430px]">
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statTeachers" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">GV</div></div>
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statClasses" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">Lớp</div></div>
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statRooms" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">Phòng</div></div>
+                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statAssignments" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">PC</div></div>
+                    </div>
+                </div>
+            </div>
+            <aside class="rounded-3xl border border-teal-100 bg-white p-5 soft-shadow">
+                <h3 class="text-sm font-black uppercase tracking-[.12em] text-teal-800">Quy trình</h3>
+                <div class="mt-4 space-y-3 text-sm text-slate-600">
+                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">1</span><p>Nhập Excel giáo viên hoặc nạp dữ liệu thử.</p></div>
+                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">2</span><p>Chỉnh lớp, phòng, phân công môn-lớp.</p></div>
+                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">3</span><p>Bấm xếp lịch, xem phần nghẽn rồi xuất CSV/in.</p></div>
+                </div>
+            </aside>
+        </section>
+
+        <section id="setupPanel" class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5">
+            <div class="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div id="setupTabs" class="flex flex-wrap gap-2">
+                    <button class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="teachers"><i class="fas fa-chalkboard-user mr-2"></i>Giáo viên</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="classes"><i class="fas fa-users-rectangle mr-2"></i>Lớp học</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rooms"><i class="fas fa-door-open mr-2"></i>Phòng bộ môn</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="assignments"><i class="fas fa-list-check mr-2"></i>Phân công</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rules"><i class="fas fa-sliders mr-2"></i>Thiết lập</button>
+                </div>
+                <button id="btnGenerate" type="button" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800">
+                    <i class="fas fa-gears mr-2"></i>Xếp lịch
+                </button>
+            </div>
+
+            <div class="mt-5">
+                <section data-panel="teachers">
+                    <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="font-black text-slate-800">Nhập danh sách giáo viên</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Mẫu đọc tốt các cột: Họ tên, Môn, Lớp, Số tiết/tuần, Buổi tránh, Phòng ưu tiên, Số tiết tối đa.</p>
+                            <label class="mt-4 block">
+                                <span class="label">File Excel/CSV</span>
+                                <input id="teacherFile" type="file" accept=".xlsx,.xls,.csv" class="field bg-white text-sm">
+                            </label>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button id="btnDownloadTeacherTemplate" type="button" class="rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-extrabold text-teal-800 hover:bg-teal-50">
+                                    <i class="fas fa-file-excel mr-2"></i>Tải mẫu
+                                </button>
+                                <button id="btnAddTeacher" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
+                                    <i class="fas fa-plus mr-2 text-teal-700"></i>Thêm GV
+                                </button>
+                            </div>
+                            <div id="importNotice" class="mt-3 hidden rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-bold text-teal-900"></div>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="max-h-[420px] overflow-auto scroll-thin">
+                                <table class="w-full min-w-[780px] text-left text-sm">
+                                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr>
+                                            <th class="px-3 py-2">Họ tên</th>
+                                            <th class="px-3 py-2">Môn chính</th>
+                                            <th class="px-3 py-2">Tối đa/tuần</th>
+                                            <th class="px-3 py-2">Buổi tránh</th>
+                                            <th class="px-3 py-2">Phòng ưu tiên</th>
+                                            <th class="px-3 py-2"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teacherRows" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="classes" class="hidden">
+                    <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="font-black text-slate-800">Khai báo lớp học</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Chọn lớp học 1 buổi sáng, 1 buổi chiều hoặc 2 buổi theo quy định nhà trường.</p>
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <label><span class="label">Tên lớp</span><input id="classNameInput" class="field" placeholder="6A"></label>
+                                <label><span class="label">Buổi học</span><select id="classShiftInput" class="field"><option value="morning">1 buổi sáng</option><option value="afternoon">1 buổi chiều</option><option value="both">2 buổi</option></select></label>
+                            </div>
+                            <label class="mt-3 block"><span class="label">Phòng lớp</span><input id="classHomeRoomInput" class="field" placeholder="6A hoặc P201"></label>
+                            <button id="btnAddClass" type="button" class="mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">
+                                <i class="fas fa-plus mr-2"></i>Thêm lớp
+                            </button>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="max-h-[420px] overflow-auto scroll-thin">
+                                <table class="w-full min-w-[620px] text-left text-sm">
+                                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr><th class="px-3 py-2">Lớp</th><th class="px-3 py-2">Buổi học</th><th class="px-3 py-2">Phòng lớp</th><th class="px-3 py-2"></th></tr>
+                                    </thead>
+                                    <tbody id="classRows" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="rooms" class="hidden">
+                    <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="font-black text-slate-800">Phòng học bộ môn</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Ghi môn áp dụng cách nhau bằng dấu phẩy. Ví dụ: Tin học, Công nghệ.</p>
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <label><span class="label">Tên phòng</span><input id="roomNameInput" class="field" placeholder="Tin 1"></label>
+                                <label><span class="label">Môn/phân loại</span><input id="roomSubjectInput" class="field" placeholder="Tin học"></label>
+                            </div>
+                            <button id="btnAddRoom" type="button" class="mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">
+                                <i class="fas fa-plus mr-2"></i>Thêm phòng
+                            </button>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="max-h-[420px] overflow-auto scroll-thin">
+                                <table class="w-full min-w-[600px] text-left text-sm">
+                                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                        <tr><th class="px-3 py-2">Phòng</th><th class="px-3 py-2">Môn/phân loại</th><th class="px-3 py-2"></th></tr>
+                                    </thead>
+                                    <tbody id="roomRows" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="assignments" class="hidden">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="flex flex-wrap items-end justify-between gap-3">
+                            <div>
+                                <h3 class="font-black text-slate-800">Phân công môn-lớp</h3>
+                                <p class="mt-1 text-sm text-slate-500">Mỗi dòng là số tiết/tuần của một môn, một lớp, một giáo viên.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button id="btnAddAssignment" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-plus mr-2 text-teal-700"></i>Thêm phân công</button>
+                                <button id="btnBuildAssignments" type="button" class="rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-extrabold text-teal-800 hover:bg-teal-50"><i class="fas fa-rotate mr-2"></i>Tạo từ Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                        <div class="max-h-[460px] overflow-auto scroll-thin">
+                            <table class="w-full min-w-[980px] text-left text-sm">
+                                <thead class="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
+                                    <tr><th class="px-3 py-2">Lớp</th><th class="px-3 py-2">Môn</th><th class="px-3 py-2">Giáo viên</th><th class="px-3 py-2">Tiết/tuần</th><th class="px-3 py-2">Phòng yêu cầu</th><th class="px-3 py-2">Ghi chú</th><th class="px-3 py-2"></th></tr>
+                                </thead>
+                                <tbody id="assignmentRows" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-panel="rules" class="hidden">
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Số tiết buổi sáng</span><input id="morningPeriods" type="number" min="1" max="8" class="field" value="5"></label>
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Số tiết buổi chiều</span><input id="afternoonPeriods" type="number" min="1" max="8" class="field" value="4"></label>
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Ngày học</span><input id="schoolDays" class="field" value="T2,T3,T4,T5,T6,T7"></label>
+                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Tối đa cùng môn/ngày/lớp</span><input id="maxSameSubjectDay" type="number" min="1" max="5" class="field" value="2"></label>
+                    </div>
+                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                        <strong>Ghi chú:</strong> ô “Buổi tránh” của giáo viên nhận dạng dạng <code>T2S</code>, <code>T3C</code>, <code>T5 sáng</code>, <code>thứ 6 chiều</code>. Ký hiệu S là sáng, C là chiều.
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5 print-panel">
+            <div class="no-print flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-black">Kết quả thời khóa biểu</h2>
+                    <p id="resultSummary" class="mt-1 text-sm text-slate-500">Chưa xếp lịch. Bấm “Xếp lịch” sau khi nhập dữ liệu.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <select id="viewSelector" class="field !w-auto min-w-[180px] text-sm font-bold"></select>
+                    <button id="btnExportSchedule" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-file-export mr-2 text-teal-700"></i>Xuất CSV</button>
+                    <button id="btnPrint" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-print mr-2 text-teal-700"></i>In</button>
+                </div>
+            </div>
+            <div id="resultTabs" class="no-print mt-4 flex flex-wrap gap-2">
+                <button class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="class">Theo lớp</button>
+                <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="teacher">Theo giáo viên</button>
+                <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="issues">Chưa xếp / cảnh báo</button>
+            </div>
+            <div id="scheduleMount" class="mt-4 overflow-auto scroll-thin"></div>
+        </section>
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'gb_timetable_builder_v1';
+        const state = {
+            teachers: [],
+            importedAssignments: [],
+            classes: [],
+            rooms: [],
+            assignments: [],
+            rules: { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 },
+            result: null,
+            activeResult: 'class',
+            projectMeta: null,
+        };
+
+        const $ = id => document.getElementById(id);
+        const uid = prefix => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        const clean = value => String(value ?? '').trim();
+        const normalizeText = value => clean(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        const splitList = value => clean(value).split(/[,\n;]+/).map(v => v.trim()).filter(Boolean);
+
+        function headerValue(row, aliases) {
+            const keys = Object.keys(row || {});
+            const normalized = keys.map(key => [key, normalizeText(key).replace(/\s+/g, '')]);
+            for (const alias of aliases) {
+                const wanted = normalizeText(alias).replace(/\s+/g, '');
+                const found = normalized.find(([, key]) => key === wanted || key.includes(wanted));
+                if (found) return clean(row[found[0]]);
+            }
+            return '';
+        }
+
+        function teacherOptions(selectedId) {
+            const options = state.teachers.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escapeHtml(t.name || 'Chưa đặt tên')}</option>`);
+            return `<option value="">Chọn giáo viên</option>${options.join('')}`;
+        }
+
+        function classOptions(selectedId) {
+            const options = state.classes.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.name || 'Lớp')}</option>`);
+            return `<option value="">Chọn lớp</option>${options.join('')}`;
+        }
+
+        function shiftLabel(value) {
+            return value === 'both' ? '2 buổi' : (value === 'afternoon' ? '1 buổi chiều' : '1 buổi sáng');
+        }
+
+        function updateStats() {
+            $('statTeachers').textContent = state.teachers.length;
+            $('statClasses').textContent = state.classes.length;
+            $('statRooms').textContent = state.rooms.length;
+            $('statAssignments').textContent = state.assignments.length;
+        }
+
+        function readRulesFromInputs() {
+            state.rules.morningPeriods = Math.max(1, Number($('morningPeriods').value || 5));
+            state.rules.afternoonPeriods = Math.max(1, Number($('afternoonPeriods').value || 4));
+            state.rules.days = splitList($('schoolDays').value || 'T2,T3,T4,T5,T6,T7');
+            state.rules.maxSameSubjectDay = Math.max(1, Number($('maxSameSubjectDay').value || 2));
+        }
+
+        function syncRuleInputs() {
+            $('morningPeriods').value = state.rules.morningPeriods;
+            $('afternoonPeriods').value = state.rules.afternoonPeriods;
+            $('schoolDays').value = state.rules.days.join(',');
+            $('maxSameSubjectDay').value = state.rules.maxSameSubjectDay;
+        }
+
+        function renderTeachers() {
+            $('teacherRows').innerHTML = state.teachers.map(t => `
+                <tr data-id="${t.id}">
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(t.name)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subject" value="${escapeHtml(t.subject)}"></td>
+                    <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="maxPeriods" value="${escapeHtml(t.maxPeriods || 24)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="unavailable" value="${escapeHtml(t.unavailable)}" placeholder="T2S, T5C"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="preferredRooms" value="${escapeHtml(t.preferredRooms)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có giáo viên. Hãy nhập Excel hoặc bấm thêm giáo viên.</td></tr>`;
+            $('teacherRows').querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const teacher = state.teachers.find(t => t.id === tr.dataset.id);
+                if (!teacher) return;
+                teacher[e.target.dataset.field] = e.target.type === 'number' ? Number(e.target.value || 0) : e.target.value;
+                updateStats();
+            }));
+            $('teacherRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.teachers = state.teachers.filter(t => t.id !== id);
+                state.assignments = state.assignments.filter(a => a.teacherId !== id);
+                renderAll();
+            }));
+        }
+
+        function renderClasses() {
+            $('classRows').innerHTML = state.classes.map(c => `
+                <tr data-id="${c.id}">
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(c.name)}"></td>
+                    <td class="px-3 py-2">
+                        <select class="compact-input text-sm" data-field="shift">
+                            <option value="morning" ${c.shift === 'morning' ? 'selected' : ''}>1 buổi sáng</option>
+                            <option value="afternoon" ${c.shift === 'afternoon' ? 'selected' : ''}>1 buổi chiều</option>
+                            <option value="both" ${c.shift === 'both' ? 'selected' : ''}>2 buổi</option>
+                        </select>
+                    </td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="homeRoom" value="${escapeHtml(c.homeRoom)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có lớp học.</td></tr>`;
+            $('classRows').querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const item = state.classes.find(c => c.id === tr.dataset.id);
+                if (!item) return;
+                item[e.target.dataset.field] = e.target.value;
+                renderAssignments();
+                updateStats();
+            }));
+            $('classRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.classes = state.classes.filter(c => c.id !== id);
+                state.assignments = state.assignments.filter(a => a.classId !== id);
+                renderAll();
+            }));
+        }
+
+        function renderRooms() {
+            $('roomRows').innerHTML = state.rooms.map(r => `
+                <tr data-id="${r.id}">
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(r.name)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subjects" value="${escapeHtml(r.subjects)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="3" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phòng bộ môn. Hệ thống vẫn dùng phòng lớp mặc định.</td></tr>`;
+            $('roomRows').querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const item = state.rooms.find(r => r.id === tr.dataset.id);
+                if (!item) return;
+                item[e.target.dataset.field] = e.target.value;
+                updateStats();
+            }));
+            $('roomRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.rooms = state.rooms.filter(r => r.id !== id);
+                renderAll();
+            }));
+        }
+
+        function renderAssignments() {
+            $('assignmentRows').innerHTML = state.assignments.map(a => `
+                <tr data-id="${a.id}">
+                    <td class="px-3 py-2"><select class="compact-input text-sm" data-field="classId">${classOptions(a.classId)}</select></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="subject" value="${escapeHtml(a.subject)}"></td>
+                    <td class="px-3 py-2"><select class="compact-input text-sm" data-field="teacherId">${teacherOptions(a.teacherId)}</select></td>
+                    <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="periods" value="${escapeHtml(a.periods || 1)}"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="roomNeed" value="${escapeHtml(a.roomNeed)}" placeholder="Tin học"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="note" value="${escapeHtml(a.note)}"></td>
+                    <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('') || `<tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phân công. Nhập từ Excel hoặc thêm thủ công.</td></tr>`;
+            $('assignmentRows').querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
+                const tr = e.target.closest('tr');
+                const item = state.assignments.find(a => a.id === tr.dataset.id);
+                if (!item) return;
+                item[e.target.dataset.field] = e.target.type === 'number' ? Number(e.target.value || 0) : e.target.value;
+                updateStats();
+            }));
+            $('assignmentRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+                const id = e.target.closest('tr').dataset.id;
+                state.assignments = state.assignments.filter(a => a.id !== id);
+                renderAll();
+            }));
+            updateStats();
+        }
+
+        function renderAll() {
+            renderTeachers();
+            renderClasses();
+            renderRooms();
+            renderAssignments();
+            updateStats();
+        }
+
+        function addTeacher(data = {}) {
+            state.teachers.push({
+                id: data.id || uid('t'),
+                name: clean(data.name) || 'Giáo viên mới',
+                subject: clean(data.subject),
+                maxPeriods: Number(data.maxPeriods || 24),
+                unavailable: clean(data.unavailable),
+                preferredRooms: clean(data.preferredRooms),
+            });
+        }
+
+        function addClass(data = {}) {
+            const name = clean(data.name) || 'Lớp mới';
+            state.classes.push({ id: data.id || uid('c'), name, shift: data.shift || 'morning', homeRoom: clean(data.homeRoom) || name });
+        }
+
+        function addRoom(data = {}) {
+            state.rooms.push({ id: data.id || uid('r'), name: clean(data.name) || 'Phòng mới', subjects: clean(data.subjects) });
+        }
+
+        function addAssignment(data = {}) {
+            state.assignments.push({
+                id: data.id || uid('a'),
+                classId: data.classId || state.classes[0]?.id || '',
+                subject: clean(data.subject) || state.teachers.find(t => t.id === data.teacherId)?.subject || '',
+                teacherId: data.teacherId || state.teachers[0]?.id || '',
+                periods: Number(data.periods || 1),
+                roomNeed: clean(data.roomNeed),
+                note: clean(data.note),
+            });
+        }
+
+        function ensureClassByName(name, shift = 'morning') {
+            const wanted = normalizeText(name);
+            let found = state.classes.find(c => normalizeText(c.name) === wanted);
+            if (!found) {
+                found = { id: uid('c'), name: clean(name), shift, homeRoom: clean(name) };
+                state.classes.push(found);
+            }
+            return found;
+        }
+
+        function findTeacherByName(name) {
+            const wanted = normalizeText(name);
+            return state.teachers.find(t => normalizeText(t.name) === wanted);
+        }
+
+        async function importTeacherFile(file) {
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            const importedAssignments = [];
+            let addedTeachers = 0;
+
+            rows.forEach(row => {
+                const name = headerValue(row, ['Họ tên', 'Ho ten', 'Giáo viên', 'Giao vien', 'Tên giáo viên', 'Ten giao vien']);
+                if (!name) return;
+                const subject = headerValue(row, ['Môn', 'Mon', 'Môn chính', 'Mon chinh', 'Bộ môn', 'Bo mon']);
+                const className = headerValue(row, ['Lớp', 'Lop', 'Lớp dạy', 'Lop day']);
+                const periods = Number(headerValue(row, ['Số tiết/tuần', 'So tiet/tuan', 'Số tiết', 'So tiet', 'Tiet']) || 0);
+                const unavailable = headerValue(row, ['Buổi tránh', 'Buoi tranh', 'Lịch bận', 'Lich ban', 'Không dạy', 'Khong day']);
+                const preferredRooms = headerValue(row, ['Phòng ưu tiên', 'Phong uu tien', 'Phòng', 'Phong']);
+                const maxPeriods = Number(headerValue(row, ['Số tiết tối đa', 'So tiet toi da', 'Định mức', 'Dinh muc']) || 24);
+
+                let teacher = findTeacherByName(name);
+                if (!teacher) {
+                    teacher = { id: uid('t'), name, subject, maxPeriods, unavailable, preferredRooms };
+                    state.teachers.push(teacher);
+                    addedTeachers++;
+                } else {
+                    teacher.subject = teacher.subject || subject;
+                    teacher.unavailable = teacher.unavailable || unavailable;
+                    teacher.preferredRooms = teacher.preferredRooms || preferredRooms;
+                    teacher.maxPeriods = teacher.maxPeriods || maxPeriods;
+                }
+
+                if (className && periods > 0) {
+                    const classes = splitList(className);
+                    classes.forEach(label => importedAssignments.push({
+                        className: label,
+                        teacherName: name,
+                        teacherId: teacher.id,
+                        subject,
+                        periods,
+                        roomNeed: preferredRooms,
+                    }));
+                }
+            });
+
+            state.importedAssignments = importedAssignments;
+            buildAssignmentsFromImport(false);
+            $('importNotice').textContent = `Đã nhập ${addedTeachers} giáo viên mới, nhận diện ${importedAssignments.length} dòng phân công.`;
+            $('importNotice').classList.remove('hidden');
+            renderAll();
+        }
+
+        function buildAssignmentsFromImport(showNotice = true) {
+            if (!state.importedAssignments.length) {
+                if (showNotice) alert('Chưa có dòng phân công trong Excel. Cần có cột Lớp và Số tiết/tuần.');
+                return;
+            }
+            const existingKeys = new Set(state.assignments.map(a => `${a.classId}|${a.teacherId}|${normalizeText(a.subject)}`));
+            state.importedAssignments.forEach(item => {
+                const classItem = ensureClassByName(item.className);
+                const key = `${classItem.id}|${item.teacherId}|${normalizeText(item.subject)}`;
+                if (existingKeys.has(key)) return;
+                addAssignment({ classId: classItem.id, teacherId: item.teacherId, subject: item.subject, periods: item.periods, roomNeed: item.roomNeed });
+                existingKeys.add(key);
+            });
+            renderAll();
+        }
+
+        function parseUnavailable(value) {
+            const text = normalizeText(value).replace(/thu\s*/g, 't').replace(/sang/g, 's').replace(/chieu/g, 'c');
+            const set = new Set();
+            text.split(/[,\n;]+/).forEach(part => {
+                const compact = part.replace(/\s+/g, '').toUpperCase();
+                const match = compact.match(/T?([2-7])([SC])?/);
+                if (!match) return;
+                const day = `T${match[1]}`;
+                const session = match[2];
+                if (session) set.add(`${day}-${session === 'S' ? 'morning' : 'afternoon'}`);
+                else {
+                    set.add(`${day}-morning`);
+                    set.add(`${day}-afternoon`);
+                }
+            });
+            return set;
+        }
+
+        function slotsForClass(classItem) {
+            const sessions = classItem.shift === 'both' ? ['morning', 'afternoon'] : [classItem.shift || 'morning'];
+            const slots = [];
+            state.rules.days.forEach(day => {
+                sessions.forEach(session => {
+                    const count = session === 'morning' ? state.rules.morningPeriods : state.rules.afternoonPeriods;
+                    for (let period = 1; period <= count; period++) {
+                        slots.push({ day, session, period, key: `${day}-${session}-${period}` });
+                    }
+                });
+            });
+            return slots;
+        }
+
+        function roomMatches(room, needOrSubject) {
+            const need = normalizeText(needOrSubject);
+            if (!need) return false;
+            return splitList(room.subjects).some(s => {
+                const ns = normalizeText(s);
+                return ns && (need.includes(ns) || ns.includes(need));
+            }) || normalizeText(room.name).includes(need);
+        }
+
+        function chooseRoom(assignment, slot, roomBusy) {
+            const classItem = state.classes.find(c => c.id === assignment.classId);
+            const need = assignment.roomNeed || assignment.subject;
+            const candidates = state.rooms.filter(room => roomMatches(room, need));
+            for (const room of candidates) {
+                const key = `${room.name}|${slot.day}|${slot.session}|${slot.period}`;
+                if (!roomBusy.has(key)) return room.name;
+            }
+            return classItem?.homeRoom || classItem?.name || '';
+        }
+
+        function buildLessonUnits() {
+            const units = [];
+            state.assignments.forEach(assignment => {
+                const classItem = state.classes.find(c => c.id === assignment.classId);
+                const teacher = state.teachers.find(t => t.id === assignment.teacherId);
+                const periods = Math.max(0, Number(assignment.periods || 0));
+                if (!classItem || !teacher || !assignment.subject || periods <= 0) return;
+                for (let i = 0; i < periods; i++) {
+                    units.push({ ...assignment, unit: i + 1, className: classItem.name, teacherName: teacher.name });
+                }
+            });
+            return units.sort((a, b) => {
+                const ta = state.assignments.filter(x => x.teacherId === a.teacherId).reduce((sum, x) => sum + Number(x.periods || 0), 0);
+                const tb = state.assignments.filter(x => x.teacherId === b.teacherId).reduce((sum, x) => sum + Number(x.periods || 0), 0);
+                return tb - ta || b.periods - a.periods;
+            });
+        }
+
+        function roomOptionsForLesson(lesson, slot) {
+            const classItem = state.classes.find(c => c.id === lesson.classId);
+            const need = lesson.roomNeed || lesson.subject;
+            const specialized = state.rooms
+                .filter(room => roomMatches(room, need))
+                .map(room => room.name)
+                .filter(Boolean);
+            const rooms = specialized.length ? specialized : [classItem?.homeRoom || classItem?.name || ''];
+            return Array.from(new Set(rooms.filter(Boolean))).map(room => ({ ...slot, room }));
+        }
+
+        function buildBaseDomains(lessons) {
+            const teacherUnavailable = Object.fromEntries(state.teachers.map(t => [t.id, parseUnavailable(t.unavailable)]));
+            return lessons.map(lesson => {
+                const classItem = state.classes.find(c => c.id === lesson.classId);
+                if (!classItem) return [];
+                const slots = slotsForClass(classItem).filter(slot => !teacherUnavailable[lesson.teacherId]?.has(`${slot.day}-${slot.session}`));
+                return slots.flatMap(slot => roomOptionsForLesson(lesson, slot));
+            });
+        }
+
+        function makeIssue(message, type = 'infeasible') {
+            return { type, message };
+        }
+
+        function precheckSchedule(lessons, domains) {
+            const issues = [];
+            const classLoad = {};
+            const teacherLoad = {};
+            lessons.forEach(lesson => {
+                classLoad[lesson.classId] = (classLoad[lesson.classId] || 0) + 1;
+                teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+            });
+
+            state.classes.forEach(c => {
+                const capacity = slotsForClass(c).length;
+                if ((classLoad[c.id] || 0) > capacity) {
+                    issues.push(makeIssue(`${c.name} có ${classLoad[c.id]} tiết cần xếp nhưng chỉ có ${capacity} ô học theo cấu hình buổi học.`));
+                }
+            });
+
+            state.teachers.forEach(t => {
+                const load = teacherLoad[t.id] || 0;
+                if (load > Number(t.maxPeriods || 99)) {
+                    issues.push(makeIssue(`${t.name} được phân công ${load} tiết/tuần, vượt định mức ${t.maxPeriods} tiết/tuần.`));
+                }
+            });
+
+            const classSubjectLoad = {};
+            lessons.forEach(lesson => {
+                const key = `${lesson.classId}|${normalizeText(lesson.subject)}`;
+                classSubjectLoad[key] = (classSubjectLoad[key] || 0) + 1;
+            });
+            Object.entries(classSubjectLoad).forEach(([key, load]) => {
+                const [classId, subjectKey] = key.split('|');
+                const classItem = state.classes.find(c => c.id === classId);
+                const lesson = lessons.find(item => item.classId === classId && normalizeText(item.subject) === subjectKey);
+                const capacity = state.rules.days.length * state.rules.maxSameSubjectDay;
+                if (load > capacity) {
+                    issues.push(makeIssue(`${classItem?.name || 'Lớp'} - ${lesson?.subject || 'môn học'} có ${load} tiết/tuần, vượt giới hạn ${state.rules.maxSameSubjectDay} tiết/môn/ngày trong ${state.rules.days.length} ngày học.`));
+                }
+            });
+
+            lessons.forEach((lesson, index) => {
+                if (!domains[index]?.length) {
+                    issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, buổi tránh của giáo viên và phòng bộ môn.`));
+                }
+            });
+
+            return issues;
+        }
+
+        function gapCount(periods) {
+            const list = Array.from(new Set(periods.filter(Number))).sort((a, b) => a - b);
+            if (list.length <= 1) return 0;
+            let gaps = 0;
+            for (let period = list[0]; period <= list[list.length - 1]; period++) {
+                if (!list.includes(period)) gaps++;
+            }
+            return gaps;
+        }
+
+        function evaluateBeauty(lessons, assignments) {
+            const classBuckets = new Map();
+            const teacherBuckets = new Map();
+            const subjectDay = new Map();
+            let latePenalty = 0;
+            let roomPenalty = 0;
+
+            assignments.forEach((option, index) => {
+                if (!option) return;
+                const lesson = lessons[index];
+                const classKey = `${lesson.classId}|${option.day}|${option.session}`;
+                const teacherKey = `${lesson.teacherId}|${option.day}|${option.session}`;
+                const subjectKey = `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}`;
+                if (!classBuckets.has(classKey)) classBuckets.set(classKey, []);
+                if (!teacherBuckets.has(teacherKey)) teacherBuckets.set(teacherKey, []);
+                if (!subjectDay.has(subjectKey)) subjectDay.set(subjectKey, 0);
+                classBuckets.get(classKey).push(option.period);
+                teacherBuckets.get(teacherKey).push(option.period);
+                subjectDay.set(subjectKey, subjectDay.get(subjectKey) + 1);
+                latePenalty += option.period * 0.35 + (option.session === 'afternoon' ? 0.4 : 0);
+                if (lesson.roomNeed && !roomMatches({ name: option.room, subjects: lesson.roomNeed }, lesson.roomNeed)) roomPenalty += 6;
+            });
+
+            let classGaps = 0;
+            let teacherGaps = 0;
+            let singleLessonTeacherSessions = 0;
+            classBuckets.forEach(periods => { classGaps += gapCount(periods); });
+            teacherBuckets.forEach(periods => {
+                teacherGaps += gapCount(periods);
+                if (periods.length === 1) singleLessonTeacherSessions++;
+            });
+
+            let sameSubjectSameDay = 0;
+            subjectDay.forEach(count => {
+                if (count > 1) sameSubjectSameDay += count - 1;
+            });
+
+            const score =
+                classGaps * 130 +
+                teacherGaps * 90 +
+                sameSubjectSameDay * 38 +
+                singleLessonTeacherSessions * 12 +
+                latePenalty +
+                roomPenalty;
+
+            return {
+                score: Math.round(score * 100) / 100,
+                classGaps,
+                teacherGaps,
+                sameSubjectSameDay,
+                singleLessonTeacherSessions,
+            };
+        }
+
+        function solveByConstraints(lessons, domains) {
+            const maxDepth = lessons.length > 1000 ? 12 : lessons.length > 700 ? 14 : 22;
+            const maxAttempts = lessons.length > 1000 ? 12 : lessons.length > 700 ? 16 : 28;
+            const nodeBudget = lessons.length > 1000 ? 520000 : lessons.length > 700 ? 760000 : 1150000;
+            let totalNodes = 0;
+            let deepest = 0;
+            let bestBlocked = null;
+            let bestSolution = null;
+            let bestBeauty = null;
+            let bestPartial = null;
+            let bestPartialPlaced = 0;
+
+            const subjectDayKey = (lesson, option) => `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}`;
+            const resourceKeys = (lesson, option) => ({
+                classKey: `${lesson.classId}|${option.day}|${option.session}|${option.period}`,
+                teacherKey: `${lesson.teacherId}|${option.day}|${option.session}|${option.period}`,
+                roomKey: `${option.room}|${option.day}|${option.session}|${option.period}`,
+                subjectKey: subjectDayKey(lesson, option),
+            });
+
+            const difficultyOrder = lessons.map((lesson, index) => ({
+                index,
+                size: domains[index].length,
+                load: lessons.filter(other => other.teacherId === lesson.teacherId || other.classId === lesson.classId).length,
+            })).sort((a, b) => a.size - b.size || b.load - a.load).map(item => item.index);
+
+            function rememberPartial(assignments, beauty = null) {
+                const placed = assignments.filter(Boolean).length;
+                if (placed > bestPartialPlaced) {
+                    bestPartialPlaced = placed;
+                    bestPartial = assignments.slice();
+                    bestBeauty = beauty ? { ...beauty, placed } : bestBeauty;
+                }
+            }
+
+            function makeSolver(attempt) {
+                let assignments = new Array(lessons.length).fill(null);
+                let classSlotMap = new Map();
+                let teacherSlotMap = new Map();
+                let roomSlotMap = new Map();
+                let subjectDayMap = new Map();
+                let nodes = 0;
+
+                function snapshot() {
+                    return {
+                        assignments: assignments.slice(),
+                        classSlotMap: new Map(classSlotMap),
+                        teacherSlotMap: new Map(teacherSlotMap),
+                        roomSlotMap: new Map(roomSlotMap),
+                        subjectDayMap: new Map(Array.from(subjectDayMap, ([key, value]) => [key, new Set(value)])),
+                    };
+                }
+
+                function restore(snap) {
+                    assignments = snap.assignments;
+                    classSlotMap = snap.classSlotMap;
+                    teacherSlotMap = snap.teacherSlotMap;
+                    roomSlotMap = snap.roomSlotMap;
+                    subjectDayMap = snap.subjectDayMap;
+                }
+
+                function addSubjectDay(key, index) {
+                    if (!subjectDayMap.has(key)) subjectDayMap.set(key, new Set());
+                    subjectDayMap.get(key).add(index);
+                }
+
+                function place(index, option) {
+                    const lesson = lessons[index];
+                    const keys = resourceKeys(lesson, option);
+                    assignments[index] = option;
+                    classSlotMap.set(keys.classKey, index);
+                    teacherSlotMap.set(keys.teacherKey, index);
+                    roomSlotMap.set(keys.roomKey, index);
+                    addSubjectDay(keys.subjectKey, index);
+                }
+
+                function unplace(index) {
+                    const option = assignments[index];
+                    if (!option) return;
+                    const lesson = lessons[index];
+                    const keys = resourceKeys(lesson, option);
+                    assignments[index] = null;
+                    classSlotMap.delete(keys.classKey);
+                    teacherSlotMap.delete(keys.teacherKey);
+                    roomSlotMap.delete(keys.roomKey);
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    if (subjectSet) {
+                        subjectSet.delete(index);
+                        if (!subjectSet.size) subjectDayMap.delete(keys.subjectKey);
+                    }
+                }
+
+                function conflictsFor(index, option, path) {
+                    const lesson = lessons[index];
+                    const keys = resourceKeys(lesson, option);
+                    const conflicts = new Set();
+                    [classSlotMap.get(keys.classKey), teacherSlotMap.get(keys.teacherKey), roomSlotMap.get(keys.roomKey)]
+                        .forEach(conflict => {
+                            if (conflict !== undefined && conflict !== index) conflicts.add(conflict);
+                        });
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    const subjectCount = subjectSet ? subjectSet.size : 0;
+                    if (subjectCount >= state.rules.maxSameSubjectDay) {
+                        const movable = Array.from(subjectSet || [])
+                            .filter(conflict => conflict !== index && !path.has(conflict))
+                            .sort((a, b) => domains[b].length - domains[a].length)[0];
+                        if (movable !== undefined) conflicts.add(movable);
+                        else conflicts.add(Array.from(subjectSet || [])[0]);
+                    }
+                    return Array.from(conflicts).filter(conflict => conflict !== undefined && conflict !== index);
+                }
+
+                function localSoftCost(index, option) {
+                    const lesson = lessons[index];
+                    const classPeriods = [];
+                    const teacherPeriods = [];
+                    assignments.forEach((placed, placedIndex) => {
+                        if (!placed || placedIndex === index) return;
+                        const other = lessons[placedIndex];
+                        if (placed.day === option.day && placed.session === option.session && other.classId === lesson.classId) classPeriods.push(placed.period);
+                        if (placed.day === option.day && placed.session === option.session && other.teacherId === lesson.teacherId) teacherPeriods.push(placed.period);
+                    });
+                    const classBefore = gapCount(classPeriods);
+                    const teacherBefore = gapCount(teacherPeriods);
+                    const classAfter = gapCount([...classPeriods, option.period]);
+                    const teacherAfter = gapCount([...teacherPeriods, option.period]);
+                    const adjacentClass = classPeriods.some(period => Math.abs(period - option.period) === 1);
+                    const adjacentTeacher = teacherPeriods.some(period => Math.abs(period - option.period) === 1);
+                    const subjectCount = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
+                    return (
+                        (classAfter - classBefore) * 110 +
+                        (teacherAfter - teacherBefore) * 70 +
+                        subjectCount * 35 +
+                        option.period * 0.8 +
+                        (option.session === 'afternoon' ? 0.6 : 0) -
+                        (adjacentClass ? 16 : 0) -
+                        (adjacentTeacher ? 10 : 0) +
+                        ((attempt * 17 + option.period * 13 + option.day.charCodeAt(1)) % 11) * 0.03
+                    );
+                }
+
+                function orderedOptions(index, path) {
+                    return domains[index].map(option => {
+                        const conflicts = conflictsFor(index, option, path);
+                        return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
+                    }).sort((a, b) => {
+                        const jitterA = ((attempt + 3) * (a.option.period + 5) * (a.option.day.charCodeAt(1) + 7)) % 17;
+                        const jitterB = ((attempt + 3) * (b.option.period + 5) * (b.option.day.charCodeAt(1) + 7)) % 17;
+                        return (a.cost + jitterA * 0.02) - (b.cost + jitterB * 0.02);
+                    });
+                }
+
+                function recursivePlace(index, depth, path) {
+                    nodes++;
+                    totalNodes++;
+                    deepest = Math.max(deepest, assignments.filter(Boolean).length);
+                    if (totalNodes > nodeBudget) {
+                        rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                        return false;
+                    }
+                    if (assignments[index]) return true;
+
+                    const candidates = orderedOptions(index, path);
+                    for (const candidate of candidates) {
+                        if (candidate.conflicts.some(conflict => path.has(conflict))) continue;
+                        if (candidate.conflicts.length && depth <= 0) continue;
+                        if (candidate.conflicts.length > 4) continue;
+
+                        const snap = snapshot();
+                        candidate.conflicts.forEach(unplace);
+                        place(index, candidate.option);
+
+                        let ok = true;
+                        const nextPath = new Set(path);
+                        nextPath.add(index);
+                        const displaced = candidate.conflicts.sort((a, b) => domains[a].length - domains[b].length);
+                        for (const conflict of displaced) {
+                            if (!recursivePlace(conflict, depth - 1, nextPath)) {
+                                ok = false;
+                                bestBlocked = lessons[conflict];
+                                break;
+                            }
+                        }
+                        if (ok) return true;
+                        restore(snap);
+                    }
+
+                    rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                    bestBlocked = lessons[index];
+                    return false;
+                }
+
+                function improve(maxChecks = 2500) {
+                    let currentBeauty = evaluateBeauty(lessons, assignments);
+                    let checks = 0;
+                    let improved = true;
+                    while (improved && checks < maxChecks) {
+                        improved = false;
+                        const order = lessons.map((_, index) => index).sort((a, b) => domains[a].length - domains[b].length);
+                        for (const index of order) {
+                            if (checks >= maxChecks) break;
+                            const current = assignments[index];
+                            if (!current) continue;
+                            const snap = snapshot();
+                            unplace(index);
+                            const candidates = domains[index]
+                                .filter(option => !conflictsFor(index, option, new Set()).length)
+                                .sort((a, b) => localSoftCost(index, a) - localSoftCost(index, b))
+                                .slice(0, 12);
+                            let accepted = false;
+                            for (const option of candidates) {
+                                checks++;
+                                place(index, option);
+                                const beauty = evaluateBeauty(lessons, assignments);
+                                if (beauty.score + 0.01 < currentBeauty.score) {
+                                    currentBeauty = beauty;
+                                    accepted = true;
+                                    improved = true;
+                                    break;
+                                }
+                                unplace(index);
+                            }
+                            if (!accepted) restore(snap);
+                        }
+                    }
+                    return currentBeauty;
+                }
+
+                function run() {
+                    const order = attempt % 2
+                        ? difficultyOrder.slice().sort((a, b) => domains[a].length - domains[b].length || ((a * 31 + attempt) % 7) - ((b * 31 + attempt) % 7))
+                        : difficultyOrder;
+                    for (const index of order) {
+                        if (!recursivePlace(index, maxDepth, new Set([index]))) {
+                            const beauty = evaluateBeauty(lessons, assignments);
+                            rememberPartial(assignments, beauty);
+                            return { ok: false, assignments: assignments.slice(), nodes, placed: assignments.filter(Boolean).length, beauty };
+                        }
+                    }
+                    const beauty = improve(lessons.length > 700 ? 1800 : 3500);
+                    return { ok: true, assignments, nodes, placed: assignments.filter(Boolean).length, beauty };
+                }
+
+                return { run };
+            }
+
+            for (let attempt = 0; attempt < maxAttempts && totalNodes <= nodeBudget; attempt++) {
+                const result = makeSolver(attempt).run();
+                if (result.ok) {
+                    if (!bestSolution || result.beauty.score < bestBeauty.score) {
+                        bestSolution = result.assignments.slice();
+                        bestBeauty = result.beauty;
+                    }
+                } else if (!bestSolution && (!bestBeauty || result.placed > (bestBeauty.placed || 0))) {
+                    bestBeauty = { ...result.beauty, placed: result.placed };
+                    rememberPartial(result.assignments, result.beauty);
+                }
+            }
+
+            function runMrvFallback() {
+                if (bestSolution || lessons.length > 420 || totalNodes > nodeBudget) return null;
+
+                let assignments = new Array(lessons.length).fill(null);
+                let classSlotMap = new Map();
+                let teacherSlotMap = new Map();
+                let roomSlotMap = new Map();
+                let subjectDayMap = new Map();
+                const maxFallbackNodes = lessons.length > 240 ? 160000 : 260000;
+                let fallbackNodes = 0;
+
+                function keysFor(index, option) {
+                    const lesson = lessons[index];
+                    return resourceKeys(lesson, option);
+                }
+
+                function canPlace(index, option) {
+                    const keys = keysFor(index, option);
+                    if (classSlotMap.has(keys.classKey) || teacherSlotMap.has(keys.teacherKey) || roomSlotMap.has(keys.roomKey)) return false;
+                    return (subjectDayMap.get(keys.subjectKey)?.size || 0) < state.rules.maxSameSubjectDay;
+                }
+
+                function place(index, option) {
+                    const keys = keysFor(index, option);
+                    assignments[index] = option;
+                    classSlotMap.set(keys.classKey, index);
+                    teacherSlotMap.set(keys.teacherKey, index);
+                    roomSlotMap.set(keys.roomKey, index);
+                    if (!subjectDayMap.has(keys.subjectKey)) subjectDayMap.set(keys.subjectKey, new Set());
+                    subjectDayMap.get(keys.subjectKey).add(index);
+                }
+
+                function unplace(index) {
+                    const option = assignments[index];
+                    if (!option) return;
+                    const keys = keysFor(index, option);
+                    assignments[index] = null;
+                    classSlotMap.delete(keys.classKey);
+                    teacherSlotMap.delete(keys.teacherKey);
+                    roomSlotMap.delete(keys.roomKey);
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    if (subjectSet) {
+                        subjectSet.delete(index);
+                        if (!subjectSet.size) subjectDayMap.delete(keys.subjectKey);
+                    }
+                }
+
+                function fallbackCost(index, option) {
+                    const lesson = lessons[index];
+                    const classPeriods = [];
+                    const teacherPeriods = [];
+                    assignments.forEach((placed, placedIndex) => {
+                        if (!placed) return;
+                        const other = lessons[placedIndex];
+                        if (placed.day === option.day && placed.session === option.session && other.classId === lesson.classId) classPeriods.push(placed.period);
+                        if (placed.day === option.day && placed.session === option.session && other.teacherId === lesson.teacherId) teacherPeriods.push(placed.period);
+                    });
+                    const classAfter = gapCount([...classPeriods, option.period]);
+                    const teacherAfter = gapCount([...teacherPeriods, option.period]);
+                    const sameSubject = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
+                    return classAfter * 120 + teacherAfter * 80 + sameSubject * 30 + option.period * 0.5;
+                }
+
+                function nextIndex() {
+                    let best = null;
+                    for (let index = 0; index < lessons.length; index++) {
+                        if (assignments[index]) continue;
+                        const feasible = domains[index].filter(option => canPlace(index, option));
+                        if (!feasible.length) return { index, candidates: [] };
+                        const item = { index, candidates: feasible };
+                        if (!best || feasible.length < best.candidates.length || (feasible.length === best.candidates.length && domains[index].length < domains[best.index].length)) best = item;
+                    }
+                    return best;
+                }
+
+                function search() {
+                    fallbackNodes++;
+                    totalNodes++;
+                    deepest = Math.max(deepest, assignments.filter(Boolean).length);
+                    if (fallbackNodes > maxFallbackNodes || totalNodes > nodeBudget) {
+                        rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                        return false;
+                    }
+
+                    const next = nextIndex();
+                    if (!next) return true;
+                    if (!next.candidates.length) {
+                        bestBlocked = lessons[next.index];
+                        rememberPartial(assignments, evaluateBeauty(lessons, assignments));
+                        return false;
+                    }
+
+                    const cap = lessons.length > 240 ? 30 : next.candidates.length;
+                    const candidates = next.candidates
+                        .sort((a, b) => fallbackCost(next.index, a) - fallbackCost(next.index, b))
+                        .slice(0, cap);
+
+                    for (const option of candidates) {
+                        place(next.index, option);
+                        if (search()) return true;
+                        unplace(next.index);
+                    }
+                    bestBlocked = lessons[next.index];
+                    return false;
+                }
+
+                const ok = search();
+                const beauty = evaluateBeauty(lessons, assignments);
+                rememberPartial(assignments, beauty);
+                return { ok, assignments: assignments.slice(), nodes: fallbackNodes, placed: assignments.filter(Boolean).length, beauty };
+            }
+
+            const fallback = runMrvFallback();
+            if (fallback?.ok) {
+                bestSolution = fallback.assignments.slice();
+                bestBeauty = fallback.beauty;
+            }
+
+            return {
+                ok: !!bestSolution,
+                assignments: bestSolution || bestPartial || new Array(lessons.length).fill(null),
+                nodes: totalNodes,
+                deepest,
+                blockedLesson: bestBlocked,
+                beauty: bestBeauty,
+            };
+        }
+
+        function generateSchedule() {
+            readRulesFromInputs();
+            const byClass = {};
+            state.classes.forEach(c => { byClass[c.id] = {}; });
+            const lessons = buildLessonUnits();
+            const domains = buildBaseDomains(lessons);
+            const precheckIssues = precheckSchedule(lessons, domains);
+
+            if (precheckIssues.length) {
+                state.result = {
+                    byClass,
+                    issues: precheckIssues,
+                    generatedAt: new Date().toISOString(),
+                    teacherLoad: {},
+                    status: 'infeasible',
+                    solver: { nodes: 0, deepest: 0, total: lessons.length },
+                };
+                state.activeResult = 'issues';
+                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+                renderResultControls();
+                renderSchedule();
+                return;
+            }
+
+            const solved = solveByConstraints(lessons, domains);
+            const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
+            const issues = [];
+
+            if (solved.assignments.some(Boolean)) {
+                lessons.forEach((lesson, index) => {
+                    const option = solved.assignments[index];
+                    if (!option) return;
+                    const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
+                    byClass[lesson.classId][option.key] = cell;
+                    teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+                });
+            } else {
+                const blocked = solved.blockedLesson;
+                issues.push(makeIssue(
+                    blocked
+                        ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                        : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
+                ));
+            }
+
+            if (!solved.ok && !issues.length) {
+                const placed = solved.assignments.filter(Boolean).length;
+                const blocked = solved.blockedLesson;
+                issues.push(makeIssue(
+                    blocked
+                        ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                        : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.`
+                ));
+            }
+
+            state.result = {
+                byClass,
+                issues,
+                generatedAt: new Date().toISOString(),
+                teacherLoad,
+                status: solved.ok ? 'complete' : (solved.assignments.some(Boolean) ? 'partial' : 'infeasible'),
+                solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
+                beauty: solved.beauty,
+            };
+            state.activeResult = solved.ok ? 'class' : 'issues';
+            document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
+            renderResultControls();
+            renderSchedule();
+        }
+
+        function sessionText(session) {
+            return session === 'afternoon' ? 'Chiều' : 'Sáng';
+        }
+
+        function scheduleCellHtml(cell, mode) {
+            if (!cell) return '<div class="min-h-[54px] text-xs text-slate-300">Trống</div>';
+            const title = mode === 'teacher' ? cell.className : cell.subject;
+            const sub = mode === 'teacher' ? cell.subject : cell.teacherName;
+            return `<div class="lesson-chip bg-teal-50 text-teal-950">
+                <div class="font-black">${escapeHtml(title)}</div>
+                <div class="mt-1 text-xs text-teal-800">${escapeHtml(sub)}</div>
+                <div class="mt-1 text-[11px] font-bold text-slate-500">${escapeHtml(cell.room || '')}</div>
+            </div>`;
+        }
+
+        function renderTableForClass(classItem) {
+            const slots = slotsForClass(classItem);
+            const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) })).filter(g => g.slots.length);
+            const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
+            let rows = '';
+            for (let i = 0; i < maxRows; i++) {
+                rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
+                    const slot = group.slots[i];
+                    if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
+                    const cell = state.result?.byClass?.[classItem.id]?.[slot.key];
+                    return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'class')}</td>`;
+                }).join('')}</tr>`;
+            }
+            return `<div class="mb-5">
+                <h3 class="mb-2 text-base font-black">${escapeHtml(classItem.name)} <span class="text-sm font-bold text-slate-500">· ${shiftLabel(classItem.shift)}</span></h3>
+                <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
+                    <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+
+        function teacherCells(teacherId) {
+            const cells = [];
+            Object.values(state.result?.byClass || {}).forEach(map => {
+                Object.values(map).forEach(cell => { if (cell.teacherId === teacherId) cells.push(cell); });
+            });
+            return cells;
+        }
+
+        function renderTableForTeacher(teacher) {
+            const cells = teacherCells(teacher.id);
+            const slotMap = Object.fromEntries(cells.map(cell => [`${cell.day}-${cell.session}-${cell.period}`, cell]));
+            const slots = [];
+            state.rules.days.forEach(day => {
+                ['morning', 'afternoon'].forEach(session => {
+                    const count = session === 'morning' ? state.rules.morningPeriods : state.rules.afternoonPeriods;
+                    for (let period = 1; period <= count; period++) slots.push({ day, session, period });
+                });
+            });
+            const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) }));
+            const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
+            let rows = '';
+            for (let i = 0; i < maxRows; i++) {
+                rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
+                    const slot = group.slots[i];
+                    if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
+                    const cell = slotMap[`${slot.day}-${slot.session}-${slot.period}`];
+                    return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'teacher')}</td>`;
+                }).join('')}</tr>`;
+            }
+            return `<div class="mb-5">
+                <h3 class="mb-2 text-base font-black">${escapeHtml(teacher.name)} <span class="text-sm font-bold text-slate-500">· ${escapeHtml(teacher.subject || '')} · ${cells.length} tiết</span></h3>
+                <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
+                    <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+
+        function renderResultControls() {
+            const selector = $('viewSelector');
+            if (state.activeResult === 'teacher') {
+                selector.innerHTML = `<option value="all">Tất cả giáo viên</option>${state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}`;
+            } else {
+                selector.innerHTML = `<option value="all">Tất cả lớp</option>${state.classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}`;
+            }
+        }
+
+        function renderSchedule() {
+            const mount = $('scheduleMount');
+            if (!state.result) {
+                mount.innerHTML = `<div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500">Chưa có kết quả xếp lịch.</div>`;
+                $('resultSummary').textContent = 'Chưa xếp lịch. Bấm “Xếp lịch” sau khi nhập dữ liệu.';
+                return;
+            }
+            const totalPlaced = Object.values(state.result.byClass).reduce((sum, map) => sum + Object.keys(map).length, 0);
+            const solverText = state.result.solver ? ` Solver đã xét ${state.result.solver.nodes} nhánh.` : '';
+            const beauty = state.result.beauty;
+            const beautyText = beauty
+                ? ` Điểm đẹp: ${beauty.score}; trống lớp: ${beauty.classGaps}, trống GV: ${beauty.teacherGaps}, môn dồn ngày: ${beauty.sameSubjectSameDay}.`
+                : '';
+            $('resultSummary').textContent = state.result.status === 'complete'
+                ? `Đã xếp đủ 100%: ${totalPlaced}/${state.result.solver?.total || totalPlaced} tiết, không vi phạm ràng buộc.${solverText}${beautyText}`
+                : `Chưa có lịch khả thi: mới xếp ${totalPlaced}/${state.result.solver?.total || totalPlaced} tiết. Cần xử lý ${state.result.issues.length} điểm nghẽn.${solverText}`;
+
+            const selected = $('viewSelector').value || 'all';
+            if (state.activeResult === 'issues') {
+                mount.innerHTML = state.result.issues.length ? `
+                    <div class="space-y-2">
+                        ${state.result.issues.map(issue => `<div class="conflict-row rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900">${escapeHtml(issue.message)}</div>`).join('')}
+                    </div>
+                ` : `<div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center text-sm font-bold text-emerald-900">Không có cảnh báo. Lịch đã xếp hết theo các ràng buộc hiện tại.</div>`;
+                return;
+            }
+
+            if (state.activeResult === 'teacher') {
+                const teachers = selected === 'all' ? state.teachers : state.teachers.filter(t => t.id === selected);
+                mount.innerHTML = teachers.map(renderTableForTeacher).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có giáo viên.</div>`;
+                return;
+            }
+
+            const classes = selected === 'all' ? state.classes : state.classes.filter(c => c.id === selected);
+            mount.innerHTML = classes.map(renderTableForClass).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có lớp.</div>`;
+        }
+
+        function downloadBlob(filename, content, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadTeacherTemplate() {
+            const rows = [
+                ['Họ tên', 'Môn', 'Lớp', 'Số tiết/tuần', 'Buổi tránh', 'Phòng ưu tiên', 'Số tiết tối đa'],
+                ['Nguyễn Văn A', 'Toán', '6A,6B', 4, 'T2S, T5C', '', 24],
+                ['Trần Thị B', 'Tin học', '6A', 2, 'T3C', 'Tin 1', 20],
+            ];
+            if (window.XLSX) {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                XLSX.utils.book_append_sheet(wb, ws, 'GiaoVien');
+                XLSX.writeFile(wb, 'Mau_GiaoVien_ThoiKhoaBieu.xlsx');
+                return;
+            }
+            downloadBlob('Mau_GiaoVien_ThoiKhoaBieu.csv', '\ufeff' + rows.map(r => r.join(',')).join('\n'), 'text/csv;charset=utf-8');
+        }
+
+        function exportScheduleCsv() {
+            if (!state.result) return alert('Chưa có lịch để xuất.');
+            const rows = [['Lớp', 'Thứ', 'Buổi', 'Tiết', 'Môn', 'Giáo viên', 'Phòng']];
+            state.classes.forEach(c => {
+                Object.values(state.result.byClass[c.id] || {}).forEach(cell => rows.push([c.name, cell.day, sessionText(cell.session), cell.period, cell.subject, cell.teacherName, cell.room]));
+            });
+            const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            downloadBlob('ThoiKhoaBieu.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
+        }
+
+        function projectPayload() {
+            readRulesFromInputs();
+            return {
+                teachers: state.teachers,
+                importedAssignments: state.importedAssignments,
+                classes: state.classes,
+                rooms: state.rooms,
+                assignments: state.assignments,
+                rules: state.rules,
+            };
+        }
+
+        function applyProject(project, result = null, meta = null) {
+            if (!project || typeof project !== 'object') return false;
+            Object.assign(state, {
+                teachers: Array.isArray(project.teachers) ? project.teachers : [],
+                importedAssignments: Array.isArray(project.importedAssignments) ? project.importedAssignments : [],
+                classes: Array.isArray(project.classes) ? project.classes : [],
+                rooms: Array.isArray(project.rooms) ? project.rooms : [],
+                assignments: Array.isArray(project.assignments) ? project.assignments : [],
+                rules: project.rules || state.rules,
+                result: result || null,
+                activeResult: result?.status === 'infeasible' ? 'issues' : 'class',
+                projectMeta: meta,
+            });
+            syncRuleInputs();
+            renderAll();
+            renderResultControls();
+            renderSchedule();
+            return true;
+        }
+
+        async function loadHostingProject() {
+            try {
+                const res = await fetch('api/thoikhoabieu.php?action=latest', { cache: 'no-store', credentials: 'include' });
+                if (!res.ok) return false;
+                const data = await res.json();
+                if (!data.ok || !data.project?.project) return false;
+                return applyProject(data.project.project, data.project.result, {
+                    id: data.project.id,
+                    name: data.project.name,
+                    schoolYear: data.project.school_year,
+                    updatedAt: data.project.updated_at,
+                });
+            } catch {
+                return false;
+            }
+        }
+
+        async function saveDraft() {
+            const payload = projectPayload();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            const button = $('btnSaveDraft');
+            const oldText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2 text-teal-700"></i>Đang lưu...';
+            try {
+                const res = await fetch('api/thoikhoabieu.php?action=save', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Thời khóa biểu nhà trường',
+                        project: payload,
+                        result: state.result,
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok) {
+                    throw new Error(data.error || 'Không lưu được thời khóa biểu lên hosting.');
+                }
+                state.projectMeta = {
+                    id: data.project?.id || null,
+                    name: data.project?.name || 'Thời khóa biểu nhà trường',
+                    schoolYear: data.project?.school_year || '',
+                    updatedAt: data.project?.updated_at || null,
+                };
+                alert(data.message || 'Đã lưu thời khóa biểu lên hosting.');
+            } catch (error) {
+                alert(`${error.message}\n\nĐã giữ một bản dự phòng tạm trên trình duyệt này, nhưng chưa lưu lên hosting.`);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = oldText;
+            }
+        }
+
+        function loadDraft() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const data = JSON.parse(raw);
+                return applyProject(data, null, { source: 'localStorage' });
+            } catch {
+                return false;
+            }
+        }
+
+        function loadSampleData() {
+            state.teachers = [];
+            state.classes = [];
+            state.rooms = [];
+            state.assignments = [];
+            [
+                ['Nguyễn Văn An', 'Toán', 24, 'T2S', ''],
+                ['Trần Thị Bình', 'Ngữ văn', 24, '', ''],
+                ['Lê Minh Châu', 'Tiếng Anh', 22, 'T4C', ''],
+                ['Phạm Quốc Dũng', 'Tin học', 18, 'T3C', 'Tin 1'],
+                ['Hoàng Thu Hà', 'Vật lý', 20, '', 'Lý 1'],
+                ['Vũ Hải Nam', 'Hóa học', 20, 'T6S', 'Hóa 1'],
+            ].forEach(([name, subject, maxPeriods, unavailable, preferredRooms]) => addTeacher({ name, subject, maxPeriods, unavailable, preferredRooms }));
+            ['6A', '6B', '7A', '7B'].forEach((name, index) => addClass({ name, shift: index % 2 ? 'morning' : 'both', homeRoom: name }));
+            addRoom({ name: 'Tin 1', subjects: 'Tin học' });
+            addRoom({ name: 'Lý 1', subjects: 'Vật lý, Công nghệ' });
+            addRoom({ name: 'Hóa 1', subjects: 'Hóa học, Sinh học' });
+            state.classes.forEach(c => {
+                addAssignment({ classId: c.id, teacherId: state.teachers[0].id, subject: 'Toán', periods: 4 });
+                addAssignment({ classId: c.id, teacherId: state.teachers[1].id, subject: 'Ngữ văn', periods: 4 });
+                addAssignment({ classId: c.id, teacherId: state.teachers[2].id, subject: 'Tiếng Anh', periods: 3 });
+                addAssignment({ classId: c.id, teacherId: state.teachers[3].id, subject: 'Tin học', periods: 2, roomNeed: 'Tin học' });
+                addAssignment({ classId: c.id, teacherId: state.teachers[4].id, subject: 'Vật lý', periods: 2, roomNeed: 'Vật lý' });
+                addAssignment({ classId: c.id, teacherId: state.teachers[5].id, subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' });
+            });
+            renderAll();
+        }
+
+        function bindEvents() {
+            $('setupTabs').addEventListener('click', e => {
+                const btn = e.target.closest('[data-tab]');
+                if (!btn) return;
+                document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== btn.dataset.tab));
+            });
+            $('resultTabs').addEventListener('click', e => {
+                const btn = e.target.closest('[data-result]');
+                if (!btn) return;
+                state.activeResult = btn.dataset.result;
+                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                renderResultControls();
+                renderSchedule();
+            });
+            $('viewSelector').addEventListener('change', renderSchedule);
+            $('btnAddTeacher').addEventListener('click', () => { addTeacher(); renderAll(); });
+            $('btnAddClass').addEventListener('click', () => {
+                addClass({ name: $('classNameInput').value, shift: $('classShiftInput').value, homeRoom: $('classHomeRoomInput').value });
+                $('classNameInput').value = '';
+                $('classHomeRoomInput').value = '';
+                renderAll();
+            });
+            $('btnAddRoom').addEventListener('click', () => {
+                addRoom({ name: $('roomNameInput').value, subjects: $('roomSubjectInput').value });
+                $('roomNameInput').value = '';
+                $('roomSubjectInput').value = '';
+                renderAll();
+            });
+            $('btnAddAssignment').addEventListener('click', () => { addAssignment(); renderAll(); });
+            $('btnBuildAssignments').addEventListener('click', () => buildAssignmentsFromImport(true));
+            $('btnGenerate').addEventListener('click', generateSchedule);
+            $('btnDownloadTeacherTemplate').addEventListener('click', downloadTeacherTemplate);
+            $('btnExportSchedule').addEventListener('click', exportScheduleCsv);
+            $('btnPrint').addEventListener('click', () => window.print());
+            $('btnSaveDraft').addEventListener('click', saveDraft);
+            $('btnSampleData').addEventListener('click', loadSampleData);
+            $('teacherFile').addEventListener('change', e => {
+                const file = e.target.files?.[0];
+                if (file) importTeacherFile(file).catch(err => alert(`Không đọc được file: ${err.message}`));
+            });
+        }
+
+        async function initTimetablePage() {
+            bindEvents();
+            if (!await loadHostingProject()) {
+                if (!loadDraft()) loadSampleData();
+                syncRuleInputs();
+                renderAll();
+                renderResultControls();
+                renderSchedule();
+            }
+        }
+
+        initTimetablePage();
+    </script>
+</body>
+</html>
