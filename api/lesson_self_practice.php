@@ -278,7 +278,7 @@ if ($method === 'POST' && $action === 'submit') {
 
     $maxFiles = 10;
     $maxBytes = 25 * 1024 * 1024;
-    $allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip', 'rar', 'txt'];
+    $allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'zip', 'rar', 'txt'];
     if (count($files) > $maxFiles) respond(['error' => "Tối đa {$maxFiles} tệp mỗi lần nộp."], 422);
 
     foreach ($files as $file) {

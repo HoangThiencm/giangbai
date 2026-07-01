@@ -2617,6 +2617,22 @@
         loading: false,
         loaded: false,
     };
+    const selfPracticeSelectedFiles = new Map();
+    const SELF_PRACTICE_MAX_FILES = 10;
+    const SELF_PRACTICE_MAX_MB = 25;
+    const SELF_PRACTICE_DOC_ACCEPT = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain',
+        'application/zip',
+        'application/x-rar-compressed',
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.txt'
+    ].join(',');
 
     function normalizeSelfPracticeItem(item) {
         return normalizeExampleItem(item);
@@ -2630,10 +2646,20 @@
             .self-practice-card { border-radius: 16px; border: 1px solid #e2e8f0; background: #fff; padding: 16px; box-shadow: 0 8px 24px rgba(15,23,42,.04); }
             .self-practice-upload { margin-top: 14px; border-radius: 14px; border: 2px dashed #cbd5e1; background: #f8fafc; padding: 14px; }
             .self-practice-upload.is-drag { border-color: #0f766e; background: #f0fdfa; }
+            .self-practice-upload-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+            .self-practice-pick-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 72px; padding: 10px 8px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; color: #0f172a; font-size: 12px; font-weight: 800; line-height: 1.25; text-align: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: border-color .15s ease, background .15s ease, color .15s ease; }
+            .self-practice-pick-btn i { font-size: 18px; color: #0f766e; }
+            .self-practice-pick-btn:hover, .self-practice-pick-btn:focus-visible { border-color: #0f766e; background: #f0fdfa; color: #0f766e; outline: none; }
+            .self-practice-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
             .self-practice-file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
             .self-practice-file-item { display: flex; align-items: center; gap: 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 8px 10px; font-size: 12px; }
+            .self-practice-file-remove { flex-shrink: 0; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: #fff1f2; color: #be123c; cursor: pointer; touch-action: manipulation; }
             .self-practice-history { margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
             .self-practice-history a { color: #0f766e; font-weight: 700; text-decoration: underline; }
+            @media (max-width: 480px) {
+                .self-practice-upload-actions { grid-template-columns: 1fr; }
+                .self-practice-pick-btn { min-height: 52px; flex-direction: row; justify-content: flex-start; padding: 12px 14px; font-size: 14px; }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -2703,12 +2729,21 @@
         const key = 'self_practice_whole';
         return `
             <div class="self-practice-upload" data-self-practice-drop="${key}">
-                <label class="block cursor-pointer text-center">
-                    <input type="file" class="hidden" data-self-practice-input="${key}" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar,.txt">
-                    <div class="mx-auto grid h-10 w-10 place-items-center rounded-lg bg-teal-50 text-teal-700"><i class="fas fa-cloud-arrow-up"></i></div>
-                    <p class="mt-2 text-sm font-bold text-slate-800">Chọn tệp bài làm hoặc kéo thả vào đây</p>
-                    <p class="mt-1 text-xs text-slate-500">Gộp tất cả dạng vào một lần nộp · tối đa 10 tệp · 25 MB/tệp · lưu Google Drive</p>
-                </label>
+                <p class="text-center text-sm font-bold text-slate-800">Chọn cách đính kèm bài làm</p>
+                <p class="mt-1 text-center text-xs text-slate-500">Trên điện thoại: chụp ảnh bài làm hoặc chọn ảnh từ thư viện · tối đa ${SELF_PRACTICE_MAX_FILES} tệp · ${SELF_PRACTICE_MAX_MB} MB/tệp</p>
+                <div class="self-practice-upload-actions">
+                    <button type="button" class="self-practice-pick-btn" data-self-practice-pick="${key}" data-pick-mode="camera" aria-label="Chụp ảnh bài làm">
+                        <i class="fas fa-camera" aria-hidden="true"></i><span>Chụp ảnh</span>
+                    </button>
+                    <button type="button" class="self-practice-pick-btn" data-self-practice-pick="${key}" data-pick-mode="gallery" aria-label="Chọn ảnh từ thư viện">
+                        <i class="fas fa-images" aria-hidden="true"></i><span>Chọn ảnh</span>
+                    </button>
+                    <button type="button" class="self-practice-pick-btn" data-self-practice-pick="${key}" data-pick-mode="file" aria-label="Chọn tệp PDF hoặc Word">
+                        <i class="fas fa-file-arrow-up" aria-hidden="true"></i><span>Chọn tệp</span>
+                    </button>
+                </div>
+                <input type="file" class="self-practice-file-input" data-self-practice-input="${key}" tabindex="-1" aria-hidden="true">
+                <p class="mt-3 hidden text-center text-xs text-slate-400 sm:block">Hoặc kéo thả tệp vào khung này (máy tính)</p>
                 <div class="self-practice-file-list" data-self-practice-file-list="${key}"></div>
                 <label class="mt-3 block text-xs font-bold text-slate-600">Ghi chú (không bắt buộc)
                     <textarea rows="2" class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500" data-self-practice-note="${key}" placeholder="Ví dụ: Em nộp bài làm đầy đủ các dạng"></textarea>
@@ -2721,24 +2756,100 @@
         `;
     }
 
+    function selfPracticeFilesForKey(key) {
+        if (!selfPracticeSelectedFiles.has(key)) selfPracticeSelectedFiles.set(key, []);
+        return selfPracticeSelectedFiles.get(key);
+    }
+
+    function selfPracticeFileKey(file) {
+        return `${file.name}::${file.size}::${file.lastModified || 0}`;
+    }
+
+    function selfPracticeMergeFiles(key, incoming, errorEl) {
+        const current = selfPracticeFilesForKey(key);
+        const maxBytes = SELF_PRACTICE_MAX_MB * 1024 * 1024;
+        const errors = [];
+        incoming.forEach(file => {
+            if (current.length >= SELF_PRACTICE_MAX_FILES) {
+                errors.push(`Chỉ được chọn tối đa ${SELF_PRACTICE_MAX_FILES} tệp.`);
+                return;
+            }
+            if (file.size > maxBytes) {
+                errors.push(`Tệp ${file.name} vượt quá ${SELF_PRACTICE_MAX_MB} MB.`);
+                return;
+            }
+            const dedupeKey = selfPracticeFileKey(file);
+            if (current.some(existing => selfPracticeFileKey(existing) === dedupeKey)) return;
+            current.push(file);
+        });
+        if (errors.length && errorEl) {
+            errorEl.textContent = errors[0];
+            errorEl.classList.remove('hidden');
+        } else if (current.length && errorEl) {
+            errorEl.classList.add('hidden');
+        }
+        return current;
+    }
+
+    function selfPracticeConfigureInput(input, mode) {
+        input.value = '';
+        input.removeAttribute('capture');
+        input.multiple = mode !== 'camera';
+        if (mode === 'camera') {
+            input.accept = 'image/*';
+            input.setAttribute('capture', 'environment');
+        } else if (mode === 'gallery') {
+            input.accept = 'image/jpeg,image/png,image/jpg,image/heic,image/heif,image/webp,image/*';
+        } else {
+            input.accept = SELF_PRACTICE_DOC_ACCEPT;
+        }
+    }
+
+    function selfPracticeRenderFileList(key) {
+        const list = document.querySelector(`[data-self-practice-file-list="${key}"]`);
+        if (!list) return;
+        const files = selfPracticeFilesForKey(key);
+        if (!files.length) {
+            list.innerHTML = '';
+            return;
+        }
+        list.innerHTML = files.map((file, index) => `
+            <div class="self-practice-file-item">
+                <span class="grid h-8 w-8 place-items-center rounded bg-teal-50 text-teal-700"><i class="fas fa-${/^image\//i.test(file.type) ? 'image' : 'file'}"></i></span>
+                <span class="min-w-0 flex-1 truncate font-semibold text-slate-800">${escapeHtml(file.name)}</span>
+                <span class="text-slate-400">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                <button type="button" class="self-practice-file-remove" data-self-practice-remove="${key}" data-file-index="${index}" aria-label="Xóa ${escapeHtml(file.name)}">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
     function bindSelfPracticeUploads(lesson) {
         if (!lesson || (isTeacher() && !isTeacherPreview())) return;
         const canSubmit = !isTeacher();
         document.querySelectorAll('[data-self-practice-input]').forEach(input => {
             const key = input.dataset.selfPracticeInput;
-            const list = document.querySelector(`[data-self-practice-file-list="${key}"]`);
-            const renderFiles = () => {
-                if (!list) return;
-                const files = [...input.files];
-                list.innerHTML = files.map(file => `
-                    <div class="self-practice-file-item">
-                        <span class="grid h-8 w-8 place-items-center rounded bg-teal-50 text-teal-700"><i class="fas fa-file"></i></span>
-                        <span class="min-w-0 flex-1 truncate font-semibold text-slate-800">${escapeHtml(file.name)}</span>
-                        <span class="text-slate-400">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                    </div>
-                `).join('');
+            const errorEl = document.querySelector(`[data-self-practice-error="${key}"]`);
+            if (!selfPracticeSelectedFiles.has(key)) selfPracticeSelectedFiles.set(key, []);
+
+            input.onchange = () => {
+                if (!canSubmit) return;
+                const picked = [...input.files];
+                if (!picked.length) return;
+                selfPracticeMergeFiles(key, picked, errorEl);
+                selfPracticeRenderFileList(key);
+                input.value = '';
             };
-            input.onchange = renderFiles;
+
+            document.querySelectorAll(`[data-self-practice-pick="${key}"]`).forEach(button => {
+                button.onclick = () => {
+                    if (!canSubmit) return;
+                    selfPracticeConfigureInput(input, button.dataset.pickMode || 'file');
+                    input.click();
+                };
+            });
+
             const drop = document.querySelector(`[data-self-practice-drop="${key}"]`);
             if (drop) {
                 ['dragenter', 'dragover'].forEach(name => drop.addEventListener(name, e => {
@@ -2751,23 +2862,41 @@
                 }));
                 drop.addEventListener('drop', e => {
                     if (!canSubmit) return;
-                    input.files = e.dataTransfer.files;
-                    renderFiles();
+                    const dropped = [...(e.dataTransfer?.files || [])];
+                    if (!dropped.length) return;
+                    selfPracticeMergeFiles(key, dropped, errorEl);
+                    selfPracticeRenderFileList(key);
                 });
             }
+        });
+
+        document.querySelectorAll('[data-self-practice-file-list]').forEach(list => {
+            list.onclick = event => {
+                const button = event.target.closest('[data-self-practice-remove]');
+                if (!button || !list.contains(button)) return;
+                const key = button.dataset.selfPracticeRemove;
+                const index = Number(button.dataset.fileIndex);
+                const files = selfPracticeFilesForKey(key);
+                if (!Number.isFinite(index) || index < 0 || index >= files.length) return;
+                files.splice(index, 1);
+                selfPracticeRenderFileList(key);
+            };
+        });
+
+        document.querySelectorAll('[data-self-practice-input]').forEach(input => {
+            selfPracticeRenderFileList(input.dataset.selfPracticeInput);
         });
 
         document.querySelectorAll('[data-self-practice-submit]').forEach(button => {
             button.onclick = async () => {
                 if (!canSubmit) return;
                 const key = button.dataset.selfPracticeSubmit;
-                const input = document.querySelector(`[data-self-practice-input="${key}"]`);
                 const noteEl = document.querySelector(`[data-self-practice-note="${key}"]`);
                 const errorEl = document.querySelector(`[data-self-practice-error="${key}"]`);
-                const files = input?.files ? [...input.files] : [];
+                const files = [...selfPracticeFilesForKey(key)];
                 if (!files.length) {
                     if (errorEl) {
-                        errorEl.textContent = 'Vui lòng chọn ít nhất một tệp.';
+                        errorEl.textContent = 'Vui lòng chụp/chọn ít nhất một ảnh hoặc tệp bài làm.';
                         errorEl.classList.remove('hidden');
                     }
                     return;
@@ -2786,6 +2915,7 @@
                     const res = await fetch('api/lesson_self_practice.php', { method: 'POST', body: form, credentials: 'include', cache: 'no-store' });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) throw new Error(data.error || 'Không nộp được bài.');
+                    selfPracticeSelectedFiles.delete(key);
                     selfPracticeState.loaded = false;
                     await loadSelfPracticeSubmissions(lesson, true);
                     renderSelfPractice(lesson);
@@ -2834,7 +2964,7 @@
                 ${items.length ? `
                 <section class="self-practice-card">
                     <h3 class="font-bold text-slate-900"><i class="fas fa-paper-plane text-teal-700 mr-1"></i> Nộp bài cho giáo viên</h3>
-                    <p class="mt-1 text-sm text-slate-600">Chọn một hoặc nhiều tệp chứa toàn bộ bài làm (mỗi bài học chỉ nộp một lần).</p>
+                    <p class="mt-1 text-sm text-slate-600">Chụp ảnh hoặc chọn tệp chứa toàn bộ bài làm (mỗi bài học chỉ nộp một lần).</p>
                     ${renderSelfPracticeUploadForm(lesson, { canSubmit, showForm, alreadySubmitted })}
                 </section>
                 ` : ''}
