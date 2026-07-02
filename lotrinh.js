@@ -2278,8 +2278,41 @@
         `;
     }
 
-    function preprocessEssayAnswerExpression(raw) {
+    const ESSAY_SUPERSCRIPT_DIGITS = {
+        '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4',
+        '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
+        '⁻': '-', '⁺': '+',
+    };
+
+    function stripEssayAnswerWrappers(raw) {
         let text = String(raw ?? '').trim();
+        if (!text) return '';
+        text = text
+            .replace(/^\$+\s*([\s\S]*?)\s*\$+$/g, '$1')
+            .replace(/^\\\(\s*([\s\S]*?)\s*\\\)$/g, '$1')
+            .replace(/^\\\[\s*([\s\S]*?)\s*\\\]$/g, '$1')
+            .trim();
+        return text;
+    }
+
+    function normalizeExponentNotation(raw) {
+        let text = stripEssayAnswerWrappers(raw);
+        if (!text) return '';
+        text = text.replace(/(\d)([⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+)/g, (_, base, sup) => {
+            const exp = [...sup].map(ch => ESSAY_SUPERSCRIPT_DIGITS[ch] || ch).join('');
+            return `${base}^${exp}`;
+        });
+        text = text.replace(/\^\{([^}]+)\}/g, (_, exp) => `^${String(exp).replace(/\s+/g, '')}`);
+        return text;
+    }
+
+    function isEssayExponentAnswer(value) {
+        const text = normalizeExponentNotation(value);
+        return /^-?(?:\d+(?:\.\d+)?|\d*\.\d+)\^-?(?:\d+(?:\.\d+)?|\d*\.\d+)$/.test(text);
+    }
+
+    function preprocessEssayAnswerExpression(raw) {
+        let text = normalizeExponentNotation(raw);
         if (!text) return '';
         text = text
             .replace(/,/g, '.')
@@ -2310,6 +2343,14 @@
             const denominator = Number.parseFloat(fraction[2]);
             if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return { ok: false };
             return { ok: true, value: numerator / denominator };
+        }
+        const powerMatch = text.match(/^(-?(?:\d+\.\d+|\d+|\.\d+))\^(-?(?:\d+\.\d+|\d+|\.\d+))$/);
+        if (powerMatch) {
+            const base = Number.parseFloat(powerMatch[1]);
+            const exponent = Number.parseFloat(powerMatch[2]);
+            if (!Number.isFinite(base) || !Number.isFinite(exponent)) return { ok: false };
+            const value = Math.pow(base, exponent);
+            return Number.isFinite(value) ? { ok: true, value } : { ok: false };
         }
         const sqrtMatch = text.match(/^sqrt\((.+)\)$/i);
         if (sqrtMatch) {
@@ -2348,6 +2389,7 @@
         const normalized = preprocessEssayAnswerExpression(text);
         return /^-?(?:\d+(?:\.\d+)?|\d*\.\d+)(?:\/-?(?:\d+(?:\.\d+)?|\d*\.\d+))?$/.test(normalized)
             || /^sqrt\(.+\)$/i.test(normalized)
+            || isEssayExponentAnswer(text)
             || /^\\frac\{[^}]+\}\{[^}]+\}$/.test(text.replace(/\s+/g, ''))
             || /^√/.test(text);
     }
@@ -2358,7 +2400,7 @@
             return '<span class="font-bold text-slate-600">Hãy nhập đáp án trước khi kiểm tra.</span>';
         }
         if (!isEssayNumericAnswer(trimmed)) {
-            return '<span class="font-bold text-amber-700">Chỉ nhập kết quả cuối cùng.</span> Dùng số, phân số (<strong>1/2</strong>), hoặc căn (<strong>√16</strong>, <strong>4</strong>). Không nhập lời giải hay đơn vị.';
+            return '<span class="font-bold text-amber-700">Chỉ nhập kết quả cuối cùng.</span> Dùng số, phân số (<strong>1/2</strong>), căn (<strong>√16</strong>), hoặc lũy thừa (<strong>6^4</strong>). Không nhập lời giải hay đơn vị.';
         }
         const ok = essayAnswersEqual(trimmed, item?.answer || '');
         return ok
@@ -2387,8 +2429,8 @@
                         <h3 class="question-text practice-q-text">${practiceRichText(item.prompt || '')}</h3>
                     </div>
                     <div class="practice-card-content">
-                        ${renderPracticeHint('Nhập <strong>kết quả cuối</strong>: số (<strong>4</strong>), phân số (<strong>1/2</strong>), hoặc căn (<strong>√16</strong>). Có thể dùng các nút ký hiệu bên dưới.')}
-                        <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="text" autocomplete="off" placeholder="Ví dụ: 4, -3, 1/2, √16" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
+                        ${renderPracticeHint('Nhập <strong>kết quả cuối</strong>: số (<strong>4</strong>), phân số (<strong>1/2</strong>), căn (<strong>√16</strong>), hoặc lũy thừa (<strong>6^4</strong>). Có thể dùng các nút ký hiệu bên dưới.')}
+                        <input type="text" class="essay-input" data-essay-key="${escapeHtml(key)}" inputmode="text" autocomplete="off" placeholder="Ví dụ: 4, -3, 1/2, √16, 6^4" value="${escapeHtml(saved)}" ${practiceDone ? 'disabled' : ''}>
                         ${practiceDone ? '' : renderMathSymbolToolbar('essay', key)}
                         ${renderPracticeActions(`
                             ${practiceDone ? '' : `<button type="button" class="essay-check-btn practice-btn practice-btn--primary" data-essay-key="${escapeHtml(key)}"><i class="fas fa-check"></i>Kiểm tra đáp án</button>`}
@@ -3970,7 +4012,7 @@
                     'fa-pen-nib',
                     renderEssayExercises(lesson),
                     essayExercises.length,
-                    'Mỗi câu chỉ nhập <strong>kết quả là số</strong>. Không nhập lời giải, công thức hay đáp án dạng chữ.',
+                    'Mỗi câu chỉ nhập <strong>kết quả cuối</strong>: số, phân số, căn hoặc lũy thừa (ví dụ <strong>6^4</strong>). Không nhập lời giải dài.',
                     'essay',
                     'practice-part-essay'
                 )
@@ -4184,6 +4226,7 @@
             title: 'Công thức',
             symbols: [
                 { label: '√', insert: '√', title: 'Căn bậc hai (gõ thêm số, ví dụ √16)' },
+                { label: 'x^n', insert: '^', title: 'Lũy thừa (ví dụ 6^4)' },
                 { label: 'x²', insert: '^2', title: 'Bình phương' },
                 { label: 'x³', insert: '^3', title: 'Lập phương' },
                 { label: 'a/b', insert: '/', title: 'Phân số (ví dụ 1/2)' },
@@ -4210,7 +4253,7 @@
     };
 
     function normalizeAnswerText(value) {
-        let text = String(value ?? '').trim();
+        let text = normalizeExponentNotation(value) || String(value ?? '').trim();
         text = text
             .replace(/∈/g, '\\in')
             .replace(/∉/g, '\\notin')
