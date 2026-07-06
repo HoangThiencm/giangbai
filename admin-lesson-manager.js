@@ -181,11 +181,17 @@
         return String(value || '').trim();
     }
 
+    function compareLessonsNewestFirst(a, b) {
+        const orderDiff = Number(b?.order_index || 0) - Number(a?.order_index || 0);
+        if (orderDiff !== 0) return orderDiff;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    }
+
     function lessonsForScope() {
-        if (!isPageScopedEditor()) {
-            return lessons.filter(lesson => lesson.subject === selectedSubject);
-        }
-        return lessons.filter(lesson => normalizeSubjectName(lesson.subject) === PAGE_SUBJECT);
+        const scoped = !isPageScopedEditor()
+            ? lessons.filter(lesson => lesson.subject === selectedSubject)
+            : lessons.filter(lesson => normalizeSubjectName(lesson.subject) === PAGE_SUBJECT);
+        return scoped.slice().sort(compareLessonsNewestFirst);
     }
 
     function chaptersForScope() {

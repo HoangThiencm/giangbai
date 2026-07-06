@@ -1885,10 +1885,16 @@
         return map[status] || map.not_started;
     }
 
+    function compareLessonsNewestFirst(a, b) {
+        const orderDiff = Number(b?.order_index || 0) - Number(a?.order_index || 0);
+        if (orderDiff !== 0) return orderDiff;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    }
+
     function groupLessonsByChapter(lessons) {
         const groups = [];
         const indexByChapter = new Map();
-        lessons.forEach(lesson => {
+        lessons.slice().sort(compareLessonsNewestFirst).forEach(lesson => {
             const chapter = String(lesson.chapter || '').trim() || 'Chưa phân chương';
             if (!indexByChapter.has(chapter)) {
                 indexByChapter.set(chapter, groups.length);

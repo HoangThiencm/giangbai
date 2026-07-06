@@ -27,7 +27,7 @@ function decode_json_array($value): array
 
 function scoped_lessons_for_progress(PDO $pdo, ?array $teacherUser): array
 {
-    $lessonStmt = $pdo->query('SELECT id, subject, chapter, title, slug, skills_json FROM lessons ORDER BY subject ASC, order_index ASC, id ASC');
+    $lessonStmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, skills_json FROM lessons ORDER BY subject ASC, order_index DESC, id DESC');
     $allLessons = $lessonStmt->fetchAll();
     if ($teacherUser) {
         $allowedSubjects = teacher_allowed_subjects($teacherUser);
@@ -264,6 +264,7 @@ respond([
             'chapter' => $lesson['chapter'],
             'title' => $lesson['title'],
             'slug' => $lesson['slug'],
+            'order_index' => (int)($lesson['order_index'] ?? 0),
             'skills' => decode_json_array($lesson['skills_json'] ?? ''),
         ];
     }, $lessons),

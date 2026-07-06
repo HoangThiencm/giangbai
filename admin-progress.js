@@ -37,13 +37,26 @@
         return classSubjects[normalized] || inferSubjectFromClassName(normalized);
     }
 
+    function compareLessonsNewestFirst(a, b) {
+        const orderDiff = Number(b?.order_index || 0) - Number(a?.order_index || 0);
+        if (orderDiff !== 0) return orderDiff;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    }
+
+    function sortLessonsNewestFirst(items) {
+        return (items || []).slice().sort(compareLessonsNewestFirst);
+    }
+
     function lessonsForClassFilter() {
         let items = lessonsForPage();
-        if (!selectedClassName) return items;
-        const subject = subjectForClass(selectedClassName);
-        if (!subject) return items;
-        const scoped = items.filter(lesson => String(lesson.subject || '').trim() === subject);
-        return scoped.length ? scoped : items;
+        if (selectedClassName) {
+            const subject = subjectForClass(selectedClassName);
+            if (subject) {
+                const scoped = items.filter(lesson => String(lesson.subject || '').trim() === subject);
+                if (scoped.length) items = scoped;
+            }
+        }
+        return sortLessonsNewestFirst(items);
     }
 
     function syncLessonSelectionForClass() {
