@@ -1314,6 +1314,110 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             appendText(content.slice(cursor));
         }
 
+        function getMergedLessonSectionValuesForImages(raw, LI) {
+            const combined = LI.parseGeminiLessonSections(raw);
+            const theoryRaw = String((window.getTheoryOutputEl() && window.getTheoryOutputEl().value) || '').trim();
+            const restRaw = String((window.getRestOutputEl() && window.getRestOutputEl().value) || '').trim();
+            const theorySections = theoryRaw ? LI.parseGeminiLessonSections(theoryRaw) : null;
+            const restSections = restRaw ? LI.parseGeminiLessonSections(restRaw) : null;
+            const mergedImageList = [
+                theorySections && theorySections.imageList,
+                restSections && restSections.imageList,
+                combined.imageList
+            ].filter(Boolean).join('\n\n');
+            return Object.assign({}, combined, { imageList: mergedImageList });
+        }
+
+        function isGenericLessonImagePrompt(prompt) {
+            return /Bổ sung mô tả chi tiết trong DANH SÁCH HÌNH|Minh họa cho !\[|cập nhật mô tả trong DANH SÁCH HÌNH/i.test(String(prompt || ''));
+        }
+
+        function getLessonImageStorageKey() {
+            const subject = (document.getElementById('subject') || {}).value || '';
+            const chapter = (document.getElementById('chapter') || {}).value || '';
+            const title = (document.getElementById('title') || {}).value || '';
+            return `soanbaigemini-images:${subject}:${chapter}:${title}`;
+        }
+
+        function persistLessonImageState() {
+            try {
+                const key = getLessonImageStorageKey();
+                if (!key || key === 'soanbaigemini-images:::') return;
+                sessionStorage.setItem(key, JSON.stringify({
+                    prompts: Object.fromEntries(lessonImagePromptById),
+                    locations: Object.fromEntries(lessonImageLocationById),
+                    images: Object.fromEntries(generatedLessonImages)
+                }));
+            } catch (storageError) {
+                console.warn('[soanbaigemini] Không lưu được cache ảnh phiên:', storageError);
+            }
+        }
+
+        function restoreLessonImageStateFromSession() {
+            try {
+                const key = getLessonImageStorageKey();
+                if (!key || key === 'soanbaigemini-images:::') return;
+                const saved = sessionStorage.getItem(key);
+                if (!saved) return;
+                const data = JSON.parse(saved);
+                if (data.prompts) {
+                    Object.entries(data.prompts).forEach(([imageId, prompt]) => {
+                        const existing = lessonImagePromptById.get(imageId);
+                        if (!existing || isGenericLessonImagePrompt(existing)) {
+                            lessonImagePromptById.set(imageId, prompt);
+                        }
+                    });
+                }
+                if (data.locations) {
+                    Object.entries(data.locations).forEach(([imageId, locations]) => {
+                        if (!lessonImageLocationById.has(imageId)) {
+                            lessonImageLocationById.set(imageId, locations);
+                        }
+                    });
+                }
+                if (data.images) {
+                    Object.entries(data.images).forEach(([imageId, dataUrl]) => {
+                        if (!generatedLessonImages.has(imageId)) {
+                            generatedLessonImages.set(imageId, dataUrl);
+                        }
+                    });
+                }
+            } catch (storageError) {
+                console.warn('[soanbaigemini] Không khôi phục được cache ảnh phiên:', storageError);
+            }
+        }
+
+        function mergePreservedLessonImageState(previousPrompts, previousLocations) {
+            previousPrompts.forEach((prompt, imageId) => {
+                const current = lessonImagePromptById.get(imageId);
+                if (!current || (isGenericLessonImagePrompt(current) && !isGenericLessonImagePrompt(prompt))) {
+                    lessonImagePromptById.set(imageId, prompt);
+                }
+                if (!lessonImageLocationById.has(imageId) && previousLocations.has(imageId)) {
+                    lessonImageLocationById.set(imageId, previousLocations.get(imageId));
+                }
+            });
+            generatedLessonImages.forEach((_, imageId) => {
+                if (!lessonImagePromptById.has(imageId) && previousPrompts.has(imageId)) {
+                    lessonImagePromptById.set(imageId, previousPrompts.get(imageId));
+                }
+                if (!lessonImageLocationById.has(imageId) && previousLocations.has(imageId)) {
+                    lessonImageLocationById.set(imageId, previousLocations.get(imageId));
+                }
+            });
+            restoreLessonImageStateFromSession();
+        }
+
+        function manifestEntryToLessonImagePrompt(entry) {
+            const id = normalizeLessonImageId(entry.id);
+            return [
+                `${id}: ${entry.section || 'theory'}`,
+                entry.alt || id,
+                entry.type || 'diagram',
+                entry.prompt || ''
+            ].filter(Boolean).join(' | ');
+        }
+
         function collectLessonImagePrompts(raw, LI, sectionValues) {
             const byId = new Map();
             const addPrompt = (imageId, promptText) => {
@@ -1325,35 +1429,23 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 }
             };
 
-            const manifestText = (sectionValues && sectionValues.imageList) || '';
-            if (LI && LI.parseImageManifest) {
-                LI.parseImageManifest(manifestText).forEach(entry => {
-                    const id = normalizeLessonImageId(entry.id);
-                    const prompt = [
-                        `${id}: ${entry.section || 'theory'}`,
-                        entry.alt || id,
-                        entry.type || 'diagram',
-                        entry.prompt || ''
-                    ].filter(Boolean).join(' | ');
-                    addPrompt(id, prompt);
-                });
-            }
-
-            const imgTail = String(raw || '').split(/DANH\s*SÁCH\s*HÌNH(?:\s*ẢNH)?(?:\s*CẦN\s*TẠO)?/i)[1] || manifestText || '';
-            let currentBlock = '';
-            String(imgTail).split('\n').forEach(line => {
-                const trimmed = String(line || '').trim();
-                if (!trimmed || /^PROMPT\s*TẠO\s*ẢNH/i.test(trimmed)) return;
-                if (/(?:HINH|HÌNH)[_\s-]*\d+/i.test(trimmed)) {
-                    if (currentBlock) addPrompt(currentBlock.match(/(?:HINH|HÌNH)[_\s-]*\d+/i)[0], currentBlock);
-                    currentBlock = trimmed + '\n';
-                } else if (currentBlock && trimmed) {
-                    currentBlock += trimmed + '\n';
+            const theoryRaw = String((window.getTheoryOutputEl() && window.getTheoryOutputEl().value) || '').trim();
+            const restRaw = String((window.getRestOutputEl() && window.getRestOutputEl().value) || '').trim();
+            if (LI && LI.mergeImageManifestEntries && LI.buildImageManifestFromRaw) {
+                const manifest = LI.mergeImageManifestEntries(
+                    LI.buildImageManifestFromRaw(raw),
+                    theoryRaw ? LI.buildImageManifestFromRaw(theoryRaw) : [],
+                    restRaw ? LI.buildImageManifestFromRaw(restRaw) : [],
+                    LI.parseImageManifest ? LI.parseImageManifest((sectionValues && sectionValues.imageList) || '') : []
+                );
+                manifest.forEach(entry => addPrompt(entry.id, manifestEntryToLessonImagePrompt(entry)));
+            } else {
+                const manifestText = (sectionValues && sectionValues.imageList) || '';
+                if (LI && LI.parseImageManifest) {
+                    LI.parseImageManifest(manifestText).forEach(entry => {
+                        addPrompt(entry.id, manifestEntryToLessonImagePrompt(entry));
+                    });
                 }
-            });
-            if (currentBlock) {
-                const match = currentBlock.match(/(?:HINH|HÌNH)[_\s-]*\d+/i);
-                if (match) addPrompt(match[0], currentBlock);
             }
 
             const markerIds = LI && LI.extractImageMarkers
@@ -1615,7 +1707,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 lessonImportLoadErrorToast();
                 return;
             }
-            const sectionValues = LI.parseGeminiLessonSections(raw);
+            const sectionValues = getMergedLessonSectionValuesForImages(raw, LI);
             const skillsParsed = LI.parseSkills(sectionValues.skills || '');
             const editorTexts = LI.sectionsToEditorTexts(sectionValues, skillsParsed);
             const goal = sectionValues.goal;
@@ -1640,6 +1732,8 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             }
             const tasks = editorTexts.tasks || sectionValues.tasks;
 
+            const previousImagePrompts = new Map(lessonImagePromptById);
+            const previousImageLocations = new Map(lessonImageLocationById);
             const imagePromptEntries = buildLessonImageInventory(raw, LI, sectionValues);
             lessonImagePromptById.clear();
             lessonImageLocationById.clear();
@@ -1647,6 +1741,11 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 imagePrompts.push(entry.prompt);
                 lessonImagePromptById.set(entry.imageId, entry.prompt);
                 lessonImageLocationById.set(entry.imageId, entry.locations || []);
+            });
+            mergePreservedLessonImageState(previousImagePrompts, previousImageLocations);
+            imagePromptEntries.forEach(entry => {
+                const preserved = lessonImagePromptById.get(entry.imageId);
+                if (preserved && preserved !== entry.prompt) entry.prompt = preserved;
             });
 
             // Render sections with admin-specific copy
@@ -1703,8 +1802,8 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 imgDiv.appendChild(summaryWrap);
 
                 imagePromptEntries.forEach((entry, i) => {
-                    const p = entry.prompt;
                     const imageId = entry.imageId || normalizeLessonImageId('HINH_' + String(i + 1).padStart(2, '0'));
+                    const p = lessonImagePromptById.get(imageId) || entry.prompt;
                     const locations = entry.locations || [];
                     const locationSummary = formatImageLocationSummary(locations);
                     const adminHints = [...new Set(locations.map(loc => loc.adminHint).filter(Boolean))].join(' · ')
@@ -1823,10 +1922,10 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         function buildLessonImageJobsFromOutput(raw) {
             const LI = window.LessonImport;
             if (!LI || !LI.parseGeminiLessonSections) return [];
-            const sections = LI.parseGeminiLessonSections(raw);
+            const sections = getMergedLessonSectionValuesForImages(raw, LI);
             return buildLessonImageInventory(raw, LI, sections).map(entry => ({
                 imageId: entry.imageId,
-                prompt: entry.prompt
+                prompt: lessonImagePromptById.get(entry.imageId) || entry.prompt
             }));
         }
 
@@ -2620,9 +2719,19 @@ Không ghi chú nguồn SGK. Không lời mở đầu. Không dùng \`---\` ngă
                 const jobsToRun = imageJobs.length
                     ? imageJobs
                     : buildLessonImageJobsFromOutput(rawForImages);
+                const pendingJobs = jobsToRun.filter(job => !generatedLessonImages.has(job.imageId));
+                const keptCount = jobsToRun.length - pendingJobs.length;
                 if (jobsToRun.length > 0) {
-                    updateGenerationProgress(95, 'Đang tạo hình minh họa', jobsToRun.length + ' ảnh — có thể mất 20–60 giây/ảnh.');
-                    await generateAllLessonIllustrations(jobsToRun);
+                    if (pendingJobs.length > 0) {
+                        let detail = pendingJobs.length + ' ảnh còn lại';
+                        if (keptCount > 0) detail += ' (' + keptCount + ' ảnh đã giữ từ trước)';
+                        detail += ' — có thể mất 20–60 giây/ảnh.';
+                        updateGenerationProgress(95, 'Đang tạo hình minh họa', detail);
+                        await generateAllLessonIllustrations(pendingJobs);
+                    } else {
+                        updateGenerationProgress(98, 'Giữ nguyên hình đã tạo', keptCount + ' ảnh — không tạo lại.');
+                        await parseAndPreview();
+                    }
                 } else {
                     window.showAppToast('Không thấy HINH_xx / DANH SÁCH HÌNH để tạo ảnh. Thêm ![mô tả](HINH_01) và mục DANH SÁCH HÌNH ẢNH CẦN TẠO.', 'warn');
                 }
@@ -2896,6 +3005,7 @@ ${source}`;
                     statusEl.textContent = message;
                 });
                 generatedLessonImages.set(imageId, imageDataUrl);
+                lessonImagePromptById.set(imageId, imagePrompt);
                 imageEl.src = imageDataUrl;
                 imageEl.classList.remove('hidden');
                 const figure = imageEl.closest('figure');
@@ -2906,6 +3016,7 @@ ${source}`;
                 statusEl.className = statusEl.tagName === 'SPAN' ? 'text-[10px] text-emerald-700' : 'mt-2 text-xs text-emerald-700';
                 statusEl.textContent = 'Đã tạo ảnh minh họa.';
                 button.innerHTML = getLessonImageButtonLabel(true);
+                persistLessonImageState();
                 await parseAndPreview();
             } catch (error) {
                 const message = describeGeminiError(error);
@@ -2918,17 +3029,22 @@ ${source}`;
         }
 
         async function generateAllLessonIllustrations(jobs) {
-            for (let index = 0; index < jobs.length; index++) {
-                const job = jobs[index];
+            const pendingJobs = (jobs || []).filter(job => job && job.imageId && !generatedLessonImages.has(job.imageId));
+            if (!pendingJobs.length) {
+                await parseAndPreview();
+                return;
+            }
+            for (let index = 0; index < pendingJobs.length; index++) {
+                const job = pendingJobs[index];
                 const hasUi = !!(job.button && job.statusEl && job.imageEl);
-                const startPercent = 95 + Math.floor((index / jobs.length) * 4);
+                const startPercent = 95 + Math.floor((index / pendingJobs.length) * 4);
                 if (hasUi) {
                     job.button.disabled = true;
                     job.button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo ảnh...';
                     job.statusEl.className = 'mt-2 text-xs text-sky-700';
-                    job.statusEl.textContent = `Đang tạo ${job.imageId} (${index + 1}/${jobs.length})...`;
+                    job.statusEl.textContent = `Đang tạo ${job.imageId} (${index + 1}/${pendingJobs.length})...`;
                 }
-                updateGenerationProgress(startPercent, `Đang tạo hình ${index + 1}/${jobs.length}`, `${job.imageId}: Gemini đang vẽ hình minh họa từ mô tả bài học.`);
+                updateGenerationProgress(startPercent, `Đang tạo hình ${index + 1}/${pendingJobs.length}`, `${job.imageId}: Gemini đang vẽ hình minh họa từ mô tả bài học.`);
 
                 try {
                     const imageDataUrl = await createLessonIllustration(job.prompt, message => {
@@ -2936,6 +3052,8 @@ ${source}`;
                         else updateGenerationProgress(startPercent, `Đang tạo ${job.imageId}`, message);
                     });
                     generatedLessonImages.set(job.imageId, imageDataUrl);
+                    lessonImagePromptById.set(job.imageId, job.prompt);
+                    persistLessonImageState();
                     if (hasUi) {
                         job.imageEl.src = imageDataUrl;
                         job.imageEl.classList.remove('hidden');
@@ -3391,6 +3509,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 el.addEventListener('change', scheduleLessonValidation);
             });
             updateLessonPhaseUi();
+            restoreLessonImageStateFromSession();
 
             waitForLessonImport(12000).then(function() {
                 if (window.refreshLessonValidation) {
