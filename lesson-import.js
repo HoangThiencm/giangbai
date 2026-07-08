@@ -290,6 +290,7 @@ Sắp xếp từ bé đến lớn | 9 800 » 12 050 » 12 500 » 12 505 | 9 800 
 
 **NỐI Ô** — 1–2 dòng, 5 cột (cột 4 chỉ ghi chỉ số nối, không chữ "Nối"):
 Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Đọc kỹ hàng nghìn
+- BẮT BUỘC: số mảnh cột trái = số mảnh cột phải = số cặp trong cột 4 (nối 1-1). CẤM dùng nối ô cho bài phân loại nhiều→một (vd: 4 số nối với chỉ 2 nhãn "Số chẵn"/"Số lẻ" — phải dùng trắc nghiệm hoặc giảm còn 2 số mỗi bên).
 
 **KỸ NĂNG CẦN ĐẠT** (heading riêng, trước TRẮC NGHIỆM) — mỗi dòng 3 cột:
 doc_so | Đọc và viết số trong phạm vi 100 000 | 80
@@ -1674,8 +1675,17 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
                 errors.push(`drag_exercises[${i}].mode phải là match hoặc sort.`);
             }
             if (d.mode === 'match') {
+                const leftCount = (d.left || []).length;
+                const rightCount = (d.right || []).length;
+                const pairCount = (d.pairs || []).length;
+                if (leftCount !== rightCount) {
+                    errors.push(`drag_exercises[${i}]: nối ô phải có cùng số mảnh hai cột (trái ${leftCount}, phải ${rightCount}). Không dùng nối ô cho bài phân loại nhiều→một.`);
+                }
+                if (leftCount && pairCount !== leftCount) {
+                    errors.push(`drag_exercises[${i}]: số cặp nối (${pairCount}) phải bằng số mảnh mỗi cột (${leftCount}).`);
+                }
                 (d.pairs || []).forEach((p, pi) => {
-                    if (p.left >= (d.left || []).length || p.right >= (d.right || []).length) {
+                    if (p.left >= leftCount || p.right >= rightCount) {
                         errors.push(`drag_exercises[${i}].pairs[${pi}] vượt phạm vi.`);
                     }
                 });

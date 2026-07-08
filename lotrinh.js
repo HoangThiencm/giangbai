@@ -2703,6 +2703,11 @@
             .self-practice-file-remove { flex-shrink: 0; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: #fff1f2; color: #be123c; cursor: pointer; touch-action: manipulation; }
             .self-practice-history { margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
             .self-practice-history a { color: #0f766e; font-weight: 700; text-decoration: underline; }
+            .self-practice-review { margin-top: 14px; border-radius: 14px; border: 1px solid #fde68a; background: #fffbeb; padding: 14px; }
+            .self-practice-review-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
+            .self-practice-review-image { display: block; overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; }
+            .self-practice-review-image img { display: block; width: 100%; height: 140px; object-fit: cover; }
+            .self-practice-review-image span { display: block; padding: 6px 8px; font-size: 11px; font-weight: 700; color: #334155; }
             @media (max-width: 480px) {
                 .self-practice-upload-actions { grid-template-columns: 1fr; }
                 .self-practice-pick-btn { min-height: 52px; flex-direction: row; justify-content: flex-start; padding: 12px 14px; font-size: 14px; }
@@ -2735,6 +2740,69 @@
         }
     }
 
+    function driveFileIdFromViewUrl(url) {
+        const value = String(url || '');
+        const match = value.match(/\/d\/([A-Za-z0-9_-]+)/) || value.match(/[?&]id=([A-Za-z0-9_-]+)/);
+        return match ? match[1] : '';
+    }
+
+    function isLikelyImageFile(file) {
+        const mime = String(file?.mime_type || '').toLowerCase();
+        if (mime.startsWith('image/')) return true;
+        const name = String(file?.original_name || '').toLowerCase();
+        return /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(name);
+    }
+
+    function renderSelfPracticeFileLink(file, options = {}) {
+        const name = escapeHtml(file.original_name || 'Tệp');
+        const url = escapeHtml(file.view_url || '');
+        if (options.asImage && isLikelyImageFile(file)) {
+            const fileId = driveFileIdFromViewUrl(file.view_url);
+            const thumb = fileId
+                ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w480`
+                : url;
+            return `
+                <a href="${url}" target="_blank" rel="noopener" class="self-practice-review-image">
+                    <img src="${escapeHtml(thumb)}" alt="${name}" loading="lazy">
+                    <span>${name}</span>
+                </a>
+            `;
+        }
+        return `
+            <a href="${url}" target="_blank" rel="noopener" class="mr-3 inline-flex items-center gap-1">
+                <i class="fas fa-file"></i>${name}
+            </a>
+        `;
+    }
+
+    function renderSelfPracticeTeacherReview(row) {
+        const feedback = String(row.teacher_feedback || '').trim();
+        const correctionFiles = Array.isArray(row.correction_files) ? row.correction_files : [];
+        if (!feedback && !correctionFiles.length) return '';
+        const reviewedAt = String(row.reviewed_at || '').replace('T', ' ').slice(0, 16);
+        const imageFiles = correctionFiles.filter(file => isLikelyImageFile(file));
+        const otherFiles = correctionFiles.filter(file => !isLikelyImageFile(file));
+        return `
+            <div class="self-practice-review">
+                <div class="text-xs font-bold uppercase tracking-wide text-amber-700">
+                    <i class="fas fa-comment-dots mr-1"></i>Phản hồi của giáo viên
+                </div>
+                ${reviewedAt ? `<div class="mt-1 text-xs text-amber-800/80">Chấm lúc ${escapeHtml(reviewedAt)}</div>` : ''}
+                ${feedback ? `<div class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">${escapeHtml(feedback)}</div>` : ''}
+                ${imageFiles.length ? `
+                    <div class="self-practice-review-images">
+                        ${imageFiles.map(file => renderSelfPracticeFileLink(file, { asImage: true })).join('')}
+                    </div>
+                ` : ''}
+                ${otherFiles.length ? `
+                    <div class="mt-2 text-sm">
+                        ${otherFiles.map(file => renderSelfPracticeFileLink(file)).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
     function renderSelfPracticeSubmissionHistory() {
         const rows = submissionsForLessonSelfPractice();
         if (!rows.length) return '';
@@ -2744,13 +2812,10 @@
                 <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Bài đã nộp</div>
                 <div class="mb-2 text-sm text-slate-700">
                     <div class="text-xs text-slate-500">${escapeHtml(String(row.submitted_at || '').replace('T', ' ').slice(0, 16))}</div>
-                    ${(row.files || []).map(file => `
-                        <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="mr-3 inline-flex items-center gap-1">
-                            <i class="fas fa-file"></i>${escapeHtml(file.original_name)}
-                        </a>
-                    `).join('')}
+                    ${(row.files || []).map(file => renderSelfPracticeFileLink(file)).join('')}
                     ${row.note ? `<div class="text-xs text-slate-500 mt-1">${escapeHtml(row.note)}</div>` : ''}
                 </div>
+                ${renderSelfPracticeTeacherReview(row)}
             </div>
         `;
     }
@@ -2768,7 +2833,7 @@
         if (alreadySubmitted) {
             return `
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                    <i class="fas fa-circle-check mr-1"></i>Em đã nộp bài cho bài học này. Giáo viên sẽ xem trên Google Drive.
+                    <i class="fas fa-circle-check mr-1"></i>Em đã nộp bài cho bài học này. Khi giáo viên chấm xong, em sẽ thấy phản hồi và ảnh bài đã sửa ngay bên dưới.
                 </div>
                 ${renderSelfPracticeSubmissionHistory()}
             `;

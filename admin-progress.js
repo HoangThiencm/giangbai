@@ -482,11 +482,25 @@
         }
         const when = String(submission.submitted_at || '').replace('T', ' ').slice(0, 16);
         const note = submission.note ? `<div class="mt-1 text-xs text-slate-600 italic">${escapeHtml(submission.note)}</div>` : '';
+        const reviewed = !!submission.has_review;
+        const reviewBadge = reviewed
+            ? '<span class="ml-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">Đã chấm</span>'
+            : '<span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Chưa chấm</span>';
+        const feedback = String(submission.teacher_feedback || '').trim();
+        const feedbackPreview = feedback
+            ? `<div class="mt-1 text-xs text-emerald-800 line-clamp-2">${escapeHtml(feedback)}</div>`
+            : '';
+        const correctionCount = Array.isArray(submission.correction_files) ? submission.correction_files.length : 0;
+        const correctionNote = correctionCount
+            ? `<div class="mt-1 text-[10px] font-bold text-amber-700"><i class="fas fa-pen-to-square mr-1"></i>${correctionCount} ảnh/tệp bài sửa</div>`
+            : '';
         return `
             <div>
-                <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Đã nộp · ${escapeHtml(when)}</span>
+                <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Đã nộp · ${escapeHtml(when)}</span>${reviewBadge}
                 <div class="mt-1.5">${renderSubmissionFiles(submission.files)}</div>
                 ${note}
+                ${feedbackPreview}
+                ${correctionNote}
             </div>
         `;
     }

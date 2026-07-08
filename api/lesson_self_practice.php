@@ -40,6 +40,9 @@ function lsp_schema(PDO $pdo): void
         item_index INT NOT NULL DEFAULT 0,
         item_title VARCHAR(220) DEFAULT NULL,
         note TEXT DEFAULT NULL,
+        teacher_feedback TEXT DEFAULT NULL,
+        reviewed_at DATETIME DEFAULT NULL,
+        reviewed_by INT DEFAULT NULL,
         submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_lsp_submissions_lesson (lesson_id),
         INDEX idx_lsp_submissions_student (student_id),
@@ -49,6 +52,7 @@ function lsp_schema(PDO $pdo): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS lesson_self_practice_files (
         id INT AUTO_INCREMENT PRIMARY KEY,
         submission_id INT NOT NULL,
+        file_role VARCHAR(32) NOT NULL DEFAULT 'submission',
         drive_file_id VARCHAR(160) NOT NULL,
         original_name VARCHAR(255) NOT NULL,
         stored_name VARCHAR(255) NOT NULL,
@@ -57,8 +61,26 @@ function lsp_schema(PDO $pdo): void
         view_url TEXT NOT NULL,
         download_url TEXT DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_lsp_files_submission (submission_id)
+        INDEX idx_lsp_files_submission (submission_id),
+        INDEX idx_lsp_files_role (submission_id, file_role)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    try {
+        if (!column_exists($pdo, 'lesson_self_practice_submissions', 'teacher_feedback')) {
+            $pdo->exec('ALTER TABLE lesson_self_practice_submissions ADD COLUMN teacher_feedback TEXT DEFAULT NULL');
+        }
+        if (!column_exists($pdo, 'lesson_self_practice_submissions', 'reviewed_at')) {
+            $pdo->exec('ALTER TABLE lesson_self_practice_submissions ADD COLUMN reviewed_at DATETIME DEFAULT NULL');
+        }
+        if (!column_exists($pdo, 'lesson_self_practice_submissions', 'reviewed_by')) {
+            $pdo->exec('ALTER TABLE lesson_self_practice_submissions ADD COLUMN reviewed_by INT DEFAULT NULL');
+        }
+        if (!column_exists($pdo, 'lesson_self_practice_files', 'file_role')) {
+            $pdo->exec("ALTER TABLE lesson_self_practice_files ADD COLUMN file_role VARCHAR(32) NOT NULL DEFAULT 'submission' AFTER submission_id");
+        }
+    } catch (Throwable $e) {
+        // Schema upgrade may be deferred on restricted hosting.
+    }
 
     try {
         if (!column_exists($pdo, 'lessons', 'self_practice_json')) {
@@ -112,8 +134,38 @@ function lsp_parse_items(?string $json): array
     return is_array($decoded) ? $decoded : [];
 }
 
+function lsp_file_row(array $row): array
+{
+    return [
+        'id' => (int)$row['id'],
+        'file_role' => (string)($row['file_role'] ?? 'submission'),
+        'original_name' => (string)$row['original_name'],
+        'stored_name' => (string)$row['stored_name'],
+        'mime_type' => (string)($row['mime_type'] ?? ''),
+        'size_bytes' => (int)$row['size_bytes'],
+        'view_url' => (string)$row['view_url'],
+        'download_url' => (string)($row['download_url'] ?? ''),
+    ];
+}
+
+function lsp_split_files(array $files): array
+{
+    $submission = [];
+    $correction = [];
+    foreach ($files as $file) {
+        $role = (string)($file['file_role'] ?? 'submission');
+        if ($role === 'correction') {
+            $correction[] = $file;
+        } else {
+            $submission[] = $file;
+        }
+    }
+    return [$submission, $correction];
+}
+
 function lsp_submission_row(array $row, array $files = []): array
 {
+    [$submissionFiles, $correctionFiles] = lsp_split_files($files);
     return [
         'id' => (int)$row['id'],
         'lesson_id' => (int)$row['lesson_id'],
@@ -123,8 +175,12 @@ function lsp_submission_row(array $row, array $files = []): array
         'item_index' => (int)$row['item_index'],
         'item_title' => (string)($row['item_title'] ?? ''),
         'note' => (string)($row['note'] ?? ''),
+        'teacher_feedback' => (string)($row['teacher_feedback'] ?? ''),
+        'reviewed_at' => (string)($row['reviewed_at'] ?? ''),
         'submitted_at' => (string)$row['submitted_at'],
-        'files' => $files,
+        'files' => $submissionFiles,
+        'correction_files' => $correctionFiles,
+        'has_review' => trim((string)($row['teacher_feedback'] ?? '')) !== '' || !empty($correctionFiles),
     ];
 }
 
@@ -139,15 +195,7 @@ function lsp_files_for_submissions(PDO $pdo, array $submissionIds): array
     foreach ($rows as $row) {
         $sid = (int)$row['submission_id'];
         if (!isset($map[$sid])) $map[$sid] = [];
-        $map[$sid][] = [
-            'id' => (int)$row['id'],
-            'original_name' => (string)$row['original_name'],
-            'stored_name' => (string)$row['stored_name'],
-            'mime_type' => (string)($row['mime_type'] ?? ''),
-            'size_bytes' => (int)$row['size_bytes'],
-            'view_url' => (string)$row['view_url'],
-            'download_url' => (string)($row['download_url'] ?? ''),
-        ];
+        $map[$sid][] = lsp_file_row($row);
     }
     return $map;
 }
@@ -167,9 +215,11 @@ function lsp_ensure_lesson_folder(PDO $pdo, array $lesson): string
     return $folderId;
 }
 
-if (!schema_is_ready('lesson_self_practice', '20260624-v1')) {
+const LSP_SCHEMA_VERSION = '20260708-v2';
+
+if (!schema_is_ready('lesson_self_practice', LSP_SCHEMA_VERSION)) {
     lsp_schema($pdo);
-    schema_mark_ready('lesson_self_practice', '20260624-v1');
+    schema_mark_ready('lesson_self_practice', LSP_SCHEMA_VERSION);
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -329,10 +379,11 @@ if ($method === 'POST' && $action === 'submit') {
         $stmt = $pdo->prepare('INSERT INTO lesson_self_practice_submissions (lesson_id, student_id, item_index, item_title, note) VALUES (?, ?, ?, ?, ?)');
         $stmt->execute([$lessonId, (int)$user['id'], $itemIndex, $itemTitle, $note !== '' ? $note : null]);
         $submissionId = (int)$pdo->lastInsertId();
-        $fileStmt = $pdo->prepare('INSERT INTO lesson_self_practice_files (submission_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $fileStmt = $pdo->prepare('INSERT INTO lesson_self_practice_files (submission_id, file_role, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
         foreach ($uploaded as $file) {
             $fileStmt->execute([
                 $submissionId,
+                'submission',
                 $file['drive_file_id'],
                 $file['original_name'],
                 $file['stored_name'],
@@ -354,6 +405,144 @@ if ($method === 'POST' && $action === 'submit') {
         'submitted_at' => date('c'),
         'file_count' => count($uploaded),
         'message' => 'Đã nộp bài tập lên Google Drive.',
+    ]);
+}
+
+function lsp_submission_by_id(PDO $pdo, int $submissionId): ?array
+{
+    $stmt = $pdo->prepare("SELECT s.*, u.full_name AS student_name, u.class_name
+        FROM lesson_self_practice_submissions s
+        LEFT JOIN users u ON u.id = s.student_id
+        WHERE s.id = ? LIMIT 1");
+    $stmt->execute([$submissionId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function lsp_validate_upload_files(array $files, int $maxFiles, array $allowed): void
+{
+    $maxBytes = 25 * 1024 * 1024;
+    if (count($files) > $maxFiles) {
+        respond(['error' => "Tối đa {$maxFiles} tệp mỗi lần."], 422);
+    }
+    foreach ($files as $file) {
+        if ((int)$file['error'] !== UPLOAD_ERR_OK) {
+            respond(['error' => 'Một tệp tải lên bị lỗi (mã ' . (int)$file['error'] . ').'], 422);
+        }
+        if ((int)$file['size'] < 1 || (int)$file['size'] > $maxBytes) {
+            respond(['error' => 'Tệp ' . $file['name'] . ' vượt giới hạn 25 MB.'], 422);
+        }
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if ($extension === '' || !in_array($extension, $allowed, true)) {
+            respond(['error' => 'Không cho phép loại tệp .' . $extension . '.'], 422);
+        }
+        if (!is_uploaded_file($file['tmp_name'])) {
+            respond(['error' => 'Tệp tải lên không hợp lệ.'], 422);
+        }
+    }
+}
+
+if ($method === 'POST' && $action === 'review') {
+    $user = lsp_current_user($pdo);
+    $role = (string)($user['role'] ?? '');
+    if (!in_array($role, ['teacher', 'admin'], true)) {
+        respond(['error' => 'Chỉ giáo viên mới chấm và phản hồi bài nộp.'], 403);
+    }
+
+    $submissionId = (int)($_POST['submission_id'] ?? 0);
+    $feedback = trim((string)($_POST['teacher_feedback'] ?? ''));
+    if ($submissionId <= 0) respond(['error' => 'Thiếu submission_id.'], 422);
+
+    $submission = lsp_submission_by_id($pdo, $submissionId);
+    if (!$submission) respond(['error' => 'Không tìm thấy bài nộp.'], 404);
+
+    if ($role === 'teacher' && !teacher_can_view_student_class($user, (string)($submission['class_name'] ?? ''))) {
+        respond(['error' => 'Giáo viên không có quyền chấm bài của học sinh này.'], 403);
+    }
+
+    $lesson = lsp_lesson_by_id($pdo, (int)$submission['lesson_id']);
+    if (!$lesson) respond(['error' => 'Không tìm thấy bài học.'], 404);
+
+    $files = array_values(array_filter(
+        lsp_files_from_input($_FILES['correction_files'] ?? null),
+        fn($file) => (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE
+    ));
+    $allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'zip', 'rar', 'txt'];
+    if ($files) {
+        lsp_validate_upload_files($files, 10, $allowed);
+    }
+
+    $existingFileMap = lsp_files_for_submissions($pdo, [$submissionId]);
+    $existingCorrection = array_values(array_filter(
+        $existingFileMap[$submissionId] ?? [],
+        fn($file) => (string)($file['file_role'] ?? 'submission') === 'correction'
+    ));
+    if ($feedback === '' && !$files && !$existingCorrection) {
+        respond(['error' => 'Vui lòng nhập phản hồi hoặc đính kèm ảnh bài đã sửa.'], 422);
+    }
+
+    $studentName = trim((string)($submission['student_name'] ?? 'Hoc sinh'));
+    $className = trim((string)($submission['class_name'] ?? ''));
+    $identifier = (string)(int)$submission['student_id'];
+    $lessonFolder = lsp_ensure_lesson_folder($pdo, $lesson);
+    $studentFolder = drive_participant_folder($lessonFolder, $className, $studentName, $identifier);
+
+    $uploaded = [];
+    foreach ($files as $index => $file) {
+        $original = (string)$file['name'];
+        $fieldKey = 'bai-da-sua';
+        $storedName = drive_submission_stored_name($className, $studentName, $identifier, $index + 1, $original, $fieldKey);
+        $invalid = drive_validate_upload($file['tmp_name'], $original);
+        if ($invalid) respond(['error' => $invalid], 422);
+        $mime = drive_detect_mime($file['tmp_name'], $original, (string)($file['type'] ?? ''));
+        $drive = drive_upload_file($studentFolder, $storedName, $mime, $file['tmp_name']);
+        $uploaded[] = [
+            'drive_file_id' => $drive['file_id'],
+            'original_name' => $original,
+            'stored_name' => $drive['stored_name'],
+            'mime_type' => $drive['mime_type'] ?? $mime,
+            'size_bytes' => (int)$file['size'],
+            'view_url' => $drive['view_url'],
+            'download_url' => $drive['download_url'],
+        ];
+    }
+
+    $pdo->beginTransaction();
+    try {
+        if ($uploaded) {
+            $pdo->prepare("DELETE FROM lesson_self_practice_files WHERE submission_id = ? AND file_role = 'correction'")
+                ->execute([$submissionId]);
+        }
+        $pdo->prepare('UPDATE lesson_self_practice_submissions SET teacher_feedback = ?, reviewed_at = NOW(), reviewed_by = ? WHERE id = ?')
+            ->execute([$feedback !== '' ? $feedback : null, (int)$user['id'], $submissionId]);
+        if ($uploaded) {
+            $fileStmt = $pdo->prepare('INSERT INTO lesson_self_practice_files (submission_id, file_role, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach ($uploaded as $file) {
+                $fileStmt->execute([
+                    $submissionId,
+                    'correction',
+                    $file['drive_file_id'],
+                    $file['original_name'],
+                    $file['stored_name'],
+                    $file['mime_type'],
+                    $file['size_bytes'],
+                    $file['view_url'],
+                    $file['download_url'],
+                ]);
+            }
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+
+    $refreshed = lsp_submission_by_id($pdo, $submissionId);
+    $fileMap = lsp_files_for_submissions($pdo, [$submissionId]);
+    respond([
+        'ok' => true,
+        'message' => 'Đã lưu phản hồi cho học sinh.',
+        'submission' => lsp_submission_row($refreshed, $fileMap[$submissionId] ?? []),
     ]);
 }
 
