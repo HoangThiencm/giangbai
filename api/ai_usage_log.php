@@ -134,7 +134,6 @@ function ai_usage_allowed_providers(): array
 {
     return [
         'cloudflare_workers_ai',
-        'ds2api',
         'gemini',
         'gemini_browser',
         'mistral_ocr',

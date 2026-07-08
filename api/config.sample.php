@@ -23,14 +23,7 @@ define('GEMINI_API_KEYS', []);
 define('GEMINI_MODEL', 'gemini-2.5-flash');
 define('GEMINI_ENABLED', true);
 
-// === DS2API Configuration ===
-// Client key phải trùng với một key trong config.keys của DS2API Admin.
-define('DS2API_ENABLED', true);
-define('DS2API_BASE_URL', 'https://freeapideepseek.vercel.app');
-define('DS2API_API_KEY', '');
-define('DS2API_MODEL', 'deepseek-v4-flash');
-
-// Cloudflare Workers AI — fallback sau DS2API. Keep the secret only in
+// Cloudflare Workers AI — nguồn chính cho lộ trình. Keep the secret only in
 // api/config.php on the hosting; never expose it through JavaScript or JSON.
 define('CLOUDFLARE_AI_WORKER_URL', 'https://late-bird-fe3b.hoangthien-thcstranphu.workers.dev');
 define('CLOUDFLARE_AI_WORKER_SECRET', 'paste-the-same-secret-as-APP_SHARED_SECRET');

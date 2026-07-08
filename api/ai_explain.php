@@ -21,7 +21,7 @@ $subject = trim($data['subject'] ?? 'Toan');
 $lessonContext = trim($data['lesson_context'] ?? '');
 $lessonId = (int)($data['lesson_id'] ?? 0);
 $forceProvider = strtolower(trim((string)($data['force_provider'] ?? '')));
-if (!in_array($forceProvider, ['', 'ds2api', 'cloudflare', 'gemini', 'shopaikey'], true)) $forceProvider = '';
+if (!in_array($forceProvider, ['', 'cloudflare', 'gemini', 'shopaikey'], true)) $forceProvider = '';
 
 $currentUserId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $currentUserRole = '';
@@ -374,14 +374,6 @@ function call_shopaikey(string $baseUrl, string $key, string $payload): array
     return call_openai_compatible_chat($baseUrl, $key, $payload, 45);
 }
 
-function call_ds2api(string $baseUrl, string $key, string $payload): array
-{
-    // DS2API officially accepts both Bearer and x-api-key. Send both to remain
-    // compatible with Vercel/runtime variants that only inspect one source.
-    $extraHeaders = trim($key) !== '' ? ['x-api-key: ' . trim($key)] : [];
-    return call_openai_compatible_chat($baseUrl, $key, $payload, 60, $extraHeaders);
-}
-
 function call_cloudflare_worker(string $workerUrl, string $secret, array $payload): array
 {
     $ch = curl_init(rtrim($workerUrl, '/') . '/chat');
@@ -444,7 +436,7 @@ function complete_answer_if_needed(string $provider, callable $caller, string $a
 
     $more = $provider === 'gemini'
         ? extract_gemini_answer($response2)
-        : extract_shopaikey_answer($response2); // ds2api + shopaikey: OpenAI format
+        : extract_shopaikey_answer($response2);
     if ($more !== '') {
         $answer = rtrim($answer) . ' ' . ltrim($more);
     }
@@ -501,69 +493,6 @@ function try_gemini_explain(array $config, string $prompt): ?array
     }
 
     return ['error' => $lastError, 'provider' => 'gemini'];
-}
-
-function try_ds2api_explain(array $config, string $prompt): ?array
-{
-    $forcedDs2api = !empty($config['ai_test_ds2api_only']) || (($config['ai_force_provider'] ?? '') === 'ds2api');
-    if (empty($config['ds2api_enabled']) && !$forcedDs2api) return null;
-    $baseUrl = normalize_ds2api_base_url((string)($config['ds2api_base_url'] ?? ''));
-    $apiKey = ds2api_effective_api_key((string)($config['ds2api_api_key'] ?? ''));
-    if ($baseUrl === '') return null;
-    if ($apiKey === '') {
-        return [
-            'error' => 'DS2API chưa có client API key. Key phải trùng với một key trong config.keys của DS2API Admin.',
-            'provider' => 'ds2api',
-        ];
-    }
-
-    $model = trim((string)($config['ds2api_model'] ?? 'deepseek-v4-flash')) ?: 'deepseek-v4-flash';
-
-    $caller = function (string $textPrompt, int $maxTokens = 900) use ($baseUrl, $apiKey, $model) {
-        [$raw, $status, $curlError] = call_ds2api($baseUrl, $apiKey, shopaikey_payload($model, $textPrompt, $maxTokens));
-        $response = is_string($raw) && $raw !== '' ? (json_decode($raw, true) ?: []) : [];
-        return [$raw, $status, $curlError, $response];
-    };
-
-    [$raw, $status, $curlError, $response] = $caller($prompt);
-    if ($raw === false || $raw === '') {
-        return ['error' => $curlError ?: 'DS2API khong phan hoi.', 'provider' => 'ds2api'];
-    }
-
-    if ($status >= 200 && $status < 300) {
-        $answer = extract_shopaikey_answer($response);
-        if ($answer === '') {
-            return ['error' => 'DS2API tra ve noi dung rong.', 'provider' => 'ds2api'];
-        }
-        if (ai_router_ds2api_is_suspended(['answer' => $answer])) {
-            return [
-                'error' => 'Tài khoản DeepSeek qua DS2API tạm bị khóa (vi phạm chính sách). Hệ thống sẽ dùng AI dự phòng.',
-                'provider' => 'ds2api',
-                'ds2api_suspended' => true,
-            ];
-        }
-        $finishReason = $response['choices'][0]['finish_reason'] ?? '';
-        [$answer, ] = complete_answer_if_needed('ds2api', $caller, $answer, ['finish_reason' => $finishReason]);
-        if (ai_router_ds2api_is_suspended(['answer' => $answer])) {
-            return [
-                'error' => 'Tài khoản DeepSeek qua DS2API tạm bị khóa (vi phạm chính sách). Hệ thống sẽ dùng AI dự phòng.',
-                'provider' => 'ds2api',
-                'ds2api_suspended' => true,
-            ];
-        }
-        return array_merge([
-            'answer' => $answer,
-            'provider' => 'ds2api',
-            'model' => $model,
-        ], ai_usage_extract_shopaikey_tokens($response));
-    }
-
-    if ($status === 401) {
-        $errorMessage = 'DS2API từ chối API key (HTTP 401). Kiểm tra key này có trong config.keys của DS2API Admin và cấu hình Vercel đã được đồng bộ.';
-    } else {
-        $errorMessage = $response['error']['message'] ?? ($response['message'] ?? ('DS2API lỗi HTTP ' . $status));
-    }
-    return ['error' => $errorMessage, 'provider' => 'ds2api'];
 }
 
 function try_shopaikey_explain(array $config, string $prompt): ?array
@@ -664,10 +593,6 @@ function ai_explain_respond_success(
 }
 
 $runtime = load_ai_runtime_config();
-// Khi UI yêu cầu DS2API, không để fallback che lỗi auth/model/network của DS2API.
-if ($forceProvider === 'ds2api') {
-    $runtime['ai_test_ds2api_only'] = true;
-}
 if ($forceProvider !== '') {
     $runtime['ai_force_provider'] = $forceProvider;
 }
@@ -679,11 +604,7 @@ $prompt = $mode === 'chat'
     : build_explain_prompt($subject, $lessonTitle, $text);
 
 $cacheKey = ai_explain_cache_make_key($mode, $lessonId, $subject, $lessonTitle, $text, $question, $lessonContext, $history);
-// Test-only mode must hit DS2API on every request; a cached answer would make
-// the UI look successful without exercising DS2API at all.
-if ($mode !== 'chat'
-    && empty($runtime['ai_test_ds2api_only'])
-    && ai_explain_cache_eligible($mode, $text, $question)) {
+if ($mode !== 'chat' && ai_explain_cache_eligible($mode, $text, $question)) {
     $cached = ai_explain_cache_get($cacheKey);
     if (is_array($cached) && trim((string)($cached['answer'] ?? '')) !== '') {
         ai_usage_record([
@@ -779,9 +700,6 @@ $routerOut = ai_router_run([
     'providers' => [
         'light' => function () use ($runtime, $mode, $lessonTitle, $text, $question, $lessonContext) {
             return try_light_ai_explain($runtime, $mode, $lessonTitle, $text, $question, $lessonContext);
-        },
-        'ds2api' => function () use ($runtime, $prompt) {
-            return try_ds2api_explain($runtime, $prompt);
         },
         'cloudflare' => function () use ($runtime, $workerPayload) {
             return try_cloudflare_ai_explain($runtime, $workerPayload);

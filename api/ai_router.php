@@ -3,9 +3,9 @@
  * AI Router — miễn phí trước, ShopAIKey/DeepSeek chỉ khi thật sự cần.
  *
  * Thứ tự chính (AI Explain lộ trình):
- *   light_ai (miễn phí) → DS2API (DeepSeek web) → Cloudflare (quota neurons)
+ *   light_ai (miễn phí) → Cloudflare (quota neurons)
  *
- * Khi DS2API / Cloudflare không đủ:
+ * Khi Cloudflare không đủ:
  *   → Gemini
  *   → ShopAIKey / DeepSeek API (cuối cùng)
  *
@@ -92,26 +92,6 @@ function ai_router_quality_acceptable(array $result, string $mode, string $quest
     return ai_router_text_len($answer) >= 90;
 }
 
-function ai_router_ds2api_is_suspended(?array $result): bool
-{
-    if (!is_array($result)) {
-        return false;
-    }
-    if (!empty($result['ds2api_suspended'])) {
-        return true;
-    }
-    $blob = strtolower(trim((string)($result['error'] ?? '') . ' ' . ($result['answer'] ?? '')));
-    if ($blob === '') {
-        return false;
-    }
-    return str_contains($blob, 'suspended')
-        || str_contains($blob, 'violation of user policies')
-        || str_contains($blob, 'user policies')
-        || str_contains($blob, 'account has been')
-        || str_contains($blob, 'bị khóa')
-        || str_contains($blob, 'bi khoa');
-}
-
 function ai_router_pick_best(array $candidates): ?array
 {
     $best = null;
@@ -135,8 +115,6 @@ function ai_router_run(array $ctx): array
     $mode = (string)($ctx['mode'] ?? 'explain');
     $question = (string)($ctx['question'] ?? '');
     $text = (string)($ctx['text'] ?? '');
-    $prompt = (string)($ctx['prompt'] ?? '');
-    $workerPayload = $ctx['workerPayload'] ?? [];
     $providers = $ctx['providers'] ?? [];
     $log = $ctx['log'] ?? null;
 
@@ -146,13 +124,12 @@ function ai_router_run(array $ctx): array
     $usedFallback = false;
     $tiersTried = [];
     $geminiTriedAsCfFallback = false;
-    $ds2apiSuspended = false;
     $forceProvider = (string)($config['ai_force_provider'] ?? '');
 
     if ($forceProvider !== '' && isset($providers[$forceProvider]) && is_callable($providers[$forceProvider])) {
         $forced = $providers[$forceProvider]();
         $tiersTried[] = $forceProvider;
-        if (is_array($forced) && !empty($forced['answer']) && !ai_router_ds2api_is_suspended($forced)) {
+        if (is_array($forced) && !empty($forced['answer'])) {
             if (is_callable($log)) {
                 $log($mode, $forced, true, false);
             }
@@ -168,74 +145,16 @@ function ai_router_run(array $ctx): array
                 'test_mode' => true,
             ];
         }
-        if (is_array($forced) && ai_router_ds2api_is_suspended($forced)) {
-            $ds2apiSuspended = true;
-            $errors[] = 'DS2API: Tài khoản DeepSeek tạm khóa — chuyển AI dự phòng.';
-            $usedFallback = true;
-            if (is_callable($log)) {
-                $log($mode, $forced, false, true);
-            }
-        } else {
-            $forcedErr = is_array($forced) ? (string)($forced['error'] ?? 'Provider khong tra loi.') : 'Provider khong tra loi.';
-            if (is_callable($log) && is_array($forced)) {
-                $log($mode, $forced, false, false);
-            }
-            return [
-                'error' => 'Che do test ' . $forceProvider . ': ' . $forcedErr,
-                'quota' => $quotaStatus,
-                'tiers_tried' => $tiersTried,
-                'test_mode' => true,
-            ];
+        $forcedErr = is_array($forced) ? (string)($forced['error'] ?? 'Provider khong tra loi.') : 'Provider khong tra loi.';
+        if (is_callable($log) && is_array($forced)) {
+            $log($mode, $forced, false, false);
         }
-    }
-
-    if (!empty($config['ai_test_ds2api_only']) && !$ds2apiSuspended) {
-        $tryDs2apiOnly = $providers['ds2api'] ?? null;
-        if (!is_callable($tryDs2apiOnly)) {
-            return [
-                'error' => 'Chế độ test DS2API: chưa cấu hình provider.',
-                'quota' => $quotaStatus,
-                'tiers_tried' => [],
-                'test_mode' => true,
-            ];
-        }
-        $ds2Only = $tryDs2apiOnly();
-        $tiersTried[] = 'ds2api';
-        if (is_array($ds2Only) && !empty($ds2Only['answer']) && !ai_router_ds2api_is_suspended($ds2Only)) {
-            if (is_callable($log)) {
-                $log($mode, $ds2Only, true, false);
-            }
-            return [
-                'result' => array_merge($ds2Only, [
-                    'router_tier' => 'ds2api',
-                    'tiers_tried' => $tiersTried,
-                    'test_mode' => true,
-                    'complete' => true,
-                ]),
-                'quota' => $quotaStatus,
-                'used_api' => true,
-                'test_mode' => true,
-            ];
-        }
-        if (is_array($ds2Only) && ai_router_ds2api_is_suspended($ds2Only)) {
-            $ds2apiSuspended = true;
-            $errors[] = 'DS2API: Tài khoản DeepSeek tạm khóa — chuyển AI dự phòng.';
-            $usedFallback = true;
-            if (is_callable($log)) {
-                $log($mode, $ds2Only, false, true);
-            }
-        } else {
-            $ds2Err = is_array($ds2Only) ? (string)($ds2Only['error'] ?? 'DS2API không trả lời.') : 'DS2API không trả lời.';
-            if (is_callable($log) && is_array($ds2Only)) {
-                $log($mode, $ds2Only, false, false);
-            }
-            return [
-                'error' => 'Chế độ test DS2API: ' . $ds2Err,
-                'quota' => $quotaStatus,
-                'tiers_tried' => $tiersTried,
-                'test_mode' => true,
-            ];
-        }
+        return [
+            'error' => 'Che do test ' . $forceProvider . ': ' . $forcedErr,
+            'quota' => $quotaStatus,
+            'tiers_tried' => $tiersTried,
+            'test_mode' => true,
+        ];
     }
 
     $tryLight = $providers['light'] ?? null;
@@ -263,57 +182,6 @@ function ai_router_run(array $ctx): array
         }
     }
 
-    $tryDs2api = $providers['ds2api'] ?? null;
-    if (is_callable($tryDs2api)) {
-        $ds2 = $tryDs2api();
-        if (is_array($ds2) && !empty($ds2['answer'])) {
-            $tiersTried[] = 'ds2api';
-            if (ai_router_ds2api_is_suspended($ds2)) {
-                $ds2apiSuspended = true;
-                $errors[] = 'DS2API: Tài khoản DeepSeek tạm khóa — chuyển AI dự phòng.';
-                $usedFallback = true;
-                if (is_callable($log)) {
-                    $log($mode, $ds2, false, true);
-                }
-            } else {
-            $ds2['complete'] = !empty($ds2['complete']) || (function_exists('answer_looks_complete') && answer_looks_complete((string)$ds2['answer']));
-            if (ai_router_quality_acceptable($ds2, $mode, $question, $text)) {
-                if (is_callable($log)) {
-                    $log($mode, $ds2, true, false);
-                }
-                return [
-                    'result' => array_merge($ds2, [
-                        'router_tier' => 'ds2api',
-                        'tiers_tried' => $tiersTried,
-                    ]),
-                    'quota' => $quotaStatus,
-                    'used_api' => true,
-                ];
-            }
-            $candidates[] = $ds2;
-            $usedFallback = true;
-            }
-        } elseif (is_array($ds2) && !empty($ds2['error'])) {
-            $tiersTried[] = 'ds2api';
-            $errors[] = 'DS2API: ' . $ds2['error'];
-            if (is_callable($log)) {
-                $log($mode, $ds2, false, ai_router_ds2api_is_suspended($ds2));
-            }
-            if (ai_router_ds2api_is_suspended($ds2)) {
-                $ds2apiSuspended = true;
-                $usedFallback = true;
-            } elseif (!empty($config['ds2api_enabled']) || !empty($config['ai_test_ds2api_only'])) {
-                // Khi đã bật ưu tiên DS2API, không âm thầm chuyển sang Cloudflare nếu DS2API lỗi thường.
-                return [
-                    'error' => (string)$ds2['error'],
-                    'quota' => $quotaStatus,
-                    'tiers_tried' => $tiersTried,
-                    'provider' => 'ds2api',
-                ];
-            }
-        }
-    }
-
     $tryCloudflare = $providers['cloudflare'] ?? null;
     $cloudflareSkippedQuota = false;
     if (is_callable($tryCloudflare) && ai_smart_quota_allows_cloudflare()) {
@@ -323,12 +191,12 @@ function ai_router_run(array $ctx): array
             $cf['complete'] = !empty($cf['complete']) || (function_exists('answer_looks_complete') && answer_looks_complete((string)$cf['answer']));
             if (ai_router_quality_acceptable($cf, $mode, $question, $text)) {
                 if (is_callable($log)) {
-                    $log($mode, $cf, true, $ds2apiSuspended || $usedFallback);
+                    $log($mode, $cf, true, $usedFallback);
                 }
                 $cfResult = array_merge($cf, [
                     'router_tier' => 'cloudflare',
                     'tiers_tried' => $tiersTried,
-                    'fallback' => $ds2apiSuspended || $usedFallback,
+                    'fallback' => $usedFallback,
                 ]);
                 return [
                     'result' => $cfResult,
@@ -364,9 +232,6 @@ function ai_router_run(array $ctx): array
     }
 
     // === Fallback after Cloudflare ===
-    // When Cloudflare quota exhausted or low quality:
-    //   1. Gemini is the primary fallback (as requested)
-    //   2. ShopAIKey / DeepSeek only as last resort if Gemini fails
     $tryGemini = $providers['gemini'] ?? null;
     if (is_callable($tryGemini)) {
         $gemini = $tryGemini();
@@ -376,8 +241,6 @@ function ai_router_run(array $ctx): array
             $gemini['fallback'] = $usedFallback || $cloudflareSkippedQuota;
             $isCfQuotaFallback = $cloudflareSkippedQuota || $usedFallback;
 
-            // When this is fallback due to Cloudflare quota, accept Gemini answer readily
-            // (only skip to DeepSeek if Gemini completely failed to produce content)
             if ($isCfQuotaFallback || ai_router_quality_acceptable($gemini, $mode, $question, $text)) {
                 if (is_callable($log)) {
                     $log($mode, $gemini, true, !empty($gemini['fallback']));
@@ -408,7 +271,6 @@ function ai_router_run(array $ctx): array
     $shopaikeyEnabled = !empty($config['shopaikey_enabled']) && trim((string)($config['shopaikey_api_key'] ?? '')) !== '';
     $tryShopaikey = $providers['shopaikey'] ?? null;
     if ($shopaikeyEnabled && is_callable($tryShopaikey)) {
-        // Only attempt ShopAIKey if we are intentionally falling back past Gemini
         if ($cloudflareSkippedQuota || $usedFallback || $geminiTriedAsCfFallback) {
             $shop = $tryShopaikey();
             if (is_array($shop) && !empty($shop['answer'])) {

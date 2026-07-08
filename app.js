@@ -172,20 +172,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const VEHINH_PROVIDER_STORAGE_KEY = 'vehinh_ai_provider';
     const VEHINH_MODEL_STORAGE_PREFIX = 'vehinh_ai_model_';
     const DRAWING_AI_MODEL_CATALOG = {
-        ds2api: ['deepseek-v4-flash', 'deepseek-v4-flash-nothinking', 'deepseek-v4-pro', 'deepseek-v4-pro-nothinking'],
         gemini: ['gemini-3-flash-preview', 'gemini-2.5-flash'],
     };
     const DRAWING_MODEL_LABELS = {
-        'deepseek-v4-flash': 'DeepSeek V4 Flash (nhanh)',
-        'deepseek-v4-flash-nothinking': 'DeepSeek V4 Flash — không suy luận',
-        'deepseek-v4-pro': 'DeepSeek V4 Pro',
-        'deepseek-v4-pro-nothinking': 'DeepSeek V4 Pro — không suy luận',
         'gemini-3-flash-preview': 'Gemini 3 Flash (mới nhất)',
         'gemini-2.5-flash': 'Gemini 2.5 Flash (ổn định)',
     };
 
     function normalizeDrawingProvider(provider) {
-        return provider === 'gemini' ? 'gemini' : 'ds2api';
+        return 'gemini';
     }
 
     function getProviderModelCatalog(provider) {
@@ -199,16 +194,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getDefaultDrawingAiConfig() {
         return {
-            default_provider: 'ds2api',
+            default_provider: 'gemini',
             providers: {
-                ds2api: {
-                    label: 'DeepSeek / DS2API',
-                    configured: false,
-                    enabled: true,
-                    model: localStorage.getItem('default_ds2api_module') || 'deepseek-v4-flash',
-                    models: [...DRAWING_AI_MODEL_CATALOG.ds2api],
-                    supports_image: false,
-                },
                 gemini: {
                     label: 'Google Gemini',
                     configured: false,
@@ -225,13 +212,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function normalizeDrawingAiConfig(data) {
         const defaults = getDefaultDrawingAiConfig();
         const merged = {
-            default_provider: data?.default_provider || defaults.default_provider,
+            default_provider: 'gemini',
             providers: {
-                ds2api: { ...defaults.providers.ds2api, ...(data?.providers?.ds2api || {}) },
                 gemini: { ...defaults.providers.gemini, ...(data?.providers?.gemini || {}) },
             },
         };
-        ['ds2api', 'gemini'].forEach((provider) => {
+        ['gemini'].forEach((provider) => {
             const cfg = merged.providers[provider];
             const catalog = DRAWING_AI_MODEL_CATALOG[provider] || [];
             const serverModels = Array.isArray(cfg.models) ? cfg.models.filter(model => catalog.includes(model)) : [];
@@ -256,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getActiveDrawingProvider() {
-        const raw = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'ds2api';
+        const raw = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'gemini';
         return normalizeDrawingProvider(raw);
     }
 
@@ -422,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             drawingAiConfig = normalizeDrawingAiConfig(data);
             const savedProvider = localStorage.getItem(VEHINH_PROVIDER_STORAGE_KEY);
-            const defaultProvider = normalizeDrawingProvider(savedProvider || drawingAiConfig.default_provider || 'ds2api');
+            const defaultProvider = normalizeDrawingProvider(savedProvider || drawingAiConfig.default_provider || 'gemini');
             if (allDOMElements.aiProviderSelect) {
                 allDOMElements.aiProviderSelect.value = defaultProvider;
             }
@@ -437,22 +423,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateDrawingAiSummary(loadError = '') {
         const provider = getActiveDrawingProvider();
-        const ds2 = drawingAiConfig?.providers?.ds2api || {};
         const gemini = drawingAiConfig?.providers?.gemini || {};
         const currentModel = getCurrentDrawingModel(provider);
         if (allDOMElements.aiProviderSelect) {
-            const ds2Option = allDOMElements.aiProviderSelect.querySelector('option[value="ds2api"]');
             const geminiOption = allDOMElements.aiProviderSelect.querySelector('option[value="gemini"]');
-            if (ds2Option) ds2Option.textContent = `DeepSeek / DS2API${ds2.configured ? '' : ' (chưa cấu hình)'}`;
             if (geminiOption) geminiOption.textContent = `Google Gemini${gemini.configured ? '' : ' (chưa cấu hình)'}`;
         }
         if (!allDOMElements.aiModelSummary) return;
-        const selected = provider === 'gemini' ? gemini : ds2;
+        const selected = gemini;
         const supportsImage = selected.supports_image ? 'có hỗ trợ ảnh' : 'chỉ mô tả chữ';
         const readyText = selected.configured ? 'Đã cấu hình' : 'Chưa cấu hình trên server';
-        const extra = provider === 'gemini'
-            ? ` · ${gemini.keys_count || 0} key`
-            : ' · Client Key DS2API trong Admin';
+        const extra = ` · ${gemini.keys_count || 0} key`;
         const errorLine = loadError
             ? `<div class="text-amber-300 mt-1">Không đọc cấu hình server: ${loadError}. Vẫn chọn được model bên trên.</div>`
             : '';
@@ -536,14 +517,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!userPrompt && !imageFile) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng nhập đề bài hoặc tải ảnh.</span>'; return; }
         const selectedProvider = getActiveDrawingProvider();
         const selectedModel = allDOMElements.aiModelSelect?.value || getCurrentDrawingModel(selectedProvider) || '';
-        if (selectedProvider === 'ds2api' && imageFile) {
-            allDOMElements.analysisOutput.innerHTML = '<span class="text-amber-300">DeepSeek/DS2API hiện chỉ dùng cho mô tả chữ trên trang này. Nếu muốn AI đọc ảnh, hãy chọn Google Gemini.</span>';
-            return;
-        }
-
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
-        allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng ${selectedProvider === 'gemini' ? 'Gemini' : 'DeepSeek/DS2API'}${selectedModel ? ` · ${selectedModel}` : ''}...`;
+        allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng Gemini${selectedModel ? ` · ${selectedModel}` : ''}...`;
 
         canvas.getObjects().slice().forEach(obj => { if (obj.source === 'ai' || obj.source === 'ai_primitive') { canvas.remove(obj); } });
         canvas.renderAll();

@@ -485,7 +485,6 @@
     }
 
     function formatAiProviderLabel(provider) {
-        if (provider === 'ds2api') return 'DS2API';
         if (provider === 'cloudflare_workers_ai' || provider === 'cloudflare') return 'Cloudflare';
         return provider || '';
     }
@@ -3065,7 +3064,6 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lessonAiPayload(lesson, {
                 text,
-                force_provider: 'ds2api',
                 lesson_context: lessonContextText(lesson)
             }))
         });
@@ -3078,7 +3076,6 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lessonAiPayload(lesson, {
                 mode: 'chat',
-                force_provider: 'ds2api',
                 question,
                 lesson_context: lessonContextText(lesson),
                 history
