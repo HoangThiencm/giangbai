@@ -106,12 +106,43 @@ Tham chiếu app TKB chuyên dụng:
 
 **Cách user kiểm tra:** Ctrl+F5 → thấy banner `57 GV · 30 lớp…` → tab Giáo viên có danh sách → **Xếp lịch**.
 
+### Treo trang (đã tối ưu)
+
+**Vì sao treo:** Demo 30 = 448 dòng phân công × select 57 GV → hàng chục nghìn DOM; solver 840 tiết chạy **đồng bộ** trên main thread; render 30 bảng TKB cùng lúc.
+
+**Đã làm:**
+
+- Mở trang chỉ nạp **demo nhỏ** (không auto demo 30)
+- Phân trang 40 dòng; tab render lười
+- Phân công ≥35 dòng: **chế độ gọn** (text, không select đầy)
+- Xem TKB: tối đa 3 lớp / 4 GV khi chọn “Tất cả”
+- Solver: giảm node/beautify budget khi data lớn; spinner + banner chờ
+- Kiểm tra: bỏ quét domain đầy đủ nếu >500 tiết
+
+**Lưu ý:** Bấm **Xếp lịch** với 30 lớp vẫn có thể **30–120s** “trang không phản hồi” — đó là CPU solver, không phải crash. Đừng F5 giữa chừng. (Web Worker = bước sau.)
+
+### Khung tiết + không trống tiết 1 + tiết tránh GV (đã làm)
+
+**Vấn đề:** Lớp buổi sáng bị trống tiết 1 — không chấp nhận được.
+
+**Đã thêm (tab Thiết lập):**
+
+| Mục | Ý nghĩa |
+|-----|---------|
+| Sáng từ tiết → đến tiết | VD 1→5 |
+| Chiều từ tiết → đến tiết | VD 1→4 |
+| **Bắt buộc gói từ tiết đầu buổi** | Có học buổi đó thì phải lấp từ tiết đầu khung, không trống tiết 1 rồi học tiết 2 |
+| Ngoại lệ ô trống toàn trường | VD `T4S5, T6C4` — không xếp ai |
+| Tiết tránh GV | `T2S` / `T5S1` / `T6C2-3` / `T7` |
+
+Ràng buộc gói tiết đầu là **cứng** trong solver (không chỉ beauty).
+
 ### Việc tiếp theo (chưa làm)
 
-- Slot cố định (Chào cờ / SH)
+- Slot cố định mang tên (Chào cờ / SH) gắn môn
 - Cờ tiết đôi trên phân công
 - Web Worker khi 30+ lớp
-- Chạy thử xếp 100% + beauty trên demo 30 (nặng hơn 16 lớp)
+- Chạy thử xếp 100% + beauty trên demo 30
 
 ---
 

@@ -236,18 +236,54 @@
                 </section>
 
                 <section data-panel="rules" class="hidden">
-                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Số tiết buổi sáng</span><input id="morningPeriods" type="number" min="1" max="8" class="field" value="5"></label>
-                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Số tiết buổi chiều</span><input id="afternoonPeriods" type="number" min="1" max="8" class="field" value="4"></label>
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Ngày học</span><input id="schoolDays" class="field" value="T2,T3,T4,T5,T6,T7"></label>
                         <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Tối đa cùng môn/ngày/lớp</span><input id="maxSameSubjectDay" type="number" min="1" max="5" class="field" value="2"></label>
+                        <label class="rounded-2xl border border-teal-200 bg-teal-50 p-4 flex items-center gap-3 cursor-pointer">
+                            <input id="packFromSessionStart" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-teal-700" checked>
+                            <span class="text-sm font-bold text-teal-950">Bắt buộc gói từ tiết đầu buổi<br><span class="font-normal text-teal-800/80">Lớp có học buổi sáng thì không được trống tiết 1 (tương tự chiều)</span></span>
+                        </label>
+                    </div>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h4 class="text-sm font-black text-slate-800">Khung buổi sáng</h4>
+                            <div class="mt-3 grid grid-cols-2 gap-3">
+                                <label><span class="label">Từ tiết</span><input id="morningFrom" type="number" min="1" max="10" class="field" value="1"></label>
+                                <label><span class="label">Đến tiết</span><input id="morningTo" type="number" min="1" max="10" class="field" value="5"></label>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-500">VD: sáng học tiết 1→5 (5 tiết).</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h4 class="text-sm font-black text-slate-800">Khung buổi chiều</h4>
+                            <div class="mt-3 grid grid-cols-2 gap-3">
+                                <label><span class="label">Từ tiết</span><input id="afternoonFrom" type="number" min="1" max="10" class="field" value="1"></label>
+                                <label><span class="label">Đến tiết</span><input id="afternoonTo" type="number" min="1" max="10" class="field" value="4"></label>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-500">VD: chiều tiết 1→4 trong buổi chiều.</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <label class="block">
+                            <span class="label">Ngoại lệ — ô trống toàn trường (không xếp ai)</span>
+                            <input id="blockedSlots" class="field" placeholder="VD: T4S5, T6C4  (thứ 4 sáng tiết 5; thứ 6 chiều tiết 4)">
+                        </label>
+                        <p class="mt-2 text-xs leading-5 text-slate-500">Dùng cho tiết sinh hoạt toàn trường, họp đột xuất, hoặc ô nhà trường không dạy. Cú pháp giống “tiết tránh” của GV.</p>
                     </div>
                     <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                        <strong>Ghi chú:</strong> ô “Buổi tránh” của giáo viên nhận dạng dạng <code>T2S</code>, <code>T3C</code>, <code>T5 sáng</code>, <code>thứ 6 chiều</code>. Ký hiệu S là sáng, C là chiều.
+                        <strong>Tiết / buổi tránh của giáo viên</strong> (cột “Buổi tránh” ở tab Giáo viên), ví dụ:
+                        <code class="mx-1">T2S</code> cả sáng T2 ·
+                        <code class="mx-1">T3C</code> cả chiều T3 ·
+                        <code class="mx-1">T5S1</code> T5 sáng tiết 1 ·
+                        <code class="mx-1">T6C2-3</code> T6 chiều tiết 2 đến 3 ·
+                        <code class="mx-1">T7</code> cả ngày T7.
+                        Có thể ghi nhiều, cách nhau bằng dấu phẩy.
                     </div>
                     <div class="mt-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-950">
-                        <strong>Xếp đẹp (sau khi 100% khả thi):</strong> gói buổi lớp không trống giữa; ưu tiên tiết đôi liền (Toán/Văn/Anh/Khoa học…); môn chính ưu tiên tiết sớm; giảm trống GV; rải tải theo ngày; phòng BM đúng môn. Bộ xếp chạy 2 pha: <em>ràng buộc cứng</em> → <em>tinh chỉnh beauty</em> (relocate + swap).
+                        <strong>Xếp đẹp:</strong> gói buổi từ tiết đầu; tiết đôi liền; môn chính sớm; giảm trống GV. 2 pha: ràng buộc cứng → tinh chỉnh beauty.
                     </div>
+                    <!-- Giữ id ẩn để tương thích rule cũ morningPeriods / afternoonPeriods -->
+                    <input type="hidden" id="morningPeriods" value="5">
+                    <input type="hidden" id="afternoonPeriods" value="4">
                 </section>
 
                 <section data-panel="diagnostics" class="hidden">
@@ -318,11 +354,30 @@
             classes: [],
             rooms: [],
             assignments: [],
-            rules: { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 },
+            rules: {
+                morningPeriods: 5,
+                afternoonPeriods: 4,
+                morningFrom: 1,
+                morningTo: 5,
+                afternoonFrom: 1,
+                afternoonTo: 4,
+                packFromSessionStart: true,
+                blockedSlots: '',
+                days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+                maxSameSubjectDay: 2,
+            },
             result: null,
             activeResult: 'class',
             projectMeta: null,
+            ui: {
+                activeTab: 'teachers',
+                pageSize: 40,
+                page: { teachers: 0, classes: 0, rooms: 0, assignments: 0 },
+            },
         };
+
+        /** Ngưỡng: trên mức này dùng bảng gọn + phân trang để tránh treo DOM */
+        const HEAVY_THRESHOLD = 35;
 
         const $ = id => document.getElementById(id);
         const uid = prefix => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -343,13 +398,70 @@
         }
 
         function teacherOptions(selectedId) {
-            const options = state.teachers.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escapeHtml(t.name || 'Chưa đặt tên')}</option>`);
+            // Chỉ render option đang chọn + vài gợi ý — tránh 448 dòng × 57 option (treo trình duyệt)
+            const selected = state.teachers.find(t => t.id === selectedId);
+            const others = state.teachers.filter(t => t.id !== selectedId).slice(0, 80);
+            const list = selected ? [selected, ...others] : others;
+            const options = list.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escapeHtml(t.name || 'Chưa đặt tên')}</option>`);
             return `<option value="">Chọn giáo viên</option>${options.join('')}`;
         }
 
         function classOptions(selectedId) {
-            const options = state.classes.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.name || 'Lớp')}</option>`);
+            const selected = state.classes.find(c => c.id === selectedId);
+            const others = state.classes.filter(c => c.id !== selectedId).slice(0, 80);
+            const list = selected ? [selected, ...others] : others;
+            const options = list.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.name || 'Lớp')}</option>`);
             return `<option value="">Chọn lớp</option>${options.join('')}`;
+        }
+
+        function pageSlice(list, key) {
+            const size = state.ui.pageSize;
+            const page = state.ui.page[key] || 0;
+            const total = list.length;
+            const pages = Math.max(1, Math.ceil(total / size));
+            const safePage = Math.min(page, pages - 1);
+            state.ui.page[key] = safePage;
+            const start = safePage * size;
+            return {
+                rows: list.slice(start, start + size),
+                page: safePage,
+                pages,
+                total,
+                start: total ? start + 1 : 0,
+                end: Math.min(start + size, total),
+            };
+        }
+
+        function pagerHtml(key, info) {
+            if (info.total <= state.ui.pageSize) {
+                return info.total
+                    ? `<div class="px-3 py-2 text-xs font-bold text-slate-500">Hiển thị ${info.total} dòng</div>`
+                    : '';
+            }
+            return `<div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-3 py-2 text-xs font-bold text-slate-600">
+                <span>${info.start}–${info.end} / ${info.total}</span>
+                <span class="flex gap-1">
+                    <button type="button" class="pager-btn rounded-lg border border-slate-200 px-2 py-1 hover:bg-slate-50 ${info.page <= 0 ? 'opacity-40' : ''}" data-pager="${key}" data-dir="-1" ${info.page <= 0 ? 'disabled' : ''}>Trước</button>
+                    <span class="px-2 py-1">Trang ${info.page + 1}/${info.pages}</span>
+                    <button type="button" class="pager-btn rounded-lg border border-slate-200 px-2 py-1 hover:bg-slate-50 ${info.page >= info.pages - 1 ? 'opacity-40' : ''}" data-pager="${key}" data-dir="1" ${info.page >= info.pages - 1 ? 'disabled' : ''}>Sau</button>
+                </span>
+            </div>`;
+        }
+
+        function bindPager(container) {
+            container?.querySelectorAll('.pager-btn').forEach(btn => btn.addEventListener('click', () => {
+                const key = btn.dataset.pager;
+                const dir = Number(btn.dataset.dir || 0);
+                state.ui.page[key] = Math.max(0, (state.ui.page[key] || 0) + dir);
+                if (key === 'teachers') renderTeachers();
+                else if (key === 'classes') renderClasses();
+                else if (key === 'rooms') renderRooms();
+                else if (key === 'assignments') renderAssignments();
+            }));
+        }
+
+        function yieldToUi(ms = 0) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
 
         function shiftLabel(value) {
@@ -375,48 +487,111 @@
             }
         }
 
+        function normalizeRules(rules = {}) {
+            const morningFrom = Math.max(1, Number(rules.morningFrom ?? 1));
+            let morningTo = Math.max(morningFrom, Number(rules.morningTo ?? rules.morningPeriods ?? 5));
+            const afternoonFrom = Math.max(1, Number(rules.afternoonFrom ?? 1));
+            let afternoonTo = Math.max(afternoonFrom, Number(rules.afternoonTo ?? rules.afternoonPeriods ?? 4));
+            const morningPeriods = morningTo - morningFrom + 1;
+            const afternoonPeriods = afternoonTo - afternoonFrom + 1;
+            return {
+                ...state.rules,
+                ...rules,
+                morningFrom,
+                morningTo,
+                afternoonFrom,
+                afternoonTo,
+                morningPeriods,
+                afternoonPeriods,
+                packFromSessionStart: rules.packFromSessionStart !== false && rules.packFromSessionStart !== 0 && rules.packFromSessionStart !== '0',
+                blockedSlots: clean(rules.blockedSlots ?? state.rules.blockedSlots ?? ''),
+                days: Array.isArray(rules.days) ? rules.days : (state.rules.days || ['T2', 'T3', 'T4', 'T5', 'T6', 'T7']),
+                maxSameSubjectDay: Math.max(1, Number(rules.maxSameSubjectDay ?? state.rules.maxSameSubjectDay ?? 2)),
+            };
+        }
+
         function readRulesFromInputs() {
-            state.rules.morningPeriods = Math.max(1, Number($('morningPeriods').value || 5));
-            state.rules.afternoonPeriods = Math.max(1, Number($('afternoonPeriods').value || 4));
-            state.rules.days = splitList($('schoolDays').value || 'T2,T3,T4,T5,T6,T7');
-            state.rules.maxSameSubjectDay = Math.max(1, Number($('maxSameSubjectDay').value || 2));
+            const morningFrom = Math.max(1, Number($('morningFrom')?.value || 1));
+            const morningTo = Math.max(morningFrom, Number($('morningTo')?.value || 5));
+            const afternoonFrom = Math.max(1, Number($('afternoonFrom')?.value || 1));
+            const afternoonTo = Math.max(afternoonFrom, Number($('afternoonTo')?.value || 4));
+            state.rules = normalizeRules({
+                morningFrom,
+                morningTo,
+                afternoonFrom,
+                afternoonTo,
+                days: splitList($('schoolDays')?.value || 'T2,T3,T4,T5,T6,T7'),
+                maxSameSubjectDay: Math.max(1, Number($('maxSameSubjectDay')?.value || 2)),
+                packFromSessionStart: !!$('packFromSessionStart')?.checked,
+                blockedSlots: $('blockedSlots')?.value || '',
+            });
+            if ($('morningPeriods')) $('morningPeriods').value = state.rules.morningPeriods;
+            if ($('afternoonPeriods')) $('afternoonPeriods').value = state.rules.afternoonPeriods;
         }
 
         function syncRuleInputs() {
-            $('morningPeriods').value = state.rules.morningPeriods;
-            $('afternoonPeriods').value = state.rules.afternoonPeriods;
-            $('schoolDays').value = state.rules.days.join(',');
-            $('maxSameSubjectDay').value = state.rules.maxSameSubjectDay;
+            state.rules = normalizeRules(state.rules);
+            if ($('morningFrom')) $('morningFrom').value = state.rules.morningFrom;
+            if ($('morningTo')) $('morningTo').value = state.rules.morningTo;
+            if ($('afternoonFrom')) $('afternoonFrom').value = state.rules.afternoonFrom;
+            if ($('afternoonTo')) $('afternoonTo').value = state.rules.afternoonTo;
+            if ($('morningPeriods')) $('morningPeriods').value = state.rules.morningPeriods;
+            if ($('afternoonPeriods')) $('afternoonPeriods').value = state.rules.afternoonPeriods;
+            if ($('schoolDays')) $('schoolDays').value = (state.rules.days || []).join(',');
+            if ($('maxSameSubjectDay')) $('maxSameSubjectDay').value = state.rules.maxSameSubjectDay;
+            if ($('packFromSessionStart')) $('packFromSessionStart').checked = state.rules.packFromSessionStart !== false;
+            if ($('blockedSlots')) $('blockedSlots').value = state.rules.blockedSlots || '';
+        }
+
+        function ensurePagerHost(tbodyId, pagerId) {
+            const tbody = $(tbodyId);
+            if (!tbody) return null;
+            const tableWrap = tbody.closest('.overflow-hidden') || tbody.parentElement?.parentElement;
+            let host = document.getElementById(pagerId);
+            if (!host && tableWrap) {
+                host = document.createElement('div');
+                host.id = pagerId;
+                tableWrap.appendChild(host);
+            }
+            return host;
         }
 
         function renderTeachers() {
-            $('teacherRows').innerHTML = state.teachers.map(t => `
+            const tbody = $('teacherRows');
+            if (!tbody) return;
+            const info = pageSlice(state.teachers, 'teachers');
+            tbody.innerHTML = info.rows.map(t => `
                 <tr data-id="${t.id}">
                     <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(t.name)}"></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subject" value="${escapeHtml(t.subject)}"></td>
                     <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="maxPeriods" value="${escapeHtml(t.maxPeriods || 24)}"></td>
-                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="unavailable" value="${escapeHtml(t.unavailable)}" placeholder="T2S, T5C"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="unavailable" value="${escapeHtml(t.unavailable)}" placeholder="T2S, T5S1, T6C2-3"></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="preferredRooms" value="${escapeHtml(t.preferredRooms)}"></td>
                     <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
                 </tr>
-            `).join('') || `<tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có giáo viên. Hãy nhập Excel hoặc bấm thêm giáo viên.</td></tr>`;
-            $('teacherRows').querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
+            `).join('') || `<tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có giáo viên. Hãy nhập Excel hoặc bấm Demo / thêm giáo viên.</td></tr>`;
+            tbody.querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
                 const tr = e.target.closest('tr');
                 const teacher = state.teachers.find(t => t.id === tr.dataset.id);
                 if (!teacher) return;
                 teacher[e.target.dataset.field] = e.target.type === 'number' ? Number(e.target.value || 0) : e.target.value;
                 updateStats();
             }));
-            $('teacherRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+            tbody.querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
                 const id = e.target.closest('tr').dataset.id;
                 state.teachers = state.teachers.filter(t => t.id !== id);
                 state.assignments = state.assignments.filter(a => a.teacherId !== id);
                 renderAll();
             }));
+            const host = ensurePagerHost('teacherRows', 'teacherPager');
+            if (host) { host.innerHTML = pagerHtml('teachers', info); bindPager(host); }
         }
 
         function renderClasses() {
-            $('classRows').innerHTML = state.classes.map(c => `
+            const tbody = $('classRows');
+            if (!tbody) return;
+            const info = pageSlice(state.classes, 'classes');
+            tbody.innerHTML = info.rows.map(c => `
                 <tr data-id="${c.id}">
                     <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(c.name)}"></td>
                     <td class="px-3 py-2">
@@ -430,47 +605,72 @@
                     <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('') || `<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có lớp học.</td></tr>`;
-            $('classRows').querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
+            tbody.querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
                 const tr = e.target.closest('tr');
                 const item = state.classes.find(c => c.id === tr.dataset.id);
                 if (!item) return;
                 item[e.target.dataset.field] = e.target.value;
-                renderAssignments();
                 updateStats();
             }));
-            $('classRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+            tbody.querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
                 const id = e.target.closest('tr').dataset.id;
                 state.classes = state.classes.filter(c => c.id !== id);
                 state.assignments = state.assignments.filter(a => a.classId !== id);
                 renderAll();
             }));
+            const host = ensurePagerHost('classRows', 'classPager');
+            if (host) { host.innerHTML = pagerHtml('classes', info); bindPager(host); }
         }
 
         function renderRooms() {
-            $('roomRows').innerHTML = state.rooms.map(r => `
+            const tbody = $('roomRows');
+            if (!tbody) return;
+            const info = pageSlice(state.rooms, 'rooms');
+            tbody.innerHTML = info.rows.map(r => `
                 <tr data-id="${r.id}">
                     <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(r.name)}"></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subjects" value="${escapeHtml(r.subjects)}"></td>
                     <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('') || `<tr><td colspan="3" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phòng bộ môn. Hệ thống vẫn dùng phòng lớp mặc định.</td></tr>`;
-            $('roomRows').querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
+            tbody.querySelectorAll('input').forEach(input => input.addEventListener('input', e => {
                 const tr = e.target.closest('tr');
                 const item = state.rooms.find(r => r.id === tr.dataset.id);
                 if (!item) return;
                 item[e.target.dataset.field] = e.target.value;
                 updateStats();
             }));
-            $('roomRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+            tbody.querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
                 const id = e.target.closest('tr').dataset.id;
                 state.rooms = state.rooms.filter(r => r.id !== id);
                 renderAll();
             }));
+            const host = ensurePagerHost('roomRows', 'roomPager');
+            if (host) { host.innerHTML = pagerHtml('rooms', info); bindPager(host); }
         }
 
         function renderAssignments() {
-            $('assignmentRows').innerHTML = state.assignments.map(a => `
-                <tr data-id="${a.id}">
+            const tbody = $('assignmentRows');
+            if (!tbody) return;
+            const info = pageSlice(state.assignments, 'assignments');
+            const heavy = state.assignments.length >= HEAVY_THRESHOLD;
+
+            // Chế độ gọn: text thay vì select đầy đủ → không nhân hàng nghìn <option>
+            tbody.innerHTML = info.rows.map(a => {
+                const cl = state.classes.find(c => c.id === a.classId);
+                const te = state.teachers.find(t => t.id === a.teacherId);
+                if (heavy) {
+                    return `<tr data-id="${a.id}">
+                        <td class="px-3 py-2 text-sm font-bold">${escapeHtml(cl?.name || '—')}</td>
+                        <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="subject" value="${escapeHtml(a.subject)}"></td>
+                        <td class="px-3 py-2 text-sm">${escapeHtml(te?.name || '—')}</td>
+                        <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="periods" value="${escapeHtml(a.periods || 1)}"></td>
+                        <td class="px-3 py-2"><input class="compact-input text-sm" data-field="roomNeed" value="${escapeHtml(a.roomNeed)}" placeholder="Tin học"></td>
+                        <td class="px-3 py-2 text-xs text-slate-500">${escapeHtml(a.note || '')}</td>
+                        <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
+                    </tr>`;
+                }
+                return `<tr data-id="${a.id}">
                     <td class="px-3 py-2"><select class="compact-input text-sm" data-field="classId">${classOptions(a.classId)}</select></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="subject" value="${escapeHtml(a.subject)}"></td>
                     <td class="px-3 py-2"><select class="compact-input text-sm" data-field="teacherId">${teacherOptions(a.teacherId)}</select></td>
@@ -478,28 +678,56 @@
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="roomNeed" value="${escapeHtml(a.roomNeed)}" placeholder="Tin học"></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="note" value="${escapeHtml(a.note)}"></td>
                     <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
-                </tr>
-            `).join('') || `<tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phân công. Nhập từ Excel hoặc thêm thủ công.</td></tr>`;
-            $('assignmentRows').querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
+                </tr>`;
+            }).join('') || `<tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">Chưa có phân công. Nhập từ Excel hoặc thêm thủ công.</td></tr>`;
+
+            tbody.querySelectorAll('input,select').forEach(input => input.addEventListener('input', e => {
                 const tr = e.target.closest('tr');
                 const item = state.assignments.find(a => a.id === tr.dataset.id);
                 if (!item) return;
                 item[e.target.dataset.field] = e.target.type === 'number' ? Number(e.target.value || 0) : e.target.value;
                 updateStats();
             }));
-            $('assignmentRows').querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
+            tbody.querySelectorAll('.delete-row').forEach(btn => btn.addEventListener('click', e => {
                 const id = e.target.closest('tr').dataset.id;
                 state.assignments = state.assignments.filter(a => a.id !== id);
-                renderAll();
+                renderAssignments();
+                updateStats();
             }));
+            const host = ensurePagerHost('assignmentRows', 'assignmentPager');
+            if (host) {
+                host.innerHTML = pagerHtml('assignments', info)
+                    + (heavy ? `<div class="px-3 pb-2 text-[11px] font-bold text-amber-800">Chế độ gọn (≥${HEAVY_THRESHOLD} dòng): không render select đầy đủ để tránh treo trang. Xuất JSON để chỉnh hàng loạt.</div>` : '');
+                bindPager(host);
+            }
             updateStats();
         }
 
         function renderAll() {
+            // Chỉ render tab đang mở — giảm DOM khi data lớn
+            const tab = state.ui.activeTab || 'teachers';
+            if (tab === 'teachers') renderTeachers();
+            else if (tab === 'classes') renderClasses();
+            else if (tab === 'rooms') renderRooms();
+            else if (tab === 'assignments') renderAssignments();
+            else if (tab === 'diagnostics') { /* diagnostics tự render */ }
+            else {
+                renderTeachers();
+            }
+            // Luôn cập nhật stats; các bảng khác render khi đổi tab
+            updateStats();
+        }
+
+        function renderActiveOrAllLight() {
             renderTeachers();
+            // classes/rooms nhẹ; assignments chỉ khi tab active hoặc data nhỏ
             renderClasses();
             renderRooms();
-            renderAssignments();
+            if (state.ui.activeTab === 'assignments' || state.assignments.length < HEAVY_THRESHOLD) {
+                renderAssignments();
+            } else if ($('assignmentRows')) {
+                $('assignmentRows').innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">Có <b>${state.assignments.length}</b> dòng phân công. Mở tab <b>Phân công</b> để xem (phân trang, chế độ gọn).</td></tr>`;
+            }
             updateStats();
         }
 
@@ -616,36 +844,105 @@
             renderAll();
         }
 
+        /**
+         * Parse buổi/tiết tránh.
+         * Hỗ trợ: T2S | T3C | T5S1 | T6C2-3 | T7 | T2 sáng tiết 1 | thứ 4 chiều
+         * Set chứa key: "T2-morning" (cả buổi) hoặc "T2-morning-1" (từng tiết)
+         */
         function parseUnavailable(value) {
-            const text = normalizeText(value).replace(/thu\s*/g, 't').replace(/sang/g, 's').replace(/chieu/g, 'c');
+            const text = normalizeText(value)
+                .replace(/thu\s*/g, 't')
+                .replace(/sang/g, 's')
+                .replace(/chieu/g, 'c')
+                .replace(/tiet/g, '');
             const set = new Set();
             text.split(/[,\n;]+/).forEach(part => {
                 const compact = part.replace(/\s+/g, '').toUpperCase();
-                const match = compact.match(/T?([2-7])([SC])?/);
+                if (!compact) return;
+                // T2S1-3 | T2S1 | T2S | T2C | T2
+                const match = compact.match(/T?([2-7])([SC])?(?:(\d+)(?:-(\d+))?)?/);
                 if (!match) return;
                 const day = `T${match[1]}`;
-                const session = match[2];
-                if (session) set.add(`${day}-${session === 'S' ? 'morning' : 'afternoon'}`);
-                else {
-                    set.add(`${day}-morning`);
-                    set.add(`${day}-afternoon`);
-                }
+                const sessCode = match[2]; // S / C / undefined
+                const pFrom = match[3] ? Number(match[3]) : null;
+                const pTo = match[4] ? Number(match[4]) : pFrom;
+
+                const sessions = sessCode
+                    ? [sessCode === 'S' ? 'morning' : 'afternoon']
+                    : ['morning', 'afternoon'];
+
+                sessions.forEach(session => {
+                    if (pFrom == null) {
+                        set.add(`${day}-${session}`); // cả buổi
+                        return;
+                    }
+                    const a = Math.min(pFrom, pTo || pFrom);
+                    const b = Math.max(pFrom, pTo || pFrom);
+                    for (let p = a; p <= b; p++) set.add(`${day}-${session}-${p}`);
+                });
             });
             return set;
         }
 
+        function isSlotBlockedBySet(blockSet, slot) {
+            if (!blockSet || !blockSet.size) return false;
+            if (blockSet.has(`${slot.day}-${slot.session}`)) return true;
+            if (blockSet.has(`${slot.day}-${slot.session}-${slot.period}`)) return true;
+            return false;
+        }
+
+        function schoolBlockedSet() {
+            return parseUnavailable(state.rules.blockedSlots || '');
+        }
+
+        function sessionPeriodRange(session) {
+            if (session === 'afternoon') {
+                const from = Math.max(1, Number(state.rules.afternoonFrom || 1));
+                const to = Math.max(from, Number(state.rules.afternoonTo || state.rules.afternoonPeriods || 4));
+                return { from, to };
+            }
+            const from = Math.max(1, Number(state.rules.morningFrom || 1));
+            const to = Math.max(from, Number(state.rules.morningTo || state.rules.morningPeriods || 5));
+            return { from, to };
+        }
+
         function slotsForClass(classItem) {
             const sessions = classItem.shift === 'both' ? ['morning', 'afternoon'] : [classItem.shift || 'morning'];
+            const blocked = schoolBlockedSet();
             const slots = [];
-            state.rules.days.forEach(day => {
+            (state.rules.days || []).forEach(day => {
                 sessions.forEach(session => {
-                    const count = session === 'morning' ? state.rules.morningPeriods : state.rules.afternoonPeriods;
-                    for (let period = 1; period <= count; period++) {
-                        slots.push({ day, session, period, key: `${day}-${session}-${period}` });
+                    const { from, to } = sessionPeriodRange(session);
+                    for (let period = from; period <= to; period++) {
+                        const slot = { day, session, period, key: `${day}-${session}-${period}` };
+                        if (isSlotBlockedBySet(blocked, slot)) continue;
+                        slots.push(slot);
                     }
                 });
             });
             return slots;
+        }
+
+        /** Ràng buộc cứng: buổi học gói từ tiết đầu — không trống tiết 1 rồi mới học tiết 2. */
+        function packConstraintAllows(lesson, option, assignments, lessonsArr) {
+            if (state.rules.packFromSessionStart === false) return true;
+            const start = sessionPeriodRange(option.session).from;
+            const periods = [];
+            (assignments || []).forEach((placed, i) => {
+                if (!placed) return;
+                const other = lessonsArr[i];
+                if (!other || other.classId !== lesson.classId) return;
+                if (placed.day === option.day && placed.session === option.session) periods.push(placed.period);
+            });
+            periods.push(option.period);
+            const uniq = Array.from(new Set(periods)).sort((a, b) => a - b);
+            const min = uniq[0];
+            const max = uniq[uniq.length - 1];
+            if (min !== start) return false;
+            for (let p = start; p <= max; p++) {
+                if (!uniq.includes(p)) return false;
+            }
+            return true;
         }
 
         function roomMatches(room, needOrSubject) {
@@ -714,7 +1011,8 @@
             return lessons.map(lesson => {
                 const classItem = state.classes.find(c => c.id === lesson.classId);
                 if (!classItem) return [];
-                const slots = slotsForClass(classItem).filter(slot => !teacherUnavailable[lesson.teacherId]?.has(`${slot.day}-${slot.session}`));
+                const blocked = teacherUnavailable[lesson.teacherId];
+                const slots = slotsForClass(classItem).filter(slot => !isSlotBlockedBySet(blocked, slot));
                 return slots.flatMap(slot => roomOptionsForLesson(lesson, slot));
             });
         }
@@ -829,11 +1127,15 @@
             let teacherGaps = 0;
             let singleLessonTeacherSessions = 0;
             let classStartLate = 0;
-            classBuckets.forEach(periods => {
+            classBuckets.forEach((periods, classKey) => {
                 const list = uniqueSortedPeriods(periods);
                 classGaps += gapCount(list);
-                // Ưu tiên gói từ tiết 1 (trống cuối buổi OK, giống TKB trường)
-                if (list.length && list[0] > 1) classStartLate += (list[0] - 1) * 2;
+                // Gói từ tiết đầu khung buổi (sáng/chiều có thể from ≠ 1)
+                const session = (classKey.split('|')[2]) || 'morning';
+                const start = sessionPeriodRange(session).from;
+                if (list.length && list[0] > start) classStartLate += (list[0] - start) * 8;
+                // Hổng giữa dải cũng đã tính gapCount; thêm phạt nếu min > start (cấm trống tiết đầu)
+                if (list.length && list[0] > start) classStartLate += 20;
             });
             teacherBuckets.forEach(periods => {
                 const list = uniqueSortedPeriods(periods);
@@ -883,7 +1185,7 @@
                 brokenDoubles * 95 +
                 sameSubjectSameDay * 18 +
                 singleLessonTeacherSessions * 14 +
-                classStartLate * 12 +
+                classStartLate * (state.rules.packFromSessionStart === false ? 40 : 220) +
                 dayLoadVariance * 6 +
                 coreLatePenalty +
                 latePenalty +
@@ -909,9 +1211,10 @@
         }
 
         function solveByConstraints(lessons, domains) {
-            const maxDepth = lessons.length > 1000 ? 12 : lessons.length > 700 ? 14 : 22;
-            const maxAttempts = lessons.length > 1000 ? 12 : lessons.length > 700 ? 16 : 28;
-            const nodeBudget = lessons.length > 1000 ? 520000 : lessons.length > 700 ? 760000 : 1150000;
+            // Giảm budget khi data lớn để UI không “Not responding” quá lâu
+            const maxDepth = lessons.length > 1000 ? 10 : lessons.length > 700 ? 12 : lessons.length > 400 ? 16 : 22;
+            const maxAttempts = lessons.length > 1000 ? 8 : lessons.length > 700 ? 10 : lessons.length > 400 ? 14 : 28;
+            const nodeBudget = lessons.length > 1000 ? 280000 : lessons.length > 700 ? 420000 : lessons.length > 400 ? 650000 : 1150000;
             let totalNodes = 0;
             let deepest = 0;
             let bestBlocked = null;
@@ -1043,16 +1346,26 @@
                     const adjacentClass = classPeriods.some(period => Math.abs(period - option.period) === 1);
                     const adjacentTeacher = teacherPeriods.some(period => Math.abs(period - option.period) === 1);
                     const subjectCount = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
-                    const packFromStart = classPeriods.length
-                        ? (option.period > Math.max(...classPeriods) + 1 ? 18 : 0)
-                        : (option.period === 1 ? -12 : option.period * 3);
+                    const startP = sessionPeriodRange(option.session).from;
+                    let packFromStart = 0;
+                    if (!classPeriods.length) {
+                        // Tiết đầu tiên của buổi: ưu tiên đúng tiết đầu khung
+                        packFromStart = option.period === startP ? -40 : 25 + (option.period - startP) * 18;
+                    } else {
+                        const maxP = Math.max(...classPeriods);
+                        const minP = Math.min(...classPeriods);
+                        if (option.period > maxP + 1) packFromStart = 30;
+                        if (option.period < minP - 1) packFromStart = 30;
+                        if (minP > startP) packFromStart += 80; // đang trống tiết đầu — phạt nặng
+                    }
+                    if (!packConstraintAllows(lesson, option, assignments, lessons)) packFromStart += 50000;
                     const doubleBonus = adjacentSameSubject && isDoubleFriendlySubject(lesson.subject) ? -42 : (adjacentSameSubject ? -22 : 0);
-                    const coreLate = isCoreSubject(lesson.subject) && option.period >= 4 ? (option.period - 3) * 6 : 0;
+                    const coreLate = isCoreSubject(lesson.subject) && option.period >= startP + 3 ? (option.period - startP - 2) * 6 : 0;
                     return (
                         (classAfter - classBefore) * 140 +
                         (teacherAfter - teacherBefore) * 85 +
                         subjectCount * 22 +
-                        option.period * 0.55 +
+                        (option.period - startP) * 0.55 +
                         (option.session === 'afternoon' ? 0.45 : 0) +
                         packFromStart +
                         coreLate +
@@ -1064,14 +1377,16 @@
                 }
 
                 function orderedOptions(index, path) {
-                    return domains[index].map(option => {
-                        const conflicts = conflictsFor(index, option, path);
-                        return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
-                    }).sort((a, b) => {
-                        const jitterA = ((attempt + 3) * (a.option.period + 5) * (a.option.day.charCodeAt(1) + 7)) % 17;
-                        const jitterB = ((attempt + 3) * (b.option.period + 5) * (b.option.day.charCodeAt(1) + 7)) % 17;
-                        return (a.cost + jitterA * 0.02) - (b.cost + jitterB * 0.02);
-                    });
+                    return domains[index]
+                        .filter(option => packConstraintAllows(lessons[index], option, assignments, lessons))
+                        .map(option => {
+                            const conflicts = conflictsFor(index, option, path);
+                            return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
+                        }).sort((a, b) => {
+                            const jitterA = ((attempt + 3) * (a.option.period + 5) * (a.option.day.charCodeAt(1) + 7)) % 17;
+                            const jitterB = ((attempt + 3) * (b.option.period + 5) * (b.option.day.charCodeAt(1) + 7)) % 17;
+                            return (a.cost + jitterA * 0.02) - (b.cost + jitterB * 0.02);
+                        });
                 }
 
                 function recursivePlace(index, depth, path) {
@@ -1135,7 +1450,7 @@
                             const snap = snapshot();
                             unplace(index);
                             const candidates = domains[index]
-                                .filter(option => !conflictsFor(index, option, new Set()).length)
+                                .filter(option => packConstraintAllows(lessons[index], option, assignments, lessons) && !conflictsFor(index, option, new Set()).length)
                                 .sort((a, b) => localSoftCost(index, a) - localSoftCost(index, b))
                                 .slice(0, 18);
                             let accepted = false;
@@ -1287,7 +1602,7 @@
                         if (!old) continue;
                         unplace(index);
                         const cands = domains[index]
-                            .filter(opt => !conflictsAt(index, opt).length)
+                            .filter(opt => packConstraintAllows(lessons[index], opt, assignments, lessons) && !conflictsAt(index, opt).length)
                             .sort((a, b) => optionDoubleBonus(index, b) - optionDoubleBonus(index, a))
                             .slice(0, 24);
                         let bestOpt = null;
@@ -1355,9 +1670,9 @@
                             unplace(i);
                             unplace(j);
                             let applied = false;
-                            if (!conflictsAt(i, slotForI).length) {
+                            if (packConstraintAllows(lessons[i], slotForI, assignments, lessons) && !conflictsAt(i, slotForI).length) {
                                 place(i, slotForI);
-                                if (!conflictsAt(j, slotForJ).length) {
+                                if (packConstraintAllows(lessons[j], slotForJ, assignments, lessons) && !conflictsAt(j, slotForJ).length) {
                                     place(j, slotForJ);
                                     const next = evaluateBeauty(lessons, assignments);
                                     if (next.score + 0.05 < beauty.score) {
@@ -1391,7 +1706,8 @@
             }
 
             if (bestSolution) {
-                const beautifyBudget = lessons.length > 700 ? 14000 : lessons.length > 350 ? 22000 : 28000;
+                // Data lớn: giảm budget beautify để tránh treo trình duyệt quá lâu
+                const beautifyBudget = lessons.length > 700 ? 4000 : lessons.length > 400 ? 9000 : lessons.length > 200 ? 16000 : 28000;
                 const polished = beautifySchedule(bestSolution, beautifyBudget);
                 bestSolution = polished.assignments;
                 bestBeauty = { ...polished.beauty, beautifyMoves: polished.moves };
@@ -1416,7 +1732,9 @@
                 function canPlace(index, option) {
                     const keys = keysFor(index, option);
                     if (classSlotMap.has(keys.classKey) || teacherSlotMap.has(keys.teacherKey) || roomSlotMap.has(keys.roomKey)) return false;
-                    return (subjectDayMap.get(keys.subjectKey)?.size || 0) < state.rules.maxSameSubjectDay;
+                    if ((subjectDayMap.get(keys.subjectKey)?.size || 0) >= state.rules.maxSameSubjectDay) return false;
+                    if (!packConstraintAllows(lessons[index], option, assignments, lessons)) return false;
+                    return true;
                 }
 
                 function place(index, option) {
@@ -1525,87 +1843,129 @@
             };
         }
 
-        function generateSchedule() {
+        async function generateSchedule() {
             const btn = $('btnGenerate');
             const oldHtml = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Đang xếp & làm đẹp...';
+            const setBusy = (msg) => {
+                btn.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i>${msg}`;
+                if ($('dataStatusBanner')) {
+                    $('dataStatusBanner').innerHTML = `<span class="text-amber-900">⏳ ${msg} — trình duyệt có thể chậm vài chục giây, vui lòng chờ (đừng F5).</span>`;
+                }
+            };
+            setBusy('Chuẩn bị xếp lịch...');
+            await yieldToUi(30);
 
-            // Nhường UI 1 frame trước khi chạy solver (CPU-bound)
-            window.setTimeout(() => {
-                try {
-                    readRulesFromInputs();
-                    const byClass = {};
-                    state.classes.forEach(c => { byClass[c.id] = {}; });
-                    const lessons = buildLessonUnits();
-                    const domains = buildBaseDomains(lessons);
-                    const precheckIssues = precheckSchedule(lessons, domains);
+            try {
+                readRulesFromInputs();
+                const byClass = {};
+                state.classes.forEach(c => { byClass[c.id] = {}; });
+                setBusy('Đang tạo tiết & miền giá trị...');
+                await yieldToUi(20);
+                const lessons = buildLessonUnits();
+                const domains = buildBaseDomains(lessons);
+                const precheckIssues = precheckSchedule(lessons, domains);
 
-                    if (precheckIssues.length) {
-                        state.result = {
-                            byClass,
-                            issues: precheckIssues,
-                            generatedAt: new Date().toISOString(),
-                            teacherLoad: {},
-                            status: 'infeasible',
-                            solver: { nodes: 0, deepest: 0, total: lessons.length },
-                        };
-                        state.activeResult = 'issues';
-                        document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
-                        renderResultControls();
-                        renderSchedule();
-                        return;
-                    }
-
-                    const solved = solveByConstraints(lessons, domains);
-                    const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
-                    const issues = [];
-
-                    if (solved.assignments.some(Boolean)) {
-                        lessons.forEach((lesson, index) => {
-                            const option = solved.assignments[index];
-                            if (!option) return;
-                            const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
-                            byClass[lesson.classId][option.key] = cell;
-                            teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
-                        });
-                    } else {
-                        const blocked = solved.blockedLesson;
-                        issues.push(makeIssue(
-                            blocked
-                                ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
-                                : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
-                        ));
-                    }
-
-                    if (!solved.ok && !issues.length) {
-                        const placed = solved.assignments.filter(Boolean).length;
-                        const blocked = solved.blockedLesson;
-                        issues.push(makeIssue(
-                            blocked
-                                ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
-                                : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.`
-                        ));
-                    }
-
+                if (precheckIssues.length) {
                     state.result = {
                         byClass,
-                        issues,
+                        issues: precheckIssues,
                         generatedAt: new Date().toISOString(),
-                        teacherLoad,
-                        status: solved.ok ? 'complete' : (solved.assignments.some(Boolean) ? 'partial' : 'infeasible'),
-                        solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
-                        beauty: solved.beauty,
+                        teacherLoad: {},
+                        status: 'infeasible',
+                        solver: { nodes: 0, deepest: 0, total: lessons.length },
                     };
-                    state.activeResult = solved.ok ? 'class' : 'issues';
-                    document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
+                    state.activeResult = 'issues';
+                    document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
                     renderResultControls();
                     renderSchedule();
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = oldHtml;
+                    showDataNotice(`Precheck: ${precheckIssues.length} lỗi — xem tab “Chưa xếp / cảnh báo”.`, 'err');
+                    return;
                 }
-            }, 40);
+
+                setBusy(`Đang xếp ${lessons.length} tiết (có thể 30–120s)...`);
+                await yieldToUi(40);
+
+                // Chạy solver sau 1 frame — vẫn CPU-bound nhưng UI đã kịp vẽ spinner
+                const solved = await new Promise(resolve => {
+                    setTimeout(() => {
+                        try {
+                            resolve(solveByConstraints(lessons, domains));
+                        } catch (err) {
+                            console.error(err);
+                            resolve({ ok: false, assignments: [], nodes: 0, deepest: 0, beauty: null, blockedLesson: null });
+                        }
+                    }, 0);
+                });
+
+                setBusy('Đang dựng bảng kết quả...');
+                await yieldToUi(20);
+
+                const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
+                const issues = [];
+
+                if (solved.assignments?.some(Boolean)) {
+                    lessons.forEach((lesson, index) => {
+                        const option = solved.assignments[index];
+                        if (!option) return;
+                        const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
+                        byClass[lesson.classId][option.key] = cell;
+                        teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+                    });
+                } else {
+                    const blocked = solved.blockedLesson;
+                    issues.push(makeIssue(
+                        blocked
+                            ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                            : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
+                    ));
+                }
+
+                if (!solved.ok && !issues.length) {
+                    const placed = solved.assignments.filter(Boolean).length;
+                    const blocked = solved.blockedLesson;
+                    issues.push(makeIssue(
+                        blocked
+                            ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}).`
+                            : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết.`
+                    ));
+                }
+
+                state.result = {
+                    byClass,
+                    issues,
+                    generatedAt: new Date().toISOString(),
+                    teacherLoad,
+                    status: solved.ok ? 'complete' : (solved.assignments?.some(Boolean) ? 'partial' : 'infeasible'),
+                    solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
+                    beauty: solved.beauty,
+                };
+                state.activeResult = solved.ok ? 'class' : 'issues';
+                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
+                // Mặc định xem 1 lớp — tránh render 30 bảng cùng lúc
+                if ($('viewSelector') && state.classes[0]) {
+                    // renderResultControls sẽ set options; chọn lớp đầu
+                }
+                renderResultControls();
+                if ($('viewSelector') && state.classes[0] && state.activeResult === 'class') {
+                    $('viewSelector').value = state.classes[0].id;
+                }
+                renderSchedule();
+                updateStats();
+                const placed = Object.values(byClass).reduce((s, m) => s + Object.keys(m).length, 0);
+                showDataNotice(
+                    solved.ok
+                        ? `✅ Đã xếp ${placed}/${lessons.length} tiết. Chọn lớp trên dropdown để xem (không load hết 30 bảng một lúc).`
+                        : `Đã xếp ${placed}/${lessons.length} tiết — xem cảnh báo.`,
+                    solved.ok ? 'ok' : 'warn'
+                );
+            } catch (err) {
+                console.error(err);
+                alert(`Lỗi khi xếp lịch: ${err.message || err}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = oldHtml;
+            }
         }
 
         function sessionText(session) {
@@ -1660,8 +2020,8 @@
             const slots = [];
             state.rules.days.forEach(day => {
                 ['morning', 'afternoon'].forEach(session => {
-                    const count = session === 'morning' ? state.rules.morningPeriods : state.rules.afternoonPeriods;
-                    for (let period = 1; period <= count; period++) slots.push({ day, session, period });
+                    const { from, to } = sessionPeriodRange(session);
+                    for (let period = from; period <= to; period++) slots.push({ day, session, period });
                 });
             });
             const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) }));
@@ -1754,13 +2114,23 @@
             }
 
             if (state.activeResult === 'teacher') {
-                const teachers = selected === 'all' ? state.teachers : state.teachers.filter(t => t.id === selected);
-                mount.innerHTML = teachers.map(renderTableForTeacher).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có giáo viên.</div>`;
+                let teachers = selected === 'all' ? state.teachers : state.teachers.filter(t => t.id === selected);
+                let note = '';
+                if (selected === 'all' && teachers.length > 4) {
+                    note = `<div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">Đang xem 4/${teachers.length} GV đầu. Chọn đúng GV trên dropdown để xem đủ.</div>`;
+                    teachers = teachers.slice(0, 4);
+                }
+                mount.innerHTML = note + (teachers.map(renderTableForTeacher).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có giáo viên.</div>`);
                 return;
             }
 
-            const classes = selected === 'all' ? state.classes : state.classes.filter(c => c.id === selected);
-            mount.innerHTML = classes.map(renderTableForClass).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có lớp.</div>`;
+            let classes = selected === 'all' ? state.classes : state.classes.filter(c => c.id === selected);
+            let note = '';
+            if (selected === 'all' && classes.length > 3) {
+                note = `<div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">Đang xem 3/${classes.length} lớp đầu. Chọn đúng lớp trên dropdown để xem đầy đủ (nhẹ hơn).</div>`;
+                classes = classes.slice(0, 3);
+            }
+            mount.innerHTML = note + (classes.map(renderTableForClass).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có lớp.</div>`);
         }
 
         function downloadBlob(filename, content, type) {
@@ -1830,6 +2200,7 @@
         }
 
         function activateSetupTab(tabName) {
+            state.ui.activeTab = tabName;
             document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
             document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== tabName));
         }
@@ -1842,7 +2213,7 @@
                 classes: Array.isArray(project.classes) ? project.classes : [],
                 rooms: Array.isArray(project.rooms) ? project.rooms : [],
                 assignments: Array.isArray(project.assignments) ? project.assignments : [],
-                rules: project.rules || state.rules,
+                rules: normalizeRules(project.rules || state.rules),
                 result: result || null,
                 activeResult: result?.status === 'infeasible' ? 'issues' : 'class',
                 projectMeta: meta,
@@ -2022,7 +2393,11 @@
             state.assignments = [];
             state.importedAssignments = [];
             state.result = null;
-            state.rules = { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 };
+            state.rules = normalizeRules({
+                morningFrom: 1, morningTo: 5, afternoonFrom: 1, afternoonTo: 4,
+                packFromSessionStart: true, blockedSlots: '',
+                days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2,
+            });
             syncRuleInputs();
 
             // 57 GV = 30 × 1,9 — phân theo tải tiết CT 2018
@@ -2114,22 +2489,19 @@
                 });
             });
 
-            renderAll();
+            state.ui.page = { teachers: 0, classes: 0, rooms: 0, assignments: 0 };
+            state.ui.activeTab = 'teachers';
+            // Không render 448 dòng select ngay — chỉ stats + tab GV (phân trang)
+            updateStats();
+            renderTeachers();
             renderResultControls();
             renderSchedule();
             persistLocalDraft();
             activateSetupTab('teachers');
             showDataNotice(
-                `Đã nạp demo CT2018: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.rooms.length} phòng · ${state.assignments.length} phân công · ${state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0)} tiết/tuần. Mở tab Lớp/Phân công để xem; bấm “Xếp lịch” để tạo TKB; tab “Kiểm tra” để rà lỗi.`,
+                `Đã nạp demo CT2018: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.rooms.length} phòng · ${state.assignments.length} phân công · ${state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0)} tiết/tuần. Xem tab Lớp/Phân công (phân trang). Bấm “Xếp lịch” (có thể 30–90s — đừng đóng tab).`,
                 'ok'
             );
-            try {
-                // Không chặn hiển thị nếu diagnostics lỗi
-                runDiagnostics();
-            } catch (err) {
-                console.warn('Diagnostics:', err);
-            }
-            updateStats();
         }
 
         function exportCurrentDataJson() {
@@ -2284,7 +2656,7 @@
             });
 
             // --- Phòng BM ---
-            const weekSlotsMorning = state.rules.days.length * state.rules.morningPeriods;
+            const weekSlotsMorning = state.rules.days.length * (sessionPeriodRange('morning').to - sessionPeriodRange('morning').from + 1);
             const roomDemand = {};
             state.assignments.forEach(a => {
                 const need = clean(a.roomNeed);
@@ -2302,24 +2674,33 @@
                 else if (demand > supply * 0.85) warnings.push({ type: 'room', message: `Phòng BM “${needKey}”: ${demand}/${supply} ô (~${Math.round(demand / supply * 100)}%) — sát trần, dễ nghẽn.` });
             });
 
-            // --- Domain / buổi tránh ---
+            // --- Domain / buổi tránh (bỏ qua sample đầy đủ nếu quá nặng) ---
             const lessons = buildLessonUnits();
-            const domains = buildBaseDomains(lessons);
-            let emptyDomain = 0;
-            lessons.forEach((lesson, index) => {
-                if (!domains[index]?.length) {
-                    emptyDomain++;
-                    if (emptyDomain <= 12) {
-                        errors.push({ type: 'domain', message: `${lesson.subject} – ${lesson.className} (${lesson.teacherName}): không còn ô hợp lệ (kiểm tra buổi học lớp / buổi tránh GV / phòng).` });
+            let domains = null;
+            if (lessons.length > 500) {
+                info.push(`Có ${lessons.length} tiết — bỏ qua quét domain đầy đủ trong Kiểm tra (tránh treo). Precheck capacity/ĐM vẫn chạy.`);
+                // Precheck nhẹ: chỉ capacity + maxPeriods + max subject day (không cần domains đầy đủ)
+                const lightDomains = lessons.map(() => [{}]); // dummy non-empty
+                precheckSchedule(lessons, lightDomains).forEach(issue => {
+                    if (issue.message.includes('không có ô hợp lệ')) return;
+                    if (!errors.some(e => e.message === issue.message)) errors.push({ type: 'precheck', message: issue.message });
+                });
+            } else {
+                domains = buildBaseDomains(lessons);
+                let emptyDomain = 0;
+                lessons.forEach((lesson, index) => {
+                    if (!domains[index]?.length) {
+                        emptyDomain++;
+                        if (emptyDomain <= 12) {
+                            errors.push({ type: 'domain', message: `${lesson.subject} – ${lesson.className} (${lesson.teacherName}): không còn ô hợp lệ (kiểm tra buổi học lớp / buổi tránh GV / phòng).` });
+                        }
                     }
-                }
-            });
-            if (emptyDomain > 12) errors.push({ type: 'domain', message: `… và ${emptyDomain - 12} tiết khác cũng không có ô hợp lệ.` });
-
-            // Precheck gộp
-            precheckSchedule(lessons, domains).forEach(issue => {
-                if (!errors.some(e => e.message === issue.message)) errors.push({ type: 'precheck', message: issue.message });
-            });
+                });
+                if (emptyDomain > 12) errors.push({ type: 'domain', message: `… và ${emptyDomain - 12} tiết khác cũng không có ô hợp lệ.` });
+                precheckSchedule(lessons, domains).forEach(issue => {
+                    if (!errors.some(e => e.message === issue.message)) errors.push({ type: 'precheck', message: issue.message });
+                });
+            }
 
             // Gợi ý quy trình (kiểu app TKB)
             const tips = [];
@@ -2469,8 +2850,15 @@
             $('setupTabs').addEventListener('click', e => {
                 const btn = e.target.closest('[data-tab]');
                 if (!btn) return;
+                state.ui.activeTab = btn.dataset.tab;
                 document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
                 document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== btn.dataset.tab));
+                // Render lười: chỉ khi mở tab
+                if (btn.dataset.tab === 'teachers') renderTeachers();
+                else if (btn.dataset.tab === 'classes') renderClasses();
+                else if (btn.dataset.tab === 'rooms') renderRooms();
+                else if (btn.dataset.tab === 'assignments') renderAssignments();
+                else if (btn.dataset.tab === 'diagnostics') runDiagnostics();
             });
             $('resultTabs').addEventListener('click', e => {
                 const btn = e.target.closest('[data-result]');
@@ -2502,7 +2890,18 @@
             $('btnPrint').addEventListener('click', () => window.print());
             $('btnSaveDraft').addEventListener('click', saveDraft);
             $('btnSampleData').addEventListener('click', loadSampleData);
-            $('btnSampleData30')?.addEventListener('click', loadSampleData30);
+            $('btnSampleData30')?.addEventListener('click', () => {
+                if ($('dataStatusBanner')) $('dataStatusBanner').innerHTML = '⏳ Đang nạp demo 30 lớp (không treo DOM — phân trang)...';
+                // Nhường UI 1 frame rồi mới nạp
+                setTimeout(() => {
+                    try {
+                        loadSampleData30();
+                    } catch (err) {
+                        console.error(err);
+                        alert('Không nạp được demo 30 lớp: ' + (err.message || err));
+                    }
+                }, 30);
+            });
             $('btnExportDemoData')?.addEventListener('click', exportCurrentDataJson);
             const goDiagnostics = () => {
                 document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'diagnostics'));
@@ -2539,30 +2938,30 @@
                 }
             }
 
-            // Không có dữ liệu thật → nạp demo 30 lớp CT2018 (có GV + phân công)
+            // Mặc định demo NHỎ (nhẹ). Demo 30 chỉ khi user bấm nút (tránh treo lúc mở trang).
             if (!loaded || !projectHasUsableData(state)) {
                 try {
-                    loadSampleData30();
+                    loadSampleData();
                     loaded = true;
                 } catch (err) {
-                    console.error('loadSampleData30', err);
-                    try { loadSampleData(); } catch { /* ignore */ }
+                    console.error('loadSampleData', err);
                 }
             }
 
             syncRuleInputs();
-            renderAll();
+            state.ui.activeTab = 'teachers';
+            renderActiveOrAllLight();
             renderResultControls();
             renderSchedule();
             updateStats();
 
             if (projectHasUsableData(state)) {
                 showDataNotice(
-                    `Đang hiển thị: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công. Tab Giáo viên/Lớp/Phân công để xem dữ liệu; bấm “Xếp lịch” để sinh thời khóa biểu.`,
+                    `Đang hiển thị: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công. Bấm “Demo 30 lớp CT2018” khi cần bộ lớn (có phân trang). “Xếp lịch” với 30 lớp có thể mất 30–120s.`,
                     'ok'
                 );
             } else {
-                showDataNotice('Chưa có dữ liệu. Bấm “Demo 30 lớp CT2018” hoặc “Demo nhỏ” trên thanh trên.', 'warn');
+                showDataNotice('Chưa có dữ liệu. Bấm “Demo nhỏ” hoặc “Demo 30 lớp CT2018”.', 'warn');
                 activateSetupTab('teachers');
             }
         }
