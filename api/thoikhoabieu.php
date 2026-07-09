@@ -248,6 +248,14 @@ function tkb_require_project(PDO $pdo, array $user, array $input): array
 function tkb_empty_project(): array
 {
     return [
+        // V1 nghiệp vụ nhà trường (UI Cấu hình)
+        'school' => [
+            'principal' => '',
+            'vicePrincipals' => '',
+            'note' => '',
+        ],
+        'departments' => [],
+        'subjects' => [],
         'teachers' => [],
         'importedAssignments' => [],
         'classes' => [],
@@ -262,6 +270,7 @@ function tkb_empty_project(): array
             'afternoonTo' => 4,
             'packFromSessionStart' => true,
             'blockedSlots' => '',
+            'fixedSlots' => '',
             'days' => ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
             'maxSameSubjectDay' => 2,
         ],
@@ -274,13 +283,29 @@ function tkb_clean_project($project): array
         throw new RuntimeException('Thiếu dữ liệu thời khóa biểu.');
     }
 
+    $schoolIn = is_array($project['school'] ?? null) ? $project['school'] : [];
+    $school = [
+        'principal' => tkb_trim_text($schoolIn['principal'] ?? '', 180),
+        'vicePrincipals' => tkb_trim_text($schoolIn['vicePrincipals'] ?? '', 500),
+        'note' => tkb_trim_text($schoolIn['note'] ?? '', 1000),
+    ];
+
+    $rules = is_array($project['rules'] ?? null) ? $project['rules'] : [];
+    // Giữ fixedSlots / blockedSlots nếu client gửi (không strip keys lạ trong rules array)
+    if (!array_key_exists('fixedSlots', $rules)) {
+        $rules['fixedSlots'] = '';
+    }
+
     return [
+        'school' => $school,
+        'departments' => array_values(array_slice(is_array($project['departments'] ?? null) ? $project['departments'] : [], 0, 200)),
+        'subjects' => array_values(array_slice(is_array($project['subjects'] ?? null) ? $project['subjects'] : [], 0, 300)),
         'teachers' => array_values(array_slice(is_array($project['teachers'] ?? null) ? $project['teachers'] : [], 0, 300)),
         'importedAssignments' => array_values(array_slice(is_array($project['importedAssignments'] ?? null) ? $project['importedAssignments'] : [], 0, 3000)),
         'classes' => array_values(array_slice(is_array($project['classes'] ?? null) ? $project['classes'] : [], 0, 200)),
         'rooms' => array_values(array_slice(is_array($project['rooms'] ?? null) ? $project['rooms'] : [], 0, 300)),
         'assignments' => array_values(array_slice(is_array($project['assignments'] ?? null) ? $project['assignments'] : [], 0, 6000)),
-        'rules' => is_array($project['rules'] ?? null) ? $project['rules'] : [],
+        'rules' => $rules,
     ];
 }
 
