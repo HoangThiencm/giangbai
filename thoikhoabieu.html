@@ -5527,6 +5527,45 @@
             return state.departments[0]?.id || '';
         }
 
+        /** Tải tiết hiện tại của 1 GV (từ phân công). */
+        function teacherAssignedLoad(teacherId) {
+            return state.assignments
+                .filter(a => a.teacherId === teacherId)
+                .reduce((s, a) => s + Number(a.periods || 0), 0);
+        }
+
+        /**
+         * Chọn GV trong pool ít tải nhất; ưu tiên không vượt maxPeriods.
+         */
+        function pickLeastLoadedTeacher(pool, needPeriods = 1) {
+            if (!pool?.length) return null;
+            let best = null;
+            let bestScore = Infinity;
+            pool.forEach(t => {
+                const load = teacherAssignedLoad(t.id);
+                const max = Number(t.maxPeriods || 99);
+                const over = load + needPeriods > max ? 1000 + (load + needPeriods - max) : 0;
+                const score = over + load;
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = t;
+                }
+            });
+            return best || pool[0];
+        }
+
+        /**
+         * Sau khi gán PC: chỉnh ĐM = max(ĐM, tải + 2) để demo không báo “vượt định mức”.
+         * (Trường thật: nên san PC; demo ưu tiên checklist sạch.)
+         */
+        function normalizeDemoTeacherMaxPeriods() {
+            state.teachers.forEach(t => {
+                const load = teacherAssignedLoad(t.id);
+                const cur = Number(t.maxPeriods || 0);
+                t.maxPeriods = Math.max(cur, load > 0 ? load + 2 : cur, 18);
+            });
+        }
+
         function loadSampleData() {
             state.teachers = [];
             state.classes = [];
@@ -5594,15 +5633,17 @@
             addRoom({ name: 'Sân 1', subjects: 'Giáo dục thể chất, Thể dục' });
             addRoom({ name: 'CN 1', subjects: 'Công nghệ' });
 
-            state.classes.forEach((c, ci) => {
+            state.classes.forEach((c) => {
                 curriculumCt2018(classGrade(c.name)).forEach(cur => {
-                    const pool = state.teachers.filter(t => normalizeText(t.subject) === normalizeText(cur.subject)
-                        || (normalizeText(cur.subject) === 'khoa hoc tu nhien' && /khtn|khoa hoc/.test(normalizeText(t.subject))));
-                    const teacher = pool[ci % Math.max(pool.length, 1)] || state.teachers[ci % state.teachers.length];
-                    // SH ưu tiên GVCN
-                    let te = teacher;
-                    if (normalizeText(cur.subject) === 'sinh hoat' && c.homeroomTeacherId) {
-                        te = state.teachers.find(t => t.id === c.homeroomTeacherId) || teacher;
+                    const key = normalizeText(cur.subject);
+                    let te = null;
+                    if (key === 'sinh hoat' && c.homeroomTeacherId) {
+                        te = state.teachers.find(t => t.id === c.homeroomTeacherId);
+                    }
+                    if (!te) {
+                        const pool = state.teachers.filter(t => normalizeText(t.subject) === key
+                            || (key === 'khoa hoc tu nhien' && /khtn|khoa hoc/.test(normalizeText(t.subject))));
+                        te = pickLeastLoadedTeacher(pool, cur.periods) || state.teachers[0];
                     }
                     addAssignment({
                         classId: c.id,
@@ -5610,10 +5651,11 @@
                         subject: cur.subject,
                         periods: cur.periods,
                         roomNeed: cur.roomNeed || '',
-                        note: normalizeText(cur.subject) === 'sinh hoat' ? 'SH – GVCN' : '',
+                        note: key === 'sinh hoat' ? 'SH – GVCN' : '',
                     });
                 });
             });
+            normalizeDemoTeacherMaxPeriods();
 
             state.ui.page = { teachers: 0, classes: 0, rooms: 0, assignments: 0, departments: 0, subjects: 0 };
             renderResultControls();
@@ -5642,24 +5684,25 @@
             applyFullSchoolDemoMeta({ large: true });
 
             const names = demoTeacherNames();
+            // ĐM đủ rộng + số GV đủ để ~28 tiết/lớp × 30 không dồn 1 người
             const teacherPlan = [
-                { subject: 'Toán', count: 6, max: 24 },
-                { subject: 'Ngữ văn', count: 6, max: 24 },
+                { subject: 'Toán', count: 7, max: 22 },
+                { subject: 'Ngữ văn', count: 7, max: 22 },
                 { subject: 'Ngoại ngữ 1', count: 5, max: 22 },
-                { subject: 'Giáo dục công dân', count: 2, max: 20 },
-                { subject: 'Lịch sử', count: 3, max: 22 },
-                { subject: 'Địa lí', count: 3, max: 22 },
-                { subject: 'Khoa học tự nhiên', count: 5, max: 22 },
-                { subject: 'Vật lí', count: 2, max: 20 },
-                { subject: 'Hóa học', count: 3, max: 22 },
-                { subject: 'Sinh học', count: 2, max: 20 },
-                { subject: 'Công nghệ', count: 2, max: 20 },
-                { subject: 'Tin học', count: 3, max: 20 },
-                { subject: 'Giáo dục thể chất', count: 5, max: 24 },
-                { subject: 'Âm nhạc', count: 2, max: 18 },
-                { subject: 'Mỹ thuật', count: 2, max: 18 },
-                { subject: 'HĐTN-HN', count: 3, max: 24 },
-                { subject: 'Sinh hoạt', count: 4, max: 22 },
+                { subject: 'Giáo dục công dân', count: 2, max: 18 },
+                { subject: 'Lịch sử', count: 3, max: 20 },
+                { subject: 'Địa lí', count: 3, max: 20 },
+                { subject: 'Khoa học tự nhiên', count: 6, max: 22 },
+                { subject: 'Vật lí', count: 2, max: 18 },
+                { subject: 'Hóa học', count: 3, max: 20 },
+                { subject: 'Sinh học', count: 2, max: 18 },
+                { subject: 'Công nghệ', count: 2, max: 18 },
+                { subject: 'Tin học', count: 3, max: 18 },
+                { subject: 'Giáo dục thể chất', count: 5, max: 22 },
+                { subject: 'Âm nhạc', count: 2, max: 16 },
+                { subject: 'Mỹ thuật', count: 2, max: 16 },
+                { subject: 'HĐTN-HN', count: 4, max: 20 },
+                { subject: 'Sinh hoạt', count: 8, max: 12 }, // ~30 SH / 8 GVCN ≈ 4 lớp/GV
             ];
             const mildUnav = ['', '', 'T7S', '', 'T6C', '', 'T2C', '', 'T3S', '', 'T5C1-2', ''];
             let tIdx = 0;
@@ -5699,10 +5742,14 @@
             for (const g of [6, 7]) for (let i = 1; i <= 8; i++) classNames.push(`${g}/${i}`);
             for (const g of [8, 9]) for (let i = 1; i <= 7; i++) classNames.push(`${g}/${i}`);
 
-            // GVCN: ưu tiên pool Sinh hoạt + rải đều
-            const gvcnPool = state.teachers.filter(t => /sinh hoat|hdtn|toan|ngu van/.test(normalizeText(t.subject)));
+            // GVCN: chỉ pool Sinh hoạt (tránh cộng SH lên Toán/Văn đã đủ tải)
+            let gvcnPool = state.teachers.filter(t => normalizeText(t.subject) === 'sinh hoat');
+            if (gvcnPool.length < 8) {
+                gvcnPool = gvcnPool.concat(state.teachers.filter(t => normalizeText(t.subject) === 'hdtn-hn'));
+            }
+            if (!gvcnPool.length) gvcnPool = state.teachers.slice();
             classNames.forEach((name, ci) => {
-                const gvcn = gvcnPool[ci % Math.max(gvcnPool.length, 1)] || state.teachers[ci % state.teachers.length];
+                const gvcn = gvcnPool[ci % gvcnPool.length];
                 if (gvcn && !/gvcn/i.test(gvcn.roles || '')) {
                     gvcn.roles = clean((gvcn.roles || 'GVBM') + ', GVCN');
                 }
@@ -5741,13 +5788,12 @@
                 teachersBySubject[key].push(t);
             });
 
-            const assignCursor = {};
             state.classes.forEach(cl => {
                 const grade = classGrade(cl.name);
                 curriculumCt2018(grade).forEach(cur => {
                     const key = normalizeText(cur.subject);
-                    // Sinh hoạt / HĐTN: ưu tiên GVCN lớp
-                    if ((key === 'sinh hoat' || key === 'hdtn-hn') && cl.homeroomTeacherId) {
+                    // Sinh hoạt: đúng GVCN (pool Sinh hoạt) — không chất lên Toán/Văn
+                    if (key === 'sinh hoat' && cl.homeroomTeacherId) {
                         const gvcn = state.teachers.find(t => t.id === cl.homeroomTeacherId);
                         if (gvcn) {
                             addAssignment({
@@ -5756,21 +5802,15 @@
                                 subject: cur.subject,
                                 periods: cur.periods,
                                 roomNeed: cur.roomNeed || '',
-                                note: key === 'sinh hoat' ? 'SH – GVCN' : 'HĐTN – ưu tiên GVCN',
+                                note: 'SH – GVCN',
                             });
                             return;
                         }
                     }
                     const pool = teachersBySubject[key] || [];
                     if (!pool.length) return;
-                    const cursor = assignCursor[key] || 0;
-                    let best = pool[cursor % pool.length];
-                    let bestLoad = state.assignments.filter(a => a.teacherId === best.id).reduce((s, a) => s + Number(a.periods || 0), 0);
-                    pool.forEach(t => {
-                        const load = state.assignments.filter(a => a.teacherId === t.id).reduce((s, a) => s + Number(a.periods || 0), 0);
-                        if (load < bestLoad) { best = t; bestLoad = load; }
-                    });
-                    assignCursor[key] = (cursor + 1) % pool.length;
+                    const best = pickLeastLoadedTeacher(pool, cur.periods);
+                    if (!best) return;
                     addAssignment({
                         classId: cl.id,
                         teacherId: best.id,
@@ -5781,6 +5821,7 @@
                     });
                 });
             });
+            normalizeDemoTeacherMaxPeriods();
 
             state.ui.page = { teachers: 0, classes: 0, rooms: 0, assignments: 0, departments: 0, subjects: 0 };
             state.ui.activeTab = 'school';
@@ -5792,9 +5833,12 @@
             activateSetupTab('school');
             const periods = state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0);
             const gvcnOk = state.classes.filter(c => c.homeroomTeacherId).length;
+            const over = state.teachers.filter(t => teacherAssignedLoad(t.id) > Number(t.maxPeriods || 0)).length;
             showDataNotice(
-                `Demo đầy đủ: ${state.school.principal.split('—')[0].trim()} (HT) · ${state.departments.length} tổ · ${state.subjects.length} môn · ${state.teachers.length} GV · ${state.classes.length} lớp (6/1…9/7) · GVCN ${gvcnOk}/${state.classes.length} · ${state.rooms.length} phòng · ${state.assignments.length} PC · ${periods} tiết/tuần · chào cờ T2S1. Xem tab Nhà trường / Lớp. Bấm Lưu rồi Xếp lịch.`,
-                'ok'
+                `Demo đầy đủ: HT · ${state.departments.length} tổ · ${state.subjects.length} môn · ${state.teachers.length} GV · lớp 6/1…9/7 · GVCN ${gvcnOk}/${state.classes.length} · ${periods} tiết/tuần`
+                + (over ? ` · ⚠ ${over} GV vẫn vượt ĐM` : ' · không GV vượt ĐM')
+                + '. Bấm Kiểm tra / Lưu / Xếp lịch.',
+                over ? 'warn' : 'ok'
             );
         }
 
