@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xếp thời khóa biểu nhà trường</title>
-    <script src="access-control.js?v=20260629-thoikhoabieu"></script>
+    <script src="access-control.js?v=20260709-thoikhoabieu"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -92,6 +92,10 @@
                 </div>
             </aside>
         </section>
+
+        <div id="dataStatusBanner" class="no-print mt-4 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-950">
+            Đang tải dữ liệu…
+        </div>
 
         <section id="setupPanel" class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5">
             <div class="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -353,10 +357,22 @@
         }
 
         function updateStats() {
-            $('statTeachers').textContent = state.teachers.length;
-            $('statClasses').textContent = state.classes.length;
-            $('statRooms').textContent = state.rooms.length;
-            $('statAssignments').textContent = state.assignments.length;
+            if ($('statTeachers')) $('statTeachers').textContent = state.teachers.length;
+            if ($('statClasses')) $('statClasses').textContent = state.classes.length;
+            if ($('statRooms')) $('statRooms').textContent = state.rooms.length;
+            if ($('statAssignments')) $('statAssignments').textContent = state.assignments.length;
+            const totalPeriods = state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0);
+            const banner = $('dataStatusBanner');
+            if (banner) {
+                if (state.teachers.length || state.classes.length) {
+                    banner.classList.remove('hidden');
+                    banner.innerHTML = `<strong>${state.teachers.length}</strong> GV · <strong>${state.classes.length}</strong> lớp · <strong>${state.rooms.length}</strong> phòng · <strong>${state.assignments.length}</strong> phân công · <strong>${totalPeriods}</strong> tiết/tuần`
+                        + (state.result ? ` · TKB: <strong>${state.result.status === 'complete' ? 'đã xếp' : state.result.status}</strong>` : ' · TKB: <em>chưa xếp — bấm “Xếp lịch”</em>');
+                } else {
+                    banner.classList.remove('hidden');
+                    banner.innerHTML = 'Chưa có dữ liệu. Bấm <strong>Demo 30 lớp CT2018</strong> trên cùng bên phải.';
+                }
+            }
         }
 
         function readRulesFromInputs() {
@@ -1795,6 +1811,29 @@
             };
         }
 
+        function projectHasUsableData(project) {
+            if (!project || typeof project !== 'object') return false;
+            const nT = Array.isArray(project.teachers) ? project.teachers.length : 0;
+            const nC = Array.isArray(project.classes) ? project.classes.length : 0;
+            const nA = Array.isArray(project.assignments) ? project.assignments.length : 0;
+            return nT > 0 || nC > 0 || nA > 0;
+        }
+
+        function showDataNotice(message, kind = 'ok') {
+            const el = $('importNotice');
+            if (!el) return;
+            el.textContent = message;
+            el.classList.remove('hidden', 'border-teal-200', 'bg-teal-50', 'text-teal-900', 'border-amber-200', 'bg-amber-50', 'text-amber-950', 'border-rose-200', 'bg-rose-50', 'text-rose-900');
+            if (kind === 'warn') el.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-950');
+            else if (kind === 'err') el.classList.add('border-rose-200', 'bg-rose-50', 'text-rose-900');
+            else el.classList.add('border-teal-200', 'bg-teal-50', 'text-teal-900');
+        }
+
+        function activateSetupTab(tabName) {
+            document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+            document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== tabName));
+        }
+
         function applyProject(project, result = null, meta = null) {
             if (!project || typeof project !== 'object') return false;
             Object.assign(state, {
@@ -1812,7 +1851,7 @@
             renderAll();
             renderResultControls();
             renderSchedule();
-            return true;
+            return projectHasUsableData(project);
         }
 
         async function loadHostingProject() {
@@ -1821,6 +1860,8 @@
                 if (!res.ok) return false;
                 const data = await res.json();
                 if (!data.ok || !data.project?.project) return false;
+                // Project rỗng trên hosting không được coi là đã nạp — tránh che demo
+                if (!projectHasUsableData(data.project.project)) return false;
                 return applyProject(data.project.project, data.project.result, {
                     id: data.project.id,
                     name: data.project.name,
@@ -1874,10 +1915,20 @@
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return false;
                 const data = JSON.parse(raw);
+                if (!projectHasUsableData(data)) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    return false;
+                }
                 return applyProject(data, null, { source: 'localStorage' });
             } catch {
                 return false;
             }
+        }
+
+        function persistLocalDraft() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(projectPayload()));
+            } catch { /* ignore quota */ }
         }
 
         /** Khung tiết/tuần CT GDPT 2018 (THCS) — quy đổi ~35 tuần/năm.
@@ -1952,7 +2003,12 @@
                 });
             });
             renderAll();
+            renderResultControls();
             renderSchedule();
+            persistLocalDraft();
+            activateSetupTab('teachers');
+            showDataNotice(`Đã nạp demo nhỏ: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công.`, 'ok');
+            updateStats();
         }
 
         /**
@@ -2059,11 +2115,21 @@
             });
 
             renderAll();
+            renderResultControls();
             renderSchedule();
-            // Tự mở tab kiểm tra để người dùng rà soát ngay
-            document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'diagnostics'));
-            document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== 'diagnostics'));
-            runDiagnostics();
+            persistLocalDraft();
+            activateSetupTab('teachers');
+            showDataNotice(
+                `Đã nạp demo CT2018: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.rooms.length} phòng · ${state.assignments.length} phân công · ${state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0)} tiết/tuần. Mở tab Lớp/Phân công để xem; bấm “Xếp lịch” để tạo TKB; tab “Kiểm tra” để rà lỗi.`,
+                'ok'
+            );
+            try {
+                // Không chặn hiển thị nếu diagnostics lỗi
+                runDiagnostics();
+            } catch (err) {
+                console.warn('Diagnostics:', err);
+            }
+            updateStats();
         }
 
         function exportCurrentDataJson() {
@@ -2452,13 +2518,52 @@
         }
 
         async function initTimetablePage() {
-            bindEvents();
-            if (!await loadHostingProject()) {
-                if (!loadDraft()) loadSampleData();
-                syncRuleInputs();
-                renderAll();
-                renderResultControls();
-                renderSchedule();
+            try {
+                bindEvents();
+            } catch (err) {
+                console.error('bindEvents', err);
+            }
+
+            let loaded = false;
+            try {
+                loaded = await loadHostingProject();
+            } catch (err) {
+                console.warn('loadHostingProject', err);
+            }
+
+            if (!loaded) {
+                try {
+                    loaded = loadDraft();
+                } catch (err) {
+                    console.warn('loadDraft', err);
+                }
+            }
+
+            // Không có dữ liệu thật → nạp demo 30 lớp CT2018 (có GV + phân công)
+            if (!loaded || !projectHasUsableData(state)) {
+                try {
+                    loadSampleData30();
+                    loaded = true;
+                } catch (err) {
+                    console.error('loadSampleData30', err);
+                    try { loadSampleData(); } catch { /* ignore */ }
+                }
+            }
+
+            syncRuleInputs();
+            renderAll();
+            renderResultControls();
+            renderSchedule();
+            updateStats();
+
+            if (projectHasUsableData(state)) {
+                showDataNotice(
+                    `Đang hiển thị: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công. Tab Giáo viên/Lớp/Phân công để xem dữ liệu; bấm “Xếp lịch” để sinh thời khóa biểu.`,
+                    'ok'
+                );
+            } else {
+                showDataNotice('Chưa có dữ liệu. Bấm “Demo 30 lớp CT2018” hoặc “Demo nhỏ” trên thanh trên.', 'warn');
+                activateSetupTab('teachers');
             }
         }
 

@@ -92,6 +92,20 @@ Tham chiếu app TKB chuyên dụng:
 | `data/tkb-demo-30lop-ct2018.json` | Dữ liệu demo đầy đủ để rà soát |
 | `agent-tools/build-demo-30-ct2018.js` | Script sinh JSON + in diagnostics |
 
+### Lỗi “không thấy GV / TKB” (đã sửa)
+
+**Nguyên nhân:** API hosting hoặc localStorage nạp **project rỗng** → app coi như đã có dữ liệu, **không** nạp demo → bảng GV trống. Thời khóa biểu cũng trống nếu chưa bấm **Xếp lịch** (demo chỉ nạp phân công, chưa chạy solver).
+
+**Đã sửa:**
+
+- Bỏ qua project rỗng (hosting + localStorage)
+- Mặc định nạp **Demo 30 lớp CT2018** khi không có dữ liệu thật
+- Banner trạng thái luôn hiện số GV/lớp/PC
+- Sau demo: mở tab **Giáo viên**, thông báo số liệu, lưu localStorage
+- Nhắc rõ: bấm **Xếp lịch** mới có bảng TKB
+
+**Cách user kiểm tra:** Ctrl+F5 → thấy banner `57 GV · 30 lớp…` → tab Giáo viên có danh sách → **Xếp lịch**.
+
 ### Việc tiếp theo (chưa làm)
 
 - Slot cố định (Chào cờ / SH)
