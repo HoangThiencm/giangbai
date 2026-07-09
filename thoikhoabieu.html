@@ -47,8 +47,11 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 no-print">
-                <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa">
-                    <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Dữ liệu thử
+                <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa nhỏ">
+                    <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Demo nhỏ
+                </button>
+                <button id="btnSampleData16" type="button" class="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-extrabold text-teal-900 hover:bg-teal-100" title="Nạp 16 lớp · ~30 GV (tỷ lệ 1,9)">
+                    <i class="fas fa-school mr-2"></i>Demo 16 lớp
                 </button>
                 <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu thời khóa biểu lên hosting">
                     <i class="fas fa-cloud-arrow-up mr-2 text-teal-700"></i>Lưu hosting
@@ -229,6 +232,9 @@
                     <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                         <strong>Ghi chú:</strong> ô “Buổi tránh” của giáo viên nhận dạng dạng <code>T2S</code>, <code>T3C</code>, <code>T5 sáng</code>, <code>thứ 6 chiều</code>. Ký hiệu S là sáng, C là chiều.
                     </div>
+                    <div class="mt-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-950">
+                        <strong>Xếp đẹp (sau khi 100% khả thi):</strong> gói buổi lớp không trống giữa; ưu tiên tiết đôi liền (Toán/Văn/Anh/Khoa học…); môn chính ưu tiên tiết sớm; giảm trống GV; rải tải theo ngày; phòng BM đúng môn. Bộ xếp chạy 2 pha: <em>ràng buộc cứng</em> → <em>tinh chỉnh beauty</em> (relocate + swap).
+                    </div>
                 </section>
             </div>
         </section>
@@ -243,6 +249,28 @@
                     <select id="viewSelector" class="field !w-auto min-w-[180px] text-sm font-bold"></select>
                     <button id="btnExportSchedule" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-file-export mr-2 text-teal-700"></i>Xuất CSV</button>
                     <button id="btnPrint" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-print mr-2 text-teal-700"></i>In</button>
+                </div>
+            </div>
+            <div id="qualityBoard" class="no-print mt-4 hidden grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
+                    <div id="qPlaced" class="text-xl font-black text-teal-800">0/0</div>
+                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tiết đã xếp</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
+                    <div id="qPercent" class="text-xl font-black text-teal-800">0%</div>
+                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Hoàn thành</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
+                    <div id="qBeauty" class="text-xl font-black text-teal-800">—</div>
+                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Điểm đẹp</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
+                    <div id="qDoubles" class="text-xl font-black text-teal-800">—</div>
+                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tiết đôi tốt</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
+                    <div id="qGaps" class="text-xl font-black text-teal-800">—</div>
+                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Trống lớp / GV</div>
                 </div>
             </div>
             <div id="resultTabs" class="no-print mt-4 flex flex-wrap gap-2">
@@ -700,57 +728,131 @@
             return gaps;
         }
 
+        function uniqueSortedPeriods(periods) {
+            return Array.from(new Set((periods || []).filter(Number))).sort((a, b) => a - b);
+        }
+
+        function isCoreSubject(subject) {
+            const n = normalizeText(subject);
+            return /toan|ngu\s*van|^van$|van hoc|tieng anh|^anh$|ngoai ngu/.test(n);
+        }
+
+        function isDoubleFriendlySubject(subject) {
+            const n = normalizeText(subject);
+            return /toan|ngu\s*van|^van$|tieng anh|^anh$|vat ly|hoa hoc|sinh hoc|tin hoc|ngoai ngu/.test(n);
+        }
+
+        /** Điểm thấp = lịch đẹp hơn. Chuẩn thực tế VN / tkb.com.vn: gói buổi, tiết đôi, trống cuối ngày, rải môn. */
         function evaluateBeauty(lessons, assignments) {
             const classBuckets = new Map();
             const teacherBuckets = new Map();
-            const subjectDay = new Map();
+            const subjectDayPeriods = new Map();
+            const classDayLoad = new Map();
             let latePenalty = 0;
             let roomPenalty = 0;
+            let coreLatePenalty = 0;
+            let placed = 0;
 
             assignments.forEach((option, index) => {
                 if (!option) return;
+                placed++;
                 const lesson = lessons[index];
                 const classKey = `${lesson.classId}|${option.day}|${option.session}`;
                 const teacherKey = `${lesson.teacherId}|${option.day}|${option.session}`;
-                const subjectKey = `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}`;
+                const subjectKey = `${lesson.classId}|${normalizeText(lesson.subject)}|${option.day}|${option.session}`;
+                const dayLoadKey = `${lesson.classId}|${option.day}`;
                 if (!classBuckets.has(classKey)) classBuckets.set(classKey, []);
                 if (!teacherBuckets.has(teacherKey)) teacherBuckets.set(teacherKey, []);
-                if (!subjectDay.has(subjectKey)) subjectDay.set(subjectKey, 0);
+                if (!subjectDayPeriods.has(subjectKey)) subjectDayPeriods.set(subjectKey, []);
                 classBuckets.get(classKey).push(option.period);
                 teacherBuckets.get(teacherKey).push(option.period);
-                subjectDay.set(subjectKey, subjectDay.get(subjectKey) + 1);
-                latePenalty += option.period * 0.35 + (option.session === 'afternoon' ? 0.4 : 0);
+                subjectDayPeriods.get(subjectKey).push(option.period);
+                classDayLoad.set(dayLoadKey, (classDayLoad.get(dayLoadKey) || 0) + 1);
+                latePenalty += option.period * 0.22 + (option.session === 'afternoon' ? 0.25 : 0);
+                if (isCoreSubject(lesson.subject) && option.period >= 4) coreLatePenalty += (option.period - 3) * 8;
                 if (lesson.roomNeed && !roomMatches({ name: option.room, subjects: lesson.roomNeed }, lesson.roomNeed)) roomPenalty += 6;
             });
 
             let classGaps = 0;
             let teacherGaps = 0;
             let singleLessonTeacherSessions = 0;
-            classBuckets.forEach(periods => { classGaps += gapCount(periods); });
+            let classStartLate = 0;
+            classBuckets.forEach(periods => {
+                const list = uniqueSortedPeriods(periods);
+                classGaps += gapCount(list);
+                // Ưu tiên gói từ tiết 1 (trống cuối buổi OK, giống TKB trường)
+                if (list.length && list[0] > 1) classStartLate += (list[0] - 1) * 2;
+            });
             teacherBuckets.forEach(periods => {
-                teacherGaps += gapCount(periods);
-                if (periods.length === 1) singleLessonTeacherSessions++;
+                const list = uniqueSortedPeriods(periods);
+                teacherGaps += gapCount(list);
+                if (list.length === 1) singleLessonTeacherSessions++;
             });
 
             let sameSubjectSameDay = 0;
-            subjectDay.forEach(count => {
-                if (count > 1) sameSubjectSameDay += count - 1;
+            let brokenDoubles = 0;
+            let goodDoubles = 0;
+            subjectDayPeriods.forEach((periods, key) => {
+                const list = uniqueSortedPeriods(periods);
+                if (list.length > 1) sameSubjectSameDay += list.length - 1;
+                if (list.length >= 2) {
+                    let consecutivePairs = 0;
+                    for (let i = 1; i < list.length; i++) {
+                        if (list[i] === list[i - 1] + 1) consecutivePairs++;
+                    }
+                    const needed = list.length - 1;
+                    goodDoubles += consecutivePairs;
+                    brokenDoubles += Math.max(0, needed - consecutivePairs);
+                    // Môn hay dạy tiết đôi mà tách rời → phạt mạnh
+                    const subject = key.split('|')[1] || '';
+                    if (isDoubleFriendlySubject(subject) && consecutivePairs < needed) {
+                        brokenDoubles += needed - consecutivePairs;
+                    }
+                }
+            });
+
+            // Cân tải ngày trong tuần của lớp (tránh ngày 5 tiết, ngày 2 tiết)
+            const loadByClass = new Map();
+            classDayLoad.forEach((load, key) => {
+                const classId = key.split('|')[0];
+                if (!loadByClass.has(classId)) loadByClass.set(classId, []);
+                loadByClass.get(classId).push(load);
+            });
+            let dayLoadVariance = 0;
+            loadByClass.forEach(loads => {
+                if (loads.length <= 1) return;
+                const avg = loads.reduce((s, v) => s + v, 0) / loads.length;
+                loads.forEach(v => { dayLoadVariance += Math.abs(v - avg); });
             });
 
             const score =
-                classGaps * 130 +
-                teacherGaps * 90 +
-                sameSubjectSameDay * 38 +
-                singleLessonTeacherSessions * 12 +
+                classGaps * 160 +
+                teacherGaps * 110 +
+                brokenDoubles * 95 +
+                sameSubjectSameDay * 18 +
+                singleLessonTeacherSessions * 14 +
+                classStartLate * 12 +
+                dayLoadVariance * 6 +
+                coreLatePenalty +
                 latePenalty +
-                roomPenalty;
+                roomPenalty -
+                goodDoubles * 28;
+
+            // 0–100: ước lượng chất lượng (càng cao càng đẹp)
+            const quality = Math.max(0, Math.min(100, Math.round(100 - score / Math.max(8, placed * 0.55))));
 
             return {
                 score: Math.round(score * 100) / 100,
+                quality,
                 classGaps,
                 teacherGaps,
                 sameSubjectSameDay,
                 singleLessonTeacherSessions,
+                goodDoubles,
+                brokenDoubles,
+                classStartLate,
+                dayLoadVariance: Math.round(dayLoadVariance * 10) / 10,
+                placed,
             };
         }
 
@@ -870,10 +972,16 @@
                     const lesson = lessons[index];
                     const classPeriods = [];
                     const teacherPeriods = [];
+                    let adjacentSameSubject = false;
                     assignments.forEach((placed, placedIndex) => {
                         if (!placed || placedIndex === index) return;
                         const other = lessons[placedIndex];
-                        if (placed.day === option.day && placed.session === option.session && other.classId === lesson.classId) classPeriods.push(placed.period);
+                        if (placed.day === option.day && placed.session === option.session && other.classId === lesson.classId) {
+                            classPeriods.push(placed.period);
+                            if (normalizeText(other.subject) === normalizeText(lesson.subject) && Math.abs(placed.period - option.period) === 1) {
+                                adjacentSameSubject = true;
+                            }
+                        }
                         if (placed.day === option.day && placed.session === option.session && other.teacherId === lesson.teacherId) teacherPeriods.push(placed.period);
                     });
                     const classBefore = gapCount(classPeriods);
@@ -883,14 +991,22 @@
                     const adjacentClass = classPeriods.some(period => Math.abs(period - option.period) === 1);
                     const adjacentTeacher = teacherPeriods.some(period => Math.abs(period - option.period) === 1);
                     const subjectCount = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
+                    const packFromStart = classPeriods.length
+                        ? (option.period > Math.max(...classPeriods) + 1 ? 18 : 0)
+                        : (option.period === 1 ? -12 : option.period * 3);
+                    const doubleBonus = adjacentSameSubject && isDoubleFriendlySubject(lesson.subject) ? -42 : (adjacentSameSubject ? -22 : 0);
+                    const coreLate = isCoreSubject(lesson.subject) && option.period >= 4 ? (option.period - 3) * 6 : 0;
                     return (
-                        (classAfter - classBefore) * 110 +
-                        (teacherAfter - teacherBefore) * 70 +
-                        subjectCount * 35 +
-                        option.period * 0.8 +
-                        (option.session === 'afternoon' ? 0.6 : 0) -
-                        (adjacentClass ? 16 : 0) -
-                        (adjacentTeacher ? 10 : 0) +
+                        (classAfter - classBefore) * 140 +
+                        (teacherAfter - teacherBefore) * 85 +
+                        subjectCount * 22 +
+                        option.period * 0.55 +
+                        (option.session === 'afternoon' ? 0.45 : 0) +
+                        packFromStart +
+                        coreLate +
+                        doubleBonus -
+                        (adjacentClass ? 20 : 0) -
+                        (adjacentTeacher ? 12 : 0) +
                         ((attempt * 17 + option.period * 13 + option.day.charCodeAt(1)) % 11) * 0.03
                     );
                 }
@@ -952,7 +1068,14 @@
                     let improved = true;
                     while (improved && checks < maxChecks) {
                         improved = false;
-                        const order = lessons.map((_, index) => index).sort((a, b) => domains[a].length - domains[b].length);
+                        const order = lessons.map((_, index) => index).sort((a, b) => {
+                            const ba = assignments[a];
+                            const bb = assignments[b];
+                            // Ưu tiên di chuyển tiết “xấu”: môn tách đôi, gap
+                            const badA = ba && isDoubleFriendlySubject(lessons[a].subject) ? 0 : 1;
+                            const badB = bb && isDoubleFriendlySubject(lessons[b].subject) ? 0 : 1;
+                            return badA - badB || domains[a].length - domains[b].length;
+                        });
                         for (const index of order) {
                             if (checks >= maxChecks) break;
                             const current = assignments[index];
@@ -962,7 +1085,7 @@
                             const candidates = domains[index]
                                 .filter(option => !conflictsFor(index, option, new Set()).length)
                                 .sort((a, b) => localSoftCost(index, a) - localSoftCost(index, b))
-                                .slice(0, 12);
+                                .slice(0, 18);
                             let accepted = false;
                             for (const option of candidates) {
                                 checks++;
@@ -993,7 +1116,7 @@
                             return { ok: false, assignments: assignments.slice(), nodes, placed: assignments.filter(Boolean).length, beauty };
                         }
                     }
-                    const beauty = improve(lessons.length > 700 ? 1800 : 3500);
+                    const beauty = improve(lessons.length > 700 ? 2200 : 4200);
                     return { ok: true, assignments, nodes, placed: assignments.filter(Boolean).length, beauty };
                 }
 
@@ -1007,10 +1130,219 @@
                         bestSolution = result.assignments.slice();
                         bestBeauty = result.beauty;
                     }
+                    // Đã có lịch 100%: giữ 2–3 lời giải rồi dừng sớm để dồn budget cho beautify
+                    if (bestSolution && attempt >= Math.min(6, maxAttempts - 1) && bestBeauty.quality >= 72) break;
                 } else if (!bestSolution && (!bestBeauty || result.placed > (bestBeauty.placed || 0))) {
                     bestBeauty = { ...result.beauty, placed: result.placed };
                     rememberPartial(result.assignments, result.beauty);
                 }
+            }
+
+            /** Phase 2: tối ưu “đẹp” sau khi đã khả thi — relocate + swap (chuẩn thực tế TKB). */
+            function beautifySchedule(seedAssignments, budget) {
+                if (!seedAssignments?.some(Boolean)) return { assignments: seedAssignments, beauty: evaluateBeauty(lessons, seedAssignments), moves: 0 };
+
+                let assignments = seedAssignments.slice();
+                let classSlotMap = new Map();
+                let teacherSlotMap = new Map();
+                let roomSlotMap = new Map();
+                let subjectDayMap = new Map();
+
+                function rebuildMaps() {
+                    classSlotMap = new Map();
+                    teacherSlotMap = new Map();
+                    roomSlotMap = new Map();
+                    subjectDayMap = new Map();
+                    assignments.forEach((option, index) => {
+                        if (!option) return;
+                        const keys = resourceKeys(lessons[index], option);
+                        classSlotMap.set(keys.classKey, index);
+                        teacherSlotMap.set(keys.teacherKey, index);
+                        roomSlotMap.set(keys.roomKey, index);
+                        if (!subjectDayMap.has(keys.subjectKey)) subjectDayMap.set(keys.subjectKey, new Set());
+                        subjectDayMap.get(keys.subjectKey).add(index);
+                    });
+                }
+
+                function conflictsAt(index, option, ignore = new Set()) {
+                    const keys = resourceKeys(lessons[index], option);
+                    const hits = [];
+                    const classHit = classSlotMap.get(keys.classKey);
+                    const teacherHit = teacherSlotMap.get(keys.teacherKey);
+                    const roomHit = roomSlotMap.get(keys.roomKey);
+                    if (classHit !== undefined && classHit !== index && !ignore.has(classHit)) hits.push(classHit);
+                    if (teacherHit !== undefined && teacherHit !== index && !ignore.has(teacherHit)) hits.push(teacherHit);
+                    if (roomHit !== undefined && roomHit !== index && !ignore.has(roomHit)) hits.push(roomHit);
+                    const subjectSet = subjectDayMap.get(keys.subjectKey);
+                    if (subjectSet) {
+                        const others = Array.from(subjectSet).filter(i => i !== index && !ignore.has(i));
+                        if (others.length >= state.rules.maxSameSubjectDay) hits.push(others[0]);
+                    }
+                    return Array.from(new Set(hits));
+                }
+
+                function unplace(index) {
+                    const option = assignments[index];
+                    if (!option) return;
+                    const keys = resourceKeys(lessons[index], option);
+                    assignments[index] = null;
+                    if (classSlotMap.get(keys.classKey) === index) classSlotMap.delete(keys.classKey);
+                    if (teacherSlotMap.get(keys.teacherKey) === index) teacherSlotMap.delete(keys.teacherKey);
+                    if (roomSlotMap.get(keys.roomKey) === index) roomSlotMap.delete(keys.roomKey);
+                    const set = subjectDayMap.get(keys.subjectKey);
+                    if (set) {
+                        set.delete(index);
+                        if (!set.size) subjectDayMap.delete(keys.subjectKey);
+                    }
+                }
+
+                function place(index, option) {
+                    const keys = resourceKeys(lessons[index], option);
+                    assignments[index] = option;
+                    classSlotMap.set(keys.classKey, index);
+                    teacherSlotMap.set(keys.teacherKey, index);
+                    roomSlotMap.set(keys.roomKey, index);
+                    if (!subjectDayMap.has(keys.subjectKey)) subjectDayMap.set(keys.subjectKey, new Set());
+                    subjectDayMap.get(keys.subjectKey).add(index);
+                }
+
+                rebuildMaps();
+                let beauty = evaluateBeauty(lessons, assignments);
+                let moves = 0;
+                let checks = 0;
+                const maxChecks = budget;
+
+                function optionDoubleBonus(index, opt) {
+                    const lesson = lessons[index];
+                    let adj = 0;
+                    assignments.forEach((p, j) => {
+                        if (!p || j === index) return;
+                        const o = lessons[j];
+                        if (o.classId === lesson.classId && normalizeText(o.subject) === normalizeText(lesson.subject)
+                            && p.day === opt.day && p.session === opt.session && Math.abs(p.period - opt.period) === 1) adj += 50;
+                        else if (o.classId === lesson.classId && p.day === opt.day && p.session === opt.session && Math.abs(p.period - opt.period) === 1) adj += 8;
+                        if (o.teacherId === lesson.teacherId && p.day === opt.day && p.session === opt.session && Math.abs(p.period - opt.period) === 1) adj += 10;
+                    });
+                    return adj - opt.period * 0.5 - (isCoreSubject(lesson.subject) && opt.period >= 4 ? 6 : 0);
+                }
+
+                function relocatePass(limitPerPass) {
+                    let improvedLocal = false;
+                    const order = lessons.map((_, i) => i).sort((a, b) => domains[a].length - domains[b].length);
+                    for (const index of order) {
+                        if (checks >= maxChecks) break;
+                        const old = assignments[index];
+                        if (!old) continue;
+                        unplace(index);
+                        const cands = domains[index]
+                            .filter(opt => !conflictsAt(index, opt).length)
+                            .sort((a, b) => optionDoubleBonus(index, b) - optionDoubleBonus(index, a))
+                            .slice(0, 24);
+                        let bestOpt = null;
+                        let bestScore = beauty.score;
+                        for (const opt of cands) {
+                            if (checks >= maxChecks || (limitPerPass != null && checks >= limitPerPass)) break;
+                            checks++;
+                            place(index, opt);
+                            const next = evaluateBeauty(lessons, assignments);
+                            if (next.score + 0.05 < bestScore) {
+                                bestScore = next.score;
+                                bestOpt = opt;
+                            }
+                            unplace(index);
+                        }
+                        if (bestOpt) {
+                            place(index, bestOpt);
+                            beauty = evaluateBeauty(lessons, assignments);
+                            improvedLocal = true;
+                            moves++;
+                        } else {
+                            place(index, old);
+                        }
+                    }
+                    return improvedLocal;
+                }
+
+                // A) Relocate
+                let improved = true;
+                let relocateRounds = 0;
+                while (improved && checks < maxChecks && relocateRounds < 10) {
+                    relocateRounds++;
+                    improved = relocatePass(null);
+                }
+
+                // B) Swap cặp tiết (tạo tiết đôi / giảm gap GV)
+                improved = true;
+                let swapRounds = 0;
+                while (improved && checks < maxChecks && swapRounds < 6) {
+                    improved = false;
+                    swapRounds++;
+                    const placedIdx = lessons.map((_, i) => i).filter(i => assignments[i]);
+                    for (let ai = 0; ai < placedIdx.length && checks < maxChecks; ai++) {
+                        const i = placedIdx[ai];
+                        const sample = [];
+                        for (let bj = ai + 1; bj < placedIdx.length && sample.length < 36; bj++) {
+                            const j = placedIdx[bj];
+                            const oi = assignments[i];
+                            const oj = assignments[j];
+                            if (!oi || !oj) continue;
+                            if (oi.day === oj.day || lessons[i].teacherId === lessons[j].teacherId || lessons[i].classId === lessons[j].classId) {
+                                sample.push(j);
+                            }
+                        }
+                        for (const j of sample) {
+                            checks++;
+                            const oi = assignments[i];
+                            const oj = assignments[j];
+                            const slotForI = domains[i].find(d => d.day === oj.day && d.session === oj.session && d.period === oj.period && d.room === oj.room)
+                                || domains[i].find(d => d.day === oj.day && d.session === oj.session && d.period === oj.period);
+                            const slotForJ = domains[j].find(d => d.day === oi.day && d.session === oi.session && d.period === oi.period && d.room === oi.room)
+                                || domains[j].find(d => d.day === oi.day && d.session === oi.session && d.period === oi.period);
+                            if (!slotForI || !slotForJ) continue;
+
+                            unplace(i);
+                            unplace(j);
+                            let applied = false;
+                            if (!conflictsAt(i, slotForI).length) {
+                                place(i, slotForI);
+                                if (!conflictsAt(j, slotForJ).length) {
+                                    place(j, slotForJ);
+                                    const next = evaluateBeauty(lessons, assignments);
+                                    if (next.score + 0.05 < beauty.score) {
+                                        beauty = next;
+                                        improved = true;
+                                        moves++;
+                                        applied = true;
+                                    }
+                                }
+                            }
+                            if (!applied) {
+                                if (assignments[i]) unplace(i);
+                                if (assignments[j]) unplace(j);
+                                place(i, oi);
+                                place(j, oj);
+                            }
+                        }
+                    }
+                }
+
+                // C) Relocate tinh chỉnh
+                relocateRounds = 0;
+                improved = true;
+                while (improved && checks < maxChecks && relocateRounds < 6) {
+                    relocateRounds++;
+                    improved = relocatePass(null);
+                }
+
+                beauty = evaluateBeauty(lessons, assignments);
+                return { assignments, beauty, moves, checks };
+            }
+
+            if (bestSolution) {
+                const beautifyBudget = lessons.length > 700 ? 14000 : lessons.length > 350 ? 22000 : 28000;
+                const polished = beautifySchedule(bestSolution, beautifyBudget);
+                bestSolution = polished.assignments;
+                bestBeauty = { ...polished.beauty, beautifyMoves: polished.moves };
             }
 
             function runMrvFallback() {
@@ -1142,73 +1474,86 @@
         }
 
         function generateSchedule() {
-            readRulesFromInputs();
-            const byClass = {};
-            state.classes.forEach(c => { byClass[c.id] = {}; });
-            const lessons = buildLessonUnits();
-            const domains = buildBaseDomains(lessons);
-            const precheckIssues = precheckSchedule(lessons, domains);
+            const btn = $('btnGenerate');
+            const oldHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Đang xếp & làm đẹp...';
 
-            if (precheckIssues.length) {
-                state.result = {
-                    byClass,
-                    issues: precheckIssues,
-                    generatedAt: new Date().toISOString(),
-                    teacherLoad: {},
-                    status: 'infeasible',
-                    solver: { nodes: 0, deepest: 0, total: lessons.length },
-                };
-                state.activeResult = 'issues';
-                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
-                renderResultControls();
-                renderSchedule();
-                return;
-            }
+            // Nhường UI 1 frame trước khi chạy solver (CPU-bound)
+            window.setTimeout(() => {
+                try {
+                    readRulesFromInputs();
+                    const byClass = {};
+                    state.classes.forEach(c => { byClass[c.id] = {}; });
+                    const lessons = buildLessonUnits();
+                    const domains = buildBaseDomains(lessons);
+                    const precheckIssues = precheckSchedule(lessons, domains);
 
-            const solved = solveByConstraints(lessons, domains);
-            const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
-            const issues = [];
+                    if (precheckIssues.length) {
+                        state.result = {
+                            byClass,
+                            issues: precheckIssues,
+                            generatedAt: new Date().toISOString(),
+                            teacherLoad: {},
+                            status: 'infeasible',
+                            solver: { nodes: 0, deepest: 0, total: lessons.length },
+                        };
+                        state.activeResult = 'issues';
+                        document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+                        renderResultControls();
+                        renderSchedule();
+                        return;
+                    }
 
-            if (solved.assignments.some(Boolean)) {
-                lessons.forEach((lesson, index) => {
-                    const option = solved.assignments[index];
-                    if (!option) return;
-                    const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
-                    byClass[lesson.classId][option.key] = cell;
-                    teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
-                });
-            } else {
-                const blocked = solved.blockedLesson;
-                issues.push(makeIssue(
-                    blocked
-                        ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
-                        : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
-                ));
-            }
+                    const solved = solveByConstraints(lessons, domains);
+                    const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
+                    const issues = [];
 
-            if (!solved.ok && !issues.length) {
-                const placed = solved.assignments.filter(Boolean).length;
-                const blocked = solved.blockedLesson;
-                issues.push(makeIssue(
-                    blocked
-                        ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
-                        : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.`
-                ));
-            }
+                    if (solved.assignments.some(Boolean)) {
+                        lessons.forEach((lesson, index) => {
+                            const option = solved.assignments[index];
+                            if (!option) return;
+                            const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
+                            byClass[lesson.classId][option.key] = cell;
+                            teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+                        });
+                    } else {
+                        const blocked = solved.blockedLesson;
+                        issues.push(makeIssue(
+                            blocked
+                                ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                                : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
+                        ));
+                    }
 
-            state.result = {
-                byClass,
-                issues,
-                generatedAt: new Date().toISOString(),
-                teacherLoad,
-                status: solved.ok ? 'complete' : (solved.assignments.some(Boolean) ? 'partial' : 'infeasible'),
-                solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
-                beauty: solved.beauty,
-            };
-            state.activeResult = solved.ok ? 'class' : 'issues';
-            document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
-            renderResultControls();
-            renderSchedule();
+                    if (!solved.ok && !issues.length) {
+                        const placed = solved.assignments.filter(Boolean).length;
+                        const blocked = solved.blockedLesson;
+                        issues.push(makeIssue(
+                            blocked
+                                ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
+                                : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.`
+                        ));
+                    }
+
+                    state.result = {
+                        byClass,
+                        issues,
+                        generatedAt: new Date().toISOString(),
+                        teacherLoad,
+                        status: solved.ok ? 'complete' : (solved.assignments.some(Boolean) ? 'partial' : 'infeasible'),
+                        solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
+                        beauty: solved.beauty,
+                    };
+                    state.activeResult = solved.ok ? 'class' : 'issues';
+                    document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
+                    renderResultControls();
+                    renderSchedule();
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                }
+            }, 40);
         }
 
         function sessionText(session) {
@@ -1240,6 +1585,7 @@
                 }).join('')}</tr>`;
             }
             return `<div class="mb-5">
+                ${subjectFillBadges(classItem)}
                 <h3 class="mb-2 text-base font-black">${escapeHtml(classItem.name)} <span class="text-sm font-bold text-slate-500">· ${shiftLabel(classItem.shift)}</span></h3>
                 <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
                     <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
@@ -1295,22 +1641,55 @@
             }
         }
 
+        function subjectFillBadges(classItem) {
+            const map = state.result?.byClass?.[classItem.id] || {};
+            const placedBySubject = {};
+            Object.values(map).forEach(cell => {
+                const key = cell.subject || '?';
+                placedBySubject[key] = (placedBySubject[key] || 0) + 1;
+            });
+            const needed = {};
+            state.assignments.filter(a => a.classId === classItem.id).forEach(a => {
+                needed[a.subject] = (needed[a.subject] || 0) + Number(a.periods || 0);
+            });
+            const chips = Object.keys(needed).sort().map(subject => {
+                const have = placedBySubject[subject] || 0;
+                const want = needed[subject];
+                const ok = have >= want;
+                return `<span class="pill ${ok ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}">${escapeHtml(subject)} ${have}/${want}</span>`;
+            });
+            return chips.length ? `<div class="mb-2 flex flex-wrap gap-1.5">${chips.join('')}</div>` : '';
+        }
+
         function renderSchedule() {
             const mount = $('scheduleMount');
+            const board = $('qualityBoard');
             if (!state.result) {
                 mount.innerHTML = `<div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500">Chưa có kết quả xếp lịch.</div>`;
                 $('resultSummary').textContent = 'Chưa xếp lịch. Bấm “Xếp lịch” sau khi nhập dữ liệu.';
+                board?.classList.add('hidden');
                 return;
             }
             const totalPlaced = Object.values(state.result.byClass).reduce((sum, map) => sum + Object.keys(map).length, 0);
-            const solverText = state.result.solver ? ` Solver đã xét ${state.result.solver.nodes} nhánh.` : '';
+            const totalNeed = state.result.solver?.total || totalPlaced;
+            const pct = totalNeed ? Math.round(totalPlaced * 1000 / totalNeed) / 10 : 0;
+            const solverText = state.result.solver ? ` Solver: ${state.result.solver.nodes} nhánh.` : '';
             const beauty = state.result.beauty;
             const beautyText = beauty
-                ? ` Điểm đẹp: ${beauty.score}; trống lớp: ${beauty.classGaps}, trống GV: ${beauty.teacherGaps}, môn dồn ngày: ${beauty.sameSubjectSameDay}.`
+                ? ` Chất lượng ~${beauty.quality ?? '—'}/100 (score ${beauty.score}); trống lớp ${beauty.classGaps}, trống GV ${beauty.teacherGaps}; tiết đôi tốt ${beauty.goodDoubles || 0}, tách đôi ${beauty.brokenDoubles || 0}${beauty.beautifyMoves != null ? `; tinh chỉnh ${beauty.beautifyMoves} bước` : ''}.`
                 : '';
             $('resultSummary').textContent = state.result.status === 'complete'
-                ? `Đã xếp đủ 100%: ${totalPlaced}/${state.result.solver?.total || totalPlaced} tiết, không vi phạm ràng buộc.${solverText}${beautyText}`
-                : `Chưa có lịch khả thi: mới xếp ${totalPlaced}/${state.result.solver?.total || totalPlaced} tiết. Cần xử lý ${state.result.issues.length} điểm nghẽn.${solverText}`;
+                ? `✅ Xếp 100%: ${totalPlaced}/${totalNeed} tiết, không vi phạm ràng buộc.${solverText}${beautyText}`
+                : `Chưa đủ lịch khả thi: ${totalPlaced}/${totalNeed} tiết (${pct}%). Cần xử lý ${state.result.issues.length} điểm nghẽn.${solverText}`;
+
+            if (board) {
+                board.classList.remove('hidden');
+                $('qPlaced').textContent = `${totalPlaced}/${totalNeed}`;
+                $('qPercent').textContent = `${pct}%`;
+                $('qBeauty').textContent = beauty?.quality != null ? `${beauty.quality}/100` : '—';
+                $('qDoubles').textContent = beauty ? `${beauty.goodDoubles || 0} tốt / ${beauty.brokenDoubles || 0} tách` : '—';
+                $('qGaps').textContent = beauty ? `${beauty.classGaps || 0} / ${beauty.teacherGaps || 0}` : '—';
+            }
 
             const selected = $('viewSelector').value || 'all';
             if (state.activeResult === 'issues') {
@@ -1470,6 +1849,7 @@
             state.classes = [];
             state.rooms = [];
             state.assignments = [];
+            state.result = null;
             [
                 ['Nguyễn Văn An', 'Toán', 24, 'T2S', ''],
                 ['Trần Thị Bình', 'Ngữ văn', 24, '', ''],
@@ -1491,6 +1871,90 @@
                 addAssignment({ classId: c.id, teacherId: state.teachers[5].id, subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' });
             });
             renderAll();
+            renderSchedule();
+        }
+
+        /** Demo quy mô trường: 16 lớp · 30 GV (≈1,9 GV/lớp) · ~28 tiết/lớp · phòng BM đủ. */
+        function loadSampleData16() {
+            state.teachers = [];
+            state.classes = [];
+            state.rooms = [];
+            state.assignments = [];
+            state.result = null;
+            state.rules = { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 };
+            syncRuleInputs();
+
+            const teacherDefs = [
+                ['GV Toán 1', 'Toán', 24, ''], ['GV Toán 2', 'Toán', 24, 'T7S'], ['GV Toán 3', 'Toán', 24, ''], ['GV Toán 4', 'Toán', 24, 'T6S'],
+                ['GV Văn 1', 'Ngữ văn', 24, ''], ['GV Văn 2', 'Ngữ văn', 24, 'T3S'], ['GV Văn 3', 'Ngữ văn', 24, ''], ['GV Văn 4', 'Ngữ văn', 24, ''],
+                ['GV Anh 1', 'Tiếng Anh', 24, ''], ['GV Anh 2', 'Tiếng Anh', 24, 'T5S'], ['GV Anh 3', 'Tiếng Anh', 24, ''],
+                ['GV Lý 1', 'Vật lý', 22, ''], ['GV Lý 2', 'Vật lý', 22, 'T2S'],
+                ['GV Hóa 1', 'Hóa học', 22, ''], ['GV Hóa 2', 'Hóa học', 22, ''],
+                ['GV Sinh 1', 'Sinh học', 22, ''], ['GV Sinh 2', 'Sinh học', 22, 'T4S'],
+                ['GV Sử 1', 'Lịch sử', 22, ''], ['GV Sử 2', 'Lịch sử', 22, ''],
+                ['GV Địa 1', 'Địa lý', 22, ''], ['GV Địa 2', 'Địa lý', 22, 'T7S'],
+                ['GV GDCD 1', 'GDCD', 22, ''],
+                ['GV Tin 1', 'Tin học', 24, ''], ['GV Tin 2', 'Tin học', 24, ''],
+                ['GV CN 1', 'Công nghệ', 22, ''],
+                ['GV TD 1', 'Thể dục', 24, ''], ['GV TD 2', 'Thể dục', 24, ''],
+                ['GV AN 1', 'Âm nhạc', 20, ''], ['GV MT 1', 'Mỹ thuật', 20, ''], ['GV SH 1', 'Sinh hoạt', 20, ''],
+            ];
+            teacherDefs.forEach(([name, subject, maxPeriods, unavailable]) => addTeacher({ name, subject, maxPeriods, unavailable }));
+
+            ['6A', '6B', '6C', '6D', '7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B', '9C', '9D']
+                .forEach(name => addClass({ name, shift: 'morning', homeRoom: name }));
+
+            [
+                ['Tin 1', 'Tin học'], ['Tin 2', 'Tin học'],
+                ['Lý 1', 'Vật lý'], ['Lý 2', 'Vật lý'],
+                ['Hóa 1', 'Hóa học'], ['Hóa 2', 'Hóa học'],
+                ['Sinh 1', 'Sinh học'], ['Sinh 2', 'Sinh học'],
+                ['CN 1', 'Công nghệ'], ['CN 2', 'Công nghệ'],
+                ['Sân 1', 'Thể dục'], ['Sân 2', 'Thể dục'],
+            ].forEach(([name, subjects]) => addRoom({ name, subjects }));
+
+            const curriculum = [
+                { subject: 'Toán', periods: 4 },
+                { subject: 'Ngữ văn', periods: 4 },
+                { subject: 'Tiếng Anh', periods: 3 },
+                { subject: 'Vật lý', periods: 2, roomNeed: 'Vật lý' },
+                { subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' },
+                { subject: 'Sinh học', periods: 2, roomNeed: 'Sinh học' },
+                { subject: 'Lịch sử', periods: 1 },
+                { subject: 'Địa lý', periods: 1 },
+                { subject: 'GDCD', periods: 1 },
+                { subject: 'Tin học', periods: 2, roomNeed: 'Tin học' },
+                { subject: 'Công nghệ', periods: 1, roomNeed: 'Công nghệ' },
+                { subject: 'Thể dục', periods: 2, roomNeed: 'Thể dục' },
+                { subject: 'Âm nhạc', periods: 1 },
+                { subject: 'Mỹ thuật', periods: 1 },
+                { subject: 'Sinh hoạt', periods: 1 },
+            ];
+
+            const teachersBySubject = {};
+            state.teachers.forEach(t => {
+                const key = normalizeText(t.subject);
+                if (!teachersBySubject[key]) teachersBySubject[key] = [];
+                teachersBySubject[key].push(t);
+            });
+
+            state.classes.forEach((cl, ci) => {
+                curriculum.forEach(cur => {
+                    const pool = teachersBySubject[normalizeText(cur.subject)] || [];
+                    const teacher = pool[ci % pool.length];
+                    if (!teacher) return;
+                    addAssignment({
+                        classId: cl.id,
+                        teacherId: teacher.id,
+                        subject: cur.subject,
+                        periods: cur.periods,
+                        roomNeed: cur.roomNeed || '',
+                    });
+                });
+            });
+
+            renderAll();
+            renderSchedule();
         }
 
         function bindEvents() {
@@ -1530,6 +1994,7 @@
             $('btnPrint').addEventListener('click', () => window.print());
             $('btnSaveDraft').addEventListener('click', saveDraft);
             $('btnSampleData').addEventListener('click', loadSampleData);
+            $('btnSampleData16')?.addEventListener('click', loadSampleData16);
             $('teacherFile').addEventListener('change', e => {
                 const file = e.target.files?.[0];
                 if (file) importTeacherFile(file).catch(err => alert(`Không đọc được file: ${err.message}`));
