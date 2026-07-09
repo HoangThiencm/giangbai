@@ -1,8 +1,44 @@
 # Kế hoạch dự án (Project Plan)
 
-*Cập nhật: 2026-06-22 — Direct image paste tự upload Google Drive (Ctrl+V ảnh → Drive folder LESSON_IMAGES → chèn link) + fix lỗi nút "Thêm bài" (ReferenceError do IIFE).
+*Cập nhật: 2026-07-09 — TKB v1 nghiệp vụ + vá API clean project. (Lộ trình/soạn bài: mục dưới vẫn ghi 2026-06-22.)*
 
-## Các công việc đã hoàn thành gần đây
+---
+
+## Thời khóa biểu (TKB) — kế hoạch & trạng thái 2026-07-09
+
+### Khung đánh giá (bắt buộc)
+
+| Lớp | Ý nghĩa | Hiện tại |
+|-----|---------|----------|
+| Engine / benchmark | Solver trên dữ liệu sinh sẵn (script) | Có nền, bench pass |
+| App TKB trường | Dữ liệu thật + nghiệp vụ + UI | **Chưa đạt hoàn chỉnh** |
+
+**Không** dùng `100% large benchmark` để kết luận app TKB xong. Chi tiết review: **`chat.md`**.
+
+### Đã làm (TKB)
+
+- [x] Engine pure + Worker + extract; snapshot xếp; multi-đợt owner API
+- [x] Nghỉ GV cứng; large path + pack repair (bench kỹ thuật)
+- [x] V1 UI: Nhà trường, Môn/CT, GVCN, tổ CM, fixedSlots, checklist, bottlenecks
+- [x] **P1 API:** `tkb_clean_project` / `tkb_empty_project` giữ `school`, `departments`, `subjects`, `rules.fixedSlots`
+
+### Ưu tiên tiếp (TKB)
+
+1. [ ] Đo đợt CSDL thật sau Lưu (F5 còn school/tổ/môn) + Xếp → placed/total
+2. [ ] Ràng buộc sâu: SH/GVCN; soft tránh tiết cuối theo danh mục môn
+3. [ ] Xuất TKB lớp / GV / tổ
+4. [ ] Soft orphans/tGaps giữ pack; progressive Worker
+
+### Checklist phản biện TKB (UI)
+
+- [ ] Lưu hosting: school/departments/subjects còn sau reload
+- [ ] fixedSlots + nghỉ GV đúng domain
+- [ ] Kiểm tra checklist + Xếp fail có nghẽn lớp/môn/GV
+- [ ] Không nhầm bench script với đợt production
+
+---
+
+## Các công việc đã hoàn thành gần đây (lộ trình / soạn bài / thi…)
 - [x] Fix lỗi 500 khi lưu tiến độ bài học (do cột `state_json` chưa được tạo). Đã sửa file `api/lessons.php` tại hàm `ensure_progress_schema` bằng cách tách riêng biệt `try-catch` cho từng lần `ALTER TABLE`.
 - [x] Cập nhật lại giao diện AI giải thích từ Popup Modal sang dạng **bong bóng chat theo ngữ cảnh**, xuất hiện ngay gần nút AI vừa bấm, có nút `x` để đóng, không bị cắt mũi/nội dung và vẫn render MathJax đúng.
 - [x] Khắc phục tình trạng công thức Toán học MathJax SVG bị rớt dòng (xuống dòng vô tội vạ) bằng cách ghi đè class của Tailwind CSS (`mjx-container svg { display: inline !important; }`).
@@ -162,6 +198,15 @@
 - [ ] **HS — bài nối ô**: bấm trái rồi phải ghép cặp → nộp → chấm đúng/sai.
 
 ## Các công việc tiếp theo (To-do)
+
+### TKB (ưu tiên — 2026-07-09)
+- [ ] Xác nhận **Lưu hosting** giữ `school` / `departments` / `subjects` (sau vá API)
+- [ ] Audit **một đợt production** thật: placed/total + soft + bottlenecks
+- [ ] Ràng buộc sâu: SH/chào cờ gắn GVCN; soft tránh tiết cuối theo danh mục môn
+- [ ] Xuất TKB theo lớp / GV / tổ
+- [ ] Soft orphans/tGaps giữ pack; progressive Worker
+
+### Lộ trình / soạn bài / khác
 - [x] **Báo cáo lớp gọn cho giáo viên** (`thongketientrinh.html` + `admin-progress.js`): xuất Excel theo lớp/môn/bài; lọc học sinh dưới ngưỡng điểm tùy chọn; lọc học sinh chưa đăng nhập 3/7/14/30 ngày; khối **Việc cần xử lý hôm nay** ưu tiên điểm yếu, chưa vào học và chưa bắt đầu bài.
 - [ ] Tiếp tục hoàn thiện bài tập: tự luận nâng cao, tinh chỉnh UX kéo/nối ô trên mobile.
 - [ ] Kiểm tra thực tế phần tính điểm (`score`) và các chỉ số kỹ năng (`skill_scores_json`) trên dữ liệu nhiều bài học/học sinh để đảm bảo báo cáo giáo viên khớp UI học sinh.

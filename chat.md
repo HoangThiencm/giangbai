@@ -190,7 +190,8 @@ Thêm bước **“Cấu hình nhà trường”** *trước* phân công (luồ
 | Tab **Giáo viên** | + tổ CM, vai trò, tiết/ngày nghỉ (cứng) |
 | Tab **Lớp** | + khối, GVCN, sĩ số, tiết cố định lớp |
 | **Thiết lập** | `fixedSlots` toàn trường (chào cờ/SH) + blockedSlots |
-| **project_json / API** | `school`, `departments`, `subjects` — **đã vá** `tkb_clean_project()` + `tkb_empty_project()` (trước đó API strip mất khi Lưu hosting) |
+| **project_json / API** | `school`, `departments`, `subjects` — **đã vá** `tkb_clean_project()` + `tkb_empty_project()` |
+| **API get 500** | Schema v4: bỏ FOREIGN KEY khi CREATE; try/catch schema + router trả JSON lỗi (tránh 500 do FK hosting) |
 | **Kiểm tra** | Checklist đủ lớp/GV/PC/phòng; thiếu BGH/tổ/GVCN/môn; vượt ĐM/phòng |
 | **Sau xếp** | `metrics`: placed/total, holes, startLate, orphans, tGaps; `bottlenecks` theo lớp/môn/GV |
 

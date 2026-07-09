@@ -158,4 +158,62 @@ Dự án được xây dựng dựa trên stack: HTML, CSS (Tailwind), JS thuầ
 - **Bảo mật:** `global_config.json` trong repo có thể chứa GitHub PAT plaintext — nên rotate token, không commit secret.
 
 ---
-*Cập nhật lần cuối: 2026-06-22. Tabbed visual editor + dán ảnh trực tiếp tự upload Google Drive + fix add/remove item buttons (admin-lesson-manager.js).*
+
+## Thời khóa biểu (`thoikhoabieu.html`) — cập nhật 2026-07-09
+
+### Vai trò trong dự án
+Trang **xếp thời khóa biểu** (TKB) THCS: khai báo nhà trường → phân công → kiểm tra → xếp (engine client + Worker) → xuất/in/lưu đợt multi-tenant.
+
+| File | Vai trò |
+|------|---------|
+| `thoikhoabieu.html` | UI + solver (marker `// === TKB_ENGINE_END ===`) |
+| `thoikhoabieu-engine.js` | Solver pure (extract từ HTML) |
+| `thoikhoabieu-worker.js` | Web Worker xếp ngoài main thread |
+| `api/thoikhoabieu.php` | Đợt TKB: list/get/save/lock/delete; schema `timetable_projects` |
+| `agent-tools/benchmark-tkb.js` | Bench **giả lập** small/medium/large (RAM, không CSDL) |
+| `agent-tools/extract-tkb-engine.js` | Tách engine sau khi sửa solver trong HTML |
+| `chat.md` | Bản đánh giá/review TKB (công bằng engine vs app) |
+
+### Đánh giá công bằng (không gộp)
+
+| Lớp | Ý nghĩa | Hiện tại |
+|-----|---------|----------|
+| **Engine / benchmark** | Solver trên dữ liệu *sinh sẵn* (`buildLarge`…) | Có nền; large bench ~840 tiết hard+pack đã pass kỹ thuật |
+| **App TKB trường** | Dữ liệu thật + nghiệp vụ + UI đúng | **Chưa hoàn chỉnh** — không lấy “100% large bench” làm bằng chứng production |
+
+### V1 nghiệp vụ (UI + project_json)
+
+| Thành phần | Chi tiết |
+|------------|----------|
+| Tab **Nhà trường** | HT, PHT, tổ chuyên môn + tổ trưởng |
+| Tab **Giáo viên** | Tổ CM, vai trò, **tiết/ngày nghỉ** (ràng buộc **cứng**: `T2`, `T2S`, `T5S1`, `T6C2-3`…) |
+| Tab **Lớp** | Khối, buổi, phòng, **GVCN**, sĩ số, tiết cố định lớp |
+| Tab **Môn / CT** | Tiết/khối 6–9, phòng BM, tiết đôi, tránh cuối; nạp CT2018 gợi ý |
+| **Thiết lập** | Khung giờ, `blockedSlots`, **`fixedSlots`** (chào cờ/SH — trừ domain môn thường) |
+| **Phân công / Phòng BM** | Như trước |
+| **Kiểm tra** | Checklist production: đủ lớp/GV/PC, capacity, phòng, nghỉ GV, thiếu BGH/tổ/GVCN/môn |
+| **Sau xếp** | `placed/total`, soft (holes/startLate/orphans/tGaps), **bottlenecks** theo lớp/môn/GV |
+
+### Lưu CSDL (quan trọng)
+
+- Bảng `timetable_projects.project_json` / `result_json`.
+- UI `projectPayload()` gửi `school`, `departments`, `subjects` + teachers/classes/…
+- **`api/thoikhoabieu.php` — `tkb_clean_project()` / `tkb_empty_project()`** (đã vá 2026-07-09): **giữ** `school`, `departments`, `subjects` và `rules.fixedSlots`.  
+  *Trước vá: API strip 3 field nghiệp vụ → Lưu hosting mất cấu hình nhà trường khi mở lại đợt.*
+
+### Solver / Worker
+
+- Snapshot đóng băng lúc bấm Xếp (`freezeSolveSnapshot`).
+- Large path: slot-scan + repair pack; không rơi CSP 840 treo lâu.
+- Soft pack-safe: orphan reduce sau khi pack lớp 0/0 (bench).
+- **Nghỉ GV / fixedSlots** = hard domain (không xếp vào ô đó).
+
+### Lưu ý vận hành TKB
+
+- Benchmark `node agent-tools/benchmark-tkb.js --size large` **≠** đợt trong CSDL.
+- Sau sửa solver trong HTML: chạy `node agent-tools/extract-tkb-engine.js`.
+- Đợt multi-tenant: owner `created_by` + admin; khóa đợt chặn lưu/xếp/xóa.
+- Review chi tiết / roadmap: xem `chat.md` và `plan.md` (mục TKB).
+
+---
+*Cập nhật lần cuối: 2026-07-09. TKB v1 nghiệp vụ + vá API clean project; lộ trình/soạn bài vẫn như bản 2026-06-22.*

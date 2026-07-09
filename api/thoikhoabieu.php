@@ -3,7 +3,8 @@ require_once __DIR__ . '/helpers.php';
 
 session_start();
 
-const TIMETABLE_SCHEMA_VERSION = '20260709-v3';
+// v4: bỏ FOREIGN KEY trong CREATE (tránh 500 trên hosting khi users.id/engine lệch)
+const TIMETABLE_SCHEMA_VERSION = '20260709-v4-nofk';
 
 /**
  * Auth TKB: giáo viên có quyền trang thoikhoabieu, hoặc admin/superadmin (quản lý toàn bộ).
@@ -50,22 +51,47 @@ function tkb_maybe_ensure_schema(PDO $pdo): void
     if (schema_is_ready('thoikhoabieu', TIMETABLE_SCHEMA_VERSION)) {
         return;
     }
-    tkb_ensure_schema($pdo);
-    schema_mark_ready('thoikhoabieu', TIMETABLE_SCHEMA_VERSION);
+    try {
+        tkb_ensure_schema($pdo);
+        schema_mark_ready('thoikhoabieu', TIMETABLE_SCHEMA_VERSION);
+    } catch (Throwable $e) {
+        // Không chặn GET nếu bảng đã tồn tại; chỉ fail rõ khi thật sự không tạo được
+        if (!tkb_table_exists($pdo, 'timetable_projects')) {
+            throw $e;
+        }
+        // Bảng đã có → đánh dấu ready để tránh lặp 500 mỗi request
+        schema_mark_ready('thoikhoabieu', TIMETABLE_SCHEMA_VERSION);
+    }
+}
+
+function tkb_table_exists(PDO $pdo, string $table): bool
+{
+    try {
+        $stmt = $pdo->prepare('SHOW TABLES LIKE ?');
+        $stmt->execute([$table]);
+        return (bool)$stmt->fetch();
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 function tkb_column_exists(PDO $pdo, string $table, string $column): bool
 {
-    $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
-    $stmt->execute([$column]);
-    return (bool)$stmt->fetch();
+    try {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
+        $stmt->execute([$column]);
+        return (bool)$stmt->fetch();
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 function tkb_ensure_schema(PDO $pdo): void
 {
+    // Không dùng FOREIGN KEY — nhiều hosting lỗi 150/errno 121 khi users engine/charset khác
     $pdo->exec("CREATE TABLE IF NOT EXISTS timetable_projects (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        project_key VARCHAR(80) NOT NULL UNIQUE,
+        project_key VARCHAR(80) NOT NULL,
         unit_name VARCHAR(180) NOT NULL DEFAULT 'Nhà trường',
         name VARCHAR(180) NOT NULL DEFAULT 'Đợt xếp TKB',
         school_year VARCHAR(40) NOT NULL DEFAULT '',
@@ -76,19 +102,29 @@ function tkb_ensure_schema(PDO $pdo): void
         updated_by INT NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_timetable_project_key (project_key),
         INDEX idx_timetable_projects_updated (updated_at),
         INDEX idx_timetable_projects_school_year (school_year),
         INDEX idx_timetable_projects_unit (unit_name),
-        CONSTRAINT fk_timetable_project_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-        CONSTRAINT fk_timetable_project_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE CASCADE
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        INDEX idx_timetable_projects_created_by (created_by)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    // Migrate bảng cũ (thiếu cột)
-    if (!tkb_column_exists($pdo, 'timetable_projects', 'unit_name')) {
-        $pdo->exec("ALTER TABLE timetable_projects ADD COLUMN unit_name VARCHAR(180) NOT NULL DEFAULT 'Nhà trường' AFTER project_key");
-    }
-    if (!tkb_column_exists($pdo, 'timetable_projects', 'is_locked')) {
-        $pdo->exec("ALTER TABLE timetable_projects ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0 AFTER school_year");
+    // Migrate bảng cũ (thiếu cột) — mỗi ALTER độc lập
+    $alters = [
+        'unit_name' => "ALTER TABLE timetable_projects ADD COLUMN unit_name VARCHAR(180) NOT NULL DEFAULT 'Nhà trường' AFTER project_key",
+        'is_locked' => "ALTER TABLE timetable_projects ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0 AFTER school_year",
+        'school_year' => "ALTER TABLE timetable_projects ADD COLUMN school_year VARCHAR(40) NOT NULL DEFAULT '' AFTER name",
+        'project_json' => "ALTER TABLE timetable_projects ADD COLUMN project_json LONGTEXT NULL",
+        'result_json' => "ALTER TABLE timetable_projects ADD COLUMN result_json LONGTEXT NULL",
+    ];
+    foreach ($alters as $col => $sql) {
+        if (!tkb_column_exists($pdo, 'timetable_projects', $col)) {
+            try {
+                $pdo->exec($sql);
+            } catch (Throwable $e) {
+                // bỏ qua nếu đã có / không đủ quyền — request vẫn chạy nếu cột cần thiết đã đủ
+            }
+        }
     }
 }
 
@@ -501,94 +537,106 @@ function tkb_clear_result(PDO $pdo, array $user, array $input): array
 }
 
 // ---- router ----
-tkb_maybe_ensure_schema($pdo);
-$user = tkb_current_user($pdo);
-$action = trim((string)($_GET['action'] ?? 'list'));
-$method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+try {
+    tkb_maybe_ensure_schema($pdo);
+    $user = tkb_current_user($pdo);
+    $action = trim((string)($_GET['action'] ?? 'list'));
+    $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
-if ($method === 'GET' && $action === 'list') {
-    $unit = tkb_trim_text($_GET['unit_name'] ?? '', 180);
-    $year = tkb_trim_text($_GET['school_year'] ?? '', 40);
-    respond([
-        'ok' => true,
-        'projects' => tkb_list_projects($pdo, $user, $unit, $year),
-        'units' => tkb_list_units($pdo, $user),
-        'user' => ['name' => $user['full_name'], 'username' => $user['username'], 'id' => (int)$user['id']],
-    ]);
-}
+    if ($method === 'GET' && $action === 'list') {
+        $unit = tkb_trim_text($_GET['unit_name'] ?? '', 180);
+        $year = tkb_trim_text($_GET['school_year'] ?? '', 40);
+        respond([
+            'ok' => true,
+            'projects' => tkb_list_projects($pdo, $user, $unit, $year),
+            'units' => tkb_list_units($pdo, $user),
+            'user' => ['name' => $user['full_name'], 'username' => $user['username'], 'id' => (int)$user['id']],
+        ]);
+    }
 
-if ($method === 'GET' && ($action === 'latest' || $action === 'get')) {
-    $key = tkb_trim_text($_GET['project_key'] ?? '', 80);
-    $id = (int)($_GET['id'] ?? 0);
-    $project = null;
-    try {
-        if ($id > 0) {
-            $project = tkb_get_by_id($pdo, $id);
-            if ($project) {
-                tkb_assert_access($user, $project);
-            }
-        } elseif ($key !== '') {
-            $project = tkb_get_by_key($pdo, $key);
-            if ($project) {
-                tkb_assert_access($user, $project);
-            }
-        } else {
-            $list = tkb_list_projects($pdo, $user);
-            if ($list) {
-                $project = tkb_get_by_key($pdo, $list[0]['project_key']);
-            }
-        }
-    } catch (RuntimeException $e) {
-        // Không có quyền / không tìm thấy → trả null, không lộ dữ liệu
+    if ($method === 'GET' && ($action === 'latest' || $action === 'get')) {
+        $key = tkb_trim_text($_GET['project_key'] ?? '', 80);
+        $id = (int)($_GET['id'] ?? 0);
         $project = null;
+        try {
+            if ($id > 0) {
+                $project = tkb_get_by_id($pdo, $id);
+                if ($project) {
+                    tkb_assert_access($user, $project);
+                }
+            } elseif ($key !== '') {
+                $project = tkb_get_by_key($pdo, $key);
+                if ($project) {
+                    tkb_assert_access($user, $project);
+                }
+            } else {
+                $list = tkb_list_projects($pdo, $user);
+                if ($list) {
+                    $project = tkb_get_by_key($pdo, $list[0]['project_key']);
+                }
+            }
+        } catch (RuntimeException $e) {
+            // Không có quyền / không tìm thấy → trả null, không lộ dữ liệu
+            $project = null;
+        }
+        respond([
+            'ok' => true,
+            'project' => $project,
+            'projects' => tkb_list_projects($pdo, $user),
+            'units' => tkb_list_units($pdo, $user),
+            'user' => ['name' => $user['full_name'], 'username' => $user['username'], 'id' => (int)$user['id']],
+        ]);
+    }
+
+    if ($method === 'POST') {
+        $body = json_body();
+        try {
+            if ($action === 'create') {
+                $project = tkb_create_batch($pdo, $user, $body);
+                respond(['ok' => true, 'project' => $project, 'message' => 'Đã tạo đợt xếp TKB.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
+            }
+            if ($action === 'save') {
+                $project = tkb_save_batch($pdo, $user, $body);
+                respond(['ok' => true, 'project' => $project, 'message' => 'Đã lưu thời khóa biểu.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
+            }
+            if ($action === 'update_meta') {
+                $project = tkb_update_meta($pdo, $user, $body);
+                respond(['ok' => true, 'project' => $project, 'message' => 'Đã cập nhật thông tin đợt.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
+            }
+            if ($action === 'lock') {
+                $project = tkb_set_lock($pdo, $user, $body, true);
+                respond(['ok' => true, 'project' => $project, 'message' => 'Đã khóa đợt TKB.', 'projects' => tkb_list_projects($pdo, $user)]);
+            }
+            if ($action === 'unlock') {
+                $project = tkb_set_lock($pdo, $user, $body, false);
+                respond(['ok' => true, 'project' => $project, 'message' => 'Đã mở khóa đợt TKB.', 'projects' => tkb_list_projects($pdo, $user)]);
+            }
+            if ($action === 'delete') {
+                tkb_delete_batch($pdo, $user, $body);
+                respond(['ok' => true, 'message' => 'Đã xóa đợt TKB.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
+            }
+            if ($action === 'delete_unit') {
+                $count = tkb_delete_unit($pdo, $user, $body);
+                respond(['ok' => true, 'message' => "Đã xóa {$count} đợt TKB của đơn vị.", 'deleted' => $count, 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
+            }
+            if ($action === 'clear_result') {
+                $project = tkb_clear_result($pdo, $user, $body);
+                respond(['ok' => true, 'project' => $project, 'message' => 'Đã xóa kết quả xếp (giữ nguyên dữ liệu đầu vào).', 'projects' => tkb_list_projects($pdo, $user)]);
+            }
+        } catch (RuntimeException $e) {
+            respond(['error' => $e->getMessage()], 422);
+        }
+    }
+
+    respond(['error' => 'Endpoint không tồn tại.'], 404);
+} catch (Throwable $e) {
+    // Tránh 500 HTML trắng — trả JSON để UI/console đọc được
+    $msg = $e->getMessage();
+    if ($msg === '') {
+        $msg = 'Lỗi máy chủ TKB.';
     }
     respond([
-        'ok' => true,
-        'project' => $project,
-        'projects' => tkb_list_projects($pdo, $user),
-        'units' => tkb_list_units($pdo, $user),
-        'user' => ['name' => $user['full_name'], 'username' => $user['username'], 'id' => (int)$user['id']],
-    ]);
+        'error' => $msg,
+        'hint' => 'Kiểm tra bảng timetable_projects, session đăng nhập, quyền trang thoikhoabieu. Deploy api/thoikhoabieu.php bản mới nhất.',
+    ], 500);
 }
-
-if ($method === 'POST') {
-    $body = json_body();
-    try {
-        if ($action === 'create') {
-            $project = tkb_create_batch($pdo, $user, $body);
-            respond(['ok' => true, 'project' => $project, 'message' => 'Đã tạo đợt xếp TKB.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
-        }
-        if ($action === 'save') {
-            $project = tkb_save_batch($pdo, $user, $body);
-            respond(['ok' => true, 'project' => $project, 'message' => 'Đã lưu thời khóa biểu.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
-        }
-        if ($action === 'update_meta') {
-            $project = tkb_update_meta($pdo, $user, $body);
-            respond(['ok' => true, 'project' => $project, 'message' => 'Đã cập nhật thông tin đợt.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
-        }
-        if ($action === 'lock') {
-            $project = tkb_set_lock($pdo, $user, $body, true);
-            respond(['ok' => true, 'project' => $project, 'message' => 'Đã khóa đợt TKB.', 'projects' => tkb_list_projects($pdo, $user)]);
-        }
-        if ($action === 'unlock') {
-            $project = tkb_set_lock($pdo, $user, $body, false);
-            respond(['ok' => true, 'project' => $project, 'message' => 'Đã mở khóa đợt TKB.', 'projects' => tkb_list_projects($pdo, $user)]);
-        }
-        if ($action === 'delete') {
-            tkb_delete_batch($pdo, $user, $body);
-            respond(['ok' => true, 'message' => 'Đã xóa đợt TKB.', 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
-        }
-        if ($action === 'delete_unit') {
-            $count = tkb_delete_unit($pdo, $user, $body);
-            respond(['ok' => true, 'message' => "Đã xóa {$count} đợt TKB của đơn vị.", 'deleted' => $count, 'projects' => tkb_list_projects($pdo, $user), 'units' => tkb_list_units($pdo, $user)]);
-        }
-        if ($action === 'clear_result') {
-            $project = tkb_clear_result($pdo, $user, $body);
-            respond(['ok' => true, 'project' => $project, 'message' => 'Đã xóa kết quả xếp (giữ nguyên dữ liệu đầu vào).', 'projects' => tkb_list_projects($pdo, $user)]);
-        }
-    } catch (RuntimeException $e) {
-        respond(['error' => $e->getMessage()], 422);
-    }
-}
-
-respond(['error' => 'Endpoint không tồn tại.'], 404);
