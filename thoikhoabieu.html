@@ -1519,6 +1519,845 @@
                 load: (teacherLoadMap[lesson.teacherId] || 0) + (classLoadMap[lesson.classId] || 0),
             })).sort((a, b) => a.size - b.size || b.load - a.load).map(item => item.index);
 
+            /**
+             * Large: xếp theo Ô (ngày×buổi×tiết) — mọi lớp đồng thời.
+             * Ưu tiên gói từ tiết đầu + dồn GV; multi-seed; residual + 1-hop repair.
+             * Không rơi CSP sâu 840 biến (quá chậm).
+             */
+            function solveBySlotScan(seed = 0) {
+                const assignments = new Array(lessons.length).fill(null);
+                const teacherBusy = new Set();
+                const roomBusy = new Set();
+                const classBusy = new Set();
+                const subjectDay = new Map();
+                const remaining = new Set();
+                let nodes = 0;
+
+                const byClass = new Map();
+                lessons.forEach((l, i) => {
+                    remaining.add(i);
+                    if (!byClass.has(l.classId)) byClass.set(l.classId, []);
+                    byClass.get(l.classId).push(i);
+                });
+                // Đếm số tiết cùng môn trong lớp (ưu tiên môn nhiều tiết như KHTN/Toán)
+                const subjectCountInClass = new Map();
+                byClass.forEach((idxs, cid) => {
+                    idxs.forEach(i => {
+                        const k = `${cid}|${normalizeText(lessons[i].subject)}`;
+                        subjectCountInClass.set(k, (subjectCountInClass.get(k) || 0) + 1);
+                    });
+                    idxs.sort((a, b) => {
+                        const ra = lessons[a].roomNeed ? 0 : 1;
+                        const rb = lessons[b].roomNeed ? 0 : 1;
+                        const sa = subjectCountInClass.get(`${cid}|${normalizeText(lessons[a].subject)}`) || 0;
+                        const sb = subjectCountInClass.get(`${cid}|${normalizeText(lessons[b].subject)}`) || 0;
+                        return ra - rb || sb - sa || domains[a].length - domains[b].length;
+                    });
+                });
+
+                const days = state.rules.days || ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                const classDayCount = new Map();
+                const classTargets = new Map();
+                byClass.forEach((idxs, cid) => {
+                    const n = idxs.length;
+                    const base = days.map((_, d) => Math.floor(n / days.length) + (d < (n % days.length) ? 1 : 0));
+                    const rot = seed % days.length;
+                    const rotated = base.slice(rot).concat(base.slice(0, rot));
+                    classTargets.set(cid, Object.fromEntries(days.map((d, i) => [d, rotated[i]])));
+                });
+
+                // index ô → lesson (để repair O(1))
+                const teacherAt = new Map();
+                const roomAt = new Map();
+
+                function sessionsFor(cid) {
+                    const cl = state.classes.find(c => c.id === cid);
+                    return cl?.shift === 'both' ? ['morning', 'afternoon'] : [cl?.shift || 'morning'];
+                }
+
+                function canPlace(index, opt) {
+                    const L = lessons[index];
+                    if (teacherBusy.has(`${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`)) return false;
+                    if (roomBusy.has(`${opt.room}|${opt.day}|${opt.session}|${opt.period}`)) return false;
+                    if (classBusy.has(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`)) return false;
+                    const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                    if ((subjectDay.get(sk) || 0) >= state.rules.maxSameSubjectDay) return false;
+                    return true;
+                }
+
+                function placeAt(index, opt) {
+                    const L = lessons[index];
+                    assignments[index] = opt;
+                    const tk = `${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`;
+                    const rk = `${opt.room}|${opt.day}|${opt.session}|${opt.period}`;
+                    teacherBusy.add(tk);
+                    roomBusy.add(rk);
+                    classBusy.add(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`);
+                    teacherAt.set(tk, index);
+                    roomAt.set(rk, index);
+                    const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                    subjectDay.set(sk, (subjectDay.get(sk) || 0) + 1);
+                    classDayCount.set(`${L.classId}|${opt.day}`, (classDayCount.get(`${L.classId}|${opt.day}`) || 0) + 1);
+                    remaining.delete(index);
+                    nodes++;
+                }
+
+                function unplaceAt(index) {
+                    const opt = assignments[index];
+                    if (!opt) return;
+                    const L = lessons[index];
+                    const tk = `${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`;
+                    const rk = `${opt.room}|${opt.day}|${opt.session}|${opt.period}`;
+                    teacherBusy.delete(tk);
+                    roomBusy.delete(rk);
+                    classBusy.delete(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`);
+                    if (teacherAt.get(tk) === index) teacherAt.delete(tk);
+                    if (roomAt.get(rk) === index) roomAt.delete(rk);
+                    const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                    const sc = (subjectDay.get(sk) || 1) - 1;
+                    if (sc <= 0) subjectDay.delete(sk); else subjectDay.set(sk, sc);
+                    const dk = `${L.classId}|${opt.day}`;
+                    const dc = (classDayCount.get(dk) || 1) - 1;
+                    if (dc <= 0) classDayCount.delete(dk); else classDayCount.set(dk, dc);
+                    assignments[index] = null;
+                    remaining.add(index);
+                }
+
+                function tryReplaceAnywhere(index) {
+                    let best = null;
+                    for (const opt of domains[index]) {
+                        if (!canPlace(index, opt)) continue;
+                        const sc = scoreOption(index, opt);
+                        if (!best || sc < best.sc) best = { opt, sc };
+                    }
+                    if (best) {
+                        placeAt(index, best.opt);
+                        return true;
+                    }
+                    return false;
+                }
+
+                function scoreOption(index, opt) {
+                    const L = lessons[index];
+                    let score = opt.period * 1.2 + (opt.session === 'afternoon' ? 4 : 0);
+                    if (L.roomNeed) score -= 10;
+                    const subjN = subjectCountInClass.get(`${L.classId}|${normalizeText(L.subject)}`) || 1;
+                    if (subjN >= 3) score -= 6; // ưu tiên môn nhiều tiết
+                    let tAdj = false;
+                    let tCount = 0;
+                    let cAdj = false;
+                    let cPeriods = [];
+                    let sAdj = false;
+                    for (let j = 0; j < assignments.length; j++) {
+                        const o = assignments[j];
+                        if (!o) continue;
+                        const Lj = lessons[j];
+                        if (Lj.teacherId === L.teacherId && o.day === opt.day && o.session === opt.session) {
+                            tCount++;
+                            if (Math.abs(o.period - opt.period) === 1) tAdj = true;
+                        }
+                        if (Lj.classId === L.classId && o.day === opt.day && o.session === opt.session) {
+                            cPeriods.push(o.period);
+                            if (Math.abs(o.period - opt.period) === 1) cAdj = true;
+                            if (normalizeText(Lj.subject) === normalizeText(L.subject) && Math.abs(o.period - opt.period) === 1) sAdj = true;
+                        }
+                    }
+                    if (tCount > 0) score -= 12 + Math.min(4, tCount) * 3;
+                    if (tAdj) score -= 24;
+                    if (cAdj) score -= 18;
+                    if (sAdj) score -= 16;
+                    // Cân tải ngày môn: tránh 2 tiết xong rồi kẹt maxSameSubjectDay
+                    const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                    const daySub = subjectDay.get(sk) || 0;
+                    if (daySub === 1 && subjN >= 3) score -= 8; // ghép đôi
+                    if (daySub === 0 && subjN >= 3) score -= 3;
+                    const start = effectiveSessionStart(opt.day, opt.session);
+                    if (!cPeriods.length) {
+                        score += opt.period === start ? -35 : 40 + (opt.period - start) * 18;
+                    } else {
+                        const minP = Math.min(...cPeriods);
+                        const maxP = Math.max(...cPeriods);
+                        if (opt.period === maxP + 1 || opt.period === minP - 1) score -= 28;
+                        else if (opt.period > maxP + 1 || opt.period < minP - 1) score += 48;
+                        if (minP > start) score += 30;
+                    }
+                    // jitter seed
+                    score += ((seed * 19 + index * 7 + opt.period * 3 + opt.day.charCodeAt(1)) % 9) * 0.15;
+                    return score;
+                }
+
+                // Phase 1: fill theo ô — mọi lớp đồng thời, gói từ tiết đầu
+                // seed chẵn: T2→T7; seed lẻ: đảo ngày; seed % 3 === 2: tiết ngược (đa dạng nghẽn GV)
+                const dayOrder = seed % 2 ? days.slice().reverse() : days.slice();
+                for (const day of dayOrder) {
+                    for (const session of ['morning', 'afternoon']) {
+                        const { from, to } = sessionPeriodRange(session);
+                        const periods = [];
+                        for (let p = from; p <= to; p++) periods.push(p);
+                        if (seed % 3 === 2) periods.reverse();
+                        for (const p of periods) {
+                            let classIds = Array.from(byClass.keys()).filter(cid => {
+                                if (!sessionsFor(cid).includes(session)) return false;
+                                if (classBusy.has(`${cid}|${day}|${session}|${p}`)) return false;
+                                if (!byClass.get(cid).some(i => remaining.has(i))) return false;
+                                const placedDay = classDayCount.get(`${cid}|${day}`) || 0;
+                                const target = classTargets.get(cid)?.[day] ?? 99;
+                                return placedDay < target;
+                            });
+                            classIds.sort((a, b) => {
+                                const ra = byClass.get(a).filter(i => remaining.has(i)).length;
+                                const rb = byClass.get(b).filter(i => remaining.has(i)).length;
+                                const ja = (seed * 13 + a.charCodeAt(0) + p * 3) % 11;
+                                const jb = (seed * 17 + b.charCodeAt(0) + p * 5) % 11;
+                                return rb - ra || ja - jb;
+                            });
+                            if (classIds.length) {
+                                const off = (seed * 3 + p + day.charCodeAt(1)) % classIds.length;
+                                classIds = classIds.slice(off).concat(classIds.slice(0, off));
+                            }
+                            for (const cid of classIds) {
+                                let best = null;
+                                for (const idx of byClass.get(cid)) {
+                                    if (!remaining.has(idx)) continue;
+                                    for (const opt of domains[idx]) {
+                                        if (opt.day !== day || opt.session !== session || opt.period !== p) continue;
+                                        if (!canPlace(idx, opt)) continue;
+                                        const sc = scoreOption(idx, opt);
+                                        if (!best || sc < best.sc) best = { idx, opt, sc };
+                                    }
+                                }
+                                if (best) placeAt(best.idx, best.opt);
+                            }
+                        }
+                    }
+                }
+
+                // Phase 2: residual — còn lại gán ô trống tốt nhất
+                function residualPass() {
+                    const residual = Array.from(remaining).sort((a, b) => {
+                        const sa = subjectCountInClass.get(`${lessons[a].classId}|${normalizeText(lessons[a].subject)}`) || 0;
+                        const sb = subjectCountInClass.get(`${lessons[b].classId}|${normalizeText(lessons[b].subject)}`) || 0;
+                        return sb - sa || domains[a].length - domains[b].length;
+                    });
+                    for (const idx of residual) {
+                        let best = null;
+                        for (const opt of domains[idx]) {
+                            if (!canPlace(idx, opt)) continue;
+                            const sc = scoreOption(idx, opt);
+                            if (!best || sc < best.sc) best = { opt, sc };
+                        }
+                        if (best) placeAt(idx, best.opt);
+                    }
+                }
+                residualPass();
+
+                // Phase 3: repair — gỡ 1–2 tiết chặn (GV/phòng), xếp lại
+                function repairPass(maxHops = 2) {
+                    for (const idx of Array.from(remaining)) {
+                        const pool = domains[idx].slice().sort((a, b) => {
+                            const sa = scoreOption(idx, a);
+                            const sb = scoreOption(idx, b);
+                            return sa - sb;
+                        });
+                        let done = false;
+                        for (const opt of pool) {
+                            if (done) break;
+                            const L = lessons[idx];
+                            if (classBusy.has(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`)) continue;
+                            const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                            if ((subjectDay.get(sk) || 0) >= state.rules.maxSameSubjectDay) continue;
+                            const tk = `${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`;
+                            const rk = `${opt.room}|${opt.day}|${opt.session}|${opt.period}`;
+                            if (canPlace(idx, opt)) {
+                                placeAt(idx, opt);
+                                done = true;
+                                break;
+                            }
+                            const conflicts = [];
+                            if (teacherBusy.has(tk)) {
+                                const j = teacherAt.get(tk);
+                                if (j !== undefined && j !== idx) conflicts.push(j);
+                            }
+                            if (roomBusy.has(rk)) {
+                                const j = roomAt.get(rk);
+                                if (j !== undefined && j !== idx && !conflicts.includes(j)) conflicts.push(j);
+                            }
+                            if (!conflicts.length || conflicts.length > maxHops) continue;
+
+                            const saved = conflicts.map(j => ({ j, opt: assignments[j] }));
+                            conflicts.forEach(unplaceAt);
+                            if (!canPlace(idx, opt)) {
+                                saved.forEach(s => placeAt(s.j, s.opt));
+                                continue;
+                            }
+                            placeAt(idx, opt);
+                            let allRe = true;
+                            for (const s of saved) {
+                                if (!tryReplaceAnywhere(s.j)) {
+                                    allRe = false;
+                                    break;
+                                }
+                            }
+                            if (allRe) {
+                                done = true;
+                            } else {
+                                // rollback chain
+                                unplaceAt(idx);
+                                saved.forEach(s => {
+                                    if (assignments[s.j]) unplaceAt(s.j);
+                                });
+                                saved.forEach(s => placeAt(s.j, s.opt));
+                            }
+                        }
+                    }
+                }
+                repairPass(1);
+                residualPass();
+                repairPass(2);
+
+                // Phase 4: class-slot steal — gỡ tiết “mềm” cùng lớp (môn 1 tiết) để nhường ô cho môn kẹt
+                if (remaining.size) {
+                    for (const idx of Array.from(remaining)) {
+                        const L = lessons[idx];
+                        const softVictims = [];
+                        assignments.forEach((opt, j) => {
+                            if (!opt || lessons[j].classId !== L.classId) return;
+                            const sn = subjectCountInClass.get(`${L.classId}|${normalizeText(lessons[j].subject)}`) || 1;
+                            if (sn <= 2 && !lessons[j].roomNeed) softVictims.push(j);
+                        });
+                        let placedIdx = false;
+                        for (const vj of softVictims) {
+                            if (placedIdx) break;
+                            const vOpt = assignments[vj];
+                            if (!vOpt) continue;
+                            const match = domains[idx].find(o =>
+                                o.day === vOpt.day && o.session === vOpt.session && o.period === vOpt.period
+                            );
+                            if (!match) continue;
+                            unplaceAt(vj);
+                            if (canPlace(idx, match)) {
+                                placeAt(idx, match);
+                                if (tryReplaceAnywhere(vj)) {
+                                    placedIdx = true;
+                                } else {
+                                    unplaceAt(idx);
+                                    placeAt(vj, vOpt);
+                                }
+                            } else {
+                                const tk = `${L.teacherId}|${match.day}|${match.session}|${match.period}`;
+                                const rk = `${match.room}|${match.day}|${match.session}|${match.period}`;
+                                const conf = [];
+                                if (teacherBusy.has(tk) && teacherAt.has(tk)) conf.push(teacherAt.get(tk));
+                                if (roomBusy.has(rk) && roomAt.has(rk)) {
+                                    const rj = roomAt.get(rk);
+                                    if (!conf.includes(rj)) conf.push(rj);
+                                }
+                                if (conf.length === 1) {
+                                    const cj = conf[0];
+                                    const cOpt = assignments[cj];
+                                    unplaceAt(cj);
+                                    if (canPlace(idx, match)) {
+                                        placeAt(idx, match);
+                                        const okV = tryReplaceAnywhere(vj);
+                                        const okC = tryReplaceAnywhere(cj);
+                                        if (okV && okC) placedIdx = true;
+                                        else {
+                                            if (assignments[idx]) unplaceAt(idx);
+                                            if (assignments[vj]) unplaceAt(vj);
+                                            if (assignments[cj]) unplaceAt(cj);
+                                            placeAt(vj, vOpt);
+                                            placeAt(cj, cOpt);
+                                        }
+                                    } else {
+                                        placeAt(cj, cOpt);
+                                        placeAt(vj, vOpt);
+                                    }
+                                } else {
+                                    placeAt(vj, vOpt);
+                                }
+                            }
+                        }
+                    }
+                    residualPass();
+                    repairPass(2);
+                }
+
+                // Phase 5: chain repair đệ quy (độ sâu 3) — đẩy dồn conflict GV/phòng
+                if (remaining.size) {
+                    function tryPlaceChain(index, depth, taboo) {
+                        if (assignments[index]) return true;
+                        nodes++;
+                        const ordered = domains[index].slice().sort((a, b) => a.period - b.period || a.day.localeCompare(b.day));
+                        // ưu tiên ô không conflict
+                        const freeFirst = [];
+                        const needDisplace = [];
+                        for (const opt of ordered) {
+                            const L = lessons[index];
+                            if (classBusy.has(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`)) continue;
+                            const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                            if ((subjectDay.get(sk) || 0) >= state.rules.maxSameSubjectDay) continue;
+                            if (canPlace(index, opt)) freeFirst.push(opt);
+                            else needDisplace.push(opt);
+                        }
+                        for (const opt of freeFirst) {
+                            placeAt(index, opt);
+                            return true;
+                        }
+                        if (depth <= 0) return false;
+                        for (const opt of needDisplace) {
+                            const L = lessons[index];
+                            const tk = `${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`;
+                            const rk = `${opt.room}|${opt.day}|${opt.session}|${opt.period}`;
+                            const confs = [];
+                            if (teacherBusy.has(tk)) {
+                                const j = teacherAt.get(tk);
+                                if (j !== undefined && j !== index && !taboo.has(j)) confs.push(j);
+                            }
+                            if (roomBusy.has(rk)) {
+                                const j = roomAt.get(rk);
+                                if (j !== undefined && j !== index && !taboo.has(j) && !confs.includes(j)) confs.push(j);
+                            }
+                            if (!confs.length || confs.length > 2) continue;
+                            const saved = confs.map(j => ({ j, opt: Object.assign({}, assignments[j]) }));
+                            confs.forEach(unplaceAt);
+                            if (!canPlace(index, opt)) {
+                                saved.forEach(s => placeAt(s.j, s.opt));
+                                continue;
+                            }
+                            placeAt(index, opt);
+                            const nextTaboo = new Set(taboo);
+                            nextTaboo.add(index);
+                            let ok = true;
+                            for (const s of saved) {
+                                if (!tryPlaceChain(s.j, depth - 1, nextTaboo)) {
+                                    ok = false;
+                                    break;
+                                }
+                            }
+                            if (ok) return true;
+                            unplaceAt(index);
+                            saved.forEach(s => {
+                                if (assignments[s.j]) unplaceAt(s.j);
+                            });
+                            saved.forEach(s => placeAt(s.j, s.opt));
+                        }
+                        return false;
+                    }
+
+                    for (let round = 0; round < 4 && remaining.size; round++) {
+                        for (const idx of Array.from(remaining)) {
+                            tryPlaceChain(idx, 3, new Set([idx]));
+                        }
+                        // nếu còn: gỡ tạm 1 tiết cùng lớp (bất kỳ, ưu tiên môn 1 tiết) rồi chain lại
+                        if (remaining.size) {
+                            for (const idx of Array.from(remaining)) {
+                                const L = lessons[idx];
+                                const victims = [];
+                                assignments.forEach((opt, j) => {
+                                    if (!opt || lessons[j].classId !== L.classId) return;
+                                    const sn = subjectCountInClass.get(`${L.classId}|${normalizeText(lessons[j].subject)}`) || 1;
+                                    victims.push({ j, sn, room: !!lessons[j].roomNeed });
+                                });
+                                victims.sort((a, b) => (a.room ? 1 : 0) - (b.room ? 1 : 0) || a.sn - b.sn);
+                                let done = false;
+                                for (const v of victims.slice(0, 8)) {
+                                    if (done) break;
+                                    const vOpt = assignments[v.j];
+                                    if (!vOpt) continue;
+                                    unplaceAt(v.j);
+                                    if (tryPlaceChain(idx, 3, new Set([idx, v.j]))) {
+                                        if (tryPlaceChain(v.j, 3, new Set([idx, v.j]))) {
+                                            done = true;
+                                        } else if (assignments[idx]) {
+                                            // idx đã vào, victim chưa — thử residual victim
+                                            if (!tryReplaceAnywhere(v.j)) {
+                                                unplaceAt(idx);
+                                                placeAt(v.j, vOpt);
+                                            } else done = true;
+                                        } else {
+                                            placeAt(v.j, vOpt);
+                                        }
+                                    } else {
+                                        placeAt(v.j, vOpt);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const placed = lessons.length - remaining.size;
+                return {
+                    ok: remaining.size === 0,
+                    assignments,
+                    nodes,
+                    placed,
+                    unplaced: Array.from(remaining),
+                };
+            }
+
+            /**
+             * Pass mềm: giảm tiết mồ côi GV — dồn sang ngày đã có tiết + ghép 2 orphan.
+             */
+            function reduceTeacherOrphans(assignments, maxMoves = 4000) {
+                let moves = 0;
+                let improved = true;
+                const arr = assignments.slice();
+
+                function mapsFrom(arr0) {
+                    const tBusy = new Set();
+                    const cBusy = new Set();
+                    const rBusy = new Set();
+                    const subj = new Map();
+                    arr0.forEach((opt, i) => {
+                        if (!opt) return;
+                        const L = lessons[i];
+                        tBusy.add(`${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`);
+                        cBusy.add(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`);
+                        rBusy.add(`${opt.room}|${opt.day}|${opt.session}|${opt.period}`);
+                        const sk = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                        subj.set(sk, (subj.get(sk) || 0) + 1);
+                    });
+                    return { tBusy, cBusy, rBusy, subj };
+                }
+
+                function classSessionPackOk(arr0, classId, day, session, ignoreIndex) {
+                    if (state.rules.packFromSessionStart === false) return true;
+                    const periods = [];
+                    arr0.forEach((opt, j) => {
+                        if (!opt || j === ignoreIndex) return;
+                        if (lessons[j].classId !== classId) return;
+                        if (opt.day === day && opt.session === session) periods.push(opt.period);
+                    });
+                    if (!periods.length) return true;
+                    const list = uniqueSortedPeriods(periods);
+                    const start = effectiveSessionStart(day, session);
+                    if (list[0] > start) return false;
+                    return gapCountInSession(day, session, list) === 0;
+                }
+
+                function tryMove(i, day, session, maps) {
+                    const { tBusy, cBusy, rBusy, subj } = maps;
+                    const L = lessons[i];
+                    const old = arr[i];
+                    const { from, to } = sessionPeriodRange(session);
+                    let best = null;
+                    for (let p = from; p <= to; p++) {
+                        for (const cand of domains[i]) {
+                            if (cand.day !== day || cand.session !== session || cand.period !== p) continue;
+                            const tk = `${L.teacherId}|${day}|${session}|${p}`;
+                            const ck = `${L.classId}|${day}|${session}|${p}`;
+                            const rk = `${cand.room}|${day}|${session}|${p}`;
+                            const sk = `${L.classId}|${normalizeText(L.subject)}|${day}`;
+                            if (tBusy.has(tk) || cBusy.has(ck) || rBusy.has(rk)) continue;
+                            if ((subj.get(sk) || 0) >= state.rules.maxSameSubjectDay) continue;
+                            // thử tạm — không phá gói lớp (tiết 1 / lủng)
+                            arr[i] = cand;
+                            const okNew = classSessionPackOk(arr, L.classId, day, session, -1);
+                            const okOld = !old || (old.day === day && old.session === session)
+                                || classSessionPackOk(arr, L.classId, old.day, old.session, -1);
+                            arr[i] = old;
+                            if (!okNew || !okOld) continue;
+                            // ưu tiên kề tiết GV đã có
+                            let adj = 0;
+                            arr.forEach((o, j) => {
+                                if (!o || j === i || lessons[j].teacherId !== L.teacherId) return;
+                                if (o.day === day && o.session === session && Math.abs(o.period - p) === 1) adj = 1;
+                            });
+                            const sc = p - adj * 20;
+                            if (!best || sc < best.sc) best = { cand, sc };
+                        }
+                    }
+                    return best?.cand || null;
+                }
+
+                while (improved && moves < maxMoves) {
+                    improved = false;
+                    const audit0 = auditScheduleQuality(lessons, arr);
+                    if ((audit0.teacherOrphans || 0) === 0) break;
+
+                    const buckets = new Map();
+                    arr.forEach((opt, i) => {
+                        if (!opt) return;
+                        const L = lessons[i];
+                        const k = `${L.teacherId}|${opt.day}|${opt.session}`;
+                        if (!buckets.has(k)) buckets.set(k, []);
+                        buckets.get(k).push(i);
+                    });
+
+                    // 1) Dồn orphan → ngày GV đã có ≥2 tiết (ưu tiên), rồi ≥1
+                    for (const [, idxs] of buckets) {
+                        if (idxs.length !== 1 || moves >= maxMoves) continue;
+                        const i = idxs[0];
+                        const opt = arr[i];
+                        if (!opt) continue;
+                        const L = lessons[i];
+                        const teacherDays = new Map();
+                        arr.forEach((o, j) => {
+                            if (!o || lessons[j].teacherId !== L.teacherId) return;
+                            const dk = `${o.day}|${o.session}`;
+                            teacherDays.set(dk, (teacherDays.get(dk) || 0) + 1);
+                        });
+                        const targets = [];
+                        teacherDays.forEach((cnt, dk) => {
+                            if (cnt >= 1 && dk !== `${opt.day}|${opt.session}`) targets.push({ dk, cnt });
+                        });
+                        targets.sort((a, b) => b.cnt - a.cnt);
+                        if (!targets.length) continue;
+
+                        const maps = mapsFrom(arr);
+                        maps.tBusy.delete(`${L.teacherId}|${opt.day}|${opt.session}|${opt.period}`);
+                        maps.cBusy.delete(`${L.classId}|${opt.day}|${opt.session}|${opt.period}`);
+                        maps.rBusy.delete(`${opt.room}|${opt.day}|${opt.session}|${opt.period}`);
+                        const sk0 = `${L.classId}|${normalizeText(L.subject)}|${opt.day}`;
+                        maps.subj.set(sk0, (maps.subj.get(sk0) || 1) - 1);
+
+                        let moved = false;
+                        for (const { dk } of targets) {
+                            const [day, session] = dk.split('|');
+                            const cand = tryMove(i, day, session, maps);
+                            if (cand) {
+                                arr[i] = cand;
+                                moves++;
+                                improved = true;
+                                moved = true;
+                                break;
+                            }
+                        }
+                        if (!moved) arr[i] = opt;
+                    }
+
+                    // 2) Ghép 2 orphan cùng GV vào cùng một ngày trống chung
+                    if (moves < maxMoves) {
+                        const orphanByTeacher = new Map();
+                        buckets.forEach((idxs, k) => {
+                            if (idxs.length !== 1) return;
+                            const tid = k.split('|')[0];
+                            if (!orphanByTeacher.has(tid)) orphanByTeacher.set(tid, []);
+                            orphanByTeacher.get(tid).push(idxs[0]);
+                        });
+                        for (const [, oidxs] of orphanByTeacher) {
+                            if (oidxs.length < 2 || moves >= maxMoves) continue;
+                            for (let a = 0; a < oidxs.length && moves < maxMoves; a++) {
+                                for (let b = a + 1; b < oidxs.length && moves < maxMoves; b++) {
+                                    const i = oidxs[a];
+                                    const j = oidxs[b];
+                                    if (!arr[i] || !arr[j]) continue;
+                                    if (arr[i].day === arr[j].day && arr[i].session === arr[j].session) continue;
+                                    const L = lessons[i];
+                                    const maps = mapsFrom(arr);
+                                    maps.tBusy.delete(`${lessons[j].teacherId}|${arr[j].day}|${arr[j].session}|${arr[j].period}`);
+                                    maps.cBusy.delete(`${lessons[j].classId}|${arr[j].day}|${arr[j].session}|${arr[j].period}`);
+                                    maps.rBusy.delete(`${arr[j].room}|${arr[j].day}|${arr[j].session}|${arr[j].period}`);
+                                    const skj = `${lessons[j].classId}|${normalizeText(lessons[j].subject)}|${arr[j].day}`;
+                                    maps.subj.set(skj, (maps.subj.get(skj) || 1) - 1);
+                                    const cand = tryMove(j, arr[i].day, arr[i].session, maps);
+                                    if (cand) {
+                                        arr[j] = cand;
+                                        moves++;
+                                        improved = true;
+                                    } else {
+                                        const maps2 = mapsFrom(arr);
+                                        maps2.tBusy.delete(`${L.teacherId}|${arr[i].day}|${arr[i].session}|${arr[i].period}`);
+                                        maps2.cBusy.delete(`${L.classId}|${arr[i].day}|${arr[i].session}|${arr[i].period}`);
+                                        maps2.rBusy.delete(`${arr[i].room}|${arr[i].day}|${arr[i].session}|${arr[i].period}`);
+                                        const ski = `${L.classId}|${normalizeText(L.subject)}|${arr[i].day}`;
+                                        maps2.subj.set(ski, (maps2.subj.get(ski) || 1) - 1);
+                                        const cand2 = tryMove(i, arr[j].day, arr[j].session, maps2);
+                                        if (cand2) {
+                                            arr[i] = cand2;
+                                            moves++;
+                                            improved = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3) Swap cùng lớp: orphan ↔ tiết khác lớp (giữ gói) để dồn GV
+                    if (moves < maxMoves) {
+                        const orphanIdxs = [];
+                        buckets.forEach((idxs) => {
+                            if (idxs.length === 1) orphanIdxs.push(idxs[0]);
+                        });
+                        for (const i of orphanIdxs) {
+                            if (moves >= maxMoves) break;
+                            const oi = arr[i];
+                            if (!oi) continue;
+                            const Li = lessons[i];
+                            // ngày GV đã có ≥1 tiết khác
+                            const denseDays = new Set();
+                            arr.forEach((o, j) => {
+                                if (!o || j === i || lessons[j].teacherId !== Li.teacherId) return;
+                                denseDays.add(`${o.day}|${o.session}`);
+                            });
+                            if (!denseDays.size) continue;
+
+                            for (let j = 0; j < arr.length; j++) {
+                                if (moves >= maxMoves) break;
+                                if (j === i || !arr[j]) continue;
+                                const Lj = lessons[j];
+                                if (Lj.classId !== Li.classId) continue;
+                                const oj = arr[j];
+                                if (oi.day === oj.day && oi.session === oj.session) continue;
+                                // muốn đưa i sang slot của j nếu j nằm ngày dense của GV i
+                                if (!denseDays.has(`${oj.day}|${oj.session}`)) continue;
+
+                                // tìm option domain: i tại slot j, j tại slot i (đổi chỗ thời gian, phòng theo domain)
+                                const optI = domains[i].find(o =>
+                                    o.day === oj.day && o.session === oj.session && o.period === oj.period
+                                );
+                                const optJ = domains[j].find(o =>
+                                    o.day === oi.day && o.session === oi.session && o.period === oi.period
+                                );
+                                if (!optI || !optJ) continue;
+
+                                // hard: GV/phòng free sau khi gỡ cả 2
+                                const maps = mapsFrom(arr);
+                                maps.tBusy.delete(`${Li.teacherId}|${oi.day}|${oi.session}|${oi.period}`);
+                                maps.tBusy.delete(`${Lj.teacherId}|${oj.day}|${oj.session}|${oj.period}`);
+                                maps.cBusy.delete(`${Li.classId}|${oi.day}|${oi.session}|${oi.period}`);
+                                maps.cBusy.delete(`${Lj.classId}|${oj.day}|${oj.session}|${oj.period}`);
+                                maps.rBusy.delete(`${oi.room}|${oi.day}|${oi.session}|${oi.period}`);
+                                maps.rBusy.delete(`${oj.room}|${oj.day}|${oj.session}|${oj.period}`);
+                                // subject counts: gỡ cũ
+                                const ski0 = `${Li.classId}|${normalizeText(Li.subject)}|${oi.day}`;
+                                const skj0 = `${Lj.classId}|${normalizeText(Lj.subject)}|${oj.day}`;
+                                maps.subj.set(ski0, (maps.subj.get(ski0) || 1) - 1);
+                                maps.subj.set(skj0, (maps.subj.get(skj0) || 1) - 1);
+
+                                const tki = `${Li.teacherId}|${optI.day}|${optI.session}|${optI.period}`;
+                                const tkj = `${Lj.teacherId}|${optJ.day}|${optJ.session}|${optJ.period}`;
+                                const rki = `${optI.room}|${optI.day}|${optI.session}|${optI.period}`;
+                                const rkj = `${optJ.room}|${optJ.day}|${optJ.session}|${optJ.period}`;
+                                // class keys swap same class same periods exchanged — class slots free each other
+                                if (maps.tBusy.has(tki) || maps.tBusy.has(tkj)) continue;
+                                if (maps.rBusy.has(rki) || maps.rBusy.has(rkj)) continue;
+                                // same teacher can't occupy both if same slot (impossible across days usually)
+                                if (tki === tkj) continue;
+                                if (rki === rkj && optI.room === optJ.room) continue;
+                                const ski = `${Li.classId}|${normalizeText(Li.subject)}|${optI.day}`;
+                                const skj = `${Lj.classId}|${normalizeText(Lj.subject)}|${optJ.day}`;
+                                if ((maps.subj.get(ski) || 0) >= state.rules.maxSameSubjectDay) continue;
+                                if ((maps.subj.get(skj) || 0) >= state.rules.maxSameSubjectDay) continue;
+
+                                const prevI = arr[i];
+                                const prevJ = arr[j];
+                                arr[i] = optI;
+                                arr[j] = optJ;
+                                const packOk =
+                                    classSessionPackOk(arr, Li.classId, optI.day, optI.session, -1)
+                                    && classSessionPackOk(arr, Li.classId, optJ.day, optJ.session, -1);
+                                // swap cùng lớp cùng số tiết/buổi — gói thường giữ; vẫn check
+                                if (!packOk) {
+                                    arr[i] = prevI;
+                                    arr[j] = prevJ;
+                                    continue;
+                                }
+                                // chỉ nhận nếu orphan giảm
+                                const before = 1; // i was orphan
+                                const afterBuckets = new Map();
+                                [i, j].forEach(idx => {
+                                    const o = arr[idx];
+                                    const Lx = lessons[idx];
+                                    // count teacher sessions
+                                    let cnt = 0;
+                                    arr.forEach((oo, jj) => {
+                                        if (!oo || lessons[jj].teacherId !== Lx.teacherId) return;
+                                        if (oo.day === o.day && oo.session === o.session) cnt++;
+                                    });
+                                    afterBuckets.set(idx, cnt);
+                                });
+                                // accept if i no longer alone OR total teacher orphans for Li improved
+                                let orphanLiBefore = 0;
+                                let orphanLiAfter = 0;
+                                const sessCount = (useArr, tid) => {
+                                    const m = new Map();
+                                    useArr.forEach((o, jj) => {
+                                        if (!o || lessons[jj].teacherId !== tid) return;
+                                        const k = `${o.day}|${o.session}`;
+                                        m.set(k, (m.get(k) || 0) + 1);
+                                    });
+                                    let o = 0;
+                                    m.forEach(c => { if (c === 1) o++; });
+                                    return o;
+                                };
+                                // rollback to measure before
+                                arr[i] = prevI;
+                                arr[j] = prevJ;
+                                orphanLiBefore = sessCount(arr, Li.teacherId);
+                                arr[i] = optI;
+                                arr[j] = optJ;
+                                orphanLiAfter = sessCount(arr, Li.teacherId);
+                                const orphanLjBefore = sessCount(
+                                    (() => { const t = arr.slice(); t[i] = prevI; t[j] = prevJ; return t; })(),
+                                    Lj.teacherId
+                                );
+                                const orphanLjAfter = sessCount(arr, Lj.teacherId);
+                                if (orphanLiAfter + orphanLjAfter < orphanLiBefore + orphanLjBefore) {
+                                    moves++;
+                                    improved = true;
+                                    break;
+                                }
+                                arr[i] = prevI;
+                                arr[j] = prevJ;
+                            }
+                        }
+                    }
+                }
+                return { assignments: arr, moves };
+            }
+
+            if (isLarge || isHuge) {
+                const seedCount = isHuge ? 16 : 20;
+                let best = null;
+                let totalWaveNodes = 0;
+                for (let s = 0; s < seedCount; s++) {
+                    const wave = solveBySlotScan(s);
+                    totalWaveNodes += wave.nodes || 0;
+                    if (!best || wave.placed > best.placed || (wave.placed === best.placed && wave.ok && !best.ok)) {
+                        best = wave;
+                    }
+                    if (wave.ok) {
+                        let assign = wave.assignments;
+                        // Soft: dồn orphan + giữ gói lớp (không phá hard)
+                        const repaired = reduceTeacherOrphans(assign, isHuge ? 5000 : 9000);
+                        assign = repaired.assignments;
+                        state._packSoftMode = false;
+                        totalNodes += totalWaveNodes;
+                        deepest = lessons.length;
+                        return {
+                            ok: true,
+                            assignments: assign,
+                            nodes: totalNodes,
+                            deepest: lessons.length,
+                            blockedLesson: null,
+                            beauty: { ...evaluateBeauty(lessons, assign), beautifyMoves: repaired.moves },
+                        };
+                    }
+                    // đủ 100% sớm thì dừng; gần đủ thì tiếp tục seed (chain repair có thể khác)
+                    if (best && best.placed === lessons.length) break;
+                }
+                totalNodes += totalWaveNodes;
+                if (best) {
+                    deepest = Math.max(deepest, best.placed || 0);
+                    rememberPartial(best.assignments, evaluateBeauty(lessons, best.assignments));
+                    // Large: không rơi CSP nặng — trả partial tốt nhất (tránh treo 1–2 phút)
+                    state._packSoftMode = false;
+                    const blockedIdx = (best.unplaced && best.unplaced[0])
+                        ?? best.assignments.findIndex(a => !a);
+                    return {
+                        ok: false,
+                        assignments: best.assignments,
+                        nodes: totalNodes,
+                        deepest: best.placed || 0,
+                        blockedLesson: blockedIdx >= 0 ? lessons[blockedIdx] : null,
+                        beauty: evaluateBeauty(lessons, best.assignments),
+                    };
+                }
+            }
+
             function rememberPartial(assignments, beauty = null) {
                 // Không lưu partial đang lủng/trống tiết 1 (trừ khi pack tắt)
                 if (state.rules.packFromSessionStart !== false && !isFullyPackValid(lessons, assignments)) {
@@ -2149,18 +2988,25 @@
             // Beautify: large chỉ tinh chỉnh nhẹ (tránh 300s+); small/medium beautify đầy đủ hơn
             if (bestSolution) {
                 const beautifyBudget = isHuge ? 0 : isLarge ? 0 : n > 400 ? 4000 : n > 200 ? 12000 : 28000;
+                let beautyMoves = 0;
                 if (beautifyBudget > 0) {
                     state._packSoftMode = false;
                     const polished = beautifySchedule(bestSolution, beautifyBudget);
                     bestSolution = polished.assignments;
+                    beautyMoves += polished.moves || 0;
                     if (state.rules.packFromSessionStart !== false && !isFullyPackValid(lessons, bestSolution)) {
                         const stripped = stripPackViolations(lessons, bestSolution);
                         if (stripped.filter(Boolean).length === lessons.length) bestSolution = stripped;
                     }
-                    bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: polished.moves };
-                } else {
-                    bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: 0 };
                 }
+                // Medium/small: dồn tiết mồ côi GV sau beautify (large đã xử lý ở wave)
+                if (!isLarge && !isHuge) {
+                    const orphanBudget = n > 400 ? 8000 : n > 200 ? 6000 : 3500;
+                    const repaired = reduceTeacherOrphans(bestSolution, orphanBudget);
+                    bestSolution = repaired.assignments;
+                    beautyMoves += repaired.moves || 0;
+                }
+                bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: beautyMoves };
             } else if (bestPartial) {
                 bestPartial = stripPackViolations(lessons, bestPartial);
                 bestPartialPlaced = bestPartial.filter(Boolean).length;
