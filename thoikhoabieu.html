@@ -109,6 +109,38 @@
             <div class="kpi"><b id="statProgress">—</b><span>Xếp xong</span></div>
         </section>
 
+        <!-- Quản lý đơn vị / năm học / đợt -->
+        <section id="projectBar" class="card no-print mb-3 p-3 sm:p-3.5">
+            <div class="flex flex-wrap items-end gap-2.5">
+                <label class="min-w-[140px] flex-1">
+                    <span class="label">Đơn vị</span>
+                    <input id="metaUnit" class="field" list="unitDatalist" placeholder="VD: THCS ABC">
+                    <datalist id="unitDatalist"></datalist>
+                </label>
+                <label class="w-[120px]">
+                    <span class="label">Năm học</span>
+                    <input id="metaYear" class="field" placeholder="2025-2026">
+                </label>
+                <label class="min-w-[140px] flex-1">
+                    <span class="label">Đợt xếp TKB</span>
+                    <select id="metaBatchSelect" class="field"></select>
+                </label>
+                <label class="min-w-[120px] flex-1">
+                    <span class="label">Tên đợt</span>
+                    <input id="metaBatchName" class="field" placeholder="Đợt 1 / Học kỳ 1">
+                </label>
+                <div class="flex flex-wrap gap-1.5 pb-0.5">
+                    <button type="button" id="btnBatchNew" class="btn" title="Thêm đợt mới"><i class="fas fa-plus text-teal-700"></i>Thêm</button>
+                    <button type="button" id="btnBatchSaveMeta" class="btn" title="Lưu tên/đơn vị/năm"><i class="fas fa-pen text-slate-600"></i>Sửa</button>
+                    <button type="button" id="btnBatchLock" class="btn" title="Khóa/mở khóa đợt"><i class="fas fa-lock text-amber-600"></i><span id="btnBatchLockLabel">Khóa</span></button>
+                    <button type="button" id="btnBatchClearResult" class="btn" title="Xóa kết quả xếp, giữ dữ liệu"><i class="fas fa-eraser text-slate-600"></i>Xóa TKB</button>
+                    <button type="button" id="btnBatchDelete" class="btn" title="Xóa đợt này"><i class="fas fa-trash text-rose-600"></i>Xóa đợt</button>
+                    <button type="button" id="btnUnitDeleteAll" class="btn" title="Xóa toàn bộ đợt của đơn vị"><i class="fas fa-trash-can text-rose-700"></i>Xóa đơn vị</button>
+                </div>
+            </div>
+            <p id="projectLockHint" class="mt-2 hidden text-xs font-semibold text-amber-800">🔒 Đợt đang khóa — không lưu/xếp/xóa được cho đến khi mở khóa.</p>
+        </section>
+
         <div id="dataStatusBanner" class="no-print mb-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-600">
             Đang tải dữ liệu…
         </div>
@@ -340,6 +372,7 @@
 
     <script>
         const STORAGE_KEY = 'gb_timetable_builder_v1';
+        const STORAGE_ACTIVE_KEY = 'gb_timetable_active_project_key';
         const state = {
             teachers: [],
             importedAssignments: [],
@@ -360,7 +393,16 @@
             },
             result: null,
             activeResult: 'class',
-            projectMeta: null,
+            projectMeta: {
+                id: null,
+                project_key: '',
+                unit_name: 'Nhà trường',
+                name: 'Đợt 1',
+                school_year: '',
+                is_locked: false,
+            },
+            projectList: [],
+            unitList: [],
             ui: {
                 activeTab: 'teachers',
                 pageSize: 40,
@@ -954,10 +996,42 @@
             return slots;
         }
 
-        /** Ràng buộc cứng: buổi học gói từ tiết đầu — không trống tiết 1 rồi mới học tiết 2. */
+        /** Tiết đầu khung buổi sau khi bỏ qua ô ngoại lệ toàn trường (blocked). */
+        function effectiveSessionStart(day, session) {
+            const { from, to } = sessionPeriodRange(session);
+            const blocked = schoolBlockedSet();
+            for (let p = from; p <= to; p++) {
+                if (!isSlotBlockedBySet(blocked, { day, session, period: p })) return p;
+            }
+            return from;
+        }
+
+        /** Số “lủng” trong dải tiết — bỏ qua ô blocked toàn trường (không tính là lỗ). */
+        function gapCountInSession(day, session, periods) {
+            const list = uniqueSortedPeriods(periods);
+            if (list.length <= 1) return 0;
+            const blocked = schoolBlockedSet();
+            let gaps = 0;
+            for (let p = list[0]; p <= list[list.length - 1]; p++) {
+                if (list.includes(p)) continue;
+                if (isSlotBlockedBySet(blocked, { day, session, period: p })) continue;
+                gaps++;
+            }
+            return gaps;
+        }
+
+        /**
+         * Ràng buộc cứng: gói từ tiết đầu buổi, không lủng giữa.
+         * Ô ngoại lệ (blockedSlots) được bỏ qua — không bắt phải “lấp” ô đó.
+         */
         function packConstraintAllows(lesson, option, assignments, lessonsArr) {
             if (state.rules.packFromSessionStart === false) return true;
-            const start = sessionPeriodRange(option.session).from;
+            // Chế độ mềm: không chặn domain (chỉ phạt soft) — ưu tiên xếp đủ 100% rồi beautify gói buổi
+            if (state._packSoftMode) return true;
+            const start = effectiveSessionStart(option.day, option.session);
+            const blocked = schoolBlockedSet();
+            if (isSlotBlockedBySet(blocked, option)) return false;
+
             const periods = [];
             (assignments || []).forEach((placed, i) => {
                 if (!placed) return;
@@ -971,9 +1045,159 @@
             const max = uniq[uniq.length - 1];
             if (min !== start) return false;
             for (let p = start; p <= max; p++) {
+                if (isSlotBlockedBySet(blocked, { day: option.day, session: option.session, period: p })) continue;
                 if (!uniq.includes(p)) return false;
             }
             return true;
+        }
+
+        /**
+         * Rà lịch sau xếp: lủng lớp, trống tiết đầu, tiết mồ côi GV (1 tiết lẻ / gap GV).
+         * Trả về { classHoles, teacherOrphans, teacherGaps, startLate, messages }
+         */
+        function auditScheduleQuality(lessons, assignments) {
+            const classBuckets = new Map();
+            const teacherBuckets = new Map();
+            const messages = [];
+            assignments.forEach((option, index) => {
+                if (!option) return;
+                const lesson = lessons[index];
+                const ck = `${lesson.classId}|${lesson.className || ''}|${option.day}|${option.session}`;
+                const tk = `${lesson.teacherId}|${lesson.teacherName || ''}|${option.day}|${option.session}`;
+                if (!classBuckets.has(ck)) classBuckets.set(ck, []);
+                if (!teacherBuckets.has(tk)) teacherBuckets.set(tk, []);
+                classBuckets.get(ck).push(option.period);
+                teacherBuckets.get(tk).push({ period: option.period, subject: lesson.subject, className: lesson.className });
+            });
+
+            let classHoles = 0;
+            let startLate = 0;
+            classBuckets.forEach((periods, key) => {
+                const parts = key.split('|');
+                const className = parts[1] || 'Lớp';
+                const day = parts[2];
+                const session = parts[3];
+                const list = uniqueSortedPeriods(periods);
+                const holes = gapCountInSession(day, session, list);
+                const start = effectiveSessionStart(day, session);
+                if (list.length && list[0] > start) {
+                    startLate++;
+                    messages.push({
+                        type: 'start-late',
+                        severity: 'error',
+                        message: `${className} · ${day} ${session === 'afternoon' ? 'chiều' : 'sáng'}: trống tiết đầu (bắt đầu từ tiết ${list[0]}, khung từ ${start}).`,
+                    });
+                }
+                if (holes > 0) {
+                    classHoles += holes;
+                    messages.push({
+                        type: 'class-hole',
+                        severity: 'error',
+                        message: `${className} · ${day} ${session === 'afternoon' ? 'chiều' : 'sáng'}: lủng ${holes} tiết giữa buổi (dải ${list[0]}–${list[list.length - 1]}).`,
+                    });
+                }
+            });
+
+            let teacherGaps = 0;
+            let teacherOrphans = 0;
+            teacherBuckets.forEach((items, key) => {
+                const parts = key.split('|');
+                const teacherName = parts[1] || 'GV';
+                const day = parts[2];
+                const session = parts[3];
+                const list = uniqueSortedPeriods(items.map(i => i.period));
+                const holes = gapCountInSession(day, session, list);
+                if (holes > 0) {
+                    teacherGaps += holes;
+                    messages.push({
+                        type: 'teacher-gap',
+                        severity: 'warn',
+                        message: `${teacherName} · ${day} ${session === 'afternoon' ? 'chiều' : 'sáng'}: lịch GV lủng ${holes} tiết (dải ${list.join(', ')}).`,
+                    });
+                }
+                if (list.length === 1) {
+                    teacherOrphans++;
+                    messages.push({
+                        type: 'teacher-orphan',
+                        severity: 'warn',
+                        message: `${teacherName} · ${day} ${session === 'afternoon' ? 'chiều' : 'sáng'}: tiết mồ côi (chỉ 1 tiết ${list[0]} — ${items[0]?.subject || ''} ${items[0]?.className || ''}).`,
+                    });
+                }
+            });
+
+            return {
+                classHoles,
+                startLate,
+                teacherGaps,
+                teacherOrphans,
+                messages,
+                ok: classHoles === 0 && startLate === 0,
+            };
+        }
+
+        /** True nếu mọi buổi lớp đã xếp đều gói từ tiết đầu, không lủng (bỏ qua blocked). */
+        function isFullyPackValid(lessons, assignments) {
+            if (state.rules.packFromSessionStart === false) return true;
+            const buckets = new Map();
+            assignments.forEach((opt, i) => {
+                if (!opt) return;
+                const L = lessons[i];
+                const k = `${L.classId}|${opt.day}|${opt.session}`;
+                if (!buckets.has(k)) buckets.set(k, []);
+                buckets.get(k).push(opt.period);
+            });
+            for (const [k, periods] of buckets) {
+                const parts = k.split('|');
+                const day = parts[1];
+                const session = parts[2];
+                const list = uniqueSortedPeriods(periods);
+                const start = effectiveSessionStart(day, session);
+                if (list[0] !== start) return false;
+                if (gapCountInSession(day, session, list) > 0) return false;
+            }
+            return true;
+        }
+
+        /**
+         * Sửa lủng / trống tiết đầu: với mỗi buổi lớp vi phạm, gỡ các tiết “lẻ” không thuộc
+         * khối liên tục từ tiết đầu; solver partial có thể để lại trạng thái này khi hết budget.
+         */
+        function stripPackViolations(lessons, assignments) {
+            if (state.rules.packFromSessionStart === false) return assignments;
+            const next = assignments.slice();
+            const buckets = new Map();
+            next.forEach((opt, i) => {
+                if (!opt) return;
+                const L = lessons[i];
+                const k = `${L.classId}|${opt.day}|${opt.session}`;
+                if (!buckets.has(k)) buckets.set(k, []);
+                buckets.get(k).push(i);
+            });
+            buckets.forEach((indexes, k) => {
+                const parts = k.split('|');
+                const day = parts[1];
+                const session = parts[2];
+                const start = effectiveSessionStart(day, session);
+                const blocked = schoolBlockedSet();
+                const byPeriod = new Map();
+                indexes.forEach(i => {
+                    const p = next[i].period;
+                    if (!byPeriod.has(p)) byPeriod.set(p, []);
+                    byPeriod.get(p).push(i);
+                });
+                // Giữ chuỗi liên tục start, start+1, ... đến khi gặp lỗ (không blocked)
+                const { to } = sessionPeriodRange(session);
+                let keepUntil = start - 1;
+                for (let p = start; p <= to; p++) {
+                    if (isSlotBlockedBySet(blocked, { day, session, period: p })) continue;
+                    if (!byPeriod.has(p)) break;
+                    keepUntil = p;
+                }
+                indexes.forEach(i => {
+                    if (next[i] && next[i].period > keepUntil) next[i] = null;
+                });
+            });
+            return next;
         }
 
         function roomMatches(room, needOrSubject) {
@@ -1160,17 +1384,20 @@
             let classStartLate = 0;
             classBuckets.forEach((periods, classKey) => {
                 const list = uniqueSortedPeriods(periods);
-                classGaps += gapCount(list);
-                // Gói từ tiết đầu khung buổi (sáng/chiều có thể from ≠ 1)
-                const session = (classKey.split('|')[2]) || 'morning';
-                const start = sessionPeriodRange(session).from;
-                if (list.length && list[0] > start) classStartLate += (list[0] - start) * 8;
-                // Hổng giữa dải cũng đã tính gapCount; thêm phạt nếu min > start (cấm trống tiết đầu)
-                if (list.length && list[0] > start) classStartLate += 20;
+                const parts = classKey.split('|');
+                const day = parts[1];
+                const session = parts[2] || 'morning';
+                // classKey = classId|day|session
+                classGaps += gapCountInSession(day, session, list);
+                const start = effectiveSessionStart(day, session);
+                if (list.length && list[0] > start) classStartLate += (list[0] - start) * 8 + 20;
             });
-            teacherBuckets.forEach(periods => {
+            teacherBuckets.forEach((periods, teacherKey) => {
                 const list = uniqueSortedPeriods(periods);
-                teacherGaps += gapCount(list);
+                const parts = teacherKey.split('|');
+                const day = parts[1];
+                const session = parts[2] || 'morning';
+                teacherGaps += gapCountInSession(day, session, list);
                 if (list.length === 1) singleLessonTeacherSessions++;
             });
 
@@ -1211,12 +1438,12 @@
             });
 
             const score =
-                classGaps * 160 +
-                teacherGaps * 110 +
+                classGaps * 280 +
+                teacherGaps * 160 +
                 brokenDoubles * 95 +
                 sameSubjectSameDay * 18 +
-                singleLessonTeacherSessions * 14 +
-                classStartLate * (state.rules.packFromSessionStart === false ? 40 : 220) +
+                singleLessonTeacherSessions * 55 +
+                classStartLate * (state.rules.packFromSessionStart === false ? 40 : 400) +
                 dayLoadVariance * 6 +
                 coreLatePenalty +
                 latePenalty +
@@ -1242,10 +1469,12 @@
         }
 
         function solveByConstraints(lessons, domains) {
+            // Ưu tiên khả thi 100%: soft-pack khi xếp, hard-pack chỉ khi beautify/audit
+            state._packSoftMode = true;
             // Giảm budget khi data lớn để UI không “Not responding” quá lâu
             const maxDepth = lessons.length > 1000 ? 10 : lessons.length > 700 ? 12 : lessons.length > 400 ? 16 : 22;
-            const maxAttempts = lessons.length > 1000 ? 8 : lessons.length > 700 ? 10 : lessons.length > 400 ? 14 : 28;
-            const nodeBudget = lessons.length > 1000 ? 280000 : lessons.length > 700 ? 420000 : lessons.length > 400 ? 650000 : 1150000;
+            const maxAttempts = lessons.length > 1000 ? 10 : lessons.length > 700 ? 14 : lessons.length > 400 ? 18 : 32;
+            const nodeBudget = lessons.length > 1000 ? 320000 : lessons.length > 700 ? 520000 : lessons.length > 400 ? 780000 : 1200000;
             let totalNodes = 0;
             let deepest = 0;
             let bestBlocked = null;
@@ -1269,6 +1498,18 @@
             })).sort((a, b) => a.size - b.size || b.load - a.load).map(item => item.index);
 
             function rememberPartial(assignments, beauty = null) {
+                // Không lưu partial đang lủng/trống tiết 1 (trừ khi pack tắt)
+                if (state.rules.packFromSessionStart !== false && !isFullyPackValid(lessons, assignments)) {
+                    // Vẫn cho phép nếu chưa có partial pack-hợp lệ nào và đang sâu hơn
+                    const cleaned = stripPackViolations(lessons, assignments);
+                    const placedClean = cleaned.filter(Boolean).length;
+                    if (placedClean > bestPartialPlaced || (placedClean === bestPartialPlaced && isFullyPackValid(lessons, cleaned))) {
+                        bestPartialPlaced = placedClean;
+                        bestPartial = cleaned;
+                        bestBeauty = beauty ? { ...beauty, placed: placedClean } : bestBeauty;
+                    }
+                    return;
+                }
                 const placed = assignments.filter(Boolean).length;
                 if (placed > bestPartialPlaced) {
                     bestPartialPlaced = placed;
@@ -1370,39 +1611,43 @@
                         }
                         if (placed.day === option.day && placed.session === option.session && other.teacherId === lesson.teacherId) teacherPeriods.push(placed.period);
                     });
-                    const classBefore = gapCount(classPeriods);
-                    const teacherBefore = gapCount(teacherPeriods);
-                    const classAfter = gapCount([...classPeriods, option.period]);
-                    const teacherAfter = gapCount([...teacherPeriods, option.period]);
+                    const classBefore = gapCountInSession(option.day, option.session, classPeriods);
+                    const teacherBefore = gapCountInSession(option.day, option.session, teacherPeriods);
+                    const classAfter = gapCountInSession(option.day, option.session, [...classPeriods, option.period]);
+                    const teacherAfter = gapCountInSession(option.day, option.session, [...teacherPeriods, option.period]);
                     const adjacentClass = classPeriods.some(period => Math.abs(period - option.period) === 1);
                     const adjacentTeacher = teacherPeriods.some(period => Math.abs(period - option.period) === 1);
                     const subjectCount = subjectDayMap.get(subjectDayKey(lesson, option))?.size || 0;
-                    const startP = sessionPeriodRange(option.session).from;
+                    const startP = effectiveSessionStart(option.day, option.session);
                     let packFromStart = 0;
                     if (!classPeriods.length) {
-                        // Tiết đầu tiên của buổi: ưu tiên đúng tiết đầu khung
-                        packFromStart = option.period === startP ? -40 : 25 + (option.period - startP) * 18;
+                        packFromStart = option.period === startP ? -50 : 40 + (option.period - startP) * 22;
                     } else {
                         const maxP = Math.max(...classPeriods);
                         const minP = Math.min(...classPeriods);
-                        if (option.period > maxP + 1) packFromStart = 30;
-                        if (option.period < minP - 1) packFromStart = 30;
-                        if (minP > startP) packFromStart += 80; // đang trống tiết đầu — phạt nặng
+                        if (option.period > maxP + 1) packFromStart = 45;
+                        if (option.period < minP - 1) packFromStart = 45;
+                        if (minP > startP) packFromStart += 100;
                     }
                     if (!packConstraintAllows(lesson, option, assignments, lessons)) packFromStart += 50000;
+                    // Tránh tiết mồ côi GV: buổi đang 0 tiết thì nhẹ; đã 1 tiết thì mạnh ưu tiên kề
+                    let orphanTeacher = 0;
+                    if (teacherPeriods.length === 1 && !adjacentTeacher) orphanTeacher = 35;
+                    if (teacherPeriods.length === 0) orphanTeacher = 8; // hơi không thích 1 tiết lẻ sau này
                     const doubleBonus = adjacentSameSubject && isDoubleFriendlySubject(lesson.subject) ? -42 : (adjacentSameSubject ? -22 : 0);
                     const coreLate = isCoreSubject(lesson.subject) && option.period >= startP + 3 ? (option.period - startP - 2) * 6 : 0;
                     return (
-                        (classAfter - classBefore) * 140 +
-                        (teacherAfter - teacherBefore) * 85 +
+                        (classAfter - classBefore) * 200 +
+                        (teacherAfter - teacherBefore) * 120 +
                         subjectCount * 22 +
                         (option.period - startP) * 0.55 +
                         (option.session === 'afternoon' ? 0.45 : 0) +
                         packFromStart +
+                        orphanTeacher +
                         coreLate +
                         doubleBonus -
-                        (adjacentClass ? 20 : 0) -
-                        (adjacentTeacher ? 12 : 0) +
+                        (adjacentClass ? 24 : 0) -
+                        (adjacentTeacher ? 28 : 0) +
                         ((attempt * 17 + option.period * 13 + option.day.charCodeAt(1)) % 11) * 0.03
                     );
                 }
@@ -1443,7 +1688,12 @@
                         let ok = true;
                         const nextPath = new Set(path);
                         nextPath.add(index);
-                        const displaced = candidate.conflicts.sort((a, b) => domains[a].length - domains[b].length);
+                        // Xếp lại conflict theo tiết sớm trước — tránh re-place tiết 3 trước tiết 1 (gây lủng tạm / fail pack)
+                        const displaced = candidate.conflicts.slice().sort((a, b) => {
+                            const minA = Math.min(...domains[a].map(o => o.period));
+                            const minB = Math.min(...domains[b].map(o => o.period));
+                            return minA - minB || domains[a].length - domains[b].length;
+                        });
                         for (const conflict of displaced) {
                             if (!recursivePlace(conflict, depth - 1, nextPath)) {
                                 ok = false;
@@ -1736,14 +1986,6 @@
                 return { assignments, beauty, moves, checks };
             }
 
-            if (bestSolution) {
-                // Data lớn: giảm budget beautify để tránh treo trình duyệt quá lâu
-                const beautifyBudget = lessons.length > 700 ? 4000 : lessons.length > 400 ? 9000 : lessons.length > 200 ? 16000 : 28000;
-                const polished = beautifySchedule(bestSolution, beautifyBudget);
-                bestSolution = polished.assignments;
-                bestBeauty = { ...polished.beauty, beautifyMoves: polished.moves };
-            }
-
             function runMrvFallback() {
                 if (bestSolution || lessons.length > 420 || totalNodes > nodeBudget) return null;
 
@@ -1864,17 +2106,47 @@
                 bestBeauty = fallback.beauty;
             }
 
+            // Beautify gói buổi (soft-mode vẫn phạt lủng mạnh). KHÔNG strip tiết nếu đã 100% — giữ đủ tiết.
+            if (bestSolution) {
+                const beautifyBudget = lessons.length > 700 ? 5000 : lessons.length > 400 ? 12000 : lessons.length > 200 ? 20000 : 32000;
+                state._packSoftMode = false; // beautify ưu tiên candidate pack-hợp lệ
+                const polished = beautifySchedule(bestSolution, beautifyBudget);
+                bestSolution = polished.assignments;
+                // Nếu beautify làm hỏng pack, thử strip chỉ khi chưa đủ 100%
+                if (state.rules.packFromSessionStart !== false && !isFullyPackValid(lessons, bestSolution)) {
+                    const stripped = stripPackViolations(lessons, bestSolution);
+                    if (stripped.filter(Boolean).length === lessons.length) {
+                        bestSolution = stripped;
+                    }
+                    // nếu strip mất tiết → giữ bản 100% soft-pack, báo audit sau
+                }
+                bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: polished.moves };
+            } else if (bestPartial) {
+                bestPartial = stripPackViolations(lessons, bestPartial);
+                bestPartialPlaced = bestPartial.filter(Boolean).length;
+                bestBeauty = evaluateBeauty(lessons, bestPartial);
+            }
+
+            state._packSoftMode = false;
+            const finalAssign = bestSolution || bestPartial || new Array(lessons.length).fill(null);
+            // 100% = xếp đủ tiết (hard constraints trùng GV/lớp/phòng). Lủng gói buổi = quality audit.
+            const finalOk = !!bestSolution && finalAssign.filter(Boolean).length === lessons.length;
+
             return {
-                ok: !!bestSolution,
-                assignments: bestSolution || bestPartial || new Array(lessons.length).fill(null),
+                ok: finalOk,
+                assignments: finalAssign,
                 nodes: totalNodes,
                 deepest,
                 blockedLesson: bestBlocked,
-                beauty: bestBeauty,
+                beauty: bestBeauty || evaluateBeauty(lessons, finalAssign),
             };
         }
 
         async function generateSchedule() {
+            if (state.projectMeta?.is_locked) {
+                alert('Đợt đang khóa. Mở khóa trước khi xếp lịch.');
+                return;
+            }
             const btn = $('btnGenerate');
             const oldHtml = btn.innerHTML;
             btn.disabled = true;
@@ -1963,16 +2235,36 @@
                     ));
                 }
 
+                // Rà lủng / tiết mồ côi (chất lượng) — không hạ 100% nếu đã xếp đủ tiết
+                const audit = auditScheduleQuality(lessons, solved.assignments || []);
+                const qualityIssues = audit.messages.map(m => makeIssue(
+                    (m.severity === 'error' ? '⛔ ' : '⚠️ ') + m.message,
+                    m.severity === 'error' ? 'quality-error' : 'quality-warn'
+                ));
+                issues.push(...qualityIssues.filter(i => i.type === 'quality-error').slice(0, 30));
+                issues.push(...qualityIssues.filter(i => i.type === 'quality-warn').slice(0, 25));
+                if (qualityIssues.length > 55) {
+                    issues.push(makeIssue(`… và ${qualityIssues.length - 55} cảnh báo chất lượng khác.`));
+                }
+
+                const full = solved.ok && (solved.assignments || []).filter(Boolean).length === lessons.length;
                 state.result = {
                     byClass,
                     issues,
                     generatedAt: new Date().toISOString(),
                     teacherLoad,
-                    status: solved.ok ? 'complete' : (solved.assignments?.some(Boolean) ? 'partial' : 'infeasible'),
+                    status: full ? 'complete' : (solved.assignments?.some(Boolean) ? 'partial' : 'infeasible'),
                     solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
                     beauty: solved.beauty,
+                    audit: {
+                        classHoles: audit.classHoles,
+                        startLate: audit.startLate,
+                        teacherGaps: audit.teacherGaps,
+                        teacherOrphans: audit.teacherOrphans,
+                        ok: audit.ok,
+                    },
                 };
-                state.activeResult = solved.ok ? 'class' : 'issues';
+                state.activeResult = full ? (audit.ok ? 'class' : 'issues') : 'issues';
                 document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
                 renderResultControls();
                 if ($('viewSelector') && state.classes[0] && state.activeResult === 'class') {
@@ -1982,11 +2274,15 @@
                 renderSchedule();
                 updateStats();
                 const placed = Object.values(byClass).reduce((s, m) => s + Object.keys(m).length, 0);
+                const auditTxt = audit.ok
+                    ? `Gói buổi: OK.`
+                    : `Gói buổi: ${audit.classHoles} lủng, ${audit.startLate} trống tiết đầu.`;
+                const orphanTxt = ` GV mồ côi: ${audit.teacherOrphans}, lủng GV: ${audit.teacherGaps}.`;
                 showDataNotice(
-                    solved.ok
-                        ? `✅ Đã xếp ${placed}/${lessons.length} tiết. Chọn lớp trên dropdown để xem.`
-                        : `Đã xếp ${placed}/${lessons.length} tiết — xem cảnh báo.`,
-                    solved.ok ? 'ok' : 'warn'
+                    full
+                        ? `✅ Xếp 100%: ${placed}/${lessons.length} tiết. ${auditTxt}${orphanTxt}`
+                        : `Chưa 100%: ${placed}/${lessons.length} tiết. ${auditTxt}${orphanTxt}`,
+                    full ? (audit.ok && !audit.teacherOrphans ? 'ok' : 'warn') : 'err'
                 );
             } catch (err) {
                 console.error(err);
@@ -2237,6 +2533,55 @@
             document.querySelectorAll('#setupPanel [data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== tabName));
         }
 
+        function syncMetaInputsFromState() {
+            const m = state.projectMeta || {};
+            if ($('metaUnit')) $('metaUnit').value = m.unit_name || 'Nhà trường';
+            if ($('metaYear')) $('metaYear').value = m.school_year || '';
+            if ($('metaBatchName')) $('metaBatchName').value = m.name || 'Đợt 1';
+            const locked = !!m.is_locked;
+            if ($('projectLockHint')) $('projectLockHint').classList.toggle('hidden', !locked);
+            if ($('btnBatchLockLabel')) $('btnBatchLockLabel').textContent = locked ? 'Mở khóa' : 'Khóa';
+            const lockIcon = $('btnBatchLock')?.querySelector('i');
+            if (lockIcon) lockIcon.className = locked ? 'fas fa-lock-open text-emerald-600' : 'fas fa-lock text-amber-600';
+            // Disable destructive when locked
+            ['btnGenerate', 'btnSaveDraft', 'btnBatchSaveMeta', 'btnBatchDelete', 'btnBatchClearResult'].forEach(id => {
+                const el = $(id);
+                if (el && id !== 'btnBatchLock') el.disabled = locked && id !== 'btnBatchLock';
+            });
+        }
+
+        function renderProjectListSelect() {
+            const sel = $('metaBatchSelect');
+            if (!sel) return;
+            const list = state.projectList || [];
+            const unit = ($('metaUnit')?.value || '').trim();
+            const year = ($('metaYear')?.value || '').trim();
+            const filtered = list.filter(p => {
+                if (unit && p.unit_name !== unit) return false;
+                if (year && p.school_year !== year) return false;
+                return true;
+            });
+            const activeKey = state.projectMeta?.project_key || '';
+            sel.innerHTML = filtered.length
+                ? filtered.map(p => `<option value="${escapeHtml(p.project_key)}" ${p.project_key === activeKey ? 'selected' : ''}>${escapeHtml(p.name)}${p.is_locked ? ' 🔒' : ''} · ${escapeHtml(p.school_year || '—')}</option>`).join('')
+                : '<option value="">— Chưa có đợt —</option>';
+            const dl = $('unitDatalist');
+            if (dl) {
+                const units = state.unitList?.length
+                    ? state.unitList.map(u => u.unit_name)
+                    : [...new Set(list.map(p => p.unit_name).filter(Boolean))];
+                dl.innerHTML = units.map(u => `<option value="${escapeHtml(u)}"></option>`).join('');
+            }
+        }
+
+        function readMetaFromInputs() {
+            return {
+                unit_name: clean($('metaUnit')?.value || state.projectMeta?.unit_name || 'Nhà trường'),
+                school_year: clean($('metaYear')?.value || state.projectMeta?.school_year || ''),
+                name: clean($('metaBatchName')?.value || state.projectMeta?.name || 'Đợt 1'),
+            };
+        }
+
         function applyProject(project, result = null, meta = null) {
             if (!project || typeof project !== 'object') return false;
             Object.assign(state, {
@@ -2247,69 +2592,280 @@
                 assignments: Array.isArray(project.assignments) ? project.assignments : [],
                 rules: normalizeRules(project.rules || state.rules),
                 result: result || null,
-                activeResult: result?.status === 'infeasible' ? 'issues' : 'class',
-                projectMeta: meta,
+                activeResult: result?.status === 'infeasible' || result?.status === 'partial' ? 'issues' : 'class',
             });
+            if (meta) {
+                state.projectMeta = {
+                    id: meta.id != null ? meta.id : null,
+                    project_key: meta.project_key || meta.projectKey || '',
+                    unit_name: meta.unit_name || meta.unitName || 'Nhà trường',
+                    name: meta.name || 'Đợt 1',
+                    school_year: meta.school_year || meta.schoolYear || '',
+                    is_locked: !!(meta.is_locked ?? meta.isLocked),
+                    updated_at: meta.updated_at || meta.updatedAt || null,
+                };
+                try { if (state.projectMeta.project_key) localStorage.setItem(STORAGE_ACTIVE_KEY, state.projectMeta.project_key); } catch { /* */ }
+            }
             syncRuleInputs();
+            syncMetaInputsFromState();
+            renderProjectListSelect();
             renderAll();
             renderResultControls();
             renderSchedule();
+            updateStats();
             return projectHasUsableData(project);
+        }
+
+        async function apiTkb(action, opts = {}) {
+            const method = opts.method || (opts.body ? 'POST' : 'GET');
+            const url = opts.query
+                ? `api/thoikhoabieu.php?action=${encodeURIComponent(action)}&${opts.query}`
+                : `api/thoikhoabieu.php?action=${encodeURIComponent(action)}`;
+            const res = await fetch(url, {
+                method,
+                credentials: 'include',
+                cache: 'no-store',
+                headers: opts.body ? { 'Content-Type': 'application/json' } : undefined,
+                body: opts.body ? JSON.stringify(opts.body) : undefined,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.error) throw new Error(data.error || `Lỗi API (${res.status})`);
+            if (data.projects) state.projectList = data.projects;
+            if (data.units) state.unitList = data.units;
+            return data;
+        }
+
+        function setProjectFromServer(p) {
+            if (!p) return false;
+            return applyProject(p.project || tkbEmptyClientProject(), p.result, p);
+        }
+
+        function tkbEmptyClientProject() {
+            return {
+                teachers: [], importedAssignments: [], classes: [], rooms: [], assignments: [],
+                rules: normalizeRules(state.rules),
+            };
+        }
+
+        async function refreshProjectList() {
+            try {
+                const data = await apiTkb('list');
+                state.projectList = data.projects || [];
+                state.unitList = data.units || [];
+                renderProjectListSelect();
+            } catch (e) {
+                console.warn(e);
+            }
         }
 
         async function loadHostingProject() {
             try {
-                const res = await fetch('api/thoikhoabieu.php?action=latest', { cache: 'no-store', credentials: 'include' });
-                if (!res.ok) return false;
-                const data = await res.json();
-                if (!data.ok || !data.project?.project) return false;
-                // Project rỗng trên hosting không được coi là đã nạp — tránh che demo
-                if (!projectHasUsableData(data.project.project)) return false;
-                return applyProject(data.project.project, data.project.result, {
-                    id: data.project.id,
-                    name: data.project.name,
-                    schoolYear: data.project.school_year,
-                    updatedAt: data.project.updated_at,
-                });
+                const savedKey = localStorage.getItem(STORAGE_ACTIVE_KEY) || '';
+                const q = savedKey ? `project_key=${encodeURIComponent(savedKey)}` : '';
+                const data = await apiTkb('get', { query: q });
+                state.projectList = data.projects || [];
+                state.unitList = data.units || [];
+                if (!data.project) {
+                    renderProjectListSelect();
+                    return false;
+                }
+                setProjectFromServer(data.project);
+                // Có đợt (kể cả trống) = đã load hosting — không đè demo
+                return true;
             } catch {
                 return false;
             }
         }
 
         async function saveDraft() {
+            if (state.projectMeta?.is_locked) {
+                alert('Đợt đang khóa. Mở khóa trước khi lưu.');
+                return;
+            }
+            readRulesFromInputs();
+            const meta = readMetaFromInputs();
             const payload = projectPayload();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...payload, _meta: { ...state.projectMeta, ...meta } }));
             const button = $('btnSaveDraft');
             const oldText = button.innerHTML;
             button.disabled = true;
-            button.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2 text-teal-700"></i>Đang lưu...';
+            button.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Đang lưu...';
             try {
-                const res = await fetch('api/thoikhoabieu.php?action=save', {
+                const data = await apiTkb('save', {
                     method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: 'Thời khóa biểu nhà trường',
+                    body: {
+                        id: state.projectMeta?.id || null,
+                        project_key: state.projectMeta?.project_key || '',
+                        unit_name: meta.unit_name,
+                        school_year: meta.school_year,
+                        name: meta.name,
                         project: payload,
                         result: state.result,
-                    }),
+                    },
                 });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok || !data.ok) {
-                    throw new Error(data.error || 'Không lưu được thời khóa biểu lên hosting.');
-                }
-                state.projectMeta = {
-                    id: data.project?.id || null,
-                    name: data.project?.name || 'Thời khóa biểu nhà trường',
-                    schoolYear: data.project?.school_year || '',
-                    updatedAt: data.project?.updated_at || null,
-                };
-                alert(data.message || 'Đã lưu thời khóa biểu lên hosting.');
+                setProjectFromServer(data.project);
+                showDataNotice(data.message || 'Đã lưu.', 'ok');
             } catch (error) {
-                alert(`${error.message}\n\nĐã giữ một bản dự phòng tạm trên trình duyệt này, nhưng chưa lưu lên hosting.`);
+                alert(`${error.message}\n\nĐã giữ bản dự phòng trên trình duyệt.`);
             } finally {
                 button.disabled = false;
                 button.innerHTML = oldText;
+            }
+        }
+
+        async function createBatch() {
+            const meta = readMetaFromInputs();
+            const name = prompt('Tên đợt xếp TKB mới:', meta.name || 'Đợt 1');
+            if (name == null) return;
+            try {
+                const data = await apiTkb('create', {
+                    method: 'POST',
+                    body: {
+                        unit_name: meta.unit_name || 'Nhà trường',
+                        school_year: meta.school_year || '',
+                        name: clean(name) || 'Đợt 1',
+                        project: tkbEmptyClientProject(),
+                    },
+                });
+                setProjectFromServer(data.project);
+                state.result = null;
+                showDataNotice('Đã tạo đợt mới (trống). Nhập dữ liệu hoặc nạp demo.', 'ok');
+                goStep('data');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function saveBatchMeta() {
+            if (state.projectMeta?.is_locked) {
+                alert('Đợt đang khóa.');
+                return;
+            }
+            if (!state.projectMeta?.id && !state.projectMeta?.project_key) {
+                await createBatch();
+                return;
+            }
+            const meta = readMetaFromInputs();
+            try {
+                const data = await apiTkb('update_meta', {
+                    method: 'POST',
+                    body: {
+                        id: state.projectMeta.id,
+                        project_key: state.projectMeta.project_key,
+                        ...meta,
+                    },
+                });
+                setProjectFromServer({ ...data.project, project: projectPayload(), result: state.result });
+                showDataNotice(data.message || 'Đã cập nhật thông tin đợt.', 'ok');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function toggleBatchLock() {
+            if (!state.projectMeta?.id && !state.projectMeta?.project_key) {
+                alert('Chưa có đợt để khóa.');
+                return;
+            }
+            const lock = !state.projectMeta.is_locked;
+            if (!confirm(lock ? 'Khóa đợt này? Sẽ không sửa/xếp/xóa được cho đến khi mở khóa.' : 'Mở khóa đợt này?')) return;
+            try {
+                const data = await apiTkb(lock ? 'lock' : 'unlock', {
+                    method: 'POST',
+                    body: { id: state.projectMeta.id, project_key: state.projectMeta.project_key },
+                });
+                setProjectFromServer({ ...data.project, project: projectPayload(), result: state.result });
+                showDataNotice(data.message, 'ok');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function deleteBatch() {
+            if (state.projectMeta?.is_locked) {
+                alert('Đợt đang khóa. Mở khóa trước.');
+                return;
+            }
+            if (!state.projectMeta?.id && !state.projectMeta?.project_key) {
+                alert('Chưa chọn đợt.');
+                return;
+            }
+            if (!confirm(`Xóa đợt “${state.projectMeta.name}”? Không hoàn tác.`)) return;
+            try {
+                await apiTkb('delete', {
+                    method: 'POST',
+                    body: { id: state.projectMeta.id, project_key: state.projectMeta.project_key },
+                });
+                localStorage.removeItem(STORAGE_ACTIVE_KEY);
+                const data = await apiTkb('list');
+                state.projectList = data.projects || [];
+                state.unitList = data.units || [];
+                if (state.projectList[0]) {
+                    const full = await apiTkb('get', { query: `project_key=${encodeURIComponent(state.projectList[0].project_key)}` });
+                    setProjectFromServer(full.project);
+                } else {
+                    state.projectMeta = { id: null, project_key: '', unit_name: 'Nhà trường', name: 'Đợt 1', school_year: '', is_locked: false };
+                    applyProject(tkbEmptyClientProject(), null, state.projectMeta);
+                }
+                showDataNotice('Đã xóa đợt.', 'ok');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function deleteUnitAll() {
+            const unit = clean($('metaUnit')?.value || state.projectMeta?.unit_name || '');
+            if (!unit) {
+                alert('Nhập tên đơn vị cần xóa.');
+                return;
+            }
+            if (!confirm(`XÓA TOÀN BỘ đợt TKB của đơn vị “${unit}”? Không hoàn tác.`)) return;
+            if (!confirm('Xác nhận lần 2: xóa hết dữ liệu TKB đơn vị này?')) return;
+            try {
+                const data = await apiTkb('delete_unit', { method: 'POST', body: { unit_name: unit } });
+                localStorage.removeItem(STORAGE_ACTIVE_KEY);
+                state.projectList = data.projects || [];
+                state.unitList = data.units || [];
+                state.projectMeta = { id: null, project_key: '', unit_name: unit, name: 'Đợt 1', school_year: '', is_locked: false };
+                applyProject(tkbEmptyClientProject(), null, state.projectMeta);
+                showDataNotice(data.message || 'Đã xóa đơn vị.', 'ok');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function clearBatchResult() {
+            if (state.projectMeta?.is_locked) {
+                alert('Đợt đang khóa.');
+                return;
+            }
+            if (!confirm('Xóa kết quả xếp TKB (giữ GV/lớp/phân công)?')) return;
+            try {
+                if (state.projectMeta?.id || state.projectMeta?.project_key) {
+                    const data = await apiTkb('clear_result', {
+                        method: 'POST',
+                        body: { id: state.projectMeta.id, project_key: state.projectMeta.project_key },
+                    });
+                    state.result = null;
+                    setProjectFromServer({ ...data.project, project: projectPayload(), result: null });
+                } else {
+                    state.result = null;
+                    renderSchedule();
+                    updateStats();
+                }
+                showDataNotice('Đã xóa kết quả xếp.', 'ok');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function switchBatch(projectKey) {
+            if (!projectKey) return;
+            try {
+                const data = await apiTkb('get', { query: `project_key=${encodeURIComponent(projectKey)}` });
+                if (data.project) setProjectFromServer(data.project);
+            } catch (e) {
+                alert(e.message);
             }
         }
 
@@ -2380,12 +2936,12 @@
             state.assignments = [];
             state.result = null;
             [
-                ['Nguyễn Văn An', 'Toán', 24, 'T2S', ''],
-                ['Trần Thị Bình', 'Ngữ văn', 24, '', ''],
-                ['Lê Minh Châu', 'Ngoại ngữ 1', 22, 'T4C', ''],
-                ['Phạm Quốc Dũng', 'Tin học', 18, 'T3C', 'Tin 1'],
-                ['Hoàng Thu Hà', 'Khoa học tự nhiên', 20, '', 'KHTN 1'],
-                ['Vũ Hải Nam', 'Giáo dục thể chất', 20, 'T6S', 'Sân 1'],
+                ['Nguyễn Văn An', 'Toán', 32, '', ''],
+                ['Trần Thị Bình', 'Ngữ văn', 32, '', ''],
+                ['Lê Minh Châu', 'Ngoại ngữ 1', 28, '', ''],
+                ['Phạm Quốc Dũng', 'Tin học', 20, '', 'Tin 1'],
+                ['Hoàng Thu Hà', 'Khoa học tự nhiên', 28, '', 'KHTN 1'],
+                ['Vũ Hải Nam', 'Giáo dục thể chất', 24, '', 'Sân 1'],
             ].forEach(([name, subject, maxPeriods, unavailable, preferredRooms]) => addTeacher({ name, subject, maxPeriods, unavailable, preferredRooms }));
             ['6A', '6B', '7A', '7B'].forEach(name => addClass({ name, shift: 'morning', homeRoom: name }));
             addRoom({ name: 'Tin 1', subjects: 'Tin học' });
@@ -2924,6 +3480,18 @@
             $('btnExportSchedule').addEventListener('click', exportScheduleCsv);
             $('btnPrint').addEventListener('click', () => window.print());
             $('btnSaveDraft').addEventListener('click', saveDraft);
+            $('btnBatchNew')?.addEventListener('click', createBatch);
+            $('btnBatchSaveMeta')?.addEventListener('click', saveBatchMeta);
+            $('btnBatchLock')?.addEventListener('click', toggleBatchLock);
+            $('btnBatchDelete')?.addEventListener('click', deleteBatch);
+            $('btnUnitDeleteAll')?.addEventListener('click', deleteUnitAll);
+            $('btnBatchClearResult')?.addEventListener('click', clearBatchResult);
+            $('metaBatchSelect')?.addEventListener('change', e => {
+                const key = e.target.value;
+                if (key && key !== state.projectMeta?.project_key) switchBatch(key);
+            });
+            $('metaUnit')?.addEventListener('change', () => renderProjectListSelect());
+            $('metaYear')?.addEventListener('change', () => renderProjectListSelect());
             $('btnSampleData').addEventListener('click', loadSampleData);
             $('btnSampleData30')?.addEventListener('click', () => {
                 if ($('dataStatusBanner')) $('dataStatusBanner').innerHTML = '⏳ Đang nạp demo 30 lớp (không treo DOM — phân trang)...';
@@ -2969,8 +3537,8 @@
                 }
             }
 
-            // Mặc định demo NHỎ (nhẹ). Demo 30 chỉ khi user bấm nút (tránh treo lúc mở trang).
-            if (!loaded || !projectHasUsableData(state)) {
+            // Chưa load được hosting/đợt: nạp demo nhỏ. Có đợt trống: không đè demo.
+            if (!loaded) {
                 try {
                     loadSampleData();
                     loaded = true;
@@ -2980,6 +3548,8 @@
             }
 
             syncRuleInputs();
+            syncMetaInputsFromState();
+            renderProjectListSelect();
             state.ui.activeTab = 'teachers';
             goStep('data');
             renderActiveOrAllLight();
@@ -2988,11 +3558,13 @@
 
             if (projectHasUsableData(state)) {
                 showDataNotice(
-                    `Đang hiển thị: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công. Quy trình: Dữ liệu → Thiết lập → Kiểm tra → Xếp lịch.`,
+                    `Đợt: ${state.projectMeta?.name || '—'} · ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công.`,
                     'ok'
                 );
+            } else if (state.projectMeta?.project_key) {
+                showDataNotice(`Đợt “${state.projectMeta.name}” đang trống. Nhập dữ liệu hoặc menu Thêm → Demo.`, 'warn');
             } else {
-                showDataNotice('Chưa có dữ liệu. Menu Thêm → Demo nhỏ / Demo 30 lớp CT2018.', 'warn');
+                showDataNotice('Chưa có đợt. Bấm Thêm đợt hoặc menu Thêm → Demo.', 'warn');
             }
         }
 

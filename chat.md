@@ -4,6 +4,33 @@ Cập nhật: 09/07/2026
 
 Chỉ nội dung phiên hôm nay.
 
+## Quản lý đơn vị / năm học / đợt + xếp 100%
+
+### API `api/thoikhoabieu.php` (schema v2)
+
+| action | Việc |
+|--------|------|
+| list / get | Danh sách đợt, đơn vị; lấy 1 đợt |
+| create | Thêm đợt |
+| save | Lưu dữ liệu + meta |
+| update_meta | Sửa đơn vị/năm/tên đợt |
+| lock / unlock | Khóa / mở khóa đợt |
+| delete | Xóa 1 đợt |
+| delete_unit | Xóa toàn bộ đợt của đơn vị |
+| clear_result | Xóa kết quả xếp, giữ đầu vào |
+
+Cột: `unit_name`, `name` (đợt), `school_year`, `is_locked`.
+
+### UI
+
+Thanh **Đơn vị · Năm học · Đợt · Tên đợt** + Thêm / Sửa / Khóa / Xóa TKB / Xóa đợt / Xóa đơn vị.
+
+### Solver 100%
+
+- Xếp bằng **soft-pack** (không chặn domain) → ưu tiên đủ tiết.
+- Beautify gói buổi sau; audit lủng/mồ côi riêng (không hạ 100% nếu đã đủ tiết).
+- Demo nhỏ: tăng định mức GV.
+
 ---
 
 ## 1. TKB — demo 30 lớp CT GDPT 2018 + chức năng Kiểm tra
