@@ -2182,6 +2182,9 @@
             };
         }
 
+        // === TKB_ENGINE_END ===
+        // (marker extract pure engine — mọi hàm DOM/Worker để dưới dòng này)
+
         function freezeSolveSnapshot(payload) {
             // Deep clone — đóng băng đúng thời điểm bấm Xếp
             return JSON.parse(JSON.stringify({
@@ -2381,11 +2384,9 @@
             state.activeResult = full ? (softOk ? 'class' : 'issues') : 'issues';
             document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
             renderResultControls();
-            // Chọn lớp từ snapshot (đóng băng lúc xếp), map sang state.classes nếu còn
-            const firstClassId = classes[0]?.id;
-            if ($('viewSelector') && firstClassId && state.activeResult === 'class') {
-                const stillThere = state.classes.some(c => c.id === firstClassId);
-                $('viewSelector').value = stillThere ? firstClassId : (state.classes[0]?.id || 'all');
+            // Selector theo snapshot (không phụ thuộc state UI sau khi xếp)
+            if ($('viewSelector') && state.activeResult === 'class' && classes[0]?.id) {
+                $('viewSelector').value = classes[0].id;
             }
             goStep('result');
             renderSchedule();
@@ -2469,6 +2470,38 @@
             return session === 'afternoon' ? 'Chiều' : 'Sáng';
         }
 
+        /** Dữ liệu đóng băng lúc xếp — luôn dùng khi render kết quả TKB. */
+        function resultView() {
+            const snap = state.result?.snapshot;
+            if (snap && typeof snap === 'object') {
+                return {
+                    classes: Array.isArray(snap.classes) ? snap.classes : [],
+                    teachers: Array.isArray(snap.teachers) ? snap.teachers : [],
+                    assignments: Array.isArray(snap.assignments) ? snap.assignments : [],
+                    rooms: Array.isArray(snap.rooms) ? snap.rooms : [],
+                    rules: normalizeRules(snap.rules || state.rules),
+                };
+            }
+            return {
+                classes: state.classes,
+                teachers: state.teachers,
+                assignments: state.assignments,
+                rooms: state.rooms,
+                rules: state.rules,
+            };
+        }
+
+        /** Chạy fn với state.rules = rules snapshot (slotsForClass / sessionPeriodRange). */
+        function withViewRules(view, fn) {
+            const bak = state.rules;
+            state.rules = view.rules;
+            try {
+                return fn();
+            } finally {
+                state.rules = bak;
+            }
+        }
+
         function scheduleCellHtml(cell, mode) {
             if (!cell) return '<div class="min-h-[54px] text-xs text-slate-300">Trống</div>';
             const title = mode === 'teacher' ? cell.className : cell.subject;
@@ -2480,27 +2513,30 @@
             </div>`;
         }
 
-        function renderTableForClass(classItem) {
-            const slots = slotsForClass(classItem);
-            const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) })).filter(g => g.slots.length);
-            const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
-            let rows = '';
-            for (let i = 0; i < maxRows; i++) {
-                rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
-                    const slot = group.slots[i];
-                    if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
-                    const cell = state.result?.byClass?.[classItem.id]?.[slot.key];
-                    return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'class')}</td>`;
-                }).join('')}</tr>`;
-            }
-            return `<div class="mb-5">
-                ${subjectFillBadges(classItem)}
-                <h3 class="mb-2 text-base font-black">${escapeHtml(classItem.name)} <span class="text-sm font-bold text-slate-500">· ${shiftLabel(classItem.shift)}</span></h3>
-                <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
-                    <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>`;
+        function renderTableForClass(classItem, view) {
+            view = view || resultView();
+            return withViewRules(view, () => {
+                const slots = slotsForClass(classItem);
+                const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) })).filter(g => g.slots.length);
+                const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
+                let rows = '';
+                for (let i = 0; i < maxRows; i++) {
+                    rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
+                        const slot = group.slots[i];
+                        if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
+                        const cell = state.result?.byClass?.[classItem.id]?.[slot.key];
+                        return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'class')}</td>`;
+                    }).join('')}</tr>`;
+                }
+                return `<div class="mb-5">
+                    ${subjectFillBadges(classItem, view)}
+                    <h3 class="mb-2 text-base font-black">${escapeHtml(classItem.name)} <span class="text-sm font-bold text-slate-500">· ${shiftLabel(classItem.shift)}</span></h3>
+                    <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
+                        <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            });
         }
 
         function teacherCells(teacherId) {
@@ -2511,46 +2547,55 @@
             return cells;
         }
 
-        function renderTableForTeacher(teacher) {
-            const cells = teacherCells(teacher.id);
-            const slotMap = Object.fromEntries(cells.map(cell => [`${cell.day}-${cell.session}-${cell.period}`, cell]));
-            const slots = [];
-            state.rules.days.forEach(day => {
-                ['morning', 'afternoon'].forEach(session => {
-                    const { from, to } = sessionPeriodRange(session);
-                    for (let period = from; period <= to; period++) slots.push({ day, session, period });
+        function renderTableForTeacher(teacher, view) {
+            view = view || resultView();
+            return withViewRules(view, () => {
+                const cells = teacherCells(teacher.id);
+                const slotMap = Object.fromEntries(cells.map(cell => [`${cell.day}-${cell.session}-${cell.period}`, cell]));
+                const slots = [];
+                state.rules.days.forEach(day => {
+                    ['morning', 'afternoon'].forEach(session => {
+                        const { from, to } = sessionPeriodRange(session);
+                        for (let period = from; period <= to; period++) slots.push({ day, session, period });
+                    });
                 });
+                const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) }));
+                const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
+                let rows = '';
+                for (let i = 0; i < maxRows; i++) {
+                    rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
+                        const slot = group.slots[i];
+                        if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
+                        const cell = slotMap[`${slot.day}-${slot.session}-${slot.period}`];
+                        return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'teacher')}</td>`;
+                    }).join('')}</tr>`;
+                }
+                return `<div class="mb-5">
+                    <h3 class="mb-2 text-base font-black">${escapeHtml(teacher.name)} <span class="text-sm font-bold text-slate-500">· ${escapeHtml(teacher.subject || '')} · ${cells.length} tiết</span></h3>
+                    <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
+                        <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
             });
-            const groups = state.rules.days.map(day => ({ day, slots: slots.filter(s => s.day === day) }));
-            const maxRows = Math.max(...groups.map(g => g.slots.length), 1);
-            let rows = '';
-            for (let i = 0; i < maxRows; i++) {
-                rows += `<tr><td class="w-28 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">${i + 1}</td>${groups.map(group => {
-                    const slot = group.slots[i];
-                    if (!slot) return '<td class="min-w-[150px] bg-slate-50 px-2 py-2"></td>';
-                    const cell = slotMap[`${slot.day}-${slot.session}-${slot.period}`];
-                    return `<td class="min-w-[160px] px-2 py-2"><div class="mb-1 text-[10px] font-black uppercase text-slate-400">${sessionText(slot.session)} ${slot.period}</div>${scheduleCellHtml(cell, 'teacher')}</td>`;
-                }).join('')}</tr>`;
-            }
-            return `<div class="mb-5">
-                <h3 class="mb-2 text-base font-black">${escapeHtml(teacher.name)} <span class="text-sm font-bold text-slate-500">· ${escapeHtml(teacher.subject || '')} · ${cells.length} tiết</span></h3>
-                <table class="schedule-table w-full overflow-hidden rounded-2xl text-sm">
-                    <thead><tr><th class="w-28 px-3 py-2 text-left text-xs uppercase text-slate-500">Thứ tự</th>${groups.map(g => `<th class="min-w-[160px] px-3 py-2 text-left text-xs uppercase text-slate-500">${escapeHtml(g.day)}</th>`).join('')}</tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>`;
         }
 
         function renderResultControls() {
             const selector = $('viewSelector');
+            if (!selector) return;
+            const view = resultView();
+            const prev = selector.value;
             if (state.activeResult === 'teacher') {
-                selector.innerHTML = `<option value="all">Tất cả giáo viên</option>${state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}`;
+                selector.innerHTML = `<option value="all">Tất cả giáo viên</option>${view.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}`;
             } else {
-                selector.innerHTML = `<option value="all">Tất cả lớp</option>${state.classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}`;
+                selector.innerHTML = `<option value="all">Tất cả lớp</option>${view.classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}`;
             }
+            // Giữ lựa chọn nếu còn trong snapshot
+            if (prev && [...selector.options].some(o => o.value === prev)) selector.value = prev;
         }
 
-        function subjectFillBadges(classItem) {
+        function subjectFillBadges(classItem, view) {
+            view = view || resultView();
             const map = state.result?.byClass?.[classItem.id] || {};
             const placedBySubject = {};
             Object.values(map).forEach(cell => {
@@ -2558,7 +2603,7 @@
                 placedBySubject[key] = (placedBySubject[key] || 0) + 1;
             });
             const needed = {};
-            state.assignments.filter(a => a.classId === classItem.id).forEach(a => {
+            view.assignments.filter(a => a.classId === classItem.id).forEach(a => {
                 needed[a.subject] = (needed[a.subject] || 0) + Number(a.periods || 0);
             });
             const chips = Object.keys(needed).sort().map(subject => {
@@ -2579,22 +2624,22 @@
                 board?.classList.add('hidden');
                 return;
             }
-            const totalPlaced = Object.values(state.result.byClass).reduce((sum, map) => sum + Object.keys(map).length, 0);
+            const view = resultView();
+            const totalPlaced = Object.values(state.result.byClass || {}).reduce((sum, map) => sum + Object.keys(map || {}).length, 0);
             const totalNeed = state.result.solver?.total || totalPlaced;
             const pct = totalNeed ? Math.round(totalPlaced * 1000 / totalNeed) / 10 : 0;
-            const solverText = state.result.solver ? ` Solver: ${state.result.solver.nodes} nhánh.` : '';
+            const solverText = state.result.solver ? ` Solver: ${state.result.solver.nodes} nhánh${state.result.solver.ms != null ? ` · ${Math.round(state.result.solver.ms / 1000)}s` : ''}.` : '';
             const beauty = state.result.beauty;
-            const beautyText = beauty
-                ? ` Chất lượng ~${beauty.quality ?? '—'}/100 (score ${beauty.score}); trống lớp ${beauty.classGaps}, trống GV ${beauty.teacherGaps}; tiết đôi tốt ${beauty.goodDoubles || 0}, tách đôi ${beauty.brokenDoubles || 0}${beauty.beautifyMoves != null ? `; tinh chỉnh ${beauty.beautifyMoves} bước` : ''}.`
-                : '';
+            const hardLabel = state.result.hard?.label || (state.result.status === 'complete' ? 'Hợp lệ 100%' : 'Chưa đủ');
+            const softLabel = state.result.soft?.label || '—';
             $('resultSummary').textContent = state.result.status === 'complete'
-                ? `✅ Xếp 100%: ${totalPlaced}/${totalNeed} tiết, không vi phạm ràng buộc.${solverText}${beautyText}`
-                : `Chưa đủ lịch khả thi: ${totalPlaced}/${totalNeed} tiết (${pct}%). Cần xử lý ${state.result.issues.length} điểm nghẽn.${solverText}`;
+                ? `✅ Hard: ${hardLabel} (${totalPlaced}/${totalNeed}). Soft: ${softLabel}.${solverText}`
+                : `Hard: ${hardLabel} (${totalPlaced}/${totalNeed}, ${pct}%). Soft: ${softLabel}. Cảnh báo: ${state.result.issues?.length || 0}.${solverText}`;
 
             if (board) {
                 board.classList.remove('hidden');
-                if ($('qHardStatus')) $('qHardStatus').textContent = state.result.hard?.label || (state.result.status === 'complete' ? 'Hợp lệ' : 'Chưa đủ');
-                if ($('qSoftStatus')) $('qSoftStatus').textContent = state.result.soft?.label || '—';
+                if ($('qHardStatus')) $('qHardStatus').textContent = hardLabel;
+                if ($('qSoftStatus')) $('qSoftStatus').textContent = softLabel;
                 if ($('qPlaced')) $('qPlaced').textContent = `${totalPlaced}/${totalNeed}`;
                 if ($('qPercent')) $('qPercent').textContent = `${pct}%`;
                 if ($('qBeauty')) $('qBeauty').textContent = beauty?.quality != null ? `${beauty.quality}/100` : '—';
@@ -2608,34 +2653,34 @@
                 if ($('qOrphans')) $('qOrphans').textContent = state.result.audit?.teacherOrphans != null ? String(state.result.audit.teacherOrphans) : '—';
             }
 
-            const selected = $('viewSelector').value || 'all';
+            const selected = $('viewSelector')?.value || 'all';
             if (state.activeResult === 'issues') {
-                mount.innerHTML = state.result.issues.length ? `
+                mount.innerHTML = state.result.issues?.length ? `
                     <div class="space-y-2">
                         ${state.result.issues.map(issue => `<div class="conflict-row rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900">${escapeHtml(issue.message)}</div>`).join('')}
                     </div>
-                ` : `<div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center text-sm font-bold text-emerald-900">Không có cảnh báo. Lịch đã xếp hết theo các ràng buộc hiện tại.</div>`;
+                ` : `<div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center text-sm font-bold text-emerald-900">Không có cảnh báo. Lịch hard hợp lệ; soft cũng ổn.</div>`;
                 return;
             }
 
             if (state.activeResult === 'teacher') {
-                let teachers = selected === 'all' ? state.teachers : state.teachers.filter(t => t.id === selected);
+                let teachers = selected === 'all' ? view.teachers : view.teachers.filter(t => t.id === selected);
                 let note = '';
                 if (selected === 'all' && teachers.length > 4) {
-                    note = `<div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">Đang xem 4/${teachers.length} GV đầu. Chọn đúng GV trên dropdown để xem đủ.</div>`;
+                    note = `<div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">Đang xem 4/${teachers.length} GV (snapshot lúc xếp). Chọn đúng GV trên dropdown.</div>`;
                     teachers = teachers.slice(0, 4);
                 }
-                mount.innerHTML = note + (teachers.map(renderTableForTeacher).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có giáo viên.</div>`);
+                mount.innerHTML = note + (teachers.map(t => renderTableForTeacher(t, view)).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có giáo viên trong snapshot.</div>`);
                 return;
             }
 
-            let classes = selected === 'all' ? state.classes : state.classes.filter(c => c.id === selected);
+            let classes = selected === 'all' ? view.classes : view.classes.filter(c => c.id === selected);
             let note = '';
             if (selected === 'all' && classes.length > 3) {
-                note = `<div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">Đang xem 3/${classes.length} lớp đầu. Chọn đúng lớp trên dropdown để xem đầy đủ (nhẹ hơn).</div>`;
+                note = `<div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">Đang xem 3/${classes.length} lớp (snapshot lúc xếp). Chọn đúng lớp trên dropdown.</div>`;
                 classes = classes.slice(0, 3);
             }
-            mount.innerHTML = note + (classes.map(renderTableForClass).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có lớp.</div>`);
+            mount.innerHTML = note + (classes.map(c => renderTableForClass(c, view)).join('') || `<div class="p-8 text-center text-sm text-slate-500">Không có lớp trong snapshot.</div>`);
         }
 
         function downloadBlob(filename, content, type) {

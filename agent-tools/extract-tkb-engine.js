@@ -24,10 +24,18 @@ const helpers = `
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 `;
 
-// Core: parseUnavailable → end solveByConstraints
-const core = sliceFn(src, 'function parseUnavailable', 'async function generateSchedule');
+// Core pure: parseUnavailable → marker TKB_ENGINE_END (trước freeze/Worker/DOM)
+const endMarker = '// === TKB_ENGINE_END ===';
+let core;
+if (src.includes(endMarker)) {
+  core = sliceFn(src, 'function parseUnavailable', endMarker);
+} else {
+  // fallback: cắt trước generateSchedule (cũ) — tránh nếu quên marker
+  console.warn('WARN: missing TKB_ENGINE_END marker, fallback to generateSchedule');
+  core = sliceFn(src, 'function parseUnavailable', 'async function generateSchedule');
+}
 
-// curriculum helpers (sau generateSchedule trong file gốc)
+// curriculum helpers (đặt sau ENGINE_END trong HTML)
 let curriculum = '';
 const cStart = src.indexOf('function curriculumCt2018');
 const cEnd = src.indexOf('function loadSampleData');

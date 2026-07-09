@@ -5,7 +5,10 @@ session_start();
 
 const TIMETABLE_SCHEMA_VERSION = '20260709-v3';
 
-function tkb_current_teacher(PDO $pdo): array
+/**
+ * Auth TKB: giáo viên có quyền trang thoikhoabieu, hoặc admin/superadmin (quản lý toàn bộ).
+ */
+function tkb_current_user(PDO $pdo): array
 {
     $userId = (int)($_SESSION['user_id'] ?? 0);
     if ($userId <= 0) {
@@ -15,8 +18,17 @@ function tkb_current_teacher(PDO $pdo): array
     $stmt = $pdo->prepare("SELECT id, username, full_name, role, is_active, allowed_pages_json FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
-    if (!$user || !(bool)$user['is_active'] || ($user['role'] ?? '') !== 'teacher') {
-        respond(['error' => 'Chức năng xếp thời khóa biểu chỉ dành cho giáo viên.'], 403);
+    if (!$user || !(bool)$user['is_active']) {
+        respond(['error' => 'Tài khoản không hợp lệ hoặc đã bị khóa.'], 403);
+    }
+
+    $role = (string)($user['role'] ?? '');
+    if ($role === 'admin' || $role === 'superadmin') {
+        return $user;
+    }
+
+    if ($role !== 'teacher') {
+        respond(['error' => 'Chức năng xếp thời khóa biểu chỉ dành cho giáo viên hoặc admin.'], 403);
     }
 
     $allowedPages = teacher_allowed_pages_resolved($user);
@@ -25,6 +37,12 @@ function tkb_current_teacher(PDO $pdo): array
     }
 
     return $user;
+}
+
+/** @deprecated alias — giữ tên cũ cho call site */
+function tkb_current_teacher(PDO $pdo): array
+{
+    return tkb_current_user($pdo);
 }
 
 function tkb_maybe_ensure_schema(PDO $pdo): void
@@ -459,7 +477,7 @@ function tkb_clear_result(PDO $pdo, array $user, array $input): array
 
 // ---- router ----
 tkb_maybe_ensure_schema($pdo);
-$user = tkb_current_teacher($pdo);
+$user = tkb_current_user($pdo);
 $action = trim((string)($_GET['action'] ?? 'list'));
 $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
