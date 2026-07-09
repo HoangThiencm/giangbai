@@ -1,6 +1,6 @@
 # Xếp thời khóa biểu — bản đánh giá / hoàn thiện
 
-Cập nhật: **09/07/2026** (phiên large hard + orphan)  
+Cập nhật: **09/07/2026** (phiên large pack soft: holes/startLate → 0)  
 Mục đích: tài liệu nhờ review + ghi nhận tiến độ tối ưu.
 
 ---
@@ -9,13 +9,13 @@ Mục đích: tài liệu nhờ review + ghi nhận tiến độ tối ưu.
 
 | Mức | Đánh giá |
 |-----|----------|
-| Demo / nội bộ trường vừa (≤16 lớp hard 100%) | **Đủ tốt** — hard + pack soft ổn |
-| Large 30 lớp · 840 tiết hard 100% | **Đã PASS ổn định ~5–7s** (mốc mới) |
-| Soft “đẹp lịch” (mồ côi GV, lủng large) | **Cải thiện rõ, chưa xong** |
-| Production multi-trường tự tin | **Gần hơn** — hard large đã đứng; soft lớn + tenant admin còn siết |
+| Demo / nội bộ trường vừa (≤16 lớp) | **Đủ tốt** — hard + pack soft ổn |
+| Large 30 lớp · 840 tiết | **Hard 100% + pack soft 0 lủng / 0 trễ tiết 1**, ~12s |
+| Soft mồ côi GV / teacherGaps | **Còn** — giảm dần sau (large orphans ~22, tGaps cao) |
+| Production multi-trường tự tin | **Gần hơn** — mốc pack large đã đạt; densify GV + tenant còn siết |
 | Multi-tenant an toàn | **Đã siết owner** (`created_by` / admin) |
 
-**Nói gọn:** đã vượt mức “demo vừa”; large hard không còn là điểm nghẽn chính. Còn lại chủ yếu **chất lượng mềm** (orphans, holes large) và chiến lược solver sâu hơn.
+**Nói gọn:** hard scheduling + **pack lớp large** đã đạt mục tiêu demo 30 lớp. Chất lượng “đẹp GV” (orphans/gaps) là backlog tiếp theo, không chặn hard/pack.
 
 ---
 
@@ -25,43 +25,15 @@ Mục đích: tài liệu nhờ review + ghi nhận tiến độ tối ưu.
 
 | Finding | Xử lý |
 |---------|--------|
-| **[P1] Admin bị 403** | `tkb_current_user()`: **admin/superadmin** vào API; teacher vẫn cần quyền trang `thoikhoabieu` |
-| **[P1] Render kết quả theo state UI** | `resultView()` + `withViewRules()` — dùng **snapshot lúc xếp** |
-| **[P2] Engine pha tạp UI** | Marker `// === TKB_ENGINE_END ===`; extract trước freeze/Worker/DOM |
-| **[P2] Large 30 lớp** | **Đã chốt hard PASS** (xem §2.6 / §8) |
+| **[P1] Admin bị 403** | `tkb_current_user()`: **admin/superadmin** vào API |
+| **[P1] Render kết quả theo state UI** | `resultView()` + snapshot lúc xếp |
+| **[P2] Engine pha tạp UI** | Marker `// === TKB_ENGINE_END ===` |
+| **[P2] Large 30 lớp hard** | **PASS 840/840** |
+| **Pack soft large** (review follow-up) | **holes=0, startLate=0** (xem §2.6 / §9) |
 
-### 2.1. Snapshot đóng băng
+### 2.1–2.5. Snapshot / Worker / Hard-soft UI / Multi-tenant / Import
 
-- `freezeSolveSnapshot()` — clone lúc bấm **Xếp lịch**
-- Worker + fallback main thread xếp đúng snapshot; restore state UI sau
-- `applySolveOutcome(result, snapshot)` — bảng/KPI theo snapshot
-
-### 2.2. Web Worker + engine
-
-| File | Vai trò |
-|------|---------|
-| `thoikhoabieu-engine.js` | Solver pure (tách từ HTML) |
-| `thoikhoabieu-worker.js` | Xếp ngoài main thread |
-| `agent-tools/extract-tkb-engine.js` | Chạy lại khi sửa solver trong HTML |
-
-UI ưu tiên Worker; lỗi → fallback main **vẫn dùng snapshot**.
-
-### 2.3. Hard vs soft (UI)
-
-| Tầng | Ý nghĩa |
-|------|---------|
-| **Hợp lệ (hard)** | Đủ tiết, không trùng GV/lớp/phòng, precheck… |
-| **Chất lượng (đẹp)** | Gói tiết đầu, lủng, tiết đôi, mồ côi GV |
-
-KPI: `Hard: 100% … Soft: …`
-
-### 2.4. Multi-tenant API
-
-`api/thoikhoabieu.php` schema **v3**: list/get/save/lock/delete theo **owner** hoặc admin.
-
-### 2.5. Import
-
-Không map `preferredRooms` → `roomNeed` bắt buộc khi import Excel.
+(Giữ như các phiên trước — snapshot freeze, Worker+engine pure, owner API, không map preferredRooms→roomNeed.)
 
 ### 2.6. Benchmark chuẩn
 
@@ -70,16 +42,27 @@ node agent-tools/extract-tkb-engine.js
 node agent-tools/benchmark-tkb.js --size small|medium|large|all
 ```
 
-**Kết quả đo máy dev (09/07/2026, sau slot-scan + orphan swap):**
+**Kết quả đo máy dev (09/07/2026, sau `repairClassPack` + replan):**
 
 | Size | Dataset | Hard | Soft (holes / startLate / orphans) | Thời gian |
 |------|---------|------|-------------------------------------|-----------|
 | small | 4 lớp · 112 tiết | **112/112 PASS** | 0 / 0 / **~1** | ~3.6 s |
-| medium | 16 lớp · 448 tiết | **448/448 PASS** | 0 / 0 / **~18** | ~28 s |
-| large | 30 lớp · 840 tiết | **840/840 PASS** | ~22 / ~1 / **~32** | **~5–7 s** |
+| medium | 16 lớp · 448 tiết | **448/448 PASS** | 0 / 0 / **~18** | ~25–28 s |
+| large | 30 lớp · 840 tiết | **840/840 PASS** | **0 / 0 / ~22** | **~12 s** (&lt; 15s) |
 
-> Trước đó large: partial (vd 818/840) hoặc CSP treo >100s.  
-> Đã **cắt improve/beautify nặng** trên large + **không rơi CSP 840 biến**.
+**Mục tiêu đã chốt (large):**
+
+| Tiêu chí | Mục tiêu | Kết quả |
+|----------|----------|---------|
+| Hard | 840/840 | ✅ |
+| Thời gian | &lt; 15s | ✅ ~12s |
+| classHoles | 0 | ✅ |
+| startLate | 0 | ✅ |
+| teacherOrphans | giảm dần sau | ⏳ ~22 (đã có pass pack-safe) |
+| teacherGaps | giảm dần sau | ⏳ còn cao khi densify |
+
+> Thứ tự soft đúng review: **pack lớp trước** (holes/startLate), **rồi** orphan GV.  
+> Orphan chỉ chạy khi pack đã 0/0 — tránh đổi mồ côi lấy lủng.
 
 ### 2.7. Quản lý đợt
 
@@ -90,24 +73,22 @@ node agent-tools/benchmark-tkb.js --size small|medium|large|all
 ## 3. Điểm mạnh
 
 1. Luồng đủ: data → thiết lập → kiểm tra → xếp → audit → xuất/in/lưu.  
-2. Hard cơ bản đúng; **large hard 100% nhanh**.  
-3. Soft + audit có thật (lủng, tiết đầu, mồ côi).  
-4. Engine / Worker / benchmark **có trong repo**.  
-5. Snapshot freeze đã vá bug lệch UI.  
-6. Heuristic large có hướng rõ: **chia theo ô + multi-seed + chain repair**.
+2. **Large hard 100% nhanh** + **pack soft đạt**.  
+3. Soft + audit có thật; thứ tự ưu tiên pack → orphan.  
+4. Engine / Worker / benchmark trong repo; engine pure sau extract.  
+5. Snapshot freeze; multi-seed large không rơi CSP 840 biến.
 
 ---
 
-## 4. Rủi ro còn lại (thành thật)
+## 4. Rủi ro còn lại
 
 | # | Rủi ro | Ghi chú |
 |---|--------|---------|
-| 1 | **Large soft** (holes ~22, startLate, orphans ~32) | Hard xong; lịch “đẹp” large chưa đạt demo nhỏ |
-| 2 | **Mồ côi GV medium ~18** | Đã giảm mạnh (từng ~50–67); chưa về gần 0 |
-| 3 | Solver vẫn **heuristic** | Chưa chia bài theo khối tối ưu, progressive timeout UX, seed học được |
-| 4 | Worker ≠ rút CPU | Chỉ giữ UI mượt |
-| 5 | HTML + extract engine | Phải `extract-tkb-engine.js` sau mỗi sửa solver trong HTML |
-| 6 | Admin cross-owner | Cần role admin thật trên môi trường |
+| 1 | **teacherOrphans / teacherGaps** large & medium | Pack xong; densify GV còn (large tGaps có thể tăng khi dồn) |
+| 2 | Solver vẫn heuristic | Chưa progressive timeout UX / chia khối tối ưu thật |
+| 3 | Worker ≠ rút CPU | Chỉ giữ UI mượt |
+| 4 | HTML + extract | Phải `extract-tkb-engine.js` sau sửa solver trong HTML |
+| 5 | Thời large phụ thuộc multi-seed + repair | Seed xấu → repair nặng hơn; mốc ~12s ổn định trên bench hiện tại |
 
 ---
 
@@ -115,8 +96,8 @@ node agent-tools/benchmark-tkb.js --size small|medium|large|all
 
 | File | Nội dung |
 |------|----------|
-| `thoikhoabieu.html` | UI, snapshot, Worker, **`solveBySlotScan`**, orphan reduce |
-| `thoikhoabieu-engine.js` | Solver pure (sinh từ extract) |
+| `thoikhoabieu.html` | UI + solver: `solveBySlotScan`, **`repairClassPack`**, orphan reduce |
+| `thoikhoabieu-engine.js` | Pure engine (extract) |
 | `thoikhoabieu-worker.js` | Worker |
 | `api/thoikhoabieu.php` | Multi-đợt + owner |
 | `agent-tools/benchmark-tkb.js` | small/medium/large |
@@ -126,68 +107,73 @@ node agent-tools/benchmark-tkb.js --size small|medium|large|all
 
 ## 6. Checklist reviewer
 
-1. Ctrl+F5 → đợt user A không lộ sang user B.  
-2. Xếp small/demo → Hard 100%; sửa form giữa chừng **không** lệch snapshot.  
-3. `node agent-tools/benchmark-tkb.js --size small` → PASS.  
-4. `node agent-tools/benchmark-tkb.js --size medium` → PASS hard, soft holes/startLate = 0.  
-5. `node agent-tools/benchmark-tkb.js --size large` → **PASS 840/840**, thời gian &lt; 15s (mốc hiện tại ~5–7s).  
-6. Ghi nhận soft orphans medium/large (mốc: ~18 / ~32).  
-7. Khóa đợt → không lưu/xếp/xóa được.
+1. Owner isolation đợt A/B.  
+2. Snapshot: sửa form giữa xếp không lệch kết quả apply.  
+3. `benchmark-tkb.js --size small` → PASS, holes/startLate 0.  
+4. `--size medium` → PASS hard, holes/startLate 0.  
+5. `--size large` → **PASS 840/840**, **holes=0, startLate=0**, time **&lt; 15s**.  
+6. Ghi orphans medium/large (mốc ~18 / ~22).  
+7. Khóa đợt.
 
 ---
 
 ## 7. Roadmap còn lại
 
-1. ~~Chốt large 100% hard + &lt; 60s~~ → **đã đạt** (~5–7s).  
-2. **Soft large:** pass đóng lủng / tiết 1 sau hard (không gỡ hard).  
-3. **Orphan densify theo cụm GV** (cluster day, không chỉ move/swap 1-1).  
-4. Progressive best-so-far trong Worker khi timeout.  
-5. Single source of truth: page import engine, bớt duplicate.  
+1. ~~Large hard 100% &lt; 60s~~ → ✅ ~12s.  
+2. ~~Large classHoles=0, startLate=0~~ → ✅.  
+3. **Densify GV:** giảm orphans + teacherGaps (cluster day, không phá pack).  
+4. Progressive best-so-far trong Worker.  
+5. Single source of truth page ↔ engine.  
 6. (Tuỳ chọn) Preferred room soft; slot cố định Chào cờ/SH.
 
 ---
 
-## 8. Phiên tối ưu large + orphans (09/07/2026)
+## 8. Phiên hard large + orphan (trước pack soft)
 
-### Vấn đề trước phiên
+- `solveBySlotScan` multi-seed + chain repair → hard 840/840.  
+- `reduceTeacherOrphans` (move / pair / swap cùng lớp, pack-safe).  
+- Medium orphans ~67 → ~18; large hard ổn ~5–8s nhưng soft holes ~22.
 
-1. Large 30 lớp / 840 tiết — **chưa PASS ổn định** (CSP chậm / partial).  
-2. Medium hard 100% nhưng **nhiều tiết mồ côi GV**.  
-3. Solver heuristic, thiếu chiến lược chia bài toán cho scale lớn.
+---
+
+## 9. Phiên pack soft large (09/07/2026) — follow-up review
+
+### Phản biện / mục tiêu
+
+> Hard large đã tốt; soft xấu (22 lủng, 1 startLate).  
+> Ưu tiên: large `840/840 < 15s`, `classHoles=0`, `startLate=0`; orphans giảm dần sau.
 
 ### Việc đã làm
 
 | Hạng mục | Chi tiết |
 |----------|----------|
-| **`solveBySlotScan`** | Xếp theo ô (ngày×buổi×tiết), mọi lớp đồng thời; multi-seed (đảo ngày/tiết); residual; repair 1–2 hop; **chain repair depth 3**; steal slot môn mềm cùng lớp |
-| **Không rơi CSP large** | `n > 600` trả lời từ wave/slot-scan (tránh treo 100s+) |
-| **`reduceTeacherOrphans`** | Dồn ngày dày; ghép 2 orphan cùng GV; **swap cùng lớp**; **không phá pack** (tiết 1 / lủng) |
-| **Medium/small** | Orphan pass sau beautify (pack-safe) |
-| **Extract + bench** | `extract-tkb-engine.js` → small/medium/large |
+| **`repairClassPack`** | recompact / slide / pull / push / forcePack / eject / cross-class swap / **replanClass** |
+| **Thứ tự soft large** | pack trước → orphan **chỉ khi** holes=startLate=0 → pack lại nhẹ |
+| **Multi-seed chọn pack tốt** | chốt sớm khi pack hoàn hảo; early-stop khi gần tốt |
+| **Score pack nặng** trong slot-scan | ưu tiên gói tiết đầu / kề dải lớp |
 
-### Diễn biến large (hard)
+### Diễn biến soft large
 
-| Mốc | placed | Ghi chú |
-|-----|--------|---------|
-| Wave/class cũ + CSP | partial / timeout | CSP 840 biến không khả thi |
-| Slot-scan v1 | 818/840 ~5s | Kẹt chủ yếu KHTN (nghẽn lịch GV) |
-| + ưu tiên môn nhiều tiết + repair | 838/840 | Còn 2 tiết lẻ |
-| + chain repair + multi-seed | **840/840 ~5–7s** | **PASS ổn định** |
+| Mốc | holes / startLate | Ghi chú |
+|-----|-------------------|---------|
+| Sau hard-only (trước phiên) | ~22 / ~1 | “nhét đủ nhanh” |
+| repair strict | ~4 / 0 | còn 9B/9C T2 kiểu dải 1–5 |
+| + replanClass + multi-round | **0 / 0** | ✅ |
+| + orphan pack-safe | orphans ~22 | tGaps có thể tăng (đánh đổi densify) |
 
-### Soft (orphans) — xu hướng
+### Bench chốt phiên
 
-| Size | Trước (ước lượng phiên trước) | Sau phiên |
-|------|-------------------------------|-----------|
-| small | vài orphan | **~1** |
-| medium | ~50–67 (pack-safe move ít) → trước swap | **~18** (holes/startLate = 0) |
-| large | ~40–55 khi partial/full | **~32** (vẫn holes ~22) |
+```text
+large:  Hard PASS 840/840 | holes=0 startLate=0 orphans≈22 | ~12s
+medium: Hard PASS 448/448 | holes=0 startLate=0 orphans≈18 | ~26s
+small:  Hard PASS 112/112 | holes=0 startLate=0 orphans≈1  | ~3.6s
+```
 
-### Còn mở sau phiên
+### Còn mở
 
-1. Large: giảm holes/startLate (soft-pack repair sau hard).  
-2. Medium/large: đẩy orphans thấp hơn (cluster densify).  
-3. Progressive timeout + UX best-so-far.  
-4. Không tuyên bố “tối ưu hết” — **hard large xong; soft production lớn chưa xong**.
+1. Giảm **teacherOrphans** và **teacherGaps** mà **không** phá pack 0/0.  
+2. Ổn định thời gian large dưới tải seed xấu.  
+3. Progressive UX.
 
 ---
 
