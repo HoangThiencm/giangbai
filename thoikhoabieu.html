@@ -175,7 +175,16 @@
                     <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
                         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                             <h3 class="font-black text-slate-800">Nhập danh sách giáo viên</h3>
-                            <p class="mt-1 text-sm leading-6 text-slate-500">Mẫu đọc tốt các cột: Họ tên, Môn, Lớp, Số tiết/tuần, Buổi tránh, Phòng ưu tiên, Số tiết tối đa.</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Mẫu Excel: Họ tên, Môn, Lớp, Số tiết/tuần, <strong>Tiết nghỉ / ngày nghỉ GV</strong>, Phòng ưu tiên, Số tiết tối đa.</p>
+                            <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">
+                                <strong class="font-extrabold">Tiết nghỉ / ngày nghỉ = ràng buộc cứng</strong> (solver không xếp GV vào các ô này).
+                                Cú pháp: <code class="rounded bg-white px-1">T2</code> cả ngày ·
+                                <code class="rounded bg-white px-1">T2S</code> sáng ·
+                                <code class="rounded bg-white px-1">T2C</code> chiều ·
+                                <code class="rounded bg-white px-1">T5S1</code> tiết ·
+                                <code class="rounded bg-white px-1">T6C2-3</code> dải tiết.
+                                Ví dụ: <code class="rounded bg-white px-1">T2, T4S, T5S1, T6C2-3</code>
+                            </div>
                             <label class="mt-4 block">
                                 <span class="label">File Excel/CSV</span>
                                 <input id="teacherFile" type="file" accept=".xlsx,.xls,.csv" class="field bg-white text-sm">
@@ -198,7 +207,7 @@
                                             <th class="px-3 py-2">Họ tên</th>
                                             <th class="px-3 py-2">Môn chính</th>
                                             <th class="px-3 py-2">Tối đa/tuần</th>
-                                            <th class="px-3 py-2">Buổi tránh</th>
+                                            <th class="px-3 py-2" title="Ràng buộc cứng: T2 cả ngày, T2S sáng, T2C chiều, T5S1 tiết, T6C2-3 dải tiết">Tiết nghỉ / ngày nghỉ</th>
                                             <th class="px-3 py-2">Phòng ưu tiên</th>
                                             <th class="px-3 py-2"></th>
                                         </tr>
@@ -368,7 +377,7 @@
                     <div class="kpi"><b id="qOrphans">—</b><span>Mồ côi GV</span></div>
                 </div>
                 <p id="qLegend" class="text-[11px] font-medium text-slate-500">
-                    <strong>Hợp lệ</strong> = đủ tiết, không trùng GV/lớp/phòng, không vi phạm buổi tránh/capacity.
+                    <strong>Hợp lệ</strong> = đủ tiết, không trùng GV/lớp/phòng, không xếp vào tiết/ngày nghỉ GV (ràng buộc cứng), capacity OK.
                     <strong>Chất lượng</strong> = gói tiết đầu, không lủng, tiết đôi, ít mồ côi — lịch có thể hợp lệ nhưng chưa đẹp.
                 </p>
             </div>
@@ -649,7 +658,7 @@
                     <td class="px-3 py-2"><input class="compact-input text-sm font-bold" data-field="name" value="${escapeHtml(t.name)}"></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="subject" value="${escapeHtml(t.subject)}"></td>
                     <td class="px-3 py-2"><input type="number" min="1" class="compact-input text-sm" data-field="maxPeriods" value="${escapeHtml(t.maxPeriods || 24)}"></td>
-                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="unavailable" value="${escapeHtml(t.unavailable)}" placeholder="T2S, T5S1, T6C2-3"></td>
+                    <td class="px-3 py-2"><input class="compact-input text-sm" data-field="unavailable" value="${escapeHtml(t.unavailable)}" placeholder="T2, T4S, T5S1, T6C2-3" title="Nghỉ cứng: T2 | T2S | T2C | T5S1 | T6C2-3"></td>
                     <td class="px-3 py-2"><input class="compact-input text-sm" data-field="preferredRooms" value="${escapeHtml(t.preferredRooms)}"></td>
                     <td class="px-3 py-2 text-right"><button type="button" class="delete-row rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50" title="Xóa"><i class="fas fa-trash"></i></button></td>
                 </tr>
@@ -876,7 +885,10 @@
                 const subject = headerValue(row, ['Môn', 'Mon', 'Môn chính', 'Mon chinh', 'Bộ môn', 'Bo mon']);
                 const className = headerValue(row, ['Lớp', 'Lop', 'Lớp dạy', 'Lop day']);
                 const periods = Number(headerValue(row, ['Số tiết/tuần', 'So tiet/tuan', 'Số tiết', 'So tiet', 'Tiet']) || 0);
-                const unavailable = headerValue(row, ['Buổi tránh', 'Buoi tranh', 'Lịch bận', 'Lich ban', 'Không dạy', 'Khong day']);
+                const unavailable = headerValue(row, [
+                    'Tiết nghỉ / ngày nghỉ', 'Tiet nghi / ngay nghi', 'Tiết nghỉ', 'Tiet nghi', 'Ngày nghỉ', 'Ngay nghi',
+                    'Buổi tránh', 'Buoi tranh', 'Lịch bận', 'Lich ban', 'Không dạy', 'Khong day', 'Unavailable',
+                ]);
                 const preferredRooms = headerValue(row, ['Phòng ưu tiên', 'Phong uu tien', 'Phòng', 'Phong']);
                 const maxPeriods = Number(headerValue(row, ['Số tiết tối đa', 'So tiet toi da', 'Định mức', 'Dinh muc']) || 24);
 
@@ -1327,11 +1339,41 @@
 
             lessons.forEach((lesson, index) => {
                 if (!domains[index]?.length) {
-                    issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, buổi tránh của giáo viên và phòng bộ môn.`));
+                    issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, tiết/ngày nghỉ GV (ràng buộc cứng) và phòng bộ môn.`));
                 }
             });
 
             return issues;
+        }
+
+        /** Đếm ô thời gian GV còn dạy được (sau khi trừ tiết/ngày nghỉ), theo lớp GV đang phụ trách. */
+        function countTeacherAvailableSlots(teacher) {
+            const blocked = parseUnavailable(teacher.unavailable);
+            const slotKeys = new Set();
+            let free = 0;
+            const classIds = new Set(
+                state.assignments.filter(a => a.teacherId === teacher.id && a.classId).map(a => a.classId)
+            );
+            const addSlot = (slot) => {
+                const k = `${slot.day}|${slot.session}|${slot.period}`;
+                if (slotKeys.has(k)) return;
+                slotKeys.add(k);
+                if (!isSlotBlockedBySet(blocked, slot)) free++;
+            };
+            if (classIds.size) {
+                classIds.forEach(cid => {
+                    const cl = state.classes.find(c => c.id === cid);
+                    if (cl) slotsForClass(cl).forEach(addSlot);
+                });
+            } else {
+                (state.rules.days || ['T2', 'T3', 'T4', 'T5', 'T6', 'T7']).forEach(day => {
+                    ['morning', 'afternoon'].forEach(session => {
+                        const { from, to } = sessionPeriodRange(session);
+                        for (let p = from; p <= to; p++) addSlot({ day, session, period: p });
+                    });
+                });
+            }
+            return { free, total: slotKeys.size };
         }
 
         function gapCount(periods) {
@@ -4524,9 +4566,9 @@
 
         function downloadTeacherTemplate() {
             const rows = [
-                ['Họ tên', 'Môn', 'Lớp', 'Số tiết/tuần', 'Buổi tránh', 'Phòng ưu tiên', 'Số tiết tối đa'],
-                ['Nguyễn Văn A', 'Toán', '6A,6B', 4, 'T2S, T5C', '', 24],
-                ['Trần Thị B', 'Tin học', '6A', 2, 'T3C', 'Tin 1', 20],
+                ['Họ tên', 'Môn', 'Lớp', 'Số tiết/tuần', 'Tiết nghỉ / ngày nghỉ', 'Phòng ưu tiên', 'Số tiết tối đa'],
+                ['Nguyễn Văn A', 'Toán', '6A,6B', 4, 'T2, T4S, T5S1', '', 24],
+                ['Trần Thị B', 'Tin học', '6A', 2, 'T3C, T6C2-3', 'Tin 1', 20],
             ];
             if (window.XLSX) {
                 const wb = XLSX.utils.book_new();
@@ -5242,6 +5284,7 @@
                 teacherLoad[a.teacherId] = (teacherLoad[a.teacherId] || 0) + Number(a.periods || 0);
             });
             const loads = [];
+            let teachersWithRest = 0;
             state.teachers.forEach(t => {
                 const load = teacherLoad[t.id] || 0;
                 loads.push(load);
@@ -5250,7 +5293,25 @@
                 else if (load === 0) warnings.push({ type: 'teacher', message: `${t.name} (${t.subject}): chưa được phân công tiết nào.` });
                 else if (load >= max * 0.9) warnings.push({ type: 'teacher', message: `${t.name}: tải ${load}/${max} (≥90% định mức) — ít dư địa khi xếp.` });
                 if (!clean(t.subject)) warnings.push({ type: 'teacher', message: `${t.name}: chưa ghi môn chính.` });
+
+                // Tiết/ngày nghỉ GV = ràng buộc cứng (loại khỏi domain khi xếp)
+                const rest = clean(t.unavailable);
+                if (rest) {
+                    teachersWithRest++;
+                    const { free, total } = countTeacherAvailableSlots(t);
+                    const restMsg = `${t.name}: nghỉ ${rest} (ràng buộc cứng) — còn ~${free}/${total} ô khả dụng theo lớp phụ trách.`;
+                    if (load > 0 && free < load) {
+                        errors.push({ type: 'teacher-rest', message: `${restMsg} Cần ${load} tiết → thiếu ô, không xếp đủ được.` });
+                    } else if (load > 0 && free <= load + 2) {
+                        warnings.push({ type: 'teacher-rest', message: `${restMsg} Tải ${load} tiết — sát trần, dễ kẹt khi xếp.` });
+                    } else {
+                        info.push(restMsg);
+                    }
+                }
             });
+            if (teachersWithRest) {
+                info.push(`Có ${teachersWithRest} GV khai báo tiết/ngày nghỉ (solver loại các ô này khỏi lịch GV).`);
+            }
             if (loads.length) {
                 const avg = loads.reduce((s, v) => s + v, 0) / loads.length;
                 const maxL = Math.max(...loads);
@@ -5317,11 +5378,11 @@
                 else if (demand > supply * 0.85) warnings.push({ type: 'room', message: `Phòng BM “${needKey}”: ${demand}/${supply} ô (~${Math.round(demand / supply * 100)}%) — sát trần, dễ nghẽn.` });
             });
 
-            // --- Domain / buổi tránh (bỏ qua sample đầy đủ nếu quá nặng) ---
+            // --- Domain / tiết nghỉ GV (bỏ qua sample đầy đủ nếu quá nặng) ---
             const lessons = buildLessonUnits();
             let domains = null;
             if (lessons.length > 500) {
-                info.push(`Có ${lessons.length} tiết — bỏ qua quét domain đầy đủ trong Kiểm tra (tránh treo). Precheck capacity/ĐM vẫn chạy.`);
+                info.push(`Có ${lessons.length} tiết — bỏ qua quét domain đầy đủ trong Kiểm tra (tránh treo). Precheck capacity/ĐM/nghỉ GV vẫn chạy.`);
                 // Precheck nhẹ: chỉ capacity + maxPeriods + max subject day (không cần domains đầy đủ)
                 const lightDomains = lessons.map(() => [{}]); // dummy non-empty
                 precheckSchedule(lessons, lightDomains).forEach(issue => {
@@ -5335,7 +5396,7 @@
                     if (!domains[index]?.length) {
                         emptyDomain++;
                         if (emptyDomain <= 12) {
-                            errors.push({ type: 'domain', message: `${lesson.subject} – ${lesson.className} (${lesson.teacherName}): không còn ô hợp lệ (kiểm tra buổi học lớp / buổi tránh GV / phòng).` });
+                            errors.push({ type: 'domain', message: `${lesson.subject} – ${lesson.className} (${lesson.teacherName}): không còn ô hợp lệ (kiểm tra buổi học lớp / tiết·ngày nghỉ GV / phòng).` });
                         }
                     }
                 });
@@ -5350,17 +5411,27 @@
             if (errors.length) tips.push('Ưu tiên sửa hết lỗi đỏ trước khi xếp lịch.');
             if (warnings.some(w => w.type === 'balance')) tips.push('San tải GV (đưa tiết từ GV max sang GV min cùng môn).');
             if (warnings.some(w => w.type === 'room') || errors.some(e => e.type === 'room')) tips.push('Thêm phòng BM hoặc giảm roomNeed nếu phòng dùng chung.');
+            if (errors.some(e => e.type === 'teacher-rest') || warnings.some(w => w.type === 'teacher-rest')) {
+                tips.push('Tiết/ngày nghỉ GV là ràng buộc cứng — nới lịch nghỉ hoặc giảm tải phân công nếu thiếu ô.');
+            }
             if (!errors.length && !warnings.length) tips.push('Dữ liệu sạch — có thể bấm Xếp lịch.');
             else if (!errors.length) tips.push('Không có lỗi chặn cứng; vẫn nên xem cảnh báo vàng trước khi xếp.');
 
-            // Bảng tải GV top
-            const teacherRows = state.teachers.map(t => ({
-                name: t.name,
-                subject: t.subject,
-                load: teacherLoad[t.id] || 0,
-                max: Number(t.maxPeriods || 0),
-                classes: state.assignments.filter(a => a.teacherId === t.id).length,
-            })).sort((a, b) => b.load - a.load);
+            // Bảng tải GV top (+ nghỉ cứng)
+            const teacherRows = state.teachers.map(t => {
+                const rest = clean(t.unavailable);
+                const slotInfo = rest ? countTeacherAvailableSlots(t) : null;
+                return {
+                    name: t.name,
+                    subject: t.subject,
+                    load: teacherLoad[t.id] || 0,
+                    max: Number(t.maxPeriods || 0),
+                    classes: state.assignments.filter(a => a.teacherId === t.id).length,
+                    rest,
+                    freeSlots: slotInfo ? slotInfo.free : null,
+                    totalSlots: slotInfo ? slotInfo.total : null,
+                };
+            }).sort((a, b) => b.load - a.load);
 
             const classRows = state.classes.map(c => ({
                 name: c.name,
@@ -5449,6 +5520,28 @@
                 </div>
 
                 <div class="mt-4">
+                    <h4 class="mb-2 text-sm font-black text-teal-900">Tiết / ngày nghỉ GV <span class="text-[11px] font-bold uppercase text-slate-500">(ràng buộc cứng)</span></h4>
+                    ${(() => {
+                        const restRows = report.teacherRows.filter(r => r.rest);
+                        if (!restRows.length) {
+                            return '<div class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-600">Chưa GV nào khai báo nghỉ. Cột <b>Tiết nghỉ / ngày nghỉ</b> trên tab Giáo viên = nghỉ thật (solver không xếp vào).</div>';
+                        }
+                        return `<div class="space-y-1.5">${restRows.map(r => {
+                            const tight = r.freeSlots != null && r.load > 0 && r.freeSlots < r.load;
+                            const near = r.freeSlots != null && r.load > 0 && r.freeSlots <= r.load + 2;
+                            const cls = tight ? 'border-rose-200 bg-rose-50 text-rose-900' : near ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-teal-100 bg-teal-50 text-teal-950';
+                            const avail = r.freeSlots != null ? `còn ~${r.freeSlots}/${r.totalSlots} ô khả dụng` : '';
+                            return `<div class="rounded-xl border px-3 py-2 text-sm ${cls}"><b>${escapeHtml(r.name)}</b> nghỉ <code class="rounded bg-white/80 px-1">${escapeHtml(r.rest)}</code>${avail ? ` — ${avail}` : ''}${r.load ? ` · tải ${r.load} tiết` : ''}</div>`;
+                        }).join('')}</div>`;
+                    })()}
+                </div>
+
+                <div class="mt-4">
+                    <h4 class="mb-2 text-sm font-black text-slate-800">Tóm tắt khác</h4>
+                    ${list(report.info.filter(i => typeof i === 'string' ? !i.includes('nghỉ') : !(i.message || '').includes('nghỉ')).slice(0, 24), 'border-slate-100 bg-slate-50 text-slate-700')}
+                </div>
+
+                <div class="mt-4">
                     <h4 class="mb-2 text-sm font-black text-slate-800">Tổng tiết theo môn (toàn trường)</h4>
                     <div class="flex flex-wrap gap-1.5">${subjectChips || '—'}</div>
                 </div>
@@ -5458,12 +5551,13 @@
                         <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-black uppercase text-slate-500">Tải giáo viên (sắp xếp giảm dần)</div>
                         <div class="max-h-72 overflow-auto scroll-thin">
                             <table class="w-full text-left text-sm">
-                                <thead class="sticky top-0 bg-white text-xs uppercase text-slate-400"><tr><th class="px-3 py-2">GV</th><th class="px-3 py-2">Môn</th><th class="px-3 py-2">Tiết</th><th class="px-3 py-2">ĐM</th><th class="px-3 py-2">PC</th></tr></thead>
+                                <thead class="sticky top-0 bg-white text-xs uppercase text-slate-400"><tr><th class="px-3 py-2">GV</th><th class="px-3 py-2">Môn</th><th class="px-3 py-2">Tiết</th><th class="px-3 py-2">ĐM</th><th class="px-3 py-2">Nghỉ</th><th class="px-3 py-2">Ô trống</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${report.teacherRows.map(r => {
                                         const over = r.load > r.max;
                                         const hot = r.load >= r.max * 0.9;
-                                        return `<tr class="${over ? 'bg-rose-50' : hot ? 'bg-amber-50' : ''}"><td class="px-3 py-1.5 font-bold">${escapeHtml(r.name)}</td><td class="px-3 py-1.5">${escapeHtml(r.subject)}</td><td class="px-3 py-1.5 font-black ${over ? 'text-rose-700' : ''}">${r.load}</td><td class="px-3 py-1.5">${r.max}</td><td class="px-3 py-1.5">${r.classes}</td></tr>`;
+                                        const restTight = r.freeSlots != null && r.load > r.freeSlots;
+                                        return `<tr class="${over || restTight ? 'bg-rose-50' : hot ? 'bg-amber-50' : ''}"><td class="px-3 py-1.5 font-bold">${escapeHtml(r.name)}</td><td class="px-3 py-1.5">${escapeHtml(r.subject)}</td><td class="px-3 py-1.5 font-black ${over ? 'text-rose-700' : ''}">${r.load}</td><td class="px-3 py-1.5">${r.max}</td><td class="px-3 py-1.5 text-xs ${r.rest ? 'font-bold text-teal-800' : 'text-slate-400'}">${r.rest ? escapeHtml(r.rest) : '—'}</td><td class="px-3 py-1.5 text-xs ${restTight ? 'font-black text-rose-700' : ''}">${r.freeSlots != null ? `${r.freeSlots}/${r.totalSlots}` : '—'}</td></tr>`;
                                     }).join('')}
                                 </tbody>
                             </table>
