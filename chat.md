@@ -1,190 +1,174 @@
-# Ghi chú trao đổi dự án giangbai
+# Ghi chú trao đổi dự án giangbai — Xếp thời khóa biểu
 
-Cập nhật: 09/07/2026
-
-Chỉ nội dung phiên hôm nay.
-
-## Quản lý đơn vị / năm học / đợt + xếp 100%
-
-### API `api/thoikhoabieu.php` (schema v2)
-
-| action | Việc |
-|--------|------|
-| list / get | Danh sách đợt, đơn vị; lấy 1 đợt |
-| create | Thêm đợt |
-| save | Lưu dữ liệu + meta |
-| update_meta | Sửa đơn vị/năm/tên đợt |
-| lock / unlock | Khóa / mở khóa đợt |
-| delete | Xóa 1 đợt |
-| delete_unit | Xóa toàn bộ đợt của đơn vị |
-| clear_result | Xóa kết quả xếp, giữ đầu vào |
-
-Cột: `unit_name`, `name` (đợt), `school_year`, `is_locked`.
-
-### UI
-
-Thanh **Đơn vị · Năm học · Đợt · Tên đợt** + Thêm / Sửa / Khóa / Xóa TKB / Xóa đợt / Xóa đơn vị.
-
-### Solver 100%
-
-- Xếp bằng **soft-pack** (không chặn domain) → ưu tiên đủ tiết.
-- Beautify gói buổi sau; audit lủng/mồ côi riêng (không hạ 100% nếu đã đủ tiết).
-- Demo nhỏ: tăng định mức GV.
+Cập nhật: 09/07/2026  
+Mục đích: tài liệu để **nhờ đánh giá / review** (không phải spec kỹ thuật chính thức).
 
 ---
 
-## 1. TKB — demo 30 lớp CT GDPT 2018 + chức năng Kiểm tra
+## 1. Tóm tắt một dòng
 
-### Yêu cầu
+Phần xếp TKB đã có **nền prototype/triển khai nội bộ đáng giá** (đủ luồng, solver hard cơ bản, làm đẹp, audit, multi-đợt, Web Worker), nhưng **chưa nên gọi là “ổn sản xuất cho trường lớn”** nếu chưa có benchmark 16–30 lớp ổn định, phân quyền theo đơn vị/user, và làm rõ thêm trải nghiệm hard vs soft.
 
-1. Bám **số tiết thực tế CT GDPT 2018** (ví dụ Tin học ≈ **1 tiết/tuần**, không còn 2).
-2. Demo **đầy đủ** cho **30 lớp**: đủ môn, đủ GV (≈ 30 × 1,9).
-3. **Dữ liệu demo** để user tự kiểm tra (file JSON).
-4. Trong app có **chức năng kiểm tra** nhanh (tham khảo tkb.com.vn / OLM TKB / VietSchool).
+---
 
-### Khung tiết/tuần dùng trong demo (THCS, ÷ 35 tuần)
+## 2. Phạm vi đã làm
 
-| Môn / hoạt động | Tiết/tuần | Ghi chú |
-|-----------------|-----------|---------|
-| Ngữ văn | 4 | 140/năm |
-| Toán | 4 | 140/năm |
-| Ngoại ngữ 1 | 3 | 105/năm |
-| Giáo dục công dân | 1 | 35/năm |
-| Lịch sử + Địa lí | 3 | 105/năm — tách theo khối |
-| KHTN (6–7) / Lý+Hóa+Sinh (8–9) | 4 | 140/năm |
-| Công nghệ | 1 | 35/năm |
-| **Tin học** | **1** | **35/năm** |
-| GDTC | 2 | 70/năm |
-| Âm nhạc + Mỹ thuật | 1+1 | Nghệ thuật 70/năm |
-| HĐTN-HN | 2 | phần HĐTN-HN |
-| Sinh hoạt | 1 | thực tế trường |
-| **Tổng** | **~28** | Gần khung 29–29,5 (chưa môn tự chọn) |
-
-**Tách theo khối**
-
-- **Lớp 6–7:** Lịch sử 1 + Địa lí 2; **Khoa học tự nhiên 4** (gộp).
-- **Lớp 8–9:** Lịch sử 2 + Địa lí 1; **Vật lí 1 + Hóa 2 + Sinh 1**.
-
-### Demo 30 lớp
-
-| Hạng mục | Giá trị |
-|----------|---------|
-| Lớp | **30** = 8(K6) + 8(K7) + 7(K8) + 7(K9) |
-| GV | **57** (= 30 × 1,9) |
-| Phòng BM | 17 |
-| Phân công | 448 dòng · **840 tiết/tuần** |
-| Tiết/lớp | 28 / capacity sáng 30 |
-| Tin học toàn trường | **30 tiết** (= 30 × 1) |
-
-**File kiểm tra dữ liệu:** `data/tkb-demo-30lop-ct2018.json`  
-**Nút UI:** `Demo 30 lớp CT2018` · `Xuất dữ liệu` (JSON hiện tại) · tab **Kiểm tra**
-
-Sinh lại JSON:
+### 2.1. Luồng người dùng
 
 ```text
-node agent-tools/build-demo-30-ct2018.js
+Đơn vị / năm học / đợt
+  → Dữ liệu (GV → Lớp → Phòng BM → Phân công)
+  → Thiết lập (khung sáng/chiều, gói tiết đầu, ngoại lệ, max môn/ngày)
+  → Kiểm tra (precheck)
+  → Xếp lịch (Worker)
+  → Xem theo lớp / GV + audit chất lượng
+  → Lưu hosting / xuất CSV / in
 ```
 
-### Chức năng Kiểm tra (diagnostics)
+### 2.2. File chính
 
-Tham chiếu app TKB chuyên dụng:
+| File | Vai trò |
+|------|---------|
+| `thoikhoabieu.html` | UI + orchestration + (vẫn còn bản solver trong page làm fallback) |
+| `thoikhoabieu-engine.js` | Solver **pure** (không DOM) — dùng chung Worker + benchmark |
+| `thoikhoabieu-worker.js` | Web Worker xếp ngoài main thread |
+| `api/thoikhoabieu.php` | API multi-đợt: list/get/create/save/update_meta/lock/unlock/delete/delete_unit/clear_result |
+| `data/tkb-demo-30lop-ct2018.json` | Dữ liệu demo CT 2018 để rà soát |
+| `agent-tools/extract-tkb-engine.js` | Tách lại engine từ HTML khi sửa solver |
+| `agent-tools/benchmark-tkb.js` | Benchmark chuẩn small / medium / large |
+| `agent-tools/build-demo-30-ct2018.js` | Sinh JSON demo 30 lớp |
 
-| Nguồn | Ý tưởng mang sang |
-|-------|-------------------|
-| tkb.com.vn | Trợ lý: trùng lịch, cách tiết, tải GV, % hoàn thành |
-| OLM TKB | Quy trình nhập → kiểm → xếp; cảnh báo trước xếp |
-| VietSchool | Tham số hệ thống, rà phân công, công bố lịch |
+### 2.3. Ràng buộc **hard** (hợp lệ)
 
-**Trong app (`thoikhoabieu.html`):**
+- Không trùng **lớp** cùng ô
+- Không trùng **giáo viên** cùng ô
+- Không trùng **phòng** cùng ô
+- Buổi/tiết **tránh của GV** (`T2S`, `T5S1`, `T6C2-3`…)
+- Buổi học của lớp (sáng / chiều / 2 buổi)
+- Khung tiết sáng/chiều (từ–đến)
+- Ô **ngoại lệ toàn trường** (blocked slots)
+- Capacity lớp vs tổng tiết phân công
+- Định mức tiết/tuần của GV
+- Max cùng môn / ngày / lớp
 
-- Tab **Kiểm tra** + nút **Kiểm tra** cạnh **Xếp lịch**
-- Thẻ tóm tắt: Lớp / GV / tỷ lệ / phòng / tiết / **số lỗi** / **số cảnh báo**
-- **Lỗi đỏ** (chặn): vượt capacity lớp, vượt ĐM GV, max môn/ngày, phòng BM thiếu sức chứa, domain rỗng, precheck
-- **Cảnh báo vàng**: GV 0 tiết, tải ≥90% ĐM, lệch tải max−min, thiếu môn CT2018 theo lớp, phòng sát trần, lớp quá trống
-- Bảng **tải GV** + **tải lớp/capacity** + chip **tổng tiết theo môn**
-- Gợi ý sửa nhanh
+→ **Hợp lệ 100%** = xếp đủ tiết, không vi phạm hard (precheck + solver).
 
-### Kết quả kiểm tra demo 30 lớp (lần build)
+### 2.4. Tiêu chí **soft / đẹp** (chất lượng)
 
-- **Lỗi: 0 · Cảnh báo: 0** → dữ liệu sạch, sẵn sàng xếp
-- Curriculum K6/K8 = **28 tiết/lớp**
-- Tin học = **30** tiết toàn trường (= 30 × 1)
-- Cảnh báo lệch tải chỉ so **trong cùng môn** (không so Tin với Toán)
+- Gói từ tiết đầu buổi (không trống tiết 1 rồi mới học tiết 2)
+- Không **lủng** giữa buổi (trống cuối buổi vẫn OK)
+- Ưu tiên **tiết đôi** liền (Toán/Văn/Anh/KHTN…)
+- Giảm **tiết mồ côi GV** (buổi chỉ 1 tiết lẻ)
+- Giảm lủng lịch GV; môn chính ưu tiên tiết sớm
+- Cân tải ngày trong tuần (mềm)
 
-### File đã đụng
+→ Lịch có thể **hard 100%** nhưng soft vẫn **cảnh báo** (chưa đẹp). UI tách rõ hai tầng này.
 
-| File | Việc |
-|------|------|
-| `thoikhoabieu.html` | CT2018 curriculum, Demo 30, tab Kiểm tra, xuất JSON, alias phòng BM |
-| `data/tkb-demo-30lop-ct2018.json` | Dữ liệu demo đầy đủ để rà soát |
-| `agent-tools/build-demo-30-ct2018.js` | Script sinh JSON + in diagnostics |
+### 2.5. Quản lý đợt / đơn vị (API + UI)
 
-### Lỗi “không thấy GV / TKB” (đã sửa)
+| Chức năng | Có |
+|-----------|-----|
+| Khai báo **đơn vị** | Có |
+| **Năm học** | Có |
+| **Đợt** xếp TKB (thêm / chọn / sửa tên) | Có |
+| **Khóa / mở khóa** đợt | Có |
+| Xóa kết quả xếp (giữ data đầu vào) | Có |
+| Xóa 1 đợt | Có |
+| Xóa **toàn bộ đợt** của đơn vị | Có |
+| Lưu project + result lên hosting | Có |
 
-**Nguyên nhân:** API hosting hoặc localStorage nạp **project rỗng** → app coi như đã có dữ liệu, **không** nạp demo → bảng GV trống. Thời khóa biểu cũng trống nếu chưa bấm **Xếp lịch** (demo chỉ nạp phân công, chưa chạy solver).
+Schema: `unit_name`, `name` (đợt), `school_year`, `is_locked`, `project_json`, `result_json`.
 
-**Đã sửa:**
+### 2.6. Demo / CT 2018
 
-- Bỏ qua project rỗng (hosting + localStorage)
-- Mặc định nạp **Demo 30 lớp CT2018** khi không có dữ liệu thật
-- Banner trạng thái luôn hiện số GV/lớp/PC
-- Sau demo: mở tab **Giáo viên**, thông báo số liệu, lưu localStorage
-- Nhắc rõ: bấm **Xếp lịch** mới có bảng TKB
+- Khung tiết gần CT GDPT 2018 THCS (Tin học **1** tiết/tuần, LS+ĐL ≈ 3, KHTN 6–7 gộp / 8–9 tách…).
+- Demo nhỏ (4 lớp) và Demo 30 lớp (57 GV ≈ 1,9 GV/lớp).
+- Import Excel: **không** gán “phòng ưu tiên GV” thành `roomNeed` bắt buộc (đã sửa).
 
-**Cách user kiểm tra:** Ctrl+F5 → thấy banner `57 GV · 30 lớp…` → tab Giáo viên có danh sách → **Xếp lịch**.
+### 2.7. Worker + benchmark
 
-### Treo trang (đã tối ưu)
+- Page ưu tiên **Web Worker**; lỗi Worker → fallback main thread.
+- Benchmark:
 
-**Vì sao treo:** Demo 30 = 448 dòng phân công × select 57 GV → hàng chục nghìn DOM; solver 840 tiết chạy **đồng bộ** trên main thread; render 30 bảng TKB cùng lúc.
+```text
+node agent-tools/extract-tkb-engine.js          # khi đổi solver trong HTML
+node agent-tools/benchmark-tkb.js --size small  # 4 lớp
+node agent-tools/benchmark-tkb.js --size medium # 16 lớp
+node agent-tools/benchmark-tkb.js --size large  # 30 lớp
+node agent-tools/benchmark-tkb.js --size all
+```
 
-**Đã làm:**
+**Kết quả small (engine, 09/07/2026):**
 
-- Mở trang chỉ nạp **demo nhỏ** (không auto demo 30)
-- Phân trang 40 dòng; tab render lười
-- Phân công ≥35 dòng: **chế độ gọn** (text, không select đầy)
-- Xem TKB: tối đa 3 lớp / 4 GV khi chọn “Tất cả”
-- Solver: giảm node/beautify budget khi data lớn; spinner + banner chờ
-- Kiểm tra: bỏ quét domain đầy đủ nếu >500 tiết
+| Chỉ số | Giá trị |
+|--------|---------|
+| Hard | **PASS 112/112** |
+| Lủng lớp / trống tiết đầu | **0 / 0** |
+| Mồ côi GV (soft) | còn (~5) |
+| Thời gian | ~4–5 s |
 
-**Lưu ý:** Bấm **Xếp lịch** với 30 lớp vẫn có thể **30–120s** “trang không phản hồi” — đó là CPU solver, không phải crash. Đừng F5 giữa chừng. (Web Worker = bước sau.)
-
-### UI làm gọn theo tkb.com.vn / OLM TKB (đã làm)
-
-Tham chiếu playlist hướng dẫn tkb.com.vn: quy trình **khai báo → ràng buộc → kiểm → xếp → xem/in**.
-
-| Trước | Sau |
-|-------|-----|
-| Hero đen to + sidebar quy trình | Bỏ; chỉ KPI strip gọn |
-| Nhiều nút demo/lưu trên header | Header: Kiểm tra · Xếp lịch · Lưu · menu **Thêm** |
-| 6 tab ngang lẫn lộn | **4 bước**: Dữ liệu → Thiết lập → Kiểm tra → TKB |
-| Tab dữ liệu pill dày | Underline sub-tab: GV / Lớp / Phòng / Phân công |
-| Màu teal nhiều lớp card | Palette 1 brand xanh rêu, card trắng, ít bóng |
-
-File: `thoikhoabieu.html` (CSS + layout; logic xếp giữ nguyên).
-
-### Khung tiết + không trống tiết 1 + tiết tránh GV (đã làm)
-
-**Vấn đề:** Lớp buổi sáng bị trống tiết 1 — không chấp nhận được.
-
-**Đã thêm (tab Thiết lập):**
-
-| Mục | Ý nghĩa |
-|-----|---------|
-| Sáng từ tiết → đến tiết | VD 1→5 |
-| Chiều từ tiết → đến tiết | VD 1→4 |
-| **Bắt buộc gói từ tiết đầu buổi** | Có học buổi đó thì phải lấp từ tiết đầu khung, không trống tiết 1 rồi học tiết 2 |
-| Ngoại lệ ô trống toàn trường | VD `T4S5, T6C4` — không xếp ai |
-| Tiết tránh GV | `T2S` / `T5S1` / `T6C2-3` / `T7` |
-
-Ràng buộc gói tiết đầu là **cứng** trong solver (không chỉ beauty).
-
-### Việc tiếp theo (chưa làm)
-
-- Slot cố định mang tên (Chào cờ / SH) gắn môn
-- Cờ tiết đôi trên phân công
-- Web Worker khi 30+ lớp
-- Chạy thử xếp 100% + beauty trên demo 30
+Medium/large: cần chạy lại khi review (CPU máy dev); kỳ vọng lâu hơn, có thể partial nếu data/constraints chặt.
 
 ---
 
-*Khi ổn định, bổ sung `thongtin.md`.*
+## 3. Đánh giá nhanh (để người review thống nhất)
+
+### Điểm mạnh
+
+1. Đủ **luồng nghiệp vụ** thực tế: GV → lớp → phòng → phân công → kiểm tra → xếp → audit → xuất/in/lưu.
+2. Solver xử lý **hard cơ bản** đúng bài toán trường phổ thông.
+3. Có **làm đẹp** + audit (lủng, tiết đầu, mồ côi) — không chỉ “nhét đủ tiết”.
+4. **Tách hard vs soft** trên UI (người dùng hiểu: hợp lệ ≠ đã đẹp).
+5. Multi-đợt / đơn vị / năm học / khóa — nền quản lý, không chỉ một file local.
+6. Engine tách + Worker + benchmark — hướng kỹ thuật đúng để scale.
+
+### Điểm yếu / rủi ro
+
+1. **CPU-bound**: 16–30 lớp vẫn có thể 30–120s+; Worker tránh đơ UI nhưng không rút thời gian thuật toán.
+2. **Gói tiết đầu**: soft khi xếp (ưu tiên 100%), beautify sau; có thể hard OK + soft còn cảnh báo.
+3. **Phòng ưu tiên GV**: chưa có logic soft-prefer riêng (chỉ hết nhầm thành roomNeed khi import).
+4. **Benchmark 16/30** chưa gắn CI; script cũ (`loadSampleData16`, demo JScript) lệch so solver hiện tại — đã thay bằng `benchmark-tkb.js` nhưng cần chạy đủ large khi review.
+5. **Phân quyền**: GV có quyền trang TKB thấy/sửa các đợt theo danh sách chung — **chưa** giới hạn theo user/đơn vị. Nhiều trường chung host → rủi ro.
+6. Solver vẫn **trùng lặp** một phần trong HTML + engine (cần discipline chạy `extract-tkb-engine.js` khi sửa).
+
+### Kết luận mức độ
+
+| Mức | Phù hợp? |
+|-----|----------|
+| Prototype / demo / dùng nội bộ 1 trường, quy mô vừa | **Có** |
+| Production nhiều trường, 30–40+ lớp, SLA vài giây | **Chưa** |
+
+---
+
+## 4. Việc nên ưu tiên tiếp (gợi ý cho đánh giá / roadmap)
+
+| # | Việc | Lý do |
+|---|------|--------|
+| 1 | Chạy & lưu kết quả benchmark **medium + large** (máy/CI) | Chứng minh scale, không chỉ small |
+| 2 | Phân quyền **đơn vị / owner** trên API | An toàn multi-tenant |
+| 3 | Soft **preferredRooms** cho GV (không hard) | Đúng nghiệp vụ |
+| 4 | Giảm thời gian solver (heuristic tốt hơn / backend job) | Trải nghiệm trường lớn |
+| 5 | Đồng bộ single source: HTML chỉ orchestration, engine là chuẩn | Tránh lệch Worker vs page |
+| 6 | (Tuỳ chọn) Slot cố định Chào cờ / SH; cờ tiết đôi trên phân công | Gần tkb.com.vn hơn |
+
+---
+
+## 5. Cách reviewer tự kiểm tra nhanh
+
+1. Mở `thoikhoabieu.html` (đăng nhập GV có quyền TKB), **Ctrl+F5**.
+2. Thanh **Đơn vị / Năm học / Đợt** → Thêm đợt → Demo nhỏ hoặc Demo 30.
+3. Bước **Kiểm tra** → xem lỗi hard.
+4. **Xếp lịch** → banner: `Hard: 100%` vs soft; KPI Hợp lệ / Chất lượng.
+5. CLI: `node agent-tools/benchmark-tkb.js --size small` (kỳ vọng PASS 112/112).
+6. API: tạo / khóa / xóa đợt (cần session teacher + DB).
+
+---
+
+## 6. Tham chiếu nghiệp vụ
+
+- tkb.com.vn / OLM TKB: quy trình khai báo → ràng buộc → xếp → tinh chỉnh.
+- CT GDPT 2018 THCS: tiết/tuần quy đổi ~35 tuần (Tin 1, Văn/Toán 4, Anh 3…).
+
+---
+
+*Tài liệu phục vụ review. Khi chốt production, chuyển phần ổn định sang `thongtin.md`.*

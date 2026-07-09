@@ -354,12 +354,23 @@
                     <select id="viewSelector" class="field !w-auto min-w-[160px] text-sm font-semibold"></select>
                 </div>
             </div>
-            <div id="qualityBoard" class="no-print mt-3 hidden grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                <div class="kpi"><b id="qPlaced">0/0</b><span>Tiết đã xếp</span></div>
-                <div class="kpi"><b id="qPercent">0%</b><span>Hoàn thành</span></div>
-                <div class="kpi"><b id="qBeauty">—</b><span>Điểm đẹp</span></div>
-                <div class="kpi"><b id="qDoubles">—</b><span>Tiết đôi</span></div>
-                <div class="kpi"><b id="qGaps">—</b><span>Trống lớp/GV</span></div>
+            <div id="qualityBoard" class="no-print mt-3 hidden space-y-2">
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="kpi"><b id="qHardStatus">—</b><span>Hợp lệ (hard)</span></div>
+                    <div class="kpi"><b id="qPlaced">0/0</b><span>Tiết đã xếp</span></div>
+                    <div class="kpi"><b id="qPercent">0%</b><span>% hoàn thành</span></div>
+                    <div class="kpi"><b id="qSoftStatus">—</b><span>Chất lượng (đẹp)</span></div>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="kpi"><b id="qBeauty">—</b><span>Điểm đẹp</span></div>
+                    <div class="kpi"><b id="qDoubles">—</b><span>Tiết đôi</span></div>
+                    <div class="kpi"><b id="qGaps">—</b><span>Lủng lớp/GV</span></div>
+                    <div class="kpi"><b id="qOrphans">—</b><span>Mồ côi GV</span></div>
+                </div>
+                <p id="qLegend" class="text-[11px] font-medium text-slate-500">
+                    <strong>Hợp lệ</strong> = đủ tiết, không trùng GV/lớp/phòng, không vi phạm buổi tránh/capacity.
+                    <strong>Chất lượng</strong> = gói tiết đầu, không lủng, tiết đôi, ít mồ côi — lịch có thể hợp lệ nhưng chưa đẹp.
+                </p>
             </div>
             <div id="resultTabs" class="no-print mt-3 flex flex-wrap gap-2">
                 <button class="result-tab active rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700" data-result="class" type="button">Theo lớp</button>
@@ -889,7 +900,7 @@
                         teacherId: teacher.id,
                         subject,
                         periods,
-                        roomNeed: preferredRooms,
+                        roomNeed: '', // Không gán "phòng ưu tiên GV" thành roomNeed bắt buộc
                     }));
                 }
             });
@@ -2142,6 +2153,172 @@
             };
         }
 
+        function runSolveOnMainThread(payload) {
+            // Fallback nếu Worker không chạy được
+            const lessons = buildLessonUnits();
+            const domains = buildBaseDomains(lessons);
+            const precheckIssues = precheckSchedule(lessons, domains);
+            if (precheckIssues.length) {
+                return { ok: false, status: 'infeasible', precheckIssues, lessons, assignments: null, nodes: 0, deepest: 0, beauty: null, audit: null, total: lessons.length, placed: 0 };
+            }
+            const solved = solveByConstraints(lessons, domains);
+            const placed = (solved.assignments || []).filter(Boolean).length;
+            const audit = auditScheduleQuality(lessons, solved.assignments || []);
+            const full = !!solved.ok && placed === lessons.length;
+            return {
+                ok: full,
+                status: full ? 'complete' : (placed > 0 ? 'partial' : 'infeasible'),
+                precheckIssues: [],
+                lessons,
+                assignments: solved.assignments,
+                nodes: solved.nodes,
+                deepest: solved.deepest,
+                blockedLesson: solved.blockedLesson || null,
+                beauty: solved.beauty,
+                audit,
+                total: lessons.length,
+                placed,
+            };
+        }
+
+        function runSolveInWorker(payload) {
+            return new Promise((resolve, reject) => {
+                let worker;
+                try {
+                    worker = new Worker('thoikhoabieu-worker.js?v=20260709');
+                } catch (e) {
+                    reject(e);
+                    return;
+                }
+                const requestId = 'r_' + Date.now();
+                const timer = setTimeout(() => {
+                    try { worker.terminate(); } catch { /* */ }
+                    reject(new Error('Solver worker timeout (10 phút).'));
+                }, 600000);
+                worker.onmessage = (ev) => {
+                    const msg = ev.data || {};
+                    if (msg.requestId !== requestId) return;
+                    clearTimeout(timer);
+                    worker.terminate();
+                    if (!msg.ok) {
+                        reject(new Error(msg.error || 'Worker lỗi'));
+                        return;
+                    }
+                    resolve({ ...msg.result, lessons: msg.lessons });
+                };
+                worker.onerror = (err) => {
+                    clearTimeout(timer);
+                    try { worker.terminate(); } catch { /* */ }
+                    reject(err.error || err);
+                };
+                worker.postMessage({ type: 'solve', requestId, payload });
+            });
+        }
+
+        function applySolveOutcome(engineResult) {
+            const byClass = {};
+            state.classes.forEach(c => { byClass[c.id] = {}; });
+            const lessons = engineResult.lessons || [];
+            const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
+            const issues = [];
+
+            if (engineResult.precheckIssues?.length) {
+                state.result = {
+                    byClass,
+                    issues: engineResult.precheckIssues,
+                    generatedAt: new Date().toISOString(),
+                    teacherLoad: {},
+                    status: 'infeasible',
+                    solver: { nodes: 0, deepest: 0, total: engineResult.total || lessons.length },
+                    hard: { ok: false, label: 'Không hợp lệ' },
+                    soft: { ok: false, label: '—' },
+                };
+                state.activeResult = 'issues';
+                document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+                goStep('result');
+                renderResultControls();
+                renderSchedule();
+                showDataNotice(`Precheck hard: ${engineResult.precheckIssues.length} lỗi chặn xếp.`, 'err');
+                return;
+            }
+
+            const solvedAssign = engineResult.assignments || [];
+            if (solvedAssign.some(Boolean)) {
+                lessons.forEach((lesson, index) => {
+                    const option = solvedAssign[index];
+                    if (!option) return;
+                    const cell = {
+                        ...lesson,
+                        day: option.day,
+                        session: option.session,
+                        period: option.period,
+                        slotKey: option.key || `${option.day}-${option.session}-${option.period}`,
+                        room: option.room,
+                    };
+                    byClass[lesson.classId][cell.slotKey] = cell;
+                    teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+                });
+            } else {
+                const blocked = engineResult.blockedLesson;
+                issues.push(makeIssue(
+                    blocked
+                        ? `Không xếp được. Nghẽn: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}).`
+                        : 'Không xếp được với ràng buộc hard hiện tại.'
+                ));
+            }
+
+            const placed = engineResult.placed ?? solvedAssign.filter(Boolean).length;
+            const total = engineResult.total || lessons.length;
+            if (!engineResult.ok && !issues.length) {
+                issues.push(makeIssue(`Chưa đủ 100% hard: ${placed}/${total} tiết.`));
+            }
+
+            const audit = engineResult.audit || { classHoles: 0, startLate: 0, teacherGaps: 0, teacherOrphans: 0, ok: true, messages: [] };
+            const qualityIssues = (audit.messages || []).map(m => makeIssue(
+                (m.severity === 'error' ? '⛔ [Đẹp] ' : '⚠️ [Đẹp] ') + m.message,
+                m.severity === 'error' ? 'quality-error' : 'quality-warn'
+            ));
+            issues.push(...qualityIssues.filter(i => i.type === 'quality-error').slice(0, 30));
+            issues.push(...qualityIssues.filter(i => i.type === 'quality-warn').slice(0, 25));
+
+            const full = !!engineResult.ok && placed === total;
+            const softOk = !!audit.ok && !(audit.teacherOrphans > 0) && !(audit.teacherGaps > 0);
+            state.result = {
+                byClass,
+                issues,
+                generatedAt: new Date().toISOString(),
+                teacherLoad,
+                status: full ? 'complete' : (placed > 0 ? 'partial' : 'infeasible'),
+                solver: { nodes: engineResult.nodes, deepest: engineResult.deepest, total, ms: engineResult.ms },
+                beauty: engineResult.beauty,
+                audit,
+                hard: {
+                    ok: full,
+                    label: full ? 'Hợp lệ 100%' : (placed > 0 ? `Thiếu ${total - placed} tiết` : 'Không hợp lệ'),
+                },
+                soft: {
+                    ok: softOk,
+                    label: softOk ? 'Đẹp OK' : `Lủng ${audit.classHoles || 0}/đầu ${audit.startLate || 0}/mồ côi ${audit.teacherOrphans || 0}`,
+                },
+            };
+            state.activeResult = full ? (softOk ? 'class' : 'issues') : 'issues';
+            document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
+            renderResultControls();
+            if ($('viewSelector') && state.classes[0] && state.activeResult === 'class') {
+                $('viewSelector').value = state.classes[0].id;
+            }
+            goStep('result');
+            renderSchedule();
+            updateStats();
+            const msTxt = engineResult.ms != null ? ` (${Math.round(engineResult.ms / 1000)}s)` : '';
+            showDataNotice(
+                full
+                    ? `✅ Hard: 100% (${placed}/${total})${msTxt}. Soft: ${state.result.soft.label}.`
+                    : `⛔ Hard: ${placed}/${total}${msTxt}. Soft: ${state.result.soft.label}.`,
+                full ? (softOk ? 'ok' : 'warn') : 'err'
+            );
+        }
+
         async function generateSchedule() {
             if (state.projectMeta?.is_locked) {
                 alert('Đợt đang khóa. Mở khóa trước khi xếp lịch.');
@@ -2153,137 +2330,46 @@
             const setBusy = (msg) => {
                 btn.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i>${msg}`;
                 if ($('dataStatusBanner')) {
-                    $('dataStatusBanner').innerHTML = `<span class="text-amber-900">⏳ ${msg} — trình duyệt có thể chậm vài chục giây, vui lòng chờ (đừng F5).</span>`;
+                    $('dataStatusBanner').innerHTML = `<span class="text-amber-900">⏳ ${msg}</span>`;
                 }
             };
             setBusy('Chuẩn bị xếp lịch...');
-            await yieldToUi(30);
+            await yieldToUi(20);
 
             try {
                 readRulesFromInputs();
-                const byClass = {};
-                state.classes.forEach(c => { byClass[c.id] = {}; });
-                setBusy('Đang tạo tiết & miền giá trị...');
-                await yieldToUi(20);
-                const lessons = buildLessonUnits();
-                const domains = buildBaseDomains(lessons);
-                const precheckIssues = precheckSchedule(lessons, domains);
+                const payload = {
+                    teachers: state.teachers,
+                    classes: state.classes,
+                    rooms: state.rooms,
+                    assignments: state.assignments,
+                    rules: state.rules,
+                };
+                const nLessons = state.assignments.reduce((s, a) => s + Math.max(0, Number(a.periods || 0)), 0);
+                setBusy(`Đang xếp ${nLessons} tiết (Web Worker — UI không treo)...`);
+                await yieldToUi(30);
 
-                if (precheckIssues.length) {
-                    state.result = {
-                        byClass,
-                        issues: precheckIssues,
-                        generatedAt: new Date().toISOString(),
-                        teacherLoad: {},
-                        status: 'infeasible',
-                        solver: { nodes: 0, deepest: 0, total: lessons.length },
-                    };
-                    state.activeResult = 'issues';
-                    document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
-                    goStep('result');
-                    renderResultControls();
-                    renderSchedule();
-                    showDataNotice(`Precheck: ${precheckIssues.length} lỗi — xem “Cảnh báo”.`, 'err');
-                    return;
+                let engineResult;
+                try {
+                    engineResult = await runSolveInWorker(payload);
+                } catch (workerErr) {
+                    console.warn('Worker fallback main thread', workerErr);
+                    setBusy('Worker lỗi — xếp trên main thread (có thể chậm)...');
+                    await yieldToUi(20);
+                    engineResult = await new Promise(resolve => {
+                        setTimeout(() => {
+                            try { resolve(runSolveOnMainThread(payload)); }
+                            catch (e) {
+                                console.error(e);
+                                resolve({ ok: false, status: 'infeasible', precheckIssues: [makeIssue(String(e.message || e))], total: 0, placed: 0 });
+                            }
+                        }, 0);
+                    });
                 }
-
-                setBusy(`Đang xếp ${lessons.length} tiết (có thể 30–120s)...`);
-                await yieldToUi(40);
-
-                // Chạy solver sau 1 frame — vẫn CPU-bound nhưng UI đã kịp vẽ spinner
-                const solved = await new Promise(resolve => {
-                    setTimeout(() => {
-                        try {
-                            resolve(solveByConstraints(lessons, domains));
-                        } catch (err) {
-                            console.error(err);
-                            resolve({ ok: false, assignments: [], nodes: 0, deepest: 0, beauty: null, blockedLesson: null });
-                        }
-                    }, 0);
-                });
 
                 setBusy('Đang dựng bảng kết quả...');
-                await yieldToUi(20);
-
-                const teacherLoad = Object.fromEntries(state.teachers.map(t => [t.id, 0]));
-                const issues = [];
-
-                if (solved.assignments?.some(Boolean)) {
-                    lessons.forEach((lesson, index) => {
-                        const option = solved.assignments[index];
-                        if (!option) return;
-                        const cell = { ...lesson, day: option.day, session: option.session, period: option.period, slotKey: option.key, room: option.room };
-                        byClass[lesson.classId][option.key] = cell;
-                        teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
-                    });
-                } else {
-                    const blocked = solved.blockedLesson;
-                    issues.push(makeIssue(
-                        blocked
-                            ? `Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}). Hãy tăng ô học, nới buổi tránh, thêm phòng bộ môn hoặc điều chỉnh phân công.`
-                            : 'Không tồn tại lịch thỏa toàn bộ ràng buộc hiện tại. Hãy kiểm tra lại tải giáo viên, phòng bộ môn và buổi học của lớp.'
-                    ));
-                }
-
-                if (!solved.ok && !issues.length) {
-                    const placed = solved.assignments.filter(Boolean).length;
-                    const blocked = solved.blockedLesson;
-                    issues.push(makeIssue(
-                        blocked
-                            ? `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết. Điểm nghẽn gần nhất: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}).`
-                            : `Chưa xếp đủ 100%: đã xếp ${placed}/${lessons.length} tiết.`
-                    ));
-                }
-
-                // Rà lủng / tiết mồ côi (chất lượng) — không hạ 100% nếu đã xếp đủ tiết
-                const audit = auditScheduleQuality(lessons, solved.assignments || []);
-                const qualityIssues = audit.messages.map(m => makeIssue(
-                    (m.severity === 'error' ? '⛔ ' : '⚠️ ') + m.message,
-                    m.severity === 'error' ? 'quality-error' : 'quality-warn'
-                ));
-                issues.push(...qualityIssues.filter(i => i.type === 'quality-error').slice(0, 30));
-                issues.push(...qualityIssues.filter(i => i.type === 'quality-warn').slice(0, 25));
-                if (qualityIssues.length > 55) {
-                    issues.push(makeIssue(`… và ${qualityIssues.length - 55} cảnh báo chất lượng khác.`));
-                }
-
-                const full = solved.ok && (solved.assignments || []).filter(Boolean).length === lessons.length;
-                state.result = {
-                    byClass,
-                    issues,
-                    generatedAt: new Date().toISOString(),
-                    teacherLoad,
-                    status: full ? 'complete' : (solved.assignments?.some(Boolean) ? 'partial' : 'infeasible'),
-                    solver: { nodes: solved.nodes, deepest: solved.deepest, total: lessons.length },
-                    beauty: solved.beauty,
-                    audit: {
-                        classHoles: audit.classHoles,
-                        startLate: audit.startLate,
-                        teacherGaps: audit.teacherGaps,
-                        teacherOrphans: audit.teacherOrphans,
-                        ok: audit.ok,
-                    },
-                };
-                state.activeResult = full ? (audit.ok ? 'class' : 'issues') : 'issues';
-                document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
-                renderResultControls();
-                if ($('viewSelector') && state.classes[0] && state.activeResult === 'class') {
-                    $('viewSelector').value = state.classes[0].id;
-                }
-                goStep('result');
-                renderSchedule();
-                updateStats();
-                const placed = Object.values(byClass).reduce((s, m) => s + Object.keys(m).length, 0);
-                const auditTxt = audit.ok
-                    ? `Gói buổi: OK.`
-                    : `Gói buổi: ${audit.classHoles} lủng, ${audit.startLate} trống tiết đầu.`;
-                const orphanTxt = ` GV mồ côi: ${audit.teacherOrphans}, lủng GV: ${audit.teacherGaps}.`;
-                showDataNotice(
-                    full
-                        ? `✅ Xếp 100%: ${placed}/${lessons.length} tiết. ${auditTxt}${orphanTxt}`
-                        : `Chưa 100%: ${placed}/${lessons.length} tiết. ${auditTxt}${orphanTxt}`,
-                    full ? (audit.ok && !audit.teacherOrphans ? 'ok' : 'warn') : 'err'
-                );
+                await yieldToUi(15);
+                applySolveOutcome(engineResult);
             } catch (err) {
                 console.error(err);
                 alert(`Lỗi khi xếp lịch: ${err.message || err}`);
@@ -2421,11 +2507,19 @@
 
             if (board) {
                 board.classList.remove('hidden');
-                $('qPlaced').textContent = `${totalPlaced}/${totalNeed}`;
-                $('qPercent').textContent = `${pct}%`;
-                $('qBeauty').textContent = beauty?.quality != null ? `${beauty.quality}/100` : '—';
-                $('qDoubles').textContent = beauty ? `${beauty.goodDoubles || 0} tốt / ${beauty.brokenDoubles || 0} tách` : '—';
-                $('qGaps').textContent = beauty ? `${beauty.classGaps || 0} / ${beauty.teacherGaps || 0}` : '—';
+                if ($('qHardStatus')) $('qHardStatus').textContent = state.result.hard?.label || (state.result.status === 'complete' ? 'Hợp lệ' : 'Chưa đủ');
+                if ($('qSoftStatus')) $('qSoftStatus').textContent = state.result.soft?.label || '—';
+                if ($('qPlaced')) $('qPlaced').textContent = `${totalPlaced}/${totalNeed}`;
+                if ($('qPercent')) $('qPercent').textContent = `${pct}%`;
+                if ($('qBeauty')) $('qBeauty').textContent = beauty?.quality != null ? `${beauty.quality}/100` : '—';
+                if ($('qDoubles')) $('qDoubles').textContent = beauty ? `${beauty.goodDoubles || 0} tốt / ${beauty.brokenDoubles || 0} tách` : '—';
+                if ($('qGaps')) {
+                    const a = state.result.audit;
+                    $('qGaps').textContent = a
+                        ? `${a.classHoles || 0} / ${a.teacherGaps || 0}`
+                        : (beauty ? `${beauty.classGaps || 0} / ${beauty.teacherGaps || 0}` : '—');
+                }
+                if ($('qOrphans')) $('qOrphans').textContent = state.result.audit?.teacherOrphans != null ? String(state.result.audit.teacherOrphans) : '—';
             }
 
             const selected = $('viewSelector').value || 'all';
