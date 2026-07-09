@@ -604,10 +604,14 @@ function parseUnavailable(value) {
   function solveByConstraints(lessons, domains) {
       // Ưu tiên khả thi 100%: soft-pack khi xếp, hard-pack chỉ khi beautify/audit
       state._packSoftMode = true;
-      // Giảm budget khi data lớn để UI không “Not responding” quá lâu
-      const maxDepth = lessons.length > 1000 ? 10 : lessons.length > 700 ? 12 : lessons.length > 400 ? 16 : 22;
-      const maxAttempts = lessons.length > 1000 ? 10 : lessons.length > 700 ? 14 : lessons.length > 400 ? 18 : 32;
-      const nodeBudget = lessons.length > 1000 ? 320000 : lessons.length > 700 ? 520000 : lessons.length > 400 ? 780000 : 1200000;
+      // Scale budget theo kích thước — large (≈840) cần cắt bớt attempt/beautify
+      const n = lessons.length;
+      const isLarge = n > 600;
+      const isHuge = n > 900;
+      // Large: CSP như medium nhưng bỏ improve/beautify nặng + early stop
+      const maxDepth = isHuge ? 12 : isLarge ? 14 : n > 400 ? 14 : 20;
+      const maxAttempts = isHuge ? 4 : isLarge ? 6 : n > 400 ? 12 : 28;
+      const nodeBudget = isHuge ? 400000 : isLarge ? 550000 : n > 400 ? 650000 : 1150000;
       let totalNodes = 0;
       let deepest = 0;
       let bestBlocked = null;
@@ -624,10 +628,17 @@ function parseUnavailable(value) {
           subjectKey: subjectDayKey(lesson, option),
       });
 
+      // O(n) thay vì O(n²) khi tính load cho difficulty order
+      const teacherLoadMap = Object.create(null);
+      const classLoadMap = Object.create(null);
+      lessons.forEach(lesson => {
+          teacherLoadMap[lesson.teacherId] = (teacherLoadMap[lesson.teacherId] || 0) + 1;
+          classLoadMap[lesson.classId] = (classLoadMap[lesson.classId] || 0) + 1;
+      });
       const difficultyOrder = lessons.map((lesson, index) => ({
           index,
           size: domains[index].length,
-          load: lessons.filter(other => other.teacherId === lesson.teacherId || other.classId === lesson.classId).length,
+          load: (teacherLoadMap[lesson.teacherId] || 0) + (classLoadMap[lesson.classId] || 0),
       })).sort((a, b) => a.size - b.size || b.load - a.load).map(item => item.index);
 
       function rememberPartial(assignments, beauty = null) {
@@ -786,16 +797,27 @@ function parseUnavailable(value) {
           }
 
           function orderedOptions(index, path) {
-              return domains[index]
-                  .filter(option => packConstraintAllows(lessons[index], option, assignments, lessons))
-                  .map(option => {
+              let pool = domains[index].filter(option => packConstraintAllows(lessons[index], option, assignments, lessons));
+              // Large: cắt domain + cost rẻ (tránh O(domain × n) quá nặng)
+              if (isLarge || isHuge) {
+                  pool = pool.slice().sort((a, b) => a.period - b.period || a.day.localeCompare(b.day)).slice(0, 18);
+                  return pool.map(option => {
                       const conflicts = conflictsFor(index, option, path);
-                      return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
-                  }).sort((a, b) => {
-                      const jitterA = ((attempt + 3) * (a.option.period + 5) * (a.option.day.charCodeAt(1) + 7)) % 17;
-                      const jitterB = ((attempt + 3) * (b.option.period + 5) * (b.option.day.charCodeAt(1) + 7)) % 17;
-                      return (a.cost + jitterA * 0.02) - (b.cost + jitterB * 0.02);
-                  });
+                      return {
+                          option,
+                          conflicts,
+                          cost: conflicts.length * 10000 + option.period * 2 + (option.session === 'afternoon' ? 1 : 0),
+                      };
+                  }).sort((a, b) => a.cost - b.cost);
+              }
+              return pool.map(option => {
+                  const conflicts = conflictsFor(index, option, path);
+                  return { option, conflicts, cost: conflicts.length * 10000 + localSoftCost(index, option) };
+              }).sort((a, b) => {
+                  const jitterA = ((attempt + 3) * (a.option.period + 5) * (a.option.day.charCodeAt(1) + 7)) % 17;
+                  const jitterB = ((attempt + 3) * (b.option.period + 5) * (b.option.day.charCodeAt(1) + 7)) % 17;
+                  return (a.cost + jitterA * 0.02) - (b.cost + jitterB * 0.02);
+              });
           }
 
           function recursivePlace(index, depth, path) {
@@ -897,7 +919,13 @@ function parseUnavailable(value) {
                       return { ok: false, assignments: assignments.slice(), nodes, placed: assignments.filter(Boolean).length, beauty };
                   }
               }
-              const beauty = improve(lessons.length > 700 ? 2200 : 4200);
+              // Large: bỏ improve trong attempt (beautify ngoài đã cắt); small/medium cải thiện nhẹ
+              let beauty;
+              if (isLarge || isHuge) {
+                  beauty = evaluateBeauty(lessons, assignments);
+              } else {
+                  beauty = improve(lessons.length > 400 ? 1200 : 3500);
+              }
               return { ok: true, assignments, nodes, placed: assignments.filter(Boolean).length, beauty };
           }
 
@@ -911,7 +939,8 @@ function parseUnavailable(value) {
                   bestSolution = result.assignments.slice();
                   bestBeauty = result.beauty;
               }
-              // Đã có lịch 100%: giữ 2–3 lời giải rồi dừng sớm để dồn budget cho beautify
+              // Large: lấy lời giải 100% đầu tiên — không multi-attempt tìm đẹp hơn
+              if (isLarge || isHuge) break;
               if (bestSolution && attempt >= Math.min(6, maxAttempts - 1) && bestBeauty.quality >= 72) break;
           } else if (!bestSolution && (!bestBeauty || result.placed > (bestBeauty.placed || 0))) {
               bestBeauty = { ...result.beauty, placed: result.placed };
@@ -1239,21 +1268,21 @@ function parseUnavailable(value) {
           bestBeauty = fallback.beauty;
       }
 
-      // Beautify gói buổi (soft-mode vẫn phạt lủng mạnh). KHÔNG strip tiết nếu đã 100% — giữ đủ tiết.
+      // Beautify: large chỉ tinh chỉnh nhẹ (tránh 300s+); small/medium beautify đầy đủ hơn
       if (bestSolution) {
-          const beautifyBudget = lessons.length > 700 ? 5000 : lessons.length > 400 ? 12000 : lessons.length > 200 ? 20000 : 32000;
-          state._packSoftMode = false; // beautify ưu tiên candidate pack-hợp lệ
-          const polished = beautifySchedule(bestSolution, beautifyBudget);
-          bestSolution = polished.assignments;
-          // Nếu beautify làm hỏng pack, thử strip chỉ khi chưa đủ 100%
-          if (state.rules.packFromSessionStart !== false && !isFullyPackValid(lessons, bestSolution)) {
-              const stripped = stripPackViolations(lessons, bestSolution);
-              if (stripped.filter(Boolean).length === lessons.length) {
-                  bestSolution = stripped;
+          const beautifyBudget = isHuge ? 0 : isLarge ? 0 : n > 400 ? 4000 : n > 200 ? 12000 : 28000;
+          if (beautifyBudget > 0) {
+              state._packSoftMode = false;
+              const polished = beautifySchedule(bestSolution, beautifyBudget);
+              bestSolution = polished.assignments;
+              if (state.rules.packFromSessionStart !== false && !isFullyPackValid(lessons, bestSolution)) {
+                  const stripped = stripPackViolations(lessons, bestSolution);
+                  if (stripped.filter(Boolean).length === lessons.length) bestSolution = stripped;
               }
-              // nếu strip mất tiết → giữ bản 100% soft-pack, báo audit sau
+              bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: polished.moves };
+          } else {
+              bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: 0 };
           }
-          bestBeauty = { ...evaluateBeauty(lessons, bestSolution), beautifyMoves: polished.moves };
       } else if (bestPartial) {
           bestPartial = stripPackViolations(lessons, bestPartial);
           bestPartialPlaced = bestPartial.filter(Boolean).length;
@@ -1273,6 +1302,223 @@ function parseUnavailable(value) {
           blockedLesson: bestBlocked,
           beauty: bestBeauty || evaluateBeauty(lessons, finalAssign),
       };
+  }
+
+  function freezeSolveSnapshot(payload) {
+      // Deep clone — đóng băng đúng thời điểm bấm Xếp
+      return JSON.parse(JSON.stringify({
+          teachers: payload.teachers || [],
+          classes: payload.classes || [],
+          rooms: payload.rooms || [],
+          assignments: payload.assignments || [],
+          rules: payload.rules || state.rules,
+      }));
+  }
+
+  function runSolveOnMainThread(payload) {
+      // Fallback: xếp đúng snapshot (không đọc state UI lúc sau)
+      const snap = freezeSolveSnapshot(payload);
+      const bak = {
+          teachers: state.teachers,
+          classes: state.classes,
+          rooms: state.rooms,
+          assignments: state.assignments,
+          rules: state.rules,
+      };
+      try {
+          state.teachers = snap.teachers;
+          state.classes = snap.classes;
+          state.rooms = snap.rooms;
+          state.assignments = snap.assignments;
+          state.rules = normalizeRules(snap.rules || {});
+          const lessons = buildLessonUnits();
+          const domains = buildBaseDomains(lessons);
+          const precheckIssues = precheckSchedule(lessons, domains);
+          if (precheckIssues.length) {
+              return {
+                  ok: false, status: 'infeasible', precheckIssues, lessons,
+                  assignments: null, nodes: 0, deepest: 0, beauty: null, audit: null,
+                  total: lessons.length, placed: 0, snapshot: snap,
+              };
+          }
+          const solved = solveByConstraints(lessons, domains);
+          const placed = (solved.assignments || []).filter(Boolean).length;
+          const audit = auditScheduleQuality(lessons, solved.assignments || []);
+          const full = !!solved.ok && placed === lessons.length;
+          return {
+              ok: full,
+              status: full ? 'complete' : (placed > 0 ? 'partial' : 'infeasible'),
+              precheckIssues: [],
+              lessons,
+              assignments: solved.assignments,
+              nodes: solved.nodes,
+              deepest: solved.deepest,
+              blockedLesson: solved.blockedLesson || null,
+              beauty: solved.beauty,
+              audit,
+              total: lessons.length,
+              placed,
+              snapshot: snap,
+          };
+      } finally {
+          state.teachers = bak.teachers;
+          state.classes = bak.classes;
+          state.rooms = bak.rooms;
+          state.assignments = bak.assignments;
+          state.rules = bak.rules;
+      }
+  }
+
+  function runSolveInWorker(payload) {
+      return new Promise((resolve, reject) => {
+          let worker;
+          try {
+              worker = new Worker('thoikhoabieu-worker.js?v=20260709');
+          } catch (e) {
+              reject(e);
+              return;
+          }
+          const requestId = 'r_' + Date.now();
+          const timer = setTimeout(() => {
+              try { worker.terminate(); } catch { /* */ }
+              reject(new Error('Solver worker timeout (10 phút).'));
+          }, 600000);
+          worker.onmessage = (ev) => {
+              const msg = ev.data || {};
+              if (msg.requestId !== requestId) return;
+              clearTimeout(timer);
+              worker.terminate();
+              if (!msg.ok) {
+                  reject(new Error(msg.error || 'Worker lỗi'));
+                  return;
+              }
+              resolve({ ...msg.result, lessons: msg.lessons, snapshot: payload });
+          };
+          worker.onerror = (err) => {
+              clearTimeout(timer);
+              try { worker.terminate(); } catch { /* */ }
+              reject(err.error || err);
+          };
+          worker.postMessage({ type: 'solve', requestId, payload });
+      });
+  }
+
+  function applySolveOutcome(engineResult, snapshot) {
+      const snap = snapshot || engineResult.snapshot || {
+          teachers: state.teachers,
+          classes: state.classes,
+          rooms: state.rooms,
+          assignments: state.assignments,
+      };
+      const classes = Array.isArray(snap.classes) ? snap.classes : state.classes;
+      const teachers = Array.isArray(snap.teachers) ? snap.teachers : state.teachers;
+      const byClass = {};
+      classes.forEach(c => { byClass[c.id] = {}; });
+      const lessons = engineResult.lessons || [];
+      const teacherLoad = Object.fromEntries(teachers.map(t => [t.id, 0]));
+      const issues = [];
+
+      if (engineResult.precheckIssues?.length) {
+          state.result = {
+              byClass,
+              issues: engineResult.precheckIssues,
+              generatedAt: new Date().toISOString(),
+              teacherLoad: {},
+              status: 'infeasible',
+              solver: { nodes: 0, deepest: 0, total: engineResult.total || lessons.length },
+              hard: { ok: false, label: 'Không hợp lệ' },
+              soft: { ok: false, label: '—' },
+              snapshot: snap,
+          };
+          state.activeResult = 'issues';
+          document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+          goStep('result');
+          renderResultControls();
+          renderSchedule();
+          showDataNotice(`Precheck hard: ${engineResult.precheckIssues.length} lỗi chặn xếp.`, 'err');
+          return;
+      }
+
+      const solvedAssign = engineResult.assignments || [];
+      if (solvedAssign.some(Boolean)) {
+          lessons.forEach((lesson, index) => {
+              const option = solvedAssign[index];
+              if (!option) return;
+              const cell = {
+                  ...lesson,
+                  day: option.day,
+                  session: option.session,
+                  period: option.period,
+                  slotKey: option.key || `${option.day}-${option.session}-${option.period}`,
+                  room: option.room,
+              };
+              if (!byClass[lesson.classId]) byClass[lesson.classId] = {};
+              byClass[lesson.classId][cell.slotKey] = cell;
+              teacherLoad[lesson.teacherId] = (teacherLoad[lesson.teacherId] || 0) + 1;
+          });
+      } else {
+          const blocked = engineResult.blockedLesson;
+          issues.push(makeIssue(
+              blocked
+                  ? `Không xếp được. Nghẽn: ${blocked.subject} - ${blocked.className} (${blocked.teacherName}).`
+                  : 'Không xếp được với ràng buộc hard hiện tại.'
+          ));
+      }
+
+      const placed = engineResult.placed ?? solvedAssign.filter(Boolean).length;
+      const total = engineResult.total || lessons.length;
+      if (!engineResult.ok && !issues.length) {
+          issues.push(makeIssue(`Chưa đủ 100% hard: ${placed}/${total} tiết.`));
+      }
+
+      const audit = engineResult.audit || { classHoles: 0, startLate: 0, teacherGaps: 0, teacherOrphans: 0, ok: true, messages: [] };
+      const qualityIssues = (audit.messages || []).map(m => makeIssue(
+          (m.severity === 'error' ? '⛔ [Đẹp] ' : '⚠️ [Đẹp] ') + m.message,
+          m.severity === 'error' ? 'quality-error' : 'quality-warn'
+      ));
+      issues.push(...qualityIssues.filter(i => i.type === 'quality-error').slice(0, 30));
+      issues.push(...qualityIssues.filter(i => i.type === 'quality-warn').slice(0, 25));
+
+      const full = !!engineResult.ok && placed === total;
+      const softOk = !!audit.ok && !(audit.teacherOrphans > 0) && !(audit.teacherGaps > 0);
+      state.result = {
+          byClass,
+          issues,
+          generatedAt: new Date().toISOString(),
+          teacherLoad,
+          status: full ? 'complete' : (placed > 0 ? 'partial' : 'infeasible'),
+          solver: { nodes: engineResult.nodes, deepest: engineResult.deepest, total, ms: engineResult.ms },
+          beauty: engineResult.beauty,
+          audit,
+          snapshot: snap,
+          hard: {
+              ok: full,
+              label: full ? 'Hợp lệ 100%' : (placed > 0 ? `Thiếu ${total - placed} tiết` : 'Không hợp lệ'),
+          },
+          soft: {
+              ok: softOk,
+              label: softOk ? 'Đẹp OK' : `Lủng ${audit.classHoles || 0}/đầu ${audit.startLate || 0}/mồ côi ${audit.teacherOrphans || 0}`,
+          },
+      };
+      state.activeResult = full ? (softOk ? 'class' : 'issues') : 'issues';
+      document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
+      renderResultControls();
+      // Chọn lớp từ snapshot (đóng băng lúc xếp), map sang state.classes nếu còn
+      const firstClassId = classes[0]?.id;
+      if ($('viewSelector') && firstClassId && state.activeResult === 'class') {
+          const stillThere = state.classes.some(c => c.id === firstClassId);
+          $('viewSelector').value = stillThere ? firstClassId : (state.classes[0]?.id || 'all');
+      }
+      goStep('result');
+      renderSchedule();
+      updateStats();
+      const msTxt = engineResult.ms != null ? ` (${Math.round(engineResult.ms / 1000)}s)` : '';
+      showDataNotice(
+          full
+              ? `✅ Hard: 100% (${placed}/${total})${msTxt}. Soft: ${state.result.soft.label}.`
+              : `⛔ Hard: ${placed}/${total}${msTxt}. Soft: ${state.result.soft.label}.`,
+          full ? (softOk ? 'ok' : 'warn') : 'err'
+      );
   }
 
   
@@ -1296,7 +1542,8 @@ function curriculumCt2018(grade) {
               ...base,
               { subject: 'Lịch sử', periods: 1 },
               { subject: 'Địa lí', periods: 2 },
-              { subject: 'Khoa học tự nhiên', periods: 4, roomNeed: 'KHTN' },
+              // KHTN: không ép phòng BM cả 4 tiết (16 lớp×4=64 > 2 phòng×30 ô) — dùng phòng lớp
+              { subject: 'Khoa học tự nhiên', periods: 4, roomNeed: '' },
           ];
       }
       return [
