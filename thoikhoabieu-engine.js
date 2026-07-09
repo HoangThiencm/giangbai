@@ -97,8 +97,16 @@ function parseUnavailable(value) {
       return false;
   }
 
+  /** Lấy mã slot từ "T2S1:Chào cờ" → "T2S1" (pure — nằm trong engine extract). */
+  function fixedSlotCodes(value) {
+      return splitList(value).map(part => clean(String(part).split(':')[0])).filter(Boolean).join(',');
+  }
+
   function schoolBlockedSet() {
-      return parseUnavailable(state.rules.blockedSlots || '');
+      // Ô trống + tiết cố định toàn trường (chào cờ/SH…) — không xếp môn thường
+      const merged = [state.rules.blockedSlots || '', fixedSlotCodes(state.rules.fixedSlots || '')]
+          .filter(Boolean).join(',');
+      return parseUnavailable(merged);
   }
 
   function sessionPeriodRange(session) {
@@ -399,8 +407,12 @@ function parseUnavailable(value) {
       return lessons.map(lesson => {
           const classItem = state.classes.find(c => c.id === lesson.classId);
           if (!classItem) return [];
-          const blocked = teacherUnavailable[lesson.teacherId];
-          const slots = slotsForClass(classItem).filter(slot => !isSlotBlockedBySet(blocked, slot));
+          const teacherBlock = teacherUnavailable[lesson.teacherId];
+          // Tiết cố định lớp (SH…) — trừ domain môn thường; school fixed/blocked đã trong slotsForClass
+          const classFixed = parseUnavailable(fixedSlotCodes(classItem.fixedSlots || ''));
+          const slots = slotsForClass(classItem).filter(slot =>
+              !isSlotBlockedBySet(teacherBlock, slot) && !isSlotBlockedBySet(classFixed, slot)
+          );
           return slots.flatMap(slot => roomOptionsForLesson(lesson, slot));
       });
   }
@@ -449,11 +461,41 @@ function parseUnavailable(value) {
 
       lessons.forEach((lesson, index) => {
           if (!domains[index]?.length) {
-              issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, buổi tránh của giáo viên và phòng bộ môn.`));
+              issues.push(makeIssue(`${lesson.subject} - ${lesson.className} (${lesson.teacherName}) không có ô hợp lệ ban đầu. Kiểm tra buổi học của lớp, tiết/ngày nghỉ GV (ràng buộc cứng) và phòng bộ môn.`));
           }
       });
 
       return issues;
+  }
+
+  /** Đếm ô thời gian GV còn dạy được (sau khi trừ tiết/ngày nghỉ), theo lớp GV đang phụ trách. */
+  function countTeacherAvailableSlots(teacher) {
+      const blocked = parseUnavailable(teacher.unavailable);
+      const slotKeys = new Set();
+      let free = 0;
+      const classIds = new Set(
+          state.assignments.filter(a => a.teacherId === teacher.id && a.classId).map(a => a.classId)
+      );
+      const addSlot = (slot) => {
+          const k = `${slot.day}|${slot.session}|${slot.period}`;
+          if (slotKeys.has(k)) return;
+          slotKeys.add(k);
+          if (!isSlotBlockedBySet(blocked, slot)) free++;
+      };
+      if (classIds.size) {
+          classIds.forEach(cid => {
+              const cl = state.classes.find(c => c.id === cid);
+              if (cl) slotsForClass(cl).forEach(addSlot);
+          });
+      } else {
+          (state.rules.days || ['T2', 'T3', 'T4', 'T5', 'T6', 'T7']).forEach(day => {
+              ['morning', 'afternoon'].forEach(session => {
+                  const { from, to } = sessionPeriodRange(session);
+                  for (let p = from; p <= to; p++) addSlot({ day, session, period: p });
+              });
+          });
+      }
+      return { free, total: slotKeys.size };
   }
 
   function gapCount(periods) {
