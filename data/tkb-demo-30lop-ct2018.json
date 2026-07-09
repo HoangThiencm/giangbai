@@ -1,0 +1,5798 @@
+{
+  "meta": {
+    "title": "Demo TKB 30 lớp THCS — CT GDPT 2018",
+    "curriculum": "CT GDPT 2018 (THCS), tiết/tuần ≈ tiết/năm ÷ 35",
+    "notes": [
+      "Tin học: 35 tiết/năm ≈ 1 tiết/tuần",
+      "Lịch sử và Địa lí: 105 tiết/năm ≈ 3 tiết/tuần (tách Sử + Địa theo khối)",
+      "KHTN: 140 tiết/năm ≈ 4 tiết/tuần (lớp 6–7 gộp; 8–9 tách Vật lí / Hóa / Sinh)",
+      "Ngữ văn 4, Toán 4, Ngoại ngữ 1: 3, GDCD 1, CN 1, GDTC 2, Nghệ thuật 2 (AN+MT), HĐTN-HN 2, SH 1",
+      "30 lớp = 8(K6)+8(K7)+7(K8)+7(K9); 57 GV = 30×1,9",
+      "Tổng ~28 tiết/lớp/tuần (gần khung 29–29,5; chưa môn tự chọn)"
+    ],
+    "generatedAt": "2026-07-09T08:48:40.366Z",
+    "diagnostics": {
+      "errors": 0,
+      "warnings": 0,
+      "ok": true,
+      "errorMessages": [],
+      "warningMessages": []
+    },
+    "counts": {
+      "classes": 30,
+      "teachers": 57,
+      "rooms": 17,
+      "assignments": 448,
+      "totalPeriods": 840,
+      "ratio": "1.90",
+      "lessons": 840,
+      "ok": true
+    }
+  },
+  "rules": {
+    "morningPeriods": 5,
+    "afternoonPeriods": 4,
+    "days": [
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6",
+      "T7"
+    ],
+    "maxSameSubjectDay": 2
+  },
+  "curriculumByGrade": {
+    "6": [
+      {
+        "subject": "Ngữ văn",
+        "periods": 4
+      },
+      {
+        "subject": "Toán",
+        "periods": 4
+      },
+      {
+        "subject": "Ngoại ngữ 1",
+        "periods": 3
+      },
+      {
+        "subject": "Giáo dục công dân",
+        "periods": 1
+      },
+      {
+        "subject": "Công nghệ",
+        "periods": 1,
+        "roomNeed": "Công nghệ"
+      },
+      {
+        "subject": "Tin học",
+        "periods": 1,
+        "roomNeed": "Tin học"
+      },
+      {
+        "subject": "Giáo dục thể chất",
+        "periods": 2,
+        "roomNeed": "Thể dục"
+      },
+      {
+        "subject": "Âm nhạc",
+        "periods": 1
+      },
+      {
+        "subject": "Mỹ thuật",
+        "periods": 1
+      },
+      {
+        "subject": "HĐTN-HN",
+        "periods": 2
+      },
+      {
+        "subject": "Sinh hoạt",
+        "periods": 1
+      },
+      {
+        "subject": "Lịch sử",
+        "periods": 1
+      },
+      {
+        "subject": "Địa lí",
+        "periods": 2
+      },
+      {
+        "subject": "Khoa học tự nhiên",
+        "periods": 4,
+        "roomNeed": "KHTN"
+      }
+    ],
+    "7": [
+      {
+        "subject": "Ngữ văn",
+        "periods": 4
+      },
+      {
+        "subject": "Toán",
+        "periods": 4
+      },
+      {
+        "subject": "Ngoại ngữ 1",
+        "periods": 3
+      },
+      {
+        "subject": "Giáo dục công dân",
+        "periods": 1
+      },
+      {
+        "subject": "Công nghệ",
+        "periods": 1,
+        "roomNeed": "Công nghệ"
+      },
+      {
+        "subject": "Tin học",
+        "periods": 1,
+        "roomNeed": "Tin học"
+      },
+      {
+        "subject": "Giáo dục thể chất",
+        "periods": 2,
+        "roomNeed": "Thể dục"
+      },
+      {
+        "subject": "Âm nhạc",
+        "periods": 1
+      },
+      {
+        "subject": "Mỹ thuật",
+        "periods": 1
+      },
+      {
+        "subject": "HĐTN-HN",
+        "periods": 2
+      },
+      {
+        "subject": "Sinh hoạt",
+        "periods": 1
+      },
+      {
+        "subject": "Lịch sử",
+        "periods": 1
+      },
+      {
+        "subject": "Địa lí",
+        "periods": 2
+      },
+      {
+        "subject": "Khoa học tự nhiên",
+        "periods": 4,
+        "roomNeed": "KHTN"
+      }
+    ],
+    "8": [
+      {
+        "subject": "Ngữ văn",
+        "periods": 4
+      },
+      {
+        "subject": "Toán",
+        "periods": 4
+      },
+      {
+        "subject": "Ngoại ngữ 1",
+        "periods": 3
+      },
+      {
+        "subject": "Giáo dục công dân",
+        "periods": 1
+      },
+      {
+        "subject": "Công nghệ",
+        "periods": 1,
+        "roomNeed": "Công nghệ"
+      },
+      {
+        "subject": "Tin học",
+        "periods": 1,
+        "roomNeed": "Tin học"
+      },
+      {
+        "subject": "Giáo dục thể chất",
+        "periods": 2,
+        "roomNeed": "Thể dục"
+      },
+      {
+        "subject": "Âm nhạc",
+        "periods": 1
+      },
+      {
+        "subject": "Mỹ thuật",
+        "periods": 1
+      },
+      {
+        "subject": "HĐTN-HN",
+        "periods": 2
+      },
+      {
+        "subject": "Sinh hoạt",
+        "periods": 1
+      },
+      {
+        "subject": "Lịch sử",
+        "periods": 2
+      },
+      {
+        "subject": "Địa lí",
+        "periods": 1
+      },
+      {
+        "subject": "Vật lí",
+        "periods": 1,
+        "roomNeed": "Vật lí"
+      },
+      {
+        "subject": "Hóa học",
+        "periods": 2,
+        "roomNeed": "Hóa học"
+      },
+      {
+        "subject": "Sinh học",
+        "periods": 1,
+        "roomNeed": "Sinh học"
+      }
+    ],
+    "9": [
+      {
+        "subject": "Ngữ văn",
+        "periods": 4
+      },
+      {
+        "subject": "Toán",
+        "periods": 4
+      },
+      {
+        "subject": "Ngoại ngữ 1",
+        "periods": 3
+      },
+      {
+        "subject": "Giáo dục công dân",
+        "periods": 1
+      },
+      {
+        "subject": "Công nghệ",
+        "periods": 1,
+        "roomNeed": "Công nghệ"
+      },
+      {
+        "subject": "Tin học",
+        "periods": 1,
+        "roomNeed": "Tin học"
+      },
+      {
+        "subject": "Giáo dục thể chất",
+        "periods": 2,
+        "roomNeed": "Thể dục"
+      },
+      {
+        "subject": "Âm nhạc",
+        "periods": 1
+      },
+      {
+        "subject": "Mỹ thuật",
+        "periods": 1
+      },
+      {
+        "subject": "HĐTN-HN",
+        "periods": 2
+      },
+      {
+        "subject": "Sinh hoạt",
+        "periods": 1
+      },
+      {
+        "subject": "Lịch sử",
+        "periods": 2
+      },
+      {
+        "subject": "Địa lí",
+        "periods": 1
+      },
+      {
+        "subject": "Vật lí",
+        "periods": 1,
+        "roomNeed": "Vật lí"
+      },
+      {
+        "subject": "Hóa học",
+        "periods": 2,
+        "roomNeed": "Hóa học"
+      },
+      {
+        "subject": "Sinh học",
+        "periods": 1,
+        "roomNeed": "Sinh học"
+      }
+    ]
+  },
+  "teachers": [
+    {
+      "id": "t_mrd9llsx_7vetc",
+      "name": "GV Toán 1",
+      "subject": "Toán",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_klcmj",
+      "name": "GV Toán 2",
+      "subject": "Toán",
+      "maxPeriods": 24,
+      "unavailable": "T7S",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_1g7h9",
+      "name": "GV Toán 3",
+      "subject": "Toán",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_0xcqo",
+      "name": "GV Toán 4",
+      "subject": "Toán",
+      "maxPeriods": 24,
+      "unavailable": "T6S",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_pv632",
+      "name": "GV Toán 5",
+      "subject": "Toán",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_ckdb8",
+      "name": "GV Toán 6",
+      "subject": "Toán",
+      "maxPeriods": 24,
+      "unavailable": "T2S",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_c3ckw",
+      "name": "GV Ngữ văn 1",
+      "subject": "Ngữ văn",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_s8ipt",
+      "name": "GV Ngữ văn 2",
+      "subject": "Ngữ văn",
+      "maxPeriods": 24,
+      "unavailable": "T3S",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_vmbit",
+      "name": "GV Ngữ văn 3",
+      "subject": "Ngữ văn",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_be26h",
+      "name": "GV Ngữ văn 4",
+      "subject": "Ngữ văn",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_sxsii",
+      "name": "GV Ngữ văn 5",
+      "subject": "Ngữ văn",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_wfo5p",
+      "name": "GV Ngữ văn 6",
+      "subject": "Ngữ văn",
+      "maxPeriods": 24,
+      "unavailable": "T7S",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_5cgvj",
+      "name": "GV Ngoại ngữ 1 1",
+      "subject": "Ngoại ngữ 1",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 18
+    },
+    {
+      "id": "t_mrd9llsx_7f8u8",
+      "name": "GV Ngoại ngữ 1 2",
+      "subject": "Ngoại ngữ 1",
+      "maxPeriods": 22,
+      "unavailable": "T6S",
+      "assignedPeriods": 18
+    },
+    {
+      "id": "t_mrd9llsx_k83ut",
+      "name": "GV Ngoại ngữ 1 3",
+      "subject": "Ngoại ngữ 1",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 18
+    },
+    {
+      "id": "t_mrd9llsx_9d3pj",
+      "name": "GV Ngoại ngữ 1 4",
+      "subject": "Ngoại ngữ 1",
+      "maxPeriods": 22,
+      "unavailable": "T2S",
+      "assignedPeriods": 18
+    },
+    {
+      "id": "t_mrd9llsx_f275h",
+      "name": "GV Ngoại ngữ 1 5",
+      "subject": "Ngoại ngữ 1",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 18
+    },
+    {
+      "id": "t_mrd9llsx_19nod",
+      "name": "GV Giáo dục công dân 1",
+      "subject": "Giáo dục công dân",
+      "maxPeriods": 20,
+      "unavailable": "T3S",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_rezvn",
+      "name": "GV Giáo dục công dân 2",
+      "subject": "Giáo dục công dân",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_o4jm9",
+      "name": "GV Lịch sử 1",
+      "subject": "Lịch sử",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 14
+    },
+    {
+      "id": "t_mrd9llsx_p3c67",
+      "name": "GV Lịch sử 2",
+      "subject": "Lịch sử",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_pabak",
+      "name": "GV Lịch sử 3",
+      "subject": "Lịch sử",
+      "maxPeriods": 22,
+      "unavailable": "T7S",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_fs56k",
+      "name": "GV Địa lí 1",
+      "subject": "Địa lí",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_llkcn",
+      "name": "GV Địa lí 2",
+      "subject": "Địa lí",
+      "maxPeriods": 22,
+      "unavailable": "T6S",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_wqgw0",
+      "name": "GV Địa lí 3",
+      "subject": "Địa lí",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 16
+    },
+    {
+      "id": "t_mrd9llsx_bjwar",
+      "name": "GV Khoa học tự nhiên 1",
+      "subject": "Khoa học tự nhiên",
+      "maxPeriods": 22,
+      "unavailable": "T2S",
+      "assignedPeriods": 16
+    },
+    {
+      "id": "t_mrd9llsx_e8y86",
+      "name": "GV Khoa học tự nhiên 2",
+      "subject": "Khoa học tự nhiên",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_ci27c",
+      "name": "GV Khoa học tự nhiên 3",
+      "subject": "Khoa học tự nhiên",
+      "maxPeriods": 22,
+      "unavailable": "T3S",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_0dfxw",
+      "name": "GV Khoa học tự nhiên 4",
+      "subject": "Khoa học tự nhiên",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_gruda",
+      "name": "GV Khoa học tự nhiên 5",
+      "subject": "Khoa học tự nhiên",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_i5gvd",
+      "name": "GV Vật lí 1",
+      "subject": "Vật lí",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 7
+    },
+    {
+      "id": "t_mrd9llsx_0f10c",
+      "name": "GV Vật lí 2",
+      "subject": "Vật lí",
+      "maxPeriods": 20,
+      "unavailable": "T7S",
+      "assignedPeriods": 7
+    },
+    {
+      "id": "t_mrd9llsx_jy0qy",
+      "name": "GV Hóa học 1",
+      "subject": "Hóa học",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 10
+    },
+    {
+      "id": "t_mrd9llsx_xiiev",
+      "name": "GV Hóa học 2",
+      "subject": "Hóa học",
+      "maxPeriods": 22,
+      "unavailable": "T6S",
+      "assignedPeriods": 10
+    },
+    {
+      "id": "t_mrd9llsx_j5ehi",
+      "name": "GV Hóa học 3",
+      "subject": "Hóa học",
+      "maxPeriods": 22,
+      "unavailable": "",
+      "assignedPeriods": 8
+    },
+    {
+      "id": "t_mrd9llsx_a43hf",
+      "name": "GV Sinh học 1",
+      "subject": "Sinh học",
+      "maxPeriods": 20,
+      "unavailable": "T2S",
+      "assignedPeriods": 7
+    },
+    {
+      "id": "t_mrd9llsx_ounz2",
+      "name": "GV Sinh học 2",
+      "subject": "Sinh học",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 7
+    },
+    {
+      "id": "t_mrd9llsx_3nz0a",
+      "name": "GV Công nghệ 1",
+      "subject": "Công nghệ",
+      "maxPeriods": 20,
+      "unavailable": "T3S",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_e5gsn",
+      "name": "GV Công nghệ 2",
+      "subject": "Công nghệ",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_s45e1",
+      "name": "GV Tin học 1",
+      "subject": "Tin học",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_efp80",
+      "name": "GV Tin học 2",
+      "subject": "Tin học",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_0g02x",
+      "name": "GV Giáo dục thể chất 1",
+      "subject": "Giáo dục thể chất",
+      "maxPeriods": 24,
+      "unavailable": "T7S",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_9s1qt",
+      "name": "GV Giáo dục thể chất 2",
+      "subject": "Giáo dục thể chất",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_w9ijj",
+      "name": "GV Giáo dục thể chất 3",
+      "subject": "Giáo dục thể chất",
+      "maxPeriods": 24,
+      "unavailable": "T6S",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_7zn0d",
+      "name": "GV Giáo dục thể chất 4",
+      "subject": "Giáo dục thể chất",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_4ajh1",
+      "name": "GV Giáo dục thể chất 5",
+      "subject": "Giáo dục thể chất",
+      "maxPeriods": 24,
+      "unavailable": "T2S",
+      "assignedPeriods": 12
+    },
+    {
+      "id": "t_mrd9llsx_y85s9",
+      "name": "GV Âm nhạc 1",
+      "subject": "Âm nhạc",
+      "maxPeriods": 18,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_4s1xn",
+      "name": "GV Âm nhạc 2",
+      "subject": "Âm nhạc",
+      "maxPeriods": 18,
+      "unavailable": "T3S",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_6aw7g",
+      "name": "GV Mỹ thuật 1",
+      "subject": "Mỹ thuật",
+      "maxPeriods": 18,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_zfewa",
+      "name": "GV Mỹ thuật 2",
+      "subject": "Mỹ thuật",
+      "maxPeriods": 18,
+      "unavailable": "",
+      "assignedPeriods": 15
+    },
+    {
+      "id": "t_mrd9llsx_7775u",
+      "name": "GV HĐTN-HN 1",
+      "subject": "HĐTN-HN",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_xsz4b",
+      "name": "GV HĐTN-HN 2",
+      "subject": "HĐTN-HN",
+      "maxPeriods": 24,
+      "unavailable": "T7S",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_6s3g6",
+      "name": "GV HĐTN-HN 3",
+      "subject": "HĐTN-HN",
+      "maxPeriods": 24,
+      "unavailable": "",
+      "assignedPeriods": 20
+    },
+    {
+      "id": "t_mrd9llsx_97bee",
+      "name": "GV Sinh hoạt 1",
+      "subject": "Sinh hoạt",
+      "maxPeriods": 20,
+      "unavailable": "T6S",
+      "assignedPeriods": 8
+    },
+    {
+      "id": "t_mrd9llsx_s1j4e",
+      "name": "GV Sinh hoạt 2",
+      "subject": "Sinh hoạt",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 8
+    },
+    {
+      "id": "t_mrd9llsx_dw30k",
+      "name": "GV Sinh hoạt 3",
+      "subject": "Sinh hoạt",
+      "maxPeriods": 20,
+      "unavailable": "T2S",
+      "assignedPeriods": 7
+    },
+    {
+      "id": "t_mrd9llsx_1rsmz",
+      "name": "GV Sinh hoạt 4",
+      "subject": "Sinh hoạt",
+      "maxPeriods": 20,
+      "unavailable": "",
+      "assignedPeriods": 7
+    }
+  ],
+  "classes": [
+    {
+      "id": "c_mrd9llsx_b3c3q",
+      "name": "6A",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6A",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_2inir",
+      "name": "6B",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6B",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_xcwa4",
+      "name": "6C",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6C",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_njh0g",
+      "name": "6D",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6D",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_dsfrw",
+      "name": "6E",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6E",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_5qxk2",
+      "name": "6F",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6F",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_jb0na",
+      "name": "6G",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6G",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_28cw5",
+      "name": "6H",
+      "grade": 6,
+      "shift": "morning",
+      "homeRoom": "6H",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_6n659",
+      "name": "7A",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7A",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_uls8p",
+      "name": "7B",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7B",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_x6vee",
+      "name": "7C",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7C",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_ie0zu",
+      "name": "7D",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7D",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_jriim",
+      "name": "7E",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7E",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_av9fk",
+      "name": "7F",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7F",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_qlbq1",
+      "name": "7G",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7G",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_r2jlk",
+      "name": "7H",
+      "grade": 7,
+      "shift": "morning",
+      "homeRoom": "7H",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_tg33a",
+      "name": "8A",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8A",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_ivlpw",
+      "name": "8B",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8B",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_xvxt5",
+      "name": "8C",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8C",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_16bqr",
+      "name": "8D",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8D",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_fobkl",
+      "name": "8E",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8E",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_hep2a",
+      "name": "8F",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8F",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_q3ch7",
+      "name": "8G",
+      "grade": 8,
+      "shift": "morning",
+      "homeRoom": "8G",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_jx74t",
+      "name": "9A",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9A",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_d7bp2",
+      "name": "9B",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9B",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_hca39",
+      "name": "9C",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9C",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_trgbr",
+      "name": "9D",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9D",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_xkfo2",
+      "name": "9E",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9E",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_a1uj0",
+      "name": "9F",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9F",
+      "assignedPeriods": 28,
+      "capacity": 30
+    },
+    {
+      "id": "c_mrd9llsx_w62l1",
+      "name": "9G",
+      "grade": 9,
+      "shift": "morning",
+      "homeRoom": "9G",
+      "assignedPeriods": 28,
+      "capacity": 30
+    }
+  ],
+  "rooms": [
+    {
+      "id": "r_mrd9llsx_namd8",
+      "name": "Tin 1",
+      "subjects": "Tin học"
+    },
+    {
+      "id": "r_mrd9llsx_52qzt",
+      "name": "Tin 2",
+      "subjects": "Tin học"
+    },
+    {
+      "id": "r_mrd9llsx_cf4hy",
+      "name": "Tin 3",
+      "subjects": "Tin học"
+    },
+    {
+      "id": "r_mrd9llsx_ii331",
+      "name": "KHTN 1",
+      "subjects": "Khoa học tự nhiên, Vật lí, Hóa học, Sinh học"
+    },
+    {
+      "id": "r_mrd9llsx_ttcg5",
+      "name": "KHTN 2",
+      "subjects": "Khoa học tự nhiên, Vật lí, Hóa học, Sinh học"
+    },
+    {
+      "id": "r_mrd9llsx_jjmqw",
+      "name": "KHTN 3",
+      "subjects": "Khoa học tự nhiên"
+    },
+    {
+      "id": "r_mrd9llsx_mvup8",
+      "name": "Lý 1",
+      "subjects": "Vật lí"
+    },
+    {
+      "id": "r_mrd9llsx_0nv24",
+      "name": "Lý 2",
+      "subjects": "Vật lí"
+    },
+    {
+      "id": "r_mrd9llsx_u3djh",
+      "name": "Hóa 1",
+      "subjects": "Hóa học"
+    },
+    {
+      "id": "r_mrd9llsx_49ev7",
+      "name": "Hóa 2",
+      "subjects": "Hóa học"
+    },
+    {
+      "id": "r_mrd9llsx_69aav",
+      "name": "Sinh 1",
+      "subjects": "Sinh học"
+    },
+    {
+      "id": "r_mrd9llsx_j9cw1",
+      "name": "Sinh 2",
+      "subjects": "Sinh học"
+    },
+    {
+      "id": "r_mrd9llsx_o2zdw",
+      "name": "CN 1",
+      "subjects": "Công nghệ"
+    },
+    {
+      "id": "r_mrd9llsx_fazsn",
+      "name": "CN 2",
+      "subjects": "Công nghệ"
+    },
+    {
+      "id": "r_mrd9llsx_8u43z",
+      "name": "Sân 1",
+      "subjects": "Giáo dục thể chất, Thể dục"
+    },
+    {
+      "id": "r_mrd9llsx_m1044",
+      "name": "Sân 2",
+      "subjects": "Giáo dục thể chất, Thể dục"
+    },
+    {
+      "id": "r_mrd9llsx_ln03j",
+      "name": "Sân 3",
+      "subjects": "Giáo dục thể chất, Thể dục"
+    }
+  ],
+  "assignments": [
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 1",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6A",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 1",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 2",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6B",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 2",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 3",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6C",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 3",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 4",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 4",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 4",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 4",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6D",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 4",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 5",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 5",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 5",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 5",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6E",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 5",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 6",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 6",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 1",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6F",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 1",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 2",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6G",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 2",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 3",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 3",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "6H",
+      "grade": 6,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 3",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K6"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 4",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7A",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 4",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 5",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 5",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7B",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 5",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 5",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 5",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 1",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7C",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 1",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 6",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 6",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 2",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7D",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 2",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 3",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7E",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 3",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 4",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7F",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 4",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 5",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 5",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7G",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 5",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 1",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Lịch sử",
+      "periods": 1,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Địa lí",
+      "periods": 2,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "7H",
+      "grade": 7,
+      "subject": "Khoa học tự nhiên",
+      "periods": 4,
+      "teacherName": "GV Khoa học tự nhiên 1",
+      "roomNeed": "KHTN",
+      "note": "CT2018-K7"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 5",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 5",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 2",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 1",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8A",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 6",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 6",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 3",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 2",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8B",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 4",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 4",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 3",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8C",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 5",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 5",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 1",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8D",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 1",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 2",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8E",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 4",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 4",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 2",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 3",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8F",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 5",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 5",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 3",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 1",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "8G",
+      "grade": 8,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K8"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 6",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 6",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 4",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 4",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 2",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9A",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 5",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 5",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 3",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9B",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 1",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 1",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9C",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 2",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 2",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9D",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 4",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 4",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 3",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 4",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 3",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9E",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 5",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 5",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 4",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 1",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 1",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 4",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 1",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 1",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 1",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9F",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 1",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Ngữ văn",
+      "periods": 4,
+      "teacherName": "GV Ngữ văn 6",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Toán",
+      "periods": 4,
+      "teacherName": "GV Toán 6",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Ngoại ngữ 1",
+      "periods": 3,
+      "teacherName": "GV Ngoại ngữ 1 5",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Giáo dục công dân",
+      "periods": 1,
+      "teacherName": "GV Giáo dục công dân 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Công nghệ",
+      "periods": 1,
+      "teacherName": "GV Công nghệ 2",
+      "roomNeed": "Công nghệ",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Tin học",
+      "periods": 1,
+      "teacherName": "GV Tin học 2",
+      "roomNeed": "Tin học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Giáo dục thể chất",
+      "periods": 2,
+      "teacherName": "GV Giáo dục thể chất 5",
+      "roomNeed": "Thể dục",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Âm nhạc",
+      "periods": 1,
+      "teacherName": "GV Âm nhạc 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Mỹ thuật",
+      "periods": 1,
+      "teacherName": "GV Mỹ thuật 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "HĐTN-HN",
+      "periods": 2,
+      "teacherName": "GV HĐTN-HN 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Sinh hoạt",
+      "periods": 1,
+      "teacherName": "GV Sinh hoạt 2",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Lịch sử",
+      "periods": 2,
+      "teacherName": "GV Lịch sử 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Địa lí",
+      "periods": 1,
+      "teacherName": "GV Địa lí 3",
+      "roomNeed": "",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Vật lí",
+      "periods": 1,
+      "teacherName": "GV Vật lí 2",
+      "roomNeed": "Vật lí",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Hóa học",
+      "periods": 2,
+      "teacherName": "GV Hóa học 2",
+      "roomNeed": "Hóa học",
+      "note": "CT2018-K9"
+    },
+    {
+      "className": "9G",
+      "grade": 9,
+      "subject": "Sinh học",
+      "periods": 1,
+      "teacherName": "GV Sinh học 2",
+      "roomNeed": "Sinh học",
+      "note": "CT2018-K9"
+    }
+  ],
+  "teacherLoadTable": [
+    {
+      "name": "GV Toán 1",
+      "subject": "Toán",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Toán 2",
+      "subject": "Toán",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Toán 3",
+      "subject": "Toán",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Toán 4",
+      "subject": "Toán",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Toán 5",
+      "subject": "Toán",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Toán 6",
+      "subject": "Toán",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Ngữ văn 1",
+      "subject": "Ngữ văn",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Ngữ văn 2",
+      "subject": "Ngữ văn",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Ngữ văn 3",
+      "subject": "Ngữ văn",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Ngữ văn 4",
+      "subject": "Ngữ văn",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Ngữ văn 5",
+      "subject": "Ngữ văn",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV Ngữ văn 6",
+      "subject": "Ngữ văn",
+      "load": 20,
+      "max": 24,
+      "classes": 5
+    },
+    {
+      "name": "GV HĐTN-HN 1",
+      "subject": "HĐTN-HN",
+      "load": 20,
+      "max": 24,
+      "classes": 10
+    },
+    {
+      "name": "GV HĐTN-HN 2",
+      "subject": "HĐTN-HN",
+      "load": 20,
+      "max": 24,
+      "classes": 10
+    },
+    {
+      "name": "GV HĐTN-HN 3",
+      "subject": "HĐTN-HN",
+      "load": 20,
+      "max": 24,
+      "classes": 10
+    },
+    {
+      "name": "GV Ngoại ngữ 1 1",
+      "subject": "Ngoại ngữ 1",
+      "load": 18,
+      "max": 22,
+      "classes": 6
+    },
+    {
+      "name": "GV Ngoại ngữ 1 2",
+      "subject": "Ngoại ngữ 1",
+      "load": 18,
+      "max": 22,
+      "classes": 6
+    },
+    {
+      "name": "GV Ngoại ngữ 1 3",
+      "subject": "Ngoại ngữ 1",
+      "load": 18,
+      "max": 22,
+      "classes": 6
+    },
+    {
+      "name": "GV Ngoại ngữ 1 4",
+      "subject": "Ngoại ngữ 1",
+      "load": 18,
+      "max": 22,
+      "classes": 6
+    },
+    {
+      "name": "GV Ngoại ngữ 1 5",
+      "subject": "Ngoại ngữ 1",
+      "load": 18,
+      "max": 22,
+      "classes": 6
+    },
+    {
+      "name": "GV Địa lí 3",
+      "subject": "Địa lí",
+      "load": 16,
+      "max": 22,
+      "classes": 11
+    },
+    {
+      "name": "GV Khoa học tự nhiên 1",
+      "subject": "Khoa học tự nhiên",
+      "load": 16,
+      "max": 22,
+      "classes": 4
+    },
+    {
+      "name": "GV Giáo dục công dân 1",
+      "subject": "Giáo dục công dân",
+      "load": 15,
+      "max": 20,
+      "classes": 15
+    },
+    {
+      "name": "GV Giáo dục công dân 2",
+      "subject": "Giáo dục công dân",
+      "load": 15,
+      "max": 20,
+      "classes": 15
+    },
+    {
+      "name": "GV Lịch sử 2",
+      "subject": "Lịch sử",
+      "load": 15,
+      "max": 22,
+      "classes": 10
+    },
+    {
+      "name": "GV Lịch sử 3",
+      "subject": "Lịch sử",
+      "load": 15,
+      "max": 22,
+      "classes": 10
+    },
+    {
+      "name": "GV Địa lí 1",
+      "subject": "Địa lí",
+      "load": 15,
+      "max": 22,
+      "classes": 9
+    },
+    {
+      "name": "GV Địa lí 2",
+      "subject": "Địa lí",
+      "load": 15,
+      "max": 22,
+      "classes": 10
+    },
+    {
+      "name": "GV Công nghệ 1",
+      "subject": "Công nghệ",
+      "load": 15,
+      "max": 20,
+      "classes": 15
+    },
+    {
+      "name": "GV Công nghệ 2",
+      "subject": "Công nghệ",
+      "load": 15,
+      "max": 20,
+      "classes": 15
+    },
+    {
+      "name": "GV Tin học 1",
+      "subject": "Tin học",
+      "load": 15,
+      "max": 20,
+      "classes": 15
+    },
+    {
+      "name": "GV Tin học 2",
+      "subject": "Tin học",
+      "load": 15,
+      "max": 20,
+      "classes": 15
+    },
+    {
+      "name": "GV Âm nhạc 1",
+      "subject": "Âm nhạc",
+      "load": 15,
+      "max": 18,
+      "classes": 15
+    },
+    {
+      "name": "GV Âm nhạc 2",
+      "subject": "Âm nhạc",
+      "load": 15,
+      "max": 18,
+      "classes": 15
+    },
+    {
+      "name": "GV Mỹ thuật 1",
+      "subject": "Mỹ thuật",
+      "load": 15,
+      "max": 18,
+      "classes": 15
+    },
+    {
+      "name": "GV Mỹ thuật 2",
+      "subject": "Mỹ thuật",
+      "load": 15,
+      "max": 18,
+      "classes": 15
+    },
+    {
+      "name": "GV Lịch sử 1",
+      "subject": "Lịch sử",
+      "load": 14,
+      "max": 22,
+      "classes": 10
+    },
+    {
+      "name": "GV Khoa học tự nhiên 2",
+      "subject": "Khoa học tự nhiên",
+      "load": 12,
+      "max": 22,
+      "classes": 3
+    },
+    {
+      "name": "GV Khoa học tự nhiên 3",
+      "subject": "Khoa học tự nhiên",
+      "load": 12,
+      "max": 22,
+      "classes": 3
+    },
+    {
+      "name": "GV Khoa học tự nhiên 4",
+      "subject": "Khoa học tự nhiên",
+      "load": 12,
+      "max": 22,
+      "classes": 3
+    },
+    {
+      "name": "GV Khoa học tự nhiên 5",
+      "subject": "Khoa học tự nhiên",
+      "load": 12,
+      "max": 22,
+      "classes": 3
+    },
+    {
+      "name": "GV Giáo dục thể chất 1",
+      "subject": "Giáo dục thể chất",
+      "load": 12,
+      "max": 24,
+      "classes": 6
+    },
+    {
+      "name": "GV Giáo dục thể chất 2",
+      "subject": "Giáo dục thể chất",
+      "load": 12,
+      "max": 24,
+      "classes": 6
+    },
+    {
+      "name": "GV Giáo dục thể chất 3",
+      "subject": "Giáo dục thể chất",
+      "load": 12,
+      "max": 24,
+      "classes": 6
+    },
+    {
+      "name": "GV Giáo dục thể chất 4",
+      "subject": "Giáo dục thể chất",
+      "load": 12,
+      "max": 24,
+      "classes": 6
+    },
+    {
+      "name": "GV Giáo dục thể chất 5",
+      "subject": "Giáo dục thể chất",
+      "load": 12,
+      "max": 24,
+      "classes": 6
+    },
+    {
+      "name": "GV Hóa học 1",
+      "subject": "Hóa học",
+      "load": 10,
+      "max": 22,
+      "classes": 5
+    },
+    {
+      "name": "GV Hóa học 2",
+      "subject": "Hóa học",
+      "load": 10,
+      "max": 22,
+      "classes": 5
+    },
+    {
+      "name": "GV Hóa học 3",
+      "subject": "Hóa học",
+      "load": 8,
+      "max": 22,
+      "classes": 4
+    },
+    {
+      "name": "GV Sinh hoạt 1",
+      "subject": "Sinh hoạt",
+      "load": 8,
+      "max": 20,
+      "classes": 8
+    },
+    {
+      "name": "GV Sinh hoạt 2",
+      "subject": "Sinh hoạt",
+      "load": 8,
+      "max": 20,
+      "classes": 8
+    },
+    {
+      "name": "GV Vật lí 1",
+      "subject": "Vật lí",
+      "load": 7,
+      "max": 20,
+      "classes": 7
+    },
+    {
+      "name": "GV Vật lí 2",
+      "subject": "Vật lí",
+      "load": 7,
+      "max": 20,
+      "classes": 7
+    },
+    {
+      "name": "GV Sinh học 1",
+      "subject": "Sinh học",
+      "load": 7,
+      "max": 20,
+      "classes": 7
+    },
+    {
+      "name": "GV Sinh học 2",
+      "subject": "Sinh học",
+      "load": 7,
+      "max": 20,
+      "classes": 7
+    },
+    {
+      "name": "GV Sinh hoạt 3",
+      "subject": "Sinh hoạt",
+      "load": 7,
+      "max": 20,
+      "classes": 7
+    },
+    {
+      "name": "GV Sinh hoạt 4",
+      "subject": "Sinh hoạt",
+      "load": 7,
+      "max": 20,
+      "classes": 7
+    }
+  ],
+  "classLoadTable": [
+    {
+      "name": "6A",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6B",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6C",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6D",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6E",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6F",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6G",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "6H",
+      "grade": 6,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7A",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7B",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7C",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7D",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7E",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7F",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7G",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "7H",
+      "grade": 7,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 14
+    },
+    {
+      "name": "8A",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "8B",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "8C",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "8D",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "8E",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "8F",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "8G",
+      "grade": 8,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9A",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9B",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9C",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9D",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9E",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9F",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    },
+    {
+      "name": "9G",
+      "grade": 9,
+      "load": 28,
+      "capacity": 30,
+      "subjects": 16
+    }
+  ],
+  "periodsBySubject": {
+    "Ngữ văn": 120,
+    "Toán": 120,
+    "Ngoại ngữ 1": 90,
+    "Giáo dục công dân": 30,
+    "Công nghệ": 30,
+    "Tin học": 30,
+    "Giáo dục thể chất": 60,
+    "Âm nhạc": 30,
+    "Mỹ thuật": 30,
+    "HĐTN-HN": 60,
+    "Sinh hoạt": 30,
+    "Lịch sử": 44,
+    "Địa lí": 46,
+    "Khoa học tự nhiên": 64,
+    "Vật lí": 14,
+    "Hóa học": 28,
+    "Sinh học": 14
+  }
+}

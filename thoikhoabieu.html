@@ -50,8 +50,11 @@
                 <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa nhỏ">
                     <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Demo nhỏ
                 </button>
-                <button id="btnSampleData16" type="button" class="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-extrabold text-teal-900 hover:bg-teal-100" title="Nạp 16 lớp · ~30 GV (tỷ lệ 1,9)">
-                    <i class="fas fa-school mr-2"></i>Demo 16 lớp
+                <button id="btnSampleData30" type="button" class="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-extrabold text-teal-900 hover:bg-teal-100" title="30 lớp THCS · CT GDPT 2018 · ~57 GV">
+                    <i class="fas fa-school mr-2"></i>Demo 30 lớp CT2018
+                </button>
+                <button id="btnExportDemoData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Xuất JSON dữ liệu demo hiện tại để kiểm tra">
+                    <i class="fas fa-download mr-2 text-teal-700"></i>Xuất dữ liệu
                 </button>
                 <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu thời khóa biểu lên hosting">
                     <i class="fas fa-cloud-arrow-up mr-2 text-teal-700"></i>Lưu hosting
@@ -68,9 +71,9 @@
             <div class="overflow-hidden rounded-3xl bg-slate-950 text-white soft-shadow">
                 <div class="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end">
                     <div>
-                        <span class="pill bg-teal-400/15 text-teal-100"><i class="fas fa-school"></i>100 giáo viên · 1 buổi · 2 buổi · phòng bộ môn</span>
+                        <span class="pill bg-teal-400/15 text-teal-100"><i class="fas fa-school"></i>CT 2018 · 1–2 buổi · phòng BM · kiểm tra trước xếp</span>
                         <h2 class="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Thiết kế lịch từ dữ liệu thật, rà trùng và xuất bảng dùng ngay.</h2>
-                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Nhập danh sách giáo viên từ Excel, khai báo lớp học theo buổi, phòng bộ môn và phân công môn. Bộ xếp lịch sẽ tránh trùng giáo viên, lớp, phòng và báo rõ phần chưa xếp được.</p>
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Nhập Excel GV, phân công theo khung tiết CT GDPT 2018, kiểm tra tải/lớp/phòng trước khi xếp. Bộ xếp tránh trùng GV–lớp–phòng, làm đẹp tiết đôi và báo rõ phần nghẽn.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-center sm:grid-cols-4 lg:w-[430px]">
                         <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statTeachers" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">GV</div></div>
@@ -98,10 +101,16 @@
                     <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rooms"><i class="fas fa-door-open mr-2"></i>Phòng bộ môn</button>
                     <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="assignments"><i class="fas fa-list-check mr-2"></i>Phân công</button>
                     <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rules"><i class="fas fa-sliders mr-2"></i>Thiết lập</button>
+                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="diagnostics"><i class="fas fa-stethoscope mr-2"></i>Kiểm tra</button>
                 </div>
-                <button id="btnGenerate" type="button" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800">
-                    <i class="fas fa-gears mr-2"></i>Xếp lịch
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button id="btnRunDiagnostics" type="button" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-black text-amber-950 hover:bg-amber-100">
+                        <i class="fas fa-stethoscope mr-2"></i>Kiểm tra
+                    </button>
+                    <button id="btnGenerate" type="button" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800">
+                        <i class="fas fa-gears mr-2"></i>Xếp lịch
+                    </button>
+                </div>
             </div>
 
             <div class="mt-5">
@@ -234,6 +243,21 @@
                     </div>
                     <div class="mt-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-950">
                         <strong>Xếp đẹp (sau khi 100% khả thi):</strong> gói buổi lớp không trống giữa; ưu tiên tiết đôi liền (Toán/Văn/Anh/Khoa học…); môn chính ưu tiên tiết sớm; giảm trống GV; rải tải theo ngày; phòng BM đúng môn. Bộ xếp chạy 2 pha: <em>ràng buộc cứng</em> → <em>tinh chỉnh beauty</em> (relocate + swap).
+                    </div>
+                </section>
+
+                <section data-panel="diagnostics" class="hidden">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-black text-slate-800">Kiểm tra dữ liệu trước khi xếp</h3>
+                            <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Giống các phần mềm TKB chuyên dụng (OLM TKB, tkb.com.vn, VietSchool…): xem nhanh tải GV/lớp, phòng BM, phân công thiếu, môn CT 2018, và điểm nghẽn khả thi — trước khi bấm xếp lịch.</p>
+                        </div>
+                        <button id="btnRunDiagnostics2" type="button" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">
+                            <i class="fas fa-rotate mr-2"></i>Chạy lại kiểm tra
+                        </button>
+                    </div>
+                    <div id="diagnosticsMount" class="mt-4">
+                        <div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">Bấm “Kiểm tra” để quét dữ liệu hiện tại.</div>
                     </div>
                 </section>
             </div>
@@ -611,10 +635,22 @@
         function roomMatches(room, needOrSubject) {
             const need = normalizeText(needOrSubject);
             if (!need) return false;
+            // Đồng nghĩa phòng BM / môn CT 2018
+            const aliases = {
+                'the duc': ['giao duc the chat', 'gdtc', 'the duc'],
+                'giao duc the chat': ['the duc', 'gdtc', 'giao duc the chat'],
+                'vat li': ['vat ly', 'ly'],
+                'vat ly': ['vat li', 'ly'],
+                'khtn': ['khoa hoc tu nhien', 'khtn'],
+                'khoa hoc tu nhien': ['khtn', 'khoa hoc tu nhien'],
+            };
+            const needForms = new Set([need, ...(aliases[need] || [])]);
             return splitList(room.subjects).some(s => {
                 const ns = normalizeText(s);
-                return ns && (need.includes(ns) || ns.includes(need));
-            }) || normalizeText(room.name).includes(need);
+                if (!ns) return false;
+                if (needForms.has(ns) || need.includes(ns) || ns.includes(need)) return true;
+                return Array.from(needForms).some(f => ns.includes(f) || f.includes(ns));
+            }) || Array.from(needForms).some(f => normalizeText(room.name).includes(f));
         }
 
         function chooseRoom(assignment, slot, roomBusy) {
@@ -1844,6 +1880,45 @@
             }
         }
 
+        /** Khung tiết/tuần CT GDPT 2018 (THCS) — quy đổi ~35 tuần/năm.
+         *  Tin học 35 tiết/năm = 1 tiết/tuần. Lịch sử và Địa lí = 3; KHTN = 4 (lớp 6–7 gộp, 8–9 tách). */
+        function curriculumCt2018(grade) {
+            const base = [
+                { subject: 'Ngữ văn', periods: 4 },
+                { subject: 'Toán', periods: 4 },
+                { subject: 'Ngoại ngữ 1', periods: 3 },
+                { subject: 'Giáo dục công dân', periods: 1 },
+                { subject: 'Công nghệ', periods: 1, roomNeed: 'Công nghệ' },
+                { subject: 'Tin học', periods: 1, roomNeed: 'Tin học' },
+                { subject: 'Giáo dục thể chất', periods: 2, roomNeed: 'Thể dục' },
+                { subject: 'Âm nhạc', periods: 1 },
+                { subject: 'Mỹ thuật', periods: 1 },
+                { subject: 'HĐTN-HN', periods: 2 },
+                { subject: 'Sinh hoạt', periods: 1 },
+            ];
+            if (grade <= 7) {
+                return [
+                    ...base,
+                    { subject: 'Lịch sử', periods: 1 },
+                    { subject: 'Địa lí', periods: 2 },
+                    { subject: 'Khoa học tự nhiên', periods: 4, roomNeed: 'KHTN' },
+                ];
+            }
+            return [
+                ...base,
+                { subject: 'Lịch sử', periods: 2 },
+                { subject: 'Địa lí', periods: 1 },
+                { subject: 'Vật lí', periods: 1, roomNeed: 'Vật lí' },
+                { subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' },
+                { subject: 'Sinh học', periods: 1, roomNeed: 'Sinh học' },
+            ];
+        }
+
+        function classGrade(name) {
+            const m = String(name || '').match(/^(\d+)/);
+            return m ? Number(m[1]) : 6;
+        }
+
         function loadSampleData() {
             state.teachers = [];
             state.classes = [];
@@ -1853,83 +1928,100 @@
             [
                 ['Nguyễn Văn An', 'Toán', 24, 'T2S', ''],
                 ['Trần Thị Bình', 'Ngữ văn', 24, '', ''],
-                ['Lê Minh Châu', 'Tiếng Anh', 22, 'T4C', ''],
+                ['Lê Minh Châu', 'Ngoại ngữ 1', 22, 'T4C', ''],
                 ['Phạm Quốc Dũng', 'Tin học', 18, 'T3C', 'Tin 1'],
-                ['Hoàng Thu Hà', 'Vật lý', 20, '', 'Lý 1'],
-                ['Vũ Hải Nam', 'Hóa học', 20, 'T6S', 'Hóa 1'],
+                ['Hoàng Thu Hà', 'Khoa học tự nhiên', 20, '', 'KHTN 1'],
+                ['Vũ Hải Nam', 'Giáo dục thể chất', 20, 'T6S', 'Sân 1'],
             ].forEach(([name, subject, maxPeriods, unavailable, preferredRooms]) => addTeacher({ name, subject, maxPeriods, unavailable, preferredRooms }));
-            ['6A', '6B', '7A', '7B'].forEach((name, index) => addClass({ name, shift: index % 2 ? 'morning' : 'both', homeRoom: name }));
+            ['6A', '6B', '7A', '7B'].forEach(name => addClass({ name, shift: 'morning', homeRoom: name }));
             addRoom({ name: 'Tin 1', subjects: 'Tin học' });
-            addRoom({ name: 'Lý 1', subjects: 'Vật lý, Công nghệ' });
-            addRoom({ name: 'Hóa 1', subjects: 'Hóa học, Sinh học' });
-            state.classes.forEach(c => {
-                addAssignment({ classId: c.id, teacherId: state.teachers[0].id, subject: 'Toán', periods: 4 });
-                addAssignment({ classId: c.id, teacherId: state.teachers[1].id, subject: 'Ngữ văn', periods: 4 });
-                addAssignment({ classId: c.id, teacherId: state.teachers[2].id, subject: 'Tiếng Anh', periods: 3 });
-                addAssignment({ classId: c.id, teacherId: state.teachers[3].id, subject: 'Tin học', periods: 2, roomNeed: 'Tin học' });
-                addAssignment({ classId: c.id, teacherId: state.teachers[4].id, subject: 'Vật lý', periods: 2, roomNeed: 'Vật lý' });
-                addAssignment({ classId: c.id, teacherId: state.teachers[5].id, subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' });
+            addRoom({ name: 'KHTN 1', subjects: 'Khoa học tự nhiên, Vật lí, Hóa học, Sinh học' });
+            addRoom({ name: 'Sân 1', subjects: 'Giáo dục thể chất, Thể dục' });
+            state.classes.forEach((c, ci) => {
+                curriculumCt2018(classGrade(c.name)).forEach(cur => {
+                    const pool = state.teachers.filter(t => normalizeText(t.subject) === normalizeText(cur.subject)
+                        || (normalizeText(cur.subject) === 'khoa hoc tu nhien' && /khtn|khoa hoc/.test(normalizeText(t.subject))));
+                    const teacher = pool[ci % Math.max(pool.length, 1)] || state.teachers[ci % state.teachers.length];
+                    addAssignment({
+                        classId: c.id,
+                        teacherId: teacher.id,
+                        subject: cur.subject,
+                        periods: cur.periods,
+                        roomNeed: cur.roomNeed || '',
+                    });
+                });
             });
             renderAll();
             renderSchedule();
         }
 
-        /** Demo quy mô trường: 16 lớp · 30 GV (≈1,9 GV/lớp) · ~28 tiết/lớp · phòng BM đủ. */
-        function loadSampleData16() {
+        /**
+         * Demo đầy đủ THCS: 30 lớp (8+8+7+7) · 57 GV (30×1,9) · khung tiết CT GDPT 2018.
+         * Tin học = 1 tiết/tuần; LS+ĐL = 3; KHTN 6–7 = 4; 8–9 tách Lý/Hóa/Sinh.
+         */
+        function loadSampleData30() {
             state.teachers = [];
             state.classes = [];
             state.rooms = [];
             state.assignments = [];
+            state.importedAssignments = [];
             state.result = null;
             state.rules = { morningPeriods: 5, afternoonPeriods: 4, days: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], maxSameSubjectDay: 2 };
             syncRuleInputs();
 
-            const teacherDefs = [
-                ['GV Toán 1', 'Toán', 24, ''], ['GV Toán 2', 'Toán', 24, 'T7S'], ['GV Toán 3', 'Toán', 24, ''], ['GV Toán 4', 'Toán', 24, 'T6S'],
-                ['GV Văn 1', 'Ngữ văn', 24, ''], ['GV Văn 2', 'Ngữ văn', 24, 'T3S'], ['GV Văn 3', 'Ngữ văn', 24, ''], ['GV Văn 4', 'Ngữ văn', 24, ''],
-                ['GV Anh 1', 'Tiếng Anh', 24, ''], ['GV Anh 2', 'Tiếng Anh', 24, 'T5S'], ['GV Anh 3', 'Tiếng Anh', 24, ''],
-                ['GV Lý 1', 'Vật lý', 22, ''], ['GV Lý 2', 'Vật lý', 22, 'T2S'],
-                ['GV Hóa 1', 'Hóa học', 22, ''], ['GV Hóa 2', 'Hóa học', 22, ''],
-                ['GV Sinh 1', 'Sinh học', 22, ''], ['GV Sinh 2', 'Sinh học', 22, 'T4S'],
-                ['GV Sử 1', 'Lịch sử', 22, ''], ['GV Sử 2', 'Lịch sử', 22, ''],
-                ['GV Địa 1', 'Địa lý', 22, ''], ['GV Địa 2', 'Địa lý', 22, 'T7S'],
-                ['GV GDCD 1', 'GDCD', 22, ''],
-                ['GV Tin 1', 'Tin học', 24, ''], ['GV Tin 2', 'Tin học', 24, ''],
-                ['GV CN 1', 'Công nghệ', 22, ''],
-                ['GV TD 1', 'Thể dục', 24, ''], ['GV TD 2', 'Thể dục', 24, ''],
-                ['GV AN 1', 'Âm nhạc', 20, ''], ['GV MT 1', 'Mỹ thuật', 20, ''], ['GV SH 1', 'Sinh hoạt', 20, ''],
+            // 57 GV = 30 × 1,9 — phân theo tải tiết CT 2018
+            const teacherPlan = [
+                { subject: 'Toán', count: 6, max: 24 },
+                { subject: 'Ngữ văn', count: 6, max: 24 },
+                { subject: 'Ngoại ngữ 1', count: 5, max: 22 },
+                { subject: 'Giáo dục công dân', count: 2, max: 20 },
+                { subject: 'Lịch sử', count: 3, max: 22 },
+                { subject: 'Địa lí', count: 3, max: 22 },
+                { subject: 'Khoa học tự nhiên', count: 5, max: 22 },
+                { subject: 'Vật lí', count: 2, max: 20 },
+                { subject: 'Hóa học', count: 3, max: 22 },
+                { subject: 'Sinh học', count: 2, max: 20 },
+                { subject: 'Công nghệ', count: 2, max: 20 },
+                { subject: 'Tin học', count: 2, max: 20 },
+                { subject: 'Giáo dục thể chất', count: 5, max: 24 },
+                { subject: 'Âm nhạc', count: 2, max: 18 },
+                { subject: 'Mỹ thuật', count: 2, max: 18 },
+                { subject: 'HĐTN-HN', count: 3, max: 24 },
+                { subject: 'Sinh hoạt', count: 4, max: 20 },
             ];
-            teacherDefs.forEach(([name, subject, maxPeriods, unavailable]) => addTeacher({ name, subject, maxPeriods, unavailable }));
+            const mildUnav = ['', '', 'T7S', '', 'T6S', '', 'T2S', '', 'T3S', ''];
+            let tIdx = 0;
+            teacherPlan.forEach(plan => {
+                for (let i = 1; i <= plan.count; i++) {
+                    tIdx++;
+                    addTeacher({
+                        name: `GV ${plan.subject} ${i}`,
+                        subject: plan.subject,
+                        maxPeriods: plan.max,
+                        unavailable: mildUnav[tIdx % mildUnav.length],
+                    });
+                }
+            });
 
-            ['6A', '6B', '6C', '6D', '7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B', '9C', '9D']
-                .forEach(name => addClass({ name, shift: 'morning', homeRoom: name }));
+            // 30 lớp: khối 6–7 mỗi khối 8 lớp; khối 8–9 mỗi khối 7 lớp
+            const classNames = [];
+            for (const g of [6, 7]) for (let i = 1; i <= 8; i++) classNames.push(`${g}${String.fromCharCode(64 + i)}`);
+            for (const g of [8, 9]) for (let i = 1; i <= 7; i++) classNames.push(`${g}${String.fromCharCode(64 + i)}`);
+            classNames.forEach(name => addClass({ name, shift: 'morning', homeRoom: name }));
 
             [
-                ['Tin 1', 'Tin học'], ['Tin 2', 'Tin học'],
-                ['Lý 1', 'Vật lý'], ['Lý 2', 'Vật lý'],
+                ['Tin 1', 'Tin học'], ['Tin 2', 'Tin học'], ['Tin 3', 'Tin học'],
+                ['KHTN 1', 'Khoa học tự nhiên, Vật lí, Hóa học, Sinh học'],
+                ['KHTN 2', 'Khoa học tự nhiên, Vật lí, Hóa học, Sinh học'],
+                ['KHTN 3', 'Khoa học tự nhiên'],
+                ['Lý 1', 'Vật lí'], ['Lý 2', 'Vật lí'],
                 ['Hóa 1', 'Hóa học'], ['Hóa 2', 'Hóa học'],
                 ['Sinh 1', 'Sinh học'], ['Sinh 2', 'Sinh học'],
                 ['CN 1', 'Công nghệ'], ['CN 2', 'Công nghệ'],
-                ['Sân 1', 'Thể dục'], ['Sân 2', 'Thể dục'],
+                ['Sân 1', 'Giáo dục thể chất, Thể dục'],
+                ['Sân 2', 'Giáo dục thể chất, Thể dục'],
+                ['Sân 3', 'Giáo dục thể chất, Thể dục'],
             ].forEach(([name, subjects]) => addRoom({ name, subjects }));
-
-            const curriculum = [
-                { subject: 'Toán', periods: 4 },
-                { subject: 'Ngữ văn', periods: 4 },
-                { subject: 'Tiếng Anh', periods: 3 },
-                { subject: 'Vật lý', periods: 2, roomNeed: 'Vật lý' },
-                { subject: 'Hóa học', periods: 2, roomNeed: 'Hóa học' },
-                { subject: 'Sinh học', periods: 2, roomNeed: 'Sinh học' },
-                { subject: 'Lịch sử', periods: 1 },
-                { subject: 'Địa lý', periods: 1 },
-                { subject: 'GDCD', periods: 1 },
-                { subject: 'Tin học', periods: 2, roomNeed: 'Tin học' },
-                { subject: 'Công nghệ', periods: 1, roomNeed: 'Công nghệ' },
-                { subject: 'Thể dục', periods: 2, roomNeed: 'Thể dục' },
-                { subject: 'Âm nhạc', periods: 1 },
-                { subject: 'Mỹ thuật', periods: 1 },
-                { subject: 'Sinh hoạt', periods: 1 },
-            ];
 
             const teachersBySubject = {};
             state.teachers.forEach(t => {
@@ -1938,23 +2030,373 @@
                 teachersBySubject[key].push(t);
             });
 
-            state.classes.forEach((cl, ci) => {
-                curriculum.forEach(cur => {
-                    const pool = teachersBySubject[normalizeText(cur.subject)] || [];
-                    const teacher = pool[ci % pool.length];
-                    if (!teacher) return;
+            // Round-robin theo môn, cân tải
+            const assignCursor = {};
+            state.classes.forEach(cl => {
+                const grade = classGrade(cl.name);
+                curriculumCt2018(grade).forEach(cur => {
+                    const key = normalizeText(cur.subject);
+                    const pool = teachersBySubject[key] || [];
+                    if (!pool.length) return;
+                    const cursor = assignCursor[key] || 0;
+                    // chọn GV đang có ít tiết đã gán nhất trong pool
+                    let best = pool[cursor % pool.length];
+                    let bestLoad = state.assignments.filter(a => a.teacherId === best.id).reduce((s, a) => s + Number(a.periods || 0), 0);
+                    pool.forEach(t => {
+                        const load = state.assignments.filter(a => a.teacherId === t.id).reduce((s, a) => s + Number(a.periods || 0), 0);
+                        if (load < bestLoad) { best = t; bestLoad = load; }
+                    });
+                    assignCursor[key] = (cursor + 1) % pool.length;
                     addAssignment({
                         classId: cl.id,
-                        teacherId: teacher.id,
+                        teacherId: best.id,
                         subject: cur.subject,
                         periods: cur.periods,
                         roomNeed: cur.roomNeed || '',
+                        note: `CT2018-K${grade}`,
                     });
                 });
             });
 
             renderAll();
             renderSchedule();
+            // Tự mở tab kiểm tra để người dùng rà soát ngay
+            document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'diagnostics'));
+            document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== 'diagnostics'));
+            runDiagnostics();
+        }
+
+        function exportCurrentDataJson() {
+            readRulesFromInputs();
+            const teacherLoad = {};
+            state.assignments.forEach(a => {
+                teacherLoad[a.teacherId] = (teacherLoad[a.teacherId] || 0) + Number(a.periods || 0);
+            });
+            const classLoad = {};
+            state.assignments.forEach(a => {
+                classLoad[a.classId] = (classLoad[a.classId] || 0) + Number(a.periods || 0);
+            });
+            const payload = {
+                meta: {
+                    title: 'Dữ liệu TKB demo / hiện tại',
+                    curriculum: 'CT GDPT 2018 (THCS) — tiết/tuần quy đổi ~35 tuần',
+                    notes: [
+                        'Tin học: 35 tiết/năm ≈ 1 tiết/tuần',
+                        'Lịch sử và Địa lí: 105 tiết/năm ≈ 3 tiết/tuần (tách Sử + Địa)',
+                        'KHTN: 140 tiết/năm ≈ 4 tiết/tuần (lớp 6–7 gộp; 8–9 tách Lý/Hóa/Sinh theo tổ chức trường)',
+                        'Tổng ~28 tiết/lớp/tuần (gần khung 29–29,5; chưa tính môn tự chọn)',
+                    ],
+                    generatedAt: new Date().toISOString(),
+                    counts: {
+                        teachers: state.teachers.length,
+                        classes: state.classes.length,
+                        rooms: state.rooms.length,
+                        assignments: state.assignments.length,
+                        totalPeriods: state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0),
+                        ratioTeachersPerClass: state.classes.length ? (state.teachers.length / state.classes.length).toFixed(2) : '0',
+                    },
+                },
+                rules: state.rules,
+                teachers: state.teachers.map(t => ({
+                    ...t,
+                    assignedPeriods: teacherLoad[t.id] || 0,
+                })),
+                classes: state.classes.map(c => ({
+                    ...c,
+                    grade: classGrade(c.name),
+                    assignedPeriods: classLoad[c.id] || 0,
+                    capacity: slotsForClass(c).length,
+                    curriculum: curriculumCt2018(classGrade(c.name)),
+                })),
+                rooms: state.rooms,
+                assignments: state.assignments.map(a => {
+                    const cl = state.classes.find(c => c.id === a.classId);
+                    const te = state.teachers.find(t => t.id === a.teacherId);
+                    return {
+                        ...a,
+                        className: cl?.name || '',
+                        teacherName: te?.name || '',
+                    };
+                }),
+            };
+            downloadBlob('TKB_DuLieu_Demo_CT2018.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+        }
+
+        function buildDiagnosticsReport() {
+            readRulesFromInputs();
+            const errors = [];
+            const warnings = [];
+            const info = [];
+
+            const totalPeriods = state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0);
+            const ratio = state.classes.length ? (state.teachers.length / state.classes.length) : 0;
+            info.push(`Tổng quan: ${state.classes.length} lớp · ${state.teachers.length} GV (tỷ lệ ${ratio.toFixed(2)}) · ${state.rooms.length} phòng BM · ${state.assignments.length} dòng phân công · ${totalPeriods} tiết/tuần.`);
+
+            // --- Lớp ---
+            const classLoad = {};
+            state.assignments.forEach(a => {
+                if (!a.classId) return;
+                classLoad[a.classId] = (classLoad[a.classId] || 0) + Number(a.periods || 0);
+            });
+            state.classes.forEach(c => {
+                const load = classLoad[c.id] || 0;
+                const cap = slotsForClass(c).length;
+                if (load > cap) errors.push({ type: 'class', message: `${c.name}: ${load} tiết > capacity ${cap} ô (${shiftLabel(c.shift)}).` });
+                else if (load === 0) warnings.push({ type: 'class', message: `${c.name}: chưa có phân công nào.` });
+                else if (load < cap * 0.7) warnings.push({ type: 'class', message: `${c.name}: mới ${load}/${cap} tiết — còn trống nhiều (~${Math.round(load / cap * 100)}% đầy).` });
+                else info.push(`${c.name}: ${load}/${cap} tiết.`);
+
+                // thiếu môn cốt lõi CT 2018
+                const grade = classGrade(c.name);
+                const have = new Set(state.assignments.filter(a => a.classId === c.id).map(a => normalizeText(a.subject)));
+                const need = curriculumCt2018(grade).map(x => normalizeText(x.subject));
+                const missing = need.filter(s => !have.has(s));
+                if (missing.length) warnings.push({ type: 'curriculum', message: `${c.name} (K${grade}) thiếu phân công môn CT2018: ${missing.slice(0, 6).join(', ')}${missing.length > 6 ? '…' : ''}.` });
+            });
+
+            // --- GV ---
+            const teacherLoad = {};
+            state.assignments.forEach(a => {
+                if (!a.teacherId) return;
+                teacherLoad[a.teacherId] = (teacherLoad[a.teacherId] || 0) + Number(a.periods || 0);
+            });
+            const loads = [];
+            state.teachers.forEach(t => {
+                const load = teacherLoad[t.id] || 0;
+                loads.push(load);
+                const max = Number(t.maxPeriods || 99);
+                if (load > max) errors.push({ type: 'teacher', message: `${t.name} (${t.subject}): ${load} tiết > định mức ${max}.` });
+                else if (load === 0) warnings.push({ type: 'teacher', message: `${t.name} (${t.subject}): chưa được phân công tiết nào.` });
+                else if (load >= max * 0.9) warnings.push({ type: 'teacher', message: `${t.name}: tải ${load}/${max} (≥90% định mức) — ít dư địa khi xếp.` });
+                if (!clean(t.subject)) warnings.push({ type: 'teacher', message: `${t.name}: chưa ghi môn chính.` });
+            });
+            if (loads.length) {
+                const avg = loads.reduce((s, v) => s + v, 0) / loads.length;
+                const maxL = Math.max(...loads);
+                const minL = Math.min(...loads);
+                info.push(`Tải GV: TB ${avg.toFixed(1)} · min ${minL} · max ${maxL} tiết/tuần.`);
+                // Lệch tải chỉ so trong cùng môn (so toàn trường thì Tin 1 tiết ≠ Toán 4 tiết là bình thường)
+                const bySubjLoad = {};
+                state.teachers.forEach(t => {
+                    const key = normalizeText(t.subject) || '?';
+                    if (!bySubjLoad[key]) bySubjLoad[key] = [];
+                    bySubjLoad[key].push(teacherLoad[t.id] || 0);
+                });
+                Object.entries(bySubjLoad).forEach(([subj, arr]) => {
+                    if (arr.length < 2) return;
+                    const hi = Math.max(...arr);
+                    const lo = Math.min(...arr);
+                    if (hi - lo >= 8) {
+                        warnings.push({ type: 'balance', message: `Môn “${subj}”: tải GV lệch ${lo}–${hi} tiết (Δ=${hi - lo}). Nên san phân công trong tổ môn.` });
+                    }
+                });
+            }
+
+            // --- Phân công lỗi ---
+            state.assignments.forEach(a => {
+                const cl = state.classes.find(c => c.id === a.classId);
+                const te = state.teachers.find(t => t.id === a.teacherId);
+                if (!cl) errors.push({ type: 'assignment', message: `Phân công môn “${a.subject || '?'}” thiếu lớp hợp lệ.` });
+                if (!te) errors.push({ type: 'assignment', message: `Phân công môn “${a.subject || '?'}” thiếu giáo viên.` });
+                if (!clean(a.subject)) errors.push({ type: 'assignment', message: `Có dòng phân công chưa có tên môn.` });
+                if (Number(a.periods || 0) <= 0) warnings.push({ type: 'assignment', message: `${cl?.name || '?'} – ${a.subject || '?'}: số tiết ≤ 0.` });
+            });
+
+            // --- Môn / max cùng ngày ---
+            const classSubjectLoad = {};
+            state.assignments.forEach(a => {
+                const key = `${a.classId}|${normalizeText(a.subject)}`;
+                classSubjectLoad[key] = (classSubjectLoad[key] || 0) + Number(a.periods || 0);
+            });
+            const dayCap = state.rules.days.length * state.rules.maxSameSubjectDay;
+            Object.entries(classSubjectLoad).forEach(([key, load]) => {
+                if (load > dayCap) {
+                    const [classId, subj] = key.split('|');
+                    const cl = state.classes.find(c => c.id === classId);
+                    errors.push({ type: 'subject-day', message: `${cl?.name || 'Lớp'} – môn “${subj}”: ${load} tiết/tuần > giới hạn ${dayCap} (max ${state.rules.maxSameSubjectDay}/ngày × ${state.rules.days.length} ngày).` });
+                }
+            });
+
+            // --- Phòng BM ---
+            const weekSlotsMorning = state.rules.days.length * state.rules.morningPeriods;
+            const roomDemand = {};
+            state.assignments.forEach(a => {
+                const need = clean(a.roomNeed);
+                if (!need) return;
+                roomDemand[normalizeText(need)] = (roomDemand[normalizeText(need)] || 0) + Number(a.periods || 0);
+            });
+            Object.entries(roomDemand).forEach(([needKey, demand]) => {
+                const rooms = state.rooms.filter(r => roomMatches(r, needKey) || splitList(r.subjects).some(s => normalizeText(s) === needKey));
+                // broader match
+                const matched = state.rooms.filter(r => roomMatches(r, needKey));
+                const n = matched.length;
+                const supply = n * weekSlotsMorning; // xấp xỉ 1 buổi sáng
+                if (n === 0) warnings.push({ type: 'room', message: `Yêu cầu phòng “${needKey}”: ${demand} tiết nhưng chưa có phòng BM khớp — sẽ dùng phòng lớp.` });
+                else if (demand > supply) errors.push({ type: 'room', message: `Phòng BM “${needKey}”: nhu cầu ${demand} tiết > sức chứa ~${supply} ô (${n} phòng × ${weekSlotsMorning} ô sáng).` });
+                else if (demand > supply * 0.85) warnings.push({ type: 'room', message: `Phòng BM “${needKey}”: ${demand}/${supply} ô (~${Math.round(demand / supply * 100)}%) — sát trần, dễ nghẽn.` });
+            });
+
+            // --- Domain / buổi tránh ---
+            const lessons = buildLessonUnits();
+            const domains = buildBaseDomains(lessons);
+            let emptyDomain = 0;
+            lessons.forEach((lesson, index) => {
+                if (!domains[index]?.length) {
+                    emptyDomain++;
+                    if (emptyDomain <= 12) {
+                        errors.push({ type: 'domain', message: `${lesson.subject} – ${lesson.className} (${lesson.teacherName}): không còn ô hợp lệ (kiểm tra buổi học lớp / buổi tránh GV / phòng).` });
+                    }
+                }
+            });
+            if (emptyDomain > 12) errors.push({ type: 'domain', message: `… và ${emptyDomain - 12} tiết khác cũng không có ô hợp lệ.` });
+
+            // Precheck gộp
+            precheckSchedule(lessons, domains).forEach(issue => {
+                if (!errors.some(e => e.message === issue.message)) errors.push({ type: 'precheck', message: issue.message });
+            });
+
+            // Gợi ý quy trình (kiểu app TKB)
+            const tips = [];
+            if (errors.length) tips.push('Ưu tiên sửa hết lỗi đỏ trước khi xếp lịch.');
+            if (warnings.some(w => w.type === 'balance')) tips.push('San tải GV (đưa tiết từ GV max sang GV min cùng môn).');
+            if (warnings.some(w => w.type === 'room') || errors.some(e => e.type === 'room')) tips.push('Thêm phòng BM hoặc giảm roomNeed nếu phòng dùng chung.');
+            if (!errors.length && !warnings.length) tips.push('Dữ liệu sạch — có thể bấm Xếp lịch.');
+            else if (!errors.length) tips.push('Không có lỗi chặn cứng; vẫn nên xem cảnh báo vàng trước khi xếp.');
+
+            // Bảng tải GV top
+            const teacherRows = state.teachers.map(t => ({
+                name: t.name,
+                subject: t.subject,
+                load: teacherLoad[t.id] || 0,
+                max: Number(t.maxPeriods || 0),
+                classes: state.assignments.filter(a => a.teacherId === t.id).length,
+            })).sort((a, b) => b.load - a.load);
+
+            const classRows = state.classes.map(c => ({
+                name: c.name,
+                grade: classGrade(c.name),
+                load: classLoad[c.id] || 0,
+                capacity: slotsForClass(c).length,
+                subjects: state.assignments.filter(a => a.classId === c.id).length,
+            })).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+
+            // Tổng tiết theo môn
+            const bySubject = {};
+            state.assignments.forEach(a => {
+                const s = a.subject || '?';
+                bySubject[s] = (bySubject[s] || 0) + Number(a.periods || 0);
+            });
+
+            return {
+                errors,
+                warnings,
+                info,
+                tips,
+                teacherRows,
+                classRows,
+                bySubject,
+                summary: {
+                    classes: state.classes.length,
+                    teachers: state.teachers.length,
+                    rooms: state.rooms.length,
+                    assignments: state.assignments.length,
+                    totalPeriods,
+                    ratio: ratio.toFixed(2),
+                    lessons: lessons.length,
+                    ok: errors.length === 0,
+                },
+            };
+        }
+
+        function runDiagnostics() {
+            const report = buildDiagnosticsReport();
+            const mount = $('diagnosticsMount');
+            if (!mount) return report;
+
+            const badge = (n, ok) => `<span class="pill ${ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}">${n}</span>`;
+            const list = (items, cls) => items.length
+                ? `<div class="space-y-1.5">${items.map(i => `<div class="rounded-xl border px-3 py-2 text-sm ${cls}">${escapeHtml(i.message || i)}</div>`).join('')}</div>`
+                : `<div class="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-900">Không có.</div>`;
+
+            const subjectChips = Object.entries(report.bySubject)
+                .sort((a, b) => b[1] - a[1])
+                .map(([s, n]) => `<span class="pill bg-slate-100 text-slate-700">${escapeHtml(s)}: <b>${n}</b></span>`)
+                .join(' ');
+
+            mount.innerHTML = `
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black text-teal-800">${report.summary.classes}</div><div class="text-[11px] font-bold uppercase text-slate-500">Lớp</div></div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black text-teal-800">${report.summary.teachers}</div><div class="text-[11px] font-bold uppercase text-slate-500">GV</div></div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black text-teal-800">${report.summary.ratio}</div><div class="text-[11px] font-bold uppercase text-slate-500">GV/lớp</div></div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black text-teal-800">${report.summary.rooms}</div><div class="text-[11px] font-bold uppercase text-slate-500">Phòng BM</div></div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black text-teal-800">${report.summary.totalPeriods}</div><div class="text-[11px] font-bold uppercase text-slate-500">Tiết/tuần</div></div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black ${report.errors.length ? 'text-rose-700' : 'text-emerald-700'}">${report.errors.length}</div><div class="text-[11px] font-bold uppercase text-slate-500">Lỗi</div></div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"><div class="text-xl font-black ${report.warnings.length ? 'text-amber-700' : 'text-emerald-700'}">${report.warnings.length}</div><div class="text-[11px] font-bold uppercase text-slate-500">Cảnh báo</div></div>
+                </div>
+
+                <div class="mt-4 rounded-2xl border ${report.summary.ok ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'} px-4 py-3 text-sm font-bold ${report.summary.ok ? 'text-emerald-900' : 'text-rose-900'}">
+                    ${report.summary.ok
+                        ? '✅ Dữ liệu không có lỗi chặn cứng — có thể xếp lịch. Vẫn xem cảnh báo (nếu có) để lịch đẹp hơn.'
+                        : `⛔ Có ${report.errors.length} lỗi chặn — nên sửa trước khi xếp (tránh xếp dở / fail precheck).`}
+                </div>
+
+                <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                    <div>
+                        <h4 class="mb-2 text-sm font-black text-rose-800">Lỗi (chặn xếp) ${badge(report.errors.length, !report.errors.length)}</h4>
+                        ${list(report.errors, 'border-rose-100 bg-rose-50 text-rose-900')}
+                    </div>
+                    <div>
+                        <h4 class="mb-2 text-sm font-black text-amber-800">Cảnh báo ${badge(report.warnings.length, !report.warnings.length)}</h4>
+                        ${list(report.warnings, 'border-amber-100 bg-amber-50 text-amber-950')}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h4 class="mb-2 text-sm font-black text-slate-800">Gợi ý nhanh</h4>
+                    <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                        ${report.tips.map(t => `<li>${escapeHtml(t)}</li>`).join('') || '<li>Không có.</li>'}
+                    </ul>
+                </div>
+
+                <div class="mt-4">
+                    <h4 class="mb-2 text-sm font-black text-slate-800">Tổng tiết theo môn (toàn trường)</h4>
+                    <div class="flex flex-wrap gap-1.5">${subjectChips || '—'}</div>
+                </div>
+
+                <div class="mt-4 grid gap-4 xl:grid-cols-2">
+                    <div class="overflow-hidden rounded-2xl border border-slate-200">
+                        <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-black uppercase text-slate-500">Tải giáo viên (sắp xếp giảm dần)</div>
+                        <div class="max-h-72 overflow-auto scroll-thin">
+                            <table class="w-full text-left text-sm">
+                                <thead class="sticky top-0 bg-white text-xs uppercase text-slate-400"><tr><th class="px-3 py-2">GV</th><th class="px-3 py-2">Môn</th><th class="px-3 py-2">Tiết</th><th class="px-3 py-2">ĐM</th><th class="px-3 py-2">PC</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${report.teacherRows.map(r => {
+                                        const over = r.load > r.max;
+                                        const hot = r.load >= r.max * 0.9;
+                                        return `<tr class="${over ? 'bg-rose-50' : hot ? 'bg-amber-50' : ''}"><td class="px-3 py-1.5 font-bold">${escapeHtml(r.name)}</td><td class="px-3 py-1.5">${escapeHtml(r.subject)}</td><td class="px-3 py-1.5 font-black ${over ? 'text-rose-700' : ''}">${r.load}</td><td class="px-3 py-1.5">${r.max}</td><td class="px-3 py-1.5">${r.classes}</td></tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl border border-slate-200">
+                        <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-black uppercase text-slate-500">Tải lớp / capacity</div>
+                        <div class="max-h-72 overflow-auto scroll-thin">
+                            <table class="w-full text-left text-sm">
+                                <thead class="sticky top-0 bg-white text-xs uppercase text-slate-400"><tr><th class="px-3 py-2">Lớp</th><th class="px-3 py-2">Khối</th><th class="px-3 py-2">Tiết</th><th class="px-3 py-2">Ô</th><th class="px-3 py-2">Môn</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${report.classRows.map(r => {
+                                        const over = r.load > r.capacity;
+                                        return `<tr class="${over ? 'bg-rose-50' : ''}"><td class="px-3 py-1.5 font-bold">${escapeHtml(r.name)}</td><td class="px-3 py-1.5">${r.grade}</td><td class="px-3 py-1.5 font-black ${over ? 'text-rose-700' : ''}">${r.load}</td><td class="px-3 py-1.5">${r.capacity}</td><td class="px-3 py-1.5">${r.subjects}</td></tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-3 text-xs text-slate-500">Tham chiếu UX kiểm tra: tkb.com.vn / OLM TKB / VietSchool — phân tầng lỗi đỏ, cảnh báo vàng, bảng tải GV–lớp, gợi ý sửa trước khi xếp.</p>
+            `;
+            return report;
         }
 
         function bindEvents() {
@@ -1994,7 +2436,15 @@
             $('btnPrint').addEventListener('click', () => window.print());
             $('btnSaveDraft').addEventListener('click', saveDraft);
             $('btnSampleData').addEventListener('click', loadSampleData);
-            $('btnSampleData16')?.addEventListener('click', loadSampleData16);
+            $('btnSampleData30')?.addEventListener('click', loadSampleData30);
+            $('btnExportDemoData')?.addEventListener('click', exportCurrentDataJson);
+            const goDiagnostics = () => {
+                document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'diagnostics'));
+                document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== 'diagnostics'));
+                runDiagnostics();
+            };
+            $('btnRunDiagnostics')?.addEventListener('click', goDiagnostics);
+            $('btnRunDiagnostics2')?.addEventListener('click', runDiagnostics);
             $('teacherFile').addEventListener('change', e => {
                 const file = e.target.files?.[0];
                 if (file) importTeacherFile(file).catch(err => alert(`Không đọc được file: ${err.message}`));

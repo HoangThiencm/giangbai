@@ -1,258 +1,104 @@
 # Ghi chú trao đổi dự án giangbai
 
-Cập nhật: 27/06/2026
+Cập nhật: 09/07/2026
 
-Tài liệu tổng hợp các chủ đề đã trao đổi trong phiên chat. Dùng để đọc lại — không phải tài liệu kỹ thuật chính thức (`thongtin.md`).
-
----
-
-## Mục lục
-
-1. [DNS chặn quảng cáo](#1-dns-chặn-quảng-cáo)
-2. [LiteParse + chuyenpdf.html](#2-liteparse--chuyenpdfhtml)
-3. [Đã triển khai trên chuyenpdf.html](#3-đã-triển-khai-trên-chuyenpdfhtml)
-4. [taobaitap.html — bỏ tab Game](#4-taobaitaphtml--bỏ-tab-game)
-5. [vehinh.html — đánh giá & gợi ý bổ sung](#5-vehinhhtml--đánh-giá--gợi-ý-bổ-sung)
-6. [Việc chưa làm](#6-việc-chưa-làm)
+Chỉ nội dung phiên hôm nay.
 
 ---
 
-## 1. DNS chặn quảng cáo
-
-### Câu hỏi
-
-Có thể dùng dự án giangbai để làm DNS chặn quảng cáo không?
-
-### Kết luận
-
-| Trong repo giangbai | Song song ở mạng trường/nhà |
-|---------------------|------------------------------|
-| **Không** — không có DNS server | **Có** — Pi-hole, AdGuard, NextDNS… |
-
-giangbai là web app PHP + HTML. DNS ad block là tầng mạng — hai thứ bổ sung nhau, không gộp vào một repo.
-
-`cloudflare-worker/worker.js` chỉ phục vụ AI giải thích bài, **không** phải DNS filtering.
-
-### Gợi ý theo quy mô
-
-- **Trường:** lọc DNS ở router/Wi‑Fi; whitelist hosting, Drive, CDN, MathJax…
-- **Chỉ muốn site sạch:** không cần DNS — site tự host, không có mã quảng cáo bên thứ ba
-
----
-
-## 2. LiteParse + chuyenpdf.html
-
-### Câu hỏi
-
-Tích hợp LiteParse V2.1 vào `chuyenpdf.html` được không?
-
-### Kết luận
-
-**Có** — nhưng **bổ sung** engine mới (hybrid), không thay Mistral/Gemini.
-
-| Engine | Phù hợp |
-|--------|---------|
-| **LiteParse (local)** | PDF số — có lớp chữ, Word→PDF |
-| **Mistral OCR** | PDF scan, ảnh chụp |
-| **Gemini Vision** | Toán + LaTeX, văn bản hành chính khó |
-
-### Luồng hybrid đề xuất
-
-```text
-Upload PDF
-  → phân tích có lớp chữ hay scan
-  → gợi ý engine (user vẫn đổi tay)
-  → PDF số     → LiteParse
-  → scan/ảnh   → Mistral / Gemini
-  → toán LaTeX → Gemini
-```
-
-### Lưu ý kỹ thuật
-
-- LiteParse WASM ~4–5 MB, tải từ jsDelivr lần đầu
-- Trên browser **không** OCR scan được (chưa gắn Tesseract.js)
-- Chế độ Toán + LaTeX **không** dùng LiteParse
-
-### Trao đổi thêm
-
-- User **không cần biết** file scan hay số — app tự phát hiện + **gợi ý**, không ép tự động hoàn toàn
-- Môi trường Gemini Canvas: không cần API key Gemini; Mistral đã hardcode
-- Code LiteParse gộp **trong một file** `chuyenpdf.html` (không cần `liteparse-client.js` riêng)
-
----
-
-## 3. Đã triển khai trên chuyenpdf.html
-
-### Tính năng đã thêm
-
-- Dropdown **LiteParse (local, PDF có chữ)**
-- Hộp **gợi ý engine** sau khi upload — tiêu đề dạng `Gợi ý: Gemini Vision · gemini-2.5-flash`
-- Phân tích PDF bằng `pdf.js` (số trang, ký tự/trang, scan hay số)
-- Nút **Dùng gợi ý này**
-- Logic LiteParse nằm inline trong `chuyenpdf.html`
-
-### Sửa sau khi dùng thử
-
-| Vấn đề | Cách xử lý |
-|--------|------------|
-| Mặc định **Toán + LaTeX** → LiteParse báo lỗi dù file không có toán | Đổi mặc định → **Văn bản thường**; chặn LiteParse + LaTeX bằng hộp thoại rõ ràng |
-| Chữ ký trong PDF bị nhầm scan → ép Mistral | Chỉ coi scan khi **gần như không có lớp chữ**; chữ ký/ảnh nhúng vẫn gợi ý LiteParse |
-| Gợi ý chỉ nói "chế độ LaTeX" | Gợi ý nêu rõ **engine + phân tích file** |
-
-### Gợi ý engine (sau khi sửa)
-
-| File + chế độ | Gợi ý |
-|---------------|--------|
-| PDF số + Văn bản thường | LiteParse |
-| PDF scan thật | Mistral |
-| Có toán / LaTeX | Gemini |
-| Văn bản hành chính | Gemini (gợi ý, không tự đổi) |
-| Ảnh | Mistral |
-
----
-
-## 4. taobaitap.html — bỏ tab Game
+## 1. TKB — demo 30 lớp CT GDPT 2018 + chức năng Kiểm tra
 
 ### Yêu cầu
 
-Bỏ tab **Game giáo dục** (link `trochoi.html`).
+1. Bám **số tiết thực tế CT GDPT 2018** (ví dụ Tin học ≈ **1 tiết/tuần**, không còn 2).
+2. Demo **đầy đủ** cho **30 lớp**: đủ môn, đủ GV (≈ 30 × 1,9).
+3. **Dữ liệu demo** để user tự kiểm tra (file JSON).
+4. Trong app có **chức năng kiểm tra** nhanh (tham khảo tkb.com.vn / OLM TKB / VietSchool).
 
-### Đã làm
+### Khung tiết/tuần dùng trong demo (THCS, ÷ 35 tuần)
 
-- Xóa nút tab Game
-- Phần **Chế độ** còn: **Trắc nghiệm** | **Tự luận** (grid 2 cột)
+| Môn / hoạt động | Tiết/tuần | Ghi chú |
+|-----------------|-----------|---------|
+| Ngữ văn | 4 | 140/năm |
+| Toán | 4 | 140/năm |
+| Ngoại ngữ 1 | 3 | 105/năm |
+| Giáo dục công dân | 1 | 35/năm |
+| Lịch sử + Địa lí | 3 | 105/năm — tách theo khối |
+| KHTN (6–7) / Lý+Hóa+Sinh (8–9) | 4 | 140/năm |
+| Công nghệ | 1 | 35/năm |
+| **Tin học** | **1** | **35/năm** |
+| GDTC | 2 | 70/năm |
+| Âm nhạc + Mỹ thuật | 1+1 | Nghệ thuật 70/năm |
+| HĐTN-HN | 2 | phần HĐTN-HN |
+| Sinh hoạt | 1 | thực tế trường |
+| **Tổng** | **~28** | Gần khung 29–29,5 (chưa môn tự chọn) |
 
----
+**Tách theo khối**
 
-## 5. vehinh.html — đánh giá & gợi ý bổ sung
+- **Lớp 6–7:** Lịch sử 1 + Địa lí 2; **Khoa học tự nhiên 4** (gộp).
+- **Lớp 8–9:** Lịch sử 2 + Địa lí 1; **Vật lí 1 + Hóa 2 + Sinh 1**.
 
-### File liên quan
+### Demo 30 lớp
 
-- `vehinh.html` — giao diện
-- `app.js` — logic canvas + AI
+| Hạng mục | Giá trị |
+|----------|---------|
+| Lớp | **30** = 8(K6) + 8(K7) + 7(K8) + 7(K9) |
+| GV | **57** (= 30 × 1,9) |
+| Phòng BM | 17 |
+| Phân công | 448 dòng · **840 tiết/tuần** |
+| Tiết/lớp | 28 / capacity sáng 30 |
+| Tin học toàn trường | **30 tiết** (= 30 × 1) |
 
-### Đã có sẵn
+**File kiểm tra dữ liệu:** `data/tkb-demo-30lop-ct2018.json`  
+**Nút UI:** `Demo 30 lớp CT2018` · `Xuất dữ liệu` (JSON hiện tại) · tab **Kiểm tra**
 
-#### Vẽ tay (Fabric.js)
-
-| Công cụ | Có |
-|---------|-----|
-| Chọn / di chuyển | ✓ |
-| Điểm A, B, C… | ✓ |
-| Bút tự do (pencil) | ✓ — nét cố định 2px |
-| Đoạn thẳng, hình tròn | ✓ |
-| Chữ, LaTeX, chèn ảnh | ✓ |
-| Undo / Redo, Copy / Paste | ✓ |
-| Zoom, pan (Alt + kéo) | ✓ |
-| Lưới, hút lưới | ✓ |
-| Khóa đối tượng AI | ✓ |
-| Dark mode | ✓ |
-
-#### AI vẽ hình
-
-- Nhập mô tả → Gemini sinh **mã JavaScript Fabric.js** → vẽ lên canvas
-- Có thể kèm **ảnh tham chiếu**
-- GeoGebra iframe — **tách riêng**, không gắn canvas
-
-#### Đưa ảnh vào AI
-
-| Cách | Có |
-|------|-----|
-| Chọn file (`Tải ảnh lên`) | ✓ |
-| Dán ảnh Ctrl+V vào ô đề bài | ✓ |
-| Chèn ảnh lên canvas (toolbar) | ✓ |
-| **Chụp camera trực tiếp** | ✗ chưa có |
-
-### Có thể bổ sung thêm (vẽ tay)
-
-**Dễ — nên làm trước**
-
-- Slider **độ dày nét** bút tự do
-- **Hình chữ nhật**, **mũi tên**, **đa giác**
-- **Tẩy** (eraser)
-- **Xuất PNG** canvas
-- Tối ưu **bút cảm ứng / tablet**
-
-**Trung bình**
-
-- Đoạn song song / vuông góc từ điểm có sẵn
-- Nhãn độ trên cung góc (nút tay, AI đã có hàm `addAngleArc`)
-- Snap vào điểm / đoạn (hiện chỉ snap lưới)
-
-**Khó**
-
-- Gộp GeoGebra ↔ canvas
-- Nhận phác thảo tay → hình chuẩn (cần AI riêng)
-
-### Chụp hình → AI đọc → vẽ: ổn định không?
-
-#### Luồng kỹ thuật (gần sẵn)
+Sinh lại JSON:
 
 ```text
-Chụp / chọn ảnh
-  → activeImageFile
-  → Gemini Vision (ảnh + prompt)
-  → mã trong thẻ <javascript>...</javascript>
-  → executeAiCode() vẽ lên canvas
+node agent-tools/build-demo-30-ct2018.js
 ```
 
-Upload và dán ảnh **đã dùng cùng pipeline**. Thêm camera chỉ là UI:
+### Chức năng Kiểm tra (diagnostics)
 
-```html
-<input type="file" accept="image/*" capture="environment">
-```
+Tham chiếu app TKB chuyên dụng:
 
-#### Đánh giá ổn định
+| Nguồn | Ý tưởng mang sang |
+|-------|-------------------|
+| tkb.com.vn | Trợ lý: trùng lịch, cách tiết, tải GV, % hoàn thành |
+| OLM TKB | Quy trình nhập → kiểm → xếp; cảnh báo trước xếp |
+| VietSchool | Tham số hệ thống, rà phân công, công bố lịch |
 
-| Tình huống | Mức ổn định |
-|------------|-------------|
-| Upload / dán ảnh + bấm Vẽ Hình | Ổn nếu có API key Gemini |
-| Thêm chụp camera | Tương đương upload |
-| Ảnh rõ, hình đơn giản | Khá tốt |
-| Ảnh mờ, nhiều hình, chữ nhỏ | Kém — AI hay sai tỷ lệ |
-| Mã JS AI sinh ra | Điểm yếu — đôi khi lỗi cú pháp / tọa độ |
-| Hết quota API (429) | Có xoay key, vẫn có thể fail |
+**Trong app (`thoikhoabieu.html`):**
 
-#### Điều kiện chạy
+- Tab **Kiểm tra** + nút **Kiểm tra** cạnh **Xếp lịch**
+- Thẻ tóm tắt: Lớp / GV / tỷ lệ / phòng / tiết / **số lỗi** / **số cảnh báo**
+- **Lỗi đỏ** (chặn): vượt capacity lớp, vượt ĐM GV, max môn/ngày, phòng BM thiếu sức chứa, domain rỗng, precheck
+- **Cảnh báo vàng**: GV 0 tiết, tải ≥90% ĐM, lệch tải max−min, thiếu môn CT2018 theo lớp, phòng sát trần, lớp quá trống
+- Bảng **tải GV** + **tải lớp/capacity** + chip **tổng tiết theo môn**
+- Gợi ý sửa nhanh
 
-- Trang **bắt đăng nhập** (`authToken`)
-- AI gọi **Gemini trực tiếp** — cần `global_gemini_keys` (Canvas có thể không cần)
-- `hf-fallback-client.js` được load nhưng **`app.js` không dùng** — không fallback khi Gemini lỗi
+### Kết quả kiểm tra demo 30 lớp (lần build)
 
-### Gợi ý ưu tiên cho giáo dục
+- **Lỗi: 0 · Cảnh báo: 0** → dữ liệu sạch, sẵn sàng xếp
+- Curriculum K6/K8 = **28 tiết/lớp**
+- Tin học = **30** tiết toàn trường (= 30 × 1)
+- Cảnh báo lệch tải chỉ so **trong cùng môn** (không so Tin với Toán)
 
-1. Nút **Chụp ảnh / chọn file** gộp một chỗ, rõ ràng
-2. **Độ dày bút** + hình chữ nhật / mũi tên
-3. **Xuất PNG** sau khi vẽ
-4. Quy trình: AI vẽ phác thảo → GV **chỉnh tay** trên canvas
+### File đã đụng
 
-**Chụp → vẽ tự động:**
+| File | Việc |
+|------|------|
+| `thoikhoabieu.html` | CT2018 curriculum, Demo 30, tab Kiểm tra, xuất JSON, alias phòng BM |
+| `data/tkb-demo-30lop-ct2018.json` | Dữ liệu demo đầy đủ để rà soát |
+| `agent-tools/build-demo-30-ct2018.js` | Script sinh JSON + in diagnostics |
 
-- Dùng được: ảnh đề SGK chụp rõ, biểu đồ đơn giản
-- Không kỳ vọng: scan mờ, hình phức tạp khớp 100%
-- Ổn định hơn nếu: ảnh → AI **mô tả** → GV sửa mô tả → mới vẽ
+### Việc tiếp theo (chưa làm)
 
-### Câu hỏi mở (vehinh)
-
-Ưu tiên triển khai:
-
-- **(A)** Bổ sung vẽ tay
-- **(B)** Thêm chụp ảnh
-- **(C)** Cả hai
+- Slot cố định (Chào cờ / SH)
+- Cờ tiết đôi trên phân công
+- Web Worker khi 30+ lớp
+- Chạy thử xếp 100% + beauty trên demo 30 (nặng hơn 16 lớp)
 
 ---
 
-## 6. Việc chưa làm
-
-| Chủ đề | Trạng thái |
-|--------|------------|
-| DNS ad block Wi‑Fi trường | Chỉ trao đổi |
-| Whitelist domain Pi-hole | Chưa liệt kê |
-| `MISTRAL_API_KEY` chuyển ra backend | Chưa làm |
-| vehinh: chụp camera | Chưa làm |
-| vehinh: xuất PNG, tẩy, hình chữ nhật… | Chưa làm |
-| vehinh: Tesseract.js cho LiteParse scan | Chưa làm (chuyenpdf) |
-
----
-
-*Khi triển khai chính thức, cập nhật `thongtin.md`.*
+*Khi ổn định, bổ sung `thongtin.md`.*
