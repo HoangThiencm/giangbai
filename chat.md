@@ -121,6 +121,20 @@ Tham chiếu app TKB chuyên dụng:
 
 **Lưu ý:** Bấm **Xếp lịch** với 30 lớp vẫn có thể **30–120s** “trang không phản hồi” — đó là CPU solver, không phải crash. Đừng F5 giữa chừng. (Web Worker = bước sau.)
 
+### UI làm gọn theo tkb.com.vn / OLM TKB (đã làm)
+
+Tham chiếu playlist hướng dẫn tkb.com.vn: quy trình **khai báo → ràng buộc → kiểm → xếp → xem/in**.
+
+| Trước | Sau |
+|-------|-----|
+| Hero đen to + sidebar quy trình | Bỏ; chỉ KPI strip gọn |
+| Nhiều nút demo/lưu trên header | Header: Kiểm tra · Xếp lịch · Lưu · menu **Thêm** |
+| 6 tab ngang lẫn lộn | **4 bước**: Dữ liệu → Thiết lập → Kiểm tra → TKB |
+| Tab dữ liệu pill dày | Underline sub-tab: GV / Lớp / Phòng / Phân công |
+| Màu teal nhiều lớp card | Palette 1 brand xanh rêu, card trắng, ít bóng |
+
+File: `thoikhoabieu.html` (CSS + layout; logic xếp giữ nguyên).
+
 ### Khung tiết + không trống tiết 1 + tiết tránh GV (đã làm)
 
 **Vấn đề:** Lớp buổi sáng bị trống tiết 1 — không chấp nhận được.

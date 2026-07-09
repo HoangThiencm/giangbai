@@ -9,115 +9,136 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        body { font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
-        .soft-shadow { box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
-        .field { width: 100%; border: 1px solid #dbe3ef; border-radius: 12px; padding: .68rem .82rem; outline: none; background: #fff; }
-        .field:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, .12); }
-        .label { display: block; margin-bottom: .38rem; color: #334155; font-size: .75rem; font-weight: 800; }
-        .pill { display: inline-flex; align-items: center; gap: .38rem; border-radius: 999px; padding: .28rem .62rem; font-size: .72rem; font-weight: 800; }
-        .tab-btn.active { background: #0f766e; color: #fff; box-shadow: 0 8px 18px rgba(15, 118, 110, .18); }
+        :root {
+            --tkb-brand: #0f6b5c;
+            --tkb-brand-soft: #e6f5f2;
+            --tkb-line: #e8edf3;
+            --tkb-muted: #64748b;
+            --tkb-ink: #0f172a;
+        }
+        body { font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; color: var(--tkb-ink); background: #f4f6f9; }
+        .field { width: 100%; border: 1px solid var(--tkb-line); border-radius: 10px; padding: .62rem .75rem; outline: none; background: #fff; font-size: .9rem; }
+        .field:focus { border-color: var(--tkb-brand); box-shadow: 0 0 0 3px rgba(15, 107, 92, .12); }
+        .label { display: block; margin-bottom: .32rem; color: var(--tkb-muted); font-size: .72rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+        .pill { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .22rem .58rem; font-size: .72rem; font-weight: 700; }
+        /* Stepper chính — phong cách app TKB chuyên dụng */
+        .step-btn { position: relative; display: flex; align-items: center; gap: .55rem; padding: .7rem 1rem; border-radius: 12px; font-size: .86rem; font-weight: 700; color: var(--tkb-muted); background: transparent; border: 1px solid transparent; transition: .15s ease; }
+        .step-btn:hover { background: #fff; color: var(--tkb-ink); }
+        .step-btn.active { background: #fff; color: var(--tkb-brand); border-color: #cfe8e2; box-shadow: 0 4px 16px rgba(15, 23, 42, .06); }
+        .step-num { width: 1.55rem; height: 1.55rem; border-radius: 999px; display: grid; place-items: center; font-size: .72rem; font-weight: 800; background: #e2e8f0; color: #475569; }
+        .step-btn.active .step-num { background: var(--tkb-brand); color: #fff; }
+        /* Sub-tabs dữ liệu */
+        .tab-btn { border-bottom: 2px solid transparent; border-radius: 0; padding: .55rem .2rem; margin-right: 1.1rem; font-size: .88rem; font-weight: 700; color: var(--tkb-muted); background: transparent !important; box-shadow: none !important; }
+        .tab-btn:hover { color: var(--tkb-ink); }
+        .tab-btn.active { color: var(--tkb-brand); border-bottom-color: var(--tkb-brand); background: transparent !important; }
+        .result-tab.active { background: var(--tkb-brand) !important; color: #fff !important; border-color: var(--tkb-brand) !important; }
         .schedule-table { border-collapse: separate; border-spacing: 0; min-width: 900px; }
         .schedule-table th { position: sticky; top: 0; z-index: 1; background: #f8fafc; }
-        .schedule-table th, .schedule-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        .schedule-table tr > *:first-child { border-left: 1px solid #e2e8f0; }
-        .schedule-table thead tr:first-child > * { border-top: 1px solid #e2e8f0; }
-        .lesson-chip { border-radius: 10px; padding: .42rem .48rem; line-height: 1.25; }
+        .schedule-table th, .schedule-table td { border-right: 1px solid var(--tkb-line); border-bottom: 1px solid var(--tkb-line); vertical-align: top; }
+        .schedule-table tr > *:first-child { border-left: 1px solid var(--tkb-line); }
+        .schedule-table thead tr:first-child > * { border-top: 1px solid var(--tkb-line); }
+        .lesson-chip { border-radius: 8px; padding: .4rem .45rem; line-height: 1.25; background: var(--tkb-brand-soft); }
         .scroll-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-        .conflict-row { border-left: 4px solid #f43f5e; }
-        .compact-input { border: 1px solid #dbe3ef; border-radius: 10px; padding: .5rem .58rem; outline: none; width: 100%; background: #fff; }
-        .compact-input:focus { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15, 118, 110, .10); }
+        .conflict-row { border-left: 3px solid #e11d48; }
+        .compact-input { border: 1px solid var(--tkb-line); border-radius: 8px; padding: .42rem .5rem; outline: none; width: 100%; background: #fff; font-size: .875rem; }
+        .compact-input:focus { border-color: var(--tkb-brand); box-shadow: 0 0 0 2px rgba(15, 107, 92, .10); }
+        .card { background: #fff; border: 1px solid var(--tkb-line); border-radius: 14px; }
+        .kpi { text-align: center; padding: .7rem .5rem; border-radius: 12px; background: #f8fafc; border: 1px solid var(--tkb-line); }
+        .kpi b { display: block; font-size: 1.25rem; font-weight: 800; color: var(--tkb-brand); line-height: 1.2; }
+        .kpi span { font-size: .68rem; font-weight: 700; color: var(--tkb-muted); text-transform: uppercase; letter-spacing: .04em; }
+        .btn { display: inline-flex; align-items: center; gap: .4rem; border-radius: 10px; padding: .55rem .9rem; font-size: .86rem; font-weight: 700; border: 1px solid var(--tkb-line); background: #fff; color: var(--tkb-ink); cursor: pointer; }
+        .btn:hover { background: #f8fafc; }
+        .btn-primary { background: var(--tkb-brand); color: #fff; border-color: var(--tkb-brand); }
+        .btn-primary:hover { filter: brightness(1.05); background: var(--tkb-brand); color: #fff; }
+        .btn-ghost { border-color: transparent; background: transparent; color: var(--tkb-muted); }
+        .btn-ghost:hover { background: #f1f5f9; color: var(--tkb-ink); }
+        .tools-menu { position: relative; }
+        .tools-menu summary { list-style: none; cursor: pointer; }
+        .tools-menu summary::-webkit-details-marker { display: none; }
+        .tools-menu[open] .tools-panel { display: block; }
+        .tools-panel { display: none; position: absolute; right: 0; top: calc(100% + 6px); min-width: 220px; background: #fff; border: 1px solid var(--tkb-line); border-radius: 12px; box-shadow: 0 12px 40px rgba(15,23,42,.12); z-index: 40; padding: .4rem; }
+        .tools-panel button, .tools-panel a { display: flex; width: 100%; align-items: center; gap: .5rem; padding: .55rem .7rem; border-radius: 8px; font-size: .84rem; font-weight: 600; color: var(--tkb-ink); text-align: left; border: 0; background: transparent; cursor: pointer; text-decoration: none; }
+        .tools-panel button:hover, .tools-panel a:hover { background: #f1f5f9; }
         @media print {
-            header, .no-print, #setupPanel, #resultTabs { display: none !important; }
+            header, .no-print, #setupPanel, #resultTabs, #mainSteps, #dataSubnav { display: none !important; }
             main { max-width: none !important; padding: 0 !important; }
             .print-panel { box-shadow: none !important; border: 0 !important; }
             body { background: #fff !important; }
         }
     </style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+<body class="min-h-screen">
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur no-print">
+        <div class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-5">
             <div class="flex items-center gap-3">
-                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-teal-700 text-white">
-                    <i class="fas fa-calendar-days"></i>
+                <div class="grid h-9 w-9 place-items-center rounded-xl text-white" style="background:var(--tkb-brand)">
+                    <i class="fas fa-calendar-days text-sm"></i>
                 </div>
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-teal-700">Nhà trường</p>
-                    <h1 class="text-lg font-black tracking-tight sm:text-xl">Xếp thời khóa biểu</h1>
+                    <h1 class="text-base font-extrabold tracking-tight sm:text-lg">Xếp thời khóa biểu</h1>
+                    <p class="text-[11px] font-semibold text-slate-500">Khai báo → Kiểm tra → Xếp tự động → Xuất / in</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center gap-2 no-print">
-                <button id="btnSampleData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Nạp dữ liệu minh họa nhỏ">
-                    <i class="fas fa-wand-magic-sparkles mr-2 text-teal-700"></i>Demo nhỏ
-                </button>
-                <button id="btnSampleData30" type="button" class="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-extrabold text-teal-900 hover:bg-teal-100" title="30 lớp THCS · CT GDPT 2018 · ~57 GV">
-                    <i class="fas fa-school mr-2"></i>Demo 30 lớp CT2018
-                </button>
-                <button id="btnExportDemoData" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Xuất JSON dữ liệu demo hiện tại để kiểm tra">
-                    <i class="fas fa-download mr-2 text-teal-700"></i>Xuất dữ liệu
-                </button>
-                <button id="btnSaveDraft" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50" title="Lưu thời khóa biểu lên hosting">
-                    <i class="fas fa-cloud-arrow-up mr-2 text-teal-700"></i>Lưu hosting
-                </button>
-                <a href="index.html" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50">
-                    <i class="fas fa-home mr-2 text-teal-700"></i>Trang chủ
-                </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <button id="btnRunDiagnostics" type="button" class="btn"><i class="fas fa-stethoscope text-amber-600"></i>Kiểm tra</button>
+                <button id="btnGenerate" type="button" class="btn btn-primary"><i class="fas fa-magic"></i>Xếp lịch</button>
+                <button id="btnSaveDraft" type="button" class="btn"><i class="fas fa-cloud-arrow-up" style="color:var(--tkb-brand)"></i>Lưu</button>
+                <details class="tools-menu">
+                    <summary class="btn"><i class="fas fa-ellipsis"></i>Thêm</summary>
+                    <div class="tools-panel">
+                        <button id="btnSampleData" type="button"><i class="fas fa-wand-magic-sparkles text-teal-700"></i>Demo nhỏ</button>
+                        <button id="btnSampleData30" type="button"><i class="fas fa-school text-teal-700"></i>Demo 30 lớp CT2018</button>
+                        <button id="btnExportDemoData" type="button"><i class="fas fa-file-export text-slate-600"></i>Xuất JSON dữ liệu</button>
+                        <button id="btnExportSchedule" type="button"><i class="fas fa-file-csv text-slate-600"></i>Xuất CSV lịch</button>
+                        <button id="btnPrint" type="button"><i class="fas fa-print text-slate-600"></i>In thời khóa biểu</button>
+                        <a href="index.html"><i class="fas fa-home text-slate-600"></i>Trang chủ</a>
+                    </div>
+                </details>
             </div>
         </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <section class="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
-            <div class="overflow-hidden rounded-3xl bg-slate-950 text-white soft-shadow">
-                <div class="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end">
-                    <div>
-                        <span class="pill bg-teal-400/15 text-teal-100"><i class="fas fa-school"></i>CT 2018 · 1–2 buổi · phòng BM · kiểm tra trước xếp</span>
-                        <h2 class="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Thiết kế lịch từ dữ liệu thật, rà trùng và xuất bảng dùng ngay.</h2>
-                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Nhập Excel GV, phân công theo khung tiết CT GDPT 2018, kiểm tra tải/lớp/phòng trước khi xếp. Bộ xếp tránh trùng GV–lớp–phòng, làm đẹp tiết đôi và báo rõ phần nghẽn.</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-center sm:grid-cols-4 lg:w-[430px]">
-                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statTeachers" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">GV</div></div>
-                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statClasses" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">Lớp</div></div>
-                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statRooms" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">Phòng</div></div>
-                        <div class="rounded-2xl bg-white/10 px-3 py-3"><div id="statAssignments" class="text-2xl font-black">0</div><div class="text-[11px] text-slate-300">PC</div></div>
-                    </div>
-                </div>
-            </div>
-            <aside class="rounded-3xl border border-teal-100 bg-white p-5 soft-shadow">
-                <h3 class="text-sm font-black uppercase tracking-[.12em] text-teal-800">Quy trình</h3>
-                <div class="mt-4 space-y-3 text-sm text-slate-600">
-                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">1</span><p>Nhập Excel giáo viên hoặc nạp dữ liệu thử.</p></div>
-                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">2</span><p>Chỉnh lớp, phòng, phân công môn-lớp.</p></div>
-                    <div class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-50 text-xs font-black text-teal-800">3</span><p>Bấm xếp lịch, xem phần nghẽn rồi xuất CSV/in.</p></div>
-                </div>
-            </aside>
+    <main class="mx-auto max-w-[1200px] px-4 py-4 sm:px-5">
+        <!-- KPI strip kiểu tkb.com.vn -->
+        <section class="card no-print mb-3 grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 lg:grid-cols-6">
+            <div class="kpi"><b id="statTeachers">0</b><span>Giáo viên</span></div>
+            <div class="kpi"><b id="statClasses">0</b><span>Lớp</span></div>
+            <div class="kpi"><b id="statRooms">0</b><span>Phòng BM</span></div>
+            <div class="kpi"><b id="statAssignments">0</b><span>Phân công</span></div>
+            <div class="kpi"><b id="statPeriods">0</b><span>Tiết/tuần</span></div>
+            <div class="kpi"><b id="statProgress">—</b><span>Xếp xong</span></div>
         </section>
 
-        <div id="dataStatusBanner" class="no-print mt-4 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-950">
+        <div id="dataStatusBanner" class="no-print mb-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-600">
             Đang tải dữ liệu…
         </div>
 
-        <section id="setupPanel" class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5">
-            <div class="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                <div id="setupTabs" class="flex flex-wrap gap-2">
-                    <button class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="teachers"><i class="fas fa-chalkboard-user mr-2"></i>Giáo viên</button>
-                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="classes"><i class="fas fa-users-rectangle mr-2"></i>Lớp học</button>
-                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rooms"><i class="fas fa-door-open mr-2"></i>Phòng bộ môn</button>
-                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="assignments"><i class="fas fa-list-check mr-2"></i>Phân công</button>
-                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="rules"><i class="fas fa-sliders mr-2"></i>Thiết lập</button>
-                    <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-tab="diagnostics"><i class="fas fa-stethoscope mr-2"></i>Kiểm tra</button>
+        <!-- 4 bước quy trình -->
+        <nav id="mainSteps" class="no-print mb-3 flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-slate-100/80 p-1.5">
+            <button type="button" class="step-btn active" data-step="data"><span class="step-num">1</span> Dữ liệu</button>
+            <button type="button" class="step-btn" data-step="rules"><span class="step-num">2</span> Thiết lập</button>
+            <button type="button" class="step-btn" data-step="check"><span class="step-num">3</span> Kiểm tra</button>
+            <button type="button" class="step-btn" data-step="result"><span class="step-num">4</span> Thời khóa biểu</button>
+        </nav>
+
+        <section id="setupPanel" class="card p-4 sm:p-5" data-step-panel="data">
+            <div class="no-print mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-sm font-extrabold text-slate-900">Khai báo đầu vào</h2>
+                    <p class="mt-0.5 text-xs font-medium text-slate-500">Giống quy trình tkb.com.vn: GV → Lớp → Phòng → Phân công.</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <button id="btnRunDiagnostics" type="button" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-black text-amber-950 hover:bg-amber-100">
-                        <i class="fas fa-stethoscope mr-2"></i>Kiểm tra
-                    </button>
-                    <button id="btnGenerate" type="button" class="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800">
-                        <i class="fas fa-gears mr-2"></i>Xếp lịch
-                    </button>
+                <div id="setupTabs" class="flex flex-wrap">
+                    <button class="tab-btn active" data-tab="teachers" type="button">Giáo viên</button>
+                    <button class="tab-btn" data-tab="classes" type="button">Lớp học</button>
+                    <button class="tab-btn" data-tab="rooms" type="button">Phòng BM</button>
+                    <button class="tab-btn" data-tab="assignments" type="button">Phân công</button>
+                    <!-- Ẩn khỏi sub-nav nhưng giữ data-tab cho JS cũ nếu cần -->
+                    <button class="tab-btn !hidden" data-tab="rules" type="button">Thiết lập</button>
+                    <button class="tab-btn !hidden" data-tab="diagnostics" type="button">Kiểm tra</button>
                 </div>
             </div>
 
-            <div class="mt-5">
+            <div id="dataSubnav">
                 <section data-panel="teachers">
                     <div class="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
                         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -235,112 +256,83 @@
                     </div>
                 </section>
 
-                <section data-panel="rules" class="hidden">
-                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Ngày học</span><input id="schoolDays" class="field" value="T2,T3,T4,T5,T6,T7"></label>
-                        <label class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="label">Tối đa cùng môn/ngày/lớp</span><input id="maxSameSubjectDay" type="number" min="1" max="5" class="field" value="2"></label>
-                        <label class="rounded-2xl border border-teal-200 bg-teal-50 p-4 flex items-center gap-3 cursor-pointer">
-                            <input id="packFromSessionStart" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-teal-700" checked>
-                            <span class="text-sm font-bold text-teal-950">Bắt buộc gói từ tiết đầu buổi<br><span class="font-normal text-teal-800/80">Lớp có học buổi sáng thì không được trống tiết 1 (tương tự chiều)</span></span>
-                        </label>
-                    </div>
-                    <div class="mt-4 grid gap-4 md:grid-cols-2">
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <h4 class="text-sm font-black text-slate-800">Khung buổi sáng</h4>
-                            <div class="mt-3 grid grid-cols-2 gap-3">
-                                <label><span class="label">Từ tiết</span><input id="morningFrom" type="number" min="1" max="10" class="field" value="1"></label>
-                                <label><span class="label">Đến tiết</span><input id="morningTo" type="number" min="1" max="10" class="field" value="5"></label>
-                            </div>
-                            <p class="mt-2 text-xs text-slate-500">VD: sáng học tiết 1→5 (5 tiết).</p>
-                        </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <h4 class="text-sm font-black text-slate-800">Khung buổi chiều</h4>
-                            <div class="mt-3 grid grid-cols-2 gap-3">
-                                <label><span class="label">Từ tiết</span><input id="afternoonFrom" type="number" min="1" max="10" class="field" value="1"></label>
-                                <label><span class="label">Đến tiết</span><input id="afternoonTo" type="number" min="1" max="10" class="field" value="4"></label>
-                            </div>
-                            <p class="mt-2 text-xs text-slate-500">VD: chiều tiết 1→4 trong buổi chiều.</p>
-                        </div>
-                    </div>
-                    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <label class="block">
-                            <span class="label">Ngoại lệ — ô trống toàn trường (không xếp ai)</span>
-                            <input id="blockedSlots" class="field" placeholder="VD: T4S5, T6C4  (thứ 4 sáng tiết 5; thứ 6 chiều tiết 4)">
-                        </label>
-                        <p class="mt-2 text-xs leading-5 text-slate-500">Dùng cho tiết sinh hoạt toàn trường, họp đột xuất, hoặc ô nhà trường không dạy. Cú pháp giống “tiết tránh” của GV.</p>
-                    </div>
-                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                        <strong>Tiết / buổi tránh của giáo viên</strong> (cột “Buổi tránh” ở tab Giáo viên), ví dụ:
-                        <code class="mx-1">T2S</code> cả sáng T2 ·
-                        <code class="mx-1">T3C</code> cả chiều T3 ·
-                        <code class="mx-1">T5S1</code> T5 sáng tiết 1 ·
-                        <code class="mx-1">T6C2-3</code> T6 chiều tiết 2 đến 3 ·
-                        <code class="mx-1">T7</code> cả ngày T7.
-                        Có thể ghi nhiều, cách nhau bằng dấu phẩy.
-                    </div>
-                    <div class="mt-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-950">
-                        <strong>Xếp đẹp:</strong> gói buổi từ tiết đầu; tiết đôi liền; môn chính sớm; giảm trống GV. 2 pha: ràng buộc cứng → tinh chỉnh beauty.
-                    </div>
-                    <!-- Giữ id ẩn để tương thích rule cũ morningPeriods / afternoonPeriods -->
-                    <input type="hidden" id="morningPeriods" value="5">
-                    <input type="hidden" id="afternoonPeriods" value="4">
-                </section>
-
-                <section data-panel="diagnostics" class="hidden">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h3 class="font-black text-slate-800">Kiểm tra dữ liệu trước khi xếp</h3>
-                            <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Giống các phần mềm TKB chuyên dụng (OLM TKB, tkb.com.vn, VietSchool…): xem nhanh tải GV/lớp, phòng BM, phân công thiếu, môn CT 2018, và điểm nghẽn khả thi — trước khi bấm xếp lịch.</p>
-                        </div>
-                        <button id="btnRunDiagnostics2" type="button" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">
-                            <i class="fas fa-rotate mr-2"></i>Chạy lại kiểm tra
-                        </button>
-                    </div>
-                    <div id="diagnosticsMount" class="mt-4">
-                        <div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">Bấm “Kiểm tra” để quét dữ liệu hiện tại.</div>
-                    </div>
-                </section>
             </div>
         </section>
 
-        <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4 soft-shadow sm:p-5 print-panel">
-            <div class="no-print flex flex-wrap items-center justify-between gap-3">
+        <section id="rulesPanel" class="card hidden p-4 sm:p-5" data-step-panel="rules" data-panel="rules">
+            <div class="mb-4 border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-extrabold text-slate-900">Thiết lập khung giờ & ràng buộc</h2>
+                <p class="mt-0.5 text-xs font-medium text-slate-500">Khai báo buổi học, ngoại lệ toàn trường. Tiết tránh từng GV ở tab Giáo viên.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3.5"><span class="label">Ngày học</span><input id="schoolDays" class="field" value="T2,T3,T4,T5,T6,T7"></label>
+                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3.5"><span class="label">Tối đa cùng môn/ngày/lớp</span><input id="maxSameSubjectDay" type="number" min="1" max="5" class="field" value="2"></label>
+                <label class="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 flex items-start gap-3 cursor-pointer">
+                    <input id="packFromSessionStart" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-slate-300" checked>
+                    <span class="text-sm font-semibold text-emerald-950">Gói từ tiết đầu buổi<br><span class="font-normal text-emerald-900/70 text-xs">Không trống tiết 1 khi đã có tiết sau</span></span>
+                </label>
+            </div>
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <h4 class="text-sm font-bold text-slate-800">Buổi sáng</h4>
+                    <div class="mt-2 grid grid-cols-2 gap-3">
+                        <label><span class="label">Từ tiết</span><input id="morningFrom" type="number" min="1" max="10" class="field" value="1"></label>
+                        <label><span class="label">Đến tiết</span><input id="morningTo" type="number" min="1" max="10" class="field" value="5"></label>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <h4 class="text-sm font-bold text-slate-800">Buổi chiều</h4>
+                    <div class="mt-2 grid grid-cols-2 gap-3">
+                        <label><span class="label">Từ tiết</span><input id="afternoonFrom" type="number" min="1" max="10" class="field" value="1"></label>
+                        <label><span class="label">Đến tiết</span><input id="afternoonTo" type="number" min="1" max="10" class="field" value="4"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                <label class="block">
+                    <span class="label">Ngoại lệ — ô trống toàn trường</span>
+                    <input id="blockedSlots" class="field" placeholder="T4S5, T6C4">
+                </label>
+                <p class="mt-1.5 text-xs text-slate-500">VD: <code>T4S5</code> = T4 sáng tiết 5 không xếp. GV tránh: <code>T2S</code>, <code>T5S1</code>, <code>T6C2-3</code>.</p>
+            </div>
+            <input type="hidden" id="morningPeriods" value="5">
+            <input type="hidden" id="afternoonPeriods" value="4">
+        </section>
+
+        <section id="checkPanel" class="card mt-0 hidden p-4 sm:p-5" data-step-panel="check" data-panel="diagnostics">
+            <div class="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
-                    <h2 class="text-lg font-black">Kết quả thời khóa biểu</h2>
-                    <p id="resultSummary" class="mt-1 text-sm text-slate-500">Chưa xếp lịch. Bấm “Xếp lịch” sau khi nhập dữ liệu.</p>
+                    <h2 class="text-sm font-extrabold text-slate-900">Kiểm tra trước khi xếp</h2>
+                    <p class="mt-0.5 text-xs font-medium text-slate-500">Tải GV/lớp, phòng BM, thiếu môn, điểm nghẽn — theo tinh thần tkb.com.vn / OLM TKB.</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <select id="viewSelector" class="field !w-auto min-w-[180px] text-sm font-bold"></select>
-                    <button id="btnExportSchedule" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-file-export mr-2 text-teal-700"></i>Xuất CSV</button>
-                    <button id="btnPrint" type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"><i class="fas fa-print mr-2 text-teal-700"></i>In</button>
+                <button id="btnRunDiagnostics2" type="button" class="btn btn-primary"><i class="fas fa-rotate"></i>Chạy kiểm tra</button>
+            </div>
+            <div id="diagnosticsMount">
+                <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">Bấm “Chạy kiểm tra” hoặc bước 3 trên thanh quy trình.</div>
+            </div>
+        </section>
+
+        <section id="resultPanel" class="card mt-0 hidden p-4 sm:p-5 print-panel" data-step-panel="result">
+            <div class="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-sm font-extrabold text-slate-900">Thời khóa biểu</h2>
+                    <p id="resultSummary" class="mt-0.5 text-xs font-medium text-slate-500">Chưa xếp. Hoàn tất dữ liệu → Kiểm tra → bấm “Xếp lịch”.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="viewSelector" class="field !w-auto min-w-[160px] text-sm font-semibold"></select>
                 </div>
             </div>
-            <div id="qualityBoard" class="no-print mt-4 hidden grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
-                    <div id="qPlaced" class="text-xl font-black text-teal-800">0/0</div>
-                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tiết đã xếp</div>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
-                    <div id="qPercent" class="text-xl font-black text-teal-800">0%</div>
-                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Hoàn thành</div>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
-                    <div id="qBeauty" class="text-xl font-black text-teal-800">—</div>
-                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Điểm đẹp</div>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
-                    <div id="qDoubles" class="text-xl font-black text-teal-800">—</div>
-                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tiết đôi tốt</div>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
-                    <div id="qGaps" class="text-xl font-black text-teal-800">—</div>
-                    <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Trống lớp / GV</div>
-                </div>
+            <div id="qualityBoard" class="no-print mt-3 hidden grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                <div class="kpi"><b id="qPlaced">0/0</b><span>Tiết đã xếp</span></div>
+                <div class="kpi"><b id="qPercent">0%</b><span>Hoàn thành</span></div>
+                <div class="kpi"><b id="qBeauty">—</b><span>Điểm đẹp</span></div>
+                <div class="kpi"><b id="qDoubles">—</b><span>Tiết đôi</span></div>
+                <div class="kpi"><b id="qGaps">—</b><span>Trống lớp/GV</span></div>
             </div>
-            <div id="resultTabs" class="no-print mt-4 flex flex-wrap gap-2">
-                <button class="tab-btn active rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="class">Theo lớp</button>
-                <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="teacher">Theo giáo viên</button>
-                <button class="tab-btn rounded-xl px-4 py-2 text-sm font-extrabold text-slate-700" data-result="issues">Chưa xếp / cảnh báo</button>
+            <div id="resultTabs" class="no-print mt-3 flex flex-wrap gap-2">
+                <button class="result-tab active rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700" data-result="class" type="button">Theo lớp</button>
+                <button class="result-tab rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700" data-result="teacher" type="button">Theo GV</button>
+                <button class="result-tab rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700" data-result="issues" type="button">Cảnh báo</button>
             </div>
             <div id="scheduleMount" class="mt-4 overflow-auto scroll-thin"></div>
         </section>
@@ -474,6 +466,16 @@
             if ($('statRooms')) $('statRooms').textContent = state.rooms.length;
             if ($('statAssignments')) $('statAssignments').textContent = state.assignments.length;
             const totalPeriods = state.assignments.reduce((s, a) => s + Number(a.periods || 0), 0);
+            if ($('statPeriods')) $('statPeriods').textContent = totalPeriods;
+            if ($('statProgress')) {
+                if (state.result?.solver?.total) {
+                    const placed = Object.values(state.result.byClass || {}).reduce((s, m) => s + Object.keys(m || {}).length, 0);
+                    const pct = Math.round(placed * 1000 / state.result.solver.total) / 10;
+                    $('statProgress').textContent = `${pct}%`;
+                } else {
+                    $('statProgress').textContent = '—';
+                }
+            }
             const banner = $('dataStatusBanner');
             if (banner) {
                 if (state.teachers.length || state.classes.length) {
@@ -482,8 +484,37 @@
                         + (state.result ? ` · TKB: <strong>${state.result.status === 'complete' ? 'đã xếp' : state.result.status}</strong>` : ' · TKB: <em>chưa xếp — bấm “Xếp lịch”</em>');
                 } else {
                     banner.classList.remove('hidden');
-                    banner.innerHTML = 'Chưa có dữ liệu. Bấm <strong>Demo 30 lớp CT2018</strong> trên cùng bên phải.';
+                    banner.innerHTML = 'Chưa có dữ liệu. Mở menu <strong>Thêm</strong> → Demo nhỏ / Demo 30 lớp CT2018.';
                 }
+            }
+        }
+
+        function goStep(step) {
+            document.querySelectorAll('#mainSteps [data-step]').forEach(b => b.classList.toggle('active', b.dataset.step === step));
+            document.querySelectorAll('[data-step-panel]').forEach(p => {
+                p.classList.toggle('hidden', p.dataset.stepPanel !== step);
+            });
+            if (step === 'data') {
+                const tab = ['teachers', 'classes', 'rooms', 'assignments'].includes(state.ui.activeTab)
+                    ? state.ui.activeTab
+                    : 'teachers';
+                state.ui.activeTab = tab;
+                document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+                document.querySelectorAll('#setupPanel [data-panel]').forEach(panel => {
+                    panel.classList.toggle('hidden', panel.dataset.panel !== tab);
+                });
+                if (tab === 'teachers') renderTeachers();
+                else if (tab === 'classes') renderClasses();
+                else if (tab === 'rooms') renderRooms();
+                else if (tab === 'assignments') renderAssignments();
+            } else if (step === 'check') {
+                state.ui.activeTab = 'diagnostics';
+                try { runDiagnostics(); } catch (e) { console.warn(e); }
+            } else if (step === 'rules') {
+                state.ui.activeTab = 'rules';
+                syncRuleInputs();
+            } else if (step === 'result') {
+                renderSchedule();
             }
         }
 
@@ -1876,10 +1907,11 @@
                         solver: { nodes: 0, deepest: 0, total: lessons.length },
                     };
                     state.activeResult = 'issues';
-                    document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+                    document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === 'issues'));
+                    goStep('result');
                     renderResultControls();
                     renderSchedule();
-                    showDataNotice(`Precheck: ${precheckIssues.length} lỗi — xem tab “Chưa xếp / cảnh báo”.`, 'err');
+                    showDataNotice(`Precheck: ${precheckIssues.length} lỗi — xem “Cảnh báo”.`, 'err');
                     return;
                 }
 
@@ -1941,21 +1973,18 @@
                     beauty: solved.beauty,
                 };
                 state.activeResult = solved.ok ? 'class' : 'issues';
-                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
-                // Mặc định xem 1 lớp — tránh render 30 bảng cùng lúc
-                if ($('viewSelector') && state.classes[0]) {
-                    // renderResultControls sẽ set options; chọn lớp đầu
-                }
+                document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.result === state.activeResult));
                 renderResultControls();
                 if ($('viewSelector') && state.classes[0] && state.activeResult === 'class') {
                     $('viewSelector').value = state.classes[0].id;
                 }
+                goStep('result');
                 renderSchedule();
                 updateStats();
                 const placed = Object.values(byClass).reduce((s, m) => s + Object.keys(m).length, 0);
                 showDataNotice(
                     solved.ok
-                        ? `✅ Đã xếp ${placed}/${lessons.length} tiết. Chọn lớp trên dropdown để xem (không load hết 30 bảng một lúc).`
+                        ? `✅ Đã xếp ${placed}/${lessons.length} tiết. Chọn lớp trên dropdown để xem.`
                         : `Đã xếp ${placed}/${lessons.length} tiết — xem cảnh báo.`,
                     solved.ok ? 'ok' : 'warn'
                 );
@@ -2201,8 +2230,11 @@
 
         function activateSetupTab(tabName) {
             state.ui.activeTab = tabName;
+            if (tabName === 'rules') { goStep('rules'); return; }
+            if (tabName === 'diagnostics') { goStep('check'); return; }
+            goStep('data');
             document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
-            document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== tabName));
+            document.querySelectorAll('#setupPanel [data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== tabName));
         }
 
         function applyProject(project, result = null, meta = null) {
@@ -2847,24 +2879,27 @@
         }
 
         function bindEvents() {
+            $('mainSteps')?.addEventListener('click', e => {
+                const btn = e.target.closest('[data-step]');
+                if (!btn) return;
+                goStep(btn.dataset.step);
+            });
             $('setupTabs').addEventListener('click', e => {
                 const btn = e.target.closest('[data-tab]');
                 if (!btn) return;
                 state.ui.activeTab = btn.dataset.tab;
                 document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-                document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== btn.dataset.tab));
-                // Render lười: chỉ khi mở tab
+                document.querySelectorAll('#setupPanel [data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== btn.dataset.tab));
                 if (btn.dataset.tab === 'teachers') renderTeachers();
                 else if (btn.dataset.tab === 'classes') renderClasses();
                 else if (btn.dataset.tab === 'rooms') renderRooms();
                 else if (btn.dataset.tab === 'assignments') renderAssignments();
-                else if (btn.dataset.tab === 'diagnostics') runDiagnostics();
             });
             $('resultTabs').addEventListener('click', e => {
                 const btn = e.target.closest('[data-result]');
                 if (!btn) return;
                 state.activeResult = btn.dataset.result;
-                document.querySelectorAll('#resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                document.querySelectorAll('#resultTabs .result-tab, #resultTabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
                 renderResultControls();
                 renderSchedule();
             });
@@ -2903,11 +2938,7 @@
                 }, 30);
             });
             $('btnExportDemoData')?.addEventListener('click', exportCurrentDataJson);
-            const goDiagnostics = () => {
-                document.querySelectorAll('#setupTabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'diagnostics'));
-                document.querySelectorAll('[data-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.panel !== 'diagnostics'));
-                runDiagnostics();
-            };
+            const goDiagnostics = () => { goStep('check'); };
             $('btnRunDiagnostics')?.addEventListener('click', goDiagnostics);
             $('btnRunDiagnostics2')?.addEventListener('click', runDiagnostics);
             $('teacherFile').addEventListener('change', e => {
@@ -2950,19 +2981,18 @@
 
             syncRuleInputs();
             state.ui.activeTab = 'teachers';
+            goStep('data');
             renderActiveOrAllLight();
             renderResultControls();
-            renderSchedule();
             updateStats();
 
             if (projectHasUsableData(state)) {
                 showDataNotice(
-                    `Đang hiển thị: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công. Bấm “Demo 30 lớp CT2018” khi cần bộ lớn (có phân trang). “Xếp lịch” với 30 lớp có thể mất 30–120s.`,
+                    `Đang hiển thị: ${state.teachers.length} GV · ${state.classes.length} lớp · ${state.assignments.length} phân công. Quy trình: Dữ liệu → Thiết lập → Kiểm tra → Xếp lịch.`,
                     'ok'
                 );
             } else {
-                showDataNotice('Chưa có dữ liệu. Bấm “Demo nhỏ” hoặc “Demo 30 lớp CT2018”.', 'warn');
-                activateSetupTab('teachers');
+                showDataNotice('Chưa có dữ liệu. Menu Thêm → Demo nhỏ / Demo 30 lớp CT2018.', 'warn');
             }
         }
 
