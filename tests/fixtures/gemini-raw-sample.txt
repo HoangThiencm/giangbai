@@ -21,12 +21,15 @@ BÀI TẬP NỘP GIÁO VIÊN
 
 BÀI TẬP TỰ LUẬN NGẮN
 Viết tập B gồm số chẵn nhỏ hơn 6 | B={0,2,4} | Bắt đầu từ 0
+Cho A={1,2,3}. Số phần tử của A | 3 | Đếm phần tử
 
 KÉO THẢ VÀO Ô TRỐNG
 Điền ___ vào chỗ trống: 2 + 3 = ___ | 4 » 5 » 6 | 5 | Tính tổng
+Ký hiệu ___ nghĩa là thuộc | ∈ » ∉ » ⊂ | ∈ | Nhớ ký hiệu
 
 SẮP XẾP THỨ TỰ
 Sắp xếp từ bé đến lớn | 3 » 1 » 2 | 1 » 2 » 3 | So sánh
+Sắp xếp các số chẵn tăng dần | 8 » 2 » 6 » 4 | 2 » 4 » 6 » 8 | Chẵn tăng dần
 
 NỐI Ô
 Nối phép tính với kết quả | 2+1 » 3+0 | 3 » 3 | 0-0,1-1 | Ghép cặp
@@ -38,6 +41,9 @@ liet_ke | Liệt kê phần tử | 80
 TRẮC NGHIỆM
 khai_niem | Câu nào đúng về tập hợp? | Nhóm đối tượng xác định | Một phép cộng | Số tự nhiên | Hình vẽ | A
 liet_ke | $4 \in \{2,4,6\}$? | Đúng | Sai | Không xác định | Cả A và B | A
+khai_niem | Tập hợp rỗng có bao nhiêu phần tử? | 0 | 1 | 2 | Vô số | A
+liet_ke | Số phần tử của {1,2,3,4} | 3 | 4 | 5 | 2 | B
+khai_niem | Ký hiệu thuộc là | ∈ | ∉ | ⊂ | ∪ | A
 
 NHIỆM VỤ HỌC SINH
 Đọc lý thuyết

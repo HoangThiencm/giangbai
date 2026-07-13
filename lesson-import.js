@@ -6,8 +6,15 @@
     'use strict';
 
     const SCHEMA_VERSION = 'lesson-import-v1';
-    const PROMPT_VERSION = '20260626-tabs-v2';
+    const PROMPT_VERSION = '20260713-format-lock-v1';
     const VALID_SUBJECTS = ['Toán 4', 'Toán 5', 'Toán 6', 'Toán 7', 'Toán 8', 'Toán 9'];
+    const MIN_ESSAY = 2;
+    const MIN_FILL = 2;
+    const MIN_DRAG = 2;
+    const MIN_QUESTIONS = 5;
+    const MIN_SKILLS = 2;
+    const MIN_SORT_ITEMS = 2;
+    const MIN_MATCH_PAIRS = 2;
     const SUBJECT_CODES = {
         'Toán 4': 'math4', 'Toán 5': 'math5', 'Toán 6': 'math6',
         'Toán 7': 'math7', 'Toán 8': 'math8', 'Toán 9': 'math9'
@@ -268,38 +275,170 @@
         return parts;
     }
 
+    function isSeparatorOnlyText(value) {
+        const t = String(value || '').trim();
+        if (!t) return true;
+        if (/^[-*=_~.]{2,}$/.test(t)) return true;
+        if (/^:?-{2,}$/.test(t)) return true;
+        return false;
+    }
+
+    /** Dòng rác Gemini hay chèn: ---, bảng MD, header Cột A|Cột B, :---| :--- */
+    function isJunkInteractiveLine(line) {
+        const raw = String(line || '').trim();
+        if (!raw) return true;
+        if (isSeparatorOnlyText(raw)) return true;
+        const unwrapped = raw.replace(/^\|/, '').replace(/\|$/, '').trim();
+        if (/^:?-{2,}(\s*\|\s*:?-{2,})+$/.test(unwrapped)) return true;
+        if (/^[-*=_]{3,}$/.test(raw)) return true;
+
+        const parts = splitQuestionParts(raw);
+        if (!parts.length) return true;
+        if (parts.every(p => isSeparatorOnlyText(p) || /^:?-{2,}$/.test(String(p).trim()))) return true;
+
+        const p0 = String(parts[0] || '').trim();
+        const p1 = String(parts[1] || '').trim();
+        if (/^cột(\s*[a-z0-9]+)?$/i.test(p0) && parts.length <= 3) return true;
+        if (/^(quy\s*tắc|ví\s*dụ|biểu\s*thức|kết\s*quả|trái|phải)$/i.test(p0)
+            && /^(quy\s*tắc|ví\s*dụ|biểu\s*thức|kết\s*quả|trái|phải)$/i.test(p1)
+            && parts.length <= 3) {
+            return true;
+        }
+        return false;
+    }
+
+    function isWeakDragExercise(item) {
+        if (!item || typeof item !== 'object') return true;
+        const prompt = String(item.prompt || '').trim();
+        if (!prompt || isSeparatorOnlyText(prompt) || isJunkInteractiveLine(prompt)) return true;
+        if (item.mode === 'match') {
+            const left = item.left || [];
+            const right = item.right || [];
+            const pairs = item.pairs || [];
+            if (left.length < MIN_MATCH_PAIRS || right.length < MIN_MATCH_PAIRS) return true;
+            if (pairs.length < MIN_MATCH_PAIRS) return true;
+            return false;
+        }
+        const items = item.items || [];
+        const answer = item.answer || [];
+        if (items.length < MIN_SORT_ITEMS || answer.length < MIN_SORT_ITEMS) return true;
+        if (items.every(x => isSeparatorOnlyText(x))) return true;
+        return false;
+    }
+
+    function getLessonOutputSkeleton() {
+        return `MỤC TIÊU
+Sau bài học này, học sinh sẽ...
+
+LÝ THUYẾT
+(nội dung markdown + LaTeX; chèn ![mô tả](HINH_01) nếu cần)
+
+VÍ DỤ
+**DẠNG 1: ...**
+**PHƯƠNG PHÁP GIẢI:** ...
+**Bài 1:** ...
+**Lời giải:** ...
+
+BÀI TẬP NỘP GIÁO VIÊN
+**DẠNG 1: ...**
+**Bài 1:** (chỉ đề, không lời giải)
+
+BÀI TẬP TỰ LUẬN NGẮN
+Đề đầy đủ | 42 | Gợi ý ngắn
+Đề đầy đủ 2 | 15 | Gợi ý ngắn
+
+KÉO THẢ VÀO Ô TRỐNG
+Câu có ___ | mảnh1 » mảnh2 » nhiễu | đáp_án | gợi ý
+Câu có ___ khác | a » b » c | b | gợi ý
+
+SẮP XẾP THỨ TỰ
+Sắp xếp từ bé đến lớn | 9 » 3 » 7 » 1 | 1 » 3 » 7 » 9 | So sánh
+Sắp xếp thứ tự phép tính | Cộng » Nhân » Lũy thừa | Lũy thừa » Nhân » Cộng | Nhớ quy tắc
+
+NỐI Ô
+Nối biểu thức với kết quả | $2+1$ » $3\\cdot2$ | 3 » 6 | 0-0,1-1 | Ghép cặp
+
+KỸ NĂNG CẦN ĐẠT
+ky_nang_1 | Tên kỹ năng 1 | 80
+ky_nang_2 | Tên kỹ năng 2 | 80
+
+TRẮC NGHIỆM
+ky_nang_1 | Câu hỏi? | A | B | C | D | B
+ky_nang_2 | Câu hỏi 2? | A | B | C | D | A
+ky_nang_1 | Câu hỏi 3? | A | B | C | D | C
+ky_nang_2 | Câu hỏi 4? | A | B | C | D | D
+ky_nang_1 | Câu hỏi 5? | A | B | C | D | B
+
+NHIỆM VỤ HỌC SINH
+Đọc lý thuyết
+Làm bài tập tương tác
+Nộp bài tập giáo viên
+
+DANH SÁCH HÌNH ẢNH CẦN TẠO
+HINH_01: theory | Mô tả ngắn | diagram | Prompt tạo ảnh`;
+    }
+
     function getInteractiveFormatGuide() {
-        return `**QUY TẮC ĐỊNH DẠNG (parser lesson-import-v1 — copy JSON là chạy, không sửa tay):**
-- KHÔNG dùng \`---\`, \`===\`, \`***\` để ngăn cách mục, dạng hoặc phần — chỉ dùng heading in đậm hoặc 2 dòng trống.
-- Mỗi câu bài tập = **đúng 1 dòng**, các cột phân tách bằng | (pipe).
-- KHÔNG dùng markdown trong các mục pipe: không **Câu 1:**, không **Đáp án:**, không bullet -, không heading ###.
-- KHÔNG tách đề và đáp án thành 2 dòng — ghép thành 1 dòng pipe.
-- KHÔNG ghi nhãn cột như "Đề:", "Trái »", "Phải »", "Nối »", "gợi ý:" — chỉ nội dung thuần.
-- Mảnh trong cùng cột PHẢI nối bằng » (không dùng dấu phẩy , giữa các mảnh).
+        return `**HỢP ĐỒNG FORMAT (parser lesson-import-v1 — máy đọc tự động, sai 1 cột = FAIL, không xuất JSON):**
 
-**BÀI TẬP TỰ LUẬN NGẮN** — 2–5 dòng, đúng 3 cột:
+Bạn KHÔNG được tự nghĩ format. Chỉ được xuất đúng skeleton + quy tắc dưới đây.
+
+**CẤM TUYỆT ĐỐI (hay gây hỏng parse):**
+1. CẤM bảng Markdown: không | Cột A | Cột B |, không | :--- | :--- |, không hàng | biểu thức | kết quả |.
+2. CẤM \`---\` / \`===\` / \`***\` / dòng chỉ có dấu gạch để ngăn mục/dạng/bài.
+3. CẤM markdown trong dòng pipe: không **Câu 1:**, **Đáp án:**, bullet -, ### heading.
+4. CẤM tách đề / đáp án 2 dòng — mỗi câu = **đúng 1 dòng** pipe.
+5. CẤM nhãn cột "Đề:", "Trái »", "Phải »", "Nối »", "gợi ý:" — chỉ nội dung thuần.
+6. CẤM dùng dấu phẩy giữa các mảnh — mảnh trong cùng cột nối bằng » .
+7. CẤM gộp NỐI Ô và SẮP XẾP thành một bảng — phải 2 heading riêng, mỗi câu 1 dòng pipe.
+
+**SỐ LƯỢNG BẮT BUỘC (thiếu = lỗi đỏ):**
+- BÀI TẬP TỰ LUẬN NGẮN: ${MIN_ESSAY}–5 dòng (3 cột)
+- KÉO THẢ VÀO Ô TRỐNG: đúng ${MIN_FILL} dòng (4 cột)
+- SẮP XẾP THỨ TỰ: đúng 2 dòng (4 cột, ≥${MIN_SORT_ITEMS} mảnh)
+- NỐI Ô: 1–2 dòng (5 cột, ≥${MIN_MATCH_PAIRS} cặp, nối 1-1)
+- KỸ NĂNG CẦN ĐẠT: ≥${MIN_SKILLS} dòng (3 cột), đặt TRƯỚC trắc nghiệm
+- TRẮC NGHIỆM: ${MIN_QUESTIONS}–10 dòng (7 cột, skill_id cột 1)
+- NHIỆM VỤ: 3–5 dòng thường (không pipe, không ---)
+
+**BÀI TẬP TỰ LUẬN NGẮN** — đúng 3 cột:
 Viết số gồm 4 chục nghìn, 5 nghìn, 6 trăm và 2 đơn vị | 45602 | Đọc từng hàng
-SAI: - **Câu 1:** Viết số... (markdown, thiếu đáp án)
+SAI: - **Câu 1:** Viết số...
 SAI: **Câu 1:** ... rồi dòng riêng **Đáp án:** 45602
+SAI: đáp án dính "42 ---"
 
-**KÉO THẢ VÀO Ô TRỐNG** — đúng 2 dòng, 4 cột:
+**KÉO THẢ VÀO Ô TRỐNG** — đúng 4 cột:
 Câu có ___ | mảnh1 » mảnh2 » mảnh_nhiễu | đáp_án1 » đáp_án2 | gợi ý ngắn
 
-**SẮP XẾP THỨ TỰ** — đúng 2 dòng, 4 cột (cột 2 và 3 cùng bộ mảnh, chỉ khác thứ tự):
+**SẮP XẾP THỨ TỰ** — đúng 4 cột (cột 2 và 3 cùng bộ mảnh, chỉ khác thứ tự; ≥${MIN_SORT_ITEMS} mảnh):
 Sắp xếp từ bé đến lớn | 9 800 » 12 050 » 12 500 » 12 505 | 9 800 » 12 050 » 12 500 » 12 505 | So sánh hàng nghìn trước
+SAI: mỗi dòng chỉ 1 mảnh kiểu "$2^2\\cdot3+1$ | 13" (đó là bảng, không phải sắp xếp)
 
-**NỐI Ô** — 1–2 dòng, 5 cột (cột 4 chỉ ghi chỉ số nối, không chữ "Nối"):
+**NỐI Ô** — đúng 5 cột (cột 4 chỉ số nối 0-0,1-1 — không chữ "Nối"):
 Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Đọc kỹ hàng nghìn
-- BẮT BUỘC: số mảnh cột trái = số mảnh cột phải = số cặp trong cột 4 (nối 1-1). CẤM dùng nối ô cho bài phân loại nhiều→một (vd: 4 số nối với chỉ 2 nhãn "Số chẵn"/"Số lẻ" — phải dùng trắc nghiệm hoặc giảm còn 2 số mỗi bên).
+- BẮT BUỘC: số mảnh trái = phải = số cặp. CẤM phân loại nhiều→một.
+SAI (bảng MD):
+| Cột A | Cột B |
+| :--- | :--- |
+| $2^2\\cdot3+1$ | 13 |
 
-**KỸ NĂNG CẦN ĐẠT** (heading riêng, trước TRẮC NGHIỆM) — mỗi dòng 3 cột:
+**KỸ NĂNG CẦN ĐẠT** — 3 cột, id không dấu, không bullet:
 doc_so | Đọc và viết số trong phạm vi 100 000 | 80
+SAI: - Ghi nhớ... | SAI: id rỗng | SAI: dòng chỉ "---"
 
-**TRẮC NGHIỆM** — 5–10 dòng, đúng 7 cột (cột 1 = skill_id có trong KỸ NĂNG; phân bổ đều, không gán cùng 1 skill cho >80% câu):
+**TRẮC NGHIỆM** — đúng 7 cột (skill_id | câu | A | B | C | D | đáp án A/B/C/D):
 doc_so | Số nào lớn nhất? | 45 006 | 45 602 | 45 062 | 46 052 | B
+Phân bổ skill_id đều; không gán cùng 1 skill cho >80% câu. Thiếu skill_id hoặc thiếu TN = FAIL.
 
-**DANH SÁCH HÌNH ẢNH CẦN TẠO** — mọi HINH_xx dùng trong bài PHẢI khai báo ở cuối:
-HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh`;
+**DANH SÁCH HÌNH ẢNH CẦN TẠO** — mỗi HINH_xx đã dùng:
+HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
+
+**SKELETON HEADING (giữ đúng tên, đúng thứ tự — Bước 2 bắt đầu từ VÍ DỤ):**
+${getLessonOutputSkeleton()}`;
+    }
+
+    function getLessonFormatContract() {
+        return getInteractiveFormatGuide();
     }
 
     function canonicalizeDragExerciseItem(item) {
@@ -483,18 +622,21 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
     function parseSkills(text) {
         return mergeSkillInputLines(text).map((line, index) => {
+            if (isJunkInteractiveLine(line) || isSeparatorOnlyText(line)) return null;
             const parts = line.split('|').map(part => part.trim());
             if (parts.length === 1 && /^\d{1,3}$/.test(parts[0])) return null;
-            const idRaw = normalizeSkillField(parts[0], 'id');
-            const nameRaw = normalizeSkillField(parts[1], 'name');
+            const idRaw = normalizeSkillField(parts[0], 'id').replace(/^[-*•]\s*/, '').trim();
+            const nameRaw = normalizeSkillField(parts[1], 'name').replace(/^[-*•]\s*/, '').trim();
             const targetRaw = normalizeSkillField(parts[2], 'target');
+            if (isSeparatorOnlyText(idRaw) && isSeparatorOnlyText(nameRaw)) return null;
+            if (isSeparatorOnlyText(nameRaw) && !idRaw) return null;
             const id = slugify(idRaw || nameRaw || `skill-${index + 1}`);
             const name = nameRaw || idRaw || `Kỹ năng ${index + 1}`;
+            if (!id || isSeparatorOnlyText(name)) return null;
             const targetNum = Number(targetRaw);
             const target = Number.isFinite(targetNum) && targetNum > 0
                 ? Math.min(100, Math.max(1, Math.round(targetNum)))
                 : 80;
-            if (!id && !name) return null;
             return { id, name, target };
         }).filter(Boolean);
     }
@@ -804,17 +946,19 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
     }
 
     function parseFillExercises(text) {
-        return parseLines(text).map((line, index) => {
-            const normalized = normalizeFillParts(splitQuestionParts(line));
-            return {
-                id: `fill_${index + 1}`,
-                prompt: normalized.prompt,
-                items: normalized.pool,
-                pool: normalized.pool,
-                answer: normalized.answers.length <= 1 ? (normalized.answers[0] || '') : normalized.answers,
-                hint: normalized.hint
-            };
-        }).filter(item => item.prompt && (item.pool.length || item.answer));
+        return parseLines(text)
+            .filter(line => !isJunkInteractiveLine(line))
+            .map((line, index) => {
+                const normalized = normalizeFillParts(splitQuestionParts(line));
+                return {
+                    id: `fill_${index + 1}`,
+                    prompt: normalized.prompt,
+                    items: normalized.pool,
+                    pool: normalized.pool,
+                    answer: normalized.answers.length <= 1 ? (normalized.answers[0] || '') : normalized.answers,
+                    hint: normalized.hint
+                };
+            }).filter(item => item.prompt && (item.pool.length || item.answer) && !isSeparatorOnlyText(item.prompt));
     }
 
     function parseMatchPairs(spec) {
@@ -910,8 +1054,10 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
     function parseDragExercises(text, options = {}) {
         return parseLines(text)
+            .filter(line => !isJunkInteractiveLine(line))
             .map((line, index) => parseSingleDragLine(line, index, options))
             .filter(item => {
+                if (isWeakDragExercise(item)) return false;
                 if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
                 return item.prompt && item.items?.length && item.answer?.length;
             });
@@ -919,12 +1065,14 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
 
     function parseEssayExercises(text) {
         const preprocessed = preprocessEssaySectionText(text);
-        return parseLines(preprocessed).map((line, index) => {
+        return parseLines(preprocessed)
+            .filter(line => !isJunkInteractiveLine(line))
+            .map((line, index) => {
             const parts = splitQuestionParts(line);
             return canonicalizeEssayExercise({
                 id: `essay_${index + 1}`,
                 prompt: parts[0] || '',
-                answer: parts[1] || '',
+                answer: String(parts[1] || '').replace(/\s*-{2,}\s*$/g, '').trim(),
                 hint: parts[2] || ''
             });
         }).filter(item => item.prompt);
@@ -1386,11 +1534,51 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
             normalized.is_published = false;
         }
 
+        normalized.essay_exercises = ensureArray(normalized.essay_exercises)
+            .map(item => {
+                const copy = canonicalizeEssayExercise(item);
+                copy.answer = String(copy.answer || '').replace(/\s*-{2,}\s*$/g, '').trim();
+                return copy;
+            })
+            .filter(item => item.prompt && !isSeparatorOnlyText(item.prompt));
+
+        normalized.fill_exercises = ensureArray(normalized.fill_exercises)
+            .filter(item => item && item.prompt && !isSeparatorOnlyText(item.prompt) && !isJunkInteractiveLine(item.prompt));
+
         normalized.drag_exercises = ensureArray(normalized.drag_exercises)
             .map(canonicalizeDragExerciseItem)
             .filter(item => {
+                if (isWeakDragExercise(item)) return false;
                 if (item.mode === 'match') return item.prompt && item.left?.length && item.right?.length && item.pairs?.length;
                 return item.prompt && item.items?.length && item.answer?.length;
+            });
+
+        normalized.skills = ensureArray(normalized.skills)
+            .map(s => ({
+                id: slugify(String(s.id || s.name || '').replace(/^[-*•]\s*/, '')),
+                name: String(s.name || s.id || '').replace(/^[-*•]\s*/, '').trim(),
+                target: Number(s.target) > 0 ? Math.min(100, Math.round(Number(s.target))) : 80
+            }))
+            .filter(s => s.id && s.name && !isSeparatorOnlyText(s.name));
+
+        normalized.tasks = ensureArray(normalized.tasks)
+            .map(t => String(t || '').trim())
+            .filter(t => t && !isSeparatorOnlyText(t) && !/^[-*=_]{2,}$/.test(t));
+
+        normalized.self_practice = ensureArray(normalized.self_practice)
+            .filter(item => {
+                const title = String(item?.title || '').trim();
+                const body = String(item?.body || '').trim();
+                if (isSeparatorOnlyText(title) && !body) return false;
+                return !!(title || body);
+            });
+
+        normalized.examples = ensureArray(normalized.examples)
+            .filter(item => {
+                const title = String(item?.title || '').trim();
+                const body = String(item?.body || '').trim();
+                if (isSeparatorOnlyText(title) && !body) return false;
+                return !!(title || body);
             });
 
         return normalized;
@@ -1536,6 +1724,35 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         if (/Môn ".+" không hợp lệ/.test(text)) return '【LỚP/MÔN】Chọn đúng Toán 4–9 ở mục 1.';
         if (/schema_version/.test(text)) return '【JSON】Sai phiên bản file import — tải lại trang (Ctrl+F5).';
 
+        if (/TỰ LUẬN NGẮN/.test(text) || /essay_exercises.*---/.test(text)) {
+            return `【BÀI TẬP TỰ LUẬN】${text}\n`
+                + `✏️ Mỗi dòng 3 cột: Đề | Đáp án (chỉ số) | Gợi ý — không markdown, không ---\n`
+                + `   Ví dụ: ${quoteLine('Tính 12 + 15 | 27 | Cộng hàng đơn vị')}`;
+        }
+        if (/KÉO THẢ VÀO Ô TRỐNG/.test(text) || /fill_exercises/.test(text) && /Cần đúng/.test(text)) {
+            return `【KÉO THẢ】${text}\n`
+                + `✏️ Heading KÉO THẢ VÀO Ô TRỐNG + đúng ${MIN_FILL} dòng 4 cột:\n`
+                + `   ${quoteLine('Câu có ___ | a » b » c | b | gợi ý')}`;
+        }
+        if (/NỐI Ô \/ SẮP XẾP/.test(text) || /bảng markdown/.test(text) || /quá yếu/.test(text)) {
+            return `【NỐI Ô / SẮP XẾP】${text}\n`
+                + `✏️ CẤM bảng | Cột A | Cột B |. Dùng 2 heading riêng, mỗi câu 1 dòng pipe:\n`
+                + `   SẮP XẾP: ${quoteLine('Sắp xếp từ bé đến lớn | 3 » 1 » 2 | 1 » 2 » 3 | So sánh')}\n`
+                + `   NỐI Ô: ${quoteLine('Nối | 2+1 » 3+0 | 3 » 3 | 0-0,1-1 | Ghép')}`;
+        }
+        if (/TRẮC NGHIỆM/.test(text) || /câu trắc nghiệm/.test(text)) {
+            return `【TRẮC NGHIỆM】${text}\n`
+                + `✏️ ${MIN_QUESTIONS}+ dòng, 7 cột: skill_id | Câu | A | B | C | D | B\n`
+                + `   skill_id phải có trong KỸ NĂNG CẦN ĐẠT.`;
+        }
+        if (/kỹ năng/i.test(text) || /skills\[/.test(text)) {
+            return `【KỸ NĂNG】${text}\n`
+                + `✏️ ≥${MIN_SKILLS} dòng: id_khong_dau | Tên kỹ năng | 80 — không bullet, không ---`;
+        }
+        if (/tasks\[/.test(text)) {
+            return `【NHIỆM VỤ】${text}\n✏️ Mỗi dòng một việc học sinh cần làm — xóa dòng ---.`;
+        }
+
         const hint = context.tool === 'admin'
             ? '✏️ Sửa trong ô import Gemini hoặc tab tương ứng rồi bấm Kiểm tra import.'
             : '✏️ Sửa trong ô kết quả Gemini rồi bấm Kiểm tra import.';
@@ -1658,6 +1875,8 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         (pkg.essay_exercises || []).forEach((e, i) => {
             if (!String(e.answer || '').trim()) {
                 errors.push(`essay_exercises[${i}].answer rỗng.`);
+            } else if (/-{2,}/.test(String(e.answer || ''))) {
+                errors.push(`essay_exercises[${i}].answer chứa dấu --- (rác format).`);
             }
         });
 
@@ -1673,6 +1892,9 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         (pkg.drag_exercises || []).forEach((d, i) => {
             if (d.mode !== 'match' && d.mode !== 'sort') {
                 errors.push(`drag_exercises[${i}].mode phải là match hoặc sort.`);
+            }
+            if (isWeakDragExercise(d)) {
+                errors.push(`drag_exercises[${i}]: bài kéo thả quá yếu / giống bảng markdown (cần ≥${MIN_SORT_ITEMS} mảnh sort hoặc ≥${MIN_MATCH_PAIRS} cặp nối).`);
             }
             if (d.mode === 'match') {
                 const leftCount = (d.left || []).length;
@@ -1699,6 +1921,21 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
             }
         });
 
+        (pkg.skills || []).forEach((s, i) => {
+            if (!String(s.id || '').trim()) {
+                errors.push(`skills[${i}].id rỗng — dùng dạng id_khong_dau | Tên | 80.`);
+            }
+            if (isSeparatorOnlyText(s.name)) {
+                errors.push(`skills[${i}].name không hợp lệ (rác ---).`);
+            }
+        });
+
+        (pkg.tasks || []).forEach((t, i) => {
+            if (isSeparatorOnlyText(t)) {
+                errors.push(`tasks[${i}] là rác ngăn cách (---) — xóa hoặc viết nhiệm vụ thật.`);
+            }
+        });
+
         const markers = collectMarkersFromPackage(pkg);
         const manifestIds = new Set((pkg.image_manifest || []).map(e => normalizeImageId(e.id)));
         markers.forEach(id => {
@@ -1711,10 +1948,36 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
         if (!pkg.videos?.length) warnings.push('Thiếu video.');
         if (!markers.length && !pkg.image_manifest?.length) warnings.push('Không có ảnh/minh họa.');
 
+        const strictStructure = options.strictStructure !== false;
+        const essayCount = pkg.essay_exercises?.length || 0;
+        const fillCount = pkg.fill_exercises?.length || 0;
+        const dragCount = pkg.drag_exercises?.length || 0;
+        const skillCount = pkg.skills?.length || 0;
         const parsedQuestions = pkg.questions?.length || 0;
         const rawQuestionLines = Number(options.rawQuestionLineCount) || 0;
-        if (parsedQuestions < 5) {
-            if (rawQuestionLines >= 5) {
+
+        if (strictStructure) {
+            if (essayCount < MIN_ESSAY) {
+                errors.push(`Cần ít nhất ${MIN_ESSAY} bài TỰ LUẬN NGẮN (pipe 3 cột). Hiện có ${essayCount}.`);
+            }
+            if (fillCount < MIN_FILL) {
+                errors.push(`Cần đúng ${MIN_FILL} câu KÉO THẢ VÀO Ô TRỐNG (pipe 4 cột). Hiện có ${fillCount}. Không dùng bảng markdown.`);
+            }
+            if (dragCount < MIN_DRAG) {
+                errors.push(`Cần ít nhất ${MIN_DRAG} bài NỐI Ô / SẮP XẾP đúng format pipe (heading riêng, ≥${MIN_SORT_ITEMS} mảnh hoặc ≥${MIN_MATCH_PAIRS} cặp). Hiện có ${dragCount}. CẤM bảng | Cột A | Cột B |.`);
+            }
+            if (skillCount < MIN_SKILLS) {
+                errors.push(`Cần ít nhất ${MIN_SKILLS} kỹ năng (id | tên | 80). Hiện có ${skillCount}.`);
+            }
+            if (parsedQuestions < MIN_QUESTIONS) {
+                if (rawQuestionLines >= MIN_QUESTIONS) {
+                    errors.push(`Chỉ parse được ${parsedQuestions}/${rawQuestionLines} câu trắc nghiệm — sai format pipe (skill_id | Câu | A | B | C | D | đáp án).`);
+                } else {
+                    errors.push(`Cần ít nhất ${MIN_QUESTIONS} câu TRẮC NGHIỆM (7 cột, có skill_id). Hiện có ${parsedQuestions}.`);
+                }
+            }
+        } else if (parsedQuestions < MIN_QUESTIONS) {
+            if (rawQuestionLines >= MIN_QUESTIONS) {
                 warnings.push(`Chỉ parse được ${parsedQuestions}/${rawQuestionLines} câu trắc nghiệm — kiểm tra format pipe (skill_id | Câu | A | B | C | D | đáp án).`);
             } else {
                 warnings.push('Số lượng trắc nghiệm ít hơn gợi ý (5+).');
@@ -1771,18 +2034,50 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
             is_published: false,
             goal_text: pickLongestSection(theorySections && theorySections.goal, sections.goal),
             theory: parseTheoryBlocks(pickLongestSection(theorySections && theorySections.theory, sections.theory)),
-            examples: parseExamples(pickLongestSection(restSections && restSections.examples, sections.examples)),
-            self_practice: parseExamples(pickLongestSection(restSections && restSections.selfPractice, sections.selfPractice)),
-            essay_exercises: parseEssayExercises(pickLongestSection(restSections && restSections.essay, sections.essay)),
-            fill_exercises: parseFillExercises(pickLongestSection(restSections && restSections.fill, sections.fill)),
+            examples: parseExamples(pickLongestSection(
+                restSections && restSections.examples,
+                sections.examples,
+                theorySections && theorySections.examples
+            )),
+            self_practice: parseExamples(pickLongestSection(
+                restSections && restSections.selfPractice,
+                sections.selfPractice,
+                theorySections && theorySections.selfPractice
+            )),
+            essay_exercises: parseEssayExercises(pickLongestSection(
+                restSections && restSections.essay,
+                sections.essay,
+                theorySections && theorySections.essay
+            )),
+            fill_exercises: parseFillExercises(pickLongestSection(
+                restSections && restSections.fill,
+                sections.fill,
+                theorySections && theorySections.fill
+            )),
             drag_exercises: [
-                ...parseDragExercises(pickLongestSection(restSections && restSections.dragMatch, sections.dragMatch), { preferMatch: true }),
-                ...parseDragExercises(pickLongestSection(restSections && restSections.dragSort, sections.dragSort)),
-                ...parseDragExercises(pickLongestSection(restSections && restSections.drag, sections.drag))
+                ...parseDragExercises(pickLongestSection(
+                    restSections && restSections.dragMatch,
+                    sections.dragMatch,
+                    theorySections && theorySections.dragMatch
+                ), { preferMatch: true }),
+                ...parseDragExercises(pickLongestSection(
+                    restSections && restSections.dragSort,
+                    sections.dragSort,
+                    theorySections && theorySections.dragSort
+                )),
+                ...parseDragExercises(pickLongestSection(
+                    restSections && restSections.drag,
+                    sections.drag,
+                    theorySections && theorySections.drag
+                ))
             ],
             questions: qReport.questions,
             skills,
-            tasks: parseLines(sections.tasks),
+            tasks: parseLines(pickLongestSection(
+                sections.tasks,
+                restSections && restSections.tasks,
+                theorySections && theorySections.tasks
+            )).filter(t => t && !isSeparatorOnlyText(t)),
             videos: [],
             image_manifest: imageManifest,
             generated_at: new Date().toISOString(),
@@ -1932,7 +2227,17 @@ HINH_01: theory | Sơ đồ bảng hàng | diagram | Mô tả prompt tạo ảnh
     const LessonImport = {
         SCHEMA_VERSION,
         PROMPT_VERSION,
+        MIN_ESSAY,
+        MIN_FILL,
+        MIN_DRAG,
+        MIN_QUESTIONS,
+        MIN_SKILLS,
         getInteractiveFormatGuide,
+        getLessonFormatContract,
+        getLessonOutputSkeleton,
+        isJunkInteractiveLine,
+        isSeparatorOnlyText,
+        isWeakDragExercise,
         preprocessEssaySectionText,
         canonicalizeEssayExercise,
         canonicalizeDragExerciseItem,

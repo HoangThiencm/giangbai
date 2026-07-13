@@ -28,12 +28,13 @@ const errors = validation.errors || [];
 
 const checks = [
     ['schema', pkg.schema_version === 'lesson-import-v1'],
+    ['prompt_version format-lock', LI.PROMPT_VERSION.includes('format-lock')],
     ['skills', pkg.skills.length >= 2],
-    ['questions', pkg.questions.length >= 2],
+    ['questions', pkg.questions.length >= 5],
     ['questions have skill', pkg.questions.every(q => q.skill)],
     ['drag match+sort (' + pkg.drag_exercises.length + ')', pkg.drag_exercises.length >= 2],
-    ['fill', pkg.fill_exercises.length >= 1],
-    ['essay', pkg.essay_exercises.length >= 1],
+    ['fill', pkg.fill_exercises.length >= 2],
+    ['essay', pkg.essay_exercises.length >= 2],
     ['self practice', pkg.self_practice.length >= 1],
     ['image manifest', pkg.image_manifest.length >= 1],
     ['is_published false', pkg.is_published === false],
@@ -93,8 +94,72 @@ if (!sortItem || sortItem.mode !== 'sort' || sortSig(sortItem.items) !== sortSig
 if (typeof LI.getInteractiveFormatGuide === 'function' && !LI.getInteractiveFormatGuide().includes('lesson-import-v1')) {
     console.error('FAIL: interactive format guide');
     failed += 1;
+} else if (!LI.getInteractiveFormatGuide().includes('CẤM bảng Markdown') && !LI.getInteractiveFormatGuide().includes('CẤM bảng')) {
+    console.error('FAIL: format guide missing markdown table ban');
+    failed += 1;
 } else {
     console.log('OK: interactive format guide');
+}
+
+// Junk markdown-table rows must be rejected
+const junkTable = `NỐI Ô
+Cột A | Cột B
+:--- | :---
+$2^2 \\cdot 3 + 1$ | 13
+$20 - 2 \\cdot 5$ | 10`;
+const junkDrag = LI.parseDragExercises(junkTable, { preferMatch: true });
+if (junkDrag.some(d => /cột/i.test(d.prompt) || d.prompt.includes(':---'))) {
+    console.error('FAIL: junk table headers accepted as drag', junkDrag);
+    failed += 1;
+} else if (junkDrag.some(d => (d.items || []).length === 1 && (d.mode === 'sort'))) {
+    console.error('FAIL: single-cell table rows accepted as sort', junkDrag);
+    failed += 1;
+} else {
+    console.log('OK: markdown table junk filtered from drag');
+}
+
+const junkPkg = LI.normalizeLessonImportPackage({
+    schema_version: 'lesson-import-v1',
+    subject: 'Toán 6',
+    title: 'Test junk',
+    slug: 'test-junk',
+    skills: [{ id: '', name: '---', target: 80 }, { id: 'ok', name: 'Kỹ năng OK', target: 80 }],
+    tasks: ['---', 'Đọc lý thuyết'],
+    essay_exercises: [{ id: 'e1', prompt: 'Tính 1+1', answer: '2 ---', hint: '' }],
+    drag_exercises: [{ id: 'd1', mode: 'sort', prompt: 'Cột A', items: ['Cột B'], answer: ['Cột B'], hint: '' }]
+});
+if (junkPkg.skills.some(s => !s.id || s.name === '---')) {
+    console.error('FAIL: junk skills not filtered', junkPkg.skills);
+    failed += 1;
+} else if (junkPkg.tasks.some(t => t === '---')) {
+    console.error('FAIL: junk tasks not filtered', junkPkg.tasks);
+    failed += 1;
+} else if (String(junkPkg.essay_exercises[0]?.answer || '').includes('---')) {
+    console.error('FAIL: essay --- not stripped', junkPkg.essay_exercises[0]);
+    failed += 1;
+} else if (junkPkg.drag_exercises.length) {
+    console.error('FAIL: weak/junk drag not filtered', junkPkg.drag_exercises);
+    failed += 1;
+} else {
+    console.log('OK: normalize strips --- / weak drag / empty skills');
+}
+
+const incompleteValidation = LI.validateLessonImportPackage({
+    schema_version: 'lesson-import-v1',
+    subject: 'Toán 6',
+    title: 'Thiếu tương tác',
+    slug: 'thieu-tuong-tac',
+    essay_exercises: [],
+    fill_exercises: [],
+    drag_exercises: [],
+    questions: [],
+    skills: [{ id: 'a', name: 'A', target: 80 }]
+}, { strictStructure: true });
+if (!(incompleteValidation.errors || []).some(e => /TRẮC NGHIỆM|trắc nghiệm|KÉO THẢ|NỐI Ô/i.test(e))) {
+    console.error('FAIL: strictStructure should error on empty interactive', incompleteValidation.errors);
+    failed += 1;
+} else {
+    console.log('OK: strictStructure blocks empty interactive export');
 }
 
 const messyEssay = `BÀI TẬP TỰ LUẬN NGẮN
