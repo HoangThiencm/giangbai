@@ -199,9 +199,9 @@
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h3 class="font-bold text-slate-800 text-lg">
-                        <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo dõi tiến độ học sinh
+                        <i class="fas fa-chart-line text-amber-600 mr-2"></i>Theo dõi tiến độ & chấm bài nộp
                     </h3>
-                    <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn lớp (vd. 6A, 6B, 6C) để xem nhanh tiến độ từng lớp. Bấm <strong>Cập nhật tiến trình</strong> để hệ thống tính lại điểm luyện tập từ đáp án đã lưu của học sinh.</p>
+                    <p id="progressScopeHint" class="text-sm text-slate-500 mt-1">Chọn <strong>bài học</strong> trên lộ trình → xem tiến độ lớp và <strong>chấm bài nộp Drive</strong> (tab Bài tập của học sinh). Không chấm trong màn soạn bài.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button id="progressExportBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded font-bold text-sm">
@@ -232,6 +232,9 @@
                         <option value="needs">Cần luyện thêm</option>
                         <option value="mastered">Đã học xong</option>
                         <option value="not_started">Chưa bắt đầu</option>
+                        <option value="submitted">Đã nộp bài</option>
+                        <option value="unreviewed">Nộp chưa chấm</option>
+                        <option value="reviewed">Đã chấm bài nộp</option>
                     </select>
                 </label>
                 <label class="block text-sm font-bold text-slate-700">Ngưỡng điểm yếu
@@ -251,21 +254,21 @@
             </div>
             <section id="progressTodayActions" class="mt-5 rounded-lg border border-amber-200 bg-amber-50/70 p-4"></section>
             <div id="progressSummary" class="mt-5 grid grid-cols-2 md:grid-cols-5 gap-3"></div>
-            <p class="mt-4 text-xs text-slate-500"><i class="fas fa-folder-open mr-1 text-sky-600"></i>Mỗi học sinh một dòng: tiến độ luyện tập và bài nộp Drive (tab <strong>Bài tập</strong> trong lộ trình).</p>
+            <p class="mt-4 text-xs text-slate-500"><i class="fas fa-folder-open mr-1 text-sky-600"></i>Mỗi dòng = 1 học sinh <strong>trong bài học đã chọn</strong>. Cột bài nộp: xem Drive + <strong>chấm / gửi phản hồi</strong> (học sinh thấy ngay tab Bài tập trên lộ trình).</p>
             <div class="mt-2 overflow-x-auto rounded border border-slate-200">
                 <table class="min-w-full table-fixed divide-y divide-slate-200">
                     <colgroup>
-                        <col style="width:20%">
+                        <col style="width:18%">
+                        <col style="width:18%">
+                        <col style="width:30%">
                         <col style="width:22%">
-                        <col style="width:22%">
-                        <col style="width:24%">
                         <col style="width:12%">
                     </colgroup>
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Học sinh / Lớp</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Tiến độ học tập</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Bài nộp giáo viên</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Bài nộp · Chấm bài</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cần lưu ý</th>
                             <th class="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Cập nhật</th>
                         </tr>
@@ -287,6 +290,21 @@
                     <iframe id="progressDrivePreviewFrame" class="min-h-0 flex-1 bg-slate-100" title="Xem bài nộp trong trang"></iframe>
                 </div>
             </div>
+            <div id="progressReviewModal" class="fixed inset-0 z-[85] hidden items-center justify-center bg-slate-900/60 p-3 sm:p-6" style="backdrop-filter:blur(2px)">
+                <div class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                    <div class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-3">
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-amber-700">Chấm bài nộp · theo bài học</p>
+                            <h2 id="progressReviewTitle" class="truncate text-base font-black text-slate-900">Phản hồi học sinh</h2>
+                            <p id="progressReviewMeta" class="mt-0.5 text-xs text-slate-500"></p>
+                        </div>
+                        <button id="progressCloseReviewBtn" type="button" class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div id="progressReviewBody" class="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-sm"></div>
+                </div>
+            </div>
         `;
         dashboard.prepend(panel);
         applyPageScopeUi();
@@ -295,6 +313,10 @@
         el('progressCloseDrivePreviewBtn')?.addEventListener('click', closeDrivePreview);
         el('progressDrivePreviewModal')?.addEventListener('click', event => {
             if (event.target === el('progressDrivePreviewModal')) closeDrivePreview();
+        });
+        el('progressCloseReviewBtn')?.addEventListener('click', closeReviewModal);
+        el('progressReviewModal')?.addEventListener('click', event => {
+            if (event.target === el('progressReviewModal')) closeReviewModal();
         });
         el('progressLessonSelect').onchange = event => {
             selectedLessonId = event.target.value;
@@ -475,6 +497,21 @@
         `;
     }
 
+    function renderCorrectionPreview(files) {
+        const list = Array.isArray(files) ? files : [];
+        if (!list.length) return '<span class="text-xs text-slate-400">Chưa có ảnh/tệp bài sửa</span>';
+        return list.map(file => {
+            const name = escapeHtml(file.original_name || 'Tệp');
+            const url = String(file.view_url || '');
+            if (url) {
+                return `<button type="button" data-preview-url="${escapeHtml(url)}" data-preview-title="${name}" class="mb-1 block max-w-full truncate text-left text-xs font-bold text-amber-800 underline hover:text-amber-950">
+                    <i class="fas fa-pen-to-square mr-1"></i>${name}
+                </button>`;
+            }
+            return `<span class="block text-xs text-slate-500">${name}</span>`;
+        }).join('');
+    }
+
     function renderSubmissionCell(row, submissionMap) {
         const submission = submissionMap.get(Number(row.student_id));
         if (!submission) {
@@ -494,6 +531,10 @@
         const correctionNote = correctionCount
             ? `<div class="mt-1 text-[10px] font-bold text-amber-700"><i class="fas fa-pen-to-square mr-1"></i>${correctionCount} ảnh/tệp bài sửa</div>`
             : '';
+        const gradeLabel = reviewed ? 'Sửa phản hồi' : 'Chấm bài';
+        const gradeClass = reviewed
+            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            : 'bg-amber-600 hover:bg-amber-700 text-white';
         return `
             <div>
                 <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Đã nộp · ${escapeHtml(when)}</span>${reviewBadge}
@@ -501,8 +542,140 @@
                 ${note}
                 ${feedbackPreview}
                 ${correctionNote}
+                <button type="button"
+                    class="mt-2 inline-flex items-center gap-1 rounded px-2.5 py-1 text-[11px] font-bold ${gradeClass}"
+                    data-progress-review-id="${Number(submission.id)}">
+                    <i class="fas fa-pen-to-square"></i> ${gradeLabel}
+                </button>
             </div>
         `;
+    }
+
+    function closeReviewModal() {
+        const modal = el('progressReviewModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        const body = el('progressReviewBody');
+        if (body) body.innerHTML = '';
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function openReviewModal(submissionId) {
+        const submission = submissions.find(item => Number(item.id) === Number(submissionId));
+        if (!submission) return;
+        const modal = el('progressReviewModal');
+        const body = el('progressReviewBody');
+        const titleEl = el('progressReviewTitle');
+        const metaEl = el('progressReviewMeta');
+        if (!modal || !body) return;
+
+        const lesson = currentLessonMeta();
+        const lessonLabel = lesson
+            ? `${lesson.subject || ''} · ${lesson.title || ''}`.trim()
+            : 'Bài học đang chọn';
+        const studentName = submission.student_name || submission.full_name || 'Học sinh';
+        const when = String(submission.submitted_at || '').replace('T', ' ').slice(0, 16);
+        const reviewed = !!submission.has_review;
+
+        if (titleEl) titleEl.textContent = studentName;
+        if (metaEl) {
+            metaEl.textContent = [
+                lessonLabel,
+                submission.class_name || '',
+                when ? `Nộp ${when}` : ''
+            ].filter(Boolean).join(' · ');
+        }
+
+        body.innerHTML = `
+            <div class="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-3">
+                <div class="text-[11px] font-bold uppercase tracking-wide text-sky-800">Bài học sinh nộp</div>
+                <div class="mt-2">${renderSubmissionFiles(submission.files)}</div>
+                ${submission.note ? `<p class="mt-2 text-xs italic text-slate-600">Ghi chú HS: ${escapeHtml(submission.note)}</p>` : ''}
+            </div>
+            <form id="progressReviewForm" data-submission-id="${Number(submission.id)}" class="space-y-3">
+                ${reviewed ? `
+                    <div class="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+                        Đã phản hồi${submission.reviewed_at ? ` · ${String(submission.reviewed_at).replace('T', ' ').slice(0, 16)}` : ''}
+                    </div>
+                ` : `
+                    <div class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Chưa chấm — nhập nhận xét và/hoặc ảnh bài đã sửa</div>
+                `}
+                <label class="block text-xs font-bold text-slate-700">Nhận xét giáo viên
+                    <textarea id="progressReviewFeedback" rows="4" class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" placeholder="Ví dụ: Em làm đúng dạng 1; dạng 2 cần trình bày rõ hơn...">${escapeHtml(submission.teacher_feedback || '')}</textarea>
+                </label>
+                <div>
+                    <div class="text-xs font-bold text-slate-700">Ảnh / tệp bài đã chấm·sửa</div>
+                    <div class="mt-1">${renderCorrectionPreview(submission.correction_files)}</div>
+                    <input id="progressReviewFiles" type="file" multiple accept="image/*,.pdf,.doc,.docx" class="mt-2 block w-full text-xs">
+                    <p class="mt-1 text-[11px] text-slate-500">Chọn ảnh chụp bài đã chấm. Tải tệp mới sẽ thay ảnh cũ trên Drive.</p>
+                </div>
+                <div id="progressReviewError" class="hidden rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"></div>
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <button type="submit" id="progressReviewSubmitBtn" class="inline-flex items-center gap-2 rounded bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
+                        <i class="fas fa-paper-plane"></i> Gửi phản hồi
+                    </button>
+                    <button type="button" id="progressReviewCancelBtn" class="rounded border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>
+                </div>
+                <p class="text-[11px] text-slate-500">Học sinh thấy nhận xét và ảnh bài sửa ngay trong tab <strong>Bài tập</strong> của <strong>bài học này</strong> trên lộ trình.</p>
+            </form>
+        `;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+
+        bindSubmissionPreviewButtons(body);
+        el('progressReviewCancelBtn')?.addEventListener('click', closeReviewModal);
+        el('progressReviewForm')?.addEventListener('submit', submitProgressReview);
+    }
+
+    async function submitProgressReview(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const submissionId = Number(form?.dataset?.submissionId || 0);
+        if (!submissionId) return;
+        const feedbackEl = el('progressReviewFeedback');
+        const fileInput = el('progressReviewFiles');
+        const errorEl = el('progressReviewError');
+        const button = el('progressReviewSubmitBtn');
+        const payload = new FormData();
+        payload.append('action', 'review');
+        payload.append('submission_id', String(submissionId));
+        payload.append('teacher_feedback', feedbackEl?.value || '');
+        Array.from(fileInput?.files || []).forEach(file => payload.append('correction_files[]', file));
+        const oldHtml = button?.innerHTML || '';
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+        }
+        if (errorEl) {
+            errorEl.classList.add('hidden');
+            errorEl.textContent = '';
+        }
+        try {
+            const res = await fetch('api/lesson_self_practice.php', {
+                method: 'POST',
+                body: payload,
+                credentials: 'include',
+                cache: 'no-store'
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Không lưu được phản hồi.');
+            await loadSubmissions();
+            closeReviewModal();
+        } catch (err) {
+            if (errorEl) {
+                errorEl.textContent = err.message || 'Không lưu được phản hồi.';
+                errorEl.classList.remove('hidden');
+            }
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = oldHtml;
+            }
+        }
     }
 
     function bindSubmissionPreviewButtons(root) {
@@ -511,6 +684,16 @@
             button.dataset.boundPreview = '1';
             button.addEventListener('click', () => {
                 openDrivePreview(button.dataset.previewUrl || '', button.dataset.previewTitle || 'Tệp đính kèm');
+            });
+        });
+    }
+
+    function bindReviewButtons(root) {
+        (root || document).querySelectorAll('[data-progress-review-id]').forEach(button => {
+            if (button.dataset.boundReview === '1') return;
+            button.dataset.boundReview = '1';
+            button.addEventListener('click', () => {
+                openReviewModal(button.dataset.progressReviewId);
             });
         });
     }
@@ -566,15 +749,30 @@
         return days === 0 ? 'Đã vào học hôm nay' : `${days} ngày chưa vào học`;
     }
 
+    function submissionForRow(row, submissionMap = null) {
+        const map = submissionMap || submissionByStudentId();
+        return map.get(Number(row.student_id)) || null;
+    }
+
     function filteredRows() {
         const statusFilter = el('progressStatusFilter')?.value || '';
         const search = (el('progressSearch')?.value || '').toLowerCase();
+        const submissionMap = submissionByStudentId();
         return scopeRows().filter(row => {
             const haystack = `${row.full_name} ${row.username} ${row.class_name}`.toLowerCase();
             if (search && !haystack.includes(search)) return false;
             if (statusFilter === 'weak') return isWeakRow(row);
             if (statusFilter === 'inactive') return isInactiveRow(row);
             if (statusFilter === 'needs') return row.needs_practice;
+            if (statusFilter === 'submitted') return !!submissionForRow(row, submissionMap);
+            if (statusFilter === 'unreviewed') {
+                const sub = submissionForRow(row, submissionMap);
+                return !!(sub && !sub.has_review);
+            }
+            if (statusFilter === 'reviewed') {
+                const sub = submissionForRow(row, submissionMap);
+                return !!(sub && sub.has_review);
+            }
             if (statusFilter) return row.status === statusFilter;
             return true;
         });
@@ -822,15 +1020,17 @@
         const practiced = viewRows.filter(row => ['needs_practice', 'mastered'].includes(row.status)).length;
         const mastered = viewRows.filter(row => row.status === 'mastered').length;
         const needs = viewRows.filter(row => row.needs_practice).length;
-        const submitted = scopedSubmissions().length;
+        const scoped = scopedSubmissions();
+        const submitted = scoped.length;
+        const unreviewed = scoped.filter(item => !item.has_review).length;
         const teacherClasses = teacherManagedClasses();
         const scope = selectedClassName
             ? `Lớp ${selectedClassName}`
             : (isTeacherUser() && teacherClasses.length ? 'Tất cả lớp phụ trách' : 'Tất cả lớp');
         const cards = [
             [`Học sinh (${scope})`, total, 'text-slate-900'],
-            ['Nộp Drive', submitted, 'text-sky-700'],
-            ['Đã làm bài', practiced, 'text-indigo-700'],
+            ['Nộp Drive (bài này)', submitted, 'text-sky-700'],
+            ['Chưa chấm', unreviewed, unreviewed ? 'text-amber-700' : 'text-emerald-700'],
             ['Đã học xong', mastered, 'text-teal-700'],
             ['Cần luyện thêm', needs, 'text-amber-700']
         ];
@@ -986,6 +1186,7 @@
             body.innerHTML = filtered.map(row => renderRow(row, submissionMap)).join('');
         }
         bindSubmissionPreviewButtons(body);
+        bindReviewButtons(body);
         typesetMath();
     }
 

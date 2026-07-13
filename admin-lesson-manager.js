@@ -1763,7 +1763,6 @@
                 <button id="duplicateLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-copy mr-1"></i>Nhân bản</button>
                 <button id="deleteLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded font-bold"><i class="fas fa-trash mr-1"></i>Xóa</button>
                 <button id="lessonReloadBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-rotate-right mr-1"></i>Tải lại</button>
-                <button id="viewSubmissionsBtn" type="button" class="px-3 py-1.5 text-xs bg-sky-600 text-white rounded font-bold"><i class="fas fa-cloud-arrow-down mr-1"></i>Bài nộp HS</button>
             </div>
 
             <!-- Compact metadata (always visible, above tabs) -->
@@ -1877,13 +1876,14 @@
                     </div>
                 </div>
 
-                <!-- Submissions inside Bài tập tab for visual grouping -->
-                <section id="selfPracticeSubmissionsPanel" class="mt-4 rounded border border-sky-200 bg-sky-50 p-3 text-xs">
-                    <div class="flex items-center justify-between">
-                        <div class="font-bold text-sky-900"><i class="fas fa-folder-open mr-1"></i>Bài nộp học sinh (Drive)</div>
-                        <button type="button" id="reloadSelfPracticeSubmissionsBtn" class="px-2 py-0.5 border border-sky-300 bg-white rounded text-sky-700">Tải</button>
-                    </div>
-                    <div id="selfPracticeSubmissionsBody" class="mt-2 text-sky-800">Chọn bài để xem bài nộp của học sinh.</div>
+                <!-- Chấm bài nộp: chỉ ở Theo dõi tiến độ (theo từng bài học trên lộ trình), không chấm trong soạn bài -->
+                <section class="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                    <div class="font-bold text-slate-800"><i class="fas fa-info-circle mr-1 text-sky-600"></i>Bài nộp học sinh</div>
+                    <p class="mt-1.5 leading-relaxed">
+                        Tab này chỉ <strong>soạn đề bài nộp</strong>. Chấm / nhận xét / ảnh bài sửa nằm trong
+                        <a href="thongketientrinh.html" class="font-bold text-sky-700 underline hover:text-sky-900">Theo dõi tiến độ</a>
+                        — chọn đúng <strong>bài học</strong> trên lộ trình, rồi chấm từng học sinh đã nộp Drive.
+                    </p>
                 </section>
             </div>
 
@@ -2034,16 +2034,6 @@
         ['lessonGoalInput', 'lessonTheory', 'lessonExamples', 'lessonSelfPractice', 'lessonEssay', 'lessonFill', 'lessonDrag', 'lessonSkills', 'lessonTasks', 'lessonVideos', 'lessonQuestions'].forEach(id => {
             const field = el(id);
             if (field) field.addEventListener('input', renderPreview);
-        });
-        el('reloadSelfPracticeSubmissionsBtn')?.addEventListener('click', () => loadSelfPracticeSubmissions());
-        el('viewSubmissionsBtn')?.addEventListener('click', () => {
-            // Activate the Bài tập tab so the submissions panel inside is visible
-            const baitapBtn = panel.querySelector('button[data-tab="baitap"]');
-            if (baitapBtn) baitapBtn.click();
-            setTimeout(() => {
-                el('selfPracticeSubmissionsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                loadSelfPracticeSubmissions();
-            }, 80);
         });
         setupEditorFieldShortcuts();
         setupRichToolbars();
@@ -2290,155 +2280,6 @@
 
         renderSubjectPills();
         renderPreview();
-        loadSelfPracticeSubmissions();
-    }
-
-    function renderSelfPracticeCorrectionPreview(files) {
-        const list = Array.isArray(files) ? files : [];
-        if (!list.length) return '<span class="text-slate-400">Chưa có ảnh bài sửa</span>';
-        return list.map(file => `
-            <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="mb-1 block font-bold text-amber-800 underline">
-                <i class="fas fa-pen-to-square mr-1"></i>${escapeHtml(file.original_name || 'Tệp')}
-            </a>
-        `).join('');
-    }
-
-    function renderSelfPracticeReviewForm(row) {
-        const reviewed = !!row.has_review;
-        return `
-            <form class="space-y-2" data-self-practice-review-form="${row.id}">
-                ${reviewed ? `
-                    <div class="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-800">
-                        Đã phản hồi${row.reviewed_at ? ` · ${String(row.reviewed_at).replace('T', ' ').slice(0, 16)}` : ''}
-                    </div>
-                ` : `
-                    <div class="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800">Chưa chấm</div>
-                `}
-                <label class="block text-[11px] font-bold text-slate-600">Nhận xét
-                    <textarea rows="3" class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-400" data-self-practice-feedback="${row.id}" placeholder="Ví dụ: Em làm đúng dạng 1, dạng 2 cần trình bày rõ hơn...">${escapeHtml(row.teacher_feedback || '')}</textarea>
-                </label>
-                <div class="text-[11px] text-slate-600">
-                    <div class="font-bold text-slate-700">Ảnh bài đã sửa</div>
-                    <div class="mt-1">${renderSelfPracticeCorrectionPreview(row.correction_files)}</div>
-                    <input type="file" multiple accept="image/*,.pdf,.doc,.docx" class="mt-2 block w-full text-[11px]" data-self-practice-correction-input="${row.id}">
-                    <p class="mt-1 text-slate-500">Chọn ảnh chụp bài đã chấm/sửa. Tải tệp mới sẽ thay ảnh cũ.</p>
-                </div>
-                <button type="submit" class="inline-flex items-center gap-1 rounded bg-sky-700 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-sky-800" data-self-practice-review-submit="${row.id}">
-                    <i class="fas fa-paper-plane"></i> Gửi phản hồi
-                </button>
-                <div class="hidden text-[11px] font-semibold text-rose-700" data-self-practice-review-error="${row.id}"></div>
-            </form>
-        `;
-    }
-
-    function bindSelfPracticeReviewForms(root) {
-        (root || document).querySelectorAll('[data-self-practice-review-form]').forEach(form => {
-            if (form.dataset.boundReview === '1') return;
-            form.dataset.boundReview = '1';
-            form.addEventListener('submit', async event => {
-                event.preventDefault();
-                const submissionId = Number(form.dataset.selfPracticeReviewForm || 0);
-                if (!submissionId) return;
-                const feedbackEl = form.querySelector(`[data-self-practice-feedback="${submissionId}"]`);
-                const fileInput = form.querySelector(`[data-self-practice-correction-input="${submissionId}"]`);
-                const errorEl = form.querySelector(`[data-self-practice-review-error="${submissionId}"]`);
-                const button = form.querySelector(`[data-self-practice-review-submit="${submissionId}"]`);
-                const payload = new FormData();
-                payload.append('action', 'review');
-                payload.append('submission_id', String(submissionId));
-                payload.append('teacher_feedback', feedbackEl?.value || '');
-                Array.from(fileInput?.files || []).forEach(file => payload.append('correction_files[]', file));
-                const old = button?.innerHTML || '';
-                if (button) {
-                    button.disabled = true;
-                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
-                }
-                if (errorEl) errorEl.classList.add('hidden');
-                try {
-                    const res = await fetch('api/lesson_self_practice.php', {
-                        method: 'POST',
-                        body: payload,
-                        credentials: 'include',
-                        cache: 'no-store'
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    if (!res.ok) throw new Error(data.error || 'Không lưu được phản hồi.');
-                    if (fileInput) fileInput.value = '';
-                    await loadSelfPracticeSubmissions();
-                } catch (err) {
-                    if (errorEl) {
-                        errorEl.textContent = err.message || 'Không lưu được phản hồi.';
-                        errorEl.classList.remove('hidden');
-                    }
-                } finally {
-                    if (button) {
-                        button.disabled = false;
-                        button.innerHTML = old;
-                    }
-                }
-            });
-        });
-    }
-
-    async function loadSelfPracticeSubmissions() {
-        const panel = el('selfPracticeSubmissionsPanel');
-        const body = el('selfPracticeSubmissionsBody');
-        if (!panel || !body) return;
-        if (!currentLessonId) {
-            body.innerHTML = '<p class="text-sky-800">Chọn hoặc lưu một bài học để xem bài nộp của học sinh.</p>';
-            return;
-        }
-        body.innerHTML = '<span class="text-slate-500"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải bài nộp...</span>';
-        try {
-            const res = await fetch(`api/lesson_self_practice.php?action=list&lesson_id=${encodeURIComponent(currentLessonId)}`, {
-                credentials: 'include',
-                cache: 'no-store'
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Không tải được bài nộp.');
-            const submissions = Array.isArray(data.submissions) ? data.submissions : [];
-            if (!submissions.length) {
-                body.innerHTML = '<p class="text-sky-800">Chưa có học sinh lớp bạn dạy nộp bài cho bài học này. (Kiểm tra Admin đã gán <strong>lớp</strong> cho tài khoản giáo viên chưa.)</p>';
-                return;
-            }
-            body.innerHTML = `
-                <p class="mb-2 text-sky-900">Xem bài nộp, nhập nhận xét và đính kèm ảnh bài đã sửa — học sinh sẽ thấy ngay trong tab <strong>Bài tập</strong> trên lộ trình.</p>
-                <div class="overflow-x-auto rounded-lg border border-sky-200 bg-white">
-                    <table class="min-w-full text-left text-xs">
-                        <thead class="bg-sky-100 font-bold uppercase text-sky-800">
-                            <tr>
-                                <th class="px-3 py-2">Thời gian</th>
-                                <th class="px-3 py-2">Học sinh</th>
-                                <th class="px-3 py-2">Bài nộp</th>
-                                <th class="px-3 py-2">Ghi chú HS</th>
-                                <th class="px-3 py-2 min-w-[260px]">Phản hồi giáo viên</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${submissions.map(row => `
-                                <tr class="border-t border-sky-100 align-top">
-                                    <td class="px-3 py-2 whitespace-nowrap">${String(row.submitted_at || '').replace('T', ' ').slice(0, 16)}</td>
-                                    <td class="px-3 py-2">
-                                        <div class="font-semibold">${escapeHtml(row.student_name || '')}</div>
-                                        <div class="text-sky-700">${escapeHtml(row.class_name || '')}</div>
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        ${(row.files || []).map(file => `
-                                            <a href="${escapeHtml(file.view_url)}" target="_blank" rel="noopener" class="block font-bold text-sky-800 underline">${escapeHtml(file.original_name)}</a>
-                                        `).join('') || '—'}
-                                    </td>
-                                    <td class="px-3 py-2 text-slate-600">${escapeHtml(row.note || '')}</td>
-                                    <td class="px-3 py-2">${renderSelfPracticeReviewForm(row)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            bindSelfPracticeReviewForms(body);
-        } catch (err) {
-            body.innerHTML = `<p class="text-rose-700">${escapeHtml(err.message || 'Không tải được bài nộp.')}</p>`;
-        }
     }
 
     function fillSeed() {

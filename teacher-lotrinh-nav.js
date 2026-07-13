@@ -202,7 +202,7 @@
                 : `<a href="${pages[0]?.url || 'lotrinhtoan6.html'}" class="${navLinkClass(false)}"><i class="fas fa-pen-ruler"></i> Soạn bài</a>`)
             : '';
         const statsLink = showStats
-            ? `<a href="thongketientrinh.html" class="${navLinkClass(statsActive)}"><i class="fas fa-chart-line"></i> Thống kê lớp</a>`
+            ? `<a href="thongketientrinh.html" class="${navLinkClass(statsActive)}"><i class="fas fa-chart-line"></i> Tiến độ · Chấm bài</a>`
             : '';
         const aiStatsLink = showAiStats
             ? `<a href="theodoi-ai.html" class="${navLinkClass(aiStatsActive)}"><i class="fas fa-robot"></i> Theo dõi AI</a>`
