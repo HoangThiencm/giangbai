@@ -14627,12 +14627,21 @@ module.exports = {
             const [pendingSourceImages, setPendingSourceImages] = useState([]);
             const [sourceProgress, setSourceProgress] = useState({ active: false, percent: 0, message: "" });
             const [sourceNotice, setSourceNotice] = useState("");
+            const [generationProgress, setGenerationProgress] = useState({
+                visible: false,
+                status: "idle",
+                percent: 0,
+                message: "",
+                elapsedSeconds: 0
+            });
             const [sourceOnly, setSourceOnly] = useState(true);
             const [retryCount, setRetryCount] = useState(0);
             const [showSettings, setShowSettings] = useState(false);
             const sourceDropZoneRef = useRef(null);
             const sourceFileInputRef = useRef(null);
             const sourceNoticeTimerRef = useRef(null);
+            const generationElapsedTimerRef = useRef(null);
+            const generationDismissTimerRef = useRef(null);
             const [presentationSettings, setPresentationSettings] = useState({
                 shuffleOptions: false,
                 countdownTime: 0,
@@ -14667,8 +14676,59 @@ module.exports = {
             useEffect(() => {
                 return () => {
                     if (sourceNoticeTimerRef.current) clearTimeout(sourceNoticeTimerRef.current);
+                    if (generationElapsedTimerRef.current) clearInterval(generationElapsedTimerRef.current);
+                    if (generationDismissTimerRef.current) clearTimeout(generationDismissTimerRef.current);
                 };
             }, []);
+
+            const beginGenerationProgress = () => {
+                if (generationElapsedTimerRef.current) clearInterval(generationElapsedTimerRef.current);
+                if (generationDismissTimerRef.current) clearTimeout(generationDismissTimerRef.current);
+                setGenerationProgress({
+                    visible: true,
+                    status: "running",
+                    percent: 8,
+                    message: "Đang chuẩn bị và gửi yêu cầu tới AI...",
+                    elapsedSeconds: 0
+                });
+                generationElapsedTimerRef.current = setInterval(() => {
+                    setGenerationProgress(prev => prev.status === "running"
+                        ? { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }
+                        : prev);
+                }, 1000);
+            };
+
+            const updateGenerationProgress = (percent, message) => {
+                setGenerationProgress(prev => ({
+                    ...prev,
+                    visible: true,
+                    status: "running",
+                    percent: Math.max(prev.percent, percent),
+                    message
+                }));
+            };
+
+            const finishGenerationProgress = (status, message) => {
+                if (generationDismissTimerRef.current) {
+                    clearTimeout(generationDismissTimerRef.current);
+                    generationDismissTimerRef.current = null;
+                }
+                if (generationElapsedTimerRef.current) {
+                    clearInterval(generationElapsedTimerRef.current);
+                    generationElapsedTimerRef.current = null;
+                }
+                setGenerationProgress(prev => ({
+                    ...prev,
+                    visible: true,
+                    status,
+                    percent: status === "success" ? 100 : prev.percent,
+                    message
+                }));
+                generationDismissTimerRef.current = setTimeout(() => {
+                    setGenerationProgress(prev => ({ ...prev, visible: false }));
+                    generationDismissTimerRef.current = null;
+                }, status === "success" ? 5000 : 10000);
+            };
 
             // --- CÁC HÀM QUẢN LÝ CHỦ ĐỀ ---
             const addTopic = () => {
@@ -15000,12 +15060,15 @@ module.exports = {
 
                 const emptyTopics = topicsToGenerate.filter(t => !t.name.trim());
                 if (emptyTopics.length > 0) {
-                    showSourceNotice("Vui lòng nhập tên cho các chủ đề!");
+                    const validationMessage = "Vui lòng nhập tên cho các chủ đề trước khi tạo bài.";
+                    finishGenerationProgress("error", validationMessage);
+                    showSourceNotice(validationMessage);
                     return;
                 }
 
                 setLoading(true);
                 setRetryCount(0);
+                beginGenerationProgress();
 
                 const totalQuestions = topicsToGenerate.reduce((sum, t) => sum + t.count, 0);
                 const structurePrompt = topicsToGenerate.map((t, idx) => {
@@ -15073,15 +15136,23 @@ module.exports = {
                 }
 
                 try {
+                    updateGenerationProgress(18, "Đã gửi yêu cầu. AI đang tạo nội dung...");
                     const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
+                    updateGenerationProgress(72, "Đã nhận phản hồi từ AI. Đang đọc dữ liệu...");
                     let parsedData;
                     try {
                         parsedData = GeminiModule.parseJSONResponse(response);
                     } catch (parseError) {
+                        updateGenerationProgress(80, "Phản hồi cần hiệu chỉnh. AI đang sửa định dạng dữ liệu...");
                         parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
                     }
+                    updateGenerationProgress(90, "Đang kiểm tra và chuẩn hóa kết quả...");
                     if (mode === "quiz") {
                         parsedData = normalizeQuizItems(parsedData);
+                    }
+
+                    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+                        throw new Error("AI không trả về câu hỏi hoặc bài tập hợp lệ.");
                     }
 
                     if (mode === "quiz") {
@@ -15097,9 +15168,12 @@ module.exports = {
                             setEssays(parsedData);
                         }
                     }
+                    finishGenerationProgress("success", `Đã tạo thành công ${parsedData.length} ${mode === "quiz" ? "câu hỏi" : "bài tập"}.`);
                     setStep(2);
                 } catch (error) {
-                    showSourceNotice(`Thất bại! Lỗi: ${error.message}`);
+                    const errorMessage = error && error.message ? error.message : "Không xác định được nguyên nhân.";
+                    finishGenerationProgress("error", `Không tạo được bài tập: ${errorMessage}`);
+                    showSourceNotice(`Không tạo được bài tập: ${errorMessage}`);
                 } finally {
                     setLoading(false);
                 }
@@ -15330,6 +15404,41 @@ module.exports = {
 
             return (
                 <div className="max-w-4xl mx-auto p-4 md:p-8 font-sans">
+                    {generationProgress.visible && (
+                        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-xl" role="status" aria-live="assertive">
+                            <div className={`rounded-2xl border px-5 py-4 shadow-2xl backdrop-blur-sm ${generationProgress.status === "error"
+                                ? "bg-red-50/95 border-red-300 text-red-900"
+                                : generationProgress.status === "success"
+                                    ? "bg-emerald-50/95 border-emerald-300 text-emerald-900"
+                                    : "bg-white/95 border-indigo-200 text-slate-800"}`}>
+                                <div className="flex items-start gap-3">
+                                    <i className={`fas mt-0.5 text-xl ${generationProgress.status === "error"
+                                        ? "fa-circle-exclamation text-red-600"
+                                        : generationProgress.status === "success"
+                                            ? "fa-circle-check text-emerald-600"
+                                            : "fa-circle-notch fa-spin text-indigo-600"}`}></i>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex justify-between gap-3 text-sm font-bold">
+                                            <span>{generationProgress.status === "error" ? "Tạo bài thất bại" : generationProgress.status === "success" ? "Tạo bài hoàn tất" : "Đang tạo bài tập"}</span>
+                                            <span className="whitespace-nowrap">{generationProgress.percent}%{generationProgress.status === "running" ? ` · ${generationProgress.elapsedSeconds}s` : ""}</span>
+                                        </div>
+                                        <p className="mt-1 text-sm leading-5 break-words">{generationProgress.message}</p>
+                                        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${generationProgress.status === "error" ? "bg-red-500" : generationProgress.status === "success" ? "bg-emerald-500" : "bg-gradient-to-r from-indigo-500 to-blue-500"}`}
+                                                style={{ width: `${generationProgress.percent}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                    {generationProgress.status !== "running" && (
+                                        <button type="button" onClick={() => setGenerationProgress(prev => ({ ...prev, visible: false }))} className="-mr-1 text-current opacity-60 hover:opacity-100" aria-label="Đóng thông báo">
+                                            <i className="fas fa-times"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center mb-8">
                         <button onClick={() => window.location.href = 'index.html'} className="text-slate-500 hover:text-indigo-600 font-bold transition flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
                             <i className="fas fa-arrow-left"></i> Về Trang Chủ

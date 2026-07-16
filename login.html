@@ -153,6 +153,7 @@
 
                         localStorage.setItem('authToken', data.token);
                         localStorage.setItem('userEmail', email);
+                        sessionStorage.setItem('lotrinh_force_notification_popup', '1');
                         window.location.href = 'index.html';
                     } else {
                         // Đăng ký thành công
@@ -223,6 +224,7 @@
                 localStorage.setItem('userRole', data.user.role);
                 localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
                 localStorage.setItem('userClassName', data.user.class_name || '');
+                sessionStorage.setItem('lotrinh_force_notification_popup', '1');
                 window.location.href = landingPageFor(data.user);
             } catch {
                 clearLocalAuth();
@@ -285,6 +287,7 @@
                 localStorage.setItem('userRole', data.user.role);
                 localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
                 localStorage.setItem('userClassName', data.user.class_name || '');
+                sessionStorage.setItem('lotrinh_force_notification_popup', '1');
 
                 window.location.href = landingPageFor(data.user);
             } catch (err) {

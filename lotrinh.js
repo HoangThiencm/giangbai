@@ -96,6 +96,7 @@
     const LS_STUDY_MINUTES_KEY = `lotrinh_study_minutes_${PAGE_STORAGE_KEY}`;
     const LS_LESSON_NAV_VIEW_KEY = `lotrinh_lesson_nav_view_${PAGE_STORAGE_KEY}`;
     const LS_MOTIVATION_KEY_PREFIX = `lotrinh_motivation_${PAGE_STORAGE_KEY}`;
+    const SS_FORCE_NOTIFICATION_POPUP_KEY = 'lotrinh_force_notification_popup';
     const REVIEW_STALE_DAYS = 7;
     const REQUESTED_LESSON_ID = new URLSearchParams(window.location.search).get('lessonId') || '';
 
@@ -5916,11 +5917,16 @@
     async function bootstrapLotrinhPage() {
         state.loading = true;
         state.error = '';
+        const forceNotificationPopup = sessionStorage.getItem(SS_FORCE_NOTIFICATION_POPUP_KEY) === '1';
         render();
         let lessonToStart = null;
         try {
             await reloadLessons(true);
             await Promise.all([loadStudentExams(), loadStudentNotifications()]);
+            if (forceNotificationPopup && (state.user?.role || '') === 'student') {
+                state.notificationsDismissed = false;
+                sessionStorage.removeItem(SS_FORCE_NOTIFICATION_POPUP_KEY);
+            }
             const initialLesson = currentLesson();
             if (initialLesson && lessonNeedsDetail(initialLesson)) {
                 ensureLessonDetail(initialLesson).then(() => render()).catch(console.warn);
