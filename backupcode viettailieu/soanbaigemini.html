@@ -10,7 +10,7 @@
         (function () {
             // lesson-import.js chỉ cần cho Kiểm tra import / Xuất JSON (optional trong Canvas).
             // Prompt gen bài PHẢI tự chứa trong file HTML này — Canvas chạy độc lập, không phụ thuộc hosting.
-            var VERSION = '20260713-format-lock-v2-canvas';
+            var VERSION = '20260716-soan-fill-four-columns-v1';
             var SOURCES = [
                 'lesson-import.js?v=' + VERSION,
                 'https://hoangthiencm.id.vn/lesson-import.js?v=' + VERSION
@@ -681,6 +681,22 @@
             var validation = LI.validateLessonImportPackage(pkg, {
                 pageSubject: subject,
                 rawQuestionLineCount: rawQuestionLineCount
+            });
+            var rawFillLines = LI.getSectionRawLines ? LI.getSectionRawLines(raw, 'fill') : [];
+            rawFillLines.forEach(function (line, index) {
+                var columns = LI.splitQuestionParts ? LI.splitQuestionParts(line) : String(line || '').split('|').map(function (part) { return part.trim(); });
+                if (columns.length !== 4) {
+                    validation.errors.push('KÉO THẢ VÀO Ô TRỐNG dòng ' + (index + 1) + ' phải có đúng 4 cột: Đề | Các mảnh | Đáp án đúng | Gợi ý. Hiện có ' + columns.length + ' cột.');
+                    return;
+                }
+                var pool = LI.splitPoolText ? LI.splitPoolText(columns[1]) : String(columns[1] || '').split('»').map(function (part) { return part.trim(); }).filter(Boolean);
+                var answers = LI.splitPoolText ? LI.splitPoolText(columns[2]) : String(columns[2] || '').split('»').map(function (part) { return part.trim(); }).filter(Boolean);
+                var blankCount = (String(columns[0] || '').match(/_{3,}/g) || []).length || 1;
+                if (!answers.length || answers.length !== blankCount) {
+                    validation.errors.push('KÉO THẢ VÀO Ô TRỐNG dòng ' + (index + 1) + ': số đáp án ở cột 3 phải bằng số ô trống (' + blankCount + ').');
+                } else if (answers.some(function (answer) { return pool.indexOf(answer) < 0; })) {
+                    validation.errors.push('KÉO THẢ VÀO Ô TRỐNG dòng ' + (index + 1) + ': đáp án ở cột 3 phải nằm trong danh sách mảnh ở cột 2.');
+                }
             });
             var enriched = LI.enrichLessonValidation
                 ? LI.enrichLessonValidation(validation, raw, pkg, { tool: 'soanbaigemini' })
@@ -2528,6 +2544,8 @@ Tìm x: 54 - (x + 7) = 24 | 23 | Chuyển vế cẩn thận
 KÉO THẢ VÀO Ô TRỐNG
 Thứ tự phép tính không ngoặc: ___ rồi ___ rồi ___ | lũy thừa » nhân chia » cộng trừ » đảo ngược | lũy thừa » nhân chia » cộng trừ | Nhớ quy tắc
 Điền: 2^3 · 5 = ___ | 30 » 40 » 13 | 40 | Tính lũy thừa trước
+
+Mỗi dòng KÉO THẢ bắt buộc đúng 4 cột: Đề | Các mảnh | Đáp án đúng | Gợi ý. Cột 3 không được bỏ; nếu mọi mảnh đều là đáp án thì vẫn lặp lại toàn bộ thứ tự đúng ở cột 3. Câu như "Quan sát sơ đồ lý thuyết" chỉ được nằm ở cột 4.
 
 SẮP XẾP THỨ TỰ
 Sắp xếp thứ tự thực hiện | Cộng trừ » Nhân chia » Lũy thừa | Lũy thừa » Nhân chia » Cộng trừ | Nhớ quy tắc
