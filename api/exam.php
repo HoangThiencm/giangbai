@@ -65,6 +65,7 @@ function ensure_exam_schema(PDO $pdo): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS exam_submissions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         exam_id VARCHAR(16) NOT NULL,
+        student_id INT DEFAULT NULL,
         student_name VARCHAR(160) NOT NULL DEFAULT '',
         sbd VARCHAR(80) NOT NULL DEFAULT '',
         student_class VARCHAR(80) NOT NULL DEFAULT '',
@@ -75,8 +76,39 @@ function ensure_exam_schema(PDO $pdo): void
         ai_feedback TEXT DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_submissions_exam (exam_id),
+        INDEX idx_submissions_student (student_id),
         INDEX idx_submissions_score (score)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    $columnStmt = $pdo->query("SHOW COLUMNS FROM exam_submissions LIKE 'student_id'");
+    if (!$columnStmt->fetch()) {
+        $pdo->exec('ALTER TABLE exam_submissions ADD COLUMN student_id INT DEFAULT NULL AFTER exam_id, ADD INDEX idx_submissions_student (student_id)');
+    }
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS exam_assignments (
+        exam_id VARCHAR(16) NOT NULL,
+        student_id INT NOT NULL,
+        subject VARCHAR(80) NOT NULL DEFAULT '',
+        grade VARCHAR(20) NOT NULL DEFAULT '',
+        class_name VARCHAR(80) NOT NULL DEFAULT '',
+        assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (exam_id, student_id),
+        INDEX idx_exam_assignments_student_subject (student_id, subject),
+        INDEX idx_exam_assignments_exam (exam_id)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS app_schema_migrations (
+        migration_key VARCHAR(120) PRIMARY KEY,
+        completed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    $migrationKey = 'exam_assignments_v1';
+    $migrationStmt = $pdo->prepare('SELECT migration_key FROM app_schema_migrations WHERE migration_key = ? LIMIT 1');
+    $migrationStmt->execute([$migrationKey]);
+    if (!$migrationStmt->fetch()) {
+        backfill_exam_assignments($pdo);
+        $pdo->prepare('INSERT IGNORE INTO app_schema_migrations (migration_key) VALUES (?)')->execute([$migrationKey]);
+    }
 }
 
 function current_teacher(PDO $pdo): ?array
@@ -95,6 +127,15 @@ function require_teacher(PDO $pdo): array
         respond(['error' => 'Cần đăng nhập tài khoản giáo viên.'], 401);
     }
     return $teacher;
+}
+
+function current_student(PDO $pdo): ?array
+{
+    if (empty($_SESSION['user_id'])) return null;
+    $stmt = $pdo->prepare("SELECT id, username, full_name, class_name, role FROM users WHERE id = ? AND role = 'student' AND is_active = 1 LIMIT 1");
+    $stmt->execute([(int)$_SESSION['user_id']]);
+    $user = $stmt->fetch();
+    return $user ?: null;
 }
 
 function new_exam_id(): string
@@ -342,6 +383,68 @@ function exam_to_public_payload(array $row): array
     ];
 }
 
+function questions_without_answers(array $questions): array
+{
+    return array_map(function ($question) {
+        if (!is_array($question)) return $question;
+        unset($question['correct_index'], $question['correctAnswer'], $question['answer']);
+        return $question;
+    }, $questions);
+}
+
+function roster_contains_student(array $roster, array $student): bool
+{
+    foreach ($roster as $item) {
+        if ((int)($item['student_id'] ?? 0) > 0 && (int)$item['student_id'] === (int)$student['id']) return true;
+        if (strcasecmp(trim((string)($item['sbd'] ?? '')), trim((string)$student['username'])) === 0
+            && strcasecmp(trim((string)($item['full_name'] ?? '')), trim((string)$student['full_name'])) === 0) return true;
+    }
+    return false;
+}
+
+function student_submission_where(PDO $pdo, string $examId, array $student): array
+{
+    $stmt = $pdo->prepare('SELECT * FROM exam_submissions WHERE exam_id = ? AND (student_id = ? OR (student_id IS NULL AND LOWER(TRIM(sbd)) = LOWER(TRIM(?)) AND LOWER(TRIM(student_name)) = LOWER(TRIM(?)))) ORDER BY score DESC, created_at DESC');
+    $stmt->execute([$examId, (int)$student['id'], $student['username'], $student['full_name']]);
+    return $stmt->fetchAll();
+}
+
+function inferred_exam_subject(array $meta): string
+{
+    $subject = trim((string)($meta['subject'] ?? ''));
+    if ($subject !== '') return $subject;
+    $grade = trim((string)($meta['grade'] ?? ''));
+    if (preg_match('/([4-9])/', $grade, $match)) return 'Toán ' . $match[1];
+    $className = trim((string)($meta['class_name'] ?? ''));
+    if (preg_match('/(?:^|\D)([4-9])(?:\D|$)/u', $className, $match)) return 'Toán ' . $match[1];
+    return '';
+}
+
+function sync_exam_assignments(PDO $pdo, string $examId, array $meta): void
+{
+    $pdo->prepare('DELETE FROM exam_assignments WHERE exam_id = ?')->execute([$examId]);
+    if (($meta['student_mode'] ?? 'free') !== 'class') return;
+    $subject = inferred_exam_subject($meta);
+    $grade = trim((string)($meta['grade'] ?? ''));
+    $className = trim((string)($meta['class_name'] ?? ''));
+    $insert = $pdo->prepare('INSERT IGNORE INTO exam_assignments (exam_id, student_id, subject, grade, class_name) VALUES (?, ?, ?, ?, ?)');
+    foreach (normalize_roster($meta['roster'] ?? []) as $student) {
+        $studentId = (int)($student['student_id'] ?? 0);
+        if ($studentId <= 0) continue;
+        $insert->execute([$examId, $studentId, $subject, $grade, $className]);
+    }
+}
+
+function backfill_exam_assignments(PDO $pdo): void
+{
+    $stmt = $pdo->query('SELECT id, variants_json FROM exams');
+    foreach ($stmt->fetchAll() as $exam) {
+        $variants = parse_json_or_default($exam['variants_json'] ?? null, []);
+        $meta = parse_exam_meta($variants);
+        sync_exam_assignments($pdo, (string)$exam['id'], $meta);
+    }
+}
+
 function teacher_owns_exam(array $teacher, array $exam): bool
 {
     $owner = strtolower(trim((string)($exam['teacher_email'] ?? '')));
@@ -428,6 +531,8 @@ if ($method === 'POST' && $action === 'save') {
         ]);
     }
 
+    sync_exam_assignments($pdo, $examId, $meta);
+
     respond(['status' => 'ok', 'exam_id' => $examId]);
 }
 
@@ -453,7 +558,84 @@ if ($method === 'GET' && $action === 'class-students') {
 if ($method === 'GET' && $action === 'get' && !empty($parts[1])) {
     $exam = fetch_exam($pdo, $parts[1]);
     if (!$exam) respond(['error' => 'Not Found'], 404);
-    respond(exam_to_public_payload($exam));
+    $payload = exam_to_public_payload($exam);
+    $teacher = current_teacher($pdo);
+    if (!$teacher || !teacher_owns_exam($teacher, $exam)) {
+        $payload['questions'] = questions_without_answers($payload['questions'] ?? []);
+    }
+    respond($payload);
+}
+
+if ($method === 'GET' && $action === 'my-student-exams') {
+    $student = current_student($pdo);
+    if (!$student) respond(['error' => 'Cần đăng nhập tài khoản học sinh.'], 401);
+    $subjectFilter = trim((string)($_GET['subject'] ?? ''));
+    $sql = 'SELECT e.* FROM exam_assignments a JOIN exams e ON e.id = a.exam_id WHERE a.student_id = ?';
+    $params = [(int)$student['id']];
+    if ($subjectFilter !== '') {
+        $sql .= ' AND a.subject = ?';
+        $params[] = $subjectFilter;
+    }
+    $sql .= ' ORDER BY e.created_at DESC';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $items = [];
+    foreach ($stmt->fetchAll() as $exam) {
+        $payload = exam_to_public_payload($exam);
+        $info = $payload['info'] ?? [];
+
+        $submissions = student_submission_where($pdo, (string)$exam['id'], $student);
+        $best = $submissions[0] ?? null;
+        $total = (int)($best['total_questions'] ?? count($payload['questions'] ?? []));
+        $correct = (int)($best['correct_count'] ?? 0);
+        $maxAttempts = (int)($info['max_attempts'] ?? 0);
+        $attemptCount = count($submissions);
+        $items[] = [
+            'id' => $exam['id'],
+            'title' => $exam['title'],
+            'subject' => $info['subject'] ?? '',
+            'grade' => $info['grade'] ?? '',
+            'class_name' => $info['class_name'] ?? '',
+            'duration_mins' => (int)$exam['duration_mins'],
+            'start_time' => $exam['start_time'],
+            'end_time' => $exam['end_time'],
+            'status' => $info['status'] ?? 'open',
+            'attempt_count' => $attemptCount,
+            'max_attempts' => $maxAttempts,
+            'can_attempt' => ($info['status'] ?? 'open') === 'open' && ($maxAttempts <= 0 || $attemptCount < $maxAttempts),
+            'best_result' => $best ? [
+                'score' => (float)$best['score'],
+                'correct_count' => $correct,
+                'wrong_count' => max(0, $total - $correct),
+                'total_questions' => $total,
+                'created_at' => $best['created_at'],
+            ] : null,
+        ];
+    }
+    respond(['exams' => $items]);
+}
+
+if ($method === 'GET' && $action === 'student-session' && !empty($parts[1])) {
+    $student = current_student($pdo);
+    if (!$student) respond(['authenticated' => false]);
+    $exam = fetch_exam($pdo, $parts[1]);
+    if (!$exam) respond(['error' => 'Not Found'], 404);
+    $payload = exam_to_public_payload($exam);
+    $info = $payload['info'] ?? [];
+    $eligible = ($info['student_mode'] ?? 'free') !== 'class'
+        || roster_contains_student($info['roster'] ?? [], $student);
+    $submissions = student_submission_where($pdo, (string)$exam['id'], $student);
+    respond([
+        'authenticated' => true,
+        'eligible' => $eligible,
+        'student' => [
+            'id' => (int)$student['id'],
+            'full_name' => $student['full_name'],
+            'sbd' => $student['username'],
+            'class_name' => $student['class_name'] ?? '',
+        ],
+        'attempt_count' => count($submissions),
+    ]);
 }
 
 if ($method === 'GET' && $action === 'my-exams') {
@@ -473,6 +655,7 @@ if ($method === 'DELETE' && $action === 'delete' && !empty($parts[1])) {
     $exam = fetch_exam($pdo, $parts[1]);
     if (!$exam) respond(['error' => 'Not Found'], 404);
     if (!teacher_owns_exam($teacher, $exam)) respond(['error' => 'Không có quyền xóa đề này.'], 403);
+    $pdo->prepare('DELETE FROM exam_assignments WHERE exam_id = ?')->execute([$parts[1]]);
     $pdo->prepare('DELETE FROM exam_submissions WHERE exam_id = ?')->execute([$parts[1]]);
     $pdo->prepare('DELETE FROM exams WHERE id = ?')->execute([$parts[1]]);
     respond(['message' => 'Deleted']);
@@ -498,6 +681,8 @@ if ($method === 'POST' && $action === 'duplicate' && !empty($parts[1])) {
         $exam['start_time'],
         $exam['end_time'],
     ]);
+    $variants = parse_json_or_default($exam['variants_json'] ?? null, []);
+    sync_exam_assignments($pdo, $newId, parse_exam_meta($variants));
     respond(['status' => 'ok', 'new_id' => $newId]);
 }
 
@@ -525,6 +710,18 @@ if ($method === 'POST' && $action === 'submit') {
     $studentName = trim((string)($data['student_name'] ?? ''));
     $sbd = trim((string)($data['sbd'] ?? ''));
     $studentClass = trim((string)($data['student_class'] ?? ''));
+    $loggedStudent = current_student($pdo);
+    $studentId = null;
+
+    if ($loggedStudent) {
+        if ($studentMode === 'class' && !roster_contains_student($roster, $loggedStudent)) {
+            respond(['error' => 'Tài khoản của bạn không có trong danh sách lớp của đề thi.'], 403);
+        }
+        $studentId = (int)$loggedStudent['id'];
+        $studentName = trim((string)$loggedStudent['full_name']);
+        $sbd = trim((string)$loggedStudent['username']);
+        $studentClass = trim((string)($loggedStudent['class_name'] ?? $studentClass));
+    }
 
     if ($studentMode === 'class') {
         if (count($roster) === 0) {
@@ -539,7 +736,9 @@ if ($method === 'POST' && $action === 'submit') {
 
         $maxAttempts = parse_max_attempts($meta['max_attempts'] ?? 0);
         if ($maxAttempts > 0) {
-            $attemptCount = count_student_submissions($pdo, $examId, $studentName, $sbd);
+            $attemptCount = $loggedStudent
+                ? count(student_submission_where($pdo, $examId, $loggedStudent))
+                : count_student_submissions($pdo, $examId, $studentName, $sbd);
             if ($attemptCount >= $maxAttempts) {
                 respond([
                     'error' => "Bạn đã thi đủ {$maxAttempts} lần cho đề này. Không thể nộp thêm bài.",
@@ -573,9 +772,10 @@ if ($method === 'POST' && $action === 'submit') {
     $score = $total > 0 ? round(($correct / $total) * 10, 2) : 0;
     $feedback = "Bạn làm đúng {$correct}/{$total} câu.";
 
-    $stmt = $pdo->prepare('INSERT INTO exam_submissions (exam_id, student_name, sbd, student_class, score, correct_count, total_questions, details_json, ai_feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO exam_submissions (exam_id, student_id, student_name, sbd, student_class, score, correct_count, total_questions, details_json, ai_feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $examId,
+        $studentId,
         $studentName,
         $sbd,
         $studentClass,
@@ -591,10 +791,8 @@ if ($method === 'POST' && $action === 'submit') {
 
 if ($method === 'GET' && $action === 'student-attempts') {
     $examId = trim((string)($_GET['exam_id'] ?? ''));
-    $studentName = trim((string)($_GET['student_name'] ?? ''));
-    $sbd = trim((string)($_GET['sbd'] ?? ''));
-    if ($examId === '' || $studentName === '' || $sbd === '') {
-        respond(['error' => 'Thiếu thông tin thí sinh.'], 422);
+    if ($examId === '') {
+        respond(['error' => 'Thiếu exam_id.'], 422);
     }
 
     $exam = fetch_exam($pdo, $examId);
@@ -603,8 +801,31 @@ if ($method === 'GET' && $action === 'student-attempts') {
     $variants = parse_json_or_default($exam['variants_json'] ?? null, []);
     $meta = parse_exam_meta($variants);
     $studentMode = in_array($meta['student_mode'] ?? '', ['free', 'class'], true) ? $meta['student_mode'] : 'free';
+    $roster = $studentMode === 'class' ? normalize_roster($meta['roster'] ?? []) : [];
     $maxAttempts = $studentMode === 'class' ? parse_max_attempts($meta['max_attempts'] ?? 0) : 0;
-    $attemptCount = count_student_submissions($pdo, $examId, $studentName, $sbd);
+
+    $loggedStudent = current_student($pdo);
+    if ($loggedStudent) {
+        // Học sinh đã đăng nhập: chỉ trả số lượt của chính họ, không tin name/SBD từ query.
+        if ($studentMode === 'class' && !roster_contains_student($roster, $loggedStudent)) {
+            respond(['error' => 'Tài khoản của bạn không có trong danh sách lớp của đề thi.'], 403);
+        }
+        $attemptCount = count(student_submission_where($pdo, $examId, $loggedStudent));
+    } else {
+        $studentName = trim((string)($_GET['student_name'] ?? ''));
+        $sbd = trim((string)($_GET['sbd'] ?? ''));
+        if ($studentName === '' || $sbd === '') {
+            respond(['error' => 'Thiếu thông tin thí sinh.'], 422);
+        }
+        // Link ngoài / Zalo: chỉ cho tra cứu khi thí sinh hợp lệ (class → phải có trong roster).
+        if ($studentMode === 'class') {
+            if (count($roster) === 0 || !roster_matches_submission($roster, $studentName, $sbd)) {
+                respond(['error' => 'Thí sinh không có trong danh sách lớp của đề thi.'], 403);
+            }
+        }
+        $attemptCount = count_student_submissions($pdo, $examId, $studentName, $sbd);
+    }
+
     $remaining = $maxAttempts > 0 ? max(0, $maxAttempts - $attemptCount) : null;
 
     respond([

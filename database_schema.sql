@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS exams (
 CREATE TABLE IF NOT EXISTS exam_submissions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     exam_id VARCHAR(16) NOT NULL,
+    student_id INT DEFAULT NULL,
     student_name VARCHAR(160) NOT NULL DEFAULT '',
     sbd VARCHAR(80) NOT NULL DEFAULT '',
     student_class VARCHAR(80) NOT NULL DEFAULT '',
@@ -77,8 +78,24 @@ CREATE TABLE IF NOT EXISTS exam_submissions (
     ai_feedback TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_submissions_exam (exam_id),
+    INDEX idx_submissions_student (student_id),
     INDEX idx_submissions_score (score),
-    CONSTRAINT fk_submissions_exam FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
+    CONSTRAINT fk_submissions_exam FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+    CONSTRAINT fk_exam_submissions_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS exam_assignments (
+    exam_id VARCHAR(16) NOT NULL,
+    student_id INT NOT NULL,
+    subject VARCHAR(80) NOT NULL DEFAULT '',
+    grade VARCHAR(20) NOT NULL DEFAULT '',
+    class_name VARCHAR(80) NOT NULL DEFAULT '',
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (exam_id, student_id),
+    INDEX idx_exam_assignments_student_subject (student_id, subject),
+    INDEX idx_exam_assignments_exam (exam_id),
+    CONSTRAINT fk_exam_assignments_exam FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+    CONSTRAINT fk_exam_assignments_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS submission_assignments (

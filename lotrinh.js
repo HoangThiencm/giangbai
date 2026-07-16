@@ -108,6 +108,9 @@
         user: null,
         lessons: [],
         progress: {},
+        studentExams: [],
+        studentExamsLoading: false,
+        studentExamsError: '',
         selectedLessonId: localStorage.getItem(LS_LESSON_KEY) || '',
         activeTab: localStorage.getItem(LS_TAB_KEY) || 'learn',
         studyMinutes: Number(localStorage.getItem(LS_STUDY_MINUTES_KEY)) || 30,
@@ -1279,6 +1282,7 @@
         renderTeacherPreviewBanner();
         renderOverallProgress();
         cleanupVerboseRightPanels();
+        renderStudentExamPanel();
         renderLessonList();
         renderHeader(lesson);
         renderTabs();
@@ -1332,6 +1336,107 @@
     function getLessonRightAside() {
         return document.getElementById('lessonRightAside')
             || document.querySelector('#studentLearningMain section.grid > aside');
+    }
+
+    function formatExamDate(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    }
+
+    function examStatusView(exam) {
+        if (exam.status === 'not_started') return { label: 'Chưa mở', tone: 'border-slate-200 bg-slate-50 text-slate-600', icon: 'fa-clock' };
+        if (exam.status === 'expired') return { label: 'Đã kết thúc', tone: 'border-slate-200 bg-slate-50 text-slate-500', icon: 'fa-lock' };
+        if (exam.status === 'open' && exam.can_attempt === false) {
+            return { label: 'Đã hết lượt', tone: 'border-amber-200 bg-amber-50 text-amber-800', icon: 'fa-ban' };
+        }
+        if (exam.best_result) return { label: 'Đã thi', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', icon: 'fa-circle-check' };
+        return { label: 'Chưa thi', tone: 'border-rose-200 bg-rose-50 text-rose-700', icon: 'fa-bell' };
+    }
+
+    async function loadStudentExams() {
+        if ((state.user?.role || '') !== 'student') {
+            state.studentExams = [];
+            return;
+        }
+        state.studentExamsLoading = true;
+        state.studentExamsError = '';
+        try {
+            const data = await api(`api/exam.php?route=my-student-exams&subject=${encodeURIComponent(PAGE_SUBJECT)}`, {
+                method: 'GET',
+                cache: 'no-store'
+            });
+            state.studentExams = Array.isArray(data.exams) ? data.exams : [];
+        } catch (err) {
+            state.studentExamsError = String(err?.message || 'Không tải được danh sách bài thi.');
+        } finally {
+            state.studentExamsLoading = false;
+        }
+    }
+
+    function renderStudentExamPanel() {
+        const rightAside = getLessonRightAside();
+        if (!rightAside || (state.user?.role || '') !== 'student') {
+            document.getElementById('studentExamPanel')?.remove();
+            return;
+        }
+        let panel = document.getElementById('studentExamPanel');
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'studentExamPanel';
+            panel.className = 'panel overflow-hidden';
+        }
+        if (panel.parentElement !== rightAside || rightAside.firstChild !== panel) {
+            rightAside.insertBefore(panel, rightAside.firstChild);
+        }
+
+        const exams = state.studentExams || [];
+        const pendingCount = exams.filter(exam => exam.status === 'open' && !exam.best_result && exam.can_attempt).length;
+        let body = '';
+        if (state.studentExamsLoading) {
+            body = '<div class="p-4 text-sm font-semibold text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Đang tải bài thi...</div>';
+        } else if (state.studentExamsError) {
+            body = `<div class="p-4 text-sm text-rose-700">${escapeHtml(state.studentExamsError)}</div>`;
+        } else if (!exams.length) {
+            body = '<div class="p-4 text-sm leading-6 text-slate-500">Hiện chưa có bài thi nào được giao cho lớp của em.</div>';
+        } else {
+            body = `<div class="divide-y divide-slate-100">${exams.map(exam => {
+                const view = examStatusView(exam);
+                const result = exam.best_result;
+                const disabled = !exam.can_attempt;
+                const timeText = exam.status === 'not_started' && exam.start_time
+                    ? `Mở ${formatExamDate(exam.start_time)}`
+                    : (exam.status === 'expired' && exam.end_time ? `Đóng ${formatExamDate(exam.end_time)}` : `${Number(exam.duration_mins) || 0} phút`);
+                return `
+                    <article class="p-4">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-bold leading-5 text-slate-900">${escapeHtml(exam.title || 'Bài thi')}</h3>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">${escapeHtml(timeText)}${exam.max_attempts > 0 ? ` · ${exam.attempt_count}/${exam.max_attempts} lượt` : ''}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full border px-2 py-1 text-[11px] font-bold ${view.tone}"><i class="fas ${view.icon} mr-1"></i>${view.label}</span>
+                        </div>
+                        ${result ? `<div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                            <div class="rounded bg-indigo-50 p-2 text-indigo-700"><strong class="block text-base">${Number(result.score)}</strong>Điểm</div>
+                            <div class="rounded bg-emerald-50 p-2 text-emerald-700"><strong class="block text-base">${Number(result.correct_count)}</strong>Đúng</div>
+                            <div class="rounded bg-rose-50 p-2 text-rose-700"><strong class="block text-base">${Number(result.wrong_count)}</strong>Sai</div>
+                        </div>` : ''}
+                        ${exam.status === 'open' ? `<a href="thitructuyen.html?mode=student&examId=${encodeURIComponent(exam.id)}&source=lotrinh" class="mt-3 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded px-3 py-2 text-sm font-bold ${disabled ? 'pointer-events-none bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700'}">
+                            <i class="fas ${result ? 'fa-rotate-right' : 'fa-arrow-right-to-bracket'}"></i>${result ? (disabled ? 'Đã hết lượt thi' : 'Thi lại') : 'Vào thi'}
+                        </a>` : ''}
+                    </article>`;
+            }).join('')}</div>`;
+        }
+        panel.innerHTML = `
+            <div class="flex items-center justify-between border-b border-slate-100 bg-indigo-50 px-4 py-3">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-widest text-indigo-700">Bài thi của em</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">Kết quả chỉ hiển thị đúng · sai, không hiện đáp án</p>
+                </div>
+                ${pendingCount ? `<span class="rounded-full bg-rose-600 px-2.5 py-1 text-xs font-bold text-white">${pendingCount} chưa thi</span>` : '<i class="fas fa-clipboard-check text-xl text-indigo-500"></i>'}
+            </div>
+            ${body}`;
     }
 
     function ensureStudyPlannerPanel() {
@@ -5552,6 +5657,7 @@
         let lessonToStart = null;
         try {
             await reloadLessons(true);
+            await loadStudentExams();
             const initialLesson = currentLesson();
             if (initialLesson && lessonNeedsDetail(initialLesson)) {
                 ensureLessonDetail(initialLesson).then(() => render()).catch(console.warn);
@@ -5579,7 +5685,7 @@
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible' || isTeacher()) return;
-        reloadLessons(false).then(() => render()).catch(console.warn);
+        Promise.all([reloadLessons(false), loadStudentExams()]).then(() => render()).catch(console.warn);
     });
 
     await bootstrapLotrinhPage();

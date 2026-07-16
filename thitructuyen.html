@@ -1975,6 +1975,7 @@
             const toastTimerRef = useRef(null);
             const [attemptInfo, setAttemptInfo] = useState(null);
             const [checkingAttempts, setCheckingAttempts] = useState(false);
+            const [accountStudent, setAccountStudent] = useState(null);
             const answersRef = useRef({});
             const infoRef = useRef({ name: "", sbd: "", class: "" });
             const nameInputRef = useRef(null);
@@ -2085,7 +2086,8 @@
                 setCheckingAttempts(true);
                 try {
                     const res = await axios.get(
-                        `${examUrl("student-attempts")}&exam_id=${encodeURIComponent(examId)}&student_name=${encodeURIComponent(trimmedName)}&sbd=${encodeURIComponent(trimmedSbd)}`
+                        `${examUrl("student-attempts")}&exam_id=${encodeURIComponent(examId)}&student_name=${encodeURIComponent(trimmedName)}&sbd=${encodeURIComponent(trimmedSbd)}`,
+                        { withCredentials: true }
                     );
                     setAttemptInfo(res.data || null);
                     return res.data || null;
@@ -2119,8 +2121,33 @@
             useEffect(() => { examRef.current = exam; }, [exam]);
 
             useEffect(() => {
-                axios.get(examUrl(`get/${examId}`)).then(res => {
-                    const data = res.data;
+                Promise.all([
+                    axios.get(examUrl(`get/${examId}`), { withCredentials: true }),
+                    axios.get(examUrl(`student-session/${examId}`), { withCredentials: true })
+                        .catch(() => ({ data: { authenticated: false } }))
+                ]).then(([examRes, sessionRes]) => {
+                    const data = examRes.data;
+                    const sessionData = sessionRes.data || {};
+                    if (sessionData.authenticated && sessionData.eligible && sessionData.student) {
+                        const student = sessionData.student;
+                        const snapshot = persistInfo({
+                            name: student.full_name || "",
+                            sbd: student.sbd || "",
+                            class: student.class_name || data.info.class_name || ""
+                        });
+                        setInfo(snapshot);
+                        setAccountStudent(student);
+                        setAttemptInfo({
+                            attempt_count: sessionData.attempt_count || 0,
+                            max_attempts: data.info.max_attempts || 0,
+                            remaining: data.info.max_attempts > 0 ? Math.max(0, data.info.max_attempts - (sessionData.attempt_count || 0)) : null,
+                            can_attempt: data.info.max_attempts <= 0 || (sessionData.attempt_count || 0) < data.info.max_attempts
+                        });
+                    } else if (sessionData.authenticated && !sessionData.eligible) {
+                        setError("Tài khoản của bạn không có trong danh sách lớp của đề thi này.");
+                        setStep("locked");
+                        return;
+                    }
                     if (data.info.status === "not_started") { setError(`Chưa đến giờ thi! Mở lúc: ${new Date(data.info.start_time).toLocaleString()}`); setStep("locked"); }
                     else if (data.info.status === "expired") { setError("Đã hết giờ làm bài."); setStep("locked"); }
                     else { setExam(data); setTimeLeft(data.info.duration_mins * 60); setStep("info"); }
@@ -2206,7 +2233,7 @@
                         sbd: currentInfo.sbd,
                         student_class: currentInfo.class,
                         answers: normalizeAnswersPayload(currentAnswers)
-                    }, { timeout: 45000 });
+                    }, { timeout: 45000, withCredentials: true });
                     setExam(prev => ({ ...(prev || {}), ...res.data }));
                     setStep("result");
                 } catch (e) {
@@ -2302,7 +2329,16 @@
 
             const startExam = async () => {
                 let snapshot;
-                if (isClassRosterMode) {
+                if (accountStudent) {
+                    snapshot = persistInfo({
+                        name: accountStudent.full_name || info.name,
+                        sbd: accountStudent.sbd || info.sbd,
+                        class: accountStudent.class_name || info.class || exam?.info?.class_name || ""
+                    });
+                    if (attemptInfo && attemptInfo.can_attempt === false) {
+                        return showStudentAlert(`Bạn đã thi đủ ${attemptInfo.max_attempts} lần cho đề này. Không thể làm thêm.`);
+                    }
+                } else if (isClassRosterMode) {
                     if (!selectedRosterKey) return showStudentAlert("Vui lòng chọn tên của bạn trong danh sách lớp!");
                     const student = examRoster.find(item => rosterKey(item) === selectedRosterKey);
                     if (!student) return showStudentAlert("Thí sinh không hợp lệ. Vui lòng chọn lại.");
@@ -2362,7 +2398,22 @@
                         <h2 className="text-2xl font-bold mb-2 text-gray-800">{exam.info.title}</h2>
                         <div className="flex justify-center gap-4 text-sm text-gray-500 mb-6"><span><i className="fas fa-clock"></i> {exam.info.duration_mins} phút</span><span><i className="fas fa-question-circle"></i> {exam.questions.length} câu</span></div>
                         <div className="space-y-3 text-left">
-                            {isClassRosterMode ? (
+                            {accountStudent ? (
+                                <>
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-900">
+                                        <div className="font-bold mb-2"><i className="fas fa-user-check"></i> Đã nhận diện tài khoản học sinh</div>
+                                        <div className="font-semibold text-gray-800">{info.name}</div>
+                                        <div className="text-xs mt-1">SBD: {info.sbd} · Lớp: {info.class || exam.info.class_name || "—"}</div>
+                                    </div>
+                                    {attemptInfo && attemptInfo.max_attempts > 0 ? (
+                                        <div className={`text-xs rounded-lg p-3 border ${attemptInfo.can_attempt ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
+                                            {attemptInfo.can_attempt
+                                                ? `Bạn còn ${attemptInfo.remaining} / ${attemptInfo.max_attempts} lượt thi.`
+                                                : `Bạn đã thi đủ ${attemptInfo.max_attempts} lần. Không thể làm thêm.`}
+                                        </div>
+                                    ) : null}
+                                </>
+                            ) : isClassRosterMode ? (
                                 <>
                                     <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm text-indigo-900">
                                         <div className="font-bold mb-1"><i className="fas fa-users"></i> Danh sách lớp: {exam.info.class_name || "—"}</div>
