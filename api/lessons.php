@@ -592,10 +592,17 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['is_published'],
             (int)$existing['id']
         ]);
+        $wasPublished = !empty($existing['is_published']);
+        $isPublished = !empty($payload['is_published']);
+        if (!$wasPublished && $isPublished) {
+            notify_students_for_lesson($pdo, (int)$existing['id'], $payload['subject'], $payload['title']);
+        } elseif ($wasPublished && !$isPublished) {
+            remove_entity_notifications($pdo, 'lesson', (string)$existing['id']);
+        }
         respond(['ok' => true, 'id' => (int)$existing['id'], 'slug' => $slug]);
     }
 
-    $stmt = $pdo->prepare('SELECT id FROM lessons WHERE slug = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, is_published FROM lessons WHERE slug = ? LIMIT 1');
     $stmt->execute([$slug]);
     $existingBySlug = $stmt->fetch();
 
@@ -624,6 +631,13 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['is_published'],
             $slug
         ]);
+        $wasPublished = !empty($existingBySlug['is_published']);
+        $isPublished = !empty($payload['is_published']);
+        if (!$wasPublished && $isPublished) {
+            notify_students_for_lesson($pdo, (int)$existingBySlug['id'], $payload['subject'], $payload['title']);
+        } elseif ($wasPublished && !$isPublished) {
+            remove_entity_notifications($pdo, 'lesson', (string)$existingBySlug['id']);
+        }
         respond(['ok' => true, 'id' => (int)$existingBySlug['id'], 'slug' => $slug]);
     }
 
@@ -650,7 +664,11 @@ if ($method === 'POST' && $action === 'save_content') {
         $payload['tasks_json'],
         $payload['skills_json']
     ]);
-    respond(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'slug' => $slug]);
+    $newLessonId = (int)$pdo->lastInsertId();
+    if (!empty($payload['is_published'])) {
+        notify_students_for_lesson($pdo, $newLessonId, $payload['subject'], $payload['title']);
+    }
+    respond(['ok' => true, 'id' => $newLessonId, 'slug' => $slug]);
 }
 
 if ($method === 'POST' && $action === 'delete_lesson') {
@@ -665,6 +683,7 @@ if ($method === 'POST' && $action === 'delete_lesson') {
     if (table_exists($pdo, 'student_lesson_progress')) {
         $pdo->prepare('DELETE FROM student_lesson_progress WHERE lesson_id = ?')->execute([$id]);
     }
+    remove_entity_notifications($pdo, 'lesson', (string)$id);
     $pdo->prepare('DELETE FROM lessons WHERE id = ?')->execute([$id]);
     respond(['ok' => true, 'deleted_id' => $id]);
 }

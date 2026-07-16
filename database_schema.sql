@@ -98,6 +98,27 @@ CREATE TABLE IF NOT EXISTS exam_assignments (
     CONSTRAINT fk_exam_assignments_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS student_notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    event_key VARCHAR(160) NOT NULL,
+    notification_type ENUM('lesson', 'exam') NOT NULL,
+    entity_id VARCHAR(40) NOT NULL,
+    subject VARCHAR(80) NOT NULL DEFAULT '',
+    title VARCHAR(255) NOT NULL,
+    message TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at DATETIME DEFAULT NULL,
+    UNIQUE KEY uniq_student_notification (student_id, event_key),
+    INDEX idx_student_notifications_unread (student_id, read_at, created_at),
+    CONSTRAINT fk_student_notifications_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS app_schema_migrations (
+    migration_key VARCHAR(120) PRIMARY KEY,
+    completed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS submission_assignments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     public_code VARCHAR(24) NOT NULL UNIQUE,

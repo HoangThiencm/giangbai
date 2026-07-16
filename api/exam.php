@@ -424,15 +424,25 @@ function inferred_exam_subject(array $meta): string
     return '';
 }
 
-function sync_exam_assignments(PDO $pdo, string $examId, array $meta): void
+function sync_exam_assignments(PDO $pdo, string $examId, array $meta, bool $notify = false, string $examTitle = 'Bài thi'): void
 {
+    $previousAssignments = [];
+    $previousStmt = $pdo->prepare('SELECT student_id FROM exam_assignments WHERE exam_id = ?');
+    $previousStmt->execute([$examId]);
+    foreach ($previousStmt->fetchAll() as $row) {
+        $previousAssignments[(int)$row['student_id']] = true;
+    }
     $pdo->prepare('DELETE FROM exam_assignments WHERE exam_id = ?')->execute([$examId]);
-    if (($meta['student_mode'] ?? 'free') !== 'class') return;
+    if (($meta['student_mode'] ?? 'free') !== 'class') {
+        remove_entity_notifications($pdo, 'exam', $examId);
+        return;
+    }
     $subject = inferred_exam_subject($meta);
     $grade = trim((string)($meta['grade'] ?? ''));
     $className = trim((string)($meta['class_name'] ?? ''));
     $insert = $pdo->prepare('INSERT IGNORE INTO exam_assignments (exam_id, student_id, subject, grade, class_name) VALUES (?, ?, ?, ?, ?)');
     $findStudent = $pdo->prepare("SELECT id FROM users WHERE username = ? AND role = 'student' AND is_active = 1 LIMIT 1");
+    $assignedStudentIds = [];
     foreach (normalize_roster($meta['roster'] ?? []) as $student) {
         $studentId = (int)($student['student_id'] ?? 0);
         if ($studentId <= 0 && trim((string)($student['username'] ?? '')) !== '') {
@@ -441,6 +451,26 @@ function sync_exam_assignments(PDO $pdo, string $examId, array $meta): void
         }
         if ($studentId <= 0) continue;
         $insert->execute([$examId, $studentId, $subject, $grade, $className]);
+        $assignedStudentIds[] = $studentId;
+    }
+
+    ensure_student_notifications_schema($pdo);
+    $assignedStudentIds = array_values(array_unique($assignedStudentIds));
+    if (!$assignedStudentIds) {
+        remove_entity_notifications($pdo, 'exam', $examId);
+        return;
+    }
+    $marks = implode(',', array_fill(0, count($assignedStudentIds), '?'));
+    $cleanup = $pdo->prepare("DELETE FROM student_notifications WHERE notification_type = 'exam' AND entity_id = ? AND student_id NOT IN ($marks)");
+    $cleanup->execute(array_merge([$examId], $assignedStudentIds));
+    $update = $pdo->prepare("UPDATE student_notifications SET subject = ?, title = ?, message = ? WHERE student_id = ? AND notification_type = 'exam' AND entity_id = ?");
+    foreach ($assignedStudentIds as $studentId) {
+        $notificationTitle = 'Bài thi mới: ' . $examTitle;
+        $notificationMessage = 'Giáo viên vừa giao một bài thi mới. Em vào làm bài đúng thời gian nhé.';
+        $update->execute([$subject, $notificationTitle, $notificationMessage, $studentId, $examId]);
+        if ($notify && empty($previousAssignments[$studentId])) {
+            create_student_notification($pdo, $studentId, 'exam:' . $examId, 'exam', $examId, $subject, $notificationTitle, $notificationMessage);
+        }
     }
 }
 
@@ -540,7 +570,7 @@ if ($method === 'POST' && $action === 'save') {
         ]);
     }
 
-    sync_exam_assignments($pdo, $examId, $meta);
+    sync_exam_assignments($pdo, $examId, $meta, true, $title);
 
     respond(['status' => 'ok', 'exam_id' => $examId]);
 }
@@ -670,6 +700,7 @@ if ($method === 'DELETE' && $action === 'delete' && !empty($parts[1])) {
     $exam = fetch_exam($pdo, $parts[1]);
     if (!$exam) respond(['error' => 'Not Found'], 404);
     if (!teacher_owns_exam($teacher, $exam)) respond(['error' => 'Không có quyền xóa đề này.'], 403);
+    remove_entity_notifications($pdo, 'exam', (string)$parts[1]);
     $pdo->prepare('DELETE FROM exam_assignments WHERE exam_id = ?')->execute([$parts[1]]);
     $pdo->prepare('DELETE FROM exam_submissions WHERE exam_id = ?')->execute([$parts[1]]);
     $pdo->prepare('DELETE FROM exams WHERE id = ?')->execute([$parts[1]]);
@@ -697,7 +728,7 @@ if ($method === 'POST' && $action === 'duplicate' && !empty($parts[1])) {
         $exam['end_time'],
     ]);
     $variants = parse_json_or_default($exam['variants_json'] ?? null, []);
-    sync_exam_assignments($pdo, $newId, parse_exam_meta($variants));
+    sync_exam_assignments($pdo, $newId, parse_exam_meta($variants), true, $newTitle);
     respond(['status' => 'ok', 'new_id' => $newId]);
 }
 

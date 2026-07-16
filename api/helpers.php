@@ -185,6 +185,65 @@ function subject_for_lotrinh_page(string $page): ?string
     return lotrinh_page_subjects()[$page] ?? null;
 }
 
+function lotrinh_page_for_subject(string $subject): ?string
+{
+    $page = array_search(trim($subject), lotrinh_page_subjects(), true);
+    return $page === false ? null : (string)$page;
+}
+
+function ensure_student_notifications_schema(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS student_notifications (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        event_key VARCHAR(160) NOT NULL,
+        notification_type ENUM('lesson', 'exam') NOT NULL,
+        entity_id VARCHAR(40) NOT NULL,
+        subject VARCHAR(80) NOT NULL DEFAULT '',
+        title VARCHAR(255) NOT NULL,
+        message TEXT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        read_at DATETIME DEFAULT NULL,
+        UNIQUE KEY uniq_student_notification (student_id, event_key),
+        INDEX idx_student_notifications_unread (student_id, read_at, created_at)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+}
+
+function create_student_notification(PDO $pdo, int $studentId, string $eventKey, string $type, string $entityId, string $subject, string $title, string $message): void
+{
+    if ($studentId <= 0) return;
+    ensure_student_notifications_schema($pdo);
+    $stmt = $pdo->prepare('INSERT IGNORE INTO student_notifications (student_id, event_key, notification_type, entity_id, subject, title, message) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$studentId, $eventKey, $type, $entityId, trim($subject), trim($title), trim($message)]);
+}
+
+function notify_students_for_lesson(PDO $pdo, int $lessonId, string $subject, string $title): void
+{
+    ensure_student_notifications_schema($pdo);
+    $students = $pdo->query("SELECT id, allowed_pages_json FROM users WHERE role = 'student' AND is_active = 1")->fetchAll();
+    $eventKey = 'lesson:' . $lessonId;
+    foreach ($students as $student) {
+        $pages = json_decode((string)($student['allowed_pages_json'] ?? '[]'), true);
+        if (!in_array($subject, subjects_for_allowed_pages(is_array($pages) ? $pages : []), true)) continue;
+        create_student_notification(
+            $pdo,
+            (int)$student['id'],
+            $eventKey,
+            'lesson',
+            (string)$lessonId,
+            $subject,
+            'Bài học mới: ' . $title,
+            'Giáo viên vừa mở một bài học mới. Em vào học nhé.'
+        );
+    }
+}
+
+function remove_entity_notifications(PDO $pdo, string $type, string $entityId): void
+{
+    ensure_student_notifications_schema($pdo);
+    $pdo->prepare('DELETE FROM student_notifications WHERE notification_type = ? AND entity_id = ?')->execute([$type, $entityId]);
+}
+
 function lotrinh_route_order(): array
 {
     return ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];

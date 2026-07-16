@@ -97,6 +97,7 @@
     const LS_LESSON_NAV_VIEW_KEY = `lotrinh_lesson_nav_view_${PAGE_STORAGE_KEY}`;
     const LS_MOTIVATION_KEY_PREFIX = `lotrinh_motivation_${PAGE_STORAGE_KEY}`;
     const REVIEW_STALE_DAYS = 7;
+    const REQUESTED_LESSON_ID = new URLSearchParams(window.location.search).get('lessonId') || '';
 
     const BADGE_DEFS = [
         { id: 'streak_3', label: '3 ngày học liên tiếp', icon: 'fa-fire', tone: 'text-orange-600 bg-orange-50 border-orange-200' },
@@ -112,7 +113,9 @@
         studentExamsLoading: false,
         studentExamsError: '',
         studentExamHistoryOpen: false,
-        selectedLessonId: localStorage.getItem(LS_LESSON_KEY) || '',
+        notifications: [],
+        notificationsDismissed: false,
+        selectedLessonId: REQUESTED_LESSON_ID || localStorage.getItem(LS_LESSON_KEY) || '',
         activeTab: localStorage.getItem(LS_TAB_KEY) || 'learn',
         studyMinutes: Number(localStorage.getItem(LS_STUDY_MINUTES_KEY)) || 30,
         teacherPreviewUi: { answers: {}, essayAnswers: {}, practiceDone: false },
@@ -1290,6 +1293,7 @@
         renderSkills(lesson);
         bindPracticeInteractions(lesson);
         refreshStudentAiAssist(lesson);
+        renderNotificationBoard();
         typesetMath();
     }
 
@@ -1337,6 +1341,155 @@
     function getLessonRightAside() {
         return document.getElementById('lessonRightAside')
             || document.querySelector('#studentLearningMain section.grid > aside');
+    }
+
+    async function loadStudentNotifications() {
+        if ((state.user?.role || '') !== 'student') {
+            state.notifications = [];
+            return;
+        }
+        try {
+            const beforeIds = new Set((state.notifications || []).map(item => String(item.id)));
+            const data = await api('api/student_notifications.php?action=list', {
+                method: 'GET',
+                cache: 'no-store'
+            });
+            const next = Array.isArray(data.notifications) ? data.notifications : [];
+            if (next.some(item => !beforeIds.has(String(item.id)))) {
+                state.notificationsDismissed = false;
+            }
+            state.notifications = next;
+        } catch (err) {
+            console.warn('[lotrinh] Không tải được thông báo học sinh:', err);
+        }
+    }
+
+    async function markNotificationRead(id) {
+        await api('api/student_notifications.php?action=read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        state.notifications = state.notifications.filter(item => String(item.id) !== String(id));
+    }
+
+    async function markAllNotificationsRead() {
+        await api('api/student_notifications.php?action=read-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        state.notifications = [];
+        state.notificationsDismissed = false;
+        renderNotificationBoard();
+    }
+
+    function notificationTime(value) {
+        const date = new Date(value || '');
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    }
+
+    function renderNotificationBoard() {
+        document.getElementById('studentNotificationBoard')?.remove();
+        document.getElementById('studentNotificationBell')?.remove();
+        const notifications = state.notifications || [];
+        if ((state.user?.role || '') !== 'student' || !notifications.length) return;
+
+        if (state.notificationsDismissed) {
+            const bell = document.createElement('button');
+            bell.id = 'studentNotificationBell';
+            bell.type = 'button';
+            bell.className = 'fixed bottom-5 right-5 z-[80] inline-flex min-h-[52px] items-center gap-2 rounded-full bg-rose-600 px-4 py-3 font-bold text-white shadow-xl hover:bg-rose-700';
+            bell.innerHTML = `<i class="fas fa-bell"></i><span>${notifications.length} thông báo mới</span>`;
+            bell.onclick = () => {
+                state.notificationsDismissed = false;
+                renderNotificationBoard();
+            };
+            document.body.appendChild(bell);
+            return;
+        }
+
+        const board = document.createElement('div');
+        board.id = 'studentNotificationBoard';
+        board.className = 'fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm';
+        board.innerHTML = `
+            <section class="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="studentNotificationTitle">
+                <header class="flex items-start justify-between gap-4 bg-gradient-to-r from-indigo-700 to-violet-600 px-5 py-5 text-white">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-indigo-100">Thông báo mới</p>
+                        <h2 id="studentNotificationTitle" class="mt-1 text-2xl font-bold">Em có ${notifications.length} nội dung cần xem</h2>
+                        <p class="mt-1 text-sm text-indigo-100">Bài học và bài thi mới từ giáo viên</p>
+                    </div>
+                    <button id="closeStudentNotificationBoard" type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 hover:bg-white/25" aria-label="Đóng bảng thông báo"><i class="fas fa-xmark"></i></button>
+                </header>
+                <div class="max-h-[58vh] divide-y divide-slate-100 overflow-y-auto">
+                    ${notifications.map(item => {
+                        const isExam = item.notification_type === 'exam';
+                        return `<article class="p-5 hover:bg-slate-50">
+                            <div class="flex items-start gap-4">
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${isExam ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}"><i class="fas ${isExam ? 'fa-clipboard-question' : 'fa-book-open'}"></i></div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                        <h3 class="font-bold leading-6 text-slate-900">${escapeHtml(item.title || 'Thông báo mới')}</h3>
+                                        <span class="text-xs font-semibold text-slate-400">${escapeHtml(notificationTime(item.created_at))}</span>
+                                    </div>
+                                    <p class="mt-1 text-sm leading-6 text-slate-600">${escapeHtml(item.message || '')}</p>
+                                    <button type="button" class="notification-open-btn mt-3 inline-flex min-h-[40px] items-center gap-2 rounded-lg ${isExam ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'} px-4 py-2 text-sm font-bold text-white" data-notification-id="${escapeHtml(item.id)}" data-notification-type="${escapeHtml(item.notification_type)}" data-entity-id="${escapeHtml(item.entity_id)}" data-subject="${escapeHtml(item.subject)}">
+                                        <i class="fas fa-arrow-right"></i>${isExam ? 'Vào làm bài' : 'Vào học ngay'}
+                                    </button>
+                                </div>
+                            </div>
+                        </article>`;
+                    }).join('')}
+                </div>
+                <footer class="flex flex-col-reverse gap-2 border-t bg-slate-50 p-4 sm:flex-row sm:justify-end">
+                    <button id="dismissStudentNotifications" type="button" class="min-h-[42px] rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">Để xem sau</button>
+                    <button id="readAllStudentNotifications" type="button" class="min-h-[42px] rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700"><i class="fas fa-check-double mr-2"></i>Đã biết tất cả</button>
+                </footer>
+            </section>`;
+        document.body.appendChild(board);
+
+        const dismiss = () => {
+            state.notificationsDismissed = true;
+            renderNotificationBoard();
+        };
+        document.getElementById('closeStudentNotificationBoard').onclick = dismiss;
+        document.getElementById('dismissStudentNotifications').onclick = dismiss;
+        document.getElementById('readAllStudentNotifications').onclick = () => markAllNotificationsRead().catch(console.warn);
+        board.querySelectorAll('.notification-open-btn').forEach(button => {
+            button.onclick = async () => {
+                const notificationId = button.getAttribute('data-notification-id');
+                const type = button.getAttribute('data-notification-type');
+                const entityId = button.getAttribute('data-entity-id') || '';
+                const subject = button.getAttribute('data-subject') || '';
+                try { await markNotificationRead(notificationId); } catch (err) { console.warn(err); }
+                if (type === 'exam') {
+                    window.location.href = `thitructuyen.html?mode=student&examId=${encodeURIComponent(entityId)}&source=notification`;
+                    return;
+                }
+                if (normalizeSubjectName(subject) !== normalizeSubjectName(PAGE_SUBJECT)) {
+                    const targetPage = Object.entries(LOTRINH_PAGE_SUBJECTS).find(([, value]) => normalizeSubjectName(value) === normalizeSubjectName(subject))?.[0];
+                    const targetUrl = targetPage ? LOTRINH_PAGE_URLS[targetPage] : '';
+                    if (targetUrl) {
+                        window.location.href = `${targetUrl}?lessonId=${encodeURIComponent(entityId)}&source=notification`;
+                        return;
+                    }
+                }
+                const lesson = state.lessons.find(item => String(item.id) === String(entityId));
+                if (lesson) {
+                    state.selectedLessonId = lesson.id;
+                    state.activeTab = 'learn';
+                    localStorage.setItem(LS_LESSON_KEY, String(lesson.id));
+                    localStorage.setItem(LS_TAB_KEY, 'learn');
+                    state.notificationsDismissed = state.notifications.length > 0;
+                    render();
+                    if (lessonNeedsDetail(lesson)) ensureLessonDetail(lesson).then(() => render()).catch(console.warn);
+                } else {
+                    renderNotificationBoard();
+                }
+            };
+        });
     }
 
     function formatExamDate(value) {
@@ -5766,7 +5919,7 @@
         let lessonToStart = null;
         try {
             await reloadLessons(true);
-            await loadStudentExams();
+            await Promise.all([loadStudentExams(), loadStudentNotifications()]);
             const initialLesson = currentLesson();
             if (initialLesson && lessonNeedsDetail(initialLesson)) {
                 ensureLessonDetail(initialLesson).then(() => render()).catch(console.warn);
@@ -5794,7 +5947,7 @@
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible' || isTeacher()) return;
-        Promise.all([reloadLessons(false), loadStudentExams()]).then(() => render()).catch(console.warn);
+        Promise.all([reloadLessons(false), loadStudentExams(), loadStudentNotifications()]).then(() => render()).catch(console.warn);
     });
 
     await bootstrapLotrinhPage();
