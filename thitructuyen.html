@@ -1183,6 +1183,8 @@
                 duration: 45,
                 start_time: "",
                 end_time: "",
+                subject: "",
+                grade: "",
                 student_mode: "free",
                 class_name: "",
                 roster: [],
@@ -1235,7 +1237,14 @@
                 try {
                     const res = await axios.get(`${examUrl("class-students")}&class_name=${encodeURIComponent(trimmed)}`, { withCredentials: true });
                     const roster = Array.isArray(res.data?.roster) ? res.data.roster : [];
-                    setExamInfo(prev => ({ ...prev, class_name: trimmed, roster }));
+                    const gradeMatch = trimmed.match(/(?:^|\D)([4-9])(?:\D|$)/);
+                    setExamInfo(prev => ({
+                        ...prev,
+                        class_name: trimmed,
+                        roster,
+                        subject: gradeMatch ? `Toán ${gradeMatch[1]}` : prev.subject,
+                        grade: gradeMatch ? gradeMatch[1] : prev.grade
+                    }));
                 } catch (e) {
                     alert("Không tải được danh sách lớp: " + formatApiError(e, e.message));
                     setExamInfo(prev => ({ ...prev, class_name: trimmed, roster: [] }));
@@ -1580,6 +1589,7 @@
                 if (examInfo.student_mode === "class") {
                     if (!examInfo.class_name) return alert("Vui lòng chọn lớp cho danh sách thí sinh.");
                     if (!examInfo.roster?.length) return alert("Lớp đã chọn chưa có học sinh. Kiểm tra lại danh sách trong admin.");
+                    if (!examInfo.subject) return alert("Vui lòng chọn môn/khối để bài thi xuất hiện đúng lộ trình học sinh.");
                 }
 
                 const payload = {
@@ -1682,6 +1692,21 @@
                                     <span className="text-indigo-700 font-bold whitespace-nowrap">
                                         {loadingRoster ? "Đang tải..." : `${examInfo.roster?.length || 0} HS`}
                                     </span>
+                                )}
+                                {examInfo.student_mode === "class" && (
+                                    <select
+                                        className="border rounded px-2 py-1 bg-white min-w-[110px]"
+                                        value={examInfo.subject || ""}
+                                        onChange={e => {
+                                            const subject = e.target.value;
+                                            const gradeMatch = subject.match(/([4-9])/);
+                                            setExamInfo(prev => ({ ...prev, subject, grade: gradeMatch ? gradeMatch[1] : "" }));
+                                        }}
+                                        title="Lộ trình sẽ hiển thị bài thi này"
+                                    >
+                                        <option value="">-- Môn/khối --</option>
+                                        {[4, 5, 6, 7, 8, 9].map(grade => <option key={grade} value={`Toán ${grade}`}>Toán {grade}</option>)}
+                                    </select>
                                 )}
                                 {examInfo.student_mode === "class" && (
                                     <label className="flex items-center gap-1 whitespace-nowrap" title="0 = không giới hạn">
@@ -1812,10 +1837,12 @@
                     student_mode: meta.student_mode === "class" ? "class" : "free",
                     class_name: String(meta.class_name || "").trim(),
                     roster: Array.isArray(meta.roster) ? meta.roster : [],
-                    max_attempts: Math.max(0, parseInt(meta.max_attempts, 10) || 0)
+                    max_attempts: Math.max(0, parseInt(meta.max_attempts, 10) || 0),
+                    subject: String(meta.subject || "").trim(),
+                    grade: String(meta.grade || "").trim()
                 };
             } catch {
-                return { student_mode: "free", class_name: "", roster: [], max_attempts: 0 };
+                return { student_mode: "free", class_name: "", roster: [], max_attempts: 0, subject: "", grade: "" };
             }
         };
 
@@ -2147,6 +2174,10 @@
                         setError("Tài khoản của bạn không có trong danh sách lớp của đề thi này.");
                         setStep("locked");
                         return;
+                    } else if (!sessionData.authenticated && data.info.student_mode === "class") {
+                        setError("Đề thi theo lớp yêu cầu đăng nhập tài khoản học sinh.");
+                        setStep("locked");
+                        return;
                     }
                     if (data.info.status === "not_started") { setError(`Chưa đến giờ thi! Mở lúc: ${new Date(data.info.start_time).toLocaleString()}`); setStep("locked"); }
                     else if (data.info.status === "expired") { setError("Đã hết giờ làm bài."); setStep("locked"); }
@@ -2377,7 +2408,7 @@
                 setAnswers(prev => ({ ...prev, [originalQIdx]: originalOptIdx }));
             };
 
-            if (step === "locked") return withStudentToast(<div className="flex justify-center h-screen items-center bg-gray-100"><div className="bg-white p-8 rounded shadow text-center"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Đóng Cửa</h2><p>{error}</p></div></div>);
+            if (step === "locked") return withStudentToast(<div className="flex justify-center h-screen items-center bg-gray-100 p-4"><div className="bg-white p-8 rounded shadow text-center max-w-md"><h2 className="text-xl font-bold text-red-500 mb-2"><i className="fas fa-lock"></i> Chưa thể vào thi</h2><p>{error}</p>{String(error || "").toLowerCase().includes("đăng nhập") && <a href="login.html" className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-indigo-600 px-5 py-2 font-bold text-white hover:bg-indigo-700"><i className="fas fa-right-to-bracket mr-2"></i>Đăng nhập học sinh</a>}</div></div>);
             if (step === "loading") return withStudentToast(<div className="flex justify-center h-screen items-center"><div className="loader border-indigo-600"></div></div>);
 
             if (step === "info" && isClassRosterMode && examRoster.length === 0) {

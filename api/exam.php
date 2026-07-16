@@ -273,6 +273,8 @@ function build_exam_meta(array $data, PDO $pdo): array
 
     $className = trim((string)($data['class_name'] ?? ''));
     $roster = normalize_roster($data['roster'] ?? []);
+    $subject = trim((string)($data['subject'] ?? ''));
+    $grade = trim((string)($data['grade'] ?? ''));
 
     if ($mode === 'class') {
         if ($className === '') {
@@ -283,6 +285,12 @@ function build_exam_meta(array $data, PDO $pdo): array
         }
         if (count($roster) === 0) {
             respond(['error' => 'Lớp đã chọn không có học sinh hoạt động.'], 422);
+        }
+        if ($subject === '') {
+            respond(['error' => 'Vui lòng chọn môn/khối để hiển thị đề đúng lộ trình học sinh.'], 422);
+        }
+        if ($grade === '' && preg_match('/([4-9])/', $subject, $gradeMatch)) {
+            $grade = $gradeMatch[1];
         }
         foreach ($roster as $idx => $item) {
             if ($item['class_name'] === '') {
@@ -305,15 +313,11 @@ function build_exam_meta(array $data, PDO $pdo): array
         'class_name' => $className,
         'roster' => $roster,
         'max_attempts' => $maxAttempts,
+        'subject' => $subject,
+        'grade' => $grade,
     ];
     if (isset($data['matrixConfig']) && is_array($data['matrixConfig'])) {
         $meta['matrixConfig'] = $data['matrixConfig'];
-    }
-    if (!empty($data['subject'])) {
-        $meta['subject'] = trim((string)$data['subject']);
-    }
-    if (!empty($data['grade'])) {
-        $meta['grade'] = trim((string)$data['grade']);
     }
     return $meta;
 }
@@ -428,8 +432,13 @@ function sync_exam_assignments(PDO $pdo, string $examId, array $meta): void
     $grade = trim((string)($meta['grade'] ?? ''));
     $className = trim((string)($meta['class_name'] ?? ''));
     $insert = $pdo->prepare('INSERT IGNORE INTO exam_assignments (exam_id, student_id, subject, grade, class_name) VALUES (?, ?, ?, ?, ?)');
+    $findStudent = $pdo->prepare("SELECT id FROM users WHERE username = ? AND role = 'student' AND is_active = 1 LIMIT 1");
     foreach (normalize_roster($meta['roster'] ?? []) as $student) {
         $studentId = (int)($student['student_id'] ?? 0);
+        if ($studentId <= 0 && trim((string)($student['username'] ?? '')) !== '') {
+            $findStudent->execute([trim((string)$student['username'])]);
+            $studentId = (int)($findStudent->fetchColumn() ?: 0);
+        }
         if ($studentId <= 0) continue;
         $insert->execute([$examId, $studentId, $subject, $grade, $className]);
     }
@@ -579,12 +588,18 @@ if ($method === 'GET' && $action === 'my-student-exams') {
     $sql .= ' ORDER BY e.created_at DESC';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+    $submissionStmt = $pdo->prepare('SELECT * FROM exam_submissions WHERE student_id = ? OR (student_id IS NULL AND LOWER(TRIM(sbd)) = LOWER(TRIM(?)) AND LOWER(TRIM(student_name)) = LOWER(TRIM(?))) ORDER BY score DESC, created_at DESC');
+    $submissionStmt->execute([(int)$student['id'], $student['username'], $student['full_name']]);
+    $submissionsByExam = [];
+    foreach ($submissionStmt->fetchAll() as $submission) {
+        $submissionsByExam[(string)$submission['exam_id']][] = $submission;
+    }
     $items = [];
     foreach ($stmt->fetchAll() as $exam) {
         $payload = exam_to_public_payload($exam);
         $info = $payload['info'] ?? [];
 
-        $submissions = student_submission_where($pdo, (string)$exam['id'], $student);
+        $submissions = $submissionsByExam[(string)$exam['id']] ?? [];
         $best = $submissions[0] ?? null;
         $total = (int)($best['total_questions'] ?? count($payload['questions'] ?? []));
         $correct = (int)($best['correct_count'] ?? 0);
@@ -713,6 +728,10 @@ if ($method === 'POST' && $action === 'submit') {
     $loggedStudent = current_student($pdo);
     $studentId = null;
 
+    if ($studentMode === 'class' && !$loggedStudent) {
+        respond(['error' => 'Đề thi theo lớp yêu cầu đăng nhập tài khoản học sinh.'], 401);
+    }
+
     if ($loggedStudent) {
         if ($studentMode === 'class' && !roster_contains_student($roster, $loggedStudent)) {
             respond(['error' => 'Tài khoản của bạn không có trong danh sách lớp của đề thi.'], 403);
@@ -812,17 +831,15 @@ if ($method === 'GET' && $action === 'student-attempts') {
         }
         $attemptCount = count(student_submission_where($pdo, $examId, $loggedStudent));
     } else {
+        if ($studentMode === 'class') {
+            respond(['error' => 'Cần đăng nhập tài khoản học sinh để xem số lượt thi của đề theo lớp.'], 401);
+        }
         $studentName = trim((string)($_GET['student_name'] ?? ''));
         $sbd = trim((string)($_GET['sbd'] ?? ''));
         if ($studentName === '' || $sbd === '') {
             respond(['error' => 'Thiếu thông tin thí sinh.'], 422);
         }
-        // Link ngoài / Zalo: chỉ cho tra cứu khi thí sinh hợp lệ (class → phải có trong roster).
-        if ($studentMode === 'class') {
-            if (count($roster) === 0 || !roster_matches_submission($roster, $studentName, $sbd)) {
-                respond(['error' => 'Thí sinh không có trong danh sách lớp của đề thi.'], 403);
-            }
-        }
+        // Link tự do vẫn được tra cứu theo tên/SBD để giữ tương thích cách thi cũ.
         $attemptCount = count_student_submissions($pdo, $examId, $studentName, $sbd);
     }
 
