@@ -448,6 +448,9 @@ if ($method === 'GET') {
 
 if ($method === 'POST' && $action === 'save_progress') {
     $user = ensure_login();
+    if (($user['role'] ?? '') !== 'student') {
+        respond(['error' => 'Chế độ học thử không lưu tiến độ.'], 403);
+    }
     $data = $requestData;
     $lessonId = (int)($data['lesson_id'] ?? 0);
     if ($lessonId <= 0) respond(['error' => 'Thiếu lesson_id.'], 422);
@@ -489,6 +492,9 @@ if ($method === 'POST' && $action === 'save_progress') {
 
 if ($method === 'POST' && $action === 'reset_progress') {
     $user = ensure_login();
+    if (($user['role'] ?? '') !== 'student') {
+        respond(['error' => 'Chế độ học thử không thay đổi tiến độ.'], 403);
+    }
     $data = $requestData;
     $lessonId = (int)($data['lesson_id'] ?? 0);
     if ($lessonId <= 0) respond(['error' => 'Thiếu lesson_id.'], 422);

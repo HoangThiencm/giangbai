@@ -1326,6 +1326,7 @@
             <div>
                 <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Giáo viên đang xem thử</p>
                 <h2 class="text-lg font-bold text-slate-950">Giao diện bên dưới là cách học sinh nhìn thấy lộ trình.</h2>
+                <p class="mt-1 text-sm text-slate-600">Bạn có thể làm và chấm thử toàn bộ bài. Kết quả thử không lưu vào tiến độ hoặc báo cáo học sinh.</p>
             </div>
             <button id="backToLessonEditorBtn" type="button" class="inline-flex items-center justify-center gap-2 rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
                 <i class="fas fa-pen-to-square"></i> Quay lại soạn bài

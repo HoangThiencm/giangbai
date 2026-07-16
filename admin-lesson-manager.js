@@ -88,6 +88,32 @@
 
     function el(id) { return document.getElementById(id); }
 
+    function lessonStorageKey(subject) {
+        return String(subject || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    function testCurrentLessonAsStudent() {
+        if (!currentLessonId) {
+            alert('Hãy lưu bài học trước khi học thử để hệ thống dùng đúng nội dung đã lưu.');
+            return;
+        }
+
+        const subject = (isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject')?.value) || selectedSubject;
+        const storageKey = lessonStorageKey(subject);
+        localStorage.setItem(`lotrinh_selected_lesson_${storageKey}`, String(currentLessonId));
+        localStorage.setItem(`lotrinh_teacher_preview_${storageKey}`, '1');
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('lessonId', String(currentLessonId));
+        window.location.assign(url.toString());
+    }
+
     function requireLessonImport() {
         if (!LI) {
             alert('Thiếu lesson-import.js. Tải lại trang (Ctrl+F5).');
@@ -1760,6 +1786,7 @@
                     <select id="lessonSelect" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none"></select>
                 </div>
                 <button id="newLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-slate-800 text-white rounded font-bold"><i class="fas fa-plus mr-1"></i>Mới</button>
+                <button id="testLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-teal-700 text-white rounded font-bold hover:bg-teal-800" title="Mở đúng bài đang chọn bằng giao diện học sinh; kết quả thử không được lưu vào tiến độ"><i class="fas fa-flask mr-1"></i>Học thử bài này</button>
                 <button id="duplicateLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-copy mr-1"></i>Nhân bản</button>
                 <button id="deleteLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded font-bold"><i class="fas fa-trash mr-1"></i>Xóa</button>
                 <button id="lessonReloadBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-rotate-right mr-1"></i>Tải lại</button>
@@ -1982,6 +2009,7 @@
         el('lessonReloadBtn').onclick = refreshLessons;
         el('lessonSelect').onchange = () => { void fillForm(el('lessonSelect').value); };
         el('newLessonBtn').onclick = newLesson;
+        el('testLessonBtn').onclick = testCurrentLessonAsStudent;
         el('duplicateLessonBtn').onclick = duplicateLesson;
         el('deleteLessonBtn').onclick = deleteLesson;
         el('renameChapterBtn').onclick = renameChapter;
