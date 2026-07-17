@@ -976,6 +976,7 @@
     function openModal(doc = null) {
         state.pendingUploadFiles = [];
         state.primaryParseFileIndex = 0;
+        resetUploadProgress();
         $('documentForm')?.reset();
         $('formError')?.classList.add('hidden');
         renderPendingFilesPicker();
@@ -1306,8 +1307,31 @@
         };
     }
 
-    async function uploadFileViaChunks(documentId, file, index) {
+    function updateUploadProgress(uploaded, total, label = '') {
+        const box = $('uploadProgress');
+        if (!box) return;
+        const safeTotal = Math.max(1, Number(total) || 1);
+        const safeUploaded = Math.min(safeTotal, Math.max(0, Number(uploaded) || 0));
+        const percent = Math.min(100, Math.round((safeUploaded / safeTotal) * 100));
+        box.classList.remove('hidden');
+        if ($('uploadProgressText')) {
+            const amount = `${formatBytes(safeUploaded)} / ${formatBytes(safeTotal)}`;
+            $('uploadProgressText').textContent = label ? `${label} · ${amount}` : amount;
+        }
+        if ($('uploadProgressPercent')) $('uploadProgressPercent').textContent = `${percent}%`;
+        if ($('uploadProgressBar')) $('uploadProgressBar').style.width = `${percent}%`;
+    }
+
+    function resetUploadProgress() {
+        $('uploadProgress')?.classList.add('hidden');
+        if ($('uploadProgressText')) $('uploadProgressText').textContent = 'Đang chuẩn bị tải tệp...';
+        if ($('uploadProgressPercent')) $('uploadProgressPercent').textContent = '0%';
+        if ($('uploadProgressBar')) $('uploadProgressBar').style.width = '0%';
+    }
+
+    async function uploadFileViaChunks(documentId, file, index, onProgress) {
         const mime = file.type || 'application/octet-stream';
+        onProgress?.(0);
         const init = await api('upload_init', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1336,9 +1360,13 @@
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 const backend = data.upload_backend ? ` [${data.upload_backend}]` : '';
-                throw new Error((data.error || 'Không tải được phần tệp lên Google Drive.') + backend);
+                const loginHint = response.status === 401
+                    ? ' Phiên đăng nhập đã hết hạn; hãy đăng nhập lại rồi tải tiếp.'
+                    : '';
+                throw new Error((data.error || 'Không tải được phần tệp lên Google Drive.') + loginHint + backend);
             }
             lastResult = data;
+            onProgress?.(Math.min(file.size, Number(data.uploaded) || (offset + blob.size)));
             if (data.complete) return data;
         }
         if (!lastResult?.complete) {
@@ -1356,9 +1384,24 @@
         });
         if (!pending.length) return saveData;
         if (state.driveReady) {
+            const totalBytes = pending.reduce((sum, file) => sum + file.size, 0);
+            let completedBytes = 0;
+            updateUploadProgress(0, totalBytes, `Đang chuẩn bị 1/${pending.length}`);
             for (let index = 0; index < pending.length; index += 1) {
-                await uploadFileViaChunks(Number(saveData.document?.id) || Number(payload.id) || 0, pending[index], index);
+                const file = pending[index];
+                await uploadFileViaChunks(
+                    Number(saveData.document?.id) || Number(payload.id) || 0,
+                    file,
+                    index,
+                    uploaded => updateUploadProgress(
+                        completedBytes + uploaded,
+                        totalBytes,
+                        `Tệp ${index + 1}/${pending.length}: ${file.name}`
+                    )
+                );
+                completedBytes += file.size;
             }
+            updateUploadProgress(totalBytes, totalBytes, `Đã tải ${pending.length} tệp`);
             return {
                 ok: true,
                 document: saveData.document,
@@ -1390,6 +1433,7 @@
             event.preventDefault();
             const button = $('saveDocumentBtn');
             const original = button?.innerHTML || '';
+            resetUploadProgress();
             if (button) {
                 button.disabled = true;
                 button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang lưu...';

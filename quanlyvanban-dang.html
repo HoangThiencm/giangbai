@@ -170,6 +170,15 @@
                 </label>
                 <p id="selectedFilesNote" class="text-xs text-slate-500">Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.</p>
                 <div id="pendingFilesPicker" class="hidden"></div>
+                <div id="uploadProgress" class="hidden rounded-lg border border-rose-200 bg-rose-50 p-3" role="status" aria-live="polite">
+                    <div class="flex items-center justify-between gap-3 text-xs font-bold text-rose-900">
+                        <span id="uploadProgressText">Đang chuẩn bị tải tệp...</span>
+                        <span id="uploadProgressPercent">0%</span>
+                    </div>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-rose-100">
+                        <div id="uploadProgressBar" class="h-full rounded-full bg-rose-600 transition-[width] duration-200" style="width:0%"></div>
+                    </div>
+                </div>
                 <p id="formError" class="hidden rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"></p>
             </div>
             <div class="flex flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-4">
@@ -208,6 +217,6 @@
     </div>
 
     <div id="toast" class="fixed bottom-4 right-4 z-[70] hidden max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-xl"></div>
-    <script src="vanban-app.js?v=20260717-document-types"></script>
+    <script src="vanban-app.js?v=20260717-drive-progress"></script>
 </body>
 </html>

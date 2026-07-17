@@ -763,7 +763,6 @@ function drive_upload_resumable_chunk(string $uploadUrl, string $mediaMime, int 
         throw new RuntimeException('Phần tệp vượt quá kích thước đã khai báo.');
     }
     $timeouts = drive_curl_timeouts();
-    $token = drive_access_token();
     $ch = curl_init($uploadUrl);
     curl_setopt_array($ch, [
         CURLOPT_CUSTOMREQUEST => 'PUT',
@@ -772,7 +771,6 @@ function drive_upload_resumable_chunk(string $uploadUrl, string $mediaMime, int 
         CURLOPT_CONNECTTIMEOUT => $timeouts['connect'],
         CURLOPT_TIMEOUT => $timeouts['total'],
         CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $token,
             'Content-Type: ' . $mediaMime,
             'Content-Length: ' . $len,
             'Content-Range: bytes ' . $offset . '-' . $end . '/' . $total,

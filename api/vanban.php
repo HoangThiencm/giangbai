@@ -596,13 +596,16 @@ function vbd_parse_ini_size(string $value): int
 
 function vbd_upload_chunk_bytes(): int
 {
-    $configured = defined('VANBAN_UPLOAD_CHUNK_MB') ? max(1, (int)VANBAN_UPLOAD_CHUNK_MB) : 1;
+    $configured = defined('VANBAN_UPLOAD_CHUNK_MB') ? max(1, (int)VANBAN_UPLOAD_CHUNK_MB) : 4;
     $chunk = $configured * 1024 * 1024;
     $uploadMax = vbd_parse_ini_size((string)(ini_get('upload_max_filesize') ?: ''));
-    if ($uploadMax > 0) {
-        // Leave headroom for multipart overhead on shared hosting (often 2M).
-        $safe = max(256 * 1024, $uploadMax - 256 * 1024);
-        $chunk = min($chunk, $safe);
+    $postMax = vbd_parse_ini_size((string)(ini_get('post_max_size') ?: ''));
+    foreach ([$uploadMax, $postMax] as $phpLimit) {
+        if ($phpLimit > 0) {
+            // Leave headroom for multipart fields and headers on shared hosting.
+            $safe = max(256 * 1024, $phpLimit - 256 * 1024);
+            $chunk = min($chunk, $safe);
+        }
     }
     return max(256 * 1024, $chunk);
 }
