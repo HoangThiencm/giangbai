@@ -435,6 +435,44 @@
             text-align: justify;
         }
 
+        .appendix-page {
+            break-before: page;
+            page-break-before: always;
+            margin-top: 42px;
+            padding-top: 26px;
+            border-top: 2px dashed #94a3b8;
+            position: relative;
+        }
+
+        .appendix-page:first-child {
+            margin-top: 54px;
+        }
+
+        .appendix-content {
+            outline: none;
+        }
+
+        .appendix-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            margin-bottom: 10px;
+            font-family: "Segoe UI", sans-serif;
+            font-size: 12px;
+        }
+
+        @media print {
+            .appendix-actions {
+                display: none !important;
+            }
+
+            .appendix-page {
+                border-top: none;
+                margin-top: 0;
+                padding-top: 0;
+            }
+        }
+
         /* Animation */
         .loader {
             border: 3px solid #f3f3f3;
@@ -628,8 +666,8 @@
                                 <div class="doc-number">Số: <span id="setupPrevDocNo">.../TT-XXX</span></div>
                             </td>
                             <td>
-                                <div class="quoc-hieu">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                                <div class="tieu-ngu">Độc lập - Tự do - Hạnh phúc</div>
+                                <div class="quoc-hieu" id="setupPrevRightHeading">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                                <div class="tieu-ngu" id="setupPrevRightSubheading">Độc lập - Tự do - Hạnh phúc</div>
                                 <div style="border-top:1px solid black; width:56%; margin:5px auto;"></div>
                                 <div class="doc-date"><span id="setupPrevLocation">Xuân Đông</span>, <span
                                         id="setupPrevDate">ngày ... tháng ... năm ...</span></div>
@@ -947,7 +985,7 @@
                     <input id="minPages" type="number" min="1" value="1"
                         class="w-full p-2 border border-green-300 rounded focus:ring-2 focus:ring-green-500" />
                     <p class="text-xs text-gray-500 italic mt-1">
-                        AI sẽ cố gắng diễn giải chi tiết để đạt độ dài này (1 trang ≈ 450 từ).
+                        Độ dài được điều chỉnh theo loại văn bản; văn bản ngắn và bảng không bị kéo dài để đủ số từ.
                     </p>
                 </div>
 
@@ -957,8 +995,8 @@
                     </label>
                     <select id="temperatureSelect"
                         class="w-full p-2 border border-green-300 rounded focus:ring-2 focus:ring-green-500 font-semibold text-sm">
-                        <option value="0.3">🎯 Chính xác tuyệt đối (Công văn, QĐ...)</option>
-                        <option value="0.5" selected>⚖️ Cân bằng (Khuyến nghị)</option>
+                        <option value="0.3" selected>🎯 Chuẩn hành chính (Khuyến nghị)</option>
+                        <option value="0.5">⚖️ Cân bằng</option>
                         <option value="0.7">💡 Linh hoạt (Kế hoạch, Báo cáo...)</option>
                         <option value="0.9">🎨 Sáng tạo cao (Tờ trình, Đề án...)</option>
                     </select>
@@ -975,7 +1013,7 @@
                 <select id="draftingModeSelect"
                     class="w-full p-2 border border-green-300 rounded focus:ring-2 focus:ring-green-500 font-semibold text-sm">
                     <option value="strict_nd30">📐 Chế độ 1: Siết chặt Nghị định 30</option>
-                    <option value="creative_framework">✨ Chế độ 2: AI sáng tạo trong khuôn khổ</option>
+                    <option value="creative_framework">✨ Chế độ 2: Linh hoạt câu chữ (không đổi khung)</option>
                     <option value="auto_by_type" selected>🤖 Chế độ 3: Tự động theo văn bản</option>
                 </select>
                 <p class="text-xs text-gray-500 italic mt-1">
@@ -1132,6 +1170,49 @@
             </div>
         </div>
 
+        <div class="bg-sky-50 border border-sky-300 rounded-lg p-4 mb-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-3">
+                <div>
+                    <h3 class="font-bold text-sky-800 flex items-center gap-2">
+                        <i class="fas fa-paperclip"></i>
+                        <span>Phụ lục đi kèm</span>
+                    </h3>
+                    <p class="text-sm text-slate-600 mt-1">Tạo phụ lục thủ công hoặc để AI kiểm tra văn bản có cần danh sách, danh mục, bảng phân công hay biểu mẫu kèm theo.</p>
+                </div>
+                <button id="checkAppendixNeedBtn" type="button" onclick="analyzeAppendixNeed()"
+                    class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded text-sm whitespace-nowrap">
+                    <i class="fas fa-search mr-1"></i> AI kiểm tra nhu cầu phụ lục
+                </button>
+            </div>
+
+            <div id="appendixSuggestionPanel" class="hidden mb-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <div class="font-bold"><i class="fas fa-lightbulb mr-1"></i>Đề nghị tạo phụ lục</div>
+                <div id="appendixSuggestionText" class="mt-1"></div>
+                <button type="button" onclick="useAppendixSuggestion()"
+                    class="mt-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded text-xs">Dùng đề nghị này</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[230px_1fr_auto] gap-3">
+                <select id="appendixTypeSelect" class="p-2 border border-sky-300 rounded bg-white font-semibold text-sm">
+                    <option value="AUTO">Tự xác định loại phụ lục</option>
+                    <option value="DANH SÁCH">Danh sách</option>
+                    <option value="DANH MỤC">Danh mục</option>
+                    <option value="BẢNG PHÂN CÔNG">Bảng phân công</option>
+                    <option value="TIẾN ĐỘ THỰC HIỆN">Tiến độ thực hiện</option>
+                    <option value="BIỂU MẪU">Biểu mẫu</option>
+                    <option value="NỘI DUNG CHI TIẾT">Nội dung chi tiết</option>
+                </select>
+                <input id="appendixRequirement" type="text"
+                    class="p-2 border border-sky-300 rounded bg-white text-sm"
+                    placeholder="Mô tả phụ lục cần tạo, ví dụ: Danh sách thành viên Ban tổ chức và nhiệm vụ" />
+                <button id="createAppendixBtn" type="button" onclick="generateAppendixFromUI()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded text-sm whitespace-nowrap">
+                    <i class="fas fa-plus mr-1"></i> Tạo thêm phụ lục
+                </button>
+            </div>
+            <div id="appendixStatus" class="text-xs text-sky-700 mt-2 italic"></div>
+        </div>
+
         <div class="bg-gray-200 p-8 rounded overflow-auto border border-gray-300 flex justify-center">
             <div class="w-[21cm]">
                 <!-- Toolbar -->
@@ -1176,6 +1257,9 @@
 
                     <!-- 4. FOOTER -->
                     <div id="previewFooter" contenteditable="true" class="mt-8"></div>
+
+                    <!-- 5. APPENDICES -->
+                    <div id="appendixContainer" class="mt-8"></div>
                 </div>
             </div>
         </div>
@@ -1509,6 +1593,8 @@
         let fixInFlight = false;
         let analysisData = {};
         let currentMetaData = {};
+        let currentAppendices = [];
+        let currentAppendixSuggestion = null;
         let pdfFullText = "";
         const DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview";
         let currentGeminiModel = localStorage.getItem("gemini_model") || DEFAULT_GEMINI_MODEL;
@@ -1655,7 +1741,7 @@
                     "GIẤY GIỚI THIỆU",
                     "PHỤ LỤC",
                     "NGHỊ QUYẾT",
-                    "BẢN CẢM KẾT"
+                    "BẢN CAM KẾT"
                 ]
             },
             HOANG_THIEN: {
@@ -1684,10 +1770,220 @@
                     "HỢP ĐỒNG MUA BÁN",
                     "HỢP ĐỒNG THUÊ NHÀ",
                     "HỢP ĐỒNG NGUYÊN TẮC",
-                    "HỢP ĐỒNG KHÁC"
+                    "HỢP ĐỒNG KHÁC",
+                    "BIÊN BẢN NGHIỆM THU",
+                    "THANH LÝ HỢP ĐỒNG"
                 ]
             }
         };
+
+        const CONTRACT_BASE_PROFILE = {
+            defaultMode: "strict_nd30",
+            lengthMode: "contract",
+            questions: [
+                "Thông tin pháp lý và người đại diện của Bên A, Bên B là gì?",
+                "Đối tượng, phạm vi và sản phẩm/kết quả phải bàn giao của hợp đồng là gì?",
+                "Giá trị, phương thức thanh toán và thời hạn thực hiện như thế nào?",
+                "Quyền, nghĩa vụ, xử lý vi phạm, chấm dứt và giải quyết tranh chấp được thỏa thuận ra sao?"
+            ],
+            appendixCandidates: ["DANH MỤC", "TIẾN ĐỘ THỰC HIỆN", "BIỂU MẪU"],
+            guide: `
+*** HỒ SƠ RIÊNG CHO HỢP ĐỒNG ***
+- Không áp cấu trúc công văn hành chính "Căn cứ -> Thực hiện -> Yêu cầu/Đề nghị".
+- Phải nhận diện rõ Bên A, Bên B, người đại diện, căn cứ ký kết, đối tượng và phạm vi hợp đồng.
+- Trình bày thành các Điều: đối tượng/phạm vi; chất lượng và bàn giao; giá trị và thanh toán; thời hạn; quyền và nghĩa vụ; vi phạm/chấm dứt; giải quyết tranh chấp; hiệu lực.
+- Chỉ đưa số tiền, tài khoản, thời hạn, chế tài và thông tin pháp lý khi có dữ liệu; thiếu thì ghi [...], tuyệt đối không tự bịa.
+- Phụ lục kỹ thuật, danh mục hàng hóa, tiến độ hoặc biên bản bàn giao phải được đề cập rõ nếu nội dung hợp đồng cần.
+`
+        };
+
+        const DOCUMENT_PROFILES = Object.freeze({
+            "THÔNG BÁO": {
+                defaultMode: "strict_nd30", lengthMode: "short",
+                questions: ["Nội dung cần thông báo là gì?", "Đối tượng nhận thông báo là ai?", "Thời gian, địa điểm, thời hạn hoặc đầu mối liên hệ cần nêu là gì?"],
+                appendixCandidates: ["DANH SÁCH", "BIỂU MẪU"],
+                guide: `*** KHUNG RIÊNG CHO THÔNG BÁO ***\n- Nêu ngay nội dung thông báo; sau đó làm rõ đối tượng, thời gian, địa điểm, yêu cầu thực hiện và đầu mối liên hệ nếu có.\n- Không viết phần thành tích, khẩu hiệu hoặc nhận định tác động.\n- Văn bản ngắn có thể trình bày liên tục; chỉ chia mục khi có từ hai nhóm nội dung trở lên.`
+            },
+            "QUYẾT ĐỊNH": {
+                defaultMode: "strict_nd30", lengthMode: "decision",
+                questions: ["Cơ quan/người có thẩm quyền ban hành quyết định là ai?", "Nội dung quyết định trọng tâm là gì?", "Đối tượng, phạm vi và thời điểm có hiệu lực là gì?", "Đơn vị/cá nhân chịu trách nhiệm thi hành là ai?"],
+                appendixCandidates: ["DANH SÁCH", "DANH MỤC", "BẢNG PHÂN CÔNG"],
+                guide: `*** KHUNG RIÊNG CHO QUYẾT ĐỊNH ***\n- Trình tự body: các căn cứ có thật -> dòng QUYẾT ĐỊNH: -> các Điều.\n- Điều 1 nêu nội dung quyết định; các Điều tiếp theo quy định trách nhiệm, hiệu lực và tổ chức thi hành theo dữ liệu thực tế.\n- Không tự tạo căn cứ pháp lý, số văn bản hoặc cơ quan có thẩm quyền.\n- Nếu ban hành danh sách, quy chế, quy định hoặc danh mục kèm theo, phải nêu rõ "kèm theo Quyết định này" và đề nghị tạo phụ lục tương ứng.`
+            },
+            "DANH SÁCH": {
+                defaultMode: "strict_nd30", lengthMode: "table",
+                questions: ["Danh sách gồm nhóm người, hồ sơ hay đối tượng nào?", "Các trường/cột bắt buộc phải có là gì?", "Nguồn dữ liệu nào được dùng để điền danh sách?"],
+                appendixCandidates: [],
+                guide: `*** KHUNG RIÊNG CHO DANH SÁCH ***\n- Chỉ xuất bảng Markdown.\n- Tự chọn cột phù hợp chủ đề; không ép mọi danh sách vào cột Vai trò/Nhiệm vụ.\n- Chỉ điền người và dữ kiện có trong nguồn; ô chưa có dữ liệu ghi [...].\n- Không tự tạo đủ 5 dòng nếu nguồn thực tế có ít hơn.`
+            },
+            "DANH MỤC": {
+                defaultMode: "strict_nd30", lengthMode: "table",
+                questions: ["Danh mục cần liệt kê tài liệu, thiết bị, nhiệm vụ hay nội dung gì?", "Các trường/cột cần thể hiện là gì?", "Có mã số, số lượng, thời hạn hoặc ghi chú bắt buộc không?"],
+                appendixCandidates: [],
+                guide: `*** KHUNG RIÊNG CHO DANH MỤC ***\n- Chỉ xuất bảng Markdown với các cột phù hợp dữ liệu thực tế.\n- Không ép cột chung nếu chủ đề đòi hỏi mã, số lượng, đơn vị tính, thời hạn hoặc tình trạng.\n- Không tự bịa mục; dữ liệu chưa biết ghi [...].`
+            },
+            "CÔNG VĂN": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Công văn gửi cơ quan/đơn vị nào?", "Nội dung yêu cầu, đề nghị hoặc trao đổi cụ thể là gì?", "Thời hạn và đơn vị/cá nhân chịu trách nhiệm thực hiện là gì?"],
+                appendixCandidates: ["DANH SÁCH", "DANH MỤC", "BIỂU MẪU"],
+                guide: `*** KHUNG RIÊNG CHO CÔNG VĂN ***\n- Mở đầu nêu căn cứ hoặc bối cảnh ngắn gọn.\n- Phần chính phải rõ việc, rõ đối tượng, rõ thời hạn và rõ trách nhiệm.\n- Không ép I./II./III. nếu nội dung ngắn.\n- Kết thúc bằng yêu cầu/đề nghị phù hợp, không dùng lời cổ động.`
+            },
+            "TỜ TRÌNH": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Tờ trình kính gửi cơ quan/người có thẩm quyền nào?", "Sự cần thiết và cơ sở của nội dung trình là gì?", "Nội dung xin xem xét/phê duyệt cụ thể là gì?", "Hồ sơ hoặc phụ lục gửi kèm gồm những gì?"],
+                appendixCandidates: ["DANH SÁCH", "DANH MỤC", "NỘI DUNG CHI TIẾT"],
+                guide: `*** KHUNG RIÊNG CHO TỜ TRÌNH ***\n- Dòng đầu body là Kính gửi.\n- Nội dung gồm: sự cần thiết/cơ sở; nội dung trình; kiến nghị cấp có thẩm quyền xem xét, quyết định.\n- Nếu có phương án, dự toán, danh sách hoặc hồ sơ chi tiết thì nêu là tài liệu/phụ lục kèm theo, không nhồi toàn bộ vào body.`
+            },
+            "BÁO CÁO": {
+                defaultMode: "strict_nd30", lengthMode: "long",
+                questions: ["Đây là báo cáo định kỳ, chuyên đề, sơ kết, tổng kết hay báo cáo sự việc?", "Phạm vi và thời kỳ báo cáo là gì?", "Kết quả nào có dữ liệu kiểm chứng?", "Hạn chế, nguyên nhân và kiến nghị cụ thể là gì?"],
+                appendixCandidates: ["DANH SÁCH", "DANH MỤC", "NỘI DUNG CHI TIẾT"],
+                guide: `*** KHUNG RIÊNG CHO BÁO CÁO ***\n- Chọn bố cục theo đúng tính chất báo cáo, không máy móc luôn đủ bốn phần.\n- Báo cáo định kỳ/tổng kết: tình hình và kết quả -> đánh giá/hạn chế/nguyên nhân -> nhiệm vụ hoặc kiến nghị.\n- Báo cáo sự việc: diễn biến -> xử lý -> kết quả -> vấn đề cần xin ý kiến.\n- Mọi nhận định mức độ, thành tích và tác động phải có dữ kiện nguồn; không dùng mỹ từ thay cho số liệu.\n- Số liệu chi tiết hoặc danh sách dài nên đưa vào phụ lục và dẫn chiếu trong body.`
+            },
+            "ĐỀ CƯƠNG BÁO CÁO": {
+                defaultMode: "strict_nd30", lengthMode: "outline",
+                questions: ["Loại báo cáo và đối tượng sử dụng đề cương là gì?", "Mẫu nguồn quy định những phần nào?", "Mỗi phần cần thu thập dữ liệu hoặc minh chứng gì?"],
+                appendixCandidates: ["BIỂU MẪU"],
+                guide: `*** KHUNG RIÊNG CHO ĐỀ CƯƠNG BÁO CÁO ***\n- Chỉ tạo đề cương, không viết thành báo cáo hoàn chỉnh.\n- Mỗi mục gồm tiêu đề, phạm vi nội dung và dữ liệu/minh chứng cần điền.\n- Bám nguyên thứ tự file mẫu nếu có.`
+            },
+            "KẾ HOẠCH": {
+                defaultMode: "strict_nd30", lengthMode: "long",
+                questions: ["Mục tiêu, yêu cầu và kết quả đầu ra của kế hoạch là gì?", "Nhiệm vụ, mốc thời gian và nguồn lực chính là gì?", "Đơn vị/cá nhân chủ trì, phối hợp là ai?", "Cách theo dõi, đánh giá và báo cáo kết quả như thế nào?"],
+                appendixCandidates: ["BẢNG PHÂN CÔNG", "TIẾN ĐỘ THỰC HIỆN", "DANH SÁCH", "DANH MỤC"],
+                guide: `*** KHUNG RIÊNG CHO KẾ HOẠCH ***\n- Bố cục ưu tiên: căn cứ/sự cần thiết; mục đích, yêu cầu; nội dung/nhiệm vụ; tiến độ; nguồn lực; tổ chức thực hiện.\n- Mỗi nhiệm vụ phải gắn với kết quả, thời gian và trách nhiệm nếu dữ liệu cho phép.\n- Body trình bày gọn; bảng tiến độ, bảng phân công, danh sách hoặc danh mục dài nên đưa thành phụ lục và dẫn chiếu rõ.\n- Không bịa chỉ tiêu, kinh phí hoặc mốc thời gian để làm kế hoạch có vẻ đầy đủ.`
+            },
+            "HƯỚNG DẪN": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Đối tượng và phạm vi áp dụng của hướng dẫn là gì?", "Quy trình/các bước cần hướng dẫn gồm những gì?", "Hồ sơ, thời hạn, biểu mẫu và đầu mối hỗ trợ là gì?"],
+                appendixCandidates: ["BIỂU MẪU", "DANH MỤC"],
+                guide: `*** KHUNG RIÊNG CHO HƯỚNG DẪN ***\n- Nêu phạm vi, đối tượng và nguyên tắc áp dụng.\n- Trình bày theo trình tự thao tác hoặc nhóm nghiệp vụ; mỗi bước rõ người thực hiện, hồ sơ/kết quả và thời hạn nếu có.\n- Biểu mẫu hoặc danh mục hồ sơ chi tiết đưa vào phụ lục.`
+            },
+            "QUY CHẾ": {
+                defaultMode: "strict_nd30", lengthMode: "long",
+                questions: ["Quy chế điều chỉnh hoạt động nào và áp dụng cho ai?", "Nguyên tắc, trách nhiệm, quan hệ phối hợp và chế độ làm việc là gì?", "Việc kiểm tra, xử lý vi phạm và tổ chức thực hiện ra sao?"],
+                appendixCandidates: ["BIỂU MẪU", "DANH MỤC"],
+                guide: `*** KHUNG RIÊNG CHO QUY CHẾ ***\n- Tổ chức theo Chương, Điều; quy định phạm vi, đối tượng, nguyên tắc, trách nhiệm/quyền hạn, quan hệ phối hợp và tổ chức thực hiện.\n- Điều khoản phải có tính quy phạm nội bộ, tránh viết như kế hoạch hoặc báo cáo.\n- Nếu ban hành kèm Quyết định phải có dòng dẫn chiếu quyết định kèm theo.`
+            },
+            "QUY ĐỊNH": {
+                defaultMode: "strict_nd30", lengthMode: "long",
+                questions: ["Phạm vi và đối tượng áp dụng là gì?", "Các yêu cầu, tiêu chuẩn, hành vi phải làm/không được làm là gì?", "Trách nhiệm kiểm tra và xử lý khi không thực hiện là gì?"],
+                appendixCandidates: ["BIỂU MẪU", "DANH MỤC"],
+                guide: `*** KHUNG RIÊNG CHO QUY ĐỊNH ***\n- Tổ chức theo Chương/Mục/Điều khi nội dung dài; nêu rõ phạm vi, đối tượng, yêu cầu và trách nhiệm.\n- Dùng câu quy định cụ thể, không viết theo giọng vận động hoặc báo cáo.\n- Nếu ban hành kèm Quyết định phải dẫn chiếu đúng văn bản ban hành.`
+            },
+            "BIÊN BẢN": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Thời gian, địa điểm và tính chất cuộc làm việc là gì?", "Thành phần, chủ trì và thư ký/người ghi biên bản gồm ai?", "Diễn biến, ý kiến và nội dung thống nhất là gì?", "Các bên nào phải ký xác nhận?"],
+                appendixCandidates: ["DANH SÁCH", "NỘI DUNG CHI TIẾT"],
+                guide: `*** KHUNG RIÊNG CHO BIÊN BẢN ***\n- Mở đầu bắt buộc có thời gian, địa điểm, thành phần, chủ trì và người ghi biên bản nếu có.\n- Ghi diễn biến/ý kiến theo trình tự, sau đó là kết luận hoặc nội dung thống nhất.\n- Cuối biên bản nêu thời điểm kết thúc và các bên ký xác nhận; không dùng footer một người ký như công văn.\n- Danh sách người tham dự dài có thể tách thành phụ lục.`
+            },
+            "GIẤY MỜI": {
+                defaultMode: "strict_nd30", lengthMode: "short",
+                questions: ["Cơ quan/cá nhân được mời là ai?", "Nội dung và mục đích buổi làm việc là gì?", "Thời gian, địa điểm, thành phần và yêu cầu chuẩn bị là gì?", "Đầu mối xác nhận tham dự là ai?"],
+                appendixCandidates: ["DANH SÁCH", "NỘI DUNG CHI TIẾT"],
+                guide: `*** KHUNG RIÊNG CHO GIẤY MỜI ***\n- Viết ngắn gọn; phải có người/đơn vị được mời, nội dung, thời gian, địa điểm, thành phần, yêu cầu chuẩn bị và đầu mối liên hệ nếu có.\n- Không mở rộng thành kế hoạch hay bài phát biểu.\n- Chương trình chi tiết hoặc danh sách đại biểu dài đưa vào phụ lục.`
+            },
+            "GIẤY GIỚI THIỆU": {
+                defaultMode: "strict_nd30", lengthMode: "short",
+                questions: ["Người được giới thiệu, chức vụ và giấy tờ nhận dạng là gì?", "Được giới thiệu đến cơ quan nào để thực hiện việc gì?", "Thời hạn hiệu lực của giấy giới thiệu là bao lâu?"],
+                appendixCandidates: [],
+                guide: `*** KHUNG RIÊNG CHO GIẤY GIỚI THIỆU ***\n- Nêu rõ người được giới thiệu, chức vụ/đơn vị, nơi đến, nhiệm vụ liên hệ và thời hạn hiệu lực.\n- Không thêm mục đánh giá, kiến nghị hoặc tổ chức thực hiện.`
+            },
+            "PHỤ LỤC": {
+                defaultMode: "strict_nd30", lengthMode: "table",
+                questions: ["Phụ lục kèm theo văn bản nào, số và ngày bao nhiêu?", "Nội dung phụ lục là danh sách, danh mục, bảng tiến độ hay biểu mẫu?", "Các cột/trường dữ liệu bắt buộc là gì?"],
+                appendixCandidates: [],
+                guide: `*** KHUNG RIÊNG CHO PHỤ LỤC ***\n- Đầu phụ lục phải có tên phụ lục và dòng dẫn chiếu văn bản kèm theo.\n- Cấu trúc có thể là bảng, danh sách hoặc biểu mẫu tùy dữ liệu; không thêm nơi nhận và chữ ký của văn bản chính nếu không được yêu cầu.`
+            },
+            "NGHỊ QUYẾT": {
+                defaultMode: "strict_nd30", lengthMode: "long",
+                questions: ["Nghị quyết được thông qua tại cuộc họp/đại hội nào?", "Các nội dung, chỉ tiêu hoặc chủ trương được quyết nghị là gì?", "Kết quả biểu quyết và trách nhiệm tổ chức thực hiện ra sao?"],
+                appendixCandidates: ["DANH SÁCH", "DANH MỤC"],
+                guide: `*** KHUNG RIÊNG CHO NGHỊ QUYẾT ***\n- Nêu căn cứ, bối cảnh cuộc họp/đại hội và nội dung được quyết nghị.\n- Các điều/mục phải thể hiện quyết định tập thể, chỉ tiêu/nhiệm vụ và trách nhiệm thực hiện.\n- Chỉ ghi tỷ lệ biểu quyết khi có dữ liệu nguồn.`
+            },
+            "CHỈ THỊ": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Tình hình hoặc yêu cầu cấp thiết dẫn đến chỉ thị là gì?", "Nhiệm vụ bắt buộc đối với từng đơn vị/cá nhân là gì?", "Thời hạn, kiểm tra và chế độ báo cáo ra sao?"],
+                appendixCandidates: ["BẢNG PHÂN CÔNG", "TIẾN ĐỘ THỰC HIỆN"],
+                guide: `*** KHUNG RIÊNG CHO CHỈ THỊ ***\n- Nêu ngắn gọn tình hình và yêu cầu cần tập trung chỉ đạo.\n- Giao nhiệm vụ cụ thể theo chủ thể, thời hạn, trách nhiệm kiểm tra và báo cáo.\n- Không dùng lời văn chung chung thay cho mệnh lệnh quản lý.`
+            },
+            "BẢN CAM KẾT": {
+                defaultMode: "strict_nd30", lengthMode: "short",
+                questions: ["Chủ thể cam kết và bên tiếp nhận cam kết là ai?", "Các nội dung cam kết cụ thể là gì?", "Thời hạn thực hiện và trách nhiệm khi vi phạm ra sao?"],
+                appendixCandidates: [],
+                guide: `*** KHUNG RIÊNG CHO BẢN CAM KẾT ***\n- Xác định rõ người/tổ chức cam kết, bên tiếp nhận, nội dung cam kết, thời hạn và trách nhiệm khi không thực hiện.\n- Dùng ngôi và cách ký phù hợp; không viết thành báo cáo thành tích.`
+            },
+            "BẢN CẢM KẾT": {
+                defaultMode: "strict_nd30", lengthMode: "short",
+                questions: ["Chủ thể cam kết và bên tiếp nhận cam kết là ai?", "Các nội dung cam kết cụ thể là gì?", "Thời hạn thực hiện và trách nhiệm khi vi phạm ra sao?"],
+                appendixCandidates: [],
+                guide: `*** LƯU Ý TÊN LOẠI ***\n- Chuẩn hóa tên loại thành "BẢN CAM KẾT".\n*** KHUNG RIÊNG CHO BẢN CAM KẾT ***\n- Xác định rõ chủ thể, nội dung, thời hạn và trách nhiệm thực hiện.`
+            },
+            "BÁO CÁO TỔNG HỢP": {
+                defaultMode: "strict_nd30", lengthMode: "long",
+                questions: ["Tháng/giai đoạn tổng hợp là gì?", "Kết quả, hạn chế và nguyên nhân từ từng tổ/bộ phận là gì?", "Nhiệm vụ tháng tới, tiến độ và người phụ trách là gì?"],
+                appendixCandidates: ["BẢNG PHÂN CÔNG", "TIẾN ĐỘ THỰC HIỆN", "DANH SÁCH"],
+                guide: `*** KHUNG RIÊNG CHO BÁO CÁO TỔNG HỢP ***\n- Gộp dữ liệu theo nhóm việc, không chắp vá theo từng file.\n- Gồm hai phần chính: đánh giá giai đoạn trước và kế hoạch giai đoạn tiếp theo.\n- Chi tiết tiến độ/phân công dài nên tách thành phụ lục.`
+            },
+            "HỢP ĐỒNG LAO ĐỘNG": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG THỬ VIỆC": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG KHOÁN VIỆC": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG DỊCH VỤ": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG MUA BÁN": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG THUÊ NHÀ": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG NGUYÊN TẮC": { ...CONTRACT_BASE_PROFILE },
+            "HỢP ĐỒNG KHÁC": { ...CONTRACT_BASE_PROFILE },
+            "BIÊN BẢN NGHIỆM THU": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Hợp đồng/công việc được nghiệm thu là gì?", "Thời gian, địa điểm và thành phần nghiệm thu gồm ai?", "Khối lượng, chất lượng, kết quả và tồn tại được xác nhận ra sao?", "Kết luận nghiệm thu và trách nhiệm tiếp theo là gì?"],
+                appendixCandidates: ["DANH MỤC", "NỘI DUNG CHI TIẾT"],
+                guide: `*** KHUNG RIÊNG CHO BIÊN BẢN NGHIỆM THU ***\n- Dẫn chiếu đúng hợp đồng/hồ sơ; nêu thời gian, địa điểm, thành phần.\n- Ghi đối tượng, khối lượng, chất lượng, kết quả kiểm tra, tồn tại và kết luận nghiệm thu.\n- Cuối văn bản có xác nhận của các bên; danh mục chi tiết có thể đưa vào phụ lục.`
+            },
+            "THANH LÝ HỢP ĐỒNG": {
+                defaultMode: "strict_nd30", lengthMode: "standard",
+                questions: ["Hợp đồng được thanh lý là hợp đồng nào?", "Các nghĩa vụ, khối lượng và thanh toán đã hoàn thành ra sao?", "Công nợ, tài sản, hồ sơ còn tồn tại hay không?", "Thời điểm chấm dứt quyền và nghĩa vụ của các bên là khi nào?"],
+                appendixCandidates: ["DANH MỤC"],
+                guide: `*** KHUNG RIÊNG CHO THANH LÝ HỢP ĐỒNG ***\n- Dẫn chiếu hợp đồng gốc và thông tin các bên.\n- Xác nhận kết quả thực hiện, giá trị/khối lượng, thanh toán, công nợ và hồ sơ bàn giao theo dữ liệu có thật.\n- Nêu rõ nghĩa vụ còn lại và thời điểm thanh lý có hiệu lực; các bên ký xác nhận.`
+            }
+        });
+
+        const SCHEME_WRITING_GUIDES = Object.freeze({
+            HANH_CHINH: "Dùng văn phong hành chính trung tính, chính xác, tiết chế.",
+            HOANG_THIEN: "Dùng văn phong báo cáo quản trị trường học, gọn và dựa trên dữ kiện.",
+            DANG: "Dùng thuật ngữ và giọng văn của tổ chức Đảng nhưng vẫn cụ thể, tránh khẩu hiệu không gắn nhiệm vụ.",
+            DOAN: "Dùng giọng văn của tổ chức Đoàn, rõ hoạt động, đối tượng, tiến độ và trách nhiệm; hạn chế lời cổ động chung chung.",
+            MATTRAN: "Dùng giọng văn của Mặt trận, nhấn mạnh phối hợp và giám sát đúng dữ kiện; không tự thêm chủ trương.",
+            HOP_DONG: "Dùng ngôn ngữ hợp đồng rõ quyền, nghĩa vụ, điều kiện và trách nhiệm; không dùng văn phong báo cáo hoặc khẩu hiệu."
+        });
+
+        function getDocumentProfile(docType = "") {
+            const type = String(docType || "").toUpperCase().trim();
+            return DOCUMENT_PROFILES[type] || {
+                defaultMode: "strict_nd30",
+                lengthMode: "standard",
+                questions: ["Nội dung trọng tâm của văn bản là gì?", "Đối tượng, thời gian và trách nhiệm thực hiện là gì?"],
+                appendixCandidates: [],
+                guide: `*** KHUNG AN TOÀN ***\n- Bám đúng tên loại văn bản, dữ liệu nguồn và mẫu người dùng cung cấp.\n- Không tự thêm số liệu, căn cứ, cơ quan, cá nhân hoặc kết quả.`
+            };
+        }
+
+        function buildDocumentProfileGuide(docScheme = "HANH_CHINH", docType = "") {
+            const profile = getDocumentProfile(docType);
+            const schemeGuide = SCHEME_WRITING_GUIDES[docScheme] || SCHEME_WRITING_GUIDES.HANH_CHINH;
+            return `
+*** NHẬN DIỆN VĂN BẢN BẮT BUỘC ***
+- Hình thức/hệ thống: ${docScheme}.
+- Loại văn bản phải soạn: ${docType}.
+- ${schemeGuide}
+
+${profile.guide}
+
+*** KIỂM SOÁT GIỌNG VĂN VÀ DỮ KIỆN ***
+- Không dùng các cụm khoa trương như "tạo bước đột phá", "ý nghĩa hết sức sâu sắc", "quyết tâm cao độ", "thành công rực rỡ", "góp phần mạnh mẽ" nếu nguồn không có căn cứ trực tiếp.
+- Không nâng mức độ kết quả, tác động hoặc thành tích cao hơn dữ liệu nguồn.
+- Ưu tiên câu ngắn, một câu một ý; bỏ lời dẫn chung chung và khẩu hiệu.
+- Khi thiếu dữ kiện quan trọng, ghi [...] hoặc diễn đạt ở mức khái quát hợp lệ; không suy đoán để làm văn bản có vẻ đầy đủ.
+`;
+        }
 
         const NOI_NHAN_PRESETS = [
             "Phòng Văn hóa - Xã hội xã Xuân Đông",
@@ -1968,6 +2264,19 @@
             const signerNameDisplay = (meta.signer_name || "").trim() || "[Họ và tên]";
             const noiNhanHtml = toNoiNhanHtml(meta.noi_nhan || "");
             return `<table class="footer-table"><tr><td style="text-align:left; padding-left:20px;"><div class="font-bold italic">Nơi nhận:</div><div style="font-size:11pt;">${noiNhanHtml}</div></td><td><div class="signer-title">${signerTitle.toUpperCase()}</div><div class="signature-insert-zone" data-signature-insert-zone="true" contenteditable="false">${signatureZoneHtml}</div><div class="signer-name" style="margin-top:18px;">${escapeHtml(signerNameDisplay)}</div></td></tr></table>`;
+        }
+
+        function buildDocumentFooterHtml(meta = {}, signatureZoneHtml = "") {
+            const type = String(meta.docType || "").toUpperCase();
+            if (type === "BIÊN BẢN") {
+                const chairTitle = meta.signer_title || "CHỦ TRÌ";
+                const chairName = meta.signer_name || "[Họ và tên]";
+                return `<table class="footer-table"><tr>
+                    <td style="text-align:center; width:50%;"><div class="signer-title">NGƯỜI GHI BIÊN BẢN</div><div style="font-style:italic; margin-top:5px;">(Ký, ghi rõ họ tên)</div><div class="signer-name">[Họ và tên]</div></td>
+                    <td style="text-align:center; width:50%;"><div class="signer-title">${escapeHtml(chairTitle).toUpperCase()}</div><div style="font-style:italic; margin-top:5px;">(Ký, ghi rõ họ tên)</div><div class="signature-insert-zone" data-signature-insert-zone="true" contenteditable="false">${signatureZoneHtml}</div><div class="signer-name" style="margin-top:18px;">${escapeHtml(chairName)}</div></td>
+                </tr></table>`;
+            }
+            return buildAdministrativeFooterHtml(meta, signatureZoneHtml);
         }
 
         function getEditorSelectionHost(node) {
@@ -2466,7 +2775,7 @@
             const meta = currentMetaData || {};
             if (!footerDiv || !meta.docType || !String(footerDiv.innerHTML || "").trim()) return;
             if (meta.isContractGroup) return;
-            footerDiv.innerHTML = buildAdministrativeFooterHtml(meta, getSignatureInsertZoneHtml(footerDiv));
+            footerDiv.innerHTML = buildDocumentFooterHtml(meta, getSignatureInsertZoneHtml(footerDiv));
         }
 
         function getCurrentUserEmail() {
@@ -3999,6 +4308,10 @@
 
             analysisData = {};
             currentMetaData = {};
+            currentAppendices = [];
+            currentAppendixSuggestion = null;
+            renderAppendices();
+            showAppendixSuggestion(null);
             workflowMemory = {};
             problematicContent = "";
             pdfFullText = "";
@@ -4075,7 +4388,7 @@
             const minPages = document.getElementById("minPages");
             if (minPages) minPages.value = "1";
             const temperatureSelect = document.getElementById("temperatureSelect");
-            if (temperatureSelect) temperatureSelect.value = "0.5";
+            if (temperatureSelect) temperatureSelect.value = "0.3";
             const styleRadio = document.querySelector('input[name="styleSelect"][value="hanh_chinh"]');
             if (styleRadio) styleRadio.checked = true;
             const draftingModeSelect = document.getElementById("draftingModeSelect");
@@ -4109,7 +4422,7 @@
                 dynamicAnswers,
                 extraWrite: document.getElementById("extraWrite")?.value || "",
                 minPages: document.getElementById("minPages")?.value || "1",
-                temperature: document.getElementById("temperatureSelect")?.value || "0.5",
+                temperature: document.getElementById("temperatureSelect")?.value || "0.3",
                 draftingMode: document.getElementById("draftingModeSelect")?.value || "auto_by_type",
                 useWebSearch: document.getElementById("useWebSearch")?.checked || false,
                 style: styleValue,
@@ -4150,7 +4463,7 @@
             const minPages = document.getElementById("minPages");
             if (minPages) minPages.value = data.minPages || "1";
             const temperature = document.getElementById("temperatureSelect");
-            if (temperature) temperature.value = data.temperature || "0.5";
+            if (temperature) temperature.value = data.temperature || "0.3";
             const draftingModeSelect = document.getElementById("draftingModeSelect");
             if (draftingModeSelect) draftingModeSelect.value = data.draftingMode || "auto_by_type";
             const useWebSearch = document.getElementById("useWebSearch");
@@ -4338,6 +4651,22 @@
             const setupPrevNoiNhan = document.getElementById("setupPrevNoiNhan");
             const setupPrevSignerTitle = document.getElementById("setupPrevSignerTitle");
             const setupPrevSignerName = document.getElementById("setupPrevSignerName");
+            const setupPrevRightHeading = document.getElementById("setupPrevRightHeading");
+            const setupPrevRightSubheading = document.getElementById("setupPrevRightSubheading");
+            const scheme = String(document.getElementById("docSchemeSelect")?.value || "HANH_CHINH").toUpperCase();
+            const schemeHeading = scheme === "DANG"
+                ? "ĐẢNG CỘNG SẢN VIỆT NAM"
+                : scheme === "DOAN"
+                    ? "ĐOÀN TNCS HỒ CHÍ MINH"
+                    : scheme === "MATTRAN"
+                        ? "ỦY BAN TRUNG ƯƠNG MTTQ VIỆT NAM"
+                        : "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM";
+            if (setupPrevRightHeading) setupPrevRightHeading.innerText = schemeHeading;
+            if (setupPrevRightSubheading) {
+                const usesNationalMotto = !["DANG", "DOAN", "MATTRAN"].includes(scheme);
+                setupPrevRightSubheading.innerText = usesNationalMotto ? "Độc lập - Tự do - Hạnh phúc" : "";
+                setupPrevRightSubheading.style.display = usesNationalMotto ? "block" : "none";
+            }
 
             if (setupPrevParent) setupPrevParent.innerText = parent.toUpperCase();
             if (setupPrevUnit) setupPrevUnit.innerText = unit.toUpperCase();
@@ -4376,6 +4705,9 @@
             });
 
             if (badge) badge.innerText = conf.badge || "HC";
+            const preferredStyle = scheme === "DANG" ? "dang" : "hanh_chinh";
+            const styleRadio = document.querySelector(`input[name="styleSelect"][value="${preferredStyle}"]`);
+            if (styleRadio) styleRadio.checked = true;
             onDocTypeChange();
             updateSetupPreview();
         }
@@ -4735,7 +5067,7 @@
                 }
             }
 
-            return picked.map((line, idx) => `${idx + 1}. ${line}`).join("\n");
+            return picked.map((line) => `- ${line}`).join("\n");
         }
 
         function buildPdfPriorityGuide() {
@@ -5174,7 +5506,7 @@
 
         // Prompt 1: Phân tích (Trả về JSON thuần)
         const PROMPT_ANALYZE = `
-Bạn là chuyên viên văn thư - hành chính.
+Bạn là chuyên viên phân tích hồ sơ soạn thảo, có khả năng phân biệt văn bản hành chính, văn bản tổ chức và hợp đồng.
 Nhiệm vụ: xác định những thông tin THỰC SỰ còn thiếu để soạn đúng loại văn bản.
 
 QUY TẮC:
@@ -5203,7 +5535,7 @@ YÊU CẦU PHÂN TÍCH:
   A) fixed_questions: các thông tin cơ bản (Đơn vị, Số hiệu, Địa danh...)
   B) dynamic_questions: câu hỏi mở để làm rõ nội dung/chi tiết.
 - 🔴 TUYỆT ĐỐI KHÔNG tạo câu hỏi gợi ý liên quan đến các cơ quan, đơn vị sau: cấp huyện, "Phòng Giáo dục", "Phòng Giáo dục và Đào tạo", "Phòng GD&ĐT", "UBND huyện", "HĐND huyện", "Huyện ủy", "Ban thanh tra nhân dân", "Công đoàn", "Công đoàn cơ sở", "Liên đoàn Lao động" (vì các cấp/cơ quan này đã bị bãi bỏ hoặc không áp dụng trong ngữ cảnh hiện tại).
-- Nếu hồ sơ nguồn hoặc người dùng nhắc "tỉnh Đồng Nai", phải hiểu và chuẩn hóa thành "thành phố Đồng Nai"; "UBND tỉnh Đồng Nai" thành "UBND thành phố Đồng Nai".
+- Tên cơ quan/địa danh hiện hành phải theo ngày ban hành văn bản mới; tên nằm trong số, tên hoặc trích dẫn văn bản lịch sử phải được giữ nguyên.
 
 SCHEMA BẮT BUỘC (Phải nằm giữa BEGIN_JSON và END_JSON):
 BEGIN_JSON
@@ -5223,8 +5555,11 @@ END_JSON
 
         // Prompt 2: Soạn thảo (Chỉ trả Body)
         const PROMPT_WRITE = `
-Bạn là chuyên viên soạn thảo văn bản hành chính.
+Bạn là chuyên viên soạn thảo văn bản chuyên nghiệp, có khả năng phân biệt văn bản hành chính, văn bản tổ chức và hợp đồng.
 Nhiệm vụ: viết duy nhất NỘI DUNG BODY cuối cùng theo đúng loại văn bản và dữ liệu đầu vào.
+
+LOẠI VĂN BẢN BẮT BUỘC: {doc_type}
+HÌNH THỨC/HỆ THỐNG VĂN BẢN: {doc_scheme}
 
 PHONG CÁCH VĂN BẢN: {writing_style}
 
@@ -5249,7 +5584,7 @@ QUY TẮC:
 4) Nếu thiếu dữ liệu thì dùng cách diễn đạt hợp lệ hoặc để [...] rõ ràng.
 5) Tích hợp yêu cầu bổ sung của người dùng một cách tự nhiên, không gượng ép.
 6) Phải viết hoàn chỉnh từ đầu đến cuối, không bỏ dở.
-7) Nếu dữ liệu đầu vào/hồ sơ nguồn có "tỉnh Đồng Nai" hoặc "UBND tỉnh Đồng Nai", bắt buộc thay lần lượt thành "thành phố Đồng Nai" và "UBND thành phố Đồng Nai".
+7) Với cơ quan/địa danh HIỆN HÀNH của văn bản mới, dùng tên theo thời điểm ban hành. Khi trích dẫn văn bản lịch sử, giữ nguyên tên cơ quan và địa danh ghi trên văn bản được trích dẫn.
 8) Tuân thủ mô hình chính quyền 2 cấp: không dùng cấp huyện, phòng giáo dục, công đoàn hoặc các tổ chức/cơ quan cấp huyện trong văn bản hiện hành.
 
 YÊU CẦU ĐỊNH DẠNG:
@@ -5257,7 +5592,7 @@ YÊU CẦU ĐỊNH DẠNG:
 - Mỗi ý liệt kê trên dòng riêng bằng "- " hoặc "1.", "2."...
 - Không dùng chuỗi "* ... * ..." trên cùng một dòng.
 - Với DANH SÁCH: chỉ trả bảng Markdown, ưu tiên suy ra các thành phần/đối tượng cần lập danh sách từ văn bản căn cứ, yêu cầu người dùng và hồ sơ nguồn.
-- Với DANH MỤC: chỉ trả bảng Markdown, tối thiểu 4 cột và 5 dòng dữ liệu.
+- Với DANH MỤC: chỉ trả bảng Markdown; số cột và số dòng theo dữ liệu thực tế, không tạo dòng giả.
 - Với KẾ HOẠCH: không lập bảng kế hoạch, không dùng bảng Markdown; trình bày bằng mục, đoạn văn và danh sách đánh số/gạch đầu dòng.
 - Nếu là KẾ HOẠCH/BÁO CÁO dài: có thể dùng I., II., III., IV. khi phù hợp.
 
@@ -5273,7 +5608,7 @@ BẮT ĐẦU VIẾT BODY NGAY, KHÔNG THÊM LỜI MỞ ĐẦU KIỂU “Dưới 
             const decisionMode = options.decisionDetailLevel === "ngan_gon" ? "ngắn gọn" : "chi tiết";
 
             const common = `
-*** KHUNG BODY THEO NGHỊ ĐỊNH 30/2020/NĐ-CP ***
+*** QUY TẮC THỂ THỨC VÀ PHÂN CẤP ĐỀ MỤC HÀNH CHÍNH ***
 - Chỉ xuất BODY, không lặp Header/Footer (Quốc hiệu, tiêu ngữ, số ký hiệu, nơi nhận, chữ ký).
 - Chỉ đánh số mục khi nội dung thực sự cần chia mục; không ép mọi loại văn bản vào cùng một khung I./II./III.
 - Nếu có hệ thống mục thì thống nhất theo cấp: I. -> 1. -> a. hoặc Điều 1. -> khoản/điểm tùy loại văn bản.
@@ -5283,7 +5618,7 @@ BẮT ĐẦU VIẾT BODY NGAY, KHÔNG THÊM LỜI MỞ ĐẦU KIỂU “Dưới 
 
             const byType = {
                 "KẾ HOẠCH": `
-*** GỢI Ý KHUNG CHO KẾ HOẠCH (MẪU DÙNG CHUNG 1.4) ***
+*** GỢI Ý KHUNG NỘI BỘ CHO KẾ HOẠCH ***
 I. CĂN CỨ XÂY DỰNG KẾ HOẠCH.
 II. MỤC ĐÍCH, YÊU CẦU.
 III. NỘI DUNG THỰC HIỆN.
@@ -5297,11 +5632,9 @@ IV. TỔ CHỨC THỰC HIỆN.
 - Không lập bảng kế hoạch/bảng tiến độ; nếu cần liệt kê thì dùng mục số hoặc gạch đầu dòng.
 `,
                 "BÁO CÁO": `
-*** GỢI Ý KHUNG CHO BÁO CÁO (MẪU DÙNG CHUNG 1.4) ***
-I. KẾT QUẢ THỰC HIỆN.
-II. ĐÁNH GIÁ CHUNG.
-III. KHÓ KHĂN, VƯỚNG MẮC (nếu có).
-IV. KIẾN NGHỊ, ĐỀ XUẤT.
+*** GỢI Ý KHUNG NỘI BỘ CHO BÁO CÁO ***
+- Chọn khung theo tính chất báo cáo: định kỳ/tổng kết, chuyên đề hoặc báo cáo sự việc.
+- Chỉ dùng các phần Kết quả, Đánh giá, Khó khăn, Kiến nghị khi phù hợp dữ liệu và mục đích báo cáo.
 `,
                 "ĐỀ CƯƠNG BÁO CÁO": `
 *** GỢI Ý KHUNG CHO ĐỀ CƯƠNG BÁO CÁO ***
@@ -5316,10 +5649,10 @@ IV. KIẾN NGHỊ, ĐỀ XUẤT.
 - Nhiệm vụ chính là lập danh sách các thành phần/đối tượng/hồ sơ/mục việc cần có để thực hiện công việc theo văn bản căn cứ và yêu cầu người dùng.
 - Cố gắng suy luận hợp lý từ văn bản căn cứ, file nguồn và ghi chú người dùng; không hỏi lại những gì có thể suy ra.
 - Nếu thiếu thông tin chi tiết thì vẫn lập danh sách khung và điền "[...]" ở ô chưa chắc chắn.
-- Ưu tiên các cột: STT | Thành phần/Đối tượng | Vai trò/Nhiệm vụ | Căn cứ/Ghi chú.
+- Tự chọn cột phù hợp chủ đề; chỉ dùng cột Vai trò/Nhiệm vụ khi đúng bản chất danh sách.
 `,
                 "TỜ TRÌNH": `
-*** GỢI Ý KHUNG CHO TỜ TRÌNH (MẪU DÙNG CHUNG 1.4) ***
+*** GỢI Ý KHUNG NỘI BỘ CHO TỜ TRÌNH ***
 - Dòng đầu body phải có: "Kính gửi: ${toTrinhReceiver}".
 - Ưu tiên 3 khối nội dung: sự cần thiết/cơ sở; nội dung đề nghị; kiến nghị, đề xuất.
 - Có thể dùng I./II./III. nếu văn bản dài; không bắt buộc nếu văn bản ngắn.
@@ -5332,13 +5665,13 @@ IV. KIẾN NGHỊ, ĐỀ XUẤT.
 - Số điều trong khoảng ${decisionMin}-${decisionMax}; mức chi tiết: ${decisionMode}.
 `,
                 "THÔNG BÁO": `
-*** GỢI Ý KHUNG CHO THÔNG BÁO (MẪU DÙNG CHUNG 1.4) ***
+*** GỢI Ý KHUNG NỘI BỘ CHO THÔNG BÁO ***
 - Nêu ngay nội dung thông báo.
 - Nếu có nhiều ý thì tách thành các mục rõ ràng; không bắt buộc áp I./II./III.
 - Nêu rõ thời gian, phạm vi áp dụng, trách nhiệm thực hiện nếu có.
 `,
                 "CÔNG VĂN": `
-*** KHUNG CHO CÔNG VĂN (MẪU RIÊNG 1.5) ***
+*** KHUNG NỘI BỘ CHO CÔNG VĂN ***
 - Không ép mặc định theo I./II./III.
 - Mở đầu nêu lý do/căn cứ hoặc bối cảnh ban hành.
 - Phần chính nêu yêu cầu/đề nghị cụ thể, rõ việc, rõ thời hạn, rõ trách nhiệm.
@@ -5358,18 +5691,7 @@ IV. KIẾN NGHỊ, ĐỀ XUẤT.
         function resolveEffectiveDraftingMode(selectedMode, docType) {
             const mode = String(selectedMode || "auto_by_type");
             if (mode !== "auto_by_type") return mode;
-
-            const type = String(docType || "").toUpperCase().trim();
-            const strictTypes = new Set([
-                "QUYẾT ĐỊNH", "CÔNG VĂN", "THÔNG BÁO", "TỜ TRÌNH", "NGHỊ QUYẾT", "CHỈ THỊ", "QUY CHẾ", "QUY ĐỊNH"
-            ]);
-            const creativeTypes = new Set([
-                "KẾ HOẠCH", "BÁO CÁO", "HƯỚNG DẪN", "BIÊN BẢN", "PHỤ LỤC", "DANH MỤC", "DANH SÁCH"
-            ]);
-
-            if (strictTypes.has(type)) return "strict_nd30";
-            if (creativeTypes.has(type)) return "creative_framework";
-            return "strict_nd30";
+            return getDocumentProfile(docType).defaultMode || "strict_nd30";
         }
 
         function buildHoangThienAnalyzeGuide(docType = "") {
@@ -5420,9 +5742,10 @@ ${useWebSearch ? `- Nếu cần xây dựng kế hoạch tháng tới, được 
 NGUYÊN TẮC:
 - Văn phong chính thống, trang trọng, theo đúng thể thức văn bản hành chính
 - Sử dụng thuật ngữ hành chính: "cơ quan", "đơn vị", "ban hành", "triển khai", "thực hiện"
-- Cấu trúc: Căn cứ → Thực hiện → Yêu cầu/Đề nghị
+- Cấu trúc phải lấy theo HỒ SƠ RIÊNG CỦA LOẠI VĂN BẢN; không áp một khung chung cho mọi loại.
 - Lời văn ngắn gọn, rõ ràng, minh bạch, dễ hiểu
 - Tránh các từ ngữ chính trị nặng về tư tưởng Đảng
+- Không dùng khẩu hiệu, mỹ từ, lời ca ngợi hoặc khẳng định thành tích khi không có dữ kiện kiểm chứng.
 
 **QUY TẮC CHÍNH QUYỀN 2 CẤP CHO TRƯỜNG HỌC (CỰC KỲ QUAN TRỌNG)**:
 Hệ thống này phục vụ kế hoạch trường học theo mô hình chính quyền 2 cấp, không còn cấp huyện trong luồng quản lý hiện hành. TUYỆT ĐỐI KHÔNG được sử dụng các thuật ngữ/cơ quan đã bị bãi bỏ hoặc không áp dụng sau:
@@ -5432,14 +5755,14 @@ Hệ thống này phục vụ kế hoạch trường học theo mô hình chính
   - "Thanh tra nhân dân", "Ban thanh tra nhân dân"
   - "Công đoàn", "Công đoàn cơ sở", "Công đoàn ngành giáo dục", "Liên đoàn Lao động"
   - Các "Phòng" trong bối cảnh hành chính (như Phòng Tài chính, Phòng Nội vụ...)
-  - "Tỉnh Đồng Nai", "tỉnh Đồng Nai", "UBND tỉnh Đồng Nai" khi nói về địa danh/cơ quan hiện hành
+  - Không dùng tên đơn vị hành chính cũ để chỉ cơ quan hiện hành; nhưng phải giữ nguyên tên trong số, tên và trích dẫn văn bản lịch sử.
 
 ✅ DÙNG THAY THẾ nếu bắt buộc cần một nhóm tương đương:
   - Thay "Phòng Giáo dục" / "Phòng Giáo dục và Đào tạo" → "Sở Giáo dục và Đào tạo", "Nhà trường", "Cơ sở giáo dục"
   - Thay "UBND huyện" / "HĐND huyện" / "Cấp huyện" → "UBND xã", "Chính quyền địa phương", "Cấp xã"
   - Thay "Thanh tra nhân dân" / "Ban thanh tra nhân dân" → "Ban Kiểm tra nội bộ", "Giám sát cộng đồng"
   - Thay "Công đoàn" / "Công đoàn cơ sở" → "Tập thể cán bộ, giáo viên, nhân viên", "Đoàn thể"
-  - Thay "tỉnh Đồng Nai" → "thành phố Đồng Nai"; thay "UBND tỉnh Đồng Nai" → "UBND thành phố Đồng Nai"
+  - Với văn bản mới sau thời điểm chuyển đổi, dùng "thành phố Đồng Nai" và "UBND thành phố Đồng Nai"; không sửa tên nằm trong trích dẫn lịch sử.
 
 VÍ DỤ MẪU:
 - "Phối hợp với chính quyền địa phương..." (KHÔNG viết "UBND huyện")
@@ -5469,10 +5792,6 @@ VÍ DỤ MẪU:
         // DANH SÁCH THUẬT NGỮ BỊ CẤM (CHO CHÍNH QUYỀN 2 CẤP)
         // ==========================================
         const FORBIDDEN_TERMS = [
-            { term: "UBND tỉnh Đồng Nai", alternatives: ["UBND thành phố Đồng Nai"] },
-            { term: "Ủy ban nhân dân tỉnh Đồng Nai", alternatives: ["Ủy ban nhân dân thành phố Đồng Nai"] },
-            { term: "Tỉnh Đồng Nai", alternatives: ["Thành phố Đồng Nai"] },
-            { term: "tỉnh Đồng Nai", alternatives: ["thành phố Đồng Nai"] },
             { term: "Phòng Giáo dục và Đào tạo", alternatives: ["Sở Giáo dục và Đào tạo", "Nhà trường"] },
             { term: "Phòng Giáo dục", alternatives: ["Sở GD&ĐT", "Trường học", "Cơ sở giáo dục"] },
             { term: "Phòng GD&ĐT", alternatives: ["Sở GD&ĐT", "Trường học"] },
@@ -5487,12 +5806,13 @@ VÍ DỤ MẪU:
             { term: "Công đoàn ngành giáo dục", alternatives: ["Tập thể cán bộ, giáo viên, nhân viên"] },
             { term: "Công đoàn cơ sở", alternatives: ["Tập thể cán bộ, giáo viên"] },
             { term: "Liên đoàn Lao động", alternatives: ["Tập thể cán bộ, giáo viên, nhân viên"] },
-            { term: "Công đoàn", alternatives: ["Tập thể cán bộ", "Tổ chức đoàn thể"] },
-            { term: "Phòng ", alternatives: ["Bộ phận", "Tổ", "Nhóm"] } // Tránh "Phòng" trong bối cảnh hành chính cấp huyện (có khoảng trắng để tránh "phòng họp")
+            { term: "Công đoàn", alternatives: ["Tập thể cán bộ", "Tổ chức đoàn thể"] }
         ];
 
         // Hàm kiểm tra văn bản có chứa thuật ngữ bị cấm không
         function validateContent(content) {
+            const scheme = String(currentMetaData?.docScheme || "HANH_CHINH").toUpperCase();
+            if (!["HANH_CHINH", "HOANG_THIEN"].includes(scheme)) return [];
             const found = [];
             FORBIDDEN_TERMS.forEach(item => {
                 const regex = new RegExp(item.term, 'gi');
@@ -5659,12 +5979,13 @@ BẮT ĐẦU VIẾT NỘI DUNG ĐÃ SỬA:
                 const analyzePrompt = `
 Bạn là chuyên gia soạn thảo văn bản hành chính. Hãy phân tích văn bản "${docType}" sau đây và đưa ra 3-5 gợi ý ngắn gọn về những phần CÓ THỂ BỔ SUNG để văn bản hoàn thiện hơn.
 
-VĂN BẢN HIỆN TẠI:
+ VĂN BẢN HIỆN TẠI:
 """
 ${currentBody}
 """
 
-YÊU CẦU:
+ YÊU CẦU:
+- Đối chiếu đúng hồ sơ loại văn bản sau:\n${buildDocumentProfileGuide(currentMetaData?.docScheme || "HANH_CHINH", docType)}
 - Mỗi gợi ý ngắn gọn, 1 câu, tối đa 10 từ
 - Chỉ gợi ý những phần THỰC SỰ còn thiếu hoặc cần bổ sung
 - Nếu văn bản đã đầy đủ, chỉ đưa ra tối đa 2 gợi ý cải thiện
@@ -5792,6 +6113,9 @@ ${pdfContentForSupplement || "Không có tài liệu nguồn bổ sung."}
 HƯỚNG DẪN ƯU TIÊN TÀI LIỆU:
 ${pdfPriorityGuide}
 
+HỒ SƠ LOẠI VĂN BẢN PHẢI GIỮ NGUYÊN:
+${buildDocumentProfileGuide(currentMetaData?.docScheme || "HANH_CHINH", currentMetaData?.docType || "VĂN BẢN")}
+
 ${shouldAvoidPlanTables(currentMetaData?.docType || "") ? `RÀNG BUỘC RIÊNG VỀ BẢNG KẾ HOẠCH:
 - Không lập bảng kế hoạch/bảng tiến độ, không xuất bảng Markdown.
 - Nội dung bổ sung về tiến độ, phân công, nhiệm vụ phải ở dạng mục số, đoạn văn hoặc gạch đầu dòng.` : ""}
@@ -5801,9 +6125,10 @@ NHIỆM VỤ:
 2. VIẾT THÊM phần nội dung mới theo yêu cầu (Markdown).
 3. GIỮ NGUYÊN toàn bộ văn bản cũ, CHỈ THÊM MỚI phần bổ sung vào vị trí phù hợp.
 4. ĐẢM BẢO phần bổ sung hòa nhập tự nhiên với văn bản gốc.
-5. NẾU có FILE MẪU thì BẮT BUỘC giữ nguyên cấu trúc mục/tiêu đề/thứ tự theo file mẫu.
-6. NẾU có FILE CĂN CỨ thì BẮT BUỘC không làm sai lệch số liệu/thông tin cốt lõi từ file căn cứ.
-7. CHỈ xuất ra TOÀN BỘ VĂN BẢN SAU KHI BỔ SUNG (Markdown), không giải thích.
+5. KHÔNG đổi loại văn bản, không phá cấu trúc riêng và không làm giọng văn khoa trương hơn.
+6. NẾU có FILE MẪU thì BẮT BUỘC giữ nguyên cấu trúc mục/tiêu đề/thứ tự theo file mẫu.
+7. NẾU có FILE CĂN CỨ thì BẮT BUỘC không làm sai lệch số liệu/thông tin cốt lõi từ file căn cứ.
+8. CHỈ xuất ra TOÀN BỘ VĂN BẢN SAU KHI BỔ SUNG (Markdown), không giải thích.
 
 BẮT ĐẦU VIẾT VĂN BẢN HOÀN CHỈNH:
 `;
@@ -5832,9 +6157,8 @@ NỘI DUNG:
 
 YÊU CẦU:
 1) Chỉ xuất bảng Markdown.
-2) Cột bắt buộc: STT | Thành phần/Đối tượng | Vai trò/Nhiệm vụ | Căn cứ/Ghi chú.
-3) Tối thiểu 5 dòng dữ liệu.
-4) Nếu thiếu thông tin thì điền "[...]".
+2) Tự chọn cột phù hợp chủ đề và dữ liệu nguồn.
+3) Không tạo dòng giả; nếu thiếu thông tin trong một ô thì điền "[...]".
 `;
                     enhancedMarkdown = await runStageWithProgress(86, 92, "Đang chuẩn hóa lại bảng DANH SÁCH...", () => callGemini(fixDanhSachPrompt, {
                         purpose: "table_fix",
@@ -5863,9 +6187,8 @@ NỘI DUNG:
 
 YÊU CẦU:
 1) Chỉ xuất bảng Markdown.
-2) Cột bắt buộc: STT | Tên mục | Nội dung/Thông tin chính | Ghi chú.
-3) Tối thiểu 5 dòng dữ liệu.
-4) Nếu thiếu thông tin thì điền "[...]".
+2) Tự chọn cột phù hợp loại danh mục và dữ liệu nguồn.
+3) Không tạo dòng giả; nếu thiếu thông tin trong một ô thì điền "[...]".
 `;
                     enhancedMarkdown = await runStageWithProgress(86, 92, "Đang chuẩn hóa lại bảng DANH MỤC...", () => callGemini(fixDanhMucPrompt, {
                         purpose: "table_fix",
@@ -5899,18 +6222,329 @@ YÊU CẦU:
             }
         }
 
+        function normalizeAppendixType(value = "") {
+            const type = String(value || "").toUpperCase().trim();
+            const allowed = new Set(["DANH SÁCH", "DANH MỤC", "BẢNG PHÂN CÔNG", "TIẾN ĐỘ THỰC HIỆN", "BIỂU MẪU", "NỘI DUNG CHI TIẾT"]);
+            return allowed.has(type) ? type : "NỘI DUNG CHI TIẾT";
+        }
+
+        function inferAppendixTypeFromText(text = "", docType = "") {
+            const value = String(text || "").toLowerCase();
+            if (/danh\s+sách|thành\s+viên|đại\s+biểu|học\s+sinh|nhân\s+sự/.test(value)) return "DANH SÁCH";
+            if (/danh\s+mục|thiết\s+bị|tài\s+liệu|hồ\s+sơ|hàng\s+hóa/.test(value)) return "DANH MỤC";
+            if (/phân\s+công|chủ\s+trì|phối\s+hợp|phụ\s+trách/.test(value)) return "BẢNG PHÂN CÔNG";
+            if (/tiến\s+độ|lộ\s+trình|mốc\s+thời\s+gian|thời\s+gian\s+thực\s+hiện/.test(value)) return "TIẾN ĐỘ THỰC HIỆN";
+            if (/biểu\s+mẫu|phiếu|mẫu\s+số/.test(value)) return "BIỂU MẪU";
+            const candidates = getDocumentProfile(docType).appendixCandidates || [];
+            return normalizeAppendixType(candidates[0] || "NỘI DUNG CHI TIẾT");
+        }
+
+        function detectLocalAppendixNeed(text = "", docType = "") {
+            const source = String(text || "");
+            const explicitPatterns = [
+                /(?:phụ\s*lục|danh\s*sách|danh\s*mục|bảng\s*phân\s*công|bảng\s*tiến\s*độ|biểu\s*mẫu)\s+(?:đính|gửi|ban\s+hành)?\s*kèm/iu,
+                /kèm\s+theo\s+(?:văn\s*bản\s*này\s+)?(?:phụ\s*lục|danh\s*sách|danh\s*mục|bảng|biểu\s*mẫu)/iu,
+                /theo\s+(?:danh\s*sách|danh\s*mục|phụ\s*lục)\s+(?:đính|gửi)?\s*kèm/iu,
+                /ban\s+hành\s+kèm\s+theo/iu
+            ];
+            const explicitMatch = explicitPatterns.some(pattern => pattern.test(source));
+            if (explicitMatch) {
+                const appendixType = inferAppendixTypeFromText(source, docType);
+                return {
+                    needed: true,
+                    type: appendixType,
+                    reason: "Văn bản đã dẫn chiếu nội dung hoặc tài liệu kèm theo nhưng chưa có phụ lục tương ứng.",
+                    requirement: `Tạo ${appendixType.toLowerCase()} đúng với nội dung được dẫn chiếu trong văn bản chính.`
+                };
+            }
+
+            const type = String(docType || "").toUpperCase();
+            const semanticNeed = (type === "QUYẾT ĐỊNH" && /phê\s+duyệt|thành\s+lập|công\s+nhận/iu.test(source) && /danh\s+sách|danh\s+mục|thành\s+viên/iu.test(source))
+                || (type === "KẾ HOẠCH" && /nhiều\s+(?:đơn\s+vị|bộ\s+phận)|phân\s+công\s+chi\s+tiết|tiến\s+độ\s+chi\s+tiết/iu.test(source));
+            if (semanticNeed) {
+                const appendixType = inferAppendixTypeFromText(source, docType);
+                return {
+                    needed: true,
+                    type: appendixType,
+                    reason: "Nội dung chính có phần chi tiết nên tách thành phụ lục để văn bản gọn và dễ thực hiện.",
+                    requirement: `Tách phần chi tiết liên quan thành ${appendixType.toLowerCase()} kèm theo.`
+                };
+            }
+
+            return { needed: false, type: "", reason: "", requirement: "" };
+        }
+
+        function showAppendixSuggestion(suggestion) {
+            const panel = document.getElementById("appendixSuggestionPanel");
+            const textEl = document.getElementById("appendixSuggestionText");
+            if (!panel || !textEl) return;
+            currentAppendixSuggestion = suggestion?.needed ? suggestion : null;
+            panel.classList.toggle("hidden", !currentAppendixSuggestion);
+            textEl.textContent = currentAppendixSuggestion
+                ? `${currentAppendixSuggestion.reason} Loại đề nghị: ${currentAppendixSuggestion.type}.`
+                : "";
+        }
+
+        function refreshAppendixNeedRecommendation() {
+            const bodyText = document.getElementById("editableBody")?.innerText || "";
+            let suggestion = detectLocalAppendixNeed(bodyText, currentMetaData?.docType || "");
+            if (suggestion.needed && currentAppendices.some(item => normalizeAppendixType(item.type) === normalizeAppendixType(suggestion.type))) {
+                suggestion = { needed: false, type: "", reason: "", requirement: "" };
+            }
+            showAppendixSuggestion(suggestion);
+            const status = document.getElementById("appendixStatus");
+            if (status && !suggestion.needed) {
+                status.textContent = currentAppendices.length > 0
+                    ? `Đang có ${currentAppendices.length} phụ lục đi kèm.`
+                    : "Chưa phát hiện dẫn chiếu phụ lục rõ ràng; bạn vẫn có thể tạo thủ công hoặc dùng AI kiểm tra.";
+            }
+        }
+
+        function useAppendixSuggestion() {
+            if (!currentAppendixSuggestion) return;
+            const typeSelect = document.getElementById("appendixTypeSelect");
+            const requirementInput = document.getElementById("appendixRequirement");
+            if (typeSelect) typeSelect.value = normalizeAppendixType(currentAppendixSuggestion.type);
+            if (requirementInput) requirementInput.value = currentAppendixSuggestion.requirement || "";
+            requirementInput?.focus();
+        }
+
+        async function analyzeAppendixNeed() {
+            const bodyText = document.getElementById("editableBody")?.innerText?.trim() || "";
+            if (!bodyText) return alert("Chưa có nội dung văn bản để kiểm tra.");
+            const button = document.getElementById("checkAppendixNeedBtn");
+            const status = document.getElementById("appendixStatus");
+            if (button) button.disabled = true;
+            if (status) status.textContent = "AI đang đối chiếu nội dung chính và nhu cầu phụ lục...";
+            try {
+                const docType = currentMetaData?.docType || "VĂN BẢN";
+                const prompt = `
+Bạn là chuyên viên kiểm tra hồ sơ văn bản. Hãy xác định văn bản sau có CẦN phụ lục đi kèm hay không.
+
+LOẠI VĂN BẢN: ${docType}
+TRÍCH YẾU: ${currentMetaData?.docSubject || ""}
+NỘI DUNG:
+"""${bodyText}"""
+
+Chỉ đề nghị phụ lục khi:
+1) Văn bản đã dẫn chiếu tài liệu/danh sách/danh mục/bảng/biểu mẫu kèm theo; hoặc
+2) Có dữ liệu chi tiết cần tách khỏi body để bảo đảm rõ ràng và có thể thực hiện; hoặc
+3) Loại văn bản và nội dung quyết định/kế hoạch không thể hoàn chỉnh nếu thiếu phần chi tiết đó.
+Không đề nghị chỉ để làm văn bản dài hơn.
+
+Trả đúng JSON, không thêm chữ ngoài JSON:
+{"needed":true/false,"type":"DANH SÁCH|DANH MỤC|BẢNG PHÂN CÔNG|TIẾN ĐỘ THỰC HIỆN|BIỂU MẪU|NỘI DUNG CHI TIẾT","reason":"...","requirement":"..."}
+`;
+                const response = await callGemini(prompt, {
+                    purpose: "appendix_analysis",
+                    allowWebSearch: false,
+                    maxTotalAttempts: 3,
+                    maxOutputTokens: 1024
+                });
+                const firstBrace = response.indexOf("{");
+                const lastBrace = response.lastIndexOf("}");
+                let parsed = null;
+                if (firstBrace >= 0 && lastBrace > firstBrace) {
+                    try { parsed = JSON.parse(response.slice(firstBrace, lastBrace + 1)); } catch (err) { parsed = null; }
+                }
+                const localFallback = detectLocalAppendixNeed(bodyText, docType);
+                const suggestion = parsed && typeof parsed.needed === "boolean"
+                    ? {
+                        needed: parsed.needed,
+                        type: normalizeAppendixType(parsed.type || inferAppendixTypeFromText(bodyText, docType)),
+                        reason: String(parsed.reason || "").trim(),
+                        requirement: String(parsed.requirement || "").trim()
+                    }
+                    : localFallback;
+                showAppendixSuggestion(suggestion);
+                if (status) status.textContent = suggestion.needed
+                    ? "AI đề nghị tạo phụ lục; bạn có thể dùng đề nghị hoặc chỉnh lại trước khi tạo."
+                    : "AI chưa thấy phụ lục là bắt buộc đối với nội dung hiện tại.";
+            } catch (err) {
+                const fallback = detectLocalAppendixNeed(bodyText, currentMetaData?.docType || "");
+                showAppendixSuggestion(fallback);
+                if (status) status.textContent = fallback.needed
+                    ? "Đã phát hiện nhu cầu phụ lục từ nội dung văn bản."
+                    : "Chưa thể kiểm tra bằng AI; bạn vẫn có thể tạo phụ lục thủ công.";
+            } finally {
+                if (button) button.disabled = false;
+            }
+        }
+
+        function syncAppendicesFromDom() {
+            currentAppendices.forEach((appendix) => {
+                const content = document.querySelector(`.appendix-content[data-appendix-id="${appendix.id}"]`);
+                if (content) appendix.html = content.innerHTML;
+            });
+        }
+
+        function ensureMainDocumentReferencesAppendix(appendixType, appendixNumber) {
+            const body = document.getElementById("editableBody");
+            if (!body) return;
+            const typeLabel = normalizeAppendixType(appendixType).toLowerCase();
+            const currentText = String(body.innerText || "").toLowerCase();
+            const alreadyReferenced = currentText.includes(`phụ lục ${appendixNumber}`)
+                || (appendixNumber === 1 && currentText.includes("phụ lục") && currentText.includes(typeLabel));
+            if (alreadyReferenced) return;
+
+            const docType = String(currentMetaData?.docType || "văn bản").toUpperCase();
+            const referenceText = `Kèm theo ${docType === "QUYẾT ĐỊNH" ? "Quyết định" : docType.toLowerCase()} này là Phụ lục ${appendixNumber}: ${typeLabel}; phụ lục là bộ phận đi kèm của văn bản.`;
+            if (docType === "QUYẾT ĐỊNH") {
+                const articleOne = Array.from(body.querySelectorAll("p, div")).find((element) => /^Điều\s+1\./i.test(String(element.innerText || "").trim()));
+                if (articleOne) {
+                    articleOne.append(document.createTextNode(` ${referenceText}`));
+                    return;
+                }
+            }
+            const paragraph = document.createElement("p");
+            paragraph.textContent = referenceText;
+            paragraph.style.textAlign = "justify";
+            body.appendChild(paragraph);
+        }
+
+        function renderAppendices() {
+            const container = document.getElementById("appendixContainer");
+            if (!container) return;
+            if (currentAppendices.length === 0) {
+                container.innerHTML = "";
+                return;
+            }
+            container.innerHTML = currentAppendices.map((appendix, index) => `
+                <section class="appendix-page" data-appendix-section="true" data-appendix-id="${appendix.id}">
+                    <div class="appendix-actions" data-docx-ignore="true" contenteditable="false">
+                        <span class="px-2 py-1 text-slate-500">Phụ lục ${index + 1}</span>
+                        <button type="button" onclick="removeAppendix('${appendix.id}')" class="px-2 py-1 rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100">Xóa phụ lục</button>
+                    </div>
+                    <div class="appendix-content" data-appendix-id="${appendix.id}" contenteditable="true">${appendix.html || marked.parse(appendix.markdown || "")}</div>
+                </section>
+            `).join("");
+            lockStaticFormSections();
+        }
+
+        async function removeAppendix(appendixId) {
+            const approved = window.customConfirm
+                ? await window.customConfirm("Bạn có chắc muốn xóa phụ lục này không?")
+                : window.confirm("Bạn có chắc muốn xóa phụ lục này không?");
+            if (!approved) return;
+            syncAppendicesFromDom();
+            currentAppendices = currentAppendices.filter(item => String(item.id) !== String(appendixId));
+            renderAppendices();
+            refreshAppendixNeedRecommendation();
+        }
+
+        async function generateAppendixFromUI() {
+            const bodyText = document.getElementById("editableBody")?.innerText?.trim() || "";
+            if (!bodyText) return alert("Chưa có văn bản chính để tạo phụ lục.");
+            const typeSelect = document.getElementById("appendixTypeSelect");
+            const requirementInput = document.getElementById("appendixRequirement");
+            const createButton = document.getElementById("createAppendixBtn");
+            const status = document.getElementById("appendixStatus");
+            const selectedType = typeSelect?.value || "AUTO";
+            const requirement = requirementInput?.value?.trim() || currentAppendixSuggestion?.requirement || "";
+            const appendixType = selectedType === "AUTO"
+                ? normalizeAppendixType(currentAppendixSuggestion?.type || inferAppendixTypeFromText(`${requirement}\n${bodyText}`, currentMetaData?.docType || ""))
+                : normalizeAppendixType(selectedType);
+            if (createButton) createButton.disabled = true;
+            if (status) status.textContent = `AI đang tạo phụ lục dạng ${appendixType.toLowerCase()}...`;
+            syncAppendicesFromDom();
+            try {
+                const appendixSourceContext = buildPromptSourceContext({
+                    mode: "supplement",
+                    docType: currentMetaData?.docType || "",
+                    docSubject: currentMetaData?.docSubject || "",
+                    userContext: requirement,
+                    fixedData: currentMetaData || {},
+                    minPages: 1
+                });
+                const prompt = `
+Bạn là chuyên viên lập phụ lục văn bản. Hãy tạo DUY NHẤT một phụ lục đi kèm văn bản chính.
+
+VĂN BẢN CHÍNH:
+- Loại: ${currentMetaData?.docType || "VĂN BẢN"}
+- Trích yếu: ${currentMetaData?.docSubject || ""}
+- Số: ${currentMetaData?.doc_number || "[...]"}
+- Ngày: ${currentMetaData?.date || "[...]"}
+- Cơ quan/đơn vị: ${currentMetaData?.unit_name || "[...]"}
+
+NỘI DUNG VĂN BẢN CHÍNH:
+"""${bodyText}"""
+
+HỒ SƠ TÀI KHOẢN CÓ THỂ DÙNG ĐỂ ĐIỀN DỮ LIỆU:
+${buildAccountProfilePromptBlock()}
+
+TÀI LIỆU NGUỒN ĐÃ CHỌN LỌC:
+"""${appendixSourceContext.text}"""
+
+LOẠI PHỤ LỤC: ${appendixType}
+YÊU CẦU CỤ THỂ: ${requirement || "Tạo nội dung chi tiết phù hợp với phần được dẫn chiếu trong văn bản chính."}
+
+QUY TẮC BẮT BUỘC:
+1) Dòng đầu: **PHỤ LỤC ${currentAppendices.length + 1}**; dòng tiếp theo là tên phụ lục IN HOA, rõ nội dung.
+2) Có dòng in nghiêng: *(Kèm theo ${currentMetaData?.docType || "văn bản"} số ${currentMetaData?.doc_number || "[...]"} ngày ${currentMetaData?.date || "[...]"} của ${currentMetaData?.unit_name || "[...]"})*.
+3) Không lặp quốc hiệu, tiêu ngữ, nơi nhận hoặc chữ ký của văn bản chính.
+4) Nếu là danh sách/danh mục/bảng phân công/tiến độ: xuất bảng Markdown và tự chọn cột đúng chủ đề.
+5) Chỉ dùng dữ kiện có trong văn bản chính và hồ sơ; không tự tạo người, số liệu, thời hạn. Ô thiếu dữ liệu ghi [...].
+6) Không tạo dòng giả để đủ số lượng; không thêm lời giải thích ngoài phụ lục.
+7) Nội dung phụ lục phải khớp đúng phần dẫn chiếu của văn bản chính.
+
+HỒ SƠ LOẠI VĂN BẢN:
+${buildDocumentProfileGuide(currentMetaData?.docScheme || "HANH_CHINH", currentMetaData?.docType || "VĂN BẢN")}
+`;
+                const markdown = await callGemini(prompt, {
+                    purpose: "appendix",
+                    allowWebSearch: false,
+                    maxTotalAttempts: 4,
+                    maxOutputTokens: 6144
+                });
+                const cleaned = String(markdown || "").replace(/^```(?:markdown)?\s*/i, "").replace(/```\s*$/i, "").trim();
+                if (!cleaned) throw new Error("AI không trả về nội dung phụ lục.");
+                currentAppendices.push({
+                    id: `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                    type: appendixType,
+                    requirement,
+                    markdown: cleaned,
+                    html: ""
+                });
+                ensureMainDocumentReferencesAppendix(appendixType, currentAppendices.length);
+                renderAppendices();
+                showAppendixSuggestion(null);
+                if (requirementInput) requirementInput.value = "";
+                if (status) status.textContent = `Đã tạo phụ lục ${currentAppendices.length}: ${appendixType}. Có thể chỉnh trực tiếp trên trang.`;
+                document.querySelector("#appendixContainer .appendix-page:last-child")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            } catch (err) {
+                console.error(err);
+                if (status) status.textContent = `Không thể tạo phụ lục: ${err.message}`;
+                alert("Không thể tạo phụ lục: " + err.message);
+            } finally {
+                if (createButton) createButton.disabled = false;
+            }
+        }
+
         // ==========================================
         // 3. API CALLER (CẤU HÌNH LINH HOẠT THEO LỰA CHỌN NGƯỜI DÙNG)
         // ==========================================
-        function buildPageTargets(minPages = 1) {
+        function buildPageTargets(minPages = 1, docType = "") {
             const pages = Math.max(1, Number(minPages) || 1);
-            const preferredMaxPages = pages >= 10 ? 15 : Math.max(pages, pages + 2);
+            const lengthMode = getDocumentProfile(docType).lengthMode || "standard";
+            const presets = {
+                short: { min: 120, target: 220, max: 480, allowExpansion: false },
+                outline: { min: 180, target: 320, max: 700, allowExpansion: false },
+                table: { min: 0, target: 0, max: 0, allowExpansion: false },
+                decision: { min: 180, target: 320, max: 800, allowExpansion: false },
+                standard: { min: 260, target: 420, max: 900, allowExpansion: true },
+                long: { min: pages * 330, target: pages * 390, max: Math.max(pages + 1, 2) * 470, allowExpansion: true },
+                contract: { min: pages * 420, target: pages * 500, max: Math.max(pages + 2, 3) * 560, allowExpansion: true }
+            };
+            const selected = presets[lengthMode] || presets.standard;
+            const scale = pages > 1 && !["long", "contract", "table"].includes(lengthMode) ? pages : 1;
             return {
                 minPages: pages,
-                preferredMaxPages,
-                minWords: pages * 450,
-                targetWords: Math.round(pages * 480),
-                preferredMaxWords: preferredMaxPages * 520
+                preferredMaxPages: Math.max(pages, pages + 1),
+                minWords: selected.min * scale,
+                targetWords: selected.target * scale,
+                preferredMaxWords: selected.max * scale,
+                lengthMode,
+                allowExpansion: selected.allowExpansion
             };
         }
 
@@ -5921,6 +6555,7 @@ YÊU CẦU:
 
             const normalizedType = String(docType || "").toUpperCase().trim();
             const pages = Math.max(1, Number(minPages) || 1);
+            const lengthMode = getDocumentProfile(normalizedType).lengthMode || "standard";
 
             if (purpose === "expand") {
                 return Math.min(24000, Math.max(8192, 3000 + pages * 1300));
@@ -5933,6 +6568,10 @@ YÊU CẦU:
             if (normalizedType === "DANH MỤC" || normalizedType === "DANH SÁCH") {
                 return 6144;
             }
+
+            if (lengthMode === "short") return 3072;
+            if (lengthMode === "outline") return 4096;
+            if (lengthMode === "standard") return Math.min(8192, 4096 + pages * 900);
 
             return Math.min(24000, Math.max(8192, 2500 + pages * 1200));
         }
@@ -6054,7 +6693,14 @@ YÊU CẦU:
         }
 
         function applyLocalBodyPostProcessing(markdownText, docType, isStrictNd30Mode) {
-            let current = normalizeDongNaiAdministrativeText(markdownText || "");
+            let current = String(markdownText || "");
+            const lengthMode = getDocumentProfile(docType).lengthMode || "standard";
+            if (lengthMode === "table") {
+                return current.trim();
+            }
+            if (lengthMode === "contract") {
+                return forceIndexedBlocks(normalizeAdministrativeMarkdown(current)).trim();
+            }
             if (shouldAvoidPlanTables(docType)) {
                 current = convertMarkdownTablesToLists(current);
             }
@@ -6078,7 +6724,7 @@ YÊU CẦU:
                 current = convertMarkdownTablesToLists(current);
             }
 
-            return normalizeDongNaiAdministrativeText(current).trim();
+            return current.trim();
         }
 
         async function callGemini(prompt, options = {}) {
@@ -6090,8 +6736,23 @@ YÊU CẦU:
 
                 const userModel = currentGeminiModel;
                 const temperatureEl = document.getElementById("temperatureSelect");
-                const userTemperature = temperatureEl ? parseFloat(temperatureEl.value) : 0.5;
+                const userTemperature = temperatureEl ? parseFloat(temperatureEl.value) : 0.3;
                 const requestPurpose = String(options.purpose || "write").toLowerCase();
+                const deterministicPurposes = new Set([
+                    "analyze", "suggest", "table_fix", "rewrite_fix", "decision_compress", "appendix_analysis"
+                ]);
+                const restrainedPurposes = new Set(["expand", "supplement", "appendix", "continue"]);
+                const selectedDraftingMode = document.getElementById("draftingModeSelect")?.value || "auto_by_type";
+                const maxWriteTemperature = selectedDraftingMode === "creative_framework" ? 0.45 : 0.3;
+                const effectiveTemperature = Number.isFinite(Number(options.temperature))
+                    ? Number(options.temperature)
+                    : deterministicPurposes.has(requestPurpose)
+                        ? 0.1
+                        : restrainedPurposes.has(requestPurpose)
+                            ? 0.2
+                            : Math.min(Number.isFinite(userTemperature) ? userTemperature : 0.3, maxWriteTemperature);
+                const effectiveTopP = deterministicPurposes.has(requestPurpose) ? 0.6 : 0.75;
+                const effectiveTopK = deterministicPurposes.has(requestPurpose) ? 16 : 28;
                 const requestedMaxOutputTokens = Math.max(512, Math.floor(options.maxOutputTokens || 8192));
                 const allowWebSearch = options.allowWebSearch === true
                     ? true
@@ -6178,9 +6839,9 @@ YÊU CẦU:
                         const requestBody = {
                             contents: [{ parts: [{ text: effectivePrompt }] }],
                             generationConfig: {
-                                temperature: userTemperature,
-                                topP: 0.85,
-                                topK: 50,
+                                temperature: effectiveTemperature,
+                                topP: effectiveTopP,
+                                topK: effectiveTopK,
                                 maxOutputTokens: requestedMaxOutputTokens
                             }
                         };
@@ -6220,19 +6881,20 @@ YÊU CẦU:
                                 continueAttempts++;
                                 console.log(`Phát hiện văn bản bị cắt ngang (Lần ${continueAttempts}). Đang tự động viết tiếp...`);
 
-                                const lastFewWords = text.slice(-150);
+                                const accumulatedText = chunks.join("");
+                                const lastFewWords = accumulatedText.slice(-180);
                                 const continuePrompt = `Văn bản bạn đang viết phần thân (body) bị ngắt quãng giữa chừng do giới hạn độ dài. BẮT BUỘC bạn HÃY TIẾP TỤC VIẾT TIẾP đoạn còn lại một cách liền mạch. \n\nHãy viết tiếp nối KHỚP với đoạn cuối này (TUYỆT ĐỐI KHÔNG lặp lại những gì đã viết ở trên, CHỈ viết phần tiếp theo):\n"...${lastFewWords}"`;
 
                                 const requestBodyCont = {
                                     contents: [
                                         { role: "user", parts: [{ text: effectivePrompt }] },
-                                        { role: "model", parts: [{ text: text }] },
+                                        { role: "model", parts: [{ text: accumulatedText }] },
                                         { role: "user", parts: [{ text: continuePrompt }] }
                                     ],
                                     generationConfig: {
-                                        temperature: userTemperature,
-                                        topP: 0.85,
-                                        topK: 50,
+                                        temperature: Math.min(effectiveTemperature, 0.2),
+                                        topP: effectiveTopP,
+                                        topK: effectiveTopK,
                                         maxOutputTokens: requestedMaxOutputTokens
                                     }
                                 };
@@ -6287,9 +6949,9 @@ YÊU CẦU:
                                 body: JSON.stringify({
                                     contents: [{ parts: [{ text: prompt }] }],
                                     generationConfig: {
-                                        temperature: userTemperature,
-                                        topP: 0.85,
-                                        topK: 50,
+                                        temperature: effectiveTemperature,
+                                        topP: effectiveTopP,
+                                        topK: effectiveTopK,
                                         maxOutputTokens: requestedMaxOutputTokens
                                     }
                                 })
@@ -6404,39 +7066,25 @@ YÊU CẦU:
                 { id: "signer_title", text: "Chức vụ người ký?" },
                 { id: "signer_name", text: "Họ tên người ký?" }
             ];
-            const dynamicByType = {
-                "KẾ HOẠCH": [
-                    "Mục tiêu/chỉ tiêu chính của kế hoạch là gì?",
-                    "Các mốc thời gian thực hiện chính là gì?",
-                    "Phân công trách nhiệm cho các bộ phận/cá nhân như thế nào?"
-                ],
-                "BÁO CÁO": [
-                    "Kết quả nổi bật cần nêu là gì?",
-                    "Khó khăn, hạn chế và nguyên nhân chính là gì?",
-                    "Kiến nghị/đề xuất cụ thể là gì?"
-                ],
-                "ĐỀ CƯƠNG BÁO CÁO": [
-                    "Mẫu đề cương hoặc bố cục bắt buộc gồm những mục nào?",
-                    "Các ý chính/dữ liệu nào cần đưa vào từng mục của đề cương?",
-                    "Đề cương này phục vụ cho báo cáo về nội dung hoặc giai đoạn nào?"
-                ],
-                "DANH SÁCH": [
-                    "Cần lập danh sách các thành phần/đối tượng nào để thực hiện công việc này?",
-                    "Mỗi thành phần/đối tượng cần ghi vai trò, nhiệm vụ hoặc thông tin gì trong danh sách?",
-                    "Văn bản căn cứ hoặc yêu cầu nào quyết định việc đưa các thành phần đó vào danh sách?"
-                ],
-                "QUYẾT ĐỊNH": [
-                    "Nội dung quyết định trọng tâm là gì?",
-                    "Đối tượng áp dụng và phạm vi áp dụng là gì?"
-                ]
-            };
+            const normalizedType = String(docType || "").toUpperCase().trim();
+            const isContractDocument = normalizedType.startsWith("HỢP ĐỒNG")
+                || normalizedType === "BIÊN BẢN NGHIỆM THU"
+                || normalizedType === "THANH LÝ HỢP ĐỒNG";
+            if (isContractDocument) {
+                fixedQuestions.push(
+                    { id: "party_a_name", text: "Tên đầy đủ của Bên A?" },
+                    { id: "party_a_rep", text: "Người đại diện và chức vụ của Bên A?" },
+                    { id: "party_b_name", text: "Tên đầy đủ của Bên B?" },
+                    { id: "party_b_rep", text: "Người đại diện và chức vụ của Bên B?" }
+                );
+            }
+            const profile = getDocumentProfile(docType);
             return {
-                is_contract_group: String(docType || "").startsWith("HỢP ĐỒNG"),
+                is_contract_group: isContractDocument,
                 fixed_questions: fixedQuestions,
-                dynamic_questions: dynamicByType[String(docType || "").toUpperCase()] || [
-                    "Nội dung trọng tâm cần nhấn mạnh trong văn bản là gì?",
-                    "Thời gian/tiến độ thực hiện cụ thể như thế nào?"
-                ]
+                dynamic_questions: Array.isArray(profile.questions) && profile.questions.length > 0
+                    ? profile.questions
+                    : ["Nội dung trọng tâm cần nhấn mạnh trong văn bản là gì?", "Thời gian/tiến độ thực hiện cụ thể như thế nào?"]
             };
         }
 
@@ -6453,10 +7101,21 @@ YÊU CẦU:
             const dynamic_questions = Array.isArray(raw?.dynamic_questions)
                 ? raw.dynamic_questions.map((q) => String(q || "").trim()).filter(Boolean)
                 : [];
+            const mergedDynamicQuestions = Array.from(new Set([
+                ...dynamic_questions,
+                ...fallback.dynamic_questions
+            ])).slice(0, 8);
+            const mergedFixedQuestions = [];
+            const seenFixedIds = new Set();
+            [...fixed_questions, ...fallback.fixed_questions].forEach((question) => {
+                if (!question?.id || seenFixedIds.has(question.id)) return;
+                seenFixedIds.add(question.id);
+                mergedFixedQuestions.push(question);
+            });
             return {
                 is_contract_group: typeof raw?.is_contract_group === "boolean" ? raw.is_contract_group : fallback.is_contract_group,
-                fixed_questions: fixed_questions.length > 0 ? fixed_questions : fallback.fixed_questions,
-                dynamic_questions: dynamic_questions.length > 0 ? dynamic_questions : fallback.dynamic_questions
+                fixed_questions: mergedFixedQuestions,
+                dynamic_questions: mergedDynamicQuestions
             };
         }
 
@@ -6742,7 +7401,9 @@ YÊU CẦU:
 
             // LẤY PHONG CÁCH ĐÃ CHỌN
             const selectedStyle = document.querySelector('input[name="styleSelect"]:checked')?.value || "hanh_chinh";
-            const writingStyleGuide = selectedStyle === "dang" ? STYLE_DANG : STYLE_HANH_CHINH;
+            const writingStyleGuide = (selectedStyle === "dang" || document.getElementById("docSchemeSelect")?.value === "DANG")
+                ? STYLE_DANG
+                : STYLE_HANH_CHINH;
 
             const docType = document.getElementById("docTypeSelect").value;
             const docScheme = document.getElementById("docSchemeSelect")?.value || "HANH_CHINH";
@@ -6761,6 +7422,10 @@ YÊU CẦU:
             }
             const decisionDetailLevel = document.getElementById("decisionDetailLevel")?.value || "ngan_gon";
             const noiNhanInput = document.getElementById("noiNhanInput")?.value?.trim() || "";
+            currentAppendices = [];
+            currentAppendixSuggestion = null;
+            renderAppendices();
+            showAppendixSuggestion(null);
             const selectedDraftingMode = document.getElementById("draftingModeSelect")?.value || "auto_by_type";
             const effectiveDraftingMode = resolveEffectiveDraftingMode(selectedDraftingMode, docType);
             const isStrictNd30Mode = effectiveDraftingMode === "strict_nd30";
@@ -6772,7 +7437,7 @@ YÊU CẦU:
 `
                 : `
 *** CHẾ ĐỘ SÁNG TẠO TRONG KHUÔN KHỔ ***
-- Giữ khung hành chính cơ bản, nhưng cho phép diễn đạt linh hoạt, tự nhiên hơn.
+- Bắt buộc giữ nguyên hồ sơ cấu trúc của loại văn bản; chỉ cho phép diễn đạt linh hoạt, tự nhiên hơn ở cấp câu chữ.
 - Không bắt buộc mọi mục số phải có tiểu mục a./b./c.; có thể dùng gạch đầu dòng khi phù hợp.
 `;
             const isShortDecisionMode = (docType === "QUYẾT ĐỊNH" && decisionDetailLevel === "ngan_gon");
@@ -6825,7 +7490,7 @@ YÊU CẦU:
             updateFloatingProgress(10, "Đang chuẩn bị yêu cầu và dữ liệu đầu vào...");
 
             try {
-                const pageTargets = buildPageTargets(minPages);
+                const pageTargets = buildPageTargets(minPages, docType);
                 const danhSachSeedRows = docType === "DANH SÁCH"
                     ? buildDanhSachSeedRowsFromAccountProfile({
                         docSubject,
@@ -6868,7 +7533,9 @@ GHI CHÚ BAN ĐẦU: ${userContext}
 
 YÊU CẦU BỔ SUNG (RẤT QUAN TRỌNG): ${extraWrite || "Không có"}
 
-*** ĐỘ DÀI MỤC TIÊU: tối thiểu ${pageTargets.minPages} trang (~${pageTargets.minWords} từ), ưu tiên khoảng ${pageTargets.targetWords}-${pageTargets.preferredMaxWords} từ. ***
+${pageTargets.lengthMode === "table"
+                        ? "*** ĐỘ DÀI: phụ thuộc dữ liệu thực tế; không tạo dòng giả để đủ trang. ***"
+                        : `*** ĐỘ DÀI PHÙ HỢP LOẠI VĂN BẢN: khoảng ${pageTargets.targetWords} từ, không vượt quá ${pageTargets.preferredMaxWords} từ nếu dữ liệu không đòi hỏi. ***`}
             `;
 
                 if (coSigners.length > 0) {
@@ -6895,16 +7562,16 @@ ${docType === "KẾ HOẠCH" ? `- Văn bản là KẾ HOẠCH: tuyệt đối kh
 - Các phần mục tiêu, nội dung, tiến độ, phân công trách nhiệm phải trình bày bằng mục số, đoạn văn hoặc gạch đầu dòng.` : ""}
 ${docType === "DANH SÁCH" ? `- Văn bản là DANH SÁCH: bắt buộc xuất dạng bảng Markdown, không viết văn xuôi.
 - Nhiệm vụ là lập danh sách các thành phần/đối tượng/hồ sơ/mục việc cần có để thực hiện nội dung công việc theo yêu cầu người dùng và văn bản căn cứ.
-- Bảng phải có cột: STT | Thành phần/Đối tượng | Vai trò/Nhiệm vụ | Căn cứ/Ghi chú.
-- Tạo tối thiểu 5 dòng dữ liệu; nếu thiếu thông tin thì điền "[...]".
+- Tự chọn các cột đúng với chủ đề và dữ liệu nguồn; chỉ dùng mẫu STT | Thành phần/Đối tượng | Vai trò/Nhiệm vụ | Căn cứ/Ghi chú khi thực sự phù hợp.
+- Không tạo dòng giả để đủ số lượng; ô thiếu thông tin thì điền "[...]".
 - Nếu văn bản nguồn nêu căn cứ, nhóm đối tượng hoặc bộ phận tham gia, phải ưu tiên chuyển hóa các ý đó thành từng dòng cụ thể trong bảng.` : ""}
 ${docType === "DANH MỤC" ? `- Văn bản là DANH MỤC: bắt buộc xuất dạng bảng Markdown, không viết văn xuôi.
-- Bảng phải có cột: STT | Tên mục | Nội dung/Thông tin chính | Ghi chú.
-- Tạo tối thiểu 5 dòng dữ liệu; nếu thiếu thông tin thì điền "[...]".` : ""}
+- Tự chọn cột đúng với loại danh mục; không tạo dòng giả. Nếu thiếu thông tin thì điền "[...]".` : ""}
 
-${isStrictNd30Mode ? nd30BodyGuide : ""}
+${isStrictNd30Mode && ["HANH_CHINH", "HOANG_THIEN"].includes(docScheme) ? nd30BodyGuide : ""}
 ${modeGuide}
 ${docScheme === "HOANG_THIEN" ? buildHoangThienWriteGuide(docType, useWebSearch) : ""}
+${buildDocumentProfileGuide(docScheme, docType)}
 
 *** THỨ TỰ ƯU TIÊN NGUỒN ***
 ${pdfPriorityGuide}
@@ -6912,6 +7579,7 @@ ${pdfPriorityGuide}
 
                 const prompt = PROMPT_WRITE
                     .replace(/{doc_type}/g, docType)
+                    .replace(/{doc_scheme}/g, docScheme)
                     .replace(/{writing_style}/g, writingStyleGuide)
                     .replace(/{user_answers}/g, combinedUserAnswers)
                     .replace(/{pdf_content}/g, pdfContentForWrite)
@@ -6955,7 +7623,8 @@ YÊU CẦU BẮT BUỘC:
                 const wordCount = countVietnameseWords(markdownText);
                 const shortfall = pageTargets.minWords - wordCount;
 
-                if (!isShortDecisionMode && shortfall > 700) {
+                const expansionThreshold = Math.max(220, Math.round(pageTargets.minWords * 0.3));
+                if (!isShortDecisionMode && pageTargets.allowExpansion && shortfall > expansionThreshold) {
                     indicator.innerHTML = `<div class="loader"></div> <span class="text-sm text-orange-600 font-semibold ml-2">Nội dung còn thiếu khoảng ${shortfall} từ. Đang yêu cầu AI mở rộng thêm...</span>`;
 
                     const expandPrompt = `
@@ -6968,14 +7637,15 @@ NHIỆM VỤ CỦA BẠN:
 1. GIỮ NGUYÊN toàn bộ nội dung đã viết ở trên.
 2. MỞ RỘNG thêm bằng cách:
    - Bổ sung chi tiết cho các phần còn sơ sài
-   - Thêm các mục/phần mới phù hợp với loại văn bản "${docType}"
+   - Chỉ thêm mục/phần mới khi hồ sơ loại văn bản "${docType}" thực sự yêu cầu
    - Diễn giải rõ hơn các nhiệm vụ, trách nhiệm, quy trình
    - Bổ sung phần tổ chức thực hiện, phân công chi tiết
    - Thêm tiêu chí đánh giá, yêu cầu cụ thể
    - Mở rộng phần kiến nghị, đề xuất (nếu có)
 3. ĐẢM BẢO đạt tối thiểu ${pageTargets.minWords} từ nhưng không kéo văn bản lan man.
 4. KHÔNG bịa số liệu, tên người, địa chỉ cụ thể.
-5. CHỈ xuất ra NỘI DUNG HOÀN CHỈNH sau khi mở rộng (Markdown), không giải thích.
+5. KHÔNG thêm khẩu hiệu, lời ca ngợi, nhận định thành tích hoặc tác động không có căn cứ.
+6. CHỈ xuất ra NỘI DUNG HOÀN CHỈNH sau khi mở rộng (Markdown), không giải thích.
 
 BẮT ĐẦU VIẾT NỘI DUNG ĐÃ MỞ RỘNG:
 `;
@@ -6999,10 +7669,9 @@ NỘI DUNG HIỆN TẠI:
 
 RÀNG BUỘC BẮT BUỘC:
 1) Chỉ xuất ra BẢNG MARKDOWN, không văn xuôi.
-2) Bắt buộc có cột: STT | Thành phần/Đối tượng | Vai trò/Nhiệm vụ | Căn cứ/Ghi chú.
-3) Tối thiểu 5 dòng dữ liệu.
-4) Nếu thiếu dữ liệu thì điền "[...]".
-5) Không thêm lời mở đầu hay kết luận.
+2) Tự chọn cột phù hợp chủ đề; giữ nguyên các cột có ý nghĩa trong nội dung hiện tại.
+3) Chỉ tạo số dòng tương ứng dữ liệu thực tế; nếu một ô thiếu dữ liệu thì điền "[...]".
+4) Không thêm lời mở đầu hay kết luận.
 `;
 
                     markdownText = await runStageWithProgress(90, 95, "Đang ép định dạng bảng DANH SÁCH...", () => callGemini(danhSachFixPrompt, {
@@ -7033,10 +7702,9 @@ NỘI DUNG HIỆN TẠI:
 
 RÀNG BUỘC BẮT BUỘC:
 1) Chỉ xuất ra BẢNG MARKDOWN, không văn xuôi.
-2) Bắt buộc có cột: STT | Tên mục | Nội dung/Thông tin chính | Ghi chú.
-3) Tối thiểu 5 dòng dữ liệu.
-4) Nếu thiếu dữ liệu thì điền "[...]".
-5) Không thêm lời mở đầu hay kết luận.
+2) Tự chọn cột phù hợp loại danh mục; giữ nguyên các cột có ý nghĩa trong nội dung hiện tại.
+3) Chỉ tạo số dòng tương ứng dữ liệu thực tế; nếu một ô thiếu dữ liệu thì điền "[...]".
+4) Không thêm lời mở đầu hay kết luận.
 `;
 
                     markdownText = await runStageWithProgress(90, 95, "Đang ép định dạng bảng DANH MỤC...", () => callGemini(danhMucFixPrompt, {
@@ -7356,7 +8024,7 @@ RÀNG BUỘC BẮT BUỘC:
             const lines = text.split(/\r?\n/);
             const tableLines = lines.filter(line => /^\s*\|.*\|\s*$/.test(line));
             const hasSeparator = lines.some(line => /^\s*\|?\s*:?-{3,}\s*\|/.test(line));
-            return tableLines.length >= 7 && hasSeparator;
+            return tableLines.length >= 3 && hasSeparator;
         }
 
         function isDanhSachTableMarkdown(markdownText) {
@@ -7369,8 +8037,11 @@ RÀNG BUỘC BẮT BUỘC:
             const looksLikeDanhSachHeader = normalizedHeader.includes("thành phần")
                 || normalizedHeader.includes("đối tượng")
                 || normalizedHeader.includes("vai trò")
-                || normalizedHeader.includes("nhiệm vụ");
-            return tableLines.length >= 7 && hasSeparator && looksLikeDanhSachHeader;
+                || normalizedHeader.includes("nhiệm vụ")
+                || normalizedHeader.includes("họ và tên")
+                || normalizedHeader.includes("họ tên")
+                || normalizedHeader.includes("stt");
+            return tableLines.length >= 3 && hasSeparator && looksLikeDanhSachHeader;
         }
 
         function buildFallbackDanhMucTable(markdownText) {
@@ -7619,6 +8290,7 @@ RÀNG BUỘC BẮT BUỘC:
                 alert("Không tìm thấy vùng dữ liệu để lưu.");
                 return;
             }
+            syncAppendicesFromDom();
 
             const docs = getSavedDocs();
             const item = {
@@ -7630,7 +8302,8 @@ RÀNG BUỘC BẮT BUỘC:
                 headerHtml: header.innerHTML,
                 titleHtml: title.innerHTML,
                 footerHtml: footer.innerHTML,
-                bodyHtml: body.innerHTML
+                bodyHtml: body.innerHTML,
+                appendices: currentAppendices
             };
 
             docs.unshift(item);
@@ -7686,6 +8359,8 @@ RÀNG BUỘC BẮT BUỘC:
             const item = docs[index];
 
             currentMetaData = item.meta || {};
+            currentAppendices = Array.isArray(item.appendices) ? item.appendices : [];
+            currentAppendixSuggestion = null;
             const header = document.getElementById("previewHeader");
             const title = document.getElementById("previewTitleWrapper");
             const footer = document.getElementById("previewFooter");
@@ -7695,6 +8370,8 @@ RÀNG BUỘC BẮT BUỘC:
             if (title) title.innerHTML = item.titleHtml || "";
             if (footer) footer.innerHTML = item.footerHtml || "";
             if (body) body.innerHTML = item.bodyHtml || "";
+            renderAppendices();
+            refreshAppendixNeedRecommendation();
 
             lockStaticFormSections();
             goToStep(3);
@@ -8060,10 +8737,25 @@ RÀNG BUỘC BẮT BUỘC:
             // RENDER HEADER
             if (safeMeta.isContractGroup) {
                 headerDiv.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div class="quoc-hieu">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div><div class="tieu-ngu">Độc lập - Tự do - Hạnh phúc</div><div style="border-top:1px solid black; width:40%; margin:5px auto;"></div></div>`;
-                titleDiv.innerHTML = `<div id="previewTitle" class="font-bold uppercase text-[16pt] mt-4 mb-2 text-center">${safeMeta.docType}</div><div id="previewSubject" class="font-bold text-[14pt] mb-2 text-center">${safeMeta.docSubject}</div><div class="italic text-[13pt] text-center mb-4">Số: ${safeMeta.contract_number || safeMeta.so_hop_dong || "..."}</div>`;
+                titleDiv.innerHTML = `<div id="previewTitle" class="font-bold uppercase text-[16pt] mt-4 mb-2 text-center">${safeMeta.docType}</div><div id="previewSubject" class="font-bold text-[14pt] mb-2 text-center">${safeMeta.docSubject}</div><div class="italic text-[13pt] text-center mb-4">Số: ${safeMeta.contract_number || safeMeta.so_hop_dong || safeMeta.doc_number || "..."}</div>`;
                 const repA = safeMeta.ben_a_dai_dien || safeMeta.party_a_rep || "...";
                 const repB = safeMeta.ben_b_dai_dien || safeMeta.party_b_rep || "...";
                 footerDiv.innerHTML = `<table class="footer-table"><tr><td><div class="signer-title">ĐẠI DIỆN BÊN A</div><div style="margin-top:5px; font-style:italic;">(Ký, đóng dấu, ghi rõ họ tên)</div><br/><br/><br/><div class="signer-name">${repA}</div></td><td><div class="signer-title">ĐẠI DIỆN BÊN B</div><div style="margin-top:5px; font-style:italic;">(Ký, đóng dấu, ghi rõ họ tên)</div><br/><br/><br/><div class="signer-name">${repB}</div></td></tr></table>`;
+            } else if (["DANG", "DOAN", "MATTRAN"].includes(String(safeMeta.docScheme || "").toUpperCase())) {
+                const scheme = String(safeMeta.docScheme || "").toUpperCase();
+                const rightHeading = scheme === "DANG"
+                    ? "ĐẢNG CỘNG SẢN VIỆT NAM"
+                    : scheme === "DOAN"
+                        ? "ĐOÀN TNCS HỒ CHÍ MINH"
+                        : "ỦY BAN TRUNG ƯƠNG MTTQ VIỆT NAM";
+                const unitParent = safeUpper(safeMeta.unit_parent, "CƠ QUAN CẤP TRÊN");
+                const unitName = safeUpper(safeMeta.unit_name, "ĐƠN VỊ BAN HÀNH");
+                const docNum = safeMeta.doc_number || "...";
+                const location = safeMeta.location || "...";
+                const date = formatDateForDocument(safeMeta.date || "");
+                headerDiv.innerHTML = `<table class="header-table"><tr><td><div class="org-parent">${unitParent}</div><div class="org-name">${unitName}</div><div style="border-top:1px solid black; width:30%; margin:5px auto;"></div><div class="doc-number">Số: ${docNum}</div></td><td><div class="quoc-hieu">${rightHeading}</div><div style="border-top:1px solid black; width:50%; margin:8px auto 5px;"></div><div class="doc-date">${location}, ${date}</div></td></tr></table>`;
+                titleDiv.innerHTML = `<div id="previewTitle" class="font-bold uppercase text-[16pt] mt-4 mb-2 text-center">${safeMeta.docType}</div><div id="previewSubject" class="font-bold text-[14pt] mb-4 text-center">${safeMeta.docSubject}</div>`;
+                footerDiv.innerHTML = buildDocumentFooterHtml(safeMeta);
             } else {
                 // HÀNH CHÍNH
                 const unitParent = (safeMeta.unit_parent || "CƠ QUAN CHỦ QUẢN").toUpperCase();
@@ -8073,7 +8765,7 @@ RÀNG BUỘC BẮT BUỘC:
                 const date = formatDateForDocument(safeMeta.date || "");
                 headerDiv.innerHTML = `<table class="header-table"><tr><td><div class="org-parent">${unitParent}</div><div class="org-name">${unitName}</div><div style="border-top:1px solid black; width:30%; margin:5px auto;"></div><div class="doc-number">Số: ${docNum}</div></td><td><div class="quoc-hieu">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div><div class="tieu-ngu">Độc lập - Tự do - Hạnh phúc</div><div style="border-top:1px solid black; width:60%; margin:5px auto;"></div><div class="doc-date">${location}, ${date}</div></td></tr></table>`;
                 titleDiv.innerHTML = `<div id="previewTitle" class="font-bold uppercase text-[16pt] mt-4 mb-2 text-center">${safeMeta.docType}</div><div id="previewSubject" class="font-bold text-[14pt] mb-4 text-center">${safeMeta.docSubject}</div>`;
-                footerDiv.innerHTML = buildAdministrativeFooterHtml(safeMeta);
+                footerDiv.innerHTML = buildDocumentFooterHtml(safeMeta);
             }
 
             let cleanMd = stripLeadingDuplicateTitle(markdown, safeMeta);
@@ -8111,14 +8803,23 @@ RÀNG BUỘC BẮT BUỘC:
 
             const selectedRenderMode = safeMeta.draftingMode || "auto_by_type";
             const effectiveRenderMode = safeMeta.effectiveDraftingMode || resolveEffectiveDraftingMode(selectedRenderMode, safeMeta.docType || "");
-            const normalizedMd = enforceUniversalAdministrativeStructure(normalizeAdministrativeMarkdown(cleanMd));
-            if (effectiveRenderMode === "strict_nd30") {
-                cleanMd = forceIndexedBlocks(boldIndexedHeadingLines(normalizedMd));
+            const renderLengthMode = getDocumentProfile(safeMeta.docType || "").lengthMode || "standard";
+            if (renderLengthMode === "table") {
+                cleanMd = cleanMd.trim();
+            } else if (renderLengthMode === "contract") {
+                cleanMd = forceIndexedBlocks(normalizeAdministrativeMarkdown(cleanMd));
             } else {
-                cleanMd = forceIndexedBlocks(normalizedMd);
+                const normalizedMd = enforceUniversalAdministrativeStructure(normalizeAdministrativeMarkdown(cleanMd));
+                if (effectiveRenderMode === "strict_nd30") {
+                    cleanMd = forceIndexedBlocks(boldIndexedHeadingLines(normalizedMd));
+                } else {
+                    cleanMd = forceIndexedBlocks(normalizedMd);
+                }
             }
 
             document.getElementById("editableBody").innerHTML = marked.parse(cleanMd);
+            renderAppendices();
+            refreshAppendixNeedRecommendation();
             lockStaticFormSections();
         }
 
@@ -8202,6 +8903,7 @@ RÀNG BUỘC BẮT BUỘC:
             if (!window.docx) return alert("Thư viện Word chưa tải xong!");
             const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, LineRuleType, ImageRun } = window.docx;
             const meta = currentMetaData || {};
+            syncAppendicesFromDom();
             let headerElements = [];
 
             // 1. TẠO HEADER
@@ -8211,8 +8913,28 @@ RÀNG BUỘC BẮT BUỘC:
                 headerElements.push(new Paragraph({ children: [new TextRun({ text: "____________________", bold: true, font: "Times New Roman" })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
                 headerElements.push(new Paragraph({ children: [new TextRun({ text: safeUpper(meta.docType, "VĂN BẢN"), bold: true, size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER, spacing: { before: 200 } }));
                 headerElements.push(new Paragraph({ children: [new TextRun({ text: String(meta.docSubject || ""), bold: true, size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER }));
-                headerElements.push(new Paragraph({ children: [new TextRun({ text: `Số: ${meta.contract_number || meta.so_hop_dong || "..."}`, italics: true, size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER, spacing: { after: 240 } }));
+                headerElements.push(new Paragraph({ children: [new TextRun({ text: `Số: ${meta.contract_number || meta.so_hop_dong || meta.doc_number || "..."}`, italics: true, size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER, spacing: { after: 240 } }));
             } else {
+                const scheme = String(meta.docScheme || "HANH_CHINH").toUpperCase();
+                const politicalHeading = scheme === "DANG"
+                    ? "ĐẢNG CỘNG SẢN VIỆT NAM"
+                    : scheme === "DOAN"
+                        ? "ĐOÀN TNCS HỒ CHÍ MINH"
+                        : scheme === "MATTRAN"
+                            ? "ỦY BAN TRUNG ƯƠNG MTTQ VIỆT NAM"
+                            : "";
+                const rightHeaderChildren = politicalHeading
+                    ? [
+                        new Paragraph({ children: [new TextRun({ text: politicalHeading, bold: true, font: "Times New Roman", size: 26 })], alignment: AlignmentType.CENTER }),
+                        new Paragraph({ children: [new TextRun({ text: "____________________", bold: true, font: "Times New Roman" })], alignment: AlignmentType.CENTER }),
+                        new Paragraph({ children: [new TextRun({ text: `${meta.location || "..."}, ${formatDateForDocument(meta.date || "")}`, italics: true, font: "Times New Roman", size: 28 })], alignment: AlignmentType.CENTER })
+                    ]
+                    : [
+                        new Paragraph({ children: [new TextRun({ text: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", bold: true, font: "Times New Roman", size: 24 })], alignment: AlignmentType.CENTER }),
+                        new Paragraph({ children: [new TextRun({ text: "Độc lập - Tự do - Hạnh phúc", bold: true, font: "Times New Roman", size: 26 })], alignment: AlignmentType.CENTER }),
+                        new Paragraph({ children: [new TextRun({ text: "____________________", bold: true, font: "Times New Roman" })], alignment: AlignmentType.CENTER }),
+                        new Paragraph({ children: [new TextRun({ text: `${meta.location || "..."}, ${formatDateForDocument(meta.date || "")}`, italics: true, font: "Times New Roman", size: 28 })], alignment: AlignmentType.CENTER })
+                    ];
                 const headerTable = new Table({
                     width: { size: 100, type: WidthType.PERCENTAGE },
                     borders: {
@@ -8237,12 +8959,7 @@ RÀNG BUỘC BẮT BUỘC:
                                 }),
                                 new TableCell({
                                     width: { size: 50, type: WidthType.PERCENTAGE },
-                                    children: [
-                                        new Paragraph({ children: [new TextRun({ text: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", bold: true, font: "Times New Roman", size: 24 })], alignment: AlignmentType.CENTER }),
-                                        new Paragraph({ children: [new TextRun({ text: "Độc lập - Tự do - Hạnh phúc", bold: true, font: "Times New Roman", size: 26 })], alignment: AlignmentType.CENTER }),
-                                        new Paragraph({ children: [new TextRun({ text: "____________________", bold: true, font: "Times New Roman" })], alignment: AlignmentType.CENTER }),
-                                        new Paragraph({ children: [new TextRun({ text: `${meta.location || "..."}, ${formatDateForDocument(meta.date || "")}`, italics: true, font: "Times New Roman", size: 28 })], alignment: AlignmentType.CENTER })
-                                    ]
+                                    children: rightHeaderChildren
                                 })
                             ]
                         })
@@ -8259,6 +8976,11 @@ RÀNG BUỘC BẮT BUỘC:
             const bodyNodes = scanDomToDocx(bodyContainer, window.docx);
             const footerContainer = document.getElementById("previewFooter");
             const footerNodes = scanDomToDocx(footerContainer, window.docx);
+            const appendixNodes = [];
+            document.querySelectorAll("#appendixContainer .appendix-content").forEach((appendixContent) => {
+                appendixNodes.push(new Paragraph({ pageBreakBefore: true, text: "" }));
+                appendixNodes.push(...scanDomToDocx(appendixContent, window.docx));
+            });
 
             // 4. XUẤT FILE
             const doc = new Document({
@@ -8280,7 +9002,7 @@ RÀNG BUỘC BẮT BUỘC:
                         }
                     }
                 },
-                sections: [{ properties: { page: { margin: { top: 1134, right: 851, bottom: 1134, left: 1701 } } }, children: [...headerElements, ...bodyNodes, new Paragraph({ text: "" }), ...footerNodes] }]
+                sections: [{ properties: { page: { margin: { top: 1134, right: 851, bottom: 1134, left: 1701 } } }, children: [...headerElements, ...bodyNodes, new Paragraph({ text: "" }), ...footerNodes, ...appendixNodes] }]
             });
             Packer.toBlob(doc).then((blob) => { saveAs(blob, `VanBan_${meta.docType || "VanBan"}.docx`); });
         });
@@ -8400,21 +9122,26 @@ RÀNG BUỘC BẮT BUỘC:
                             nodes.push(...scanDomToDocx(child, docx));
                             return;
                         }
-                        const isCenter = child.style.textAlign === 'center' || child.classList.contains('text-center') || ['h1', 'h2', 'h3'].includes(tag);
+                        const isCenter = child.style.textAlign === 'center' || child.classList.contains('text-center');
                         const isHeading = ['h1', 'h2', 'h3'].includes(tag);
                         const isList = tag === 'li';
+                        const isOrderedList = isList && child.parentElement?.tagName?.toLowerCase() === 'ol';
+                        const listIndex = isOrderedList ? Array.from(child.parentElement.children).indexOf(child) + 1 : 0;
+                        const listPrefix = isList ? (isOrderedList ? `${listIndex}. ` : "- ") : "";
                         const runs = getInlineRuns(child, docx);
                         if (runs.length === 0 && !child.querySelector("img")) return;
                         nodes.push(new Paragraph({
-                            children: [...(isList ? [new TextRun({ text: "- ", font: "Times New Roman", size: DOCX_BODY_FONT_SIZE })] : []), ...runs],
-                            alignment: isCenter ? AlignmentType.CENTER : getDocxAlignmentForElement(child, AlignmentType, AlignmentType.JUSTIFIED),
+                            children: [...(isList ? [new TextRun({ text: listPrefix, font: "Times New Roman", size: DOCX_BODY_FONT_SIZE })] : []), ...runs],
+                            alignment: isCenter ? AlignmentType.CENTER : getDocxAlignmentForElement(child, AlignmentType, isHeading ? AlignmentType.LEFT : AlignmentType.JUSTIFIED),
                             spacing: {
                                 before: DOCX_BEFORE_AFTER_6PT,
                                 after: DOCX_BEFORE_AFTER_6PT,
                                 line: DOCX_SINGLE_LINE,
                                 lineRule: LineRuleType.AUTO
                             },
-                            indent: (!isHeading && !isCenter) ? { firstLine: DOCX_FIRST_LINE_1_27CM } : undefined
+                            indent: isList
+                                ? { left: DOCX_FIRST_LINE_1_27CM, hanging: 360 }
+                                : (!isHeading && !isCenter) ? { firstLine: DOCX_FIRST_LINE_1_27CM } : undefined
                         }));
                     } else if (tag === 'img') {
                         const imageRun = createDocxImageRunFromElement(child, docx);
