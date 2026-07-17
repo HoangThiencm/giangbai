@@ -984,6 +984,10 @@
         updateSelectedFilesNote();
         if ($('documentId')) $('documentId').value = doc?.id || '';
         if ($('modalTitle')) $('modalTitle').textContent = doc ? 'Cập nhật văn bản' : `Thêm văn bản · ${meta.label}`;
+        const attachmentButtonLabel = $('addAttachmentBtn')?.querySelector('span');
+        if (attachmentButtonLabel) {
+            attachmentButtonLabel.textContent = doc ? 'Thêm tệp đính kèm' : 'Chọn tệp đính kèm';
+        }
         if ($('academicYear')) $('academicYear').value = doc?.academic_year || state.selectedYear || '';
         if ($('direction')) $('direction').value = doc?.direction || state.activeDirection || 'incoming';
         if ($('documentNumber')) $('documentNumber').value = doc?.document_number || '';
@@ -1468,6 +1472,8 @@
         });
 
         $('sourceText')?.addEventListener('input', scheduleAutoParse);
+
+        $('addAttachmentBtn')?.addEventListener('click', () => $('files')?.click());
 
         $('files')?.addEventListener('change', async event => {
             const files = [...event.target.files];

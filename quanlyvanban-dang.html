@@ -166,9 +166,13 @@
                         <label class="text-sm font-bold text-slate-700">Ghi chú<textarea id="reportNote" rows="2" class="mt-1 w-full rounded border border-amber-300 bg-white p-2.5"></textarea></label>
                     </div>
                 </section>
-                <label class="block text-sm font-bold text-slate-700">Tệp văn bản / minh chứng
-                    <input id="files" type="file" multiple accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.zip,.rar,.7z,application/zip,application/x-rar-compressed,application/vnd.rar,application/x-7z-compressed" class="mt-2 block w-full rounded border border-slate-300 bg-slate-50 p-2 text-sm">
-                </label>
+                <div>
+                    <p class="text-sm font-bold text-slate-700">Tệp văn bản / minh chứng</p>
+                    <input id="files" type="file" multiple accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.zip,.rar,.7z,application/zip,application/x-rar-compressed,application/vnd.rar,application/x-7z-compressed" class="hidden">
+                    <button id="addAttachmentBtn" type="button" class="mt-2 inline-flex items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-800 hover:bg-rose-100">
+                        <i class="fa-solid fa-paperclip"></i><span>Chọn tệp đính kèm</span>
+                    </button>
+                </div>
                 <p id="selectedFilesNote" class="text-xs text-slate-500">Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.</p>
                 <div id="pendingFilesPicker" class="hidden"></div>
                 <div id="uploadProgress" class="hidden rounded-lg border border-rose-200 bg-rose-50 p-3" role="status" aria-live="polite">
@@ -218,6 +222,6 @@
     </div>
 
     <div id="toast" class="fixed bottom-4 right-4 z-[70] hidden max-w-sm rounded-lg px-4 py-3 text-sm font-semibold shadow-xl"></div>
-    <script src="vanban-app.js?v=20260717-de-an"></script>
+    <script src="vanban-app.js?v=20260717-add-attachment"></script>
 </body>
 </html>
