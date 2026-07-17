@@ -12,7 +12,7 @@
     const DOCUMENT_TYPES = [
         'Công văn', 'Thông báo', 'Quyết định', 'Nghị quyết', 'Chỉ thị',
         'Kế hoạch', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Tờ trình',
-        'Báo cáo', 'Triển khai',
+        'Báo cáo', 'Nghị định', 'Quy chế', 'Triển khai', 'Khác',
     ];
 
     const state = {
@@ -89,6 +89,8 @@
         'Báo cáo': 'bg-emerald-100 text-emerald-800',
         'Quy định': 'bg-rose-100 text-rose-800',
         'Chỉ thị': 'bg-orange-100 text-orange-900',
+        'Nghị định': 'bg-fuchsia-100 text-fuchsia-800',
+        'Quy chế': 'bg-lime-100 text-lime-800',
         'Triển khai': 'bg-teal-100 text-teal-800',
     }[type] || 'bg-slate-100 text-slate-700');
 
