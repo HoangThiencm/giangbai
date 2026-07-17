@@ -298,7 +298,7 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    $types = ['Công văn', 'Thông báo', 'Quyết định', 'Kế hoạch', 'Tờ trình', 'Báo cáo', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Quy chế', 'Nghị định', 'Chỉ thị', 'Nghị quyết'];
+    $types = ['Công văn', 'Thông báo', 'Quyết định', 'Kế hoạch', 'Đề án', 'Tờ trình', 'Báo cáo', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Quy chế', 'Nghị định', 'Chỉ thị', 'Nghị quyết'];
     foreach ($types as $type) {
         if (stripos($head, $type) !== false) {
             $result['document_type'] = $type;

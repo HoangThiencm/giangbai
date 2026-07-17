@@ -11,7 +11,7 @@
 
     const DOCUMENT_TYPES = [
         'Công văn', 'Thông báo', 'Quyết định', 'Nghị quyết', 'Chỉ thị',
-        'Kế hoạch', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Tờ trình',
+        'Kế hoạch', 'Đề án', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Tờ trình',
         'Báo cáo', 'Nghị định', 'Quy chế', 'Triển khai', 'Khác',
     ];
 
@@ -83,6 +83,7 @@
         'Hướng dẫn': 'bg-blue-100 text-blue-800',
         'Thông tư': 'bg-cyan-100 text-cyan-800',
         'Kế hoạch': 'bg-indigo-100 text-indigo-800',
+        'Đề án': 'bg-yellow-100 text-yellow-900',
         'Công văn': 'bg-slate-200 text-slate-800',
         'Thông báo': 'bg-sky-100 text-sky-800',
         'Tờ trình': 'bg-amber-100 text-amber-900',
