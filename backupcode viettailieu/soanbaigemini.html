@@ -2102,8 +2102,8 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 return;
             }
 
-            const subject = document.getElementById('subject').value;
-            const title = document.getElementById('title').value;
+            const subject = (document.getElementById('subject') || {}).value || '';
+            const title = (document.getElementById('title') || {}).value || '';
 
             const textLines = quizArea.value.split('\n');
             const children = [];
@@ -2115,20 +2115,26 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 spacing: { after: 300 }
             }));
 
+            function parseTextRuns(rawLine, defaultSize = 24) {
+                const parts = rawLine.split(/(\*\*.*?\*\*)/g);
+                const runs = [];
+                for (const part of parts) {
+                    if (!part) continue;
+                    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+                        runs.push(new TextRun({ text: part.slice(2, -2), bold: true, size: defaultSize }));
+                    } else {
+                        runs.push(new TextRun({ text: part, size: defaultSize }));
+                    }
+                }
+                return runs.length ? runs : [new TextRun({ text: rawLine, size: defaultSize })];
+            }
+
             for (const line of textLines) {
                 if (line.trim() === '') {
                     children.push(new Paragraph({ text: "", spacing: { after: 100 } }));
                 } else {
-                    let text = line;
-                    let isBold = false;
-                    if (text.startsWith('**') && text.endsWith('**')) {
-                        isBold = true;
-                        text = text.substring(2, text.length - 2);
-                    }
                     children.push(new Paragraph({
-                        children: [
-                            new TextRun({ text: text, size: 24, bold: isBold })
-                        ],
+                        children: parseTextRuns(line),
                         spacing: { after: 120 }
                     }));
                 }
@@ -2143,11 +2149,23 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
             try {
                 const blob = await Packer.toBlob(doc);
-                window.saveAs(blob, `TracNghiem_${subject.replace(/[^a-zA-Z0-9]/g, '')}_${title.replace(/[^a-zA-Z0-9\s]/g, '').substring(0, 30)}.docx`);
+                const fileName = `TracNghiem_${subject.replace(/[^a-zA-Z0-9]/g, '')}_${title.replace(/[^a-zA-Z0-9\s]/g, '').substring(0, 30)}.docx`;
+                if (window.saveAs) {
+                    window.saveAs(blob, fileName);
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
                 window.showAppToast('Xuất Word Trắc nghiệm thành công!', 'success');
             } catch (err) {
                 console.error(err);
-                window.showAppToast('Lỗi khi tạo file Word.', 'err');
+                window.showAppToast('Lỗi khi tạo file Word: ' + (err && err.message ? err.message : 'Lỗi không xác định'), 'err');
             }
         }
 
