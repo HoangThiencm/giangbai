@@ -2778,7 +2778,7 @@
         }
         const ok = essayAnswersEqual(trimmed, item?.answer || '');
         return ok
-            ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
+            ? '<span class="font-bold text-teal-700">Đúng rồi!</span> Giỏi lắm, em tiếp tục nhé! 👏'
             : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item?.hint || 'Hãy thử so sánh với đáp án mẫu.')}`;
     }
 
@@ -2793,7 +2793,7 @@
             const ok = practiceDone && essayAnswersEqual(saved, item.answer || '');
             const feedback = practiceDone
                 ? (ok
-                    ? '<span class="font-bold text-teal-700">Đúng.</span> Em đang đi đúng hướng.'
+                    ? '<span class="font-bold text-teal-700">Đúng rồi!</span> Giỏi lắm, em tiếp tục nhé! 👏'
                     : `<span class="font-bold text-rose-700">Chưa đúng.</span> Gợi ý: ${escapeHtml(item.hint || 'Hãy thử so sánh với đáp án mẫu.')}`)
                 : '';
             return `
