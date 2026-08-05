@@ -2706,10 +2706,10 @@ Bạn KHÔNG được tự nghĩ format. Chỉ xuất đúng skeleton + quy tắ
 7. NỐI Ô và SẮP XẾP là 2 heading riêng — không gộp thành một bảng.
 
 **SỐ LƯỢNG BẮT BUỘC (thiếu = lỗi đỏ FAIL, không import được):**
-- BÀI TẬP TỰ LUẬN NGẮN: **BẮT BUỘC ĐÚNG 5 DÒNG — KHÔNG ĐƯỢC TẠO 2, 3 HAY 4 DÒNG. DƯỚI 5 = FAIL.** (3 cột: Đề | Đáp án số | Gợi ý)
+- BÀI TẬP TỰ LUẬN NGẮN: **TUYỆT ĐỐI BẮT BUỘC PHẢI TẠO ĐÚNG 5 DÒNG (5 CÂU). NẾU TẠO DƯỚI 5 DÒNG SẼ BỊ LỖI HỆ THỐNG.** (3 cột: Đề | Đáp án số | Gợi ý). Dù làm gì cũng không được bớt câu!
 - KÉO THẢ VÀO Ô TRỐNG: đúng 2 dòng (4 cột)
 - SẮP XẾP THỨ TỰ: đúng 2 dòng (4 cột, ≥2 mảnh, cột 2 và 3 cùng bộ mảnh)
-- NỐI Ô: 1–2 dòng (5 cột, ≥2 cặp, cột 4 dạng 0-0,1-1)
+- NỐI Ô: 1–2 dòng (5 cột, ≥2 cặp, cột 4 dạng 0-0,1-1). **CHÚ Ý: Cột 2 (mảnh trái) và Cột 3 (mảnh phải) PHẢI CÓ CÙNG SỐ LƯỢNG MẢNH (số dấu » phải bằng nhau). CẤM tạo bài phân loại nhiều->một.**
 - KỸ NĂNG CẦN ĐẠT: ≥2 dòng (id_khong_dau | Tên | 80) — đặt TRƯỚC trắc nghiệm
 - TRẮC NGHIỆM: 5–10 dòng (7 cột: skill_id | Câu | A | B | C | D | B)
 - NHIỆM VỤ HỌC SINH: 3–5 dòng thường (không ---)
@@ -3530,7 +3530,8 @@ QUY TRÌNH KIỂM ĐỊNH BẮT BUỘC (thực hiện âm thầm, không in báo
 3. Đối chiếu kết quả tự giải với lời giải/đáp án hiện có; kiểm tra tính duy nhất của đáp án, dữ kiện có đủ hay mâu thuẫn không, phương án trắc nghiệm có đúng một đáp án đúng không.
 4. Bài/câu đúng thì giữ nguyên. Bài/câu sai thì chỉ sửa chính bài đó cùng lời giải, đáp án, gợi ý hoặc phương án liên quan; không viết lại tùy tiện phần đang đúng.
 5. Sau khi sửa một bài sai, phải tự giải lại bài vừa sửa thêm một lần để chắc chắn dữ kiện mới, phép tính và đáp án đã khớp.
-6. ${restOnly
+6. LƯU Ý FORMAT CỰC KỲ QUAN TRỌNG: TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA BỚT CÂU HỎI ĐÃ CÓ. Phần TỰ LUẬN NGẮN luôn luôn phải sinh đủ 5 câu (5 dòng). Phần NỐI Ô luôn phải đảm bảo số mảnh trái BẰNG số mảnh phải (cùng số lượng dấu »).
+7. ${restOnly
                 ? 'Đối chiếu toàn bộ bài với lý thuyết đã duyệt ở Bước 1 và sửa lỗi kiến thức, suy luận, công thức, thuật ngữ hoặc diễn đạt dễ gây hiểu nhầm.'
                 : 'Đối chiếu toàn bộ bài với ảnh sách và sửa lỗi kiến thức, suy luận, công thức, thuật ngữ hoặc diễn đạt dễ gây hiểu nhầm.'}
 
