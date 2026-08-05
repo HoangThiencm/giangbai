@@ -264,13 +264,6 @@
                                 <span>Bước 2: Tạo các mục còn lại</span>
                             </button>
 
-                            <button id="generate-quiz-btn" onclick="generateQuizPhase()"
-                                    class="flex-1 min-w-[220px] bg-purple-600 hover:bg-purple-700 transition-colors text-white px-5 py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-x-2 shadow-sm"
-                                    title="Tạo bài kiểm tra trắc nghiệm 10 câu dựa trên ảnh SGK">
-                                <i class="fas fa-file-signature"></i>
-                                <span>Bước 4: Bài kiểm tra trắc nghiệm</span>
-                            </button>
-
                             <button onclick="showStructureGuide()"
                                     class="px-5 py-3 border border-slate-300 hover:bg-slate-50 transition-colors rounded-2xl text-sm font-medium flex items-center gap-x-2">
                                 <i class="fas fa-info-circle"></i>
@@ -342,11 +335,6 @@
                                     <i class="fas fa-file-word"></i>
                                     <span>Xuất Word hoàn chỉnh</span>
                                 </button>
-                                <button onclick="exportQuizToWord()" id="export-quiz-btn" style="display: none;"
-                                        class="px-5 py-2 bg-purple-600 hover:bg-purple-700 transition-colors text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm">
-                                    <i class="fas fa-file-word"></i>
-                                    <span>Xuất Word Trắc nghiệm</span>
-                                </button>
                             </div>
                         </div>
 
@@ -364,10 +352,6 @@
                                             class="lesson-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold">
                                         <i class="fas fa-puzzle-piece mr-1"></i>Bước 2: Bài tập
                                     </button>
-                                    <button type="button" id="lesson-tab-quiz" onclick="setLessonOutputTab('quiz')"
-                                            class="lesson-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 border-purple-200 bg-purple-50">
-                                        <i class="fas fa-file-signature mr-1"></i>Bước 4: Trắc nghiệm
-                                    </button>
                                     <button type="button" id="lesson-tab-combined" onclick="setLessonOutputTab('combined')"
                                             class="lesson-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold">
                                         <i class="fas fa-layer-group mr-1"></i>Tổng hợp (JSON)
@@ -384,11 +368,6 @@
                                               class="lesson-output-textarea w-full border border-teal-200 bg-teal-50/30 p-3 rounded-2xl text-sm font-mono resize-y"
                                               placeholder="VÍ DỤ, bài tập, trắc nghiệm, DANH SÁCH HÌNH — Bước 2 ghi vào đây..."></textarea>
                                     <div class="text-[10px] text-teal-800 mt-1">Chỉ VÍ DỤ trở đi. Nếu Gemini lặp Mục tiêu/Lý thuyết, sửa trong tab này — tab Lý thuyết vẫn giữ nguyên.</div>
-                                </div>
-                                <div id="lesson-panel-quiz" class="lesson-output-panel hidden">
-                                    <textarea id="gemini-output-quiz" rows="8"
-                                              class="lesson-output-textarea w-full border border-purple-200 bg-purple-50/30 p-3 rounded-2xl text-sm font-mono resize-y"
-                                              placeholder="BÀI KIỂM TRA TRẮC NGHIỆM — Bước 4 ghi vào đây..."></textarea>
                                 </div>
                                 <div id="lesson-panel-combined" class="lesson-output-panel hidden">
                                     <textarea id="gemini-output-combined" rows="8" readonly
@@ -714,14 +693,12 @@
             return combined;
         };
         window.setLessonOutputTab = function(tab) {
-            ['theory', 'rest', 'combined', 'quiz'].forEach(function(name) {
+            ['theory', 'rest', 'combined'].forEach(function(name) {
                 var panel = document.getElementById('lesson-panel-' + name);
                 var btn = document.getElementById('lesson-tab-' + name);
                 if (panel) panel.classList.toggle('hidden', name !== tab);
                 if (btn) btn.classList.toggle('is-active', name === tab);
             });
-            var exportQuizBtn = document.getElementById('export-quiz-btn');
-            if (exportQuizBtn) exportQuizBtn.style.display = tab === 'quiz' ? 'inline-flex' : 'none';
             if (tab === 'combined') window.syncCombinedLessonPreview();
         };
 
@@ -1338,7 +1315,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                         <div class="structure-card bg-slate-50 p-4 rounded-2xl">
                             <div class="font-semibold text-teal-700">4. BÀI TẬP TƯƠNG TÁC (4 heading riêng)</div>
                             <ul class="mt-1 space-y-1 text-slate-600 list-disc pl-5">
-                                <li><strong>BÀI TẬP TỰ LUẬN NGẮN</strong> — đúng 5 dòng <code>Đề | Đáp án số | Gợi ý</code>. Mỗi câu chỉ có một kết quả số/phân số/căn/lũy thừa; không yêu cầu nhập tập hợp, ký hiệu, chữ, đơn vị hay lời giải.</li>
+                                <li><strong>BÀI TẬP TỰ LUẬN NGẮN</strong> — 3–5 dòng <code>Đề | Đáp án số | Gợi ý</code>. Mỗi câu chỉ có một kết quả số/phân số/căn/lũy thừa; không yêu cầu nhập tập hợp, ký hiệu, chữ, đơn vị hay lời giải.</li>
                                 <li><strong>KÉO THẢ VÀO Ô TRỐNG</strong> — 2 dòng <code>Câu ___ | mảnh1 » mảnh2 | đáp án » từng ô | gợi ý</code></li>
                                 <li><strong>SẮP XẾP THỨ TỰ</strong> — 2 dòng <code>Đề | phần tử » ... | thứ tự » ... | gợi ý</code></li>
                                 <li><strong>NỐI Ô</strong> — 1–2 dòng <code>Đề | mảnh trái » ... | mảnh phải » ... | 0-0,1-1 | gợi ý</code> (không ghi chữ Trái/Phải/Nối). <strong>Số mảnh trái = số mảnh phải</strong> (nối 1-1); không dùng cho phân loại nhiều số vào 2 nhãn chẵn/lẻ.</li>
@@ -2086,71 +2063,6 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         }
 
         // Export to Word - Structured for easy copy back to admin editor
-        async function exportQuizToWord() {
-            let docxLib;
-            try {
-                docxLib = await ensureDocxLibrary();
-            } catch (loadError) {
-                window.showAppToast('Chưa tải được thư viện xuất Word. Hãy tải lại trang rồi thử lại.', 'err');
-                return;
-            }
-            const { Document, Paragraph, TextRun, Packer } = docxLib;
-            
-            const quizArea = document.getElementById('gemini-output-quiz');
-            if (!quizArea || !quizArea.value.trim()) {
-                window.showAppToast('Chưa có nội dung trắc nghiệm để xuất!', 'warn');
-                return;
-            }
-
-            const subject = document.getElementById('subject').value;
-            const title = document.getElementById('title').value;
-
-            const textLines = quizArea.value.split('\n');
-            const children = [];
-
-            children.push(new Paragraph({
-                children: [
-                    new TextRun({ text: `BÀI KIỂM TRA TRẮC NGHIỆM: ${title}`, bold: true, size: 28 })
-                ],
-                spacing: { after: 300 }
-            }));
-
-            for (const line of textLines) {
-                if (line.trim() === '') {
-                    children.push(new Paragraph({ text: "", spacing: { after: 100 } }));
-                } else {
-                    let text = line;
-                    let isBold = false;
-                    if (text.startsWith('**') && text.endsWith('**')) {
-                        isBold = true;
-                        text = text.substring(2, text.length - 2);
-                    }
-                    children.push(new Paragraph({
-                        children: [
-                            new TextRun({ text: text, size: 24, bold: isBold })
-                        ],
-                        spacing: { after: 120 }
-                    }));
-                }
-            }
-
-            const doc = new Document({
-                sections: [{
-                    properties: {},
-                    children: children
-                }]
-            });
-
-            try {
-                const blob = await Packer.toBlob(doc);
-                window.saveAs(blob, `TracNghiem_${subject.replace(/[^a-zA-Z0-9]/g, '')}_${title.replace(/[^a-zA-Z0-9\s]/g, '').substring(0, 30)}.docx`);
-                window.showAppToast('Xuất Word Trắc nghiệm thành công!', 'success');
-            } catch (err) {
-                console.error(err);
-                window.showAppToast('Lỗi khi tạo file Word.', 'err');
-            }
-        }
-
         async function exportToWord() {
             let docxLib;
             try {
@@ -2705,8 +2617,8 @@ Bạn KHÔNG được tự nghĩ format. Chỉ xuất đúng skeleton + quy tắ
 6. Mảnh trong cùng cột nối bằng » (không dùng dấu phẩy giữa mảnh).
 7. NỐI Ô và SẮP XẾP là 2 heading riêng — không gộp thành một bảng.
 
-**SỐ LƯỢNG BẮT BUỘC (thiếu = lỗi đỏ FAIL, không import được):**
-- BÀI TẬP TỰ LUẬN NGẮN: **BẮT BUỘC ĐÚNG 5 DÒNG — KHÔNG ĐƯỢC TẠO 2, 3 HAY 4 DÒNG. DƯỚI 5 = FAIL.** (3 cột: Đề | Đáp án số | Gợi ý)
+**SỐ LƯỢNG BẮT BUỘC:**
+- BÀI TẬP TỰ LUẬN NGẮN: 2–5 dòng (3 cột: Đề | Đáp án số | Gợi ý)
 - KÉO THẢ VÀO Ô TRỐNG: đúng 2 dòng (4 cột)
 - SẮP XẾP THỨ TỰ: đúng 2 dòng (4 cột, ≥2 mảnh, cột 2 và 3 cùng bộ mảnh)
 - NỐI Ô: 1–2 dòng (5 cột, ≥2 cặp, cột 4 dạng 0-0,1-1)
@@ -2720,14 +2632,11 @@ Bạn KHÔNG được tự nghĩ format. Chỉ xuất đúng skeleton + quy tắ
 - Cột Đáp án CẤM tập hợp như {1; 2; 3}, khoảng/đoạn, nhiều đáp án, chữ, đơn vị và lời giải. Không dùng phép tính chưa rút gọn như 2+3; phải ghi kết quả cuối là 5.
 - Nếu kiến thức đang dạy vốn cần trả lời bằng tập hợp/ký hiệu/chữ, hãy đưa nội dung đó sang KÉO THẢ, NỐI Ô hoặc TRẮC NGHIỆM; phần TỰ LUẬN chỉ hỏi một đại lượng số liên quan (ví dụ: "Tập hợp A có bao nhiêu phần tử?").
 
-**MẪU ĐÚNG — BÀI TẬP TỰ LUẬN PHẢI ĐỦ 5 DÒNG NHƯ MẪU NÀY (copy cấu trúc, chỉ đổi nội dung toán):**
+**MẪU ĐÚNG (copy cấu trúc, chỉ đổi nội dung toán):**
 
 BÀI TẬP TỰ LUẬN NGẮN
 Tính 4 · 5^2 - 3 · 2^3 | 76 | Lũy thừa trước rồi nhân rồi trừ
 Tìm x: 54 - (x + 7) = 24 | 23 | Chuyển vế cẩn thận
-Tính tổng các số tự nhiên từ 1 đến 10 | 55 | Cộng lần lượt hoặc dùng công thức
-Số 24 có bao nhiêu ước số? | 8 | Liệt kê các cặp ước
-Tính 2^4 + 3^2 | 25 | Lũy thừa rồi cộng
 
 KÉO THẢ VÀO Ô TRỐNG
 Thứ tự phép tính không ngoặc: ___ rồi ___ rồi ___ | lũy thừa » nhân chia » cộng trừ » đảo ngược | lũy thừa » nhân chia » cộng trừ | Nhớ quy tắc
@@ -2902,9 +2811,8 @@ ${buildKnowledgeCeilingBlock(context)}
 
 **PHẠM VI BƯỚC 1 — TUYỆT ĐỐI CHỈ XUẤT:**
 1. **MỤC TIÊU** — 2–4 câu, bắt đầu bằng "Sau bài học này..."
-2. **LÝ THUYẾT** — Markdown + LaTeX $...$; ngắn gọn, sát ảnh SGK; chèn ![mô tả](HINH_xx) chỉ khi thật cần sơ đồ/khái niệm trực quan.
-   **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN LUÔN chèn một ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_MINDMAP). Sơ đồ tư duy phải bao gồm tên bài ở trung tâm, các nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, các nhánh phụ là ví dụ hoặc lưu ý quan trọng.
-3. **DANH SÁCH HÌNH ẢNH CẦN TẠO** — liệt kê HINH dùng trong lý thuyết + HINH_MINDMAP (bắt buộc)
+2. **LÝ THUYẾT** — Markdown + LaTeX $...$; ngắn gọn, sát ảnh SGK; chèn ![mô tả](HINH_xx) chỉ khi thật cần sơ đồ/khái niệm trực quan
+3. (Nếu có HINH trong lý thuyết) **DANH SÁCH HÌNH ẢNH CẦN TẠO** — chỉ liệt kê HINH dùng trong lý thuyết; nếu không cần hình thì ghi "Không cần tạo hình minh họa"
 
 **CẤM Ở BƯỚC 1:** Không viết VÍ DỤ, BÀI TẬP, TỰ LUẬN, KÉO THẢ, TRẮC NGHIỆM, KỸ NĂNG, NHIỆM VỤ.
 
@@ -3467,48 +3375,6 @@ ${source}`;
             await parseAndPreview();
         }
 
-        async function generateQuizPhase() {
-            if (lessonGenerationInProgress) return;
-            if (uploadedImages.length === 0) {
-                window.showAppToast('Chưa có ảnh đầu vào. Hãy dán ảnh trước.', 'error');
-                return;
-            }
-            
-            const base64List = uploadedImages.map(i => i.data);
-            const quizArea = document.getElementById('gemini-output-quiz');
-            
-            lessonGenerationInProgress = true;
-            setGenerateButtonsState(true);
-            updateGenerationProgress(10, 'Bước 4', 'Đang tạo bài kiểm tra trắc nghiệm 10 câu...');
-            if (quizArea) quizArea.value = 'Đang tạo bài kiểm tra trắc nghiệm...';
-            window.setLessonOutputTab('quiz');
-
-            const quizPrompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các kiến thức quan trọng từ ảnh và sinh ra 10 câu hỏi trắc nghiệm (multiple-choice).
-YÊU CẦU BẮT BUỘC:
-1. Tạo đúng 10 câu hỏi trắc nghiệm 4 đáp án A, B, C, D.
-2. Nội dung bám sát hình ảnh được cung cấp.
-3. Cuối bài bắt buộc phải có BẢNG ĐÁP ÁN.
-4. Giữ nguyên các công thức Toán học nếu có.
-Hãy xuất trực tiếp dưới dạng văn bản (text), KHÔNG XUẤT JSON.`;
-
-            try {
-                let result = await callGeminiWithImages(quizPrompt, base64List, function(percent, title, detail) {
-                    updateGenerationProgress(percent, 'Bước 4 - ' + title, detail);
-                }, { temperature: 0.2, topP: 0.8, topK: 32, maxOutputTokens: 8192 }, { phase: 'quiz', timeoutMs: 240000 });
-                
-                result = removeLessonSourceAttributions(result);
-                if (quizArea) quizArea.value = result;
-                updateGenerationProgress(100, 'Hoàn tất', 'Đã tạo xong bài trắc nghiệm!', 'success');
-            } catch (error) {
-                const message = describeGeminiError(error);
-                if (quizArea) quizArea.value = 'Lỗi: ' + message;
-                updateGenerationProgress(100, 'Lỗi', message, 'error');
-            } finally {
-                lessonGenerationInProgress = false;
-                setGenerateButtonsState(false);
-            }
-        }
-
         async function reviewLessonDraftForAccuracy(draftText, context, base64Images = [], reportProgress = () => {}, reviewPass = 1, options = {}) {
             const restOnly = options.restOnly === true;
             const reviewStage = reviewPass === 1
@@ -3544,7 +3410,7 @@ GIỚI HẠN TRÌNH ĐỘ — TUYỆT ĐỐI KHÔNG VƯỢT QUÁ:
 
 Yêu cầu hoàn thiện:
 - Nếu có mục nào thiếu ý quan trọng **được nhìn thấy trực tiếp trong ảnh**, hãy bổ sung ngắn gọn; không bổ sung kiến thức chỉ vì bạn biết nó có liên quan đến chủ đề.
-- Rà lại đúng form bài tập: ví dụ ưu tiên bài trong ảnh SGK, phân loại theo dạng và **phải có đúng 1 dạng "Bài toán thực tế"** khi phù hợp bài; bài nộp là bài song sinh tương ứng; **tự luận ngắn phải có ĐÚNH ĐỦ 5 câu (không được 2, 3 hay 4)**, mỗi câu hỏi đúng một kết quả số nhập được (số nguyên/thập phân, phân số, căn hoặc lũy thừa). CẤM tự luận yêu cầu nhập tập hợp, ký hiệu, chữ, đơn vị, lời giải hoặc nhiều giá trị; chuyển các dạng đó sang kéo thả/nối ô/trắc nghiệm. Kéo thả có đúng 2 câu; sắp xếp thứ tự có đúng 2 câu; nối ô có 1–2 câu; trắc nghiệm có đúng 10 câu.
+- Rà lại đúng form bài tập: ví dụ ưu tiên bài trong ảnh SGK, phân loại theo dạng và **phải có đúng 1 dạng "Bài toán thực tế"** khi phù hợp bài; bài nộp là bài song sinh tương ứng; tự luận ngắn có 3–5 câu, mỗi câu hỏi đúng một kết quả số nhập được (số nguyên/thập phân, phân số, căn hoặc lũy thừa). CẤM tự luận yêu cầu nhập tập hợp, ký hiệu, chữ, đơn vị, lời giải hoặc nhiều giá trị; chuyển các dạng đó sang kéo thả/nối ô/trắc nghiệm. Kéo thả có đúng 2 câu; sắp xếp thứ tự có đúng 2 câu; nối ô có 1–2 câu; trắc nghiệm có đúng 10 câu.
 - Rà **NỐI Ô**: mỗi câu phải nối 1-1 — số mảnh trái = số mảnh phải = số cặp (0-0,1-1,...). **CẤM** 4 số bên trái với 2 nhãn "Số chẵn"/"Số lẻ" bên phải (đó là phân loại, không phải nối ô). Sửa bằng cách chỉ giữ 2 số hoặc đổi mảnh phải thành 4 đặc điểm riêng biệt.
 - Rà lại hình ảnh: **chỉ giữ HINH_xx thật sự cần thiết**; xóa hình thừa ở trắc nghiệm/tự luận/tương tác. Dạng thực tế có hình thì prompt phải LOẠI: THỰC_TẾ và sát tình huống đời sống.
 - Nếu số lượng hoặc format dòng dùng dấu | chưa đúng, phải tự sửa và trả lại bản hoàn chỉnh đúng form.
@@ -3623,8 +3489,7 @@ ${getFormatLockPreamble()}
 
 - MỤC TIÊU: 2-4 câu rõ ràng.
 
-- LÝ THUYẾT: rich text Markdown + LaTeX $...$ + chèn hình khi cần bằng ![Mô tả](HINH_01).
-  **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN chèn ảnh sơ đồ tư duy tổng hợp kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_MINDMAP). Sơ đồ tư duy có tên bài ở trung tâm, nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, nhánh phụ là ví dụ hoặc lưu ý.
+- LÝ THUYẾT: rich text Markdown + LaTeX $...$ + chèn hình khi cần bằng ![Mô tả](HINH_01)
 
 - VÍ DỤ: Chỉ phân loại các dạng toán có trong ảnh. Ưu tiên tối đa các bài tập đọc được trong ảnh sách giáo khoa nguồn; chỉ chuẩn hóa cách trình bày, không làm sai dữ kiện. Nếu chưa đủ số bài thì bổ sung bài song sinh cùng phương pháp và độ khó, **không tạo dạng mới và không tạo bài mở rộng**. Không ghi chú xuất xứ như "Dựa theo Bài... - SGK", không ghi số trang và không thêm trích dẫn nguồn vào đề hoặc tiêu đề dạng. **CẤM dùng \`---\` ngăn cách dạng/mục** — chỉ dùng heading **DẠNG N:** và 2 dòng trống. Mỗi dạng phải dùng đúng khung sau:
   **DẠNG 1: Tên dạng toán** (dạng lý thuyết/cơ bản)
@@ -3651,8 +3516,7 @@ ${getFormatLockPreamble()}
 **CẤM TUYỆT ĐỐI:** không \`---\` / \`===\` ngăn cách mục hoặc dạng; không **Câu N:** / **Đáp án:** trong pipe; mỗi câu bài tập = 1 dòng pipe.
 
 **BÀI TẬP TỰ LUẬN NGẮN** (heading riêng, không gộp chung):
-**QUAN TRỌNG: PHẢI TẠO ĐỦ ĐÚNH ĐÚNH ĐỦ 5 CÂU — KHÔNG ĐƯỢC 2, 3 HAY 4 CÂU. DƯỚI 5 CÂU = FAIL.**
-Mỗi dòng BẮT BUỘC đúng 3 cột pipe: "Đề đầy đủ | Đáp án | Gợi ý"
+Tạo từ 2 đến 5 câu tùy ảnh SGK. Mỗi dòng BẮT BUỘC đúng 3 cột pipe: "Đề đầy đủ | Đáp án | Gợi ý"
 - Mỗi đề phải hỏi **đúng một kết quả số** mà học sinh có thể nhập vào một ô. Chấp nhận số nguyên/thập phân (42, -3, 2,5), phân số (3/4), căn (√16) hoặc lũy thừa (6^4).
 - Cột Đáp án KHÔNG được để trống và chỉ ghi kết quả cuối; không ghi phép tính chưa rút gọn, tập hợp, khoảng/đoạn, nhiều giá trị, chữ, đơn vị hay lời giải.
 - CẤM đề yêu cầu viết/liệt kê/biểu diễn tập hợp; điền ký hiệu, dấu, chữ, từ, công thức, biểu thức, phép tính; nêu, mô tả, giải thích hoặc chứng minh. Chuyển các dạng đó sang KÉO THẢ / NỐI Ô / TRẮC NGHIỆM. Ví dụ phù hợp: "Tập hợp A có bao nhiêu phần tử? | 4 | Liệt kê nháp rồi đếm".
@@ -3673,17 +3537,12 @@ skill_id phải trùng một id trong KỸ NĂNG. Trường cuối chỉ là A/B
 **NHIỆM VỤ HỌC SINH** (heading riêng):
 Liệt kê 3–5 việc cần làm, mỗi dòng một nhiệm vụ.
 
-**VỀ HÌNH ẢNH MINH HỌA:**
-- **Nguyên tắc chung:** Trắc nghiệm, tự luận ngắn, kéo thả, nối ô, sắp xếp **mặc định không có hình**. Lý thuyết chỉ chèn hình khi cần sơ đồ/khái niệm trực quan. Ví dụ dạng cơ bản chỉ chèn hình khi minh họa giúp hiểu dạng (ví dụ hình học, biểu đồ).
-- **BẮT BUỘC — SƠ ĐỒ TƯ DUY:** Cuối phần LÝ THUYẾT LUÔN LUÔN chèn ![Sơ đồ tư duy bài học](HINH_MINDMAP). Đây là ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: tên bài ở trung tâm, các nhánh chính là khái niệm/công thức/quy tắc cốt lõi, nhánh phụ là ví dụ hoặc lưu ý quan trọng.
-- Khi cần hình khác, chèn ![Mô tả ngắn](HINH_01) đúng vị trí trong nội dung.
-- Cuối response, thêm phần riêng liệt kê HINH_MINDMAP (bắt buộc) + các HINH_xx khác đã dùng:
+**VỀ HÌNH ẢNH MINH HỌA (CHỈ KHI THẬT SỰ CẦN):**
+- **Nguyên tắc:** Không phải bài nào cũng cần hình. Trắc nghiệm, tự luận ngắn, kéo thả, nối ô, sắp xếp **mặc định không có hình**. Lý thuyết chỉ chèn hình khi cần sơ đồ/khái niệm trực quan. Ví dụ dạng cơ bản chỉ chèn hình khi minh họa giúp hiểu dạng (ví dụ hình học, biểu đồ).
+- Khi cần hình, chèn ![Mô tả ngắn](HINH_01) đúng vị trí trong nội dung.
+- Cuối response, thêm phần riêng (chỉ liệt kê các HINH_xx đã dùng; nếu bài không cần hình nào thì ghi "Không cần tạo hình minh họa"):
 **DANH SÁCH HÌNH ẢNH CẦN TẠO**
-HINH_MINDMAP: LOẠI: SƠ_ĐỒ_TƯ_DUY | Sơ đồ tư duy tổng hợp kiến thức bài học (cuối lý thuyết)
-**PROMPT TẠO ẢNH:**
-"Sơ đồ tư duy (mind map) sách giáo khoa Toán lớp [lớp], phong cách vector sạch sẽ, nền trắng. Ở trung tâm là tên bài '[tên bài]' trong khung tròn/oval nổi bật. Các nhánh chính toả ra xung quanh với nhãn là các khái niệm/công thức/quy tắc cốt lõi của bài, mỗi nhánh một màu khác nhau (xanh dương, xanh lá, cam, tím...). Nhánh phụ ghi ví dụ ngắn hoặc lưu ý. Đường nét rõ ràng, font chữ tiếng Việt dễ đọc, bố cục cân đối, dễ hiểu cho học sinh THCS."
-
-HINH_01: LOẠI: SƠ_ĐỒ | Mô tả vị trí dùng và nội dung cần vẽ (nếu có)
+HINH_01: LOẠI: SƠ_ĐỒ | Mô tả vị trí dùng và nội dung cần vẽ
 **PROMPT TẠO ẢNH:**
 "Minh họa sách giáo khoa Toán [lớp], phong cách vector sạch, nền trắng, đường nét rõ, nhãn tiếng Việt ngắn gọn. [mô tả khái niệm/sơ đồ]. Không nhân vật hoạt hình."
 
