@@ -63,6 +63,10 @@
         lotrinhtoan8: 'Toán 8',
         lotrinhtoan9: 'Toán 9'
     };
+    const SUBJECT_TO_PAGE = {};
+    for (const [page, subj] of Object.entries(PAGE_TO_SUBJECT)) {
+        if (page !== 'lotrinh') SUBJECT_TO_PAGE[subj] = page;
+    }
 
     let lessons = [];
     let currentSlug = defaults.slug;
@@ -112,6 +116,42 @@
         const url = new URL(window.location.href);
         url.searchParams.set('lessonId', String(currentLessonId));
         window.location.assign(url.toString());
+    }
+
+    function copyLessonLink() {
+        if (!currentLessonId) {
+            alert('Chưa chọn bài nào để sao chép link.');
+            return;
+        }
+        const subject = (isPageScopedEditor() ? PAGE_SUBJECT : el('lessonSubject')?.value) || selectedSubject;
+        const pageKey = SUBJECT_TO_PAGE[subject] || 'lotrinhtoan6';
+        const pageFile = pageKey + '.html';
+        const base = window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
+        const shareUrl = base + pageFile + '?lessonId=' + currentLessonId;
+
+        const lessonTitle = el('lessonTitleInput')?.value || 'bài học';
+        const copyAndNotify = (url) => {
+            navigator.clipboard.writeText(url).then(() => {
+                showCopyToast(`Đã sao chép link "${lessonTitle}"`);
+            }).catch(() => {
+                prompt('Sao chép link bài học:', url);
+            });
+        };
+        copyAndNotify(shareUrl);
+    }
+
+    function showCopyToast(msg) {
+        let toast = document.getElementById('lessonCopyToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'lessonCopyToast';
+            toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0d9488;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.18);transition:opacity .3s;pointer-events:none;';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2200);
     }
 
     function requireLessonImport() {
@@ -1789,6 +1829,7 @@
                 <button id="testLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-teal-700 text-white rounded font-bold hover:bg-teal-800" title="Mở đúng bài đang chọn bằng giao diện học sinh; kết quả thử không được lưu vào tiến độ"><i class="fas fa-flask mr-1"></i>Học thử bài này</button>
                 <button id="duplicateLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-copy mr-1"></i>Nhân bản</button>
                 <button id="deleteLessonBtn" type="button" class="px-3 py-1.5 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded font-bold"><i class="fas fa-trash mr-1"></i>Xóa</button>
+                <button id="copyLessonLinkBtn" type="button" class="px-3 py-1.5 text-xs bg-sky-50 border border-sky-200 text-sky-700 rounded font-bold hover:bg-sky-100" title="Sao chép link bài học để gửi cho học sinh qua Zalo, nhóm lớp..."><i class="fas fa-link mr-1"></i>Sao chép link</button>
                 <button id="lessonReloadBtn" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded font-bold"><i class="fas fa-rotate-right mr-1"></i>Tải lại</button>
             </div>
 
@@ -2012,6 +2053,7 @@
         el('testLessonBtn').onclick = testCurrentLessonAsStudent;
         el('duplicateLessonBtn').onclick = duplicateLesson;
         el('deleteLessonBtn').onclick = deleteLesson;
+        el('copyLessonLinkBtn').onclick = copyLessonLink;
         el('renameChapterBtn').onclick = renameChapter;
         el('saveLessonBtn').onclick = saveLesson;
         el('seedLessonBtn').onclick = fillSeed;

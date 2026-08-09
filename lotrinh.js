@@ -1242,6 +1242,15 @@
         }
     }
 
+    function updateUrlLessonId() {
+        const id = state.selectedLessonId;
+        if (!id) return;
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('lessonId') === String(id)) return;
+        url.searchParams.set('lessonId', String(id));
+        try { history.replaceState(null, '', url.toString()); } catch (_) { /* noop */ }
+    }
+
     function render() {
         ensurePracticeStyles();
         const lesson = currentLesson();
@@ -1296,6 +1305,7 @@
         refreshStudentAiAssist(lesson);
         renderNotificationBoard();
         typesetMath();
+        updateUrlLessonId();
     }
 
     function refreshLearningChrome(lesson) {
@@ -1949,6 +1959,7 @@
                 state.activeTab = button.getAttribute('data-study-tab') || state.activeTab;
                 localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
                 localStorage.setItem(LS_TAB_KEY, state.activeTab);
+                updateUrlLessonId();
                 render();
                 if (!isTeacher()) await markLessonStarted(currentLesson());
             };
@@ -2452,6 +2463,7 @@
             button.addEventListener('click', async () => {
                 state.selectedLessonId = button.getAttribute('data-lesson-id');
                 localStorage.setItem(LS_LESSON_KEY, state.selectedLessonId);
+                updateUrlLessonId();
                 render();
                 if (!isTeacher()) await markLessonStarted(currentLesson());
             });
