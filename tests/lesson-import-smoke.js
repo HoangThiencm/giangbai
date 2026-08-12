@@ -80,6 +80,35 @@ if (messyParsed.length !== 1 || messyParsed[0].mode !== 'match') {
     console.log('OK: messy match line canonicalized');
 }
 
+// A many-to-two classification is not a valid matching exercise in Lộ trình.
+// The validator must block it and the UI must explain the exact replacement rule.
+const invalidManyToTwo = LI.parseDragExercises(
+    'Phân loại số | 12 » 25 » 8 » 17 | Số chẵn » Số lẻ | 0-0,1-1 | Phân loại chẵn lẻ',
+    { preferMatch: true }
+);
+const invalidMatchPkg = LI.normalizeLessonImportPackage({
+    schema_version: 'lesson-import-v1',
+    subject: 'Toán 6',
+    title: 'Kiểm tra nối ô',
+    slug: 'kiem-tra-noi-o',
+    drag_exercises: invalidManyToTwo
+});
+const invalidMatchValidation = LI.validateLessonImportPackage(invalidMatchPkg, { strictStructure: false });
+const invalidMatchMessage = (invalidMatchValidation.errors || []).find(error => /cùng số mảnh hai cột/.test(error));
+const invalidMatchHelp = LI.humanizeValidationError(invalidMatchMessage, {
+    pkg: invalidMatchPkg,
+    dragItems: invalidMatchPkg.drag_exercises
+});
+if (!invalidMatchMessage) {
+    console.error('FAIL: many-to-two matching must be rejected', invalidMatchValidation.errors);
+    failed += 1;
+} else if (!/phân loại nhiều mảnh|nối 1–1/i.test(invalidMatchHelp)) {
+    console.error('FAIL: many-to-two matching help is not actionable', invalidMatchHelp);
+    failed += 1;
+} else {
+    console.log('OK: many-to-two matching blocked with 1-1 repair guidance');
+}
+
 const messySortLine = 'Sắp xếp từ bé đến lớn: 12 500; 9 800; 12 050; 12 505 | 12 500 » 9 800 » 12 050 » 12 505 | 9 800 » 12 050 » 12 500 » 12 505 | So sánh hàng nghìn';
 const messySortParsed = LI.parseDragExercises(messySortLine);
 const sortItem = messySortParsed[0];
@@ -99,6 +128,13 @@ if (typeof LI.getInteractiveFormatGuide === 'function' && !LI.getInteractiveForm
     failed += 1;
 } else {
     console.log('OK: interactive format guide');
+}
+
+if (!LI.getInteractiveFormatGuide().includes('Số chẵn » Số lẻ') || !LI.getInteractiveFormatGuide().includes('tự đếm 3 số này')) {
+    console.error('FAIL: interactive format guide lacks many-to-two guardrail');
+    failed += 1;
+} else {
+    console.log('OK: matching guardrail included in generation contract');
 }
 
 // Junk markdown-table rows must be rejected

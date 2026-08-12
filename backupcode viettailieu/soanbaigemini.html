@@ -10,11 +10,16 @@
         (function () {
             // lesson-import.js chỉ cần cho Kiểm tra import / Xuất JSON (optional trong Canvas).
             // Prompt gen bài PHẢI tự chứa trong file HTML này — Canvas chạy độc lập, không phụ thuộc hosting.
-            var VERSION = '20260716-soan-fill-four-columns-v1';
+            // Đổi version khi deploy lesson-import.js để Canvas không dùng cache cũ.
+            var VERSION = '20260812-import-sync-v2';
             var SOURCES = [
-                'lesson-import.js?v=' + VERSION,
-                'https://hoangthiencm.id.vn/lesson-import.js?v=' + VERSION
+                // Canvas mở từ blob/local thường không có đường dẫn tương đối hợp lệ.
+                // Script thường (không phải fetch/module) được phép nạp cross-origin mà không cần CORS.
+                'https://hoangthiencm.id.vn/lesson-import.js?v=' + VERSION,
+                'lesson-import.js?v=' + VERSION
             ];
+            window.__lessonImportVersion = VERSION;
+            window.__lessonImportSource = '';
             window.__lessonImportReady = new Promise(function (resolve, reject) {
                 var index = 0;
                 function tryNext() {
@@ -31,7 +36,10 @@
                     tag.src = src;
                     tag.async = false;
                     tag.onload = function () {
-                        if (window.LessonImport) resolve(window.LessonImport);
+                        if (window.LessonImport) {
+                            window.__lessonImportSource = src;
+                            resolve(window.LessonImport);
+                        }
                         else tryNext();
                     };
                     tag.onerror = function () { tryNext(); };
@@ -147,7 +155,7 @@
                         <div class="text-sm text-sky-700">
                             <strong>Chạy độc lập trong Gemini Canvas</strong> (API Canvas, không cần key). Hợp đồng format pipe/heading <strong>nhúng sẵn trong file HTML</strong> — không phụ thuộc hosting khi gen bài.<br>
                             <strong>Luồng 2 bước:</strong> (1) Ảnh SGK → Bước 1 Mục tiêu+Lý thuyết → (2) duyệt → Bước 2 bài tập (khóa format + trần kiến thức) → (3) tự sửa format nếu lệch → Copy JSON/Word sang Lộ trình.<br>
-                            <span class="text-sky-600">Kiểm tra import / Xuất JSON cần <code>lesson-import.js</code> (hosting) nếu Canvas chặn script ngoài — vẫn gen/copy text được.</span>
+                            <span id="lesson-import-sync-status" class="text-sky-600">Đang kết nối bộ kiểm tra <code>lesson-import.js</code> từ hosting…</span>
                         </div>
                     </div>
                 </div>
@@ -1773,6 +1781,20 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             );
         }
 
+        function updateLessonImportSyncStatus(loaded) {
+            const statusEl = document.getElementById('lesson-import-sync-status');
+            if (!statusEl) return;
+            if (loaded && window.LessonImport) {
+                statusEl.className = 'text-emerald-700';
+                statusEl.textContent = '✓ Đã đồng bộ bộ kiểm tra lesson-import-v1 từ hosting — có thể kiểm tra và xuất JSON.';
+                statusEl.title = window.__lessonImportSource || '';
+                return;
+            }
+            statusEl.className = 'text-amber-700';
+            statusEl.textContent = 'Canvas chưa tải được lesson-import.js từ hosting; vẫn tạo được nội dung nhưng chưa thể kiểm tra/xuất JSON tại đây.';
+            statusEl.title = 'Hãy kiểm tra mạng Canvas và deploy lesson-import.js lên hosting.';
+        }
+
         async function parseAndPreview() {
             const raw = window.syncCombinedLessonPreview();
             if (!raw) {
@@ -2727,7 +2749,7 @@ Bạn KHÔNG được tự nghĩ format. Chỉ xuất đúng skeleton + quy tắ
 - BÀI TẬP TỰ LUẬN NGẮN: **TUYỆT ĐỐI BẮT BUỘC PHẢI TẠO ĐÚNG 5 DÒNG (5 CÂU). NẾU TẠO DƯỚI 5 DÒNG SẼ BỊ LỖI HỆ THỐNG.** (3 cột: Đề | Đáp án số | Gợi ý). Dù làm gì cũng không được bớt câu!
 - KÉO THẢ VÀO Ô TRỐNG: đúng 2 dòng (4 cột)
 - SẮP XẾP THỨ TỰ: đúng 2 dòng (4 cột, ≥2 mảnh, cột 2 và 3 cùng bộ mảnh)
-- NỐI Ô: 1–2 dòng (5 cột, ≥2 cặp, cột 4 dạng 0-0,1-1). **CHÚ Ý: Cột 2 (mảnh trái) và Cột 3 (mảnh phải) PHẢI CÓ CÙNG SỐ LƯỢNG MẢNH (số dấu » phải bằng nhau). CẤM tạo bài phân loại nhiều->một.**
+- NỐI Ô: 1–2 dòng (5 cột, ≥2 cặp, cột 4 dạng 0-0,1-1). **CHÚ Ý: Cột 2 (mảnh trái) và Cột 3 (mảnh phải) PHẢI CÓ CÙNG SỐ LƯỢNG MẢNH (số dấu » phải bằng nhau), đồng thời số cặp ở cột 4 phải bằng số mảnh. Trước khi xuất từng dòng phải tự đếm đủ cả 3 số này. CẤM tạo bài phân loại nhiều->một, ví dụ 4 số ở cột trái nhưng chỉ “Số chẵn » Số lẻ” ở cột phải. Hãy thay bằng phép tính → kết quả hoặc khái niệm → mô tả riêng theo từng mảnh.**
 - KỸ NĂNG CẦN ĐẠT: ≥2 dòng (id_khong_dau | Tên | 80) — đặt TRƯỚC trắc nghiệm
 - TRẮC NGHIỆM: 5–10 dòng (7 cột: skill_id | Câu | A | B | C | D | B)
 - NHIỆM VỤ HỌC SINH: 3–5 dòng thường (không ---)
@@ -2759,7 +2781,9 @@ Sắp xếp từ bé đến lớn | 9 » 3 » 7 » 1 | 1 » 3 » 7 » 9 | So sá
 
 NỐI Ô
 Nối biểu thức với kết quả | $2^{2}\\cdot3+1$ » $20-2\\cdot5$ » $3^{2}-2^{3}$ | 13 » 10 » 1 | 0-0,1-1,2-2 | Tính đúng thứ tự
+Nối phép tính với kết quả | 12 : 3 » 5 + 4 » 7 - 2 » 3 × 4 | 4 » 9 » 5 » 12 | 0-0,1-1,2-2,3-3 | Tính từng phép tính
 SAI (cấm): bảng | Cột A | Cột B | hoặc mỗi dòng chỉ "$2^{2}\\cdot3+1$ | 13"
+SAI (cấm): Phân loại số | 12 » 25 » 8 » 17 | Số chẵn » Số lẻ | 0-0,1-1 | Phân loại chẵn lẻ
 
 KỸ NĂNG CẦN ĐẠT
 thu_tu_phep_tinh | Ghi nhớ thứ tự lũy thừa → nhân chia → cộng trừ | 80
@@ -3001,6 +3025,7 @@ ${getInteractiveFormatBlock()}
 - Với TỰ LUẬN, nếu đề yêu cầu nhập tập hợp/ký hiệu/chữ/lời giải hoặc đáp án không phải một kết quả số thì phải đổi sang câu tương đương có đúng một kết quả số; có thể chuyển nội dung không phù hợp sang KÉO THẢ / NỐI Ô / TRẮC NGHIỆM.
 - Nếu thiếu TỰ LUẬN / KÉO THẢ / SẮP XẾP / NỐI Ô / TRẮC NGHIỆM / KỸ NĂNG: BỔ SUNG đủ số lượng bắt buộc, bám lý thuyết bài "${context.title}" (${context.subject}).
 - Nếu thấy bảng markdown (| Cột A | Cột B | hoặc :---): CHUYỂN thành dòng pipe NỐI Ô hoặc SẮP XẾP đúng quy tắc.
+- Với mọi lỗi NỐI Ô lệch số mảnh/cặp: **thay toàn bộ dòng lỗi**, không chỉ sửa cột chỉ số nối. Dòng thay thế phải có số mảnh trái = số mảnh phải = số cặp; tuyệt đối không giữ dạng phân loại nhiều số vào hai nhãn chung (chẵn/lẻ, đúng/sai…).
 - Xóa mọi dòng chỉ có --- / === / ***.
 - ${restOnly
                 ? 'Trả về từ heading VÍ DỤ trở đi. TUYỆT ĐỐI không thêm MỤC TIÊU / LÝ THUYẾT.'
@@ -3034,7 +3059,9 @@ ${draftText}`;
             let text = String(draftText || '').trim();
             if (!text) return text;
 
-            const maxPasses = 2;
+            // Bản nháp có thể cần một lượt riêng để thay toàn bộ câu Nối ô sai kiểu
+            // “nhiều mảnh → ít nhãn”; hai lượt thường chưa đủ sau khi Gemini sửa các lỗi khác.
+            const maxPasses = 3;
             for (let pass = 1; pass <= maxPasses; pass++) {
                 writeDraftForValidation(text, restOnly);
 
@@ -3068,7 +3095,7 @@ ${draftText}`;
                                 detail
                             );
                         },
-                        { temperature: 0.1, topP: 0.7, topK: 20, maxOutputTokens: restOnly ? 8192 : 16384 },
+                        { temperature: 0, topP: 0.6, topK: 16, maxOutputTokens: restOnly ? 8192 : 16384 },
                         { phase: 'format_repair', timeoutMs: 180000 }
                     );
                     fixed = removeLessonSourceAttributions(fixed);
@@ -4433,6 +4460,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
             restoreLessonImageStateFromSession();
 
             waitForLessonImport(12000).then(function() {
+                updateLessonImportSyncStatus(true);
                 if (window.refreshLessonValidation) {
                     try {
                         window.refreshLessonValidation();
@@ -4441,6 +4469,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                     }
                 }
             }).catch(function () {
+                updateLessonImportSyncStatus(false);
                 showAppToast('Chưa tải lesson-import.js — kiểm tra deploy + Ctrl+F5. Preview/JSON/Lộ trình cần file này.', 'warn');
             });
             console.log('%c[soanbaigemini] Sẵn sàng trong Gemini Canvas — không cần API key.', 'color:#047857');

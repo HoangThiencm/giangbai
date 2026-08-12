@@ -416,7 +416,9 @@ SAI: mỗi dòng chỉ 1 mảnh kiểu "$2^2\\cdot3+1$ | 13" (đó là bảng, k
 
 **NỐI Ô** — đúng 5 cột (cột 4 chỉ số nối 0-0,1-1 — không chữ "Nối"):
 Nối số với cách đọc | 60 006 » 66 000 | Sáu mươi nghìn không trăm linh sáu » Sáu mươi sáu nghìn | 0-0,1-1 | Đọc kỹ hàng nghìn
-- BẮT BUỘC: số mảnh trái = phải = số cặp. CẤM phân loại nhiều→một.
+- BẮT BUỘC: số mảnh trái = số mảnh phải = số cặp. Trước khi xuất từng dòng, tự đếm 3 số này; chỉ được xuất khi chúng bằng nhau.
+- CẤM phân loại nhiều→một. Đặc biệt, không được nối nhiều số với hai nhãn chung như "Số chẵn » Số lẻ", "Đúng » Sai", "Lớn hơn » Bé hơn". Nếu chỉ có 2 nhãn chung, hãy thay bằng một bài nối 1–1 khác có kết quả/đặc điểm riêng cho từng mảnh, hoặc chỉ dùng 2 mảnh mỗi bên.
+- Ví dụ 4 cặp đúng: Nối phép tính với kết quả | 12 : 3 » 5 + 4 » 7 - 2 » 3 × 4 | 4 » 9 » 5 » 12 | 0-0,1-1,2-2,3-3 | Tính từng phép tính
 SAI (bảng MD):
 | Cột A | Cột B |
 | :--- | :--- |
@@ -1681,6 +1683,18 @@ ${getLessonOutputSkeleton()}`;
                 return `【${dragName} — Câu ${dragIdx + 1}】Số mảnh ở cột 3 không khớp cột 2.\n`
                     + `📍 Dòng hiện tại: ${quoteLine(rawDragLine || (drag && drag.prompt))}\n`
                     + `✏️ Cột 3 phải có đúng số mảnh như cột 2.`;
+            }
+            if (/cùng số mảnh hai cột|phân loại nhiều→một/.test(text)) {
+                const leftCount = (drag && drag.left && drag.left.length) || 0;
+                const rightCount = (drag && drag.right && drag.right.length) || 0;
+                return `【NỐI Ô — Câu ${dragIdx + 1}】Đây là bài phân loại nhiều mảnh vào ít nhãn, Lộ trình không hỗ trợ kiểu này.\n`
+                    + `📍 Hiện có ${leftCount} mảnh trái nhưng chỉ ${rightCount} mảnh phải.\n`
+                    + `✏️ Hãy thay cả dòng bằng nối 1–1: số mảnh trái = số mảnh phải = số cặp nối. Không dùng chung hai nhãn như “Số chẵn » Số lẻ”.\n`
+                    + `   Ví dụ: ${quoteLine('Nối phép tính với kết quả | 12 : 3 » 5 + 4 » 7 - 2 » 3 × 4 | 4 » 9 » 5 » 12 | 0-0,1-1,2-2,3-3 | Tính từng phép tính')}`;
+            }
+            if (/số cặp nối/.test(text)) {
+                return `【NỐI Ô — Câu ${dragIdx + 1}】Cột chỉ số nối phải có đúng một cặp cho mỗi mảnh.\n`
+                    + `✏️ Với 3 mảnh mỗi bên, ghi đúng: ${quoteLine('0-0,1-1,2-2')}.`;
             }
             if (/mode phải là match hoặc sort/.test(text)) {
                 return `【NỐI Ô / SẮP XẾP — Câu ${dragIdx + 1}】Dòng chưa đúng dạng bài tập kéo thả.\n`
