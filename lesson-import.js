@@ -28,8 +28,9 @@
     const AI_MARKER = '[AI]';
     const AI_MARKER_LINE_RE = /^\s*(\[\[AI\]\]|\[AI\])\s*$/i;
     const AI_MARKER_INLINE_RE = /\s*(\[\[AI\]\]|\[AI\])\s*$/i;
-    const IMAGE_MARKER_RE = /!\[[^\]]*\]\((HINH[_\s-]*\d+|HÌNH[_\s-]*\d+)\)/gi;
-    const IMAGE_REF_RE = /^(?:HINH|HÌNH|IMAGE)[_\s-]*\d+$/i;
+    // HINH_MINDMAP từng được dùng bởi bản Canvas cũ; vẫn nhận để import lại bài cũ.
+    const IMAGE_MARKER_RE = /!\[[^\]]*\]\((HINH[_\s-]*\d+|HÌNH[_\s-]*\d+|HINH_MINDMAP)\)/gi;
+    const IMAGE_REF_RE = /^(?:(?:HINH|HÌNH|IMAGE)[_\s-]*\d+|HINH_MINDMAP)$/i;
 
     function slugify(value) {
         return String(value || '')
@@ -1378,7 +1379,7 @@ ${getLessonOutputSkeleton()}`;
         lines.forEach(rawLine => {
             const line = String(rawLine || '').trim();
             if (!line || /^không\s+cần\s+tạo\s+hình/i.test(line)) return;
-            const hinhMatch = line.match(/^(?:[-*+]\s+)?(?:\*\*)?(HINH[_\s-]*\d+|HÌNH[_\s-]*\d+)(?:\*\*)?\s*[:：\-]\s*(.+)$/i);
+            const hinhMatch = line.match(/^(?:[-*+]\s+)?(?:\*\*)?(HINH[_\s-]*\d+|HÌNH[_\s-]*\d+|HINH_MINDMAP)(?:\*\*)?\s*[:：\-]\s*(.+)$/i);
             if (hinhMatch) {
                 if (current) entries.push(current);
                 const id = normalizeImageId(hinhMatch[1]);

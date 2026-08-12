@@ -284,5 +284,41 @@ if (!markdownTheoryPkg.goal_text) {
     console.log('OK: markdown ### MỤC TIÊU / ### LÝ THUYẾT export to JSON');
 }
 
+const mindMapRaw = `MỤC TIÊU
+Sau bài học này, học sinh có thể tìm UCLN.
+
+LÝ THUYẾT
+Muốn tìm UCLN, phân tích các số ra thừa số nguyên tố.
+![Sơ đồ tư duy UCLN](HINH_01)
+
+DANH SÁCH HÌNH ẢNH CẦN TẠO
+HINH_01: theory | Sơ đồ tư duy UCLN | diagram | Sơ đồ tư duy UCLN với các bước phân tích thừa số nguyên tố.`;
+const mindMapPkg = LI.buildLessonImportPackage({
+    rawGeminiText: mindMapRaw,
+    metadata: { subject: 'Toán 6', chapter: 'Ch 1', title: 'Ước chung lớn nhất', tool: 'smoke-test' }
+});
+if (mindMapPkg.image_manifest[0]?.id !== 'HINH_01' || !mindMapPkg.image_manifest[0]?.prompt) {
+    console.error('FAIL: HINH_01 mind-map manifest not parsed', mindMapPkg.image_manifest);
+    failed += 1;
+} else {
+    console.log('OK: HINH_01 mind-map prompt is available');
+}
+
+const legacyMindMapRaw = `LÝ THUYẾT
+![Sơ đồ tư duy](HINH_MINDMAP)
+
+DANH SÁCH HÌNH ẢNH CẦN TẠO
+HINH_MINDMAP: theory | Sơ đồ tư duy | diagram | Prompt sơ đồ tư duy.`;
+const legacyMindMapPkg = LI.buildLessonImportPackage({
+    rawGeminiText: legacyMindMapRaw,
+    metadata: { subject: 'Toán 6', chapter: 'Ch 1', title: 'Kiểm tra ảnh cũ', tool: 'smoke-test' }
+});
+if (!legacyMindMapPkg.image_manifest.some(item => item.id === 'HINH_MINDMAP')) {
+    console.error('FAIL: legacy HINH_MINDMAP manifest not parsed', legacyMindMapPkg.image_manifest);
+    failed += 1;
+} else {
+    console.log('OK: legacy HINH_MINDMAP remains importable');
+}
+
 if (failed) process.exit(1);
 console.log('\nAll smoke checks passed.');

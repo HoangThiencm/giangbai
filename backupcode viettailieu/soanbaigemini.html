@@ -2962,8 +2962,8 @@ ${buildKnowledgeCeilingBlock(context)}
 **PHẠM VI BƯỚC 1 — TUYỆT ĐỐI CHỈ XUẤT:**
 1. **MỤC TIÊU** — 2–4 câu, bắt đầu bằng "Sau bài học này..."
 2. **LÝ THUYẾT** — Markdown + LaTeX $...$; ngắn gọn, sát ảnh SGK; chèn ![mô tả](HINH_xx) chỉ khi thật cần sơ đồ/khái niệm trực quan.
-   **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN LUÔN chèn một ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_MINDMAP). Sơ đồ tư duy phải bao gồm tên bài ở trung tâm, các nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, các nhánh phụ là ví dụ hoặc lưu ý quan trọng.
-3. **DANH SÁCH HÌNH ẢNH CẦN TẠO** — liệt kê HINH dùng trong lý thuyết + HINH_MINDMAP (bắt buộc)
+   **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN LUÔN chèn một ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_01). Sơ đồ tư duy phải bao gồm tên bài ở trung tâm, các nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, các nhánh phụ là ví dụ hoặc lưu ý quan trọng.
+3. **DANH SÁCH HÌNH ẢNH CẦN TẠO** — bắt buộc khai báo HINH_01 bằng đúng 4 cột: HINH_01: theory | Sơ đồ tư duy bài học | diagram | Prompt tạo ảnh chi tiết. Các hình khác, nếu cần, bắt đầu từ HINH_02.
 
 **CẤM Ở BƯỚC 1:** Không viết VÍ DỤ, BÀI TẬP, TỰ LUẬN, KÉO THẢ, TRẮC NGHIỆM, KỸ NĂNG, NHIỆM VỤ.
 
@@ -3069,6 +3069,58 @@ ${draftText}`;
             if (window.syncCombinedLessonPreview) window.syncCombinedLessonPreview();
         }
 
+        function normalizeLessonHeadingForRepair(line) {
+            return String(line || '')
+                .replace(/^\s*#{1,6}\s*/, '')
+                .replace(/^\s*[-*+]\s+/, '')
+                .replace(/^\s*\*\*|\*\*\s*$/g, '')
+                .replace(/[:：]\s*$/, '')
+                .trim()
+                .toUpperCase();
+        }
+
+        function lessonNeedsOneToOneMatchFallback(state) {
+            return !!(state && (state.errors || []).some(function(error) {
+                return /drag_exercises\[\d+\]: nối ô phải có cùng số mảnh hai cột|drag_exercises\[\d+\]: số cặp nối/.test(String(error || ''));
+            }));
+        }
+
+        function getOneToOneMatchFallback(context) {
+            const topic = `${context && context.title || ''} ${context && context.chapter || ''}`;
+            if (/ước\s*chung\s*lớn\s*nhất|\bUCLN\b/iu.test(topic)) {
+                return 'Nối mỗi cặp số với ƯCLN | 30 và 45 » 42 và 70 » 40 và 70 | 15 » 14 » 10 | 0-0,1-1,2-2 | Tìm ước chung lớn nhất của từng cặp';
+            }
+            return 'Nối phép tính với kết quả | 12 : 3 » 5 + 4 » 7 - 2 | 4 » 9 » 5 | 0-0,1-1,2-2 | Tính từng phép tính';
+        }
+
+        // Chỉ dùng sau khi Gemini đã cố sửa nhưng vẫn giữ kiểu phân loại nhiều→một.
+        // Không nhân bản nhãn “chẵn/lẻ” vì sẽ làm bài đúng JSON nhưng sai ý nghĩa sư phạm.
+        function replaceInvalidMatchSectionWithFallback(text, context) {
+            const lines = String(text || '').replace(/\r/g, '').split('\n');
+            const nextSection = /^(KỸ\s*NĂNG|TRẮC\s*NGHIỆM|NHIỆM\s*VỤ|DANH\s*SÁCH\s*HÌNH|VÍ\s*DỤ|BÀI\s*TẬP\s*NỘP|BÀI\s*TẬP\s*TỰ\s*LUẬN|KÉO\s*THẢ|SẮP\s*XẾP|MỤC\s*TIÊU|LÝ\s*THUYẾT)/i;
+            const result = [];
+            let replaced = false;
+            let inMatchSection = false;
+
+            lines.forEach(function(line) {
+                const heading = normalizeLessonHeadingForRepair(line);
+                if (/^NỐI\s*Ô/.test(heading)) {
+                    inMatchSection = true;
+                    result.push(line);
+                    result.push(getOneToOneMatchFallback(context));
+                    replaced = true;
+                    return;
+                }
+                if (inMatchSection && nextSection.test(heading)) {
+                    inMatchSection = false;
+                    result.push(line);
+                    return;
+                }
+                if (!inMatchSection) result.push(line);
+            });
+            return replaced ? result.join('\n').replace(/\n{3,}/g, '\n\n').trim() : String(text || '').trim();
+        }
+
         async function repairLessonFormatIfNeeded(draftText, context, options) {
             options = options || {};
             const restOnly = options.restOnly === true;
@@ -3121,6 +3173,14 @@ ${draftText}`;
                     console.warn('[soanbaigemini] format-repair lỗi:', repairErr);
                     break;
                 }
+            }
+
+            // Gemini đôi khi vẫn lặp lại bài phân loại dù prompt đã yêu cầu thay hẳn dòng.
+            // Khi đó dùng một mẫu nối 1–1 đúng cấu trúc và đúng chủ đề UCLN nếu có.
+            writeDraftForValidation(text, restOnly);
+            const finalState = window.getLessonValidationState ? window.getLessonValidationState() : null;
+            if (lessonNeedsOneToOneMatchFallback(finalState)) {
+                text = replaceInvalidMatchSectionWithFallback(text, context);
             }
             return text;
         }
@@ -3788,7 +3848,7 @@ ${getFormatLockPreamble()}
 - MỤC TIÊU: 2-4 câu rõ ràng.
 
 - LÝ THUYẾT: rich text Markdown + LaTeX $...$ + chèn hình khi cần bằng ![Mô tả](HINH_01).
-  **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN chèn ảnh sơ đồ tư duy tổng hợp kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_MINDMAP). Sơ đồ tư duy có tên bài ở trung tâm, nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, nhánh phụ là ví dụ hoặc lưu ý.
+  **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN chèn ảnh sơ đồ tư duy tổng hợp kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_01). Sơ đồ tư duy có tên bài ở trung tâm, nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, nhánh phụ là ví dụ hoặc lưu ý.
 
 - VÍ DỤ: Chỉ phân loại các dạng toán có trong ảnh. Ưu tiên tối đa các bài tập đọc được trong ảnh sách giáo khoa nguồn; chỉ chuẩn hóa cách trình bày, không làm sai dữ kiện. Nếu chưa đủ số bài thì bổ sung bài song sinh cùng phương pháp và độ khó, **không tạo dạng mới và không tạo bài mở rộng**. Không ghi chú xuất xứ như "Dựa theo Bài... - SGK", không ghi số trang và không thêm trích dẫn nguồn vào đề hoặc tiêu đề dạng. **CẤM dùng \`---\` ngăn cách dạng/mục** — chỉ dùng heading **DẠNG N:** và 2 dòng trống. Mỗi dạng phải dùng đúng khung sau:
   **DẠNG 1: Tên dạng toán** (dạng lý thuyết/cơ bản)
@@ -3839,21 +3899,14 @@ Liệt kê 3–5 việc cần làm, mỗi dòng một nhiệm vụ.
 
 **VỀ HÌNH ẢNH MINH HỌA:**
 - **Nguyên tắc chung:** Trắc nghiệm, tự luận ngắn, kéo thả, nối ô, sắp xếp **mặc định không có hình**. Lý thuyết chỉ chèn hình khi cần sơ đồ/khái niệm trực quan. Ví dụ dạng cơ bản chỉ chèn hình khi minh họa giúp hiểu dạng (ví dụ hình học, biểu đồ).
-- **BẮT BUỘC — SƠ ĐỒ TƯ DUY:** Cuối phần LÝ THUYẾT LUÔN LUÔN chèn ![Sơ đồ tư duy bài học](HINH_MINDMAP). Đây là ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: tên bài ở trung tâm, các nhánh chính là khái niệm/công thức/quy tắc cốt lõi, nhánh phụ là ví dụ hoặc lưu ý quan trọng.
-- Khi cần hình khác, chèn ![Mô tả ngắn](HINH_01) đúng vị trí trong nội dung.
-- Cuối response, thêm phần riêng liệt kê HINH_MINDMAP (bắt buộc) + các HINH_xx khác đã dùng:
+- **BẮT BUỘC — SƠ ĐỒ TƯ DUY:** Cuối phần LÝ THUYẾT LUÔN LUÔN chèn ![Sơ đồ tư duy bài học](HINH_01). Đây là ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: tên bài ở trung tâm, các nhánh chính là khái niệm/công thức/quy tắc cốt lõi, nhánh phụ là ví dụ hoặc lưu ý quan trọng.
+- Khi cần hình khác, chèn ![Mô tả ngắn](HINH_02) đúng vị trí trong nội dung.
+- Khi cần hình khác ngoài sơ đồ tư duy, dùng từ HINH_02 trở đi.
+- Cuối response, thêm phần riêng liệt kê HINH_01 (bắt buộc) + các HINH_xx khác đã dùng. Mỗi mã phải nằm trên **một dòng đúng 4 cột**, không tách dòng PROMPT riêng:
 **DANH SÁCH HÌNH ẢNH CẦN TẠO**
-HINH_MINDMAP: LOẠI: SƠ_ĐỒ_TƯ_DUY | Sơ đồ tư duy tổng hợp kiến thức bài học (cuối lý thuyết)
-**PROMPT TẠO ẢNH:**
-"Sơ đồ tư duy (mind map) sách giáo khoa Toán lớp [lớp], phong cách vector sạch sẽ, nền trắng. Ở trung tâm là tên bài '[tên bài]' trong khung tròn/oval nổi bật. Các nhánh chính toả ra xung quanh với nhãn là các khái niệm/công thức/quy tắc cốt lõi của bài, mỗi nhánh một màu khác nhau (xanh dương, xanh lá, cam, tím...). Nhánh phụ ghi ví dụ ngắn hoặc lưu ý. Đường nét rõ ràng, font chữ tiếng Việt dễ đọc, bố cục cân đối, dễ hiểu cho học sinh THCS."
-
-HINH_01: LOẠI: SƠ_ĐỒ | Mô tả vị trí dùng và nội dung cần vẽ (nếu có)
-**PROMPT TẠO ẢNH:**
-"Minh họa sách giáo khoa Toán [lớp], phong cách vector sạch, nền trắng, đường nét rõ, nhãn tiếng Việt ngắn gọn. [mô tả khái niệm/sơ đồ]. Không nhân vật hoạt hình."
-
-HINH_02: LOẠI: THỰC_TẾ | Mô tả tình huống đời sống trong bài toán thực tế
-**PROMPT TẢO ẢNH:**
-"Ảnh minh họa tình huống thực tế trong giáo dục Toán lớp [lớp], phong cách ảnh/illustration tự nhiên, sát bối cảnh Việt Nam: [mô tả cảnh, đồ vật, con người hoặc không gian cụ thể khớp đề bài]. Rõ ràng, dễ hiểu, không phong cách vector trừu tượng, không thêm chữ dài."
+HINH_01: theory | Sơ đồ tư duy tổng hợp kiến thức bài học (cuối lý thuyết) | diagram | Sơ đồ tư duy sách giáo khoa Toán lớp [lớp], nền trắng, tên bài ở trung tâm; các nhánh chính là khái niệm, công thức và quy tắc cốt lõi; nhánh phụ là ví dụ hoặc lưu ý; vector sạch, chữ Việt rõ, bố cục cân đối.
+HINH_02: examples | Mô tả vị trí dùng và nội dung cần vẽ (chỉ khi cần) | diagram | Minh họa sách giáo khoa Toán lớp [lớp], vector sạch, nền trắng, đường nét rõ, nhãn tiếng Việt ngắn gọn; mô tả đúng khái niệm/sơ đồ cần minh họa.
+HINH_03: examples | Tình huống đời sống trong bài toán thực tế (chỉ khi cần) | photo | Ảnh minh họa tình huống thực tế trong giáo dục Toán lớp [lớp], sát bối cảnh Việt Nam, rõ ràng, dễ hiểu, không sơ đồ vector trừu tượng, không thêm chữ dài.
 
 Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, vừa sức học sinh. Độ phủ format không được đánh đổi bằng việc nâng độ khó hoặc thêm kiến thức. Xuất rõ ràng theo các heading trên. **Không dùng \`---\` ngăn cách phần hoặc dạng.**`;
 
