@@ -296,8 +296,8 @@
 
                         <div class="text-[10px] text-slate-400 mt-1">Bước 1 → tab Lý thuyết. Bước 2 → tab Bài tập (không ghi đè lý thuyết). Xuất JSON ghép hai tab ở mục Tổng hợp.</div>
                         <label class="mt-3 inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                            <input id="auto-generate-lesson-images" type="checkbox" checked class="accent-teal-600">
-                            <span>Tạo hình minh họa sau khi soạn bài (chỉ các HINH_xx đã khai báo)</span>
+                            <input id="auto-generate-lesson-images" type="checkbox" class="accent-teal-600">
+                            <span>Tự tạo hình minh họa sau khi soạn bài (tùy chọn; một số phiên Gemini Canvas chặn gọi ảnh)</span>
                         </label>
                         <label class="mt-2 inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                             <input id="auto-review-lesson-accuracy" type="checkbox" checked class="accent-teal-600">
@@ -2029,15 +2029,28 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
                     const actionRow = document.createElement('div');
                     actionRow.className = 'mt-3 flex items-center gap-2';
+                    const copyPromptButton = document.createElement('button');
+                    copyPromptButton.type = 'button';
+                    copyPromptButton.className = 'px-3 py-1.5 border border-orange-300 bg-white hover:bg-orange-50 text-orange-800 rounded-lg text-xs font-semibold flex items-center gap-1';
+                    copyPromptButton.innerHTML = '<i class="fas fa-copy"></i> Copy prompt tạo ảnh';
+                    copyPromptButton.onclick = () => safeCopy(p, copyPromptButton);
+                    actionRow.appendChild(copyPromptButton);
                     const generateButton = document.createElement('button');
                     generateButton.className = 'px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-60';
-                    generateButton.innerHTML = getLessonImageButtonLabel(hasImage);
+                    generateButton.innerHTML = canvasImageGenerationBlocked
+                        ? '<i class="fas fa-ban"></i> Canvas chặn tạo ảnh'
+                        : getLessonImageButtonLabel(hasImage);
+                    generateButton.disabled = canvasImageGenerationBlocked;
                     actionRow.appendChild(generateButton);
                     pDiv.appendChild(actionRow);
 
                     const status = document.createElement('div');
                     status.className = 'mt-2 text-xs text-slate-500';
-                    status.textContent = hasImage ? 'Ảnh đã được tạo trong phiên này.' : 'Chưa tạo ảnh.';
+                    status.textContent = hasImage
+                        ? 'Ảnh đã được tạo trong phiên này.'
+                        : (canvasImageGenerationBlocked
+                            ? 'Canvas chặn tạo ảnh tự động. Dùng Copy prompt tạo ảnh để tạo trực tiếp trong Gemini.'
+                            : 'Chưa tạo ảnh.');
                     pDiv.appendChild(status);
 
                     const image = document.createElement('img');
@@ -3328,6 +3341,9 @@ ${draftText}`;
             const status = Number(error && error.status);
             const apiMessage = String((error && error.message) || '').trim();
             const modelHint = (error && error.modelName) ? (' (model: ' + error.modelName + ')') : '';
+            if (isCanvasImageGenerationBlocked(error)) {
+                return 'Phiên Gemini Canvas này chặn lời gọi tạo ảnh từ mã HTML. Nội dung bài và JSON vẫn dùng bình thường; hãy dùng nút “Copy prompt tạo ảnh” rồi tạo ảnh trực tiếp trong cuộc trò chuyện Gemini.';
+            }
             if (status === 401) {
                 return 'Phiên Gemini Canvas hết hạn hoặc không có quyền gọi API' + modelHint
                     + (apiMessage ? (' — ' + apiMessage) : '')
@@ -3355,6 +3371,14 @@ ${draftText}`;
         const generatedLessonImages = new Map();
         const lessonImagePromptById = new Map();
         const lessonImageLocationById = new Map();
+        // Gemini Canvas có thể cho gọi model văn bản nhưng chặn fetch đến model ảnh.
+        // Khi đã phát hiện một lần, không tiếp tục gọi cho các HINH sau trong phiên.
+        let canvasImageGenerationBlocked = false;
+
+        function isCanvasImageGenerationBlocked(error) {
+            return !!(error && (error.canvasImageGenerationBlocked
+                || /failed to fetch|networkerror|load failed/i.test(String(error.message || ''))));
+        }
 
         function getInlineImageFromGeminiResponse(data) {
             const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
@@ -3420,7 +3444,11 @@ ${source}`;
                     return imageDataUrl;
                 } catch (error) {
                     lastError = error;
-                    console.warn(`Tạo ảnh với ${modelName} chưa thành công:`, error);
+                    if (isCanvasImageGenerationBlocked(error)) {
+                        error.canvasImageGenerationBlocked = true;
+                        break;
+                    }
+                    console.warn(`[soanbaigemini] Tạo ảnh với ${modelName} chưa thành công; thử model dự phòng.`);
                 }
             }
 
@@ -3428,6 +3456,11 @@ ${source}`;
         }
 
         async function generateLessonIllustration(imageId, imagePrompt, button, statusEl, imageEl) {
+            if (canvasImageGenerationBlocked) {
+                statusEl.className = statusEl.tagName === 'SPAN' ? 'text-[10px] text-amber-700' : 'mt-2 text-xs text-amber-700';
+                statusEl.textContent = 'Phiên Canvas này chặn tạo ảnh tự động. Hãy dùng nút Copy prompt tạo ảnh rồi tạo ảnh trực tiếp trong cuộc trò chuyện Gemini.';
+                return;
+            }
             if (button.disabled) return;
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo ảnh...';
@@ -3454,6 +3487,7 @@ ${source}`;
                 await parseAndPreview();
             } catch (error) {
                 const message = describeGeminiError(error);
+                if (isCanvasImageGenerationBlocked(error)) canvasImageGenerationBlocked = true;
                 statusEl.className = statusEl.tagName === 'SPAN' ? 'text-[10px] text-rose-700' : 'mt-2 text-xs text-rose-700';
                 statusEl.textContent = `Chưa tạo được ảnh: ${message}`;
                 button.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(imageId));
@@ -3497,14 +3531,28 @@ ${source}`;
                     }
                 } catch (error) {
                     const message = describeGeminiError(error);
+                    const blocked = isCanvasImageGenerationBlocked(error);
+                    if (blocked) canvasImageGenerationBlocked = true;
                     if (hasUi) {
-                        job.statusEl.className = 'mt-2 text-xs text-rose-700';
+                        job.statusEl.className = blocked ? 'mt-2 text-xs text-amber-700' : 'mt-2 text-xs text-rose-700';
                         job.statusEl.textContent = `Chưa tạo được ${job.imageId}: ${message}`;
                         job.button.innerHTML = getLessonImageButtonLabel(generatedLessonImages.has(job.imageId));
                     } else {
-                        window.showAppToast(`Chưa tạo được ${job.imageId}: ${message}`, 'err');
+                        window.showAppToast(`Chưa tạo được ${job.imageId}: ${message}`, blocked ? 'warn' : 'err');
                     }
-                    console.error(`Không thể tạo ${job.imageId}:`, error);
+                    console.warn(`[soanbaigemini] Chưa tạo được ${job.imageId}: ${message}`);
+                    if (blocked) {
+                        pendingJobs.slice(index + 1).forEach(function(restJob) {
+                            if (!restJob.statusEl) return;
+                            restJob.statusEl.className = 'mt-2 text-xs text-amber-700';
+                            restJob.statusEl.textContent = 'Bỏ qua tạo tự động: Canvas đã chặn yêu cầu ảnh. Dùng Copy prompt tạo ảnh.';
+                            if (restJob.button) {
+                                restJob.button.disabled = true;
+                                restJob.button.innerHTML = '<i class="fas fa-ban"></i> Canvas chặn tạo ảnh';
+                            }
+                        });
+                        break;
+                    }
                 } finally {
                     if (hasUi) job.button.disabled = false;
                 }
