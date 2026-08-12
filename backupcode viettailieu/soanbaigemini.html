@@ -11,7 +11,8 @@
             // lesson-import.js chỉ cần cho Kiểm tra import / Xuất JSON (optional trong Canvas).
             // Prompt gen bài PHẢI tự chứa trong file HTML này — Canvas chạy độc lập, không phụ thuộc hosting.
             // Đổi version khi deploy lesson-import.js để Canvas không dùng cache cũ.
-            var VERSION = '20260812-import-sync-v2';
+            var VERSION = '20260812-import-sync-v3';
+            var REQUIRED_LESSON_IMPORT_VERSION = '20260812-noi-o-1to1-v2';
             var SOURCES = [
                 // Canvas mở từ blob/local thường không có đường dẫn tương đối hợp lệ.
                 // Script thường (không phải fetch/module) được phép nạp cross-origin mà không cần CORS.
@@ -23,12 +24,8 @@
             window.__lessonImportReady = new Promise(function (resolve, reject) {
                 var index = 0;
                 function tryNext() {
-                    if (window.LessonImport) {
-                        resolve(window.LessonImport);
-                        return;
-                    }
                     if (index >= SOURCES.length) {
-                        reject(new Error('lesson-import.js không tải được từ hosting.'));
+                        reject(new Error('lesson-import.js chưa đúng phiên bản trên hosting.'));
                         return;
                     }
                     var src = SOURCES[index++];
@@ -36,11 +33,13 @@
                     tag.src = src;
                     tag.async = false;
                     tag.onload = function () {
-                        if (window.LessonImport) {
+                        if (window.LessonImport
+                            && window.LessonImport.RUNTIME_VERSION === REQUIRED_LESSON_IMPORT_VERSION) {
                             window.__lessonImportSource = src;
                             resolve(window.LessonImport);
+                        } else {
+                            tryNext();
                         }
-                        else tryNext();
                     };
                     tag.onerror = function () { tryNext(); };
                     document.head.appendChild(tag);
@@ -338,6 +337,11 @@
                                         class="px-4 py-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-sm rounded-2xl flex items-center gap-x-2 text-amber-900">
                                     <i class="fas fa-clipboard-check"></i>
                                     <span>Kiểm tra import</span>
+                                </button>
+                                <button id="repair-current-format-btn" type="button" onclick="repairCurrentLessonFormat()"
+                                        class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-2xl flex items-center gap-x-2">
+                                    <i class="fas fa-wand-magic-sparkles"></i>
+                                    <span>Sửa cấu trúc bằng AI</span>
                                 </button>
                                 <button id="export-json-btn" onclick="exportLessonImportJson()" disabled
                                         class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm opacity-50 cursor-not-allowed"
@@ -1786,7 +1790,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (!statusEl) return;
             if (loaded && window.LessonImport) {
                 statusEl.className = 'text-emerald-700';
-                statusEl.textContent = '✓ Đã đồng bộ bộ kiểm tra lesson-import-v1 từ hosting — có thể kiểm tra và xuất JSON.';
+                statusEl.textContent = '✓ Đã đồng bộ bộ kiểm tra lesson-import-v1 từ hosting (nối ô 1–1) — có thể kiểm tra và xuất JSON.';
                 statusEl.title = window.__lessonImportSource || '';
                 return;
             }
@@ -3119,6 +3123,72 @@ ${draftText}`;
                 }
             }
             return text;
+        }
+
+        // Dùng cho bài đã tạo/dán trước đó: Kiểm tra import chỉ báo lỗi, còn nút này
+        // gửi đúng bản nháp cùng các lỗi hiện có cho Gemini sửa lại cấu trúc pipe.
+        async function repairCurrentLessonFormat() {
+            if (lessonGenerationInProgress) return;
+
+            const theoryEl = window.getTheoryOutputEl();
+            const restEl = window.getRestOutputEl();
+            const theory = String((theoryEl && theoryEl.value) || '').trim();
+            const rest = String((restEl && restEl.value) || '').trim();
+            const combined = window.syncCombinedLessonPreview();
+            if (!combined) {
+                window.showAppToast('Chưa có nội dung để sửa cấu trúc.', 'warn');
+                return;
+            }
+
+            const context = getLessonFormContext();
+            const restOnly = !!(theory && rest);
+            const draft = restOnly ? rest : combined;
+            const button = document.getElementById('repair-current-format-btn');
+            const originalLabel = button ? button.innerHTML : '';
+
+            lessonGenerationInProgress = true;
+            setGenerateButtonsState(true);
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Đang sửa cấu trúc…</span>';
+            }
+            updateGenerationProgress(84, 'Đang sửa cấu trúc', 'Gemini đang thay các dòng pipe sai; các lỗi Nối ô nhiều→một sẽ được đổi sang nối 1–1.');
+
+            try {
+                const repaired = await repairLessonFormatIfNeeded(draft, context, {
+                    restOnly,
+                    reportProgress: function(percent, title, detail) {
+                        updateGenerationProgress(percent, title, detail);
+                    }
+                });
+                if (restOnly && restEl) {
+                    restEl.value = extractRestFromOutput(repaired);
+                } else if (theoryEl) {
+                    theoryEl.value = repaired;
+                    if (restEl) restEl.value = '';
+                }
+                window.syncCombinedLessonPreview();
+                const state = window.refreshLessonValidation();
+                if (state && state.ready) {
+                    updateGenerationProgress(100, 'Đã sửa cấu trúc', 'Bài đã đạt chuẩn import. Bạn có thể xuất JSON.', 'success');
+                    window.showAppToast('Đã sửa cấu trúc — bài sẵn sàng xuất JSON.', 'ok');
+                } else {
+                    const count = (state && state.errors && state.errors.length) || 0;
+                    updateGenerationProgress(100, 'Cần kiểm tra thêm', `Gemini đã sửa nhưng còn ${count} lỗi đỏ cần xem lại.`, 'warn');
+                    window.showAppToast('Đã chạy sửa cấu trúc. Xem các lỗi đỏ còn lại bên dưới.', 'warn');
+                }
+            } catch (error) {
+                const message = describeGeminiError(error);
+                updateGenerationProgress(100, 'Không sửa được cấu trúc', message, 'error');
+                window.showAppToast('Không sửa được cấu trúc: ' + message, 'err');
+            } finally {
+                lessonGenerationInProgress = false;
+                setGenerateButtonsState(false);
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = originalLabel;
+                }
+            }
         }
 
         async function finalizeLessonOutput(result, options) {

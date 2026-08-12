@@ -7,6 +7,8 @@
 
     const SCHEMA_VERSION = 'lesson-import-v1';
     const PROMPT_VERSION = '20260713-format-lock-v1';
+    // HTML Canvas dùng mã này để không vô tình nhận một LessonImport cũ còn lưu trong phiên preview.
+    const RUNTIME_VERSION = '20260812-noi-o-1to1-v2';
     const VALID_SUBJECTS = ['Toán 4', 'Toán 5', 'Toán 6', 'Toán 7', 'Toán 8', 'Toán 9'];
     const MIN_ESSAY = 2;
     const MIN_FILL = 2;
@@ -2241,6 +2243,7 @@ ${getLessonOutputSkeleton()}`;
     const LessonImport = {
         SCHEMA_VERSION,
         PROMPT_VERSION,
+        RUNTIME_VERSION,
         MIN_ESSAY,
         MIN_FILL,
         MIN_DRAG,
