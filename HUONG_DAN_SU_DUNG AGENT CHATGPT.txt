@@ -1,0 +1,257 @@
+HƯỚNG DẪN DỄ HIỂU NHẤT – QUY TRÌNH 3 AGENT
+================================================
+
+MỤC ĐÍCH
+
+Khi thầy giao một yêu cầu code, hệ thống tự làm theo thứ tự:
+
+1. Manager tiếp nhận yêu cầu.
+2. Agent 2 – Planner đọc dự án và lập kế hoạch, không sửa code.
+3. Manager kiểm tra và duyệt kế hoạch.
+4. Agent 1 – Coder sửa code theo kế hoạch đã duyệt.
+5. Manager kiểm tra kết quả và báo cáo cho thầy.
+
+Thầy không cần tự mở ba cửa sổ chat và không cần chuyển nội dung thủ công giữa các agent.
+
+
+I. TRONG 5 FILE, CẦN DÙNG FILE NÀO?
+
+Chỉ cần đưa 1 file vào dự án:
+
+    AGENTS.md
+
+Bốn file còn lại không bắt buộc đưa vào dự án:
+
+    01_MANAGER.md
+    02_AGENT_2_PLANNER.md
+    03_AGENT_1_CODER.md
+    HUONG_DAN_SU_DUNG.txt
+
+Ý nghĩa từng file:
+
+- AGENTS.md: file Codex tự đọc để áp dụng toàn bộ quy trình.
+- 01_MANAGER.md: bản prompt riêng để tham khảo hoặc dán thủ công khi cần.
+- 02_AGENT_2_PLANNER.md: mô tả chi tiết vai trò Planner.
+- 03_AGENT_1_CODER.md: mô tả chi tiết vai trò Coder.
+- HUONG_DAN_SU_DUNG.txt: tài liệu thầy đang đọc.
+
+QUAN TRỌNG: Codex không tự đọc ba file 01, 02, 03 chỉ vì chúng nằm trong dự án. Quy trình tự động đã được viết đầy đủ trong AGENTS.md, vì vậy chỉ AGENTS.md là cần thiết.
+
+
+II. CÁCH DÙNG CHO MỘT DỰ ÁN CỤ THỂ
+
+Ví dụ dự án của thầy nằm tại:
+
+    D:\webtranphu
+
+Thầy chép file AGENTS.md vào đúng đường dẫn:
+
+    D:\webtranphu\AGENTS.md
+
+File này phải nằm cùng cấp với các file chính của dự án.
+
+Cấu trúc đúng:
+
+    D:\webtranphu\
+        AGENTS.md
+        admin.html
+        index.html
+        assets\
+        ...
+
+Cấu trúc không nên dùng:
+
+    D:\webtranphu\bo_quy_trinh_3_agent\AGENTS.md
+
+Nếu đặt trong thư mục bo_quy_trinh_3_agent, file có thể không áp dụng cho các file admin.html, index.html nằm bên ngoài thư mục đó.
+
+CÁCH LÀM TRÊN WINDOWS:
+
+Bước 1: Tải file AGENTS.md về máy.
+
+Bước 2: Mở File Explorer và đi đến thư mục dự án, ví dụ D:\webtranphu.
+
+Bước 3: Chép AGENTS.md vào ngay thư mục này.
+
+Bước 4: Đóng phiên Codex cũ và mở lại dự án, hoặc mở một cuộc trò chuyện Codex mới trong đúng thư mục dự án.
+
+Bước 5: Giao yêu cầu bình thường, ví dụ:
+
+    Tích hợp chức năng Nộp báo cáo vào admin.html.
+
+Không cần nhắc lại Manager, Planner và Coder. AGENTS.md đã quy định quy trình đó.
+
+
+III. CÁCH DÙNG TỰ ĐỘNG CHO TẤT CẢ DỰ ÁN TRÊN MÁY
+
+Cách này phù hợp khi thầy muốn mọi dự án mở bằng Codex đều dùng quy trình 3 agent.
+
+Trên Windows, đưa một bản AGENTS.md vào thư mục chung:
+
+    %USERPROFILE%\.codex\AGENTS.md
+
+Ví dụ tài khoản Windows là HoangThien:
+
+    C:\Users\HoangThien\.codex\AGENTS.md
+
+Cách làm:
+
+Bước 1: Nhấn Windows + E để mở File Explorer.
+
+Bước 2: Bấm vào thanh địa chỉ phía trên.
+
+Bước 3: Nhập:
+
+    %USERPROFILE%\.codex
+
+Bước 4: Nhấn Enter.
+
+Bước 5: Nếu thư mục .codex chưa có, hãy tạo thư mục mới và đặt tên chính xác là .codex.
+
+Bước 6: Chép AGENTS.md vào thư mục đó.
+
+Bước 7: Khởi động lại Codex hoặc mở một phiên làm việc mới.
+
+Sau khi cài theo cách này:
+
+- AGENTS.md trong C:\Users\...\.codex áp dụng chung cho mọi dự án.
+- AGENTS.md trong thư mục dự án bổ sung các quy tắc riêng của dự án đó.
+- Nếu chỉ cần quy trình 3 agent giống nhau ở mọi dự án, dùng bản chung là đủ.
+- Để chắc chắn và dễ mang dự án sang máy khác, vẫn nên có AGENTS.md trong từng repository.
+
+
+IV. CÁCH DÙNG VỚI GITHUB
+
+Nếu dự án được lưu trên GitHub, đặt AGENTS.md tại thư mục gốc của repository.
+
+Ví dụ đúng:
+
+    webtranphu/
+        AGENTS.md
+        admin.html
+        index.html
+        ...
+
+Sau đó commit và push AGENTS.md lên GitHub. Khi Codex mở repository, file sẽ đi cùng dự án và được áp dụng.
+
+Nếu repository đã có AGENTS.md:
+
+- Không ghi đè ngay.
+- Mở file AGENTS.md hiện có.
+- Ghép nội dung quy trình 3 agent vào file đó.
+- Giữ lại các quy tắc cũ của dự án.
+
+
+V. CÁCH DÙNG VỚI CHATGPT/CHATGPT WORK TRÊN WEB
+
+Chỉ tải riêng AGENTS.md vào một tin nhắn không có nghĩa file đã nằm trong thư mục gốc dự án.
+
+Cách 1 – Làm việc với repository:
+
+- Repository phải có AGENTS.md ở thư mục gốc.
+- Mở đúng repository/dự án trong ChatGPT Work hoặc Codex.
+- Bắt đầu một phiên mới rồi giao yêu cầu.
+
+Cách 2 – Tải dự án dạng ZIP:
+
+Trước khi nén, đặt AGENTS.md vào thư mục gốc dự án:
+
+    webtranphu\
+        AGENTS.md
+        admin.html
+        index.html
+        ...
+
+Sau đó nén cả thư mục webtranphu thành webtranphu.zip và tải ZIP lên.
+
+Không nên nén theo cấu trúc:
+
+    webtranphu\
+        bo_quy_trinh_3_agent\
+            AGENTS.md
+        admin.html
+
+vì AGENTS.md đang nằm sai cấp.
+
+
+VI. CÁCH KIỂM TRA CODEX ĐÃ NHẬN AGENTS.md CHƯA
+
+Sau khi đặt file và mở phiên mới, gửi câu sau:
+
+    Hãy cho biết những file hướng dẫn đang được áp dụng và tóm tắt quy trình làm việc trước khi sửa code.
+
+Nếu hoạt động đúng, Codex phải tóm tắt được quy trình:
+
+    Manager giao Planner khảo sát
+    -> Manager duyệt kế hoạch
+    -> Coder sửa code
+    -> Manager kiểm tra và nghiệm thu.
+
+Nếu Codex không nhắc đến quy trình này, kiểm tra lại:
+
+1. File có đúng tên AGENTS.md hay không.
+2. Windows có vô tình đặt tên thành AGENTS.md.txt hay không.
+3. File có nằm đúng thư mục gốc dự án hay không.
+4. Codex có đang mở đúng thư mục dự án hay không.
+5. Đã mở phiên mới hoặc khởi động lại Codex sau khi chép file chưa.
+
+CÁCH KIỂM TRA ĐUÔI FILE TRÊN WINDOWS:
+
+- Mở File Explorer.
+- Chọn View -> Show -> File name extensions.
+- Tên chính xác phải là AGENTS.md, không phải AGENTS.md.txt.
+
+
+VII. CÁCH SỬ DỤNG HẰNG NGÀY
+
+Sau khi cài đúng AGENTS.md, thầy chỉ cần giao yêu cầu bình thường.
+
+Ví dụ 1 – Thêm chức năng:
+
+    Tích hợp chức năng Nộp báo cáo vào admin.html. Tham khảo chức năng Giao nhận bài trong thư mục giangbai nhưng phải tích hợp vào hệ thống webtranphu, không tạo một hệ thống tách rời.
+
+Ví dụ 2 – Sửa lỗi:
+
+    Kiểm tra vì sao người dùng nộp báo cáo nhưng dữ liệu không được lưu. Hãy tìm nguyên nhân và sửa hoàn chỉnh.
+
+Ví dụ 3 – Chỉnh giao diện:
+
+    Điều chỉnh trang Nộp báo cáo cho hiển thị tốt trên điện thoại, giữ nguyên chức năng và màu sắc hiện tại.
+
+Codex phải tự thực hiện:
+
+1. Chat chính làm Manager.
+2. Manager tạo Planner để khảo sát, không sửa code.
+3. Manager chờ Planner trả kế hoạch.
+4. Manager kiểm tra và chốt KẾ HOẠCH ĐÃ DUYỆT.
+5. Manager mới giao Coder triển khai.
+6. Coder sửa code và chạy kiểm thử.
+7. Manager kiểm tra diff và kết quả kiểm thử.
+8. Manager báo cáo lại cho thầy.
+
+Thầy không cần gõ lại quy trình 3 agent trong từng yêu cầu.
+
+
+VIII. KHI NÀO KHÔNG NÊN DÙNG 3 AGENT?
+
+Không cần dùng đầy đủ ba vai trò cho việc rất nhỏ, ví dụ:
+
+- Sửa một lỗi chính tả.
+- Đổi một dòng chữ.
+- Thay một màu đã xác định rõ.
+
+Tuy nhiên, AGENTS.md hiện tại quy định dùng quy trình cho yêu cầu lập trình nhiều bước. Manager có thể xử lý việc rất nhỏ trực tiếp hoặc đề nghị rút gọn để tiết kiệm thời gian và token.
+
+
+IX. TÓM TẮT NGẮN GỌN NHẤT
+
+Nếu chỉ dùng cho webtranphu:
+
+    Chép AGENTS.md vào D:\webtranphu\AGENTS.md
+
+Nếu muốn dùng cho tất cả dự án Codex trên máy Windows:
+
+    Chép AGENTS.md vào %USERPROFILE%\.codex\AGENTS.md
+
+Sau đó mở phiên Codex mới và giao yêu cầu bình thường. Không cần tự tạo ba chat, không cần dán ba prompt và không cần nhắc lại quy trình.
+
